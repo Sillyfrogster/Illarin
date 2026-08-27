@@ -12,6 +12,19 @@ import (
 // immutableTables refuse the mutations a reset needs, so the reset lifts their guard and puts it straight back.
 var immutableTables = []string{"download_events", "migration_legacy_counters"}
 
+// seeded restores the rows migration 00047 adds, which the reset truncates through publication_media.
+const seeded = `
+	insert into publication_apps (id, slug, name, home_url, position)
+	values ('9d3f1c00-0000-4000-8000-000000000001', 'illarin', 'Illarin',
+	        'https://illarin.xyz', 0)
+	on conflict (id) do nothing;
+
+	insert into profile_distinctions (id, form, name, explanation, position)
+	values ('9d3f1c00-0000-4000-8000-000000000021', 'badge', 'Verified App Contributor',
+	        'Publishes official updates for a project on Illarin.', 0)
+	on conflict (id) do nothing;
+`
+
 // Connect opens a pool on the test database with the settings the server runs
 // on, and empties every table.
 func Connect(t *testing.T) *pgxpool.Pool {
@@ -68,6 +81,9 @@ func ConnectWith(t *testing.T, tune func(*postgres.Settings)) *pgxpool.Pool {
 	}
 	if enableErr != nil {
 		t.Fatalf("restore table immutability: %v", enableErr)
+	}
+	if _, err := pool.Exec(context.Background(), seeded); err != nil {
+		t.Fatalf("restore the seeded publication rows: %v", err)
 	}
 
 	return pool

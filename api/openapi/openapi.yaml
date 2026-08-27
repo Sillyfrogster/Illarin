@@ -90,6 +90,22 @@ paths:
     $ref: ./distinctions.yaml#/paths/~1v1~1accounts~1{handle}~1distinctions
   /v1/accounts/{handle}/distinctions/{assignmentId}:
     $ref: ./distinctions.yaml#/paths/~1v1~1accounts~1{handle}~1distinctions~1{assignmentId}
+  /v1/publication/apps:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1apps
+  /v1/publication/apps/{id}:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1apps~1{id}
+  /v1/publication/apps/{id}/mark:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1apps~1{id}~1mark
+  /v1/publication/categories:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1categories
+  /v1/publication/categories/{id}:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1categories~1{id}
+  /v1/publication/grants:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1grants
+  /v1/publication/grants/{id}:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1grants~1{id}
+  /v1/publication/workspace:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1workspace
   /v1/profiles/{handle}:
     $ref: ./accounts.yaml#/paths/~1v1~1profiles~1{handle}
   /v1/profiles/{handle}/restriction:
@@ -257,6 +273,34 @@ components:
       $ref: ./distinctions.yaml#/components/schemas/AssignDistinctionRequest
     OrderAssignmentsRequest:
       $ref: ./distinctions.yaml#/components/schemas/OrderAssignmentsRequest
+    PublicationApp:
+      $ref: ./publication.yaml#/components/schemas/PublicationApp
+    PublicationAppList:
+      $ref: ./publication.yaml#/components/schemas/PublicationAppList
+    DefinePublicationAppRequest:
+      $ref: ./publication.yaml#/components/schemas/DefinePublicationAppRequest
+    UpdatePublicationAppRequest:
+      $ref: ./publication.yaml#/components/schemas/UpdatePublicationAppRequest
+    OrderPublicationAppsRequest:
+      $ref: ./publication.yaml#/components/schemas/OrderPublicationAppsRequest
+    PublicationCategory:
+      $ref: ./publication.yaml#/components/schemas/PublicationCategory
+    PublicationCategoryList:
+      $ref: ./publication.yaml#/components/schemas/PublicationCategoryList
+    UpdatePublicationCategoryRequest:
+      $ref: ./publication.yaml#/components/schemas/UpdatePublicationCategoryRequest
+    OrderPublicationCategoriesRequest:
+      $ref: ./publication.yaml#/components/schemas/OrderPublicationCategoriesRequest
+    PublicationGrant:
+      $ref: ./publication.yaml#/components/schemas/PublicationGrant
+    PublicationGrantList:
+      $ref: ./publication.yaml#/components/schemas/PublicationGrantList
+    CreatePublicationGrantRequest:
+      $ref: ./publication.yaml#/components/schemas/CreatePublicationGrantRequest
+    UpdatePublicationGrantRequest:
+      $ref: ./publication.yaml#/components/schemas/UpdatePublicationGrantRequest
+    PublicationWorkspace:
+      $ref: ./publication.yaml#/components/schemas/PublicationWorkspace
     RenameHandleRequest:
       $ref: ./accounts.yaml#/components/schemas/RenameHandleRequest
     SignUpRequest:

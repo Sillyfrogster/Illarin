@@ -113,14 +113,6 @@ type BlobTombstone struct {
 	ActorID    pgtype.UUID
 }
 
-type DistinctionMedium struct {
-	ID        pgtype.UUID
-	BlobID    pgtype.UUID
-	Width     int32
-	Height    int32
-	CreatedAt pgtype.Timestamptz
-}
-
 type DownloadEvent struct {
 	ID                 int64
 	AssetID            pgtype.UUID
@@ -413,9 +405,66 @@ type PublicProfileLink struct {
 	Url      string
 }
 
+type PublicationApp struct {
+	ID          pgtype.UUID
+	Slug        string
+	Name        string
+	HomeUrl     string
+	MarkMediaID pgtype.UUID
+	Position    int32
+	RetiredAt   pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type PublicationAudit struct {
+	ID         pgtype.UUID
+	ActorID    pgtype.UUID
+	Action     string
+	AppID      pgtype.UUID
+	CategoryID pgtype.UUID
+	GrantID    pgtype.UUID
+	SubjectID  pgtype.UUID
+	RecordedAt pgtype.Timestamptz
+}
+
 type PublicationAuthority struct {
 	UserID     pgtype.UUID
 	AssignedAt pgtype.Timestamptz
+}
+
+type PublicationCategory struct {
+	ID        pgtype.UUID
+	Slug      string
+	Label     string
+	Position  int32
+	RetiredAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type PublicationGrant struct {
+	ID                pgtype.UUID
+	UserID            pgtype.UUID
+	AppID             pgtype.UUID
+	DefaultCategoryID pgtype.UUID
+	GrantedBy         pgtype.UUID
+	GrantedAt         pgtype.Timestamptz
+	RevokedAt         pgtype.Timestamptz
+	Active            bool
+}
+
+type PublicationGrantCategory struct {
+	GrantID    pgtype.UUID
+	CategoryID pgtype.UUID
+}
+
+type PublicationMedium struct {
+	ID        pgtype.UUID
+	BlobID    pgtype.UUID
+	Width     int32
+	Height    int32
+	CreatedAt pgtype.Timestamptz
 }
 
 type RetiredHandle struct {

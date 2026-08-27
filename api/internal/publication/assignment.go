@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -207,7 +206,7 @@ func (s *Service) assignmentsFor(
 		       mark.id, mark.width, mark.height
 		  from profile_distinction_assignments assignment
 		  join profile_distinctions definition on definition.id = assignment.distinction_id
-		  left join distinction_media mark
+		  left join publication_media mark
 		         on mark.id = definition.mark_media_id and mark.blob_id is not null
 		 where assignment.user_id = $1
 		   and (not $2 or (assignment.active and definition.retired_at is null))
@@ -235,14 +234,7 @@ func (s *Service) assignmentsFor(
 			return nil, fmt.Errorf("read a distinction assignment: %w", err)
 		}
 		one.Distinction.Form = Form(form)
-		if markID != nil && width != nil && height != nil {
-			one.Distinction.Mark = &Mark{
-				MediaID:           *markID,
-				Width:             *width,
-				Height:            *height,
-				DerivativeVersion: mediaproc.DerivativeVersion,
-			}
-		}
+		one.Distinction.Mark = scanMark(markID, width, height)
 		held = append(held, one)
 	}
 	if err := rows.Err(); err != nil {

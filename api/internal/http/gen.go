@@ -1862,11 +1862,26 @@ type CreateAssetRequest struct {
 // CreateAssetRequestDiscovery defines model for CreateAssetRequest.Discovery.
 type CreateAssetRequestDiscovery string
 
+// CreatePublicationGrantRequest defines model for CreatePublicationGrantRequest.
+type CreatePublicationGrantRequest struct {
+	AppId             openapi_types.UUID   `json:"appId"`
+	CategoryIds       []openapi_types.UUID `json:"categoryIds"`
+	DefaultCategoryId openapi_types.UUID   `json:"defaultCategoryId"`
+	Handle            string               `json:"handle"`
+}
+
 // DefineDistinctionRequest defines model for DefineDistinctionRequest.
 type DefineDistinctionRequest struct {
 	Explanation *string         `json:"explanation,omitempty"`
 	Form        DistinctionForm `json:"form"`
 	Name        string          `json:"name"`
+}
+
+// DefinePublicationAppRequest defines model for DefinePublicationAppRequest.
+type DefinePublicationAppRequest struct {
+	Home string `json:"home"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 // DeletedAsset defines model for DeletedAsset.
@@ -2314,6 +2329,16 @@ type OrderDistinctionsRequest struct {
 	Form           DistinctionForm      `json:"form"`
 }
 
+// OrderPublicationAppsRequest defines model for OrderPublicationAppsRequest.
+type OrderPublicationAppsRequest struct {
+	AppIds []openapi_types.UUID `json:"appIds"`
+}
+
+// OrderPublicationCategoriesRequest defines model for OrderPublicationCategoriesRequest.
+type OrderPublicationCategoriesRequest struct {
+	CategoryIds []openapi_types.UUID `json:"categoryIds"`
+}
+
 // OriginalUpload defines model for OriginalUpload.
 type OriginalUpload struct {
 	ArrivedAt time.Time `json:"arrivedAt"`
@@ -2476,6 +2501,59 @@ type PromptListContentFragmentsRole string
 // ProseContent defines model for ProseContent.
 type ProseContent struct {
 	Text string `json:"text"`
+}
+
+// PublicationApp defines model for PublicationApp.
+type PublicationApp struct {
+	Home     string             `json:"home"`
+	Id       openapi_types.UUID `json:"id"`
+	Mark     *DistinctionMark   `json:"mark,omitempty"`
+	Name     string             `json:"name"`
+	Position int                `json:"position"`
+	Retired  bool               `json:"retired"`
+	Slug     string             `json:"slug"`
+}
+
+// PublicationAppList defines model for PublicationAppList.
+type PublicationAppList struct {
+	Apps []PublicationApp `json:"apps"`
+}
+
+// PublicationCategory defines model for PublicationCategory.
+type PublicationCategory struct {
+	Id       openapi_types.UUID `json:"id"`
+	Label    string             `json:"label"`
+	Position int                `json:"position"`
+	Retired  bool               `json:"retired"`
+	Slug     string             `json:"slug"`
+}
+
+// PublicationCategoryList defines model for PublicationCategoryList.
+type PublicationCategoryList struct {
+	Categories []PublicationCategory `json:"categories"`
+}
+
+// PublicationGrant defines model for PublicationGrant.
+type PublicationGrant struct {
+	Active          bool                  `json:"active"`
+	App             PublicationApp        `json:"app"`
+	Categories      []PublicationCategory `json:"categories"`
+	DefaultCategory PublicationCategory   `json:"defaultCategory"`
+	GrantedAt       time.Time             `json:"grantedAt"`
+	Handle          string                `json:"handle"`
+	Id              openapi_types.UUID    `json:"id"`
+	RevokedAt       *time.Time            `json:"revokedAt,omitempty"`
+}
+
+// PublicationGrantList defines model for PublicationGrantList.
+type PublicationGrantList struct {
+	Grants []PublicationGrant `json:"grants"`
+}
+
+// PublicationWorkspace defines model for PublicationWorkspace.
+type PublicationWorkspace struct {
+	Grants []PublicationGrant `json:"grants"`
+	Handle string             `json:"handle"`
 }
 
 // PublishRefusal defines model for PublishRefusal.
@@ -2796,6 +2874,26 @@ type UpdateInstance struct {
 	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
 }
 
+// UpdatePublicationAppRequest defines model for UpdatePublicationAppRequest.
+type UpdatePublicationAppRequest struct {
+	Home    *string `json:"home,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	Retired *bool   `json:"retired,omitempty"`
+	Slug    *string `json:"slug,omitempty"`
+}
+
+// UpdatePublicationCategoryRequest defines model for UpdatePublicationCategoryRequest.
+type UpdatePublicationCategoryRequest struct {
+	Label   *string `json:"label,omitempty"`
+	Retired *bool   `json:"retired,omitempty"`
+}
+
+// UpdatePublicationGrantRequest defines model for UpdatePublicationGrantRequest.
+type UpdatePublicationGrantRequest struct {
+	CategoryIds       *[]openapi_types.UUID `json:"categoryIds,omitempty"`
+	DefaultCategoryId *openapi_types.UUID   `json:"defaultCategoryId,omitempty"`
+}
+
 // UserCode defines model for UserCode.
 type UserCode = string
 
@@ -3022,6 +3120,11 @@ type DenyLinkRequestParams struct {
 // DenyLinkRequestParamsXIllarinRequest defines parameters for DenyLinkRequest.
 type DenyLinkRequestParamsXIllarinRequest string
 
+// SetPublicationAppMarkMultipartBody defines parameters for SetPublicationAppMark.
+type SetPublicationAppMarkMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
 type ChangeUnverifiedEmailJSONRequestBody = ChangeEmailRequest
 
@@ -3141,6 +3244,30 @@ type ExchangeLinkAuthorizationJSONRequestBody = ExchangeLinkAuthorization
 
 // RestrictProfileJSONRequestBody defines body for RestrictProfile for application/json ContentType.
 type RestrictProfileJSONRequestBody = RestrictProfileRequest
+
+// DefinePublicationAppJSONRequestBody defines body for DefinePublicationApp for application/json ContentType.
+type DefinePublicationAppJSONRequestBody = DefinePublicationAppRequest
+
+// OrderPublicationAppsJSONRequestBody defines body for OrderPublicationApps for application/json ContentType.
+type OrderPublicationAppsJSONRequestBody = OrderPublicationAppsRequest
+
+// UpdatePublicationAppJSONRequestBody defines body for UpdatePublicationApp for application/json ContentType.
+type UpdatePublicationAppJSONRequestBody = UpdatePublicationAppRequest
+
+// SetPublicationAppMarkMultipartRequestBody defines body for SetPublicationAppMark for multipart/form-data ContentType.
+type SetPublicationAppMarkMultipartRequestBody SetPublicationAppMarkMultipartBody
+
+// OrderPublicationCategoriesJSONRequestBody defines body for OrderPublicationCategories for application/json ContentType.
+type OrderPublicationCategoriesJSONRequestBody = OrderPublicationCategoriesRequest
+
+// UpdatePublicationCategoryJSONRequestBody defines body for UpdatePublicationCategory for application/json ContentType.
+type UpdatePublicationCategoryJSONRequestBody = UpdatePublicationCategoryRequest
+
+// CreatePublicationGrantJSONRequestBody defines body for CreatePublicationGrant for application/json ContentType.
+type CreatePublicationGrantJSONRequestBody = CreatePublicationGrantRequest
+
+// UpdatePublicationGrantJSONRequestBody defines body for UpdatePublicationGrant for application/json ContentType.
+type UpdatePublicationGrantJSONRequestBody = UpdatePublicationGrantRequest
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -3482,6 +3609,45 @@ type ServerInterface interface {
 
 	// (PUT /v1/profiles/{handle}/restriction)
 	RestrictProfile(c *gin.Context, handle string)
+
+	// (GET /v1/publication/apps)
+	ListPublicationApps(c *gin.Context)
+
+	// (POST /v1/publication/apps)
+	DefinePublicationApp(c *gin.Context)
+
+	// (PUT /v1/publication/apps)
+	OrderPublicationApps(c *gin.Context)
+
+	// (PATCH /v1/publication/apps/{id})
+	UpdatePublicationApp(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/apps/{id}/mark)
+	SetPublicationAppMark(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/categories)
+	ListPublicationCategories(c *gin.Context)
+
+	// (PUT /v1/publication/categories)
+	OrderPublicationCategories(c *gin.Context)
+
+	// (PATCH /v1/publication/categories/{id})
+	UpdatePublicationCategory(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/grants)
+	ListPublicationGrants(c *gin.Context)
+
+	// (POST /v1/publication/grants)
+	CreatePublicationGrant(c *gin.Context)
+
+	// (DELETE /v1/publication/grants/{id})
+	RevokePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/publication/grants/{id})
+	UpdatePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/workspace)
+	GetPublicationWorkspace(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -5533,6 +5699,235 @@ func (siw *ServerInterfaceWrapper) RestrictProfile(c *gin.Context) {
 	siw.Handler.RestrictProfile(c, handle)
 }
 
+// ListPublicationApps operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationApps(c)
+}
+
+// DefinePublicationApp operation middleware
+func (siw *ServerInterfaceWrapper) DefinePublicationApp(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DefinePublicationApp(c)
+}
+
+// OrderPublicationApps operation middleware
+func (siw *ServerInterfaceWrapper) OrderPublicationApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrderPublicationApps(c)
+}
+
+// UpdatePublicationApp operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationApp(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationApp(c, id)
+}
+
+// SetPublicationAppMark operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationAppMark(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationAppMark(c, id)
+}
+
+// ListPublicationCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationCategories(c)
+}
+
+// OrderPublicationCategories operation middleware
+func (siw *ServerInterfaceWrapper) OrderPublicationCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrderPublicationCategories(c)
+}
+
+// UpdatePublicationCategory operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationCategory(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationCategory(c, id)
+}
+
+// ListPublicationGrants operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationGrants(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationGrants(c)
+}
+
+// CreatePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreatePublicationGrant(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreatePublicationGrant(c)
+}
+
+// RevokePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) RevokePublicationGrant(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RevokePublicationGrant(c, id)
+}
+
+// UpdatePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationGrant(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationGrant(c, id)
+}
+
+// GetPublicationWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicationWorkspace(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicationWorkspace(c)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -5607,6 +6002,19 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.AssignDistinction)
 	router.PUT(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.OrderAccountDistinctions)
 	router.DELETE(options.BaseURL+"/v1/accounts/:handle/distinctions/:assignmentId", wrapper.RemoveAccountDistinction)
+	router.GET(options.BaseURL+"/v1/publication/apps", wrapper.ListPublicationApps)
+	router.POST(options.BaseURL+"/v1/publication/apps", wrapper.DefinePublicationApp)
+	router.PUT(options.BaseURL+"/v1/publication/apps", wrapper.OrderPublicationApps)
+	router.PATCH(options.BaseURL+"/v1/publication/apps/:id", wrapper.UpdatePublicationApp)
+	router.PUT(options.BaseURL+"/v1/publication/apps/:id/mark", wrapper.SetPublicationAppMark)
+	router.GET(options.BaseURL+"/v1/publication/categories", wrapper.ListPublicationCategories)
+	router.PUT(options.BaseURL+"/v1/publication/categories", wrapper.OrderPublicationCategories)
+	router.PATCH(options.BaseURL+"/v1/publication/categories/:id", wrapper.UpdatePublicationCategory)
+	router.GET(options.BaseURL+"/v1/publication/grants", wrapper.ListPublicationGrants)
+	router.POST(options.BaseURL+"/v1/publication/grants", wrapper.CreatePublicationGrant)
+	router.DELETE(options.BaseURL+"/v1/publication/grants/:id", wrapper.RevokePublicationGrant)
+	router.PATCH(options.BaseURL+"/v1/publication/grants/:id", wrapper.UpdatePublicationGrant)
+	router.GET(options.BaseURL+"/v1/publication/workspace", wrapper.GetPublicationWorkspace)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.GetProfileRestriction)

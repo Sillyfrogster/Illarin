@@ -26,3 +26,22 @@ func recordAudit(
 	}
 	return nil
 }
+
+// recordPublicationAudit keeps who changed which app, category or grant.
+func recordPublicationAudit(
+	ctx context.Context,
+	tx pgx.Tx,
+	actor uuid.UUID,
+	action string,
+	appID, categoryID, grantID, subjectID *uuid.UUID,
+) error {
+	_, err := tx.Exec(ctx, `
+		insert into publication_audits
+		       (id, actor_id, action, app_id, category_id, grant_id, subject_id)
+		values ($1, $2, $3, $4, $5, $6, $7)
+	`, uuid.New(), actor, action, appID, categoryID, grantID, subjectID)
+	if err != nil {
+		return fmt.Errorf("record publication audit: %w", err)
+	}
+	return nil
+}

@@ -2,15 +2,12 @@ package publication
 
 import (
 	"context"
-	"crypto/sha256"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 	"unicode"
 
-	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -20,9 +17,6 @@ const (
 	distinctionExplanationLimit = 200
 	showcaseLimit               = 6
 )
-
-// markVariant is the one size a badge mark is published at.
-const markVariant = "grid"
 
 // SourceManual is the assignment source for an award the authority made by hand.
 const SourceManual = "manual"
@@ -34,14 +28,6 @@ const (
 	FormTitle    Form = "title"
 	FormBadge    Form = "badge"
 )
-
-// Mark is the Illarin-hosted image a badge is shown with.
-type Mark struct {
-	MediaID           uuid.UUID
-	Width             int
-	Height            int
-	DerivativeVersion uint32
-}
 
 // Distinction is one defined position, title or badge.
 type Distinction struct {
@@ -84,11 +70,6 @@ type DistinctionUpdate struct {
 	Name        *string
 	Explanation *string
 	Retired     *bool
-}
-
-// MarkURL addresses one badge mark on the byte path every image shares.
-func MarkURL(mediaID uuid.UUID, version uint32) string {
-	return fmt.Sprintf("/media/%s/%s/%d", mediaID, markVariant, version)
 }
 
 // Distinctions answers every definition, retired ones included.
@@ -250,33 +231,9 @@ func (s *Service) SetMark(
 		return Distinction{}, fmt.Errorf("begin mark change: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	var superseded *uuid.UUID
-	err = tx.QueryRow(ctx, `
-		select mark_media_id from profile_distinctions where id = $1 for update
-	`, id).Scan(&superseded)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Distinction{}, ErrNotFound
-	}
+	err = s.replaceMark(ctx, tx, distinctionMarks, id, stored.ID, prepared.Width, prepared.Height)
 	if err != nil {
-		return Distinction{}, fmt.Errorf("read the mark being replaced: %w", err)
-	}
-	mediaID := uuid.New()
-	_, err = tx.Exec(ctx, `
-		insert into distinction_media (id, blob_id, width, height) values ($1, $2, $3, $4)
-	`, mediaID, stored.ID, prepared.Width, prepared.Height)
-	if err != nil {
-		return Distinction{}, fmt.Errorf("record mark: %w", err)
-	}
-	_, err = tx.Exec(ctx, `
-		update profile_distinctions set mark_media_id = $2, updated_at = now() where id = $1
-	`, id, mediaID)
-	if err != nil {
-		return Distinction{}, fmt.Errorf("point the badge at its mark: %w", err)
-	}
-	if superseded != nil {
-		if _, err := tx.Exec(ctx, `delete from distinction_media where id = $1`, *superseded); err != nil {
-			return Distinction{}, fmt.Errorf("drop the superseded mark: %w", err)
-		}
+		return Distinction{}, err
 	}
 	if err := recordAudit(ctx, tx, actor, "distinction.marked", &id, nil, nil); err != nil {
 		return Distinction{}, err
@@ -285,42 +242,6 @@ func (s *Service) SetMark(
 		return Distinction{}, fmt.Errorf("commit mark change: %w", err)
 	}
 	return s.distinction(ctx, id)
-}
-
-// MarkVariant serves one size of a badge mark. Every mark is public.
-func (s *Service) MarkVariant(
-	ctx context.Context,
-	mediaID uuid.UUID,
-	variant string,
-	version uint32,
-) (string, string, error) {
-	if _, known := mediaproc.VariantByName(variant); !known || version != mediaproc.DerivativeVersion {
-		return "", "", ErrNotFound
-	}
-	var blobID uuid.UUID
-	var digestBytes []byte
-	err := s.pool.QueryRow(ctx, `
-		select media.blob_id, blob.sha256
-		  from distinction_media media
-		  join blobs blob on blob.id = media.blob_id
-		 where media.id = $1
-	`, mediaID).Scan(&blobID, &digestBytes)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", "", ErrNotFound
-	}
-	if err != nil {
-		return "", "", fmt.Errorf("find distinction media: %w", err)
-	}
-	if len(digestBytes) != sha256.Size {
-		return "", "", fmt.Errorf("distinction media blob has a %d-byte digest", len(digestBytes))
-	}
-	var digest [sha256.Size]byte
-	copy(digest[:], digestBytes)
-	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
-	if err != nil {
-		return "", "", err
-	}
-	return redirect, s.media.DerivativeType(), nil
 }
 
 func (s *Service) distinction(ctx context.Context, id uuid.UUID) (Distinction, error) {
@@ -344,7 +265,7 @@ const selectDistinctions = `
 	       definition.position, definition.retired_at is not null,
 	       mark.id, mark.width, mark.height
 	  from profile_distinctions definition
-	  left join distinction_media mark
+	  left join publication_media mark
 	         on mark.id = definition.mark_media_id and mark.blob_id is not null
 `
 
@@ -363,14 +284,7 @@ func collectDistinctions(rows pgx.Rows) ([]Distinction, error) {
 			return nil, fmt.Errorf("read a distinction: %w", err)
 		}
 		one.Form = Form(form)
-		if markID != nil && width != nil && height != nil {
-			one.Mark = &Mark{
-				MediaID:           *markID,
-				Width:             *width,
-				Height:            *height,
-				DerivativeVersion: mediaproc.DerivativeVersion,
-			}
-		}
+		one.Mark = scanMark(markID, width, height)
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {

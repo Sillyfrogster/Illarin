@@ -1,0 +1,575 @@
+paths:
+  /v1/publication/apps:
+    get:
+      operationId: listPublicationApps
+      description: >-
+        Every configured publication app, retired ones included, in the order
+        the publication authority chose. Only the publication authority may
+        read it.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The configured apps
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationAppList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+    post:
+      operationId: definePublicationApp
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefinePublicationAppRequest'
+      responses:
+        '201':
+          description: The app as it was configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationApp'
+        '400':
+          description: An app field is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '409':
+          description: Another app already uses that slug
+    put:
+      operationId: orderPublicationApps
+      description: Put the configured apps in the order they are listed.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderPublicationAppsRequest'
+      responses:
+        '200':
+          description: The configured apps in their new order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationAppList'
+        '400':
+          description: The order does not name every app exactly once
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+  /v1/publication/apps/{id}:
+    patch:
+      operationId: updatePublicationApp
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationAppRequest'
+      responses:
+        '200':
+          description: The app as it now reads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationApp'
+        '400':
+          description: An app field is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such app
+        '409':
+          description: Another app already uses that slug
+  /v1/publication/apps/{id}/mark:
+    put:
+      operationId: setPublicationAppMark
+      description: Upload the mark Illarin hosts and serves for this app.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: Send the image as the only form data part.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: The app carrying its new mark
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationApp'
+        '400':
+          description: The image is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such app
+        '413':
+          description: The image exceeds the upload limit
+        '503':
+          description: The storage reserve cannot accept the image
+  /v1/publication/categories:
+    get:
+      operationId: listPublicationCategories
+      description: >-
+        Every publication category, retired ones included, in the order the
+        publication authority chose. Only the publication authority may read it.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The publication categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationCategoryList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+    put:
+      operationId: orderPublicationCategories
+      description: Put the categories in the order they are listed.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderPublicationCategoriesRequest'
+      responses:
+        '200':
+          description: The categories in their new order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationCategoryList'
+        '400':
+          description: The order does not name every category exactly once
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+  /v1/publication/categories/{id}:
+    patch:
+      operationId: updatePublicationCategory
+      description: >-
+        Change what a category is called and whether it is still current. Its
+        slug is the stable identity posts and grants reference, so it does not
+        change.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationCategoryRequest'
+      responses:
+        '200':
+          description: The category as it now reads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationCategory'
+        '400':
+          description: A category field is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such category
+  /v1/publication/grants:
+    get:
+      operationId: listPublicationGrants
+      description: >-
+        Every grant ever made, revoked ones included. Only the publication
+        authority may read it.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The publication grants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationGrantList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+    post:
+      operationId: createPublicationGrant
+      description: Approve one verified account to publish for one app.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePublicationGrantRequest'
+      responses:
+        '201':
+          description: The grant as it was made
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationGrant'
+        '400':
+          description: The app, category set or default category is not usable
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such account
+        '409':
+          description: That account already publishes for that app
+  /v1/publication/grants/{id}:
+    patch:
+      operationId: updatePublicationGrant
+      description: Narrow or widen the categories one grant allows.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationGrantRequest'
+      responses:
+        '200':
+          description: The grant as it now stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationGrant'
+        '400':
+          description: The category set or default category is not usable
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such grant
+    delete:
+      operationId: revokePublicationGrant
+      description: >-
+        End an approval. Editor access stops at once and the contributor badge
+        goes with it, while the grant record and everything already published
+        stay.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The grant no longer permits publication
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such active grant
+  /v1/publication/workspace:
+    get:
+      operationId: getPublicationWorkspace
+      description: >-
+        The apps, categories and defaults the signed-in account may publish
+        under. An account with no active grant gets an empty workspace.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The signed-in account's publication workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationWorkspace'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+components:
+  schemas:
+    PublicationApp:
+      type: object
+      required:
+        - id
+        - slug
+        - name
+        - home
+        - position
+        - retired
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        home:
+          type: string
+        mark:
+          anyOf:
+            - $ref: './distinctions.yaml#/components/schemas/DistinctionMark'
+            - type: 'null'
+        position:
+          type: integer
+        retired:
+          type: boolean
+    PublicationAppList:
+      type: object
+      required:
+        - apps
+      properties:
+        apps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationApp'
+    DefinePublicationAppRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - name
+        - home
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        home:
+          type: string
+    UpdatePublicationAppRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        home:
+          type: string
+        retired:
+          type: boolean
+    OrderPublicationAppsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - appIds
+      properties:
+        appIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    PublicationCategory:
+      type: object
+      required:
+        - id
+        - slug
+        - label
+        - position
+        - retired
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        label:
+          type: string
+        position:
+          type: integer
+        retired:
+          type: boolean
+    PublicationCategoryList:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationCategory'
+    UpdatePublicationCategoryRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        label:
+          type: string
+        retired:
+          type: boolean
+    OrderPublicationCategoriesRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - categoryIds
+      properties:
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    PublicationGrant:
+      type: object
+      required:
+        - id
+        - handle
+        - app
+        - categories
+        - defaultCategory
+        - grantedAt
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        handle:
+          type: string
+        app:
+          $ref: '#/components/schemas/PublicationApp'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationCategory'
+        defaultCategory:
+          $ref: '#/components/schemas/PublicationCategory'
+        grantedAt:
+          type: string
+          format: date-time
+        revokedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        active:
+          type: boolean
+    PublicationGrantList:
+      type: object
+      required:
+        - grants
+      properties:
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationGrant'
+    CreatePublicationGrantRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - handle
+        - appId
+        - categoryIds
+        - defaultCategoryId
+      properties:
+        handle:
+          type: string
+        appId:
+          type: string
+          format: uuid
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        defaultCategoryId:
+          type: string
+          format: uuid
+    UpdatePublicationGrantRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        defaultCategoryId:
+          type: string
+          format: uuid
+    PublicationWorkspace:
+      type: object
+      required:
+        - handle
+        - grants
+      properties:
+        handle:
+          type: string
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationGrant'

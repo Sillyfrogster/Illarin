@@ -205,7 +205,7 @@ func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountI
 	}
 	if !held {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only Illarin's publication authority can manage distinctions.",
+			"error": "Only Illarin's publication authority can do that.",
 		})
 		return accountIdentity{}, false
 	}

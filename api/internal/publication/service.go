@@ -20,6 +20,14 @@ var (
 	ErrDistinctionForm  = errors.New("distinction form does not allow that")
 	ErrIncompleteOrder  = errors.New("order does not name every member exactly once")
 	ErrRetiredAssigning = errors.New("a retired distinction cannot be assigned")
+
+	ErrAppNotFound       = errors.New("no such publication app")
+	ErrCategoryNotFound  = errors.New("no such publication category")
+	ErrGrantNotFound     = errors.New("no such publication grant")
+	ErrSlugTaken         = errors.New("another publication app already uses that slug")
+	ErrAccountUnverified = errors.New("the account has not verified its email")
+	ErrAlreadyGranted    = errors.New("the account already publishes for that app")
+	ErrGrantRevoked      = errors.New("the grant has been revoked")
 )
 
 // FieldError names the field a request was refused over.
