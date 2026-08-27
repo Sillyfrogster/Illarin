@@ -1,0 +1,87 @@
+.preview {
+  position: sticky;
+  top: calc(var(--header-height) + 28px);
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.caption,
+.note {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note {
+  font-size: var(--type-secondary-size);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 20px;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.band {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 22px 22px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.identity {
+  min-width: 0;
+  align-self: center;
+}
+
+.name {
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: var(--type-lead-size);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.handle {
+  margin-top: 3px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  overflow-wrap: anywhere;
+}
+
+.biography {
+  grid-column: 1 / -1;
+  color: var(--color-text-primary);
+  font-size: var(--type-secondary-size);
+  line-height: 21px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.reach {
+  display: grid;
+  gap: 6px;
+  grid-column: 1 / -1;
+  list-style: none;
+}
+
+.reach li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.reach svg {
+  flex: none;
+}

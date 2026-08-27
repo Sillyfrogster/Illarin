@@ -1,4 +1,7 @@
+import Image from "next/image";
 import styles from "./CreatorMark.module.css";
+
+type Portrait = { url: string; width: number; height: number };
 
 /** Spreads handles across the tonal steps and mark angles without storing a value. */
 function shadeOf(handle: string) {
@@ -11,12 +14,29 @@ function shadeOf(handle: string) {
 
 export function CreatorMark({
   handle,
+  portrait,
   compact = false,
 }: {
   handle: string;
+  portrait?: Portrait | null;
   compact?: boolean;
 }) {
   const hash = shadeOf(handle);
+
+  if (portrait) {
+    return (
+      <span className={styles.mark} data-compact={compact || undefined}>
+        <Image
+          className={styles.portrait}
+          src={portrait.url}
+          alt=""
+          fill
+          sizes="128px"
+          unoptimized
+        />
+      </span>
+    );
+  }
 
   return (
     <span

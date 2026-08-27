@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
-import { CreatorMark } from "@/components/media/CreatorMark";
 import type {
   BrowseFilters,
   BrowsePage,
@@ -9,6 +8,7 @@ import type {
 } from "@/lib/api/query";
 import { BrowseResults } from "../browse/BrowseResults";
 import { DeletedAssets } from "./DeletedAssets";
+import { ProfileIdentity } from "./ProfileIdentity";
 import styles from "./ProfileListing.module.css";
 
 export function ProfileListing({
@@ -27,25 +27,7 @@ export function ProfileListing({
 
   return (
     <div className={styles.page}>
-      <header className={styles.profileHeader}>
-        <div className={styles.profileArt} aria-hidden="true" />
-        <Shell className={styles.profileHeaderInner}>
-          <CreatorMark handle={profile.handle} />
-          <div className={styles.identity}>
-            <h1 data-long={profile.handle.length > 20 || undefined}>
-              @{profile.handle}
-            </h1>
-            <div className={styles.scope}>
-              <strong>{isOwner ? "Owner view" : "Public profile"}</strong>
-              <span>
-                {isOwner
-                  ? "All active work and recoverable deletions"
-                  : "Published work"}
-              </span>
-            </div>
-          </div>
-        </Shell>
-      </header>
+      <ProfileIdentity profile={profile} isOwner={isOwner} />
 
       {deletedAssets !== null ? (
         <div className={styles.sectionBar}>

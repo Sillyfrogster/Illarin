@@ -1,6 +1,7 @@
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { Shell } from "@/components/layout/Shell";
 import { LinkedInstances } from "@/components/linking/LinkedInstances";
+import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import styles from "./SettingsPage.module.css";
 
 const DISCORD_NOTICES: Record<string, string> = {
@@ -30,12 +31,19 @@ export default async function SettingsPage({
         <header className={styles.heading}>
           <h1>Account settings</h1>
           <p>
-            Manage sign-in methods, email verification, and the applications
-            that can access this account.
+            Manage your public identity, sign-in methods, email verification,
+            and the applications that can access this account.
           </p>
         </header>
         <div className={styles.identityScene} aria-hidden="true" />
         <div className={styles.settingsGrid}>
+          <section className={styles.accountColumn}>
+            <header className={styles.regionHeading}>
+              <h2>Public profile</h2>
+              <p>The identity visitors meet at your handle.</p>
+            </header>
+            <PublicProfileCard />
+          </section>
           <section className={styles.accountColumn}>
             <header className={styles.regionHeading}>
               <h2>Sign-in methods</h2>
