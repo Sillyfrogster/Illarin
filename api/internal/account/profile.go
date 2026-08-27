@@ -246,9 +246,13 @@ func (s *Service) AvatarVariant(
 }
 
 func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *uuid.UUID) error {
+	var locked uuid.UUID
+	if err := tx.QueryRow(ctx, `select id from users where id = $1 for update`, ownerID).Scan(&locked); err != nil {
+		return fmt.Errorf("lock the account changing its avatar: %w", err)
+	}
 	var superseded *uuid.UUID
 	err := tx.QueryRow(ctx, `
-		select avatar_media_id from public_profiles where user_id = $1 for update
+		select avatar_media_id from public_profiles where user_id = $1
 	`, ownerID).Scan(&superseded)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("read the avatar being replaced: %w", err)
