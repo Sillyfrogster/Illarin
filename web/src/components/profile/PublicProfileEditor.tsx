@@ -38,6 +38,23 @@ type Draft = {
 
 type Answer = Profile & { error?: string; field?: string };
 
+function FieldError({
+  id,
+  shown,
+  children,
+}: {
+  id: string;
+  shown: boolean;
+  children: string;
+}) {
+  if (!shown || !children) return null;
+  return (
+    <p className={styles.fieldError} id={id}>
+      {children}
+    </p>
+  );
+}
+
 function draftOf(profile: Profile): Draft {
   return {
     displayName: profile.displayName,
@@ -53,8 +70,10 @@ export function PublicProfileEditor() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [message, setMessage] = useState("");
   const [failedField, setFailedField] = useState("");
+  const [fieldMessage, setFieldMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [avatarPending, setAvatarPending] = useState(false);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const handle = account?.handle;
 
@@ -174,6 +193,7 @@ export function PublicProfileEditor() {
     setSaving(true);
     setMessage("");
     setFailedField("");
+    setFieldMessage("");
     try {
       const response = await browserFetch("/api/v1/account/profile", {
         method: "PUT",
@@ -183,8 +203,12 @@ export function PublicProfileEditor() {
       });
       const answer = (await response.json()) as Answer;
       if (!response.ok) {
-        setMessage(answer.error ?? "The profile could not be saved.");
+        const reason = answer.error ?? "The profile could not be saved.";
         setFailedField(answer.field ?? "");
+        setFieldMessage(answer.field ? reason : "");
+        setMessage(
+          answer.field ? "Check the marked field and save again." : reason,
+        );
         return;
       }
       accept(answer);
@@ -224,6 +248,7 @@ export function PublicProfileEditor() {
 
   async function removeAvatar() {
     setAvatarPending(true);
+    setConfirmingRemoval(false);
     setMessage("");
     try {
       const response = await browserFetch("/api/v1/account/profile/avatar", {
@@ -265,18 +290,42 @@ export function PublicProfileEditor() {
                 disabled={avatarPending}
               >
                 <ImageUp size={15} strokeWidth={1.6} aria-hidden="true" />
-                {profile.avatar ? "Replace image" : "Upload image"}
+                {avatarPending
+                  ? "Working…"
+                  : profile.avatar
+                    ? "Replace image"
+                    : "Upload image"}
               </button>
-              {profile.avatar ? (
+              {profile.avatar && !confirmingRemoval ? (
                 <button
                   type="button"
                   className={styles.quietAction}
-                  onClick={removeAvatar}
+                  onClick={() => setConfirmingRemoval(true)}
                   disabled={avatarPending}
                 >
                   <Trash2 size={15} strokeWidth={1.6} aria-hidden="true" />
                   Remove
                 </button>
+              ) : null}
+              {profile.avatar && confirmingRemoval ? (
+                <span className={styles.confirm}>
+                  Remove it? Your mark takes its place.
+                  <button
+                    type="button"
+                    className={styles.criticalAction}
+                    onClick={removeAvatar}
+                    disabled={avatarPending}
+                  >
+                    Remove
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.quietAction}
+                    onClick={() => setConfirmingRemoval(false)}
+                  >
+                    Keep
+                  </button>
+                </span>
               ) : null}
             </div>
             <input
@@ -303,8 +352,19 @@ export function PublicProfileEditor() {
             placeholder={`@${profile.handle}`}
             value={draft.displayName}
             aria-invalid={failedField === "displayName" || undefined}
+            aria-describedby={
+              failedField === "displayName"
+                ? "profile-display-name-error"
+                : undefined
+            }
             onChange={(event) => change("displayName", event.target.value)}
           />
+          <FieldError
+            id="profile-display-name-error"
+            shown={failedField === "displayName"}
+          >
+            {fieldMessage}
+          </FieldError>
           <p>
             Shown above your handle. It does not have to be unique, and clearing
             it puts your handle back in its place.
@@ -320,8 +380,19 @@ export function PublicProfileEditor() {
             maxLength={BIOGRAPHY_LIMIT}
             value={draft.biography}
             aria-invalid={failedField === "biography" || undefined}
+            aria-describedby={
+              failedField === "biography"
+                ? "profile-biography-error"
+                : undefined
+            }
             onChange={(event) => change("biography", event.target.value)}
           />
+          <FieldError
+            id="profile-biography-error"
+            shown={failedField === "biography"}
+          >
+            {fieldMessage}
+          </FieldError>
           <p className={styles.hint}>
             <span>Plain text, no formatting.</span>
             <span
@@ -344,8 +415,19 @@ export function PublicProfileEditor() {
             placeholder="Leave empty to show no address"
             value={draft.contactEmail}
             aria-invalid={failedField === "contactEmail" || undefined}
+            aria-describedby={
+              failedField === "contactEmail"
+                ? "profile-contact-error"
+                : undefined
+            }
             onChange={(event) => change("contactEmail", event.target.value)}
           />
+          <FieldError
+            id="profile-contact-error"
+            shown={failedField === "contactEmail"}
+          >
+            {fieldMessage}
+          </FieldError>
           <p>
             Anyone can read this. It is separate from your sign-in address,
             which stays private and is never copied here.
@@ -361,6 +443,9 @@ export function PublicProfileEditor() {
             Up to {LINK_LIMIT} addresses, in the order you list them. Each one
             needs a label and an https address.
           </p>
+          <FieldError id="profile-links-error" shown={failedField === "links"}>
+            {fieldMessage}
+          </FieldError>
           {draft.links.length > 0 ? (
             <ol className={styles.linkList}>
               {draft.links.map((link, index) => (
