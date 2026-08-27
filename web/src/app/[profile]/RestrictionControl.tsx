@@ -28,6 +28,7 @@ export function RestrictionControl({
   const [composing, setComposing] = useState(false);
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
+  const [confirmingRestore, setConfirmingRestore] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export function RestrictionControl({
   async function restore() {
     if (pending) return;
     setPending(true);
+    setConfirmingRestore(false);
     setMessage("");
     try {
       await restoreProfile(handle);
@@ -98,14 +100,39 @@ export function RestrictionControl({
             <p className={styles.reason}>{inForce.reason}</p>
           </>
         ) : null}
-        <button
-          type="button"
-          className={styles.action}
-          onClick={restore}
-          disabled={pending}
-        >
-          {pending ? "Restoring…" : "Restore profile"}
-        </button>
+        {confirmingRestore ? (
+          <div className={styles.confirm}>
+            <p className={styles.note}>
+              Restore it? Everything the creator added becomes public again.
+            </p>
+            <div className={styles.commit}>
+              <button
+                type="button"
+                className={styles.action}
+                onClick={restore}
+                disabled={pending}
+              >
+                {pending ? "Restoring…" : "Restore"}
+              </button>
+              <button
+                type="button"
+                className={styles.quiet}
+                onClick={() => setConfirmingRestore(false)}
+              >
+                Keep hidden
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={styles.action}
+            onClick={() => setConfirmingRestore(true)}
+            disabled={pending}
+          >
+            Restore profile
+          </button>
+        )}
         {message ? (
           <p className={styles.failure} role="alert">
             {message}
@@ -114,6 +141,8 @@ export function RestrictionControl({
       </section>
     );
   }
+
+  const remaining = REASON_LIMIT - reason.length;
 
   if (!composing) {
     return (
@@ -153,7 +182,10 @@ export function RestrictionControl({
         required
       />
       <p className={styles.note}>
-        Only admins read this. It is kept in the audit record.
+        <span>Only admins read this. It is kept in the audit record.</span>
+        <span className={styles.count} data-low={remaining <= 60 || undefined}>
+          {remaining} left
+        </span>
       </p>
       <div className={styles.commit}>
         <button

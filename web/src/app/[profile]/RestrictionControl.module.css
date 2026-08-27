@@ -56,6 +56,10 @@
 }
 
 .note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
   line-height: 20px;
@@ -93,6 +97,25 @@
 
 .staff textarea:focus-visible {
   border-color: var(--color-emphasis);
+}
+
+.confirm {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.count {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.count[data-low] {
+  color: var(--color-critical-strong);
+  font-weight: 700;
 }
 
 .commit {

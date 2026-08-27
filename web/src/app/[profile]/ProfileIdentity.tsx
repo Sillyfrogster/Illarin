@@ -46,7 +46,8 @@ export function ProfileIdentity({
             </h1>
             <p className={styles.restricted}>
               <ShieldOff size={15} strokeWidth={1.6} aria-hidden="true" />
-              Illarin has restricted this profile. Its published work is below.
+              Illarin has hidden what this creator added to their profile. Their
+              published work is below.
             </p>
           </div>
           {actions}
