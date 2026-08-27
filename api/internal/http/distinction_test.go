@@ -401,6 +401,14 @@ func TestADistinctionSatisfiesNoPermissionCheck(t *testing.T) {
 		t.Fatalf("titled read of another account status = %d, want 403", listed.Code)
 	}
 
+	withheld := send(t, stack.router, authorized(jsonRequest(t,
+		http.MethodPut, "/v1/assets/"+uuid.New().String()+"/withhold",
+		`{"reason":"Titled, not an admin"}`,
+	), member))
+	if withheld.Code != http.StatusForbidden {
+		t.Fatalf("titled withhold status = %d, want 403: %s", withheld.Code, withheld.Body.String())
+	}
+
 	var role string
 	if err := stack.pool.QueryRow(context.Background(), `
 		select role from users where username = 'titled.member'
