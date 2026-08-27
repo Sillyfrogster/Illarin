@@ -2399,7 +2399,10 @@ type Profile struct {
 	Id           openapi_types.UUID   `json:"id"`
 	Links        []ProfileLink        `json:"links"`
 	Positions    []ProfileDistinction `json:"positions"`
-	Titles       []ProfileDistinction `json:"titles"`
+
+	// Restricted True when an admin has hidden the added identity. The handle and the published-asset listing stay; every other field answers empty.
+	Restricted bool                 `json:"restricted"`
+	Titles     []ProfileDistinction `json:"titles"`
 }
 
 // ProfileAvatar defines model for ProfileAvatar.
@@ -2421,6 +2424,13 @@ type ProfileDistinction struct {
 type ProfileLink struct {
 	Address string `json:"address"`
 	Label   string `json:"label"`
+}
+
+// ProfileRestriction The admin-only record of why a profile is hidden.
+type ProfileRestriction struct {
+	Reason       string    `json:"reason"`
+	RestrictedAt time.Time `json:"restrictedAt"`
+	RestrictedBy *string   `json:"restrictedBy,omitempty"`
 }
 
 // PromptListContent A preset's prompt, in the order it is sent. One level of grouping is the list's own nesting rather than a second element.
@@ -2544,6 +2554,11 @@ type RenameHandleRequest struct {
 
 // RequestCode defines model for RequestCode.
 type RequestCode = string
+
+// RestrictProfileRequest defines model for RestrictProfileRequest.
+type RestrictProfileRequest struct {
+	Reason string `json:"reason"`
+}
 
 // SaveAssetBlockRequest defines model for SaveAssetBlockRequest.
 type SaveAssetBlockRequest struct {
@@ -3124,6 +3139,9 @@ type DenyLinkRequestJSONRequestBody = DeviceLinkDecision
 // ExchangeLinkAuthorizationJSONRequestBody defines body for ExchangeLinkAuthorization for application/json ContentType.
 type ExchangeLinkAuthorizationJSONRequestBody = ExchangeLinkAuthorization
 
+// RestrictProfileJSONRequestBody defines body for RestrictProfile for application/json ContentType.
+type RestrictProfileJSONRequestBody = RestrictProfileRequest
+
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
 	var body PendingLinkPollResult
@@ -3455,6 +3473,15 @@ type ServerInterface interface {
 
 	// (GET /v1/profiles/{handle}/deleted)
 	ListDeletedAssets(c *gin.Context, handle string)
+
+	// (DELETE /v1/profiles/{handle}/restriction)
+	RestoreProfile(c *gin.Context, handle string)
+
+	// (GET /v1/profiles/{handle}/restriction)
+	GetProfileRestriction(c *gin.Context, handle string)
+
+	// (PUT /v1/profiles/{handle}/restriction)
+	RestrictProfile(c *gin.Context, handle string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -5431,6 +5458,81 @@ func (siw *ServerInterfaceWrapper) ListDeletedAssets(c *gin.Context) {
 	siw.Handler.ListDeletedAssets(c, handle)
 }
 
+// RestoreProfile operation middleware
+func (siw *ServerInterfaceWrapper) RestoreProfile(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestoreProfile(c, handle)
+}
+
+// GetProfileRestriction operation middleware
+func (siw *ServerInterfaceWrapper) GetProfileRestriction(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetProfileRestriction(c, handle)
+}
+
+// RestrictProfile operation middleware
+func (siw *ServerInterfaceWrapper) RestrictProfile(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestrictProfile(c, handle)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -5506,6 +5608,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.OrderAccountDistinctions)
 	router.DELETE(options.BaseURL+"/v1/accounts/:handle/distinctions/:assignmentId", wrapper.RemoveAccountDistinction)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
+	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
+	router.GET(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.GetProfileRestriction)
+	router.PUT(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestrictProfile)
 	router.GET(options.BaseURL+"/v1/legacy-profiles/:discordId", wrapper.ResolveLegacyProfile)
 	router.GET(options.BaseURL+"/v1/assets", wrapper.ListAssets)
 	router.POST(options.BaseURL+"/v1/assets", wrapper.CreateAsset)

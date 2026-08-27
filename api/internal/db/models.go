@@ -365,6 +365,22 @@ type ProfileMedium struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type ProfileRestriction struct {
+	UserID       pgtype.UUID
+	RestrictedBy pgtype.UUID
+	Reason       string
+	RestrictedAt pgtype.Timestamptz
+}
+
+type ProfileRestrictionAudit struct {
+	ID         pgtype.UUID
+	ActorID    pgtype.UUID
+	SubjectID  pgtype.UUID
+	Action     string
+	Reason     string
+	RecordedAt pgtype.Timestamptz
+}
+
 type ProtectedContent struct {
 	AssetID     pgtype.UUID
 	OwnerKind   string

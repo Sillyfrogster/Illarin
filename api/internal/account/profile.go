@@ -60,6 +60,7 @@ type PublicProfile struct {
 	Avatar                         *ProfileAvatar
 	Links                          []ProfileLink
 	ShowNSFWContributionsOnProfile bool
+	Restricted                     bool
 }
 
 // ProfileEdit is the whole set of added fields. An empty value removes one.
@@ -77,16 +78,18 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	var width, height *int
 	err := s.pool.QueryRow(ctx, `
 		select account.id, account.username, account.show_nsfw_contributions_on_profile,
+		       restriction.user_id is not null,
 		       coalesce(profile.display_name, ''), coalesce(profile.biography, ''),
 		       coalesce(profile.contact_email, ''),
 		       avatar.id, avatar.width, avatar.height
 		  from users account
+		  left join profile_restrictions restriction on restriction.user_id = account.id
 		  left join public_profiles profile on profile.user_id = account.id
 		  left join profile_media avatar
 		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
 		 where account.username = $1
 	`, handle).Scan(
-		&found.ID, &found.Handle, &found.ShowNSFWContributionsOnProfile,
+		&found.ID, &found.Handle, &found.ShowNSFWContributionsOnProfile, &found.Restricted,
 		&found.DisplayName, &found.Biography, &found.ContactEmail,
 		&avatarID, &width, &height,
 	)
@@ -95,6 +98,15 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	}
 	if err != nil {
 		return PublicProfile{}, fmt.Errorf("read public profile: %w", err)
+	}
+	if found.Restricted {
+		return PublicProfile{
+			ID:                             found.ID,
+			Handle:                         found.Handle,
+			ShowNSFWContributionsOnProfile: found.ShowNSFWContributionsOnProfile,
+			Links:                          []ProfileLink{},
+			Restricted:                     true,
+		}, nil
 	}
 	if avatarID != nil && width != nil && height != nil {
 		found.Avatar = &ProfileAvatar{
@@ -116,6 +128,9 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit) (PublicProfile, error) {
 	edit, err := validateProfileEdit(in)
 	if err != nil {
+		return PublicProfile{}, err
+	}
+	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
 		return PublicProfile{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -155,6 +170,9 @@ func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit
 
 // SetAvatar puts an image at a fresh address and drops the one it replaces.
 func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) (PublicProfile, error) {
+	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
+		return PublicProfile{}, err
+	}
 	stored, prepared, err := s.media.Accept(ctx, file)
 	if err != nil {
 		return PublicProfile{}, err
@@ -183,6 +201,9 @@ func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) 
 
 // RemoveAvatar takes the portrait off a profile and lets its bytes go.
 func (s *Service) RemoveAvatar(ctx context.Context, owner Account) (PublicProfile, error) {
+	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
+		return PublicProfile{}, err
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return PublicProfile{}, fmt.Errorf("begin avatar removal: %w", err)
@@ -271,6 +292,18 @@ func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *u
 	}
 	if _, err := tx.Exec(ctx, `delete from profile_media where id = $1`, *superseded); err != nil {
 		return fmt.Errorf("drop the superseded avatar: %w", err)
+	}
+	return nil
+}
+
+// refuseWhileRestricted stops an owner editing an identity an admin has hidden.
+func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
+	restricted, err := s.profileIsRestricted(ctx, ownerID)
+	if err != nil {
+		return err
+	}
+	if restricted {
+		return ErrProfileRestricted
 	}
 	return nil
 }

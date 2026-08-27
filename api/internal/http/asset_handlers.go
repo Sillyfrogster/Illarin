@@ -16,7 +16,7 @@ import (
 )
 
 func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
-	admin, ok := h.admin(c)
+	admin, ok := h.adminAccount(c, "manage withholds")
 	if !ok {
 		return
 	}
@@ -39,7 +39,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
 }
 
 func (h *Handlers) ClearAssetWithhold(c *gin.Context, id types.UUID) {
-	if _, ok := h.admin(c); !ok {
+	if _, ok := h.adminAccount(c, "manage withholds"); !ok {
 		return
 	}
 	err := h.assets.ClearWithhold(c.Request.Context(), uuid.UUID(id))
@@ -51,28 +51,6 @@ func (h *Handlers) ClearAssetWithhold(c *gin.Context, id types.UUID) {
 	default:
 		c.Status(http.StatusNoContent)
 	}
-}
-
-func (h *Handlers) admin(c *gin.Context) (account.Account, bool) {
-	token, err := c.Cookie(sessionCookieName)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sign in before managing assets."})
-		return account.Account{}, false
-	}
-	current, err := h.accounts.Current(c.Request.Context(), token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check the signed-in account."})
-		return account.Account{}, false
-	}
-	if current == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sign in before managing assets."})
-		return account.Account{}, false
-	}
-	if !current.EmailVerified || current.Role != account.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only an admin can manage withholds."})
-		return account.Account{}, false
-	}
-	return *current, true
 }
 
 func (h *Handlers) viewerID(c *gin.Context) (*uuid.UUID, bool) {

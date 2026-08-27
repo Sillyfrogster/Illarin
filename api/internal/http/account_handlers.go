@@ -586,3 +586,16 @@ func (h *Handlers) verifiedAccount(c *gin.Context, action string) (account.Accou
 	}
 	return current, true
 }
+
+// adminAccount answers the signed-in account only when it carries the admin role.
+func (h *Handlers) adminAccount(c *gin.Context, action string) (account.Account, bool) {
+	current, ok := h.verifiedAccount(c, action)
+	if !ok {
+		return account.Account{}, false
+	}
+	if current.Role != account.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only an admin can " + action + "."})
+		return account.Account{}, false
+	}
+	return current, true
+}

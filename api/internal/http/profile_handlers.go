@@ -11,6 +11,9 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
+// restrictedOwnerMessage is all an owner learns when a restriction blocks a save.
+const restrictedOwnerMessage = "An admin has restricted your public profile. Contact Illarin to have it reviewed."
+
 func (h *Handlers) SavePublicProfile(c *gin.Context) {
 	owner, ok := h.verifiedAccount(c, "editing your public profile")
 	if !ok {
@@ -56,6 +59,10 @@ func (h *Handlers) SetProfileAvatar(c *gin.Context) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 	saved, err := h.accounts.SetAvatar(c.Request.Context(), owner, limitedFile)
+	if errors.Is(err, account.ErrProfileRestricted) {
+		h.profileError(c, err)
+		return
+	}
 	if err != nil {
 		h.refuseProfile(c, err)
 		return
@@ -82,11 +89,14 @@ func (h *Handlers) RemoveProfileAvatar(c *gin.Context) {
 
 func (h *Handlers) profileError(c *gin.Context, err error) {
 	var field account.FieldError
-	if errors.As(err, &field) {
+	switch {
+	case errors.As(err, &field):
 		c.JSON(http.StatusBadRequest, gin.H{"error": field.Message, "field": field.Field})
-		return
+	case errors.Is(err, account.ErrProfileRestricted):
+		c.JSON(http.StatusForbidden, gin.H{"error": restrictedOwnerMessage})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the profile."})
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the profile."})
 }
 
 // refuseProfile answers an avatar upload the byte path could not take.
@@ -110,6 +120,10 @@ func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 
 // showProfile answers a public profile with the distinctions it shows.
 func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
+	if found.Restricted {
+		c.JSON(http.StatusOK, toAPIProfile(found, publication.Showcase{}))
+		return
+	}
 	shown, err := h.publications.Showcase(c.Request.Context(), found.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
@@ -133,6 +147,7 @@ func toAPIProfile(found account.PublicProfile, shown publication.Showcase) Profi
 		Positions:    toAPIProfileDistinctions(shown.Positions),
 		Titles:       toAPIProfileDistinctions(shown.Titles),
 		Badges:       toAPIProfileDistinctions(shown.Badges),
+		Restricted:   found.Restricted,
 	}
 	if found.Avatar != nil {
 		profile.Avatar = &ProfileAvatar{

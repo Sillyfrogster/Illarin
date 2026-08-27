@@ -92,6 +92,8 @@ paths:
     $ref: ./distinctions.yaml#/paths/~1v1~1accounts~1{handle}~1distinctions~1{assignmentId}
   /v1/profiles/{handle}:
     $ref: ./accounts.yaml#/paths/~1v1~1profiles~1{handle}
+  /v1/profiles/{handle}/restriction:
+    $ref: ./accounts.yaml#/paths/~1v1~1profiles~1{handle}~1restriction
   /v1/legacy-profiles/{discordId}:
     $ref: ./accounts.yaml#/paths/~1v1~1legacy-profiles~1{discordId}
   /v1/assets:
@@ -227,6 +229,10 @@ components:
       $ref: ./accounts.yaml#/components/schemas/SessionState
     Profile:
       $ref: ./accounts.yaml#/components/schemas/Profile
+    ProfileRestriction:
+      $ref: ./accounts.yaml#/components/schemas/ProfileRestriction
+    RestrictProfileRequest:
+      $ref: ./accounts.yaml#/components/schemas/RestrictProfileRequest
     DistinctionForm:
       $ref: ./distinctions.yaml#/components/schemas/DistinctionForm
     Distinction:
