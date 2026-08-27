@@ -285,6 +285,10 @@
     line-height: 22px;
   }
 
+  .reach a {
+    min-height: 44px;
+  }
+
   .edit {
     min-height: 44px;
     grid-column: 1 / -1;

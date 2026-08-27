@@ -221,7 +221,11 @@ export function DefinitionColumn({
             />
           </>
         ) : null}
-        <button type="submit" disabled={busy || !name.trim()}>
+        <button
+          type="submit"
+          disabled={busy || !name.trim()}
+          aria-label={`Add to ${heading}`}
+        >
           <Plus size={15} strokeWidth={2} aria-hidden="true" />
           Add
         </button>

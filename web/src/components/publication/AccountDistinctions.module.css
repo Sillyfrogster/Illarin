@@ -237,3 +237,10 @@
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
 }
+
+@media (max-width: 720px) {
+  .rowActions button {
+    width: 44px;
+    height: 44px;
+  }
+}
