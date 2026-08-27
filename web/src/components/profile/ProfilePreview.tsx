@@ -1,5 +1,5 @@
 import { ArrowUpRight, Mail } from "lucide-react";
-import { CreatorMark } from "@/components/media/CreatorMark";
+import { Avatar } from "@/components/media/Avatar";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import styles from "./ProfilePreview.module.css";
 
@@ -24,7 +24,7 @@ export function ProfilePreview({
     <aside className={styles.preview} aria-label="Profile preview">
       <p className={styles.caption}>As visitors see it</p>
       <div className={styles.band}>
-        <CreatorMark handle={handle} portrait={avatar} compact />
+        <Avatar handle={handle} portrait={avatar} size="sm" />
         <div className={styles.identity}>
           <p className={styles.name}>{displayName || `@${handle}`}</p>
           {displayName ? <p className={styles.handle}>@{handle}</p> : null}

@@ -17,7 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { CreatorMark } from "@/components/media/CreatorMark";
+import { Avatar } from "@/components/media/Avatar";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
@@ -275,7 +275,7 @@ export function PublicProfileEditor() {
     <div className={styles.desk}>
       <form className={styles.editor} onSubmit={save} noValidate>
         <div className={styles.portrait}>
-          <CreatorMark handle={profile.handle} portrait={profile.avatar} />
+          <Avatar handle={profile.handle} portrait={profile.avatar} />
           <div className={styles.portraitCopy}>
             <h2>Avatar</h2>
             <p>

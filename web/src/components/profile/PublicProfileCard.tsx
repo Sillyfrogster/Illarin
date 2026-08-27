@@ -3,7 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CreatorMark } from "@/components/media/CreatorMark";
+import { Avatar } from "@/components/media/Avatar";
 import type { Profile } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import styles from "./PublicProfileCard.module.css";
@@ -43,7 +43,7 @@ export function PublicProfileCard() {
 
   return (
     <section className={styles.card}>
-      <CreatorMark handle={profile.handle} portrait={profile.avatar} compact />
+      <Avatar handle={profile.handle} portrait={profile.avatar} size="sm" />
       <div className={styles.copy}>
         <h3>{profile.displayName || `@${profile.handle}`}</h3>
         <p>

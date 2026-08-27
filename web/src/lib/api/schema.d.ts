@@ -601,6 +601,92 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/distinctions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every distinction definition, retired ones included, in the order the publication authority chose. Only the publication authority may read it. */
+    get: operations["listDistinctions"];
+    /** @description Put one form's definitions in the order they are listed. */
+    put: operations["orderDistinctions"];
+    post: operations["defineDistinction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/distinctions/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations["updateDistinction"];
+    trace?: never;
+  };
+  "/v1/distinctions/{id}/mark": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Upload the badge mark Illarin hosts and serves for this distinction. */
+    put: operations["setDistinctionMark"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/accounts/{handle}/distinctions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every distinction one account has ever been given, inactive ones included. Only the publication authority may read it. */
+    get: operations["listAccountDistinctions"];
+    /** @description Put one account's active assignments in the order they are listed. */
+    put: operations["orderAccountDistinctions"];
+    post: operations["assignDistinction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/accounts/{handle}/distinctions/{assignmentId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Stop showing an assignment publicly. The record stays, so the history of who issued it and when remains readable. */
+    delete: operations["removeAccountDistinction"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/profiles/{handle}": {
     parameters: {
       query?: never;
@@ -1170,6 +1256,8 @@ export interface components {
     };
     SessionState: {
       user: components["schemas"]["Account"] | null;
+      /** @description True when this account is the one recorded as holding publication authority. It is not a system role and grants nothing on its own. */
+      publicationAuthority: boolean;
     };
     Profile: {
       /** Format: uuid */
@@ -1180,6 +1268,72 @@ export interface components {
       contactEmail: string;
       avatar?: components["schemas"]["ProfileAvatar"] | null;
       links: components["schemas"]["ProfileLink"][];
+      positions: components["schemas"]["ProfileDistinction"][];
+      titles: components["schemas"]["ProfileDistinction"][];
+      badges: components["schemas"]["ProfileDistinction"][];
+    };
+    /** @enum {string} */
+    DistinctionForm: "position" | "title" | "badge";
+    Distinction: {
+      /** Format: uuid */
+      id: string;
+      form: components["schemas"]["DistinctionForm"];
+      name: string;
+      explanation: string;
+      mark?: components["schemas"]["DistinctionMark"] | null;
+      position: number;
+      retired: boolean;
+    };
+    DistinctionMark: {
+      url: string;
+      width: number;
+      height: number;
+    };
+    ProfileDistinction: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      explanation: string;
+      mark?: components["schemas"]["DistinctionMark"] | null;
+    };
+    DistinctionList: {
+      definitions: components["schemas"]["Distinction"][];
+    };
+    DefineDistinctionRequest: {
+      form: components["schemas"]["DistinctionForm"];
+      name: string;
+      explanation?: string;
+    };
+    UpdateDistinctionRequest: {
+      name?: string;
+      explanation?: string;
+      retired?: boolean;
+    };
+    OrderDistinctionsRequest: {
+      form: components["schemas"]["DistinctionForm"];
+      distinctionIds: string[];
+    };
+    DistinctionAssignment: {
+      /** Format: uuid */
+      id: string;
+      distinction: components["schemas"]["Distinction"];
+      issuedBy?: string | null;
+      source: string;
+      /** Format: date-time */
+      assignedAt: string;
+      active: boolean;
+      position: number;
+    };
+    DistinctionAssignmentList: {
+      handle: string;
+      assignments: components["schemas"]["DistinctionAssignment"][];
+    };
+    AssignDistinctionRequest: {
+      /** Format: uuid */
+      distinctionId: string;
+    };
+    OrderAssignmentsRequest: {
+      assignmentIds: string[];
     };
     RenameHandleRequest: {
       handle: string;
@@ -3771,6 +3925,456 @@ export interface operations {
         };
       };
       /** @description No live delivery artifact is at that address */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listDistinctions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The defined distinctions */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctionList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  orderDistinctions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderDistinctionsRequest"];
+      };
+    };
+    responses: {
+      /** @description The defined distinctions in their new order */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctionList"];
+        };
+      };
+      /** @description The order does not name that form's definitions exactly once each */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  defineDistinction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DefineDistinctionRequest"];
+      };
+    };
+    responses: {
+      /** @description The distinction as it was defined */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Distinction"];
+        };
+      };
+      /** @description A definition field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateDistinction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDistinctionRequest"];
+      };
+    };
+    responses: {
+      /** @description The distinction as it now reads */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Distinction"];
+        };
+      };
+      /** @description A definition field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such distinction */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setDistinctionMark: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Send the image as the only form data part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The badge carrying its new mark */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Distinction"];
+        };
+      };
+      /** @description The image is not valid or the distinction is not a badge */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such distinction */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listAccountDistinctions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account's distinction assignments */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctionAssignmentList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  orderAccountDistinctions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderAssignmentsRequest"];
+      };
+    };
+    responses: {
+      /** @description The account's assignments in their new order */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctionAssignmentList"];
+        };
+      };
+      /** @description The order does not name the active assignments exactly once each */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  assignDistinction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignDistinctionRequest"];
+      };
+    };
+    responses: {
+      /** @description The assignment as it was recorded */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctionAssignment"];
+        };
+      };
+      /** @description The distinction is retired or unknown */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account already holds that distinction */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeAccountDistinction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+        assignmentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The assignment no longer appears publicly */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account or assignment */
       404: {
         headers: {
           [name: string]: unknown;

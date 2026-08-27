@@ -1,9 +1,9 @@
 import Image from "next/image";
-import styles from "./CreatorMark.module.css";
+import styles from "./Avatar.module.css";
 
 type Portrait = { url: string; width: number; height: number };
 
-/** Spreads handles across the tonal steps and mark angles without storing a value. */
+/** Spreads handles across the tonal steps without storing a value. */
 function shadeOf(handle: string) {
   let hash = 0;
   for (const character of handle) {
@@ -12,26 +12,24 @@ function shadeOf(handle: string) {
   return hash;
 }
 
-export function CreatorMark({
+export function Avatar({
   handle,
   portrait,
-  compact = false,
+  size = "md",
 }: {
   handle: string;
   portrait?: Portrait | null;
-  compact?: boolean;
+  size?: "sm" | "md" | "lg";
 }) {
-  const hash = shadeOf(handle);
-
   if (portrait) {
     return (
-      <span className={styles.mark} data-compact={compact || undefined}>
+      <span className={styles.avatar} data-size={size}>
         <Image
           className={styles.portrait}
           src={portrait.url}
           alt=""
           fill
-          sizes="128px"
+          sizes="256px"
           unoptimized
         />
       </span>
@@ -40,13 +38,11 @@ export function CreatorMark({
 
   return (
     <span
-      className={styles.mark}
-      data-tone={hash % 4}
-      data-compact={compact || undefined}
-      style={{ "--mark-angle": `${hash % 90}deg` } as React.CSSProperties}
+      className={styles.avatar}
+      data-size={size}
+      data-tone={shadeOf(handle) % 4}
       aria-hidden="true"
     >
-      <span className={styles.figure} />
       <span className={styles.initial}>{handle.slice(0, 1).toUpperCase()}</span>
     </span>
   );

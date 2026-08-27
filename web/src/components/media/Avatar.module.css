@@ -1,10 +1,11 @@
-.mark {
+.avatar {
   position: relative;
   display: grid;
   width: 76px;
   aspect-ratio: 1;
+  flex: none;
   place-items: center;
-  border-radius: 50% 50% var(--radius-md) var(--radius-md);
+  border-radius: 50%;
   background: var(--color-text-primary);
   box-shadow: var(--shadow-soft);
   color: var(--color-background);
@@ -12,7 +13,7 @@
   overflow: hidden;
 }
 
-.mark[data-tone="1"] {
+.avatar[data-tone="1"] {
   background: color-mix(
     in srgb,
     var(--color-background) 10%,
@@ -20,7 +21,7 @@
   );
 }
 
-.mark[data-tone="2"] {
+.avatar[data-tone="2"] {
   background: color-mix(
     in srgb,
     var(--color-background) 19%,
@@ -28,12 +29,20 @@
   );
 }
 
-.mark[data-tone="3"] {
+.avatar[data-tone="3"] {
   background: color-mix(
     in srgb,
     var(--color-background) 28%,
     var(--color-text-primary)
   );
+}
+
+.avatar[data-size="sm"] {
+  width: 40px;
+}
+
+.avatar[data-size="lg"] {
+  width: 128px;
 }
 
 .portrait {
@@ -42,27 +51,7 @@
   object-fit: cover;
 }
 
-.figure {
-  position: absolute;
-  z-index: 0;
-  inset: 14%;
-  background: color-mix(in srgb, currentColor 16%, transparent);
-  clip-path: polygon(
-    50% 0,
-    61% 39%,
-    100% 50%,
-    61% 61%,
-    50% 100%,
-    39% 61%,
-    0 50%,
-    39% 39%
-  );
-  transform: rotate(var(--mark-angle));
-}
-
 .initial {
-  position: relative;
-  z-index: 1;
   color: var(--color-background);
   font-family: var(--font-display);
   font-size: var(--type-section-size);
@@ -71,21 +60,28 @@
   line-height: 1;
 }
 
-.mark[data-compact] {
-  width: 40px;
-  border-radius: 50% 50% var(--radius-xs) var(--radius-xs);
-}
-
-.mark[data-compact] .initial {
+.avatar[data-size="sm"] .initial {
   font-size: var(--type-body-size);
 }
 
+.avatar[data-size="lg"] .initial {
+  font-size: var(--type-display-size);
+}
+
 @media (max-width: 720px) {
-  .mark {
+  .avatar {
     width: 60px;
+  }
+
+  .avatar[data-size="lg"] {
+    width: 88px;
   }
 
   .initial {
     font-size: var(--type-block-title-size);
+  }
+
+  .avatar[data-size="lg"] .initial {
+    font-size: var(--type-section-size);
   }
 }

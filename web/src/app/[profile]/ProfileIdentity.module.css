@@ -12,9 +12,9 @@
   background: linear-gradient(
     100deg,
     var(--color-surface) 0%,
-    var(--color-surface) 44%,
-    color-mix(in srgb, var(--color-surface) 74%, transparent) 66%,
-    transparent 90%
+    var(--color-surface) 46%,
+    color-mix(in srgb, var(--color-surface) 74%, transparent) 68%,
+    transparent 92%
   );
   content: "";
   pointer-events: none;
@@ -45,31 +45,26 @@
   position: relative;
   z-index: 2;
   display: grid;
-  min-height: 196px;
-  grid-template-columns: 112px minmax(0, 1fr) auto;
-  gap: clamp(20px, 2.4vw, 32px);
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  gap: clamp(24px, 2.6vw, 36px);
   align-items: start;
-  padding-block: clamp(30px, 3.4vw, 44px);
-}
-
-.inner > :global(span:first-child) {
-  width: 112px;
+  padding-block: clamp(32px, 3.4vw, 46px);
 }
 
 .identity {
   min-width: 0;
-  width: min(680px, 50vw);
-  padding-top: 6px;
+  width: min(660px, 50vw);
+  padding-top: 4px;
 }
 
 .identity h1 {
   max-width: 100%;
   overflow-wrap: anywhere;
   font-family: var(--font-display);
-  font-size: clamp(var(--type-section-size), 3.6vw, var(--type-display-size));
+  font-size: clamp(var(--type-section-size), 3.4vw, var(--type-display-size));
   font-weight: 560;
   letter-spacing: -0.03em;
-  line-height: 0.96;
+  line-height: 0.98;
   text-wrap: balance;
 }
 
@@ -79,7 +74,7 @@
     2.8vw,
     var(--type-section-size)
   );
-  line-height: 1.02;
+  line-height: 1.04;
 }
 
 .handle {
@@ -87,6 +82,17 @@
   color: var(--color-text-secondary);
   font-size: var(--type-body-size);
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.positions {
+  margin-top: 12px;
+  color: var(--color-text-primary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: 18px;
+  text-transform: uppercase;
   overflow-wrap: anywhere;
 }
 
@@ -153,6 +159,76 @@
   box-shadow: var(--shadow-card);
 }
 
+.standing {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 6px clamp(24px, 2.6vw, 36px);
+  padding-bottom: clamp(32px, 3.4vw, 46px);
+}
+
+.standingLabel {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  padding-top: 3px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.titles {
+  grid-column: 2;
+  min-width: 0;
+  max-width: 62ch;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  grid-column: 2;
+  gap: 10px 20px;
+  margin-top: 4px;
+  list-style: none;
+}
+
+.badge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: var(--type-secondary-size);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.badgeMark {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-xs);
+  object-fit: contain;
+}
+
+.badgeMark[data-blank] {
+  border-radius: 50%;
+  background: var(--color-muted);
+  color: var(--color-text-secondary);
+}
+
 @media (max-width: 900px) {
   .identity {
     width: min(100%, 560px);
@@ -161,33 +237,34 @@
 
 @media (max-width: 720px) {
   .band::before {
-    clip-path: polygon(0 0, 74% 0, 92% 100%, 0 100%);
+    background: linear-gradient(
+      104deg,
+      var(--color-surface) 0%,
+      var(--color-surface) 62%,
+      color-mix(in srgb, var(--color-surface) 86%, transparent) 82%,
+      color-mix(in srgb, var(--color-surface) 58%, transparent) 100%
+    );
   }
 
   .art {
-    background-position: 74% center;
+    background-position: 82% center;
   }
 
   .inner {
-    min-height: 0;
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 88px minmax(0, 1fr);
     gap: 16px;
     padding-block: 26px 30px;
   }
 
-  .inner > :global(span:first-child) {
-    width: 76px;
-  }
-
   .identity {
     width: 100%;
-    padding-top: 2px;
+    padding-top: 0;
   }
 
   .identity h1 {
     font-size: clamp(
       var(--type-block-title-size),
-      8.4vw,
+      8vw,
       var(--type-section-size)
     );
     line-height: 1;
@@ -213,5 +290,22 @@
     grid-column: 1 / -1;
     justify-content: center;
     margin-top: 4px;
+  }
+
+  .standing {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-bottom: 28px;
+  }
+
+  .standingLabel {
+    grid-column: 1;
+    grid-row: auto;
+    padding-top: 0;
+  }
+
+  .titles,
+  .badges {
+    grid-column: 1;
   }
 }

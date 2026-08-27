@@ -16,6 +16,7 @@ export type SignedInAccount = components["schemas"]["Account"];
 
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
+  publicationAuthority: boolean;
   refresh: () => Promise<void>;
   setAccount: (account: SignedInAccount | null) => void;
   signOut: () => Promise<void>;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<SignedInAccount | null | undefined>(
     undefined,
   );
+  const [publicationAuthority, setPublicationAuthority] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -36,12 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!response.ok) {
         setAccount(null);
+        setPublicationAuthority(false);
         return;
       }
-      const state = (await response.json()) as { user: SignedInAccount | null };
+      const state = (await response.json()) as {
+        user: SignedInAccount | null;
+        publicationAuthority: boolean;
+      };
       setAccount(state.user);
+      setPublicationAuthority(state.publicationAuthority);
     } catch {
       setAccount(null);
+      setPublicationAuthority(false);
     }
   }, []);
 
@@ -56,11 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!response.ok) throw new Error("Could not sign out");
     setAccount(null);
+    setPublicationAuthority(false);
   }, []);
 
   const value = useMemo(
-    () => ({ account, refresh, setAccount, signOut }),
-    [account, refresh, signOut],
+    () => ({ account, publicationAuthority, refresh, setAccount, signOut }),
+    [account, publicationAuthority, refresh, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,8 +1,9 @@
-import { ArrowUpRight, Mail, SquarePen } from "lucide-react";
+import { ArrowUpRight, Award, Mail, SquarePen } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
-import { CreatorMark } from "@/components/media/CreatorMark";
-import type { Profile } from "@/lib/api/query";
+import { Avatar } from "@/components/media/Avatar";
+import type { Profile, ProfileDistinction } from "@/lib/api/query";
 import styles from "./ProfileIdentity.module.css";
 
 export function ProfileIdentity({
@@ -15,16 +16,20 @@ export function ProfileIdentity({
   const name = profile.displayName || `@${profile.handle}`;
   const hasContactRow =
     Boolean(profile.contactEmail) || profile.links.length > 0;
+  const hasStanding = profile.titles.length > 0 || profile.badges.length > 0;
 
   return (
     <header className={styles.band}>
       <div className={styles.art} aria-hidden="true" />
       <Shell className={styles.inner}>
-        <CreatorMark handle={profile.handle} portrait={profile.avatar} />
+        <Avatar handle={profile.handle} portrait={profile.avatar} size="lg" />
         <div className={styles.identity}>
           <h1 data-long={name.length > 20 || undefined}>{name}</h1>
-          {profile.displayName ? (
-            <p className={styles.handle}>@{profile.handle}</p>
+          <p className={styles.handle}>@{profile.handle}</p>
+          {profile.positions.length > 0 ? (
+            <p className={styles.positions}>
+              {profile.positions.map((position) => position.name).join(" · ")}
+            </p>
           ) : null}
           {profile.biography ? (
             <p className={styles.biography}>{profile.biography}</p>
@@ -65,6 +70,48 @@ export function ProfileIdentity({
           </Link>
         ) : null}
       </Shell>
+      {hasStanding ? (
+        <Shell className={styles.standing}>
+          <h2 className={styles.standingLabel}>Given by Illarin</h2>
+          {profile.titles.length > 0 ? (
+            <p className={styles.titles}>
+              {profile.titles.map((title) => title.name).join(" · ")}
+            </p>
+          ) : null}
+          {profile.badges.length > 0 ? (
+            <ul className={styles.badges}>
+              {profile.badges.map((badge) => (
+                <BadgeMark key={badge.id} badge={badge} />
+              ))}
+            </ul>
+          ) : null}
+        </Shell>
+      ) : null}
     </header>
+  );
+}
+
+function BadgeMark({ badge }: { badge: ProfileDistinction }) {
+  return (
+    <li className={styles.badge} title={badge.explanation || undefined}>
+      {badge.mark ? (
+        <Image
+          className={styles.badgeMark}
+          src={badge.mark.url}
+          alt=""
+          width={22}
+          height={22}
+          unoptimized
+        />
+      ) : (
+        <span className={styles.badgeMark} data-blank="true">
+          <Award size={15} strokeWidth={1.7} aria-hidden="true" />
+        </span>
+      )}
+      {badge.name}
+      {badge.explanation ? (
+        <span className="sr-only">. {badge.explanation}</span>
+      ) : null}
+    </li>
   );
 }

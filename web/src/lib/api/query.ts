@@ -40,6 +40,11 @@ export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
 export type Profile = components["schemas"]["Profile"];
 export type ProfileLink = components["schemas"]["ProfileLink"];
+export type ProfileDistinction = components["schemas"]["ProfileDistinction"];
+export type Distinction = components["schemas"]["Distinction"];
+export type DistinctionForm = components["schemas"]["DistinctionForm"];
+export type DistinctionAssignment =
+  components["schemas"]["DistinctionAssignment"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];
