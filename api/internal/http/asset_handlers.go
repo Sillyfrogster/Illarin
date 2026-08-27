@@ -98,7 +98,7 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 	f := asset.ListFilter{}
 
 	if params.Creator != nil {
-		profile, err := h.accounts.Profile(c.Request.Context(), strings.ToLower(*params.Creator))
+		creator, err := h.accounts.CreatorListing(c.Request.Context(), strings.ToLower(*params.Creator))
 		if errors.Is(err, account.ErrProfileNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 			return
@@ -114,8 +114,8 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 			return
 		}
 		f.Profile = &asset.ProfileListingScope{
-			CreatorID:        profile.ID,
-			CreatorShowsNSFW: profile.ShowNSFWContributionsOnProfile,
+			CreatorID:        creator.ID,
+			CreatorShowsNSFW: creator.ShowNSFWContributionsOnProfile,
 		}
 		if current != nil {
 			f.Profile.ViewerID = &current.ID

@@ -324,6 +324,8 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		  join assets asset on asset.id = media.asset_id
 		 where media.blob_id = ` + blobID + `
 		   and (asset.deleted_at is null or asset.recoverable_until > ` + at + `)
+		union all
+		select 1 from profile_media media where media.blob_id = ` + blobID + `
 	)`
 }
 

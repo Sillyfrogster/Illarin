@@ -22,6 +22,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -136,7 +137,8 @@ func run() error {
 			return fmt.Errorf("Discord sign-in: %w", err)
 		}
 	}
-	accounts := account.NewService(pool, verificationSender, discordProvider, cfg.SiteURL)
+	avatars := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+	accounts := account.NewService(pool, verificationSender, discordProvider, avatars, cfg.SiteURL)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	background.Add(1)

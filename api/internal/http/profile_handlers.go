@@ -1,0 +1,131 @@
+package http
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime/types"
+)
+
+func (h *Handlers) SavePublicProfile(c *gin.Context) {
+	owner, ok := h.verifiedAccount(c, "editing your public profile")
+	if !ok {
+		return
+	}
+	var request SaveProfileRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the profile fields as JSON."})
+		return
+	}
+	links := make([]account.ProfileLink, 0, len(request.Links))
+	for _, link := range request.Links {
+		links = append(links, account.ProfileLink{Label: link.Label, Address: link.Address})
+	}
+	saved, err := h.accounts.SaveProfile(c.Request.Context(), owner, account.ProfileEdit{
+		DisplayName:  request.DisplayName,
+		Biography:    request.Biography,
+		ContactEmail: request.ContactEmail,
+		Links:        links,
+	})
+	if err != nil {
+		h.profileError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIProfile(saved))
+}
+
+func (h *Handlers) SetProfileAvatar(c *gin.Context) {
+	owner, ok := h.verifiedAccount(c, "changing your avatar")
+	if !ok {
+		return
+	}
+	parts, err := c.Request.MultipartReader()
+	if err != nil {
+		h.refuseProfile(c, refusal{reason: "send the image as form data", cause: err})
+		return
+	}
+	file, err := nextPart(parts, filePart)
+	if err != nil {
+		h.refuseProfile(c, err)
+		return
+	}
+	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
+	defer limitedFile.Close()
+	saved, err := h.accounts.SetAvatar(c.Request.Context(), owner, limitedFile)
+	if err != nil {
+		h.refuseProfile(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIProfile(saved))
+}
+
+func (h *Handlers) RemoveProfileAvatar(c *gin.Context) {
+	owner, ok := h.verifiedAccount(c, "changing your avatar")
+	if !ok {
+		return
+	}
+	saved, err := h.accounts.RemoveAvatar(c.Request.Context(), owner)
+	if errors.Is(err, account.ErrAvatarMissing) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "There is no avatar to remove."})
+		return
+	}
+	if err != nil {
+		h.profileError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIProfile(saved))
+}
+
+func (h *Handlers) profileError(c *gin.Context, err error) {
+	var field account.FieldError
+	if errors.As(err, &field) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": field.Message, "field": field.Field})
+		return
+	}
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the profile."})
+}
+
+// refuseProfile answers an avatar upload the byte path could not take.
+func (h *Handlers) refuseProfile(c *gin.Context, err error) {
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge):
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": "That image is larger than the upload limit.",
+		})
+	case errors.Is(err, storage.ErrInsufficientSpace):
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Uploads are temporarily unavailable because storage is low.",
+		})
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "That image could not be read. Use a PNG, JPEG, WebP or GIF.",
+		})
+	}
+}
+
+func toAPIProfile(found account.PublicProfile) Profile {
+	links := make([]ProfileLink, 0, len(found.Links))
+	for _, link := range found.Links {
+		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
+	}
+	profile := Profile{
+		Id:           types.UUID(found.ID),
+		Handle:       found.Handle,
+		DisplayName:  found.DisplayName,
+		Biography:    found.Biography,
+		ContactEmail: found.ContactEmail,
+		Links:        links,
+	}
+	if found.Avatar != nil {
+		profile.Avatar = &ProfileAvatar{
+			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.DerivativeVersion),
+			Width:  found.Avatar.Width,
+			Height: found.Avatar.Height,
+		}
+	}
+	return profile
+}

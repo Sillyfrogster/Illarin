@@ -69,7 +69,8 @@ type DiscordCompletion struct {
 	Intent         DiscordIntent
 }
 
-type Profile struct {
+// CreatorListing is what a creator's asset listing needs to know about them.
+type CreatorListing struct {
 	ID                             uuid.UUID
 	Handle                         string
 	ShowNSFWContributionsOnProfile bool

@@ -18,6 +18,10 @@ paths:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1password
   /v1/account/nsfw-visibility:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1nsfw-visibility
+  /v1/account/profile:
+    $ref: ./accounts.yaml#/paths/~1v1~1account~1profile
+  /v1/account/profile/avatar:
+    $ref: ./accounts.yaml#/paths/~1v1~1account~1profile~1avatar
   /v1/auth/sign-up:
     $ref: ./accounts.yaml#/paths/~1v1~1auth~1sign-up
   /v1/auth/sign-in:

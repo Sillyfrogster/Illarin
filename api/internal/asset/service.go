@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -43,16 +42,14 @@ var (
 // Service runs the catalog. It knows the module interfaces, never a concrete
 // format.
 type Service struct {
-	pool        *pgxpool.Pool
-	reg         *format.Registry
-	store       storage.Store
-	media       MediaProcessor
-	mediaSlots  chan struct{}
-	mediaFlight singleflight.Group
-	ingest      IngestSettings
-	signer      signing.Key
-	now         func() time.Time
-	siteURL     string
+	pool    *pgxpool.Pool
+	reg     *format.Registry
+	store   storage.Store
+	media   *mediaproc.Library
+	ingest  IngestSettings
+	signer  signing.Key
+	now     func() time.Time
+	siteURL string
 }
 
 func (s *Service) beginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
@@ -70,12 +67,7 @@ type IngestSettings struct {
 	AccountStorageCapBytes int64
 }
 
-type MediaProcessor interface {
-	Prepare(context.Context, io.Reader) (mediaproc.Prepared, error)
-	Render(context.Context, io.Reader, string) (mediaproc.Derivative, error)
-	ComposeSocialPreview(context.Context, io.Reader, string) (mediaproc.Derivative, error)
-	DerivativeType() string
-}
+type MediaProcessor = mediaproc.Renderer
 
 func DefaultIngestSettings() IngestSettings {
 	return IngestSettings{
@@ -142,9 +134,9 @@ func NewServiceWithMediaProcessor(
 		workers = 1
 	}
 	return &Service{
-		pool: pool, reg: reg, store: store, media: processor,
-		mediaSlots: make(chan struct{}, workers),
-		ingest:     settings, signer: signing.NewKey(), now: time.Now,
+		pool: pool, reg: reg, store: store,
+		media:  mediaproc.NewLibrary(store, processor, workers),
+		ingest: settings, signer: signing.NewKey(), now: time.Now,
 	}
 }
 

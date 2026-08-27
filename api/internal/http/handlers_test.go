@@ -16,6 +16,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
@@ -135,7 +136,7 @@ func newTestHandlersWithDelivery(
 		t.Fatalf("storage: %v", err)
 	}
 	svc := asset.NewService(pool, testRegistry(t), blob)
-	accounts := account.NewService(pool, sender, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, sender, nil, testMediaLibrary(blob), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
 
@@ -173,11 +174,15 @@ func newDiscordTestStack(
 	assets := asset.NewService(pool, testRegistry(t), blob)
 	outbox := &verificationOutbox{}
 	accounts := account.NewService(
-		pool, outbox, provider, "http://localhost:3000",
+		pool, outbox, provider, testMediaLibrary(blob), "http://localhost:3000",
 	)
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(assets, accounts, links, newTestDeliveryService(pool, assets, links), 1<<20)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
+}
+
+func testMediaLibrary(store storage.Store) *mediaproc.Library {
+	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 }
 
 func newTestLinkingService(pool *pgxpool.Pool) *linking.Service {

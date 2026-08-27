@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
-	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -114,11 +113,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 		return Media{}, ErrAssetFrozen
 	}
 
-	stored, err := s.store.Put(ctx, in.File)
-	if err != nil {
-		return Media{}, fmt.Errorf("store media: %w", err)
-	}
-	prepared, err := s.prepareMedia(ctx, stored)
+	stored, prepared, err := s.media.Accept(ctx, in.File)
 	if err != nil {
 		return Media{}, err
 	}
@@ -234,41 +229,6 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 	return media, nil
 }
 
-func (s *Service) prepareMedia(ctx context.Context, stored storage.StoredBlob) (mediaproc.Prepared, error) {
-	source, err := s.store.Open(ctx, stored.ID)
-	if err != nil {
-		return mediaproc.Prepared{}, fmt.Errorf("open stored media: %w", err)
-	}
-	release, err := s.acquireMediaSlot(ctx)
-	if err != nil {
-		source.Close()
-		return mediaproc.Prepared{}, err
-	}
-	prepared, prepareErr := s.media.Prepare(ctx, source)
-	release()
-	closeErr := source.Close()
-	if prepareErr != nil {
-		return mediaproc.Prepared{}, prepareErr
-	}
-	if closeErr != nil {
-		return mediaproc.Prepared{}, fmt.Errorf("close stored media: %w", closeErr)
-	}
-	for _, derivative := range prepared.Derivatives {
-		id := storage.DerivativeID{
-			SourceDigest: stored.Digest,
-			Variant:      derivative.Variant,
-			Version:      mediaproc.DerivativeVersion,
-		}
-		if err := s.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
-			if errors.Is(err, storage.ErrInsufficientSpace) {
-				break
-			}
-			return mediaproc.Prepared{}, fmt.Errorf("store %s media variant: %w", derivative.Variant, err)
-		}
-	}
-	return prepared, nil
-}
-
 func (s *Service) prepareExtractedMedia(
 	ctx context.Context,
 	file probe.Inspection,
@@ -302,7 +262,7 @@ func (s *Service) prepareExtractedMedia(
 		if err != nil {
 			return nil, fmt.Errorf("store extracted media: %w", err)
 		}
-		image, err := s.prepareMedia(ctx, stored)
+		image, err := s.media.Prepare(ctx, stored)
 		if err != nil {
 			if errors.Is(err, mediaproc.ErrUnsupportedImage) {
 				continue
@@ -427,75 +387,13 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	derivativeID := storage.DerivativeID{
-		SourceDigest: digest,
-		Variant:      variant,
-		Version:      version,
-	}
-	redirect, err := s.store.InternalDerivativeRedirect(ctx, derivativeID)
-	if errors.Is(err, storage.ErrDerivativeNotFound) {
-		job := s.mediaFlight.DoChan(fmt.Sprintf("%x/%s/%d", digest, variant, version), func() (any, error) {
-			return nil, s.regenerateMediaVariant(ctx, blobID, derivativeID)
-		})
-		select {
-		case <-ctx.Done():
-			return MediaDownload{}, ctx.Err()
-		case result := <-job:
-			if result.Err != nil {
-				return MediaDownload{}, result.Err
-			}
-		}
-		redirect, err = s.store.InternalDerivativeRedirect(ctx, derivativeID)
-	}
+	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
 	if err != nil {
-		return MediaDownload{}, fmt.Errorf("resolve media variant: %w", err)
+		return MediaDownload{}, err
 	}
 	return MediaDownload{
 		InternalRedirect: redirect,
 		MediaType:        s.media.DerivativeType(),
 		Private:          private,
 	}, nil
-}
-
-func (s *Service) regenerateMediaVariant(
-	ctx context.Context,
-	blobID uuid.UUID,
-	id storage.DerivativeID,
-) error {
-	release, err := s.acquireMediaSlot(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
-	source, err := s.store.Open(ctx, blobID)
-	if err != nil {
-		return fmt.Errorf("open media for regeneration: %w", err)
-	}
-	var derivative mediaproc.Derivative
-	var renderErr error
-	if _, composed := mediaproc.SocialPreviewByName(id.Variant); composed {
-		derivative, renderErr = s.media.ComposeSocialPreview(ctx, source, id.Variant)
-	} else {
-		derivative, renderErr = s.media.Render(ctx, source, id.Variant)
-	}
-	closeErr := source.Close()
-	if renderErr != nil {
-		return fmt.Errorf("regenerate media variant: %w", renderErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close media after regeneration: %w", closeErr)
-	}
-	if err := s.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
-		return fmt.Errorf("store regenerated media variant: %w", err)
-	}
-	return nil
-}
-
-func (s *Service) acquireMediaSlot(ctx context.Context) (func(), error) {
-	select {
-	case s.mediaSlots <- struct{}{}:
-		return func() { <-s.mediaSlots }, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
 }

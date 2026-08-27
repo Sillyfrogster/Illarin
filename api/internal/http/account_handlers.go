@@ -402,7 +402,7 @@ func (h *Handlers) DetachDiscord(c *gin.Context) {
 }
 
 func (h *Handlers) GetProfile(c *gin.Context, handle string) {
-	profile, err := h.accounts.Profile(c.Request.Context(), handle)
+	profile, err := h.accounts.PublicProfile(c.Request.Context(), handle)
 	if errors.Is(err, account.ErrProfileNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 		return
@@ -411,12 +411,12 @@ func (h *Handlers) GetProfile(c *gin.Context, handle string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, Profile{Id: types.UUID(profile.ID), Handle: profile.Handle})
+	c.JSON(http.StatusOK, toAPIProfile(profile))
 }
 
 // ResolveLegacyProfile answers for v1's /user/<discordId> address, resolving before anything redirects
 func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
-	profile, err := h.accounts.ProfileByDiscordSubject(c.Request.Context(), discordId)
+	profile, err := h.accounts.PublicProfileByDiscordSubject(c.Request.Context(), discordId)
 	if errors.Is(err, account.ErrProfileNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 		return
@@ -425,7 +425,7 @@ func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, Profile{Id: types.UUID(profile.ID), Handle: profile.Handle})
+	c.JSON(http.StatusOK, toAPIProfile(profile))
 }
 
 func (h *Handlers) accountError(c *gin.Context, err error) {

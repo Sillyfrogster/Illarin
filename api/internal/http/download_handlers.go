@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -103,7 +104,7 @@ func (h *Handlers) GetMediaVariant(
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, asset.ErrMediaNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+		h.profileAvatarVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion))
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -125,6 +126,34 @@ func (h *Handlers) GetMediaVariant(
 	c.Header("Content-Type", download.MediaType)
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("X-Accel-Redirect", download.InternalRedirect)
+	c.Status(http.StatusOK)
+}
+
+// profileAvatarVariant answers the same address for an image a public profile owns.
+func (h *Handlers) profileAvatarVariant(
+	c *gin.Context,
+	mediaID uuid.UUID,
+	variant string,
+	version uint32,
+) {
+	redirect, mediaType, err := h.accounts.AvatarVariant(c.Request.Context(), mediaID, variant, version)
+	if errors.Is(err, account.ErrProfileMediaNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+		return
+	}
+	if errors.Is(err, storage.ErrInsufficientSpace) {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Header("Content-Disposition", "inline")
+	c.Header("Content-Type", mediaType)
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("X-Accel-Redirect", redirect)
 	c.Status(http.StatusOK)
 }
 

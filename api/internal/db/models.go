@@ -314,6 +314,15 @@ type PasswordResetToken struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
+type ProfileMedium struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	BlobID    pgtype.UUID
+	Width     int32
+	Height    int32
+	CreatedAt pgtype.Timestamptz
+}
+
 type ProtectedContent struct {
 	AssetID     pgtype.UUID
 	OwnerKind   string
@@ -327,6 +336,23 @@ type ProtectedContent struct {
 type ProtectedDeliveryApp struct {
 	AssetID pgtype.UUID
 	App     string
+}
+
+type PublicProfile struct {
+	UserID        pgtype.UUID
+	DisplayName   string
+	Biography     string
+	ContactEmail  string
+	AvatarMediaID pgtype.UUID
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
+type PublicProfileLink struct {
+	UserID   pgtype.UUID
+	Position int32
+	Label    string
+	Url      string
 }
 
 type RetiredHandle struct {

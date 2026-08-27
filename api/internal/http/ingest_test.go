@@ -238,7 +238,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
@@ -399,7 +399,7 @@ func newVerifiedIngestRouterWithStoreFactory(
 	}
 	assets := asset.NewServiceWithIngestSettings(pool, registry, blobs, settings)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(assets, accounts, links, newTestDeliveryService(pool, assets, links), 1<<20)
 	setup := registerTestRouter(t, handlers, DefaultDeadlines())

@@ -2303,8 +2303,26 @@ type PreservedNamespace struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	Handle string             `json:"handle"`
-	Id     openapi_types.UUID `json:"id"`
+	Avatar       *ProfileAvatar     `json:"avatar,omitempty"`
+	Biography    string             `json:"biography"`
+	ContactEmail string             `json:"contactEmail"`
+	DisplayName  string             `json:"displayName"`
+	Handle       string             `json:"handle"`
+	Id           openapi_types.UUID `json:"id"`
+	Links        []ProfileLink      `json:"links"`
+}
+
+// ProfileAvatar defines model for ProfileAvatar.
+type ProfileAvatar struct {
+	Height int    `json:"height"`
+	Url    string `json:"url"`
+	Width  int    `json:"width"`
+}
+
+// ProfileLink defines model for ProfileLink.
+type ProfileLink struct {
+	Address string `json:"address"`
+	Label   string `json:"label"`
 }
 
 // PromptListContent A preset's prompt, in the order it is sent. One level of grouping is the list's own nesting rather than a second element.
@@ -2470,6 +2488,14 @@ type SaveAssetElement struct {
 
 // SaveAssetElementDisplay defines model for SaveAssetElement.Display.
 type SaveAssetElementDisplay string
+
+// SaveProfileRequest defines model for SaveProfileRequest.
+type SaveProfileRequest struct {
+	Biography    string        `json:"biography"`
+	ContactEmail string        `json:"contactEmail"`
+	DisplayName  string        `json:"displayName"`
+	Links        []ProfileLink `json:"links"`
+}
 
 // Scope asset:receive lets an instance receive assets sent to it. library:sync lets it report what it has installed.
 type Scope string
@@ -2724,6 +2750,11 @@ type GetMediaVariantParams struct {
 // GetMediaVariantParamsVariant defines parameters for GetMediaVariant.
 type GetMediaVariantParamsVariant string
 
+// SetProfileAvatarMultipartBody defines parameters for SetProfileAvatar.
+type SetProfileAvatarMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ListAssetsParams defines parameters for ListAssets.
 type ListAssetsParams struct {
 	Kind *ListAssetsParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
@@ -2875,6 +2906,12 @@ type SetNsfwVisibilityJSONRequestBody = NsfwVisibilityRequest
 
 // SetPasswordJSONRequestBody defines body for SetPassword for application/json ContentType.
 type SetPasswordJSONRequestBody = PasswordRequest
+
+// SavePublicProfileJSONRequestBody defines body for SavePublicProfile for application/json ContentType.
+type SavePublicProfileJSONRequestBody = SaveProfileRequest
+
+// SetProfileAvatarMultipartRequestBody defines body for SetProfileAvatar for multipart/form-data ContentType.
+type SetProfileAvatarMultipartRequestBody SetProfileAvatarMultipartBody
 
 // CreateAssetJSONRequestBody defines body for CreateAsset for application/json ContentType.
 type CreateAssetJSONRequestBody = StartAssetRequest
@@ -3087,6 +3124,15 @@ type ServerInterface interface {
 
 	// (PUT /v1/account/password)
 	SetPassword(c *gin.Context)
+
+	// (PUT /v1/account/profile)
+	SavePublicProfile(c *gin.Context)
+
+	// (DELETE /v1/account/profile/avatar)
+	RemoveProfileAvatar(c *gin.Context)
+
+	// (PUT /v1/account/profile/avatar)
+	SetProfileAvatar(c *gin.Context)
 
 	// (GET /v1/assets)
 	ListAssets(c *gin.Context, params ListAssetsParams)
@@ -3491,6 +3537,45 @@ func (siw *ServerInterfaceWrapper) SetPassword(c *gin.Context) {
 	}
 
 	siw.Handler.SetPassword(c)
+}
+
+// SavePublicProfile operation middleware
+func (siw *ServerInterfaceWrapper) SavePublicProfile(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SavePublicProfile(c)
+}
+
+// RemoveProfileAvatar operation middleware
+func (siw *ServerInterfaceWrapper) RemoveProfileAvatar(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveProfileAvatar(c)
+}
+
+// SetProfileAvatar operation middleware
+func (siw *ServerInterfaceWrapper) SetProfileAvatar(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetProfileAvatar(c)
 }
 
 // ListAssets operation middleware
@@ -5023,6 +5108,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)
 	router.PUT(options.BaseURL+"/v1/account/password", wrapper.SetPassword)
 	router.PUT(options.BaseURL+"/v1/account/nsfw-visibility", wrapper.SetNsfwVisibility)
+	router.PUT(options.BaseURL+"/v1/account/profile", wrapper.SavePublicProfile)
+	router.DELETE(options.BaseURL+"/v1/account/profile/avatar", wrapper.RemoveProfileAvatar)
+	router.PUT(options.BaseURL+"/v1/account/profile/avatar", wrapper.SetProfileAvatar)
 	router.POST(options.BaseURL+"/v1/auth/sign-up", wrapper.SignUp)
 	router.POST(options.BaseURL+"/v1/auth/sign-in", wrapper.SignIn)
 	router.GET(options.BaseURL+"/v1/auth/discord", wrapper.BeginDiscord)

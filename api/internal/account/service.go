@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -79,6 +80,7 @@ type Service struct {
 	pool    *pgxpool.Pool
 	sender  EmailSender
 	discord DiscordProvider
+	media   *mediaproc.Library
 	siteURL string
 }
 
@@ -86,12 +88,14 @@ func NewService(
 	pool *pgxpool.Pool,
 	sender EmailSender,
 	discord DiscordProvider,
+	library *mediaproc.Library,
 	siteURL string,
 ) *Service {
 	return &Service{
 		pool:    pool,
 		sender:  sender,
 		discord: discord,
+		media:   library,
 		siteURL: strings.TrimRight(siteURL, "/"),
 	}
 }
@@ -459,33 +463,31 @@ func (s *Service) RenameHandle(ctx context.Context, token, handle string) (Accou
 	}), nil
 }
 
-func (s *Service) Profile(ctx context.Context, handle string) (Profile, error) {
+// CreatorListing answers what a handle's asset listing needs and nothing public.
+func (s *Service) CreatorListing(ctx context.Context, handle string) (CreatorListing, error) {
 	row, err := db.New(s.pool).ProfileByHandle(ctx, handle)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Profile{}, ErrProfileNotFound
+		return CreatorListing{}, ErrProfileNotFound
 	}
 	if err != nil {
-		return Profile{}, fmt.Errorf("read profile: %w", err)
+		return CreatorListing{}, fmt.Errorf("read creator listing: %w", err)
 	}
-	return Profile{
+	return CreatorListing{
 		ID: uuid.UUID(row.ID.Bytes), Handle: row.Username,
 		ShowNSFWContributionsOnProfile: row.ShowNsfwContributionsOnProfile,
 	}, nil
 }
 
-// ProfileByDiscordSubject finds the account a Discord identity belongs to
-func (s *Service) ProfileByDiscordSubject(ctx context.Context, subject string) (Profile, error) {
+// PublicProfileByDiscordSubject finds the profile a Discord identity belongs to
+func (s *Service) PublicProfileByDiscordSubject(ctx context.Context, subject string) (PublicProfile, error) {
 	row, err := db.New(s.pool).ProfileByDiscordSubject(ctx, subject)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Profile{}, ErrProfileNotFound
+		return PublicProfile{}, ErrProfileNotFound
 	}
 	if err != nil {
-		return Profile{}, fmt.Errorf("read profile by Discord identity: %w", err)
+		return PublicProfile{}, fmt.Errorf("read profile by Discord identity: %w", err)
 	}
-	return Profile{
-		ID: uuid.UUID(row.ID.Bytes), Handle: row.Username,
-		ShowNSFWContributionsOnProfile: row.ShowNsfwContributionsOnProfile,
-	}, nil
+	return s.PublicProfile(ctx, row.Username)
 }
 
 func (s *Service) ChangeUnverifiedEmail(ctx context.Context, token, rawEmail string) (Account, error) {

@@ -122,6 +122,85 @@ paths:
           description: The visibility value is invalid
         '401':
           description: No account is signed in
+  /v1/account/profile:
+    put:
+      operationId: savePublicProfile
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProfileRequest'
+      responses:
+        '200':
+          description: The public profile as visitors now see it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: A profile field is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+  /v1/account/profile/avatar:
+    put:
+      operationId: setProfileAvatar
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        description: Send the image as the only form data part.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: The public profile carrying its new avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: The image is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '413':
+          description: The image exceeds the upload limit
+        '503':
+          description: The storage reserve cannot accept the image
+    delete:
+      operationId: removeProfileAvatar
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '200':
+          description: The public profile without an avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The profile has no avatar
   /v1/auth/sign-up:
     post:
       operationId: signUp
@@ -2557,12 +2636,30 @@ components:
       required:
         - id
         - handle
+        - displayName
+        - biography
+        - contactEmail
+        - links
       properties:
         id:
           type: string
           format: uuid
         handle:
           type: string
+        displayName:
+          type: string
+        biography:
+          type: string
+        contactEmail:
+          type: string
+        avatar:
+          anyOf:
+            - $ref: '#/components/schemas/ProfileAvatar'
+            - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileLink'
     RenameHandleRequest:
       type: object
       required:
@@ -4363,6 +4460,52 @@ components:
             - internal_failure
         message:
           type: string
+    ProfileLink:
+      type: object
+      required:
+        - label
+        - address
+      properties:
+        label:
+          type: string
+        address:
+          type: string
+    SaveProfileRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - biography
+        - contactEmail
+        - links
+      properties:
+        displayName:
+          type: string
+          maxLength: 48
+        biography:
+          type: string
+          maxLength: 400
+        contactEmail:
+          type: string
+          maxLength: 254
+        links:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ProfileLink'
+    ProfileAvatar:
+      type: object
+      required:
+        - url
+        - width
+        - height
+      properties:
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
     ManagedInstance:
       allOf:
         - $ref: '#/components/schemas/LinkedInstance'

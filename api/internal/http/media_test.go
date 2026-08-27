@@ -188,7 +188,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), limited, asset.DefaultIngestSettings(),
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(limited), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
@@ -230,7 +230,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,

@@ -53,7 +53,7 @@ func (s *Service) StageImage(ctx context.Context, body io.Reader) (StagedImage, 
 	if err != nil {
 		return StagedImage{}, fmt.Errorf("store the image: %w", err)
 	}
-	prepared, err := s.prepareMedia(ctx, stored)
+	prepared, err := s.media.Prepare(ctx, stored)
 	if err != nil {
 		return StagedImage{}, err
 	}

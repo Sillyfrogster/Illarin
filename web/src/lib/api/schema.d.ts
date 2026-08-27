@@ -84,6 +84,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/account/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["savePublicProfile"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/profile/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["setProfileAvatar"];
+    post?: never;
+    delete: operations["removeProfileAvatar"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/auth/sign-up": {
     parameters: {
       query?: never;
@@ -1143,6 +1175,11 @@ export interface components {
       /** Format: uuid */
       id: string;
       handle: string;
+      displayName: string;
+      biography: string;
+      contactEmail: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      links: components["schemas"]["ProfileLink"][];
     };
     RenameHandleRequest: {
       handle: string;
@@ -1919,6 +1956,21 @@ export interface components {
         | "internal_failure";
       message: string;
     };
+    ProfileLink: {
+      label: string;
+      address: string;
+    };
+    SaveProfileRequest: {
+      displayName: string;
+      biography: string;
+      contactEmail: string;
+      links: components["schemas"]["ProfileLink"][];
+    };
+    ProfileAvatar: {
+      url: string;
+      width: number;
+      height: number;
+    };
     ManagedInstance: components["schemas"]["LinkedInstance"] & {
       /** @description How many assets this instance has reported having installed. It is zero without the library:sync scope. */
       installed: number;
@@ -2246,6 +2298,155 @@ export interface operations {
       };
       /** @description No account is signed in */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  savePublicProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaveProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description The public profile as visitors now see it */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description A profile field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setProfileAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Send the image as the only form data part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The public profile carrying its new avatar */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description The image is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeProfileAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The public profile without an avatar */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The profile has no avatar */
+      404: {
         headers: {
           [name: string]: unknown;
         };
