@@ -135,6 +135,29 @@
   flex: none;
 }
 
+.actions {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.restricted {
+  display: flex;
+  max-width: 52ch;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-leading);
+}
+
+.restricted svg {
+  position: relative;
+  top: 2px;
+  flex: none;
+}
+
 .edit {
   display: inline-flex;
   min-height: 40px;
@@ -289,11 +312,21 @@
     min-height: 44px;
   }
 
+  .actions {
+    grid-column: 1 / -1;
+    justify-items: stretch;
+    margin-top: 4px;
+  }
+
   .edit {
     min-height: 44px;
-    grid-column: 1 / -1;
     justify-content: center;
-    margin-top: 4px;
+  }
+
+  .restricted {
+    margin-top: 12px;
+    font-size: var(--type-secondary-size);
+    line-height: 22px;
   }
 
   .standing {

@@ -703,6 +703,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/profiles/{handle}/restriction": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The private reason a profile is restricted. Only an admin may read it, and it never reaches a public or owner response. */
+    get: operations["getProfileRestriction"];
+    /** @description Hides the added identity on one public profile until an admin restores it. It changes no role, credential, asset or ownership. */
+    put: operations["restrictProfile"];
+    post?: never;
+    /** @description Gives a restricted profile its retained fields back. */
+    delete: operations["restoreProfile"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/legacy-profiles/{discordId}": {
     parameters: {
       query?: never;
@@ -1271,6 +1290,18 @@ export interface components {
       positions: components["schemas"]["ProfileDistinction"][];
       titles: components["schemas"]["ProfileDistinction"][];
       badges: components["schemas"]["ProfileDistinction"][];
+      /** @description True when an admin has hidden the added identity. The handle and the published-asset listing stay; every other field answers empty. */
+      restricted: boolean;
+    };
+    /** @description The admin-only record of why a profile is hidden. */
+    ProfileRestriction: {
+      reason: string;
+      restrictedBy?: string | null;
+      /** Format: date-time */
+      restrictedAt: string;
+    };
+    RestrictProfileRequest: {
+      reason: string;
     };
     /** @enum {string} */
     DistinctionForm: "position" | "title" | "badge";
@@ -4404,6 +4435,144 @@ export interface operations {
         };
       };
       /** @description No active profile uses the handle */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getProfileRestriction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The restriction now in force */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfileRestriction"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account, or its profile is not restricted */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restrictProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RestrictProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description The restriction now in force */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfileRestriction"];
+        };
+      };
+      /** @description The audit reason is missing or too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restoreProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The profile is restored */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account, or its profile is not restricted */
       404: {
         headers: {
           [name: string]: unknown;

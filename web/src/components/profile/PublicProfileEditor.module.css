@@ -19,6 +19,7 @@
 
 .gate {
   display: grid;
+  max-width: 640px;
   justify-items: start;
   gap: 12px;
   padding: 34px;
@@ -40,7 +41,7 @@
   line-height: var(--type-body-leading);
 }
 
-.gate a {
+.gate > a {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -53,6 +54,13 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.gate p a {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .portrait {

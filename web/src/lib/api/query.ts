@@ -41,6 +41,7 @@ export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
 export type Profile = components["schemas"]["Profile"];
 export type ProfileLink = components["schemas"]["ProfileLink"];
 export type ProfileDistinction = components["schemas"]["ProfileDistinction"];
+export type ProfileRestriction = components["schemas"]["ProfileRestriction"];
 export type Distinction = components["schemas"]["Distinction"];
 export type DistinctionForm = components["schemas"]["DistinctionForm"];
 export type DistinctionAssignment =
@@ -383,6 +384,32 @@ export async function deletePreservedNamespace(id: string, namespace: string) {
         : "That data could not be deleted. Try again.",
     );
   }
+}
+
+export async function fetchProfileRestriction(
+  handle: string,
+): Promise<ProfileRestriction | null> {
+  const { data, error } = await api.GET("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+  });
+  if (error || !data) return null;
+  return data;
+}
+
+export async function restrictProfile(handle: string, reason: string) {
+  const { data, error } = await api.PUT("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+    body: { reason },
+  });
+  if (error || !data) throw new Error("Could not restrict the profile");
+  return data;
+}
+
+export async function restoreProfile(handle: string) {
+  const { error } = await api.DELETE("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+  });
+  if (error) throw new Error("Could not restore the profile");
 }
 
 export async function withholdAsset(id: string, reason: string) {

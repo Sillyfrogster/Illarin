@@ -1,10 +1,11 @@
-import { ArrowUpRight, Award, Mail, SquarePen } from "lucide-react";
+import { ArrowUpRight, Award, Mail, ShieldOff, SquarePen } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
 import { Avatar } from "@/components/media/Avatar";
 import type { Profile, ProfileDistinction } from "@/lib/api/query";
 import styles from "./ProfileIdentity.module.css";
+import { RestrictionControl } from "./RestrictionControl";
 
 export function ProfileIdentity({
   profile,
@@ -17,6 +18,42 @@ export function ProfileIdentity({
   const hasContactRow =
     Boolean(profile.contactEmail) || profile.links.length > 0;
   const hasStanding = profile.titles.length > 0 || profile.badges.length > 0;
+
+  const actions = (
+    <div className={styles.actions}>
+      {isOwner && !profile.restricted ? (
+        <Link className={styles.edit} href="/settings/profile">
+          <SquarePen size={15} strokeWidth={1.6} aria-hidden="true" />
+          Edit profile
+        </Link>
+      ) : null}
+      <RestrictionControl
+        handle={profile.handle}
+        restricted={profile.restricted}
+      />
+    </div>
+  );
+
+  if (profile.restricted) {
+    return (
+      <header className={styles.band}>
+        <div className={styles.art} aria-hidden="true" />
+        <Shell className={styles.inner}>
+          <Avatar handle={profile.handle} size="lg" />
+          <div className={styles.identity}>
+            <h1 data-long={profile.handle.length > 19 || undefined}>
+              @{profile.handle}
+            </h1>
+            <p className={styles.restricted}>
+              <ShieldOff size={15} strokeWidth={1.6} aria-hidden="true" />
+              Illarin has restricted this profile. Its published work is below.
+            </p>
+          </div>
+          {actions}
+        </Shell>
+      </header>
+    );
+  }
 
   return (
     <header className={styles.band}>
@@ -63,12 +100,7 @@ export function ProfileIdentity({
             </ul>
           ) : null}
         </div>
-        {isOwner ? (
-          <Link className={styles.edit} href="/settings/profile">
-            <SquarePen size={15} strokeWidth={1.6} aria-hidden="true" />
-            Edit profile
-          </Link>
-        ) : null}
+        {actions}
       </Shell>
       {hasStanding ? (
         <Shell className={styles.standing}>

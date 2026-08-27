@@ -6,6 +6,7 @@ import {
   ImageUp,
   Plus,
   ShieldCheck,
+  ShieldOff,
   Trash2,
   X,
 } from "lucide-react";
@@ -136,6 +137,24 @@ export function PublicProfileEditor() {
           once an address is verified.
         </p>
         <Link href="/verify-email">Verify email</Link>
+      </section>
+    );
+  }
+
+  if (profile?.restricted) {
+    return (
+      <section className={styles.gate}>
+        <ShieldOff size={27} strokeWidth={1.35} aria-hidden="true" />
+        <h2>An admin has restricted your public profile</h2>
+        <p>
+          Your display name, avatar, biography, contact address and links are
+          hidden, and you cannot change them until Illarin restores them. Your
+          handle, your account and your published work are untouched.
+        </p>
+        <p>
+          Write to <a href="mailto:team@illarin.xyz">team@illarin.xyz</a> to
+          have it looked at again.
+        </p>
       </section>
     );
   }
