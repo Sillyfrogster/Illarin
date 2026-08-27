@@ -130,14 +130,14 @@ func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit
 	if err != nil {
 		return PublicProfile{}, err
 	}
-	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
-		return PublicProfile{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return PublicProfile{}, fmt.Errorf("begin profile save: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := lockProfileForEdit(ctx, tx, owner.ID); err != nil {
+		return PublicProfile{}, err
+	}
 	_, err = tx.Exec(ctx, `
 		insert into public_profiles (user_id, display_name, biography, contact_email)
 		values ($1, $2, $3, $4)
@@ -182,6 +182,9 @@ func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) 
 		return PublicProfile{}, fmt.Errorf("begin avatar change: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := lockProfileForEdit(ctx, tx, owner.ID); err != nil {
+		return PublicProfile{}, err
+	}
 	mediaID := uuid.New()
 	_, err = tx.Exec(ctx, `
 		insert into profile_media (id, user_id, blob_id, width, height)
@@ -201,14 +204,14 @@ func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) 
 
 // RemoveAvatar takes the portrait off a profile and lets its bytes go.
 func (s *Service) RemoveAvatar(ctx context.Context, owner Account) (PublicProfile, error) {
-	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
-		return PublicProfile{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return PublicProfile{}, fmt.Errorf("begin avatar removal: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := lockProfileForEdit(ctx, tx, owner.ID); err != nil {
+		return PublicProfile{}, err
+	}
 	var present uuid.UUID
 	err = tx.QueryRow(ctx, `
 		select avatar_media_id from public_profiles
@@ -267,10 +270,6 @@ func (s *Service) AvatarVariant(
 }
 
 func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *uuid.UUID) error {
-	var locked uuid.UUID
-	if err := tx.QueryRow(ctx, `select id from users where id = $1 for update`, ownerID).Scan(&locked); err != nil {
-		return fmt.Errorf("lock the account changing its avatar: %w", err)
-	}
 	var superseded *uuid.UUID
 	err := tx.QueryRow(ctx, `
 		select avatar_media_id from public_profiles where user_id = $1
@@ -296,11 +295,18 @@ func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *u
 	return nil
 }
 
-// refuseWhileRestricted stops an owner editing an identity an admin has hidden.
-func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
-	restricted, err := s.profileIsRestricted(ctx, ownerID)
+// lockProfileForEdit holds the account row so an admin restriction cannot land beside an owner's edit.
+func lockProfileForEdit(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID) error {
+	var locked uuid.UUID
+	if err := tx.QueryRow(ctx, `select id from users where id = $1 for update`, ownerID).Scan(&locked); err != nil {
+		return fmt.Errorf("lock the account editing its profile: %w", err)
+	}
+	var restricted bool
+	err := tx.QueryRow(ctx, `
+		select exists (select 1 from profile_restrictions where user_id = $1)
+	`, ownerID).Scan(&restricted)
 	if err != nil {
-		return err
+		return fmt.Errorf("read profile restriction state: %w", err)
 	}
 	if restricted {
 		return ErrProfileRestricted

@@ -117,15 +117,19 @@ func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle stri
 	return nil
 }
 
-func (s *Service) profileIsRestricted(ctx context.Context, ownerID uuid.UUID) (bool, error) {
+// refuseWhileRestricted turns an avatar upload away before its bytes are stored.
+func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
 	var restricted bool
 	err := s.pool.QueryRow(ctx, `
 		select exists (select 1 from profile_restrictions where user_id = $1)
 	`, ownerID).Scan(&restricted)
 	if err != nil {
-		return false, fmt.Errorf("read profile restriction state: %w", err)
+		return fmt.Errorf("read profile restriction state: %w", err)
 	}
-	return restricted, nil
+	if restricted {
+		return ErrProfileRestricted
+	}
+	return nil
 }
 
 func lockAccountByHandle(ctx context.Context, tx pgx.Tx, handle string) (uuid.UUID, error) {
