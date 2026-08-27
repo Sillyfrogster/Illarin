@@ -113,6 +113,14 @@ type BlobTombstone struct {
 	ActorID    pgtype.UUID
 }
 
+type DistinctionMedium struct {
+	ID        pgtype.UUID
+	BlobID    pgtype.UUID
+	Width     int32
+	Height    int32
+	CreatedAt pgtype.Timestamptz
+}
+
 type DownloadEvent struct {
 	ID                 int64
 	AssetID            pgtype.UUID
@@ -314,6 +322,40 @@ type PasswordResetToken struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
+type ProfileDistinction struct {
+	ID          pgtype.UUID
+	Form        string
+	Name        string
+	Explanation string
+	MarkMediaID pgtype.UUID
+	Position    int32
+	RetiredAt   pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type ProfileDistinctionAssignment struct {
+	ID            pgtype.UUID
+	UserID        pgtype.UUID
+	DistinctionID pgtype.UUID
+	IssuedBy      pgtype.UUID
+	Source        string
+	Position      int32
+	AssignedAt    pgtype.Timestamptz
+	Active        bool
+	DeactivatedAt pgtype.Timestamptz
+}
+
+type ProfileDistinctionAudit struct {
+	ID            pgtype.UUID
+	ActorID       pgtype.UUID
+	Action        string
+	DistinctionID pgtype.UUID
+	AssignmentID  pgtype.UUID
+	SubjectID     pgtype.UUID
+	RecordedAt    pgtype.Timestamptz
+}
+
 type ProfileMedium struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID
@@ -353,6 +395,11 @@ type PublicProfileLink struct {
 	Position int32
 	Label    string
 	Url      string
+}
+
+type PublicationAuthority struct {
+	UserID     pgtype.UUID
+	AssignedAt pgtype.Timestamptz
 }
 
 type RetiredHandle struct {

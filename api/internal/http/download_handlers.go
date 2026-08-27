@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -104,7 +105,7 @@ func (h *Handlers) GetMediaVariant(
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, asset.ErrMediaNotFound) {
-		h.profileAvatarVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion))
+		h.sharedImageVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion))
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -129,32 +130,44 @@ func (h *Handlers) GetMediaVariant(
 	c.Status(http.StatusOK)
 }
 
-// profileAvatarVariant answers the same address for an image a public profile owns.
-func (h *Handlers) profileAvatarVariant(
+// sharedImageVariant answers the same address for a public image no asset owns
+func (h *Handlers) sharedImageVariant(
 	c *gin.Context,
 	mediaID uuid.UUID,
 	variant string,
 	version uint32,
 ) {
-	redirect, mediaType, err := h.accounts.AvatarVariant(c.Request.Context(), mediaID, variant, version)
-	if errors.Is(err, account.ErrProfileMediaNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+	ctx := c.Request.Context()
+	owners := []func() (string, string, error){
+		func() (string, string, error) {
+			return h.accounts.AvatarVariant(ctx, mediaID, variant, version)
+		},
+		func() (string, string, error) {
+			return h.publication.MarkVariant(ctx, mediaID, variant, version)
+		},
+	}
+	for _, owner := range owners {
+		redirect, mediaType, err := owner()
+		switch {
+		case errors.Is(err, account.ErrProfileMediaNotFound),
+			errors.Is(err, publication.ErrNotFound):
+			continue
+		case errors.Is(err, storage.ErrInsufficientSpace):
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
+			return
+		case err != nil:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
+			return
+		}
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		c.Header("Content-Disposition", "inline")
+		c.Header("Content-Type", mediaType)
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Accel-Redirect", redirect)
+		c.Status(http.StatusOK)
 		return
 	}
-	if errors.Is(err, storage.ErrInsufficientSpace) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
-		return
-	}
-	c.Header("Cache-Control", "public, max-age=31536000, immutable")
-	c.Header("Content-Disposition", "inline")
-	c.Header("Content-Type", mediaType)
-	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("X-Accel-Redirect", redirect)
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
 }
 
 func valueOrEmpty(value *string) string {

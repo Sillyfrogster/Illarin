@@ -443,11 +443,17 @@ components:
       type: object
       required:
         - user
+        - publicationAuthority
       properties:
         user:
           anyOf:
             - $ref: '#/components/schemas/Account'
             - type: 'null'
+        publicationAuthority:
+          type: boolean
+          description: >-
+            True when this account is the one recorded as holding publication
+            authority. It is not a system role and grants nothing on its own.
     Profile:
       type: object
       required:
@@ -457,6 +463,9 @@ components:
         - biography
         - contactEmail
         - links
+        - positions
+        - titles
+        - badges
       properties:
         id:
           type: string
@@ -477,6 +486,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProfileLink'
+        positions:
+          type: array
+          items:
+            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
+        titles:
+          type: array
+          items:
+            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
+        badges:
+          type: array
+          items:
+            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
     ProfileAvatar:
       type: object
       required:

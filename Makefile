@@ -192,6 +192,11 @@ migrate-down: need-db ## Roll the dev database back one migration
 migrate-status: need-db ## Show which migrations have run
 	cd api && $(GOOSE) -dir migrations postgres "$(DATABASE_URL)" status
 
+.PHONY: publication-authority
+publication-authority: need-db ## Record which account holds publication authority; set HANDLE
+	@test -n "$(HANDLE)" || { echo "Set HANDLE to the account that holds publication authority."; exit 1; }
+	cd api && go run ./cmd/publication-authority -handle "$(HANDLE)"
+
 .PHONY: migrate-v1
 migrate-v1: need-db ## Carry the v1 catalog across; set V1_SOURCE, V1_BACKUP and V1_IMAGE_HOSTS
 	@test -n "$(V1_SOURCE)" || { echo "Set V1_SOURCE to the restored v1 database URL."; exit 1; }

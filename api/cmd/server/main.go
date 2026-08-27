@@ -24,6 +24,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -137,8 +138,9 @@ func run() error {
 			return fmt.Errorf("Discord sign-in: %w", err)
 		}
 	}
-	avatars := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
-	accounts := account.NewService(pool, verificationSender, discordProvider, avatars, cfg.SiteURL)
+	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
+	publications := publication.NewService(pool, images)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	background.Add(1)
@@ -151,7 +153,7 @@ func run() error {
 
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, cfg.MaxUploadBytes)
+	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, publications, cfg.MaxUploadBytes)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err

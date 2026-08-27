@@ -5,6 +5,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 )
 
 // Handlers turns HTTP requests into catalog calls.
@@ -13,6 +14,7 @@ type Handlers struct {
 	accounts       *account.Service
 	links          *linking.Service
 	deliveries     *delivery.Service
+	publication    *publication.Service
 	maxUploadBytes int64
 }
 
@@ -21,6 +23,7 @@ func NewHandlers(
 	accounts *account.Service,
 	links *linking.Service,
 	deliveries *delivery.Service,
+	publications *publication.Service,
 	maxUploadBytes int64,
 ) *Handlers {
 	return &Handlers{
@@ -28,6 +31,7 @@ func NewHandlers(
 		accounts:       accounts,
 		links:          links,
 		deliveries:     deliveries,
+		publication:    publications,
 		maxUploadBytes: maxUploadBytes,
 	}
 }

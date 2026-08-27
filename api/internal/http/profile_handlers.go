@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/oapi-codegen/runtime/types"
@@ -34,7 +35,7 @@ func (h *Handlers) SavePublicProfile(c *gin.Context) {
 		h.profileError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIProfile(saved))
+	h.showProfile(c, saved)
 }
 
 func (h *Handlers) SetProfileAvatar(c *gin.Context) {
@@ -59,7 +60,7 @@ func (h *Handlers) SetProfileAvatar(c *gin.Context) {
 		h.refuseProfile(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIProfile(saved))
+	h.showProfile(c, saved)
 }
 
 func (h *Handlers) RemoveProfileAvatar(c *gin.Context) {
@@ -76,7 +77,7 @@ func (h *Handlers) RemoveProfileAvatar(c *gin.Context) {
 		h.profileError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIProfile(saved))
+	h.showProfile(c, saved)
 }
 
 func (h *Handlers) profileError(c *gin.Context, err error) {
@@ -107,7 +108,17 @@ func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 	}
 }
 
-func toAPIProfile(found account.PublicProfile) Profile {
+// showProfile answers a public profile with the distinctions it shows.
+func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
+	shown, err := h.publication.Showcase(c.Request.Context(), found.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIProfile(found, shown))
+}
+
+func toAPIProfile(found account.PublicProfile, shown publication.Showcase) Profile {
 	links := make([]ProfileLink, 0, len(found.Links))
 	for _, link := range found.Links {
 		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
@@ -119,6 +130,9 @@ func toAPIProfile(found account.PublicProfile) Profile {
 		Biography:    found.Biography,
 		ContactEmail: found.ContactEmail,
 		Links:        links,
+		Positions:    toAPIProfileDistinctions(shown.Positions),
+		Titles:       toAPIProfileDistinctions(shown.Titles),
+		Badges:       toAPIProfileDistinctions(shown.Badges),
 	}
 	if found.Avatar != nil {
 		profile.Avatar = &ProfileAvatar{

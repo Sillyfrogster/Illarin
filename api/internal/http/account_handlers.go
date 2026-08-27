@@ -182,8 +182,13 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		c.JSON(http.StatusOK, SessionState{User: nil})
 		return
 	}
+	authority, err := h.publication.HoldsAuthority(c.Request.Context(), current.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the signed-in account."})
+		return
+	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user})
+	c.JSON(http.StatusOK, SessionState{User: &user, PublicationAuthority: authority})
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {
@@ -411,7 +416,7 @@ func (h *Handlers) GetProfile(c *gin.Context, handle string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, toAPIProfile(profile))
+	h.showProfile(c, profile)
 }
 
 // ResolveLegacyProfile answers for v1's /user/<discordId> address, resolving before anything redirects
@@ -425,7 +430,7 @@ func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, toAPIProfile(profile))
+	h.showProfile(c, profile)
 }
 
 func (h *Handlers) accountError(c *gin.Context, err error) {

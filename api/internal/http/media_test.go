@@ -191,7 +191,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(limited), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
+		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
+		newTestPublicationService(pool, limited), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
@@ -233,7 +234,8 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
+		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
+		newTestPublicationService(pool, blobs), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 

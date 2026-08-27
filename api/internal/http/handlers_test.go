@@ -17,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
@@ -140,7 +141,7 @@ func newTestHandlersWithDelivery(
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
 
-	return NewHandlers(svc, accounts, links, deliveries, maxUploadBytes)
+	return NewHandlers(svc, accounts, links, deliveries, newTestPublicationService(pool, blob), maxUploadBytes)
 }
 
 func newTestRouterWithDiscord(
@@ -177,12 +178,19 @@ func newDiscordTestStack(
 		pool, outbox, provider, testMediaLibrary(blob), "http://localhost:3000",
 	)
 	links := newTestLinkingService(pool)
-	handlers := NewHandlers(assets, accounts, links, newTestDeliveryService(pool, assets, links), 1<<20)
+	handlers := NewHandlers(
+		assets, accounts, links, newTestDeliveryService(pool, assets, links),
+		newTestPublicationService(pool, blob), 1<<20,
+	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
 }
 
 func testMediaLibrary(store storage.Store) *mediaproc.Library {
 	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+}
+
+func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
+	return publication.NewService(pool, testMediaLibrary(store))
 }
 
 func newTestLinkingService(pool *pgxpool.Pool) *linking.Service {
