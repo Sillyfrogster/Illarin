@@ -20,7 +20,7 @@ function isCurrentPage(pathname: string, href: string) {
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { account, signOut } = useAuth();
+  const { account, publicationAuthority, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -206,6 +206,19 @@ export function SiteHeader() {
                   >
                     Account settings
                   </Link>
+                  {publicationAuthority ? (
+                    <Link
+                      href="/publication/titles"
+                      aria-current={
+                        isCurrentPage(pathname, "/publication/titles")
+                          ? "page"
+                          : undefined
+                      }
+                      onClick={closeAccountMenu}
+                    >
+                      Titles and badges
+                    </Link>
+                  ) : null}
                   {!account.emailVerified ? (
                     <Link
                       href={`/verify-email?returnTo=${UPLOAD_RETURN}`}
@@ -341,6 +354,19 @@ export function SiteHeader() {
                 >
                   Account settings
                 </Link>
+                {publicationAuthority ? (
+                  <Link
+                    href="/publication/titles"
+                    aria-current={
+                      isCurrentPage(pathname, "/publication/titles")
+                        ? "page"
+                        : undefined
+                    }
+                    onClick={closeMobileMenu}
+                  >
+                    Titles and badges
+                  </Link>
+                ) : null}
                 {!account.emailVerified ? (
                   <Link
                     href={`/verify-email?returnTo=${UPLOAD_RETURN}`}

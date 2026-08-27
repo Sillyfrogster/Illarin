@@ -1,0 +1,32 @@
+.page {
+  padding-block: clamp(36px, 4vw, 64px) clamp(56px, 6vw, 96px);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 3vw, 44px);
+}
+
+.heading h1 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-size);
+  font-weight: 560;
+  letter-spacing: -0.03em;
+  line-height: var(--type-display-leading);
+}
+
+.heading p {
+  max-width: 62ch;
+  margin-top: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-leading);
+}
+
+@media (max-width: 720px) {
+  .heading h1 {
+    font-size: var(--type-section-size);
+    line-height: var(--type-section-leading);
+  }
+}
