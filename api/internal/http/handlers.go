@@ -14,7 +14,7 @@ type Handlers struct {
 	accounts       *account.Service
 	links          *linking.Service
 	deliveries     *delivery.Service
-	publication    *publication.Service
+	publications   *publication.Service
 	maxUploadBytes int64
 }
 
@@ -31,7 +31,7 @@ func NewHandlers(
 		accounts:       accounts,
 		links:          links,
 		deliveries:     deliveries,
-		publication:    publications,
+		publications:   publications,
 		maxUploadBytes: maxUploadBytes,
 	}
 }

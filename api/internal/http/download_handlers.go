@@ -143,7 +143,7 @@ func (h *Handlers) sharedImageVariant(
 			return h.accounts.AvatarVariant(ctx, mediaID, variant, version)
 		},
 		func() (string, string, error) {
-			return h.publication.MarkVariant(ctx, mediaID, variant, version)
+			return h.publications.MarkVariant(ctx, mediaID, variant, version)
 		},
 	}
 	for _, owner := range owners {

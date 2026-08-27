@@ -110,7 +110,7 @@ func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 
 // showProfile answers a public profile with the distinctions it shows.
 func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
-	shown, err := h.publication.Showcase(c.Request.Context(), found.ID)
+	shown, err := h.publications.Showcase(c.Request.Context(), found.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return

@@ -15,7 +15,7 @@ func (h *Handlers) ListDistinctions(c *gin.Context) {
 	if _, ok := h.publicationAuthority(c, "reading distinctions"); !ok {
 		return
 	}
-	defined, err := h.publication.Distinctions(c.Request.Context())
+	defined, err := h.publications.Distinctions(c.Request.Context())
 	if err != nil {
 		h.distinctionError(c, err)
 		return
@@ -33,7 +33,7 @@ func (h *Handlers) DefineDistinction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the definition as JSON."})
 		return
 	}
-	defined, err := h.publication.Define(c.Request.Context(), authority.ID, publication.DistinctionEdit{
+	defined, err := h.publications.Define(c.Request.Context(), authority.ID, publication.DistinctionEdit{
 		Form:        publication.Form(request.Form),
 		Name:        request.Name,
 		Explanation: valueOrEmpty(request.Explanation),
@@ -55,7 +55,7 @@ func (h *Handlers) UpdateDistinction(c *gin.Context, id types.UUID) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the change as JSON."})
 		return
 	}
-	updated, err := h.publication.Update(
+	updated, err := h.publications.Update(
 		c.Request.Context(), authority.ID, uuid.UUID(id), publication.DistinctionUpdate{
 			Name:        request.Name,
 			Explanation: request.Explanation,
@@ -79,7 +79,7 @@ func (h *Handlers) OrderDistinctions(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the order as JSON."})
 		return
 	}
-	ordered, err := h.publication.Order(
+	ordered, err := h.publications.Order(
 		c.Request.Context(), authority.ID,
 		publication.Form(request.Form), toUUIDs(request.DistinctionIds),
 	)
@@ -107,7 +107,7 @@ func (h *Handlers) SetDistinctionMark(c *gin.Context, id types.UUID) {
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
-	marked, err := h.publication.SetMark(c.Request.Context(), authority.ID, uuid.UUID(id), limitedFile)
+	marked, err := h.publications.SetMark(c.Request.Context(), authority.ID, uuid.UUID(id), limitedFile)
 	if errors.Is(err, publication.ErrNotFound) || errors.Is(err, publication.ErrDistinctionForm) {
 		h.distinctionError(c, err)
 		return
@@ -123,7 +123,7 @@ func (h *Handlers) ListAccountDistinctions(c *gin.Context, handle string) {
 	if _, ok := h.publicationAuthority(c, "reading an account's distinctions"); !ok {
 		return
 	}
-	held, err := h.publication.Assignments(c.Request.Context(), handle)
+	held, err := h.publications.Assignments(c.Request.Context(), handle)
 	if err != nil {
 		h.distinctionError(c, err)
 		return
@@ -144,7 +144,7 @@ func (h *Handlers) AssignDistinction(c *gin.Context, handle string) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the distinction as JSON."})
 		return
 	}
-	made, err := h.publication.Assign(
+	made, err := h.publications.Assign(
 		c.Request.Context(), authority.ID, handle, uuid.UUID(request.DistinctionId),
 	)
 	if err != nil {
@@ -164,7 +164,7 @@ func (h *Handlers) OrderAccountDistinctions(c *gin.Context, handle string) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the order as JSON."})
 		return
 	}
-	ordered, err := h.publication.OrderAssignments(
+	ordered, err := h.publications.OrderAssignments(
 		c.Request.Context(), authority.ID, handle, toUUIDs(request.AssignmentIds),
 	)
 	if err != nil {
@@ -182,7 +182,7 @@ func (h *Handlers) RemoveAccountDistinction(c *gin.Context, handle string, assig
 	if !ok {
 		return
 	}
-	err := h.publication.Withdraw(
+	err := h.publications.Withdraw(
 		c.Request.Context(), authority.ID, handle, uuid.UUID(assignmentId),
 	)
 	if err != nil {
@@ -198,7 +198,7 @@ func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountI
 	if !ok {
 		return accountIdentity{}, false
 	}
-	held, err := h.publication.HoldsAuthority(c.Request.Context(), current.ID)
+	held, err := h.publications.HoldsAuthority(c.Request.Context(), current.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check publication authority."})
 		return accountIdentity{}, false
