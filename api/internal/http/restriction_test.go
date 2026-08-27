@@ -277,6 +277,10 @@ func TestARestrictionNeedsAReasonOnlyAnAdminEverReads(t *testing.T) {
 func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
+	published := createProfileAsset(
+		t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed,
+	)
+	before := accountFactsOf(sessionState(t, stack.router, stack.owner))
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 
 	blocked := saveProfile(t, stack.router, stack.owner, `{
@@ -301,29 +305,68 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 		t.Fatalf("restricted avatar removal status = %d, want 403", removed.Code)
 	}
 
-	session := send(t, stack.router, authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/auth/session", nil,
-	), stack.owner))
-	if session.Code != http.StatusOK {
-		t.Fatalf("restricted session status = %d, want 200: %s", session.Code, session.Body.String())
+	after := accountFactsOf(sessionState(t, stack.router, stack.owner))
+	if after != before {
+		t.Fatalf("restriction changed the account: %+v became %+v", before, after)
 	}
-	var state struct {
-		User *struct {
-			Handle        string `json:"handle"`
-			Role          string `json:"role"`
-			EmailVerified bool   `json:"emailVerified"`
-		} `json:"user"`
+	if role := stack.role(t); role != "user" {
+		t.Fatalf("restriction changed the account role to %q", role)
 	}
-	if err := json.Unmarshal(session.Body.Bytes(), &state); err != nil {
-		t.Fatalf("decode session: %v", err)
-	}
-	if state.User == nil || state.User.Handle != ownerHandle ||
-		state.User.Role != "user" || !state.User.EmailVerified {
-		t.Fatalf("account changed under restriction: %+v", state.User)
-	}
-	created := createProfileAsset(t, stack.assets, stack.ownerID, "Still working", false, asset.DiscoveryListed)
-	if created == uuid.Nil {
+	stack.expectAssetUntouched(t, published)
+	if createProfileAsset(
+		t, stack.assets, stack.ownerID, "Still working", false, asset.DiscoveryListed,
+	) == uuid.Nil {
 		t.Fatal("a restricted owner could not publish")
+	}
+}
+
+// accountFacts flattens a session reading so two of them compare by value.
+type accountFacts struct {
+	Handle        string
+	Email         string
+	EmailVerified bool
+	DiscordLinked bool
+	HasPassword   bool
+}
+
+func accountFactsOf(state accountState) accountFacts {
+	facts := accountFacts{
+		Handle:        state.Handle,
+		EmailVerified: state.EmailVerified,
+		DiscordLinked: state.DiscordLinked,
+		HasPassword:   state.HasPassword,
+	}
+	if state.Email != nil {
+		facts.Email = *state.Email
+	}
+	return facts
+}
+
+func (s restrictionStack) role(t *testing.T) string {
+	t.Helper()
+	var role string
+	err := s.pool.QueryRow(context.Background(),
+		`select role from users where id = $1`, s.ownerID).Scan(&role)
+	if err != nil {
+		t.Fatalf("read account role: %v", err)
+	}
+	return role
+}
+
+func (s restrictionStack) expectAssetUntouched(t *testing.T, assetID uuid.UUID) {
+	t.Helper()
+	var owner uuid.UUID
+	var discovery string
+	var withheld bool
+	err := s.pool.QueryRow(context.Background(), `
+		select owner_id, discovery, withheld_at is not null from assets where id = $1
+	`, assetID).Scan(&owner, &discovery, &withheld)
+	if err != nil {
+		t.Fatalf("read asset state: %v", err)
+	}
+	if owner != s.ownerID || discovery != "listed" || withheld {
+		t.Fatalf("restriction changed the asset: owner %s, discovery %q, withheld %v",
+			owner, discovery, withheld)
 	}
 }
 
