@@ -383,6 +383,37 @@ func TestRemovingAnAssignmentHidesItAndKeepsItsAccountableHistory(t *testing.T) 
 	}
 }
 
+func TestATakenBackDistinctionCanBeGivenAgainWithoutLosingTheFirstRecord(t *testing.T) {
+	stack := newDistinctionStack(t)
+	stack.member(t, "again@example.com", "second.chance")
+	badge := stack.defined(t, "badge", "First light", "Given by hand.")
+	first := stack.assigned(t, "second.chance", badge.ID)
+
+	send(t, stack.router, authorized(httptest.NewRequest(
+		http.MethodDelete, "/v1/accounts/second.chance/distinctions/"+first.ID, nil,
+	), stack.authority))
+
+	second := stack.assigned(t, "second.chance", badge.ID)
+	if second.ID == first.ID {
+		t.Fatalf("giving it again reused the withdrawn record %s", first.ID)
+	}
+	if shown := stack.profile(t, "second.chance"); len(shown.Badges) != 1 {
+		t.Fatalf("badges = %+v, want the one it holds now", shown.Badges)
+	}
+
+	var records int
+	if err := stack.pool.QueryRow(context.Background(), `
+		select count(*) from profile_distinction_assignments assignment
+		  join users account on account.id = assignment.user_id
+		 where account.username = 'second.chance'
+	`).Scan(&records); err != nil {
+		t.Fatalf("count assignments: %v", err)
+	}
+	if records != 2 {
+		t.Fatalf("account kept %d assignment records, want both", records)
+	}
+}
+
 func TestADistinctionSatisfiesNoPermissionCheck(t *testing.T) {
 	stack := newDistinctionStack(t)
 	member := stack.member(t, "titled@example.com", "titled.member")
