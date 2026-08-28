@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
 import {
   approveContributor,
-  readTokens,
   revokeGrant,
   updateGrant,
 } from "@/lib/api/publication";
@@ -13,12 +12,12 @@ import type {
   PublicationApp,
   PublicationCategory,
   PublicationGrant,
-  PublicationToken,
 } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
 import { CategoryChoice } from "./CategoryChoice";
 import tokenStyles from "./ContributorDialog.module.css";
 import { TokenRows } from "./TokenRows";
+import { useGrantTokens } from "./use-grant-tokens";
 
 export function ContributorDialog({
   existing,
@@ -176,23 +175,7 @@ function TheirTokens({
   grant: PublicationGrant;
   onFailure: (message: string) => void;
 }) {
-  const [tokens, setTokens] = useState<PublicationToken[] | null>(null);
-
-  const load = useCallback(async () => {
-    const answer = await readTokens(grant.id);
-    if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "");
-      return;
-    }
-    setTokens(answer.value.tokens);
-  }, [grant.id, onFailure]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const live = tokens?.filter((token) => token.active) ?? [];
-  const spent = (tokens?.length ?? 0) - live.length;
+  const { tokens, live, spent, reread } = useGrantTokens(grant.id, onFailure);
 
   return (
     <section className={tokenStyles.theirs}>
@@ -213,15 +196,15 @@ function TheirTokens({
         <TokenRows
           tokens={live}
           revocable
-          onRevoked={() => void load()}
+          onRevoked={reread}
           onFailure={onFailure}
         />
       )}
-      {spent > 0 ? (
+      {spent.length > 0 ? (
         <p className={tokenStyles.gone}>
-          {spent === 1
+          {spent.length === 1
             ? "One more has already stopped working."
-            : `${spent} more have already stopped working.`}
+            : `${spent.length} more have already stopped working.`}
         </p>
       ) : null}
     </section>

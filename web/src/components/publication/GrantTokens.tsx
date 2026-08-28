@@ -1,35 +1,18 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import rows from "@/components/console/Console.module.css";
-import { readTokens } from "@/lib/api/publication";
-import type { PublicationGrant, PublicationToken } from "@/lib/api/query";
+import type { PublicationGrant } from "@/lib/api/query";
 import styles from "./GrantTokens.module.css";
 import { TokenDialog } from "./TokenDialog";
 import { TokenRows } from "./TokenRows";
+import { useGrantTokens } from "./use-grant-tokens";
 
 export function GrantTokens({ grant }: { grant: PublicationGrant }) {
-  const [tokens, setTokens] = useState<PublicationToken[] | null>(null);
   const [failure, setFailure] = useState("");
   const [making, setMaking] = useState(false);
-
-  const load = useCallback(async () => {
-    const answer = await readTokens(grant.id);
-    if (answer.error || !answer.value) {
-      setFailure(answer.error ?? "");
-      return;
-    }
-    setFailure("");
-    setTokens(answer.value.tokens);
-  }, [grant.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const live = tokens?.filter((token) => token.active) ?? [];
-  const spent = tokens?.filter((token) => !token.active) ?? [];
+  const { tokens, live, spent, reread } = useGrantTokens(grant.id, setFailure);
 
   return (
     <div className={styles.tokens}>
@@ -65,7 +48,7 @@ export function GrantTokens({ grant }: { grant: PublicationGrant }) {
         <TokenRows
           tokens={live}
           revocable
-          onRevoked={() => void load()}
+          onRevoked={() => reread()}
           onFailure={setFailure}
         />
       )}
@@ -76,7 +59,7 @@ export function GrantTokens({ grant }: { grant: PublicationGrant }) {
           <TokenRows
             tokens={spent}
             revocable={false}
-            onRevoked={() => void load()}
+            onRevoked={() => reread()}
             onFailure={setFailure}
           />
         </details>
@@ -88,9 +71,9 @@ export function GrantTokens({ grant }: { grant: PublicationGrant }) {
           appName={grant.app.name}
           onClose={() => {
             setMaking(false);
-            void load();
+            reread();
           }}
-          onIssued={() => void load()}
+          onIssued={() => reread()}
           onFailure={setFailure}
         />
       ) : null}
