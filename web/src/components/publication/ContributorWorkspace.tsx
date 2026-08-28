@@ -1,11 +1,15 @@
 "use client";
 
-import { Package, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Package } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import rows from "@/components/console/Console.module.css";
+import { ConsoleGate } from "@/components/console/ConsoleGate";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { Section } from "@/components/console/Section";
 import { readWorkspace } from "@/lib/api/publication";
-import type { PublicationWorkspace } from "@/lib/api/query";
+import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import styles from "./ContributorWorkspace.module.css";
 
@@ -29,9 +33,29 @@ export function ContributorWorkspace() {
     void load();
   }, [account, load]);
 
+  return (
+    <ConsolePage
+      eyebrow="Publication"
+      heading="What you may publish"
+      hint="The projects Illarin approved you to write for, and the categories each approval covers."
+    >
+      <Inside account={account} open={open} failure={failure} />
+    </ConsolePage>
+  );
+}
+
+function Inside({
+  account,
+  open,
+  failure,
+}: {
+  account: ReturnType<typeof useAuth>["account"];
+  open: PublicationWorkspace | null;
+  failure: string;
+}) {
   if (account === undefined) {
     return (
-      <p className={styles.loading} aria-live="polite">
+      <p className={rows.loading} aria-live="polite">
         Checking your account…
       </p>
     );
@@ -39,92 +63,103 @@ export function ContributorWorkspace() {
 
   if (!account) {
     return (
-      <section className={styles.gate}>
-        <ShieldCheck size={27} strokeWidth={1.35} aria-hidden="true" />
-        <h2>Sign in to reach your publication workspace</h2>
-        <p>Illarin opens this to accounts approved to publish for an app.</p>
-        <Link href="/sign-in">Sign in</Link>
-      </section>
+      <ConsoleGate
+        heading="Sign in to see what you may publish"
+        line="Illarin opens this page to the accounts it has approved."
+        href="/sign-in"
+        action="Sign in"
+      />
     );
   }
 
   if (!open) {
     return (
-      <p className={styles.loading} aria-live="polite">
-        {failure || "Reading what you may publish…"}
+      <p className={rows.loading} aria-live="polite">
+        {failure || "Reading your approvals…"}
       </p>
     );
   }
 
   if (open.grants.length === 0) {
     return (
-      <section className={styles.gate}>
-        <ShieldCheck size={27} strokeWidth={1.35} aria-hidden="true" />
-        <h2>You are not approved to publish</h2>
-        <p>
-          Publishing for a project needs an approval from Illarin's publication
-          authority. Being an admin or a moderator does not carry one.
-        </p>
-        <Link href="/">Back to Illarin</Link>
-      </section>
+      <ConsoleGate
+        heading="Nobody has approved you to publish"
+        line="Approval comes from Illarin's publication authority. An admin or a moderator role is not the same thing."
+        href="/"
+        action="Back to Illarin"
+      />
     );
   }
 
   return (
     <div className={styles.grants}>
       {open.grants.map((grant) => (
-        <section className={styles.grant} key={grant.id}>
-          <header className={styles.app}>
-            <span className={styles.mark}>
-              {grant.app.mark ? (
-                <Image
-                  src={grant.app.mark.url}
-                  alt=""
-                  width={44}
-                  height={44}
-                  unoptimized
-                />
-              ) : (
-                <Package size={20} strokeWidth={1.6} aria-hidden="true" />
-              )}
-            </span>
-            <span className={styles.identity}>
-              <span className={styles.name}>{grant.app.name}</span>
-              <a
-                className={styles.home}
-                href={grant.app.home}
-                rel="noreferrer noopener"
-                target="_blank"
-              >
-                {grant.app.home.replace(/^https:\/\//, "")}
-              </a>
-            </span>
-          </header>
-
-          <h2 className={styles.heading}>What you may publish</h2>
-          <ul className={styles.allowed}>
-            {grant.categories.map((category) => (
-              <li key={category.id}>
-                <span className={styles.category}>{category.label}</span>
-                {category.id === grant.defaultCategory.id ? (
-                  <span className={styles.byDefault}>default</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-
-          <p className={styles.byline}>
-            Posts carry your name and this app. Illarin remains the publisher.
-          </p>
-        </section>
+        <Approval key={grant.id} grant={grant} />
       ))}
-
       <p className={styles.later}>
-        Your{" "}
-        <Link href={`/${open.handle}`}>Verified App Contributor badge</Link> is
-        on your public profile for as long as an approval stands. Writing a post
-        arrives with the editor.
+        Writing happens here once the editor is built. Until then this page is
+        the record of what you were approved for. Your{" "}
+        <Link href={`/${open.handle}`}>Verified App Contributor badge</Link>{" "}
+        stays on your profile for as long as an approval stands.
       </p>
     </div>
+  );
+}
+
+function Approval({ grant }: { grant: PublicationGrant }) {
+  return (
+    <Section
+      lead={
+        <span className={styles.mark}>
+          {grant.app.mark ? (
+            <Image
+              src={grant.app.mark.url}
+              alt=""
+              width={40}
+              height={40}
+              unoptimized
+            />
+          ) : (
+            <Package size={19} strokeWidth={1.6} aria-hidden="true" />
+          )}
+        </span>
+      }
+      title={grant.app.name}
+      action={
+        <a
+          className={styles.home}
+          href={grant.app.home}
+          rel="noreferrer noopener"
+          target="_blank"
+        >
+          {grant.app.home.replace(/^https:\/\//, "")}
+          <ArrowUpRight size={14} strokeWidth={1.7} aria-hidden="true" />
+        </a>
+      }
+    >
+      <ol className={rows.list}>
+        {grant.categories.map((category) => (
+          <li className={rows.row} data-plain="true" key={category.id}>
+            <span className={rows.name}>
+              {category.label}{" "}
+              <span className={rows.slug}>{category.slug}</span>
+            </span>
+            <span className={rows.detail} />
+            <span className={rows.actions}>
+              {category.id === grant.defaultCategory.id ? (
+                <span className={styles.byDefault}>Default</span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <div className={styles.footnote}>
+        <p className={styles.byline}>
+          A post carries your name and {grant.app.name}, and Illarin stays the
+          publisher. {grant.defaultCategory.label} is chosen unless you pick
+          another.
+        </p>
+      </div>
+    </Section>
   );
 }

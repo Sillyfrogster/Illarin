@@ -10,12 +10,13 @@
 
 .heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding-bottom: 14px;
 }
 
 .heading h2 {
+  align-self: baseline;
   font-family: var(--font-display);
   font-size: var(--type-block-title-size);
   font-weight: 560;

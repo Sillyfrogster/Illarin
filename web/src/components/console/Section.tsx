@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import styles from "./Section.module.css";
 
 export function Section({
+  lead,
   title,
   count,
   action,
@@ -10,6 +11,7 @@ export function Section({
   retiredLabel,
   wide,
 }: {
+  lead?: ReactNode;
   title: string;
   count?: number;
   action?: ReactNode;
@@ -21,6 +23,7 @@ export function Section({
   return (
     <section className={styles.section} data-wide={wide || undefined}>
       <header className={styles.heading}>
+        {lead}
         <h2>{title}</h2>
         {count === undefined ? null : (
           <span className={styles.count}>{count}</span>

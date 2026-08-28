@@ -1,4 +1,4 @@
-import { ConsolePage } from "@/components/console/ConsolePage";
+import { AuthorityConsole } from "@/components/console/AuthorityConsole";
 import { PublicationHub } from "@/components/publication/PublicationHub";
 import { pageMetadata } from "@/lib/site-metadata";
 
@@ -9,12 +9,12 @@ export const metadata = pageMetadata(
 
 export default function PublicationPage() {
   return (
-    <ConsolePage
+    <AuthorityConsole
       eyebrow="Publication"
       heading="Publication"
       hint="Who may publish official updates on Illarin, for which project, and under which categories."
     >
       <PublicationHub />
-    </ConsolePage>
+    </AuthorityConsole>
   );
 }

@@ -1,4 +1,4 @@
-import { ConsolePage } from "@/components/console/ConsolePage";
+import { AuthorityConsole } from "@/components/console/AuthorityConsole";
 import { RecognitionConsole } from "@/components/recognition/RecognitionConsole";
 import { pageMetadata } from "@/lib/site-metadata";
 
@@ -9,12 +9,12 @@ export const metadata = pageMetadata(
 
 export default function RecognitionPage() {
   return (
-    <ConsolePage
+    <AuthorityConsole
       eyebrow="Recognition"
       heading="Recognition"
       hint="The jobs and the earned titles and badges Illarin puts on a public profile. None of them grants permission anywhere on Illarin."
     >
       <RecognitionConsole />
-    </ConsolePage>
+    </AuthorityConsole>
   );
 }
