@@ -74,6 +74,38 @@ func (s *Service) replaceMark(
 	return nil
 }
 
+// dropMark takes the mark off one row and deletes the image it pointed at.
+func (s *Service) dropMark(
+	ctx context.Context,
+	tx pgx.Tx,
+	owner markOwner,
+	id uuid.UUID,
+) error {
+	var held *uuid.UUID
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		select mark_media_id from %s where id = $1 for update
+	`, owner), id).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("read the mark being removed: %w", err)
+	}
+	if held == nil {
+		return nil
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf(`
+		update %s set mark_media_id = null, updated_at = now() where id = $1
+	`, owner), id)
+	if err != nil {
+		return fmt.Errorf("take the mark off the row: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `delete from publication_media where id = $1`, *held); err != nil {
+		return fmt.Errorf("drop the removed mark: %w", err)
+	}
+	return nil
+}
+
 // MarkVariant serves one size of a mark. Every mark is public.
 func (s *Service) MarkVariant(
 	ctx context.Context,

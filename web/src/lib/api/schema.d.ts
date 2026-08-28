@@ -643,10 +643,11 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Upload the badge mark Illarin hosts and serves for this distinction. */
+    /** @description Upload the mark Illarin hosts for this recognition. A title that is given a mark is shown as a badge from then on. */
     put: operations["setDistinctionMark"];
     post?: never;
-    delete?: never;
+    /** @description Take the mark away. The recognition stays and is shown as a title from then on. */
+    delete: operations["clearDistinctionMark"];
     options?: never;
     head?: never;
     patch?: never;
@@ -4392,7 +4393,7 @@ export interface operations {
           "application/json": components["schemas"]["Distinction"];
         };
       };
-      /** @description The image is not valid or the distinction is not a badge */
+      /** @description The image is not valid or the distinction is a position */
       400: {
         headers: {
           [name: string]: unknown;
@@ -4429,6 +4430,56 @@ export interface operations {
       };
       /** @description The storage reserve cannot accept the image */
       503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  clearDistinctionMark: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The recognition with its mark gone */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Distinction"];
+        };
+      };
+      /** @description The distinction is a position */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such distinction */
+      404: {
         headers: {
           [name: string]: unknown;
         };

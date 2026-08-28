@@ -513,6 +513,61 @@ func TestABadgeMarkIsHostedByIllarinAndServedOnTheSharedMediaPath(t *testing.T) 
 	}
 }
 
+func TestAMarkMakesATitleABadgeAndRemovingItMakesItATitleAgain(t *testing.T) {
+	stack := newDistinctionStack(t)
+	title := stack.defined(t, "title", "First light", "Published a first asset.")
+	stack.member(t, "promoted@example.com", "promoted.member")
+	stack.assigned(t, "promoted.member", title.ID)
+
+	uploaded := send(t, stack.router, authorized(
+		markUploadRequest(t, title.ID, httpTestPNG(t, 240, 240)), stack.authority,
+	))
+	if uploaded.Code != http.StatusOK {
+		t.Fatalf("mark status = %d, want 200: %s", uploaded.Code, uploaded.Body.String())
+	}
+	var promoted distinction
+	if err := json.Unmarshal(uploaded.Body.Bytes(), &promoted); err != nil {
+		t.Fatalf("decode the marked recognition: %v", err)
+	}
+	if promoted.Form != "badge" || promoted.Mark == nil {
+		t.Fatalf("marked recognition = %+v", promoted)
+	}
+
+	shown := stack.profile(t, "promoted.member")
+	if len(shown.Badges) != 1 || len(shown.Titles) != 0 {
+		t.Fatalf("profile after marking = %d badges, %d titles", len(shown.Badges), len(shown.Titles))
+	}
+
+	cleared := send(t, stack.router, authorized(
+		httptest.NewRequest(http.MethodDelete, "/v1/distinctions/"+title.ID+"/mark", nil),
+		stack.authority,
+	))
+	if cleared.Code != http.StatusOK {
+		t.Fatalf("clear status = %d, want 200: %s", cleared.Code, cleared.Body.String())
+	}
+	var demoted distinction
+	if err := json.Unmarshal(cleared.Body.Bytes(), &demoted); err != nil {
+		t.Fatalf("decode the unmarked recognition: %v", err)
+	}
+	if demoted.Form != "title" || demoted.Mark != nil {
+		t.Fatalf("unmarked recognition = %+v", demoted)
+	}
+
+	after := stack.profile(t, "promoted.member")
+	if len(after.Titles) != 1 || len(after.Badges) != 0 {
+		t.Fatalf("profile after clearing = %d badges, %d titles", len(after.Badges), len(after.Titles))
+	}
+
+	position := stack.defined(t, "position", "Founder", "")
+	refused := send(t, stack.router, authorized(
+		httptest.NewRequest(http.MethodDelete, "/v1/distinctions/"+position.ID+"/mark", nil),
+		stack.authority,
+	))
+	if refused.Code != http.StatusBadRequest {
+		t.Fatalf("clearing a position's mark = %d, want 400", refused.Code)
+	}
+}
+
 func TestEveryDistinctionChangeIsAuditedWithoutCopyingProfileContent(t *testing.T) {
 	stack := newDistinctionStack(t)
 	stack.member(t, "audited@example.com", "audited.member")

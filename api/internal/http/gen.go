@@ -3543,6 +3543,9 @@ type ServerInterface interface {
 	// (PATCH /v1/distinctions/{id})
 	UpdateDistinction(c *gin.Context, id openapi_types.UUID)
 
+	// (DELETE /v1/distinctions/{id}/mark)
+	ClearDistinctionMark(c *gin.Context, id openapi_types.UUID)
+
 	// (PUT /v1/distinctions/{id}/mark)
 	SetDistinctionMark(c *gin.Context, id openapi_types.UUID)
 
@@ -5046,6 +5049,31 @@ func (siw *ServerInterfaceWrapper) UpdateDistinction(c *gin.Context) {
 	siw.Handler.UpdateDistinction(c, id)
 }
 
+// ClearDistinctionMark operation middleware
+func (siw *ServerInterfaceWrapper) ClearDistinctionMark(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ClearDistinctionMark(c, id)
+}
+
 // SetDistinctionMark operation middleware
 func (siw *ServerInterfaceWrapper) SetDistinctionMark(c *gin.Context) {
 
@@ -6005,6 +6033,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/distinctions", wrapper.DefineDistinction)
 	router.PUT(options.BaseURL+"/v1/distinctions", wrapper.OrderDistinctions)
 	router.PATCH(options.BaseURL+"/v1/distinctions/:id", wrapper.UpdateDistinction)
+	router.DELETE(options.BaseURL+"/v1/distinctions/:id/mark", wrapper.ClearDistinctionMark)
 	router.PUT(options.BaseURL+"/v1/distinctions/:id/mark", wrapper.SetDistinctionMark)
 	router.GET(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.ListAccountDistinctions)
 	router.POST(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.AssignDistinction)

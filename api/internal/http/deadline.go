@@ -91,6 +91,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPut, "/v1/distinctions"):                                   d.JSON,
 		routeKey(http.MethodPatch, "/v1/distinctions/:id"):                             d.JSON,
 		routeKey(http.MethodPut, "/v1/distinctions/:id/mark"):                          d.Upload,
+		routeKey(http.MethodDelete, "/v1/distinctions/:id/mark"):                       d.JSON,
 		routeKey(http.MethodGet, "/v1/accounts/:handle/distinctions"):                  d.JSON,
 		routeKey(http.MethodPost, "/v1/accounts/:handle/distinctions"):                 d.JSON,
 		routeKey(http.MethodPut, "/v1/accounts/:handle/distinctions"):                  d.JSON,

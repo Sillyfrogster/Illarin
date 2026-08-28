@@ -208,7 +208,7 @@ func (s *Service) Order(
 	return s.Distinctions(ctx)
 }
 
-// SetMark puts an Illarin-hosted image on a badge and drops the one it replaces.
+// SetMark gives a recognition an Illarin-hosted mark, which makes it a badge.
 func (s *Service) SetMark(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -219,7 +219,7 @@ func (s *Service) SetMark(
 	if err != nil {
 		return Distinction{}, err
 	}
-	if current.Form != FormBadge {
+	if !earned(current.Form) {
 		return Distinction{}, ErrDistinctionForm
 	}
 	stored, prepared, err := s.media.Accept(ctx, file)
@@ -231,6 +231,9 @@ func (s *Service) SetMark(
 		return Distinction{}, fmt.Errorf("begin mark change: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if err := setForm(ctx, tx, id, FormBadge); err != nil {
+		return Distinction{}, err
+	}
 	err = s.replaceMark(ctx, tx, distinctionMarks, id, stored.ID, prepared.Width, prepared.Height)
 	if err != nil {
 		return Distinction{}, err
@@ -242,6 +245,55 @@ func (s *Service) SetMark(
 		return Distinction{}, fmt.Errorf("commit mark change: %w", err)
 	}
 	return s.distinction(ctx, id)
+}
+
+// ClearMark takes a badge's mark away, which leaves it a title.
+func (s *Service) ClearMark(
+	ctx context.Context,
+	actor uuid.UUID,
+	id uuid.UUID,
+) (Distinction, error) {
+	current, err := s.distinction(ctx, id)
+	if err != nil {
+		return Distinction{}, err
+	}
+	if !earned(current.Form) {
+		return Distinction{}, ErrDistinctionForm
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Distinction{}, fmt.Errorf("begin mark removal: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if err := s.dropMark(ctx, tx, distinctionMarks, id); err != nil {
+		return Distinction{}, err
+	}
+	if err := setForm(ctx, tx, id, FormTitle); err != nil {
+		return Distinction{}, err
+	}
+	if err := recordAudit(ctx, tx, actor, "distinction.unmarked", &id, nil, nil); err != nil {
+		return Distinction{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Distinction{}, fmt.Errorf("commit mark removal: %w", err)
+	}
+	return s.distinction(ctx, id)
+}
+
+// setForm moves one recognition between the two presentations it may take, and only a badge may hold a mark, so it runs before a mark is attached and after one is taken away.
+func setForm(ctx context.Context, tx pgx.Tx, id uuid.UUID, form Form) error {
+	_, err := tx.Exec(ctx, `
+		update profile_distinctions set form = $2, updated_at = now() where id = $1
+	`, id, string(form))
+	if err != nil {
+		return fmt.Errorf("set the distinction form: %w", err)
+	}
+	return nil
+}
+
+// earned answers whether a form is recognition rather than a job.
+func earned(form Form) bool {
+	return form == FormTitle || form == FormBadge
 }
 
 func (s *Service) distinction(ctx context.Context, id uuid.UUID) (Distinction, error) {

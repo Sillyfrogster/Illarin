@@ -1120,7 +1120,9 @@ paths:
   /v1/distinctions/{id}/mark:
     put:
       operationId: setDistinctionMark
-      description: Upload the badge mark Illarin hosts and serves for this distinction.
+      description: >-
+        Upload the mark Illarin hosts for this recognition. A title that is
+        given a mark is shown as a badge from then on.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -1152,7 +1154,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Distinction'
         '400':
-          description: The image is not valid or the distinction is not a badge
+          description: The image is not valid or the distinction is a position
         '401':
           description: No account is signed in
         '403':
@@ -1163,6 +1165,36 @@ paths:
           description: The image exceeds the upload limit
         '503':
           description: The storage reserve cannot accept the image
+    delete:
+      operationId: clearDistinctionMark
+      description: >-
+        Take the mark away. The recognition stays and is shown as a title from
+        then on.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The recognition with its mark gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Distinction'
+        '400':
+          description: The distinction is a position
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such distinction
   /v1/accounts/{handle}/distinctions:
     get:
       operationId: listAccountDistinctions

@@ -119,6 +119,19 @@ func (h *Handlers) SetDistinctionMark(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIDistinction(marked))
 }
 
+func (h *Handlers) ClearDistinctionMark(c *gin.Context, id types.UUID) {
+	authority, ok := h.publicationAuthority(c, "removing a badge mark")
+	if !ok {
+		return
+	}
+	cleared, err := h.publications.ClearMark(c.Request.Context(), authority.ID, uuid.UUID(id))
+	if err != nil {
+		h.distinctionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIDistinction(cleared))
+}
+
 func (h *Handlers) ListAccountDistinctions(c *gin.Context, handle string) {
 	if _, ok := h.publicationAuthority(c, "reading an account's distinctions"); !ok {
 		return
@@ -232,7 +245,7 @@ func (h *Handlers) distinctionError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrRetiredAssigning):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "A retired distinction cannot be assigned."})
 	case errors.Is(err, publication.ErrDistinctionForm):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Only a badge carries a mark."})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "A position carries no mark."})
 	case errors.Is(err, publication.ErrIncompleteOrder):
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Name every one of them exactly once to set the order.",
