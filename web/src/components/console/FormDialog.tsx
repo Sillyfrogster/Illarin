@@ -11,6 +11,7 @@ export function FormDialog({
   commit,
   busy,
   ready = true,
+  acknowledge,
   destructive,
   onClose,
   onCommit,
@@ -22,6 +23,7 @@ export function FormDialog({
   commit: string;
   busy?: boolean;
   ready?: boolean;
+  acknowledge?: boolean;
   destructive?: ReactNode;
   onClose: () => void;
   onCommit: () => void;
@@ -71,9 +73,11 @@ export function FormDialog({
           {destructive ? (
             <div className={styles.destructive}>{destructive}</div>
           ) : null}
-          <button type="button" className={styles.cancel} onClick={onClose}>
-            Cancel
-          </button>
+          {acknowledge ? null : (
+            <button type="button" className={styles.cancel} onClick={onClose}>
+              Cancel
+            </button>
+          )}
           <button
             type="submit"
             className={styles.keep}

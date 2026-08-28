@@ -16,6 +16,7 @@
 .field :global(input[type="text"]),
 .field :global(input:not([type])),
 .field :global(input[type="url"]),
+.field :global(input[type="date"]),
 .field :global(select),
 .field :global(textarea) {
   width: 100%;

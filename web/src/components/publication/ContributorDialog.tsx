@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
 import {
   approveContributor,
+  readTokens,
   revokeGrant,
   updateGrant,
 } from "@/lib/api/publication";
@@ -12,9 +13,12 @@ import type {
   PublicationApp,
   PublicationCategory,
   PublicationGrant,
+  PublicationToken,
 } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
 import { CategoryChoice } from "./CategoryChoice";
+import tokenStyles from "./ContributorDialog.module.css";
+import { TokenRows } from "./TokenRows";
 
 export function ContributorDialog({
   existing,
@@ -109,7 +113,9 @@ export function ContributorDialog({
             className={styles.retire}
             onClick={() => (confirming ? revoke() : setConfirming(true))}
           >
-            {confirming ? "Revoke, and take the badge back" : "Revoke"}
+            {confirming
+              ? "Revoke, and take the badge back"
+              : "Revoke the approval"}
           </button>
         ) : null
       }
@@ -151,6 +157,8 @@ export function ContributorDialog({
         onFallback={setFallback}
       />
 
+      {existing ? <TheirTokens grant={existing} onFailure={onFailure} /> : null}
+
       {confirming && existing ? (
         <p className={styles.warning} role="alert">
           Everything @{existing.holder.handle} published stays, under their
@@ -158,5 +166,64 @@ export function ContributorDialog({
         </p>
       ) : null}
     </FormDialog>
+  );
+}
+
+function TheirTokens({
+  grant,
+  onFailure,
+}: {
+  grant: PublicationGrant;
+  onFailure: (message: string) => void;
+}) {
+  const [tokens, setTokens] = useState<PublicationToken[] | null>(null);
+
+  const load = useCallback(async () => {
+    const answer = await readTokens(grant.id);
+    if (answer.error || !answer.value) {
+      onFailure(answer.error ?? "");
+      return;
+    }
+    setTokens(answer.value.tokens);
+  }, [grant.id, onFailure]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const live = tokens?.filter((token) => token.active) ?? [];
+  const spent = (tokens?.length ?? 0) - live.length;
+
+  return (
+    <section className={tokenStyles.theirs}>
+      <h3>
+        Their tokens
+        {tokens ? (
+          <span className={tokenStyles.count}>{live.length}</span>
+        ) : null}
+      </h3>
+      {tokens === null ? (
+        <p className={tokenStyles.quiet}>Reading their tokens…</p>
+      ) : live.length === 0 ? (
+        <p className={tokenStyles.quiet}>
+          Nothing of theirs can reach the publication API. Only they can make a
+          token; you can stop any of them.
+        </p>
+      ) : (
+        <TokenRows
+          tokens={live}
+          revocable
+          onRevoked={() => void load()}
+          onFailure={onFailure}
+        />
+      )}
+      {spent > 0 ? (
+        <p className={tokenStyles.gone}>
+          {spent === 1
+            ? "One more has already stopped working."
+            : `${spent} more have already stopped working.`}
+        </p>
+      ) : null}
+    </section>
   );
 }

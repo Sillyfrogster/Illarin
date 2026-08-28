@@ -1,7 +1,9 @@
 import type {
+  IssuedPublicationToken,
   PublicationApp,
   PublicationCategory,
   PublicationGrant,
+  PublicationToken,
   PublicationWorkspace,
 } from "@/lib/api/query";
 import { ask, json } from "./distinctions";
@@ -97,4 +99,30 @@ export function revokeGrant(id: string) {
 
 export function readWorkspace() {
   return json<PublicationWorkspace>("/publication/workspace", "GET");
+}
+
+export function readTokens(grantId: string) {
+  return json<{ tokens: PublicationToken[] }>(
+    `/publication/grants/${grantId}/tokens`,
+    "GET",
+  );
+}
+
+export function issueToken(
+  grantId: string,
+  token: { name: string; expiresAt?: string },
+) {
+  return json<IssuedPublicationToken>(
+    `/publication/grants/${grantId}/tokens`,
+    "POST",
+    token,
+  );
+}
+
+export function revokeToken(id: string) {
+  return ask<null>(
+    `/publication/tokens/${id}`,
+    { method: "DELETE" },
+    async () => null,
+  );
 }

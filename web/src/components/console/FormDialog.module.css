@@ -120,6 +120,10 @@
   color: var(--color-text-secondary);
 }
 
+.commit > .keep:only-child {
+  margin-left: auto;
+}
+
 .cancel:hover {
   color: var(--color-text-primary);
 }

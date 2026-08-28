@@ -12,6 +12,7 @@ import { readWorkspace } from "@/lib/api/publication";
 import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import styles from "./ContributorWorkspace.module.css";
+import { GrantTokens } from "./GrantTokens";
 
 export function ContributorWorkspace() {
   const { account } = useAuth();
@@ -97,8 +98,7 @@ function Inside({
         <Approval key={grant.id} grant={grant} />
       ))}
       <p className={styles.later}>
-        Writing happens here once the editor is built. Until then this page is
-        the record of what you were approved for. Your{" "}
+        Writing in the browser happens here once the editor is built. Your{" "}
         <Link href={`/${open.handle}`}>Verified App Contributor badge</Link>{" "}
         stays on your profile for as long as an approval stands.
       </p>
@@ -160,6 +160,7 @@ function Approval({ grant }: { grant: PublicationGrant }) {
           another.
         </p>
       </div>
+      <GrantTokens grant={grant} />
     </Section>
   );
 }

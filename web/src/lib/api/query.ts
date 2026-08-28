@@ -51,6 +51,9 @@ export type PublicationCategory = components["schemas"]["PublicationCategory"];
 export type PublicationGrant = components["schemas"]["PublicationGrant"];
 export type PublicationWorkspace =
   components["schemas"]["PublicationWorkspace"];
+export type PublicationToken = components["schemas"]["PublicationToken"];
+export type IssuedPublicationToken =
+  components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];

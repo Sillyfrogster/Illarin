@@ -1,0 +1,115 @@
+.tokens {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  list-style: none;
+}
+
+.token {
+  display: grid;
+  min-height: 54px;
+  align-items: center;
+  gap: 3px 16px;
+  padding: 11px 0;
+  border-top: 1px solid var(--color-border);
+  grid-template-areas:
+    "name"
+    "detail"
+    "actions";
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.token[data-spent="true"] {
+  opacity: 0.72;
+}
+
+.name {
+  font-size: var(--type-body-size);
+  font-weight: 700;
+  grid-area: name;
+  overflow-wrap: anywhere;
+}
+
+.prefix {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-size);
+  font-weight: 500;
+}
+
+.detail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  grid-area: detail;
+  line-height: var(--type-secondary-leading);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  grid-area: actions;
+  margin-top: 5px;
+  margin-inline-start: -12px;
+}
+
+.revoke,
+.confirm,
+.stand {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding-inline: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--type-secondary-size);
+  font-weight: 700;
+  transition:
+    background 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.revoke {
+  color: var(--color-text-secondary);
+}
+
+.revoke:hover:not(:disabled) {
+  background: var(--color-muted);
+  color: var(--color-text-primary);
+}
+
+.confirm {
+  background: var(--color-critical-soft);
+  color: var(--color-critical-strong);
+}
+
+.confirm:hover:not(:disabled) {
+  background: var(--color-critical);
+  color: var(--color-on-emphasis);
+}
+
+.stand {
+  color: var(--color-text-secondary);
+}
+
+.stand:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.spent {
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+}
+
+@container (min-width: 620px) {
+  .token {
+    gap: 3px 18px;
+    grid-template-areas: "name detail actions";
+    grid-template-columns: minmax(0, 16rem) minmax(0, 1fr) auto;
+  }
+
+  .actions {
+    margin-top: 0;
+    margin-inline-start: 0;
+    justify-self: end;
+  }
+}
