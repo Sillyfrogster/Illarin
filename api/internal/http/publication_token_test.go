@@ -463,6 +463,28 @@ func TestIssuingAndRevokingATokenIsAuditedWithoutItsValue(t *testing.T) {
 	}
 }
 
+func TestNothingCarryingATokenIsCacheable(t *testing.T) {
+	stack := newDistinctionStack(t)
+	who := stack.contributor(t, "writer@example.com", "publication.writer")
+	made := stack.issued(t, who, "Release robot")
+
+	listed := send(t, stack.router, authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/publication/grants/"+who.grant.ID+"/tokens", nil,
+	), who.session))
+	if listed.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("the token listing was cacheable: %q", listed.Header().Get("Cache-Control"))
+	}
+
+	issuing := stack.issue(t, who.session, who.grant.ID, `{"name":"Another"}`)
+	if issuing.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("a new token was cacheable: %q", issuing.Header().Get("Cache-Control"))
+	}
+
+	if bearing := stack.bearing(t, made.Value); bearing.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("a credential read was cacheable: %q", bearing.Header().Get("Cache-Control"))
+	}
+}
+
 func TestUsingATokenRecordsThatItWasUsed(t *testing.T) {
 	stack := newDistinctionStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
