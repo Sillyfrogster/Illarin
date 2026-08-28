@@ -34,53 +34,62 @@ export function TokenRows({
 
   return (
     <ol className={styles.tokens}>
-      {tokens.map((token) => (
-        <li
-          className={styles.token}
-          data-spent={token.active ? undefined : "true"}
-          key={token.id}
-        >
-          <span className={styles.name}>
-            {token.name} <span className={styles.prefix}>{token.prefix}</span>
-          </span>
-          <span className={styles.detail}>{describe(token)}</span>
-          <span className={styles.actions}>
-            {token.active && revocable ? (
-              <>
-                {confirming === token.id ? (
+      {tokens.map((token) => {
+        const asking = confirming === token.id;
+        return (
+          <li
+            className={styles.token}
+            data-spent={token.active ? undefined : "true"}
+            key={token.id}
+          >
+            <span className={styles.name}>
+              {token.name} <span className={styles.prefix}>{token.prefix}</span>
+            </span>
+            <span className={styles.detail}>{describe(token)}</span>
+            <span className={styles.actions}>
+              {token.active && revocable ? (
+                <>
+                  {asking ? (
+                    <button
+                      type="button"
+                      className={styles.stand}
+                      onClick={() => setConfirming("")}
+                    >
+                      Keep it
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    className={styles.stand}
-                    onClick={() => setConfirming("")}
+                    className={asking ? styles.confirm : styles.revoke}
+                    disabled={Boolean(revoking)}
+                    aria-expanded={asking}
+                    aria-describedby={
+                      asking ? `${token.id}-consequence` : undefined
+                    }
+                    onClick={() =>
+                      asking ? revoke(token.id) : setConfirming(token.id)
+                    }
                   >
-                    Keep it
+                    {revoking === token.id
+                      ? "Revoking…"
+                      : asking
+                        ? "Revoke for good"
+                        : "Revoke"}
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className={
-                    confirming === token.id ? styles.confirm : styles.revoke
-                  }
-                  disabled={Boolean(revoking)}
-                  onClick={() =>
-                    confirming === token.id
-                      ? revoke(token.id)
-                      : setConfirming(token.id)
-                  }
-                >
-                  {revoking === token.id
-                    ? "Revoking…"
-                    : confirming === token.id
-                      ? "Revoke for good"
-                      : "Revoke"}
-                </button>
-              </>
-            ) : (
-              <span className={styles.spent}>{ended(token)}</span>
-            )}
-          </span>
-        </li>
-      ))}
+                </>
+              ) : (
+                <span className={styles.spent}>{ended(token)}</span>
+              )}
+            </span>
+            {asking ? (
+              <p className={styles.consequence} id={`${token.id}-consequence`}>
+                Anything carrying it stops publishing at once. Your other tokens
+                and your approval are untouched.
+              </p>
+            ) : null}
+          </li>
+        );
+      })}
     </ol>
   );
 }

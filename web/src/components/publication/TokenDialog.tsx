@@ -24,6 +24,7 @@ export function TokenDialog({
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
   const [made, setMade] = useState<IssuedPublicationToken | null>(null);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function issue() {
@@ -47,12 +48,12 @@ export function TokenDialog({
         open
         title="Copy it now"
         hint="This is the only time Illarin can show you this token. Nothing here can read it back, so if it gets away from you, revoke it and make another."
-        commit="I have it"
+        commit={copied ? "I have it" : "Close without copying"}
         acknowledge
         onClose={onClose}
         onCommit={onClose}
       >
-        <Reveal value={made.value} />
+        <Reveal value={made.value} copied={copied} onCopied={setCopied} />
       </FormDialog>
     );
   }
@@ -99,14 +100,21 @@ export function TokenDialog({
   );
 }
 
-function Reveal({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
+function Reveal({
+  value,
+  copied,
+  onCopied,
+}: {
+  value: string;
+  copied: boolean;
+  onCopied: (copied: boolean) => void;
+}) {
   const [trouble, setTrouble] = useState("");
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
+      onCopied(true);
     } catch {
       setTrouble("Your browser would not let us copy. Select it and copy it.");
     }
@@ -115,7 +123,12 @@ function Reveal({ value }: { value: string }) {
   return (
     <div className={styles.reveal}>
       <code className={styles.value}>{value}</code>
-      <button type="button" className={styles.copy} onClick={copy}>
+      <button
+        type="button"
+        className={styles.copy}
+        onClick={copy}
+        aria-live="polite"
+      >
         {copied ? (
           <Check size={15} strokeWidth={2} aria-hidden="true" />
         ) : (

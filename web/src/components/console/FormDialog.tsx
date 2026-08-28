@@ -69,7 +69,10 @@ export function FormDialog({
 
         <div className={styles.fields}>{children}</div>
 
-        <footer className={styles.commit}>
+        <footer
+          className={styles.commit}
+          data-acknowledge={acknowledge || undefined}
+        >
           {destructive ? (
             <div className={styles.destructive}>{destructive}</div>
           ) : null}

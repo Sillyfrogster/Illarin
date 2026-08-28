@@ -124,6 +124,17 @@
   margin-left: auto;
 }
 
+/* An acknowledged dialog is left, not committed, so its way out stays quiet. */
+.commit[data-acknowledge] .keep {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.commit[data-acknowledge] .keep:hover {
+  border-color: var(--color-emphasis-border);
+}
+
 .cancel:hover {
   color: var(--color-text-primary);
 }

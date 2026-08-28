@@ -85,6 +85,7 @@
 
   .add {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
     margin-left: 0;
   }

@@ -15,7 +15,8 @@
   grid-template-areas:
     "name"
     "detail"
-    "actions";
+    "actions"
+    "consequence";
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -53,11 +54,20 @@
   margin-inline-start: -12px;
 }
 
+.consequence {
+  max-width: 58ch;
+  padding-bottom: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  grid-area: consequence;
+  line-height: var(--type-secondary-leading);
+}
+
 .revoke,
 .confirm,
 .stand {
   display: inline-flex;
-  min-height: 38px;
+  min-height: 44px;
   align-items: center;
   padding-inline: 12px;
   border-radius: var(--radius-sm);
@@ -103,8 +113,16 @@
 @container (min-width: 620px) {
   .token {
     gap: 3px 18px;
-    grid-template-areas: "name detail actions";
+    grid-template-areas:
+      "name detail actions"
+      "consequence consequence consequence";
     grid-template-columns: minmax(0, 16rem) minmax(0, 1fr) auto;
+  }
+
+  .revoke,
+  .confirm,
+  .stand {
+    min-height: 38px;
   }
 
   .actions {
