@@ -78,7 +78,7 @@ func (s *Service) DefineApp(ctx context.Context, actor uuid.UUID, in AppEdit) (A
 	if err != nil {
 		return App{}, fmt.Errorf("define publication app: %w", err)
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "app.defined", &id, nil, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "app.defined", AppID: &id}); err != nil {
 		return App{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -136,7 +136,7 @@ func (s *Service) UpdateApp(
 	if err != nil {
 		return App{}, fmt.Errorf("update publication app: %w", err)
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "app.updated", &id, nil, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "app.updated", AppID: &id}); err != nil {
 		return App{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -171,7 +171,7 @@ func (s *Service) OrderApps(ctx context.Context, actor uuid.UUID, ids []uuid.UUI
 			return nil, fmt.Errorf("order publication app: %w", err)
 		}
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "app.ordered", nil, nil, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "app.ordered"}); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -203,7 +203,7 @@ func (s *Service) SetAppMark(
 	if err != nil {
 		return App{}, err
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "app.marked", &id, nil, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "app.marked", AppID: &id}); err != nil {
 		return App{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {

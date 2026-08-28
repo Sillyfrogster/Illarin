@@ -106,7 +106,10 @@ func (s *Service) CreateGrant(ctx context.Context, actor uuid.UUID, in GrantEdit
 	if err := carryBadge(ctx, tx, holder.ID, actor); err != nil {
 		return Grant{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, actor, "grant.created", &app.ID, nil, &id, &holder.ID)
+	err = recordPublicationAudit(ctx, tx, change{
+		Actor: actor, Action: "grant.created",
+		AppID: &app.ID, GrantID: &id, SubjectID: &holder.ID,
+	})
 	if err != nil {
 		return Grant{}, err
 	}
@@ -161,9 +164,10 @@ func (s *Service) UpdateGrant(
 	if err := writeGrantCategories(ctx, tx, id, allowed); err != nil {
 		return Grant{}, err
 	}
-	err = recordPublicationAudit(
-		ctx, tx, actor, "grant.updated", &current.App.ID, nil, &id, &current.Holder.ID,
-	)
+	err = recordPublicationAudit(ctx, tx, change{
+		Actor: actor, Action: "grant.updated",
+		AppID: &current.App.ID, GrantID: &id, SubjectID: &current.Holder.ID,
+	})
 	if err != nil {
 		return Grant{}, err
 	}
@@ -196,7 +200,11 @@ func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	if err := dropBadgeWhenLastGrant(ctx, tx, holderID); err != nil {
 		return err
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "grant.revoked", &appID, nil, &id, &holderID); err != nil {
+	err = recordPublicationAudit(ctx, tx, change{
+		Actor: actor, Action: "grant.revoked",
+		AppID: &appID, GrantID: &id, SubjectID: &holderID,
+	})
+	if err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

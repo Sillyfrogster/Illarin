@@ -1662,6 +1662,114 @@ paths:
           description: The signed-in account is not the publication authority
         '404':
           description: No such active grant
+  /v1/publication/grants/{id}/tokens:
+    get:
+      operationId: listPublicationTokens
+      description: >-
+        Safe metadata for every token issued under one grant, revoked ones
+        included. The contributor holding the grant and the publication
+        authority may read it; nobody can read a token value here or anywhere.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The grant's tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationTokenList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account neither holds the grant nor publication authority
+        '404':
+          description: No such grant
+    post:
+      operationId: issuePublicationToken
+      description: >-
+        Issue one token under an active grant. The response is the only time
+        Illarin can show its value.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssuePublicationTokenRequest'
+      responses:
+        '201':
+          description: The new token and its value, shown once
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuedPublicationToken'
+        '400':
+          description: The name or expiry is not usable, or the grant is revoked
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account does not hold the grant
+        '404':
+          description: No such grant
+  /v1/publication/tokens/{id}:
+    delete:
+      operationId: revokePublicationToken
+      description: >-
+        Stop one token. The grant, the contributor's other tokens and everything
+        already published are untouched.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The token no longer authenticates
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account neither holds the grant nor publication authority
+        '404':
+          description: No such live token
+  /v1/publication/token:
+    get:
+      operationId: getPublicationCredential
+      description: >-
+        What the publication token sent with this request is, and the grant it
+        publishes under. It is the only thing a publication token reaches today,
+        and it reads nothing outside the publication.
+      security:
+        - publicationToken: []
+      responses:
+        '200':
+          description: The calling token and its grant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationCredential'
+        '401':
+          description: The token is missing, expired, revoked or no longer granted
   /v1/publication/workspace:
     get:
       operationId: getPublicationWorkspace
@@ -2879,6 +2987,13 @@ components:
       type: http
       scheme: bearer
       description: A short-lived access token issued to one linked instance.
+    publicationToken:
+      type: http
+      scheme: bearer
+      description: >-
+        A publication token issued under one publication grant. It is not a
+        session, it is not an instance token, and it carries no authority
+        outside the publication it was issued for.
   parameters:
     IllarinRequest:
       name: X-Illarin-Request
@@ -3859,6 +3974,89 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicationGrant'
+    PublicationToken:
+      type: object
+      required:
+        - id
+        - grantId
+        - name
+        - prefix
+        - createdAt
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        grantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        lastUsedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        revokedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        active:
+          type: boolean
+    PublicationTokenList:
+      type: object
+      required:
+        - tokens
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationToken'
+    IssuePublicationTokenRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        expiresAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+    IssuedPublicationToken:
+      type: object
+      required:
+        - token
+        - value
+      properties:
+        token:
+          $ref: '#/components/schemas/PublicationToken'
+        value:
+          type: string
+          description: The token value, returned here and never again.
+    PublicationCredential:
+      type: object
+      required:
+        - token
+        - grant
+      properties:
+        token:
+          $ref: '#/components/schemas/PublicationToken'
+        grant:
+          $ref: '#/components/schemas/PublicationGrant'
     RenameHandleRequest:
       type: object
       required:

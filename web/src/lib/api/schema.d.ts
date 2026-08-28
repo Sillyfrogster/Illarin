@@ -810,6 +810,58 @@ export interface paths {
     patch: operations["updatePublicationGrant"];
     trace?: never;
   };
+  "/v1/publication/grants/{id}/tokens": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Safe metadata for every token issued under one grant, revoked ones included. The contributor holding the grant and the publication authority may read it; nobody can read a token value here or anywhere. */
+    get: operations["listPublicationTokens"];
+    put?: never;
+    /** @description Issue one token under an active grant. The response is the only time Illarin can show its value. */
+    post: operations["issuePublicationToken"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/tokens/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Stop one token. The grant, the contributor's other tokens and everything already published are untouched. */
+    delete: operations["revokePublicationToken"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What the publication token sent with this request is, and the grant it publishes under. It is the only thing a publication token reaches today, and it reads nothing outside the publication. */
+    get: operations["getPublicationCredential"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/workspace": {
     parameters: {
       query?: never;
@@ -1588,6 +1640,36 @@ export interface components {
     PublicationWorkspace: {
       handle: string;
       grants: components["schemas"]["PublicationGrant"][];
+    };
+    PublicationToken: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      grantId: string;
+      name: string;
+      prefix: string;
+      /** Format: date-time */
+      createdAt: string;
+      expiresAt?: string | null;
+      lastUsedAt?: string | null;
+      revokedAt?: string | null;
+      active: boolean;
+    };
+    PublicationTokenList: {
+      tokens: components["schemas"]["PublicationToken"][];
+    };
+    IssuePublicationTokenRequest: {
+      name: string;
+      expiresAt?: string | null;
+    };
+    IssuedPublicationToken: {
+      token: components["schemas"]["PublicationToken"];
+      /** @description The token value, returned here and never again. */
+      value: string;
+    };
+    PublicationCredential: {
+      token: components["schemas"]["PublicationToken"];
+      grant: components["schemas"]["PublicationGrant"];
     };
     RenameHandleRequest: {
       handle: string;
@@ -5265,6 +5347,171 @@ export interface operations {
       };
       /** @description No such grant */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The grant's tokens */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationTokenList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account neither holds the grant nor publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  issuePublicationToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IssuePublicationTokenRequest"];
+      };
+    };
+    responses: {
+      /** @description The new token and its value, shown once */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IssuedPublicationToken"];
+        };
+      };
+      /** @description The name or expiry is not usable, or the grant is revoked */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account does not hold the grant */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  revokePublicationToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The token no longer authenticates */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account neither holds the grant nor publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such live token */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPublicationCredential: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The calling token and its grant */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCredential"];
+        };
+      };
+      /** @description The token is missing, expired, revoked or no longer granted */
+      401: {
         headers: {
           [name: string]: unknown;
         };

@@ -83,13 +83,17 @@ func noStoreLink(c *gin.Context) {
 	c.Header("Pragma", "no-cache")
 }
 
-func noStoreLinkedInstanceResponses() gin.HandlerFunc {
+// noStoreCredentialResponses keeps a response that carries or turns on a
+// credential out of every cache between Illarin and the caller.
+func noStoreCredentialResponses() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.FullPath()
 		if strings.HasPrefix(path, "/v1/link/") ||
 			path == "/v1/instances" || strings.HasPrefix(path, "/v1/instances/") ||
 			strings.HasPrefix(path, "/v1/deliveries") ||
 			path == "/v1/library/sync" ||
+			strings.HasPrefix(path, "/v1/publication/token") ||
+			strings.HasSuffix(path, "/tokens") ||
 			strings.HasSuffix(path, "/instances") ||
 			strings.HasSuffix(path, "/deliveries") {
 			noStoreLink(c)

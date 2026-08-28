@@ -104,6 +104,12 @@ paths:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1grants
   /v1/publication/grants/{id}:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1grants~1{id}
+  /v1/publication/grants/{id}/tokens:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1grants~1{id}~1tokens
+  /v1/publication/tokens/{id}:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1tokens~1{id}
+  /v1/publication/token:
+    $ref: ./publication.yaml#/paths/~1v1~1publication~1token
   /v1/publication/workspace:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1workspace
   /v1/profiles/{handle}:
@@ -163,6 +169,8 @@ components:
       $ref: ./common.yaml#/components/securitySchemes/browserMutation
     instanceToken:
       $ref: ./common.yaml#/components/securitySchemes/instanceToken
+    publicationToken:
+      $ref: ./common.yaml#/components/securitySchemes/publicationToken
   parameters:
     IllarinRequest:
       $ref: ./common.yaml#/components/parameters/IllarinRequest
@@ -303,6 +311,16 @@ components:
       $ref: ./publication.yaml#/components/schemas/UpdatePublicationGrantRequest
     PublicationWorkspace:
       $ref: ./publication.yaml#/components/schemas/PublicationWorkspace
+    PublicationToken:
+      $ref: ./publication.yaml#/components/schemas/PublicationToken
+    PublicationTokenList:
+      $ref: ./publication.yaml#/components/schemas/PublicationTokenList
+    IssuePublicationTokenRequest:
+      $ref: ./publication.yaml#/components/schemas/IssuePublicationTokenRequest
+    IssuedPublicationToken:
+      $ref: ./publication.yaml#/components/schemas/IssuedPublicationToken
+    PublicationCredential:
+      $ref: ./publication.yaml#/components/schemas/PublicationCredential
     RenameHandleRequest:
       $ref: ./accounts.yaml#/components/schemas/RenameHandleRequest
     SignUpRequest:

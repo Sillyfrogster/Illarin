@@ -108,6 +108,10 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPost, "/v1/publication/grants"):                            d.JSON,
 		routeKey(http.MethodPatch, "/v1/publication/grants/:id"):                       d.JSON,
 		routeKey(http.MethodDelete, "/v1/publication/grants/:id"):                      d.JSON,
+		routeKey(http.MethodGet, "/v1/publication/grants/:id/tokens"):                  d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/grants/:id/tokens"):                 d.JSON,
+		routeKey(http.MethodDelete, "/v1/publication/tokens/:id"):                      d.JSON,
+		routeKey(http.MethodGet, "/v1/publication/token"):                              d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/workspace"):                          d.JSON,
 		routeKey(http.MethodGet, "/v1/profiles/:handle"):                               d.JSON,
 		routeKey(http.MethodGet, "/v1/profiles/:handle/deleted"):                       d.JSON,
@@ -148,7 +152,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 	routes := r.Group(
 		"",
 		deadlineByRoute(limits),
-		noStoreLinkedInstanceResponses(),
+		noStoreCredentialResponses(),
 		h.guardBrowserMutations(),
 	)
 	routes.GET("/healthz", health)

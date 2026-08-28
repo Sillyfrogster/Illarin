@@ -28,6 +28,9 @@ var (
 	ErrAccountUnverified = errors.New("the account has not verified its email")
 	ErrAlreadyGranted    = errors.New("the account already publishes for that app")
 	ErrGrantRevoked      = errors.New("the grant has been revoked")
+	ErrTokenNotFound     = errors.New("no such publication token")
+	ErrNotTokenOwner     = errors.New("the account neither holds the grant nor publication authority")
+	ErrTokenCredential   = errors.New("the value does not identify a live publication token")
 )
 
 // FieldError names the field a request was refused over.

@@ -2143,6 +2143,20 @@ type InstanceTokenGrant struct {
 	RefreshToken         RefreshToken   `json:"refreshToken"`
 }
 
+// IssuePublicationTokenRequest defines model for IssuePublicationTokenRequest.
+type IssuePublicationTokenRequest struct {
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	Name      string     `json:"name"`
+}
+
+// IssuedPublicationToken defines model for IssuedPublicationToken.
+type IssuedPublicationToken struct {
+	Token PublicationToken `json:"token"`
+
+	// Value The token value, returned here and never again.
+	Value string `json:"value"`
+}
+
 // ItemSize How large the images inside an element are drawn. It names what it controls, and no element type declares a measurement of its own.
 type ItemSize string
 
@@ -2533,6 +2547,12 @@ type PublicationCategoryList struct {
 	Categories []PublicationCategory `json:"categories"`
 }
 
+// PublicationCredential defines model for PublicationCredential.
+type PublicationCredential struct {
+	Grant PublicationGrant `json:"grant"`
+	Token PublicationToken `json:"token"`
+}
+
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
 	Active          bool                   `json:"active"`
@@ -2556,6 +2576,24 @@ type PublicationGrantHolder struct {
 // PublicationGrantList defines model for PublicationGrantList.
 type PublicationGrantList struct {
 	Grants []PublicationGrant `json:"grants"`
+}
+
+// PublicationToken defines model for PublicationToken.
+type PublicationToken struct {
+	Active     bool               `json:"active"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	ExpiresAt  *time.Time         `json:"expiresAt,omitempty"`
+	GrantId    openapi_types.UUID `json:"grantId"`
+	Id         openapi_types.UUID `json:"id"`
+	LastUsedAt *time.Time         `json:"lastUsedAt,omitempty"`
+	Name       string             `json:"name"`
+	Prefix     string             `json:"prefix"`
+	RevokedAt  *time.Time         `json:"revokedAt,omitempty"`
+}
+
+// PublicationTokenList defines model for PublicationTokenList.
+type PublicationTokenList struct {
+	Tokens []PublicationToken `json:"tokens"`
 }
 
 // PublicationWorkspace defines model for PublicationWorkspace.
@@ -3277,6 +3315,9 @@ type CreatePublicationGrantJSONRequestBody = CreatePublicationGrantRequest
 // UpdatePublicationGrantJSONRequestBody defines body for UpdatePublicationGrant for application/json ContentType.
 type UpdatePublicationGrantJSONRequestBody = UpdatePublicationGrantRequest
 
+// IssuePublicationTokenJSONRequestBody defines body for IssuePublicationToken for application/json ContentType.
+type IssuePublicationTokenJSONRequestBody = IssuePublicationTokenRequest
+
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
 	var body PendingLinkPollResult
@@ -3656,6 +3697,18 @@ type ServerInterface interface {
 
 	// (PATCH /v1/publication/grants/{id})
 	UpdatePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/grants/{id}/tokens)
+	ListPublicationTokens(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/grants/{id}/tokens)
+	IssuePublicationToken(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/token)
+	GetPublicationCredential(c *gin.Context)
+
+	// (DELETE /v1/publication/tokens/{id})
+	RevokePublicationToken(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/workspace)
 	GetPublicationWorkspace(c *gin.Context)
@@ -5951,6 +6004,94 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationGrant(c *gin.Context) {
 	siw.Handler.UpdatePublicationGrant(c, id)
 }
 
+// ListPublicationTokens operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationTokens(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationTokens(c, id)
+}
+
+// IssuePublicationToken operation middleware
+func (siw *ServerInterfaceWrapper) IssuePublicationToken(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.IssuePublicationToken(c, id)
+}
+
+// GetPublicationCredential operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicationCredential(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicationCredential(c)
+}
+
+// RevokePublicationToken operation middleware
+func (siw *ServerInterfaceWrapper) RevokePublicationToken(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RevokePublicationToken(c, id)
+}
+
 // GetPublicationWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicationWorkspace(c *gin.Context) {
 
@@ -6051,6 +6192,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/publication/grants", wrapper.CreatePublicationGrant)
 	router.DELETE(options.BaseURL+"/v1/publication/grants/:id", wrapper.RevokePublicationGrant)
 	router.PATCH(options.BaseURL+"/v1/publication/grants/:id", wrapper.UpdatePublicationGrant)
+	router.GET(options.BaseURL+"/v1/publication/grants/:id/tokens", wrapper.ListPublicationTokens)
+	router.POST(options.BaseURL+"/v1/publication/grants/:id/tokens", wrapper.IssuePublicationToken)
+	router.DELETE(options.BaseURL+"/v1/publication/tokens/:id", wrapper.RevokePublicationToken)
+	router.GET(options.BaseURL+"/v1/publication/token", wrapper.GetPublicationCredential)
 	router.GET(options.BaseURL+"/v1/publication/workspace", wrapper.GetPublicationWorkspace)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)

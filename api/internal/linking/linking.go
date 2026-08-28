@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/credential"
 	"github.com/google/uuid"
 )
 
@@ -143,10 +144,9 @@ const (
 	secretBytes            = 32
 	opaqueCodeLength       = 43
 	maxUserCodeInputLength = 16
-	credentialLength       = 3 + 1 + codeLength + 1 + opaqueCodeLength
 
-	accessTokenKind  = "ia1"
-	refreshTokenKind = "ir1"
+	accessTokenKind  = string(credential.InstanceAccess)
+	refreshTokenKind = string(credential.InstanceRefresh)
 )
 
 var (
@@ -334,36 +334,19 @@ func opaqueCodeHash(code string) ([]byte, bool) {
 }
 
 func newCredential(kind string) (token, prefix string, hash []byte, err error) {
-	prefix, err = newCode(codeLength)
+	minted, err := credential.Mint(credential.Kind(kind))
 	if err != nil {
 		return "", "", nil, err
 	}
-	secret := make([]byte, secretBytes)
-	if _, err := rand.Read(secret); err != nil {
-		return "", "", nil, fmt.Errorf("make token: %w", err)
-	}
-	token = kind + "." + prefix + "." + base64.RawURLEncoding.EncodeToString(secret)
-	return token, prefix, hashOf(token), nil
+	return minted.Value, minted.Prefix, minted.Hash, nil
 }
 
 func credentialHash(token, kind string) ([]byte, bool) {
-	if len(token) != credentialLength {
+	read, ok := credential.Read(token, credential.Kind(kind))
+	if !ok {
 		return nil, false
 	}
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 || parts[0] != kind || len(parts[1]) != codeLength {
-		return nil, false
-	}
-	for _, char := range parts[1] {
-		if !strings.ContainsRune(codeAlphabet, char) {
-			return nil, false
-		}
-	}
-	raw, err := base64.RawURLEncoding.DecodeString(parts[2])
-	if err != nil || len(raw) != secretBytes {
-		return nil, false
-	}
-	return hashOf(token), true
+	return read.Hash, true
 }
 
 func validateAuthorization(in AuthorizationInput) (AuthorizationInput, error) {

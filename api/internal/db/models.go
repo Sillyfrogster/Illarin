@@ -426,6 +426,7 @@ type PublicationAudit struct {
 	GrantID    pgtype.UUID
 	SubjectID  pgtype.UUID
 	RecordedAt pgtype.Timestamptz
+	TokenID    pgtype.UUID
 }
 
 type PublicationAuthority struct {
@@ -465,6 +466,18 @@ type PublicationMedium struct {
 	Width     int32
 	Height    int32
 	CreatedAt pgtype.Timestamptz
+}
+
+type PublicationToken struct {
+	ID         pgtype.UUID
+	GrantID    pgtype.UUID
+	Name       string
+	Prefix     string
+	TokenHash  []byte
+	CreatedAt  pgtype.Timestamptz
+	ExpiresAt  pgtype.Timestamptz
+	LastUsedAt pgtype.Timestamptz
+	RevokedAt  pgtype.Timestamptz
 }
 
 type RetiredHandle struct {

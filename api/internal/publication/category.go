@@ -76,7 +76,7 @@ func (s *Service) UpdateCategory(
 	if err != nil {
 		return Category{}, fmt.Errorf("update publication category: %w", err)
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "category.updated", nil, &id, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "category.updated", CategoryID: &id}); err != nil {
 		return Category{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -115,7 +115,7 @@ func (s *Service) OrderCategories(
 			return nil, fmt.Errorf("order publication category: %w", err)
 		}
 	}
-	if err := recordPublicationAudit(ctx, tx, actor, "category.ordered", nil, nil, nil, nil); err != nil {
+	if err := recordPublicationAudit(ctx, tx, change{Actor: actor, Action: "category.ordered"}); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {

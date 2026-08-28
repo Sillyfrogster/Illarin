@@ -15,6 +15,13 @@ components:
       type: http
       scheme: bearer
       description: A short-lived access token issued to one linked instance.
+    publicationToken:
+      type: http
+      scheme: bearer
+      description: >-
+        A publication token issued under one publication grant. It is not a
+        session, it is not an instance token, and it carries no authority
+        outside the publication it was issued for.
   parameters:
     IllarinRequest:
       name: X-Illarin-Request
