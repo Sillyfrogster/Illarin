@@ -1,0 +1,41 @@
+{
+  "note": "Marks arrive in any order and come back in one order",
+  "document": {
+    "version": 1,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Both",
+            "marks": [
+              { "type": "link", "href": "https://example.com" },
+              { "type": "italic" },
+              { "type": "bold" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "canonical": {
+    "version": 1,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Both",
+            "marks": [
+              { "type": "bold" },
+              { "type": "italic" },
+              { "type": "link", "href": "https://example.com" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

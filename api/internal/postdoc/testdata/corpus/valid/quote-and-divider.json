@@ -1,0 +1,16 @@
+{
+  "note": "A quotation and a divider between two parts",
+  "document": {
+    "version": 1,
+    "content": [
+      { "type": "paragraph", "content": [{ "type": "text", "text": "Before." }] },
+      { "type": "divider" },
+      {
+        "type": "quote",
+        "content": [
+          { "type": "paragraph", "content": [{ "type": "text", "text": "Quoted words." }] }
+        ]
+      }
+    ]
+  }
+}

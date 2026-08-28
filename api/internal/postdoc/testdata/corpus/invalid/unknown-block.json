@@ -1,0 +1,5 @@
+{
+  "note": "A block outside the vocabulary",
+  "path": "document.content.0.type",
+  "document": { "version": 1, "content": [{ "type": "iframe", "content": [] }] }
+}

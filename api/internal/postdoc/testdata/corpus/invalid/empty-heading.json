@@ -1,0 +1,5 @@
+{
+  "note": "A heading with no words",
+  "path": "document.content.0.content",
+  "document": { "version": 1, "content": [{ "type": "heading", "level": 2, "content": [] }] }
+}

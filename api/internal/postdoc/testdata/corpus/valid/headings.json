@@ -1,0 +1,12 @@
+{
+  "note": "Body headings run from level two to level four",
+  "document": {
+    "version": 1,
+    "content": [
+      { "type": "heading", "level": 2, "content": [{ "type": "text", "text": "What changed" }] },
+      { "type": "paragraph", "content": [{ "type": "text", "text": "Quite a lot." }] },
+      { "type": "heading", "level": 3, "content": [{ "type": "text", "text": "Storage" }] },
+      { "type": "heading", "level": 4, "content": [{ "type": "text", "text": "Retention" }] }
+    ]
+  }
+}
