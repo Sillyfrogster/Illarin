@@ -207,17 +207,30 @@ export function SiteHeader() {
                     Account settings
                   </Link>
                   {publicationAuthority ? (
-                    <Link
-                      href="/publication/titles"
-                      aria-current={
-                        isCurrentPage(pathname, "/publication/titles")
-                          ? "page"
-                          : undefined
-                      }
-                      onClick={closeAccountMenu}
-                    >
-                      Titles and badges
-                    </Link>
+                    <>
+                      <Link
+                        href="/publication"
+                        aria-current={
+                          isCurrentPage(pathname, "/publication")
+                            ? "page"
+                            : undefined
+                        }
+                        onClick={closeAccountMenu}
+                      >
+                        Publication
+                      </Link>
+                      <Link
+                        href="/recognition"
+                        aria-current={
+                          isCurrentPage(pathname, "/recognition")
+                            ? "page"
+                            : undefined
+                        }
+                        onClick={closeAccountMenu}
+                      >
+                        Recognition
+                      </Link>
+                    </>
                   ) : null}
                   {!account.emailVerified ? (
                     <Link
@@ -355,17 +368,30 @@ export function SiteHeader() {
                   Account settings
                 </Link>
                 {publicationAuthority ? (
-                  <Link
-                    href="/publication/titles"
-                    aria-current={
-                      isCurrentPage(pathname, "/publication/titles")
-                        ? "page"
-                        : undefined
-                    }
-                    onClick={closeMobileMenu}
-                  >
-                    Titles and badges
-                  </Link>
+                  <>
+                    <Link
+                      href="/publication"
+                      aria-current={
+                        isCurrentPage(pathname, "/publication")
+                          ? "page"
+                          : undefined
+                      }
+                      onClick={closeMobileMenu}
+                    >
+                      Publication
+                    </Link>
+                    <Link
+                      href="/recognition"
+                      aria-current={
+                        isCurrentPage(pathname, "/recognition")
+                          ? "page"
+                          : undefined
+                      }
+                      onClick={closeMobileMenu}
+                    >
+                      Recognition
+                    </Link>
+                  </>
                 ) : null}
                 {!account.emailVerified ? (
                   <Link

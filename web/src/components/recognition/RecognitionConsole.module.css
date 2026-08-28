@@ -1,0 +1,5 @@
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2vw, 26px);
+}

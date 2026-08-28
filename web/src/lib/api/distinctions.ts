@@ -89,6 +89,10 @@ export function uploadMark(id: string, file: File) {
   );
 }
 
+export function clearMark(id: string) {
+  return json<Distinction>(`/distinctions/${id}/mark`, "DELETE");
+}
+
 export function readAccountDistinctions(handle: string) {
   return json<{ handle: string; assignments: DistinctionAssignment[] }>(
     `/accounts/${encodeURIComponent(handle)}/distinctions`,
