@@ -39,46 +39,6 @@
   font-weight: 600;
 }
 
-.gate {
-  display: flex;
-  max-width: 520px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  padding: clamp(28px, 3vw, 40px);
-  border-radius: var(--radius-xl);
-  background: var(--color-elevated);
-  box-shadow: var(--shadow-card);
-}
-
-.gate h2 {
-  font-family: var(--font-display);
-  font-size: var(--type-block-title-size);
-  font-weight: 600;
-  line-height: var(--type-block-title-leading);
-}
-
-.gate p {
-  color: var(--color-text-secondary);
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-leading);
-}
-
-.gate a {
-  display: inline-flex;
-  min-height: 46px;
-  align-items: center;
-  margin-top: 8px;
-  padding-inline: 22px;
-  border-radius: var(--radius-sm);
-  background: var(--color-emphasis);
-  color: var(--color-on-emphasis);
-  font-size: var(--type-label-size);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 @media (max-width: 1080px) {
   .regions {
     grid-template-columns: minmax(0, 1fr);

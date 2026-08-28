@@ -35,15 +35,25 @@ type publicationCategoryList struct {
 	Categories []publicationCategory `json:"categories"`
 }
 
+// profileAvatar carries the same url, width and height a hosted mark does.
+type profileAvatar = distinctionMark
+
+type publicationGrantHolder struct {
+	Handle      string         `json:"handle"`
+	DisplayName string         `json:"displayName"`
+	Avatar      *profileAvatar `json:"avatar"`
+	Restricted  bool           `json:"restricted"`
+}
+
 type publicationGrant struct {
-	ID              string                `json:"id"`
-	Handle          string                `json:"handle"`
-	App             publicationApp        `json:"app"`
-	Categories      []publicationCategory `json:"categories"`
-	DefaultCategory publicationCategory   `json:"defaultCategory"`
-	GrantedAt       time.Time             `json:"grantedAt"`
-	RevokedAt       *time.Time            `json:"revokedAt"`
-	Active          bool                  `json:"active"`
+	ID              string                 `json:"id"`
+	Holder          publicationGrantHolder `json:"holder"`
+	App             publicationApp         `json:"app"`
+	Categories      []publicationCategory  `json:"categories"`
+	DefaultCategory publicationCategory    `json:"defaultCategory"`
+	GrantedAt       time.Time              `json:"grantedAt"`
+	RevokedAt       *time.Time             `json:"revokedAt"`
+	Active          bool                   `json:"active"`
 }
 
 type publicationGrantList struct {
@@ -641,5 +651,53 @@ func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 	}
 	if columns != 0 {
 		t.Fatalf("the audit table has %d columns that could hold copied content", columns)
+	}
+}
+
+func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
+	stack := newDistinctionStack(t)
+	writer := stack.member(t, "named@example.com", "named.writer")
+	illarin := stack.appBySlug(t, "illarin")
+	announcement := stack.categoryBySlug(t, "announcement")
+
+	saved := send(t, stack.router, authorized(jsonRequest(t,
+		http.MethodPut, "/v1/account/profile",
+		`{"displayName":"Kestrel","biography":"","contactEmail":"","links":[]}`,
+	), writer))
+	if saved.Code != http.StatusOK {
+		t.Fatalf("save profile status = %d: %s", saved.Code, saved.Body.String())
+	}
+
+	made := stack.approved(t, "named.writer", illarin.ID, []string{announcement.ID}, announcement.ID)
+	if made.Holder.Handle != "named.writer" || made.Holder.DisplayName != "Kestrel" {
+		t.Fatalf("grant holder = %+v", made.Holder)
+	}
+
+	admin := stack.member(t, "restrictor@example.com", "restricting.admin")
+	setRole(t, stack.pool, "restricting.admin", "admin")
+	restricted := send(t, stack.router, authorized(jsonRequest(t,
+		http.MethodPut, "/v1/profiles/named.writer/restriction",
+		`{"reason":"Under review"}`,
+	), admin))
+	if restricted.Code != http.StatusOK && restricted.Code != http.StatusNoContent {
+		t.Fatalf("restrict status = %d: %s", restricted.Code, restricted.Body.String())
+	}
+
+	listed := send(t, stack.router, authorized(
+		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), stack.authority,
+	))
+	if listed.Code != http.StatusOK {
+		t.Fatalf("list grants status = %d: %s", listed.Code, listed.Body.String())
+	}
+	var grants publicationGrantList
+	if err := json.Unmarshal(listed.Body.Bytes(), &grants); err != nil {
+		t.Fatalf("decode grants: %v", err)
+	}
+	holder := grants.Grants[0].Holder
+	if !holder.Restricted || holder.DisplayName != "" || holder.Avatar != nil {
+		t.Fatalf("a restricted contributor still reads as %+v", holder)
+	}
+	if holder.Handle != "named.writer" {
+		t.Fatalf("a restricted contributor lost their handle: %+v", holder)
 	}
 }

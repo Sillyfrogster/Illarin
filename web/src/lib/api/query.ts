@@ -46,6 +46,11 @@ export type Distinction = components["schemas"]["Distinction"];
 export type DistinctionForm = components["schemas"]["DistinctionForm"];
 export type DistinctionAssignment =
   components["schemas"]["DistinctionAssignment"];
+export type PublicationApp = components["schemas"]["PublicationApp"];
+export type PublicationCategory = components["schemas"]["PublicationCategory"];
+export type PublicationGrant = components["schemas"]["PublicationGrant"];
+export type PublicationWorkspace =
+  components["schemas"]["PublicationWorkspace"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];

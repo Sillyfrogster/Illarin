@@ -2535,14 +2535,22 @@ type PublicationCategoryList struct {
 
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
-	Active          bool                  `json:"active"`
-	App             PublicationApp        `json:"app"`
-	Categories      []PublicationCategory `json:"categories"`
-	DefaultCategory PublicationCategory   `json:"defaultCategory"`
-	GrantedAt       time.Time             `json:"grantedAt"`
-	Handle          string                `json:"handle"`
-	Id              openapi_types.UUID    `json:"id"`
-	RevokedAt       *time.Time            `json:"revokedAt,omitempty"`
+	Active          bool                   `json:"active"`
+	App             PublicationApp         `json:"app"`
+	Categories      []PublicationCategory  `json:"categories"`
+	DefaultCategory PublicationCategory    `json:"defaultCategory"`
+	GrantedAt       time.Time              `json:"grantedAt"`
+	Holder          PublicationGrantHolder `json:"holder"`
+	Id              openapi_types.UUID     `json:"id"`
+	RevokedAt       *time.Time             `json:"revokedAt,omitempty"`
+}
+
+// PublicationGrantHolder defines model for PublicationGrantHolder.
+type PublicationGrantHolder struct {
+	Avatar      *ProfileAvatar `json:"avatar,omitempty"`
+	DisplayName string         `json:"displayName"`
+	Handle      string         `json:"handle"`
+	Restricted  bool           `json:"restricted"`
 }
 
 // PublicationGrantList defines model for PublicationGrantList.

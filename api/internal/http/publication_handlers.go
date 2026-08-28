@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -185,7 +186,11 @@ func (h *Handlers) ListPublicationGrants(c *gin.Context) {
 		h.publicationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, PublicationGrantList{Grants: toAPIGrants(made)})
+	listed, err := h.withHolders(c, made)
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, PublicationGrantList{Grants: listed})
 }
 
 func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
@@ -208,7 +213,11 @@ func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
 		h.publicationError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, toAPIGrant(made))
+	listed, err := h.withHolders(c, []publication.Grant{made})
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusCreated, listed[0])
 }
 
 func (h *Handlers) UpdatePublicationGrant(c *gin.Context, id types.UUID) {
@@ -232,7 +241,11 @@ func (h *Handlers) UpdatePublicationGrant(c *gin.Context, id types.UUID) {
 		h.publicationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIGrant(updated))
+	listed, err := h.withHolders(c, []publication.Grant{updated})
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, listed[0])
 }
 
 func (h *Handlers) RevokePublicationGrant(c *gin.Context, id types.UUID) {
@@ -257,9 +270,13 @@ func (h *Handlers) GetPublicationWorkspace(c *gin.Context) {
 		h.publicationError(c, err)
 		return
 	}
+	listed, err := h.withHolders(c, held)
+	if err != nil {
+		return
+	}
 	c.JSON(http.StatusOK, PublicationWorkspace{
 		Handle: current.Handle,
-		Grants: toAPIGrants(held),
+		Grants: listed,
 	})
 }
 
@@ -341,18 +358,39 @@ func toAPICategory(found publication.Category) PublicationCategory {
 	}
 }
 
-func toAPIGrants(made []publication.Grant) []PublicationGrant {
+// withHolders names each grant's contributor the way their profile names them.
+func (h *Handlers) withHolders(
+	c *gin.Context,
+	made []publication.Grant,
+) ([]PublicationGrant, error) {
 	listed := make([]PublicationGrant, 0, len(made))
 	for _, one := range made {
-		listed = append(listed, toAPIGrant(one))
+		found, err := h.accounts.PublicProfile(c.Request.Context(), one.Holder.Handle)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read a contributor."})
+			return nil, err
+		}
+		listed = append(listed, toAPIGrant(one, found))
 	}
-	return listed
+	return listed, nil
 }
 
-func toAPIGrant(found publication.Grant) PublicationGrant {
+func toAPIGrant(found publication.Grant, holder account.PublicProfile) PublicationGrant {
+	shown := PublicationGrantHolder{
+		Handle:      found.Holder.Handle,
+		DisplayName: holder.DisplayName,
+		Restricted:  holder.Restricted,
+	}
+	if holder.Avatar != nil {
+		shown.Avatar = &ProfileAvatar{
+			Url:    account.AvatarURL(holder.Avatar.MediaID, holder.Avatar.DerivativeVersion),
+			Width:  holder.Avatar.Width,
+			Height: holder.Avatar.Height,
+		}
+	}
 	return PublicationGrant{
 		Id:              types.UUID(found.ID),
-		Handle:          found.Holder.Handle,
+		Holder:          shown,
 		App:             toAPIApp(found.App),
 		Categories:      toAPICategories(found.Categories),
 		DefaultCategory: toAPICategory(found.DefaultCategory),

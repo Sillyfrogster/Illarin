@@ -1550,10 +1550,16 @@ export interface components {
     OrderPublicationCategoriesRequest: {
       categoryIds: string[];
     };
+    PublicationGrantHolder: {
+      handle: string;
+      displayName: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      restricted: boolean;
+    };
     PublicationGrant: {
       /** Format: uuid */
       id: string;
-      handle: string;
+      holder: components["schemas"]["PublicationGrantHolder"];
       app: components["schemas"]["PublicationApp"];
       categories: components["schemas"]["PublicationCategory"][];
       defaultCategory: components["schemas"]["PublicationCategory"];

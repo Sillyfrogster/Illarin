@@ -484,11 +484,28 @@ components:
           items:
             type: string
             format: uuid
+    PublicationGrantHolder:
+      type: object
+      required:
+        - handle
+        - displayName
+        - restricted
+      properties:
+        handle:
+          type: string
+        displayName:
+          type: string
+        avatar:
+          anyOf:
+            - $ref: './accounts.yaml#/components/schemas/ProfileAvatar'
+            - type: 'null'
+        restricted:
+          type: boolean
     PublicationGrant:
       type: object
       required:
         - id
-        - handle
+        - holder
         - app
         - categories
         - defaultCategory
@@ -498,8 +515,8 @@ components:
         id:
           type: string
           format: uuid
-        handle:
-          type: string
+        holder:
+          $ref: '#/components/schemas/PublicationGrantHolder'
         app:
           $ref: '#/components/schemas/PublicationApp'
         categories:

@@ -1,11 +1,8 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { readDefinitions } from "@/lib/api/distinctions";
 import type { Distinction, DistinctionForm } from "@/lib/api/query";
-import { useAuth } from "@/lib/auth";
 import { AccountDistinctions } from "./AccountDistinctions";
 import { DefinitionColumn } from "./DefinitionColumn";
 import styles from "./TitlesAndBadges.module.css";
@@ -29,7 +26,6 @@ const COLUMNS: { form: DistinctionForm; heading: string; hint: string }[] = [
 ];
 
 export function TitlesAndBadges() {
-  const { account, publicationAuthority } = useAuth();
   const [definitions, setDefinitions] = useState<Distinction[] | null>(null);
   const [failure, setFailure] = useState("");
 
@@ -44,33 +40,8 @@ export function TitlesAndBadges() {
   }, []);
 
   useEffect(() => {
-    if (!publicationAuthority) return;
     void load();
-  }, [load, publicationAuthority]);
-
-  if (account === undefined) {
-    return (
-      <p className={styles.loading} aria-live="polite">
-        Checking your account…
-      </p>
-    );
-  }
-
-  if (!account || !publicationAuthority) {
-    return (
-      <section className={styles.gate}>
-        <ShieldCheck size={27} strokeWidth={1.35} aria-hidden="true" />
-        <h2>Only Illarin's publication authority manages these</h2>
-        <p>
-          Being an admin or a moderator is not enough. The authority is one
-          recorded account.
-        </p>
-        <Link href={account ? "/" : "/sign-in"}>
-          {account ? "Back to Illarin" : "Sign in"}
-        </Link>
-      </section>
-    );
-  }
+  }, [load]);
 
   if (!definitions) {
     return (

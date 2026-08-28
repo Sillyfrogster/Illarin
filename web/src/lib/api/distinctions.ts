@@ -10,7 +10,7 @@ const UNREACHABLE =
 
 export type Answer<T> = { value?: T; error?: string };
 
-async function ask<T>(
+export async function ask<T>(
   path: string,
   init: RequestInit = {},
   read: (response: Response) => Promise<T>,
@@ -34,7 +34,7 @@ async function ask<T>(
   return { value: await read(response) };
 }
 
-function json<T>(path: string, method: string, body?: unknown) {
+export function json<T>(path: string, method: string, body?: unknown) {
   return ask<T>(
     path,
     {

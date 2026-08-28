@@ -8,7 +8,16 @@
   gap: clamp(28px, 3vw, 44px);
 }
 
-.heading h1 {
+.eyebrow {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.masthead h1 {
+  margin-top: 10px;
   font-family: var(--font-display);
   font-size: var(--type-display-size);
   font-weight: 560;
@@ -16,7 +25,7 @@
   line-height: var(--type-display-leading);
 }
 
-.heading p {
+.standfirst {
   max-width: 62ch;
   margin-top: 12px;
   color: var(--color-text-secondary);
@@ -25,7 +34,7 @@
 }
 
 @media (max-width: 720px) {
-  .heading h1 {
+  .masthead h1 {
     font-size: var(--type-section-size);
     line-height: var(--type-section-leading);
   }

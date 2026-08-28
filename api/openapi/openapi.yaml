@@ -291,6 +291,8 @@ components:
       $ref: ./publication.yaml#/components/schemas/UpdatePublicationCategoryRequest
     OrderPublicationCategoriesRequest:
       $ref: ./publication.yaml#/components/schemas/OrderPublicationCategoriesRequest
+    PublicationGrantHolder:
+      $ref: ./publication.yaml#/components/schemas/PublicationGrantHolder
     PublicationGrant:
       $ref: ./publication.yaml#/components/schemas/PublicationGrant
     PublicationGrantList:
