@@ -225,10 +225,16 @@ func TestTheAuthorityDefinesRenamesOrdersAndRetiresDistinctions(t *testing.T) {
 	if err := json.Unmarshal(ordered.Body.Bytes(), &list); err != nil {
 		t.Fatalf("decode ordered list: %v", err)
 	}
-	if len(list.Definitions) != 2 ||
-		list.Definitions[0].Name != "Catalogue steward" ||
-		list.Definitions[1].Name != "Founder" {
-		t.Fatalf("definitions = %+v", list.Definitions)
+	positions := make([]distinction, 0, 2)
+	for _, defined := range list.Definitions {
+		if defined.Form == "position" {
+			positions = append(positions, defined)
+		}
+	}
+	if len(positions) != 2 ||
+		positions[0].Name != "Catalogue steward" ||
+		positions[1].Name != "Founder" {
+		t.Fatalf("positions = %+v", positions)
 	}
 
 	stack.member(t, "holder@example.com", "position.holder")

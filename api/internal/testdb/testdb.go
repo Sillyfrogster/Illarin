@@ -12,17 +12,23 @@ import (
 // immutableTables refuse the mutations a reset needs, so the reset lifts their guard and puts it straight back.
 var immutableTables = []string{"download_events", "migration_legacy_counters"}
 
-// seeded restores the rows migration 00047 adds, which the reset truncates through publication_media.
+// seeded puts the rows migration 00047 adds back the way it left them.
 const seeded = `
+	truncate publication_apps, publication_categories cascade;
+	delete from profile_distinctions where id = '9d3f1c00-0000-4000-8000-000000000021';
+
 	insert into publication_apps (id, slug, name, home_url, position)
 	values ('9d3f1c00-0000-4000-8000-000000000001', 'illarin', 'Illarin',
-	        'https://illarin.xyz', 0)
-	on conflict (id) do nothing;
+	        'https://illarin.xyz', 0);
+
+	insert into publication_categories (id, slug, label, position)
+	values ('9d3f1c00-0000-4000-8000-000000000011', 'announcement', 'Announcement', 0),
+	       ('9d3f1c00-0000-4000-8000-000000000012', 'release', 'Release', 1),
+	       ('9d3f1c00-0000-4000-8000-000000000013', 'article', 'Article', 2);
 
 	insert into profile_distinctions (id, form, name, explanation, position)
 	values ('9d3f1c00-0000-4000-8000-000000000021', 'badge', 'Verified App Contributor',
-	        'Publishes official updates for a project on Illarin.', 0)
-	on conflict (id) do nothing;
+	        'Publishes official updates for a project on Illarin.', 0);
 `
 
 // Connect opens a pool on the test database with the settings the server runs
