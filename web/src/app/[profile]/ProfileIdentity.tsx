@@ -1,10 +1,10 @@
-import { ArrowUpRight, Award, Mail, ShieldOff, SquarePen } from "lucide-react";
-import Image from "next/image";
+import { ArrowUpRight, Mail, ShieldOff, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
 import { Avatar } from "@/components/media/Avatar";
-import type { Profile, ProfileDistinction } from "@/lib/api/query";
+import type { Profile } from "@/lib/api/query";
 import styles from "./ProfileIdentity.module.css";
+import { ProfileRecognition } from "./ProfileRecognition";
 import { RestrictionControl } from "./RestrictionControl";
 
 export function ProfileIdentity({
@@ -106,45 +106,9 @@ export function ProfileIdentity({
       {hasStanding ? (
         <Shell className={styles.standing}>
           <h2 className={styles.standingLabel}>Given by Illarin</h2>
-          {profile.titles.length > 0 ? (
-            <p className={styles.titles}>
-              {profile.titles.map((title) => title.name).join(" · ")}
-            </p>
-          ) : null}
-          {profile.badges.length > 0 ? (
-            <ul className={styles.badges}>
-              {profile.badges.map((badge) => (
-                <BadgeMark key={badge.id} badge={badge} />
-              ))}
-            </ul>
-          ) : null}
+          <ProfileRecognition titles={profile.titles} badges={profile.badges} />
         </Shell>
       ) : null}
     </header>
-  );
-}
-
-function BadgeMark({ badge }: { badge: ProfileDistinction }) {
-  return (
-    <li className={styles.badge} title={badge.explanation || undefined}>
-      {badge.mark ? (
-        <Image
-          className={styles.badgeMark}
-          src={badge.mark.url}
-          alt=""
-          width={22}
-          height={22}
-          unoptimized
-        />
-      ) : (
-        <span className={styles.badgeMark} data-blank="true">
-          <Award size={15} strokeWidth={1.7} aria-hidden="true" />
-        </span>
-      )}
-      {badge.name}
-      {badge.explanation ? (
-        <span className="sr-only">. {badge.explanation}</span>
-      ) : null}
-    </li>
   );
 }
