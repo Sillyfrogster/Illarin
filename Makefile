@@ -223,6 +223,10 @@ openapi-check: ## Check that the published OpenAPI bundle is current
 refractive-assets: ## Generate the deterministic refractive art assets
 	cd web && bun scripts/generate-refractive-assets.mjs
 
+.PHONY: badge-marks
+badge-marks: ## Cut the badge marks out of the engraved glyph sheet
+	cd web && python3 scripts/cut-badge-marks.py
+
 .PHONY: quiet-page-art
 quiet-page-art: ## Generate the empty and barren page artwork, one piece per kind
 	cd web && bun scripts/generate-quiet-page-art.mjs
