@@ -197,9 +197,13 @@
 }
 
 .reading {
-  width: min(100%, 40rem);
+  width: min(100%, var(--shell-reading));
   margin: 0 auto;
   padding-block: clamp(20px, 2.4vw, 32px) 48px;
+}
+
+.prose {
+  width: min(100%, 40rem);
 }
 
 @media (max-width: 940px) {

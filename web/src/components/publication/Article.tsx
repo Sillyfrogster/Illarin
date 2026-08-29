@@ -16,18 +16,20 @@ export function Article({ post }: { post: PublicPost }) {
         title={post.title}
         updatedAt={post.updatedAt ?? null}
       />
-      <PostBody document={asPostDocument(post.document)} />
-      {post.release?.address ? (
-        <p className={styles.releaseLink}>
-          <a
-            href={post.release.address}
-            rel="noreferrer noopener"
-            target="_blank"
-          >
-            {post.release.app.name} {post.release.version} release notes
-          </a>
-        </p>
-      ) : null}
+      <div className={styles.prose}>
+        <PostBody document={asPostDocument(post.document)} />
+        {post.release?.address ? (
+          <p className={styles.releaseLink}>
+            <a
+              href={post.release.address}
+              rel="noreferrer noopener"
+              target="_blank"
+            >
+              {post.release.app.name} {post.release.version} release notes
+            </a>
+          </p>
+        ) : null}
+      </div>
     </article>
   );
 }

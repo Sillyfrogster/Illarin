@@ -25,7 +25,9 @@ export function ArticleIdentity({
 }) {
   return (
     <header className={styles.identity}>
-      <h1 className={styles.title}>{title}</h1>
+      <h1 className={styles.title} data-length={titleBand(title)}>
+        {title}
+      </h1>
       {summary ? <p className={styles.summary}>{summary}</p> : null}
       <div className={styles.band}>
         {byline ? (
@@ -52,6 +54,13 @@ export function ArticleIdentity({
       </div>
     </header>
   );
+}
+
+// titleBand sizes the display type to the title rather than to the page.
+function titleBand(title: string): "short" | "medium" | "long" {
+  if (title.length > 78) return "long";
+  if (title.length > 42) return "medium";
+  return "short";
 }
 
 function Byline({ byline }: { byline: PostByline }) {

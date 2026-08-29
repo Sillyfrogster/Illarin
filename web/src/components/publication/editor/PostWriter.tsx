@@ -228,7 +228,9 @@ export function PostWriter({ id }: { id: string }) {
             title={draft.title}
             updatedAt={post.updatedPublicAt ?? null}
           />
-          <PostBody document={draft.document} />
+          <div className={styles.prose}>
+            <PostBody document={draft.document} />
+          </div>
         </article>
       ) : (
         <div className={styles.desk}>
