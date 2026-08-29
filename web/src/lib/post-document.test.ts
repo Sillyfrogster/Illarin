@@ -52,7 +52,7 @@ test("the editor drops a node outside the vocabulary rather than storing it", ()
   const carried = fromEditor({
     type: "doc",
     content: [
-      { type: "codeBlock", content: [{ type: "text", text: "rm -rf /" }] },
+      { type: "iframe", attrs: { src: "https://example.com" } },
       { type: "paragraph", content: [{ type: "text", text: "Kept" }] },
     ],
   });
@@ -176,6 +176,214 @@ test("an empty list item and its list stay out of the working copy", () => {
           ],
         },
       ],
+    },
+  ]);
+});
+
+test("a heading keeps the address it read and a new one waits for Go to write it", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "heading",
+        attrs: { level: 2, anchor: "release-notes" },
+        content: [{ type: "text", text: "Renamed since" }],
+      },
+      {
+        type: "heading",
+        attrs: { level: 3, anchor: null },
+        content: [{ type: "text", text: "Brand new" }],
+      },
+    ],
+  });
+  expect(carried.content).toEqual([
+    {
+      type: "heading",
+      level: 2,
+      anchor: "release-notes",
+      content: [{ type: "text", text: "Renamed since" }],
+    },
+    {
+      type: "heading",
+      level: 3,
+      content: [{ type: "text", text: "Brand new" }],
+    },
+  ]);
+});
+
+test("a task keeps its state and an untyped task stays out", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "taskList",
+        content: [
+          {
+            type: "taskItem",
+            attrs: { checked: true },
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "Done" }] },
+            ],
+          },
+          {
+            type: "taskItem",
+            attrs: { checked: false },
+            content: [{ type: "paragraph" }],
+          },
+        ],
+      },
+    ],
+  });
+  expect(carried.content).toEqual([
+    {
+      type: "taskList",
+      content: [
+        {
+          type: "taskItem",
+          done: true,
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "Done" }] },
+          ],
+        },
+      ],
+    },
+  ]);
+});
+
+test("a code block keeps its source and falls back to plain for an unknown label", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "codeBlock",
+        attrs: { language: "brainfuck" },
+        content: [{ type: "text", text: "one := 1\n" }],
+      },
+      { type: "codeBlock", attrs: { language: "go" }, content: [] },
+    ],
+  });
+  expect(carried.content).toEqual([
+    { type: "codeBlock", language: "plain", source: "one := 1\n" },
+  ]);
+});
+
+test("a pasted table is squared off before it is stored", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableHeader",
+                attrs: { colspan: 2 },
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Both" }],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "One" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  expect(carried.content).toEqual([
+    {
+      type: "table",
+      content: [
+        {
+          type: "tableRow",
+          content: [
+            {
+              type: "tableCell",
+              heading: true,
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Both" }],
+                },
+              ],
+            },
+            { type: "tableCell", heading: true, content: [] },
+          ],
+        },
+        {
+          type: "tableRow",
+          content: [
+            {
+              type: "tableCell",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "One" }] },
+              ],
+            },
+            { type: "tableCell", content: [] },
+          ],
+        },
+      ],
+    },
+  ]);
+});
+
+test("an inserted table and callout survive before anything is typed into them", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              { type: "tableCell", content: [{ type: "paragraph" }] },
+              { type: "tableCell", content: [{ type: "paragraph" }] },
+            ],
+          },
+        ],
+      },
+      {
+        type: "callout",
+        attrs: { kind: "tip" },
+        content: [{ type: "paragraph" }],
+      },
+    ],
+  });
+  expect(carried.content).toEqual([
+    {
+      type: "table",
+      content: [
+        {
+          type: "tableRow",
+          content: [
+            { type: "tableCell", content: [] },
+            { type: "tableCell", content: [] },
+          ],
+        },
+      ],
+    },
+    {
+      type: "callout",
+      kind: "tip",
+      content: [{ type: "paragraph", content: [] }],
     },
   ]);
 });

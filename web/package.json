@@ -14,10 +14,13 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",
+    "@tiptap/extension-table": "^3.30.5",
     "@tiptap/pm": "^3.30.5",
     "@tiptap/react": "^3.30.5",
     "@tiptap/starter-kit": "^3.30.5",
     "gsap": "^3.15.0",
+    "highlight.js": "^11.12.0",
+    "lowlight": "^3.3.0",
     "lucide-react": "^1.31.0",
     "mdast-util-from-markdown": "^2.0.3",
     "next": "16.3.0",
