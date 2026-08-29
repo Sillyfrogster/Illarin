@@ -5,12 +5,20 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
 import { FormDialog } from "@/components/console/FormDialog";
+import { ArticleHeader } from "@/components/publication/ArticleHeader";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
-import { publishPost, readPost, saveWorkingCopy } from "@/lib/api/posts";
+import {
+  publishPost,
+  readPost,
+  saveWorkingCopy,
+  uploadPostMedia,
+} from "@/lib/api/posts";
 import { readWorkspace } from "@/lib/api/publication";
 import type {
   Post,
+  PostMedia,
+  PostMediaPurpose,
   PublicationApp,
   PublicationCategory,
 } from "@/lib/api/query";
@@ -31,6 +39,8 @@ type Draft = {
   slug: string;
   document: PostDocument;
   release: { appId: string; version: string; address: string } | null;
+  header: { mediaId: string; alt: string; caption: string } | null;
+  socialMediaId: string | null;
 };
 
 type Saving = "clean" | "dirty" | "saving" | "saved" | "conflict" | "refused";
@@ -39,6 +49,7 @@ export function PostWriter({ id }: { id: string }) {
   const { account } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [media, setMedia] = useState<PostMedia[]>([]);
   const [categories, setCategories] = useState<PublicationCategory[]>([]);
   const [apps, setApps] = useState<PublicationApp[]>([]);
   const [state, setState] = useState<Saving>("clean");
@@ -58,6 +69,7 @@ export function PostWriter({ id }: { id: string }) {
     setFailure("");
     setPost(answer.value);
     setDraft(asDraft(answer.value));
+    setMedia(answer.value.media);
     version.current = answer.value.version;
     setState("clean");
     setRefusal("");
@@ -82,9 +94,11 @@ export function PostWriter({ id }: { id: string }) {
       ...draft,
       release: draft.release,
     });
-    if (answer.value) {
-      version.current = answer.value.version;
-      setPost(answer.value);
+    const written = answer.value;
+    if (written) {
+      version.current = written.version;
+      setPost(written);
+      setMedia((held) => refreshed(held, written.media));
       setRefusal("");
       setState("saved");
       return;
@@ -103,6 +117,20 @@ export function PostWriter({ id }: { id: string }) {
     const timer = setTimeout(() => void save(), AUTOSAVE_PAUSE);
     return () => clearTimeout(timer);
   }, [state, save]);
+
+  const upload = useCallback(
+    async (purpose: PostMediaPurpose, file: File) => {
+      const answer = await uploadPostMedia(id, purpose, file);
+      const added = answer.value;
+      if (!added) {
+        setRefusal(answer.error ?? "");
+        return null;
+      }
+      setMedia((held) => [...held, added]);
+      return added;
+    },
+    [id],
+  );
 
   function change(patch: Partial<Draft>) {
     setDraft((current) => (current ? { ...current, ...patch } : current));
@@ -229,7 +257,8 @@ export function PostWriter({ id }: { id: string }) {
             updatedAt={post.updatedPublicAt ?? null}
           />
           <div className={styles.prose}>
-            <PostBody document={draft.document} />
+            <ArticleHeader header={draft.header} media={media} />
+            <PostBody document={draft.document} media={media} />
           </div>
         </article>
       ) : (
@@ -259,7 +288,9 @@ export function PostWriter({ id }: { id: string }) {
             <BodyEditor
               document={draft.document}
               key={edition}
+              media={media}
               onChange={(document) => change({ document })}
+              onUpload={(file) => upload("document", file)}
             />
           </div>
           <PostDetails
@@ -267,7 +298,9 @@ export function PostWriter({ id }: { id: string }) {
             categories={categories.length > 0 ? categories : [post.category]}
             draft={draft}
             locked={post.status === "published"}
+            media={media}
             onChange={change}
+            onUpload={upload}
             post={post}
           />
         </div>
@@ -283,6 +316,14 @@ function asDraft(post: Post): Draft {
     summary: post.summary,
     slug: post.slug,
     document: asPostDocument(post.document),
+    header: post.header
+      ? {
+          mediaId: post.header.mediaId,
+          alt: post.header.alt,
+          caption: post.header.caption ?? "",
+        }
+      : null,
+    socialMediaId: post.socialMediaId ?? null,
     release: post.release
       ? {
           appId: post.release.app.id,
@@ -291,6 +332,12 @@ function asDraft(post: Post): Draft {
         }
       : null,
   };
+}
+
+// refreshed keeps an upload the working copy has not been saved with yet.
+function refreshed(held: PostMedia[], saved: PostMedia[]): PostMedia[] {
+  const known = new Set(saved.map((one) => one.id));
+  return [...saved, ...held.filter((one) => !known.has(one.id))];
 }
 
 // releaseApps keeps a post's existing project listed even after it is retired.

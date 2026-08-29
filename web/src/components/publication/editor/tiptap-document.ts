@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/react";
+import type { PostMedia } from "@/lib/api/query";
 import {
   isPostAnchor,
   isPostCalloutKind,
@@ -7,6 +8,8 @@ import {
   type PostBlock,
   type PostCell,
   type PostDocument,
+  type PostGalleryImage,
+  type PostImage,
   type PostItem,
   type PostMark,
   type PostRow,
@@ -28,8 +31,17 @@ const ILLARIN_BLOCKS: Record<string, string> = {
 
 const MARKS = ["bold", "italic", "strike", "code"] as const;
 
-export function toEditor(document: PostDocument): JSONContent {
-  return { type: "doc", content: document.content.map(editorBlock) };
+type Held = Map<string, PostMedia>;
+
+export function toEditor(
+  document: PostDocument,
+  media: PostMedia[],
+): JSONContent {
+  const held = new Map(media.map((one) => [one.id, one]));
+  return {
+    type: "doc",
+    content: document.content.map((block) => editorBlock(block, held)),
+  };
 }
 
 export function fromEditor(content: JSONContent): PostDocument {
@@ -39,7 +51,7 @@ export function fromEditor(content: JSONContent): PostDocument {
   };
 }
 
-function editorBlock(block: PostBlock): JSONContent {
+function editorBlock(block: PostBlock, media: Held): JSONContent {
   const type = EDITOR_NODES[block.type] ?? block.type;
   switch (block.type) {
     case "divider":
@@ -58,7 +70,7 @@ function editorBlock(block: PostBlock): JSONContent {
         type,
         content: block.content.map((item) => ({
           type: "listItem",
-          content: item.content.map(editorBlock),
+          content: item.content.map((child) => editorBlock(child, media)),
         })),
       };
     case "taskList":
@@ -67,16 +79,19 @@ function editorBlock(block: PostBlock): JSONContent {
         content: block.content.map((task) => ({
           type: "taskItem",
           attrs: { checked: task.done },
-          content: task.content.map(editorBlock),
+          content: task.content.map((child) => editorBlock(child, media)),
         })),
       };
     case "quote":
-      return { type, content: block.content.map(editorBlock) };
+      return {
+        type,
+        content: block.content.map((child) => editorBlock(child, media)),
+      };
     case "callout":
       return {
         type,
         attrs: { kind: block.kind },
-        content: block.content.map(editorBlock),
+        content: block.content.map((child) => editorBlock(child, media)),
       };
     case "codeBlock":
       return {
@@ -85,18 +100,47 @@ function editorBlock(block: PostBlock): JSONContent {
         content: [{ type: "text", text: block.source }],
       };
     case "table":
-      return { type, content: block.content.map(editorRow) };
+      return {
+        type,
+        content: block.content.map((row) => editorRow(row, media)),
+      };
+    case "image":
+      return { type, attrs: editorPicture(block, media) };
+    case "gallery":
+      return {
+        type,
+        content: block.content.map((picture) => ({
+          type: "galleryImage",
+          attrs: editorPicture(picture, media),
+        })),
+      };
   }
 }
 
-function editorRow(row: PostRow): JSONContent {
+// editorPicture gives a placed picture the address the editor draws it from.
+function editorPicture(
+  picture: PostImage | PostGalleryImage,
+  media: Held,
+): Record<string, unknown> {
+  const held = media.get(picture.mediaId);
+  return {
+    mediaId: picture.mediaId,
+    alt: picture.alt,
+    caption: picture.caption ?? "",
+    src: held?.url ?? "",
+    width: held?.width ?? null,
+    height: held?.height ?? null,
+  };
+}
+
+function editorRow(row: PostRow, media: Held): JSONContent {
   return {
     type: "tableRow",
     content: row.content.map((cell) => ({
       type: cell.heading ? "tableHeader" : "tableCell",
       content:
         cell.content.length > 0
-          ? cell.content.map(editorBlock)
+          ? cell.content.map((child) => editorBlock(child, media))
           : [{ type: "paragraph" }],
     })),
   };
@@ -178,6 +222,19 @@ function illarinBlock(node: JSONContent): PostBlock[] {
     case "table": {
       const rows = illarinRows(node.content);
       return rows.length > 0 ? [{ type: "table", content: rows }] : [];
+    }
+    case "image": {
+      const picture = illarinPicture(node.attrs, "image");
+      return picture ? [picture] : [];
+    }
+    case "gallery": {
+      const pictures = (node.content ?? [])
+        .filter((child) => child.type === "galleryImage")
+        .map((child) => illarinPicture(child.attrs, "galleryImage"))
+        .filter((picture) => picture !== null);
+      return pictures.length > 0
+        ? [{ type: "gallery", content: pictures }]
+        : [];
     }
     case "divider":
       return [{ type: "divider" }];
@@ -284,6 +341,24 @@ function codeSource(nodes: JSONContent[] | undefined): string {
     .filter((node) => node.type === "text")
     .map((node) => node.text ?? "")
     .join("");
+}
+
+// illarinPicture keeps only what Illarin stores: which upload, and what it says.
+function illarinPicture<kind extends "image" | "galleryImage">(
+  attrs: Record<string, unknown> | undefined,
+  type: kind,
+): (kind extends "image" ? PostImage : PostGalleryImage) | null {
+  const mediaId = attrs?.mediaId;
+  if (typeof mediaId !== "string" || !mediaId) return null;
+  const alt = typeof attrs?.alt === "string" ? attrs.alt.trim() : "";
+  const caption =
+    typeof attrs?.caption === "string" ? attrs.caption.trim() : "";
+  return {
+    type,
+    mediaId,
+    alt,
+    ...(caption ? { caption } : {}),
+  } as kind extends "image" ? PostImage : PostGalleryImage;
 }
 
 // written keeps a line the author has not typed into out of the working copy.

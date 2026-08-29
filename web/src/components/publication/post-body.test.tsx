@@ -1,12 +1,26 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { PostMedia } from "@/lib/api/query";
 import type { PostBlock, PostDocument } from "@/lib/post-document";
 import { POST_DOCUMENT_VERSION } from "@/lib/post-document";
 import { PostBody } from "./PostBody";
 
+const PLACED = "6f2c1b40-9d38-4a7e-b512-0c8e37a41d59";
+const SECOND = "1a2b3c4d-5e6f-4071-8293-a4b5c6d7e8f9";
+
+const HELD: PostMedia[] = [PLACED, SECOND].map((id) => ({
+  id,
+  postId: "b8d0f1a2-3c45-4e67-89ab-cdef01234567",
+  purpose: "document",
+  url: `/media/${id}/detail/1`,
+  thumbUrl: `/media/${id}/grid/1`,
+  width: 1200,
+  height: 600,
+}));
+
 function render(...content: PostBlock[]): string {
   const document: PostDocument = { version: POST_DOCUMENT_VERSION, content };
-  return renderToStaticMarkup(<PostBody document={document} />);
+  return renderToStaticMarkup(<PostBody document={document} media={HELD} />);
 }
 
 test("a heading renders at its level and answers to its address", () => {
@@ -211,4 +225,39 @@ test("an address outside the safe schemes never becomes a link", () => {
   expect(html).toContain("Run it");
   expect(html).not.toContain("<a");
   expect(html).not.toContain("javascript:");
+});
+
+test("a picture renders as a figure with its description and caption", () => {
+  const html = render({
+    type: "image",
+    mediaId: PLACED,
+    alt: "The workspace with one draft in it",
+    caption: "The workspace after the first draft is started.",
+  });
+  expect(html).toContain(`src="/media/${PLACED}/detail/1"`);
+  expect(html).toContain('alt="The workspace with one draft in it"');
+  expect(html).toContain(
+    "<figcaption>The workspace after the first draft is started.</figcaption>",
+  );
+});
+
+test("a gallery renders its pictures in the order the author put them in", () => {
+  const html = render({
+    type: "gallery",
+    content: [
+      { type: "galleryImage", mediaId: SECOND, alt: "Second" },
+      { type: "galleryImage", mediaId: PLACED, alt: "First" },
+    ],
+  });
+  expect(html.indexOf(SECOND)).toBeLessThan(html.indexOf(PLACED));
+  expect(html).toContain(`src="/media/${SECOND}/grid/1"`);
+});
+
+test("a picture whose bytes are gone renders nothing rather than a broken frame", () => {
+  const html = render({
+    type: "image",
+    mediaId: "00000000-0000-4000-8000-000000000000",
+    alt: "A picture that was collected",
+  });
+  expect(html).not.toContain("<img");
 });

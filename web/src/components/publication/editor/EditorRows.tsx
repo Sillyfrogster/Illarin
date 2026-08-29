@@ -3,6 +3,8 @@
 import type { Editor } from "@tiptap/react";
 import {
   Columns3,
+  Image,
+  Images,
   Minus,
   Plus,
   Quote,
@@ -12,7 +14,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { LANGUAGE_LABELS } from "@/lib/code-highlight";
 import {
   isPostCalloutKind,
@@ -22,6 +24,7 @@ import {
   type PostLanguage,
 } from "@/lib/post-document";
 import { isSafeAddress } from "@/lib/post-link";
+import { Choice, Row } from "./RowParts";
 import styles from "./Toolbar.module.css";
 import type { Controls } from "./use-controls";
 
@@ -36,10 +39,12 @@ export function InsertRow({
   controls,
   editor,
   onClose,
+  onOpen,
 }: {
   controls: Controls;
   editor: Editor;
   onClose: () => void;
+  onOpen: (intent: "picture" | "gallery") => void;
 }) {
   return (
     <Row label="Insert a structure" onClose={onClose}>
@@ -86,6 +91,20 @@ export function InsertRow({
         }}
       >
         <TriangleAlert size={15} strokeWidth={1.8} aria-hidden="true" />
+      </Choice>
+      <Choice
+        label="Picture"
+        ready={controls.canPicture}
+        press={() => onOpen("picture")}
+      >
+        <Image size={15} strokeWidth={1.8} aria-hidden="true" />
+      </Choice>
+      <Choice
+        label="Gallery"
+        ready={controls.canPicture}
+        press={() => onOpen("gallery")}
+      >
+        <Images size={15} strokeWidth={1.8} aria-hidden="true" />
       </Choice>
       <Choice
         label="Divider"
@@ -332,60 +351,5 @@ export function LinkRow({
         </p>
       ) : null}
     </Row>
-  );
-}
-
-function Row({
-  children,
-  label,
-  onClose,
-}: {
-  children: ReactNode;
-  label: string;
-  onClose?: () => void;
-}) {
-  return (
-    <fieldset
-      aria-label={label}
-      className={styles.row}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && onClose) onClose();
-      }}
-    >
-      <span aria-hidden="true" className={styles.rowMark}>
-        {label}
-      </span>
-      {children}
-    </fieldset>
-  );
-}
-
-function Choice({
-  children,
-  label,
-  press,
-  ready,
-  strong,
-  word,
-}: {
-  children?: ReactNode;
-  label: string;
-  press: () => void;
-  ready?: boolean;
-  strong?: boolean;
-  word?: string;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className={strong ? `${styles.choice} ${styles.strong}` : styles.choice}
-      disabled={ready === false}
-      onClick={press}
-      title={label}
-      type="button"
-    >
-      {children}
-      <span aria-hidden="true">{word ?? label}</span>
-    </button>
   );
 }

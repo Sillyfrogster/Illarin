@@ -22,7 +22,17 @@ export type Controls = {
   taskList: boolean;
   canUndo: boolean;
   canRedo: boolean;
-  block: "codeBlock" | "table" | "callout" | null;
+  block:
+    | "codeBlock"
+    | "table"
+    | "callout"
+    | "picture"
+    | "galleryPicture"
+    | null;
+  picture: { alt: string; caption: string };
+  canPicture: boolean;
+  canMoveBack: boolean;
+  canMoveOn: boolean;
   language: PostLanguage;
   kind: PostCalloutKind;
   canQuote: boolean;
@@ -53,6 +63,8 @@ export function useControls(editor: Editor | null): Controls | null {
 
 function read(editor: Editor): Controls {
   const table = editor.isActive("table");
+  const picture = editor.isActive("image");
+  const galleryPicture = editor.isActive("galleryImage");
   const language = editor.getAttributes("codeBlock").language;
   const kind = editor.getAttributes("callout").kind;
   return {
@@ -70,13 +82,13 @@ function read(editor: Editor): Controls {
     taskList: editor.isActive("taskList"),
     canUndo: editor.can().undo(),
     canRedo: editor.can().redo(),
-    block: editor.isActive("codeBlock")
-      ? "codeBlock"
-      : table
-        ? "table"
-        : editor.isActive("callout")
-          ? "callout"
-          : null,
+    block: blockUnderCaret(editor, table, picture, galleryPicture),
+    picture: pictureFields(
+      editor.getAttributes(galleryPicture ? "galleryImage" : "image"),
+    ),
+    canPicture: editor.can().insertContent({ type: "image" }),
+    canMoveBack: galleryPicture && editor.can().movePicture(-1),
+    canMoveOn: galleryPicture && editor.can().movePicture(1),
     language:
       typeof language === "string" && isPostLanguage(language)
         ? language
@@ -94,5 +106,26 @@ function read(editor: Editor): Controls {
     canHeadingRow: table && editor.can().toggleHeaderRow(),
     canHeadingColumn: table && editor.can().toggleHeaderColumn(),
     canDeleteTable: table && editor.can().deleteTable(),
+  };
+}
+
+function blockUnderCaret(
+  editor: Editor,
+  table: boolean,
+  picture: boolean,
+  galleryPicture: boolean,
+): Controls["block"] {
+  if (editor.isActive("codeBlock")) return "codeBlock";
+  if (table) return "table";
+  if (editor.isActive("callout")) return "callout";
+  if (picture) return "picture";
+  if (galleryPicture) return "galleryPicture";
+  return null;
+}
+
+function pictureFields(attrs: Record<string, unknown>) {
+  return {
+    alt: typeof attrs.alt === "string" ? attrs.alt : "",
+    caption: typeof attrs.caption === "string" ? attrs.caption : "",
   };
 }

@@ -4,9 +4,12 @@ import { useEffect } from "react";
 import { Field } from "@/components/console/Field";
 import type {
   Post,
+  PostMedia,
+  PostMediaPurpose,
   PublicationApp,
   PublicationCategory,
 } from "@/lib/api/query";
+import { type Chosen, PicturePicker } from "./PicturePicker";
 import styles from "./PostDetails.module.css";
 
 type Release = { appId: string; version: string; address: string };
@@ -15,6 +18,8 @@ type Draft = {
   categoryId: string;
   slug: string;
   release: Release | null;
+  header: Chosen | null;
+  socialMediaId: string | null;
 };
 
 export function PostDetails({
@@ -22,15 +27,22 @@ export function PostDetails({
   categories,
   draft,
   locked,
+  media,
   post,
   onChange,
+  onUpload,
 }: {
   apps: PublicationApp[];
   categories: PublicationCategory[];
   draft: Draft;
   locked: boolean;
+  media: PostMedia[];
   post: Post;
   onChange: (patch: Partial<Draft>) => void;
+  onUpload: (
+    purpose: PostMediaPurpose,
+    file: File,
+  ) => Promise<PostMedia | null>;
 }) {
   const category = categories.find((one) => one.id === draft.categoryId);
   const releasing = category?.slug === "release";
@@ -79,6 +91,32 @@ export function PostDetails({
           release={draft.release ?? { appId: "", version: "", address: "" }}
         />
       ) : null}
+      <PicturePicker
+        chosen={draft.header}
+        describe
+        hint="Optional. Opens the article, above the body."
+        label="Header picture"
+        media={media}
+        onChange={(header) => onChange({ header })}
+        onUpload={onUpload}
+        purpose="header"
+      />
+      <PicturePicker
+        chosen={
+          draft.socialMediaId
+            ? { mediaId: draft.socialMediaId, alt: "", caption: "" }
+            : null
+        }
+        describe={false}
+        hint="Optional. Without one, Illarin composes a card from the title."
+        label="Social image"
+        media={media}
+        onChange={(social) =>
+          onChange({ socialMediaId: social?.mediaId ?? null })
+        }
+        onUpload={onUpload}
+        purpose="social"
+      />
       {post.app ? (
         <p className={styles.attribution}>
           This post carries your name and {post.app.name}. Illarin stays the

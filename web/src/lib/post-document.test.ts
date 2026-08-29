@@ -44,11 +44,11 @@ test("the corpus is there to read", () => {
 for (const [name, one] of corpus("valid")) {
   test(`${name} survives a round trip through the editor`, () => {
     const canonical = one.canonical ?? one.document;
-    expect(fromEditor(toEditor(canonical))).toEqual(canonical);
+    expect(fromEditor(toEditor(canonical, []))).toEqual(canonical);
   });
 
   test(`${name} is written at the version this build emits`, () => {
-    expect(fromEditor(toEditor(one.document)).version).toBe(
+    expect(fromEditor(toEditor(one.document, [])).version).toBe(
       POST_DOCUMENT_VERSION,
     );
   });
@@ -472,3 +472,89 @@ function checkSpans(spans: PostSpan[]) {
     }
   }
 }
+
+const PLACED = "6f2c1b40-9d38-4a7e-b512-0c8e37a41d59";
+
+const HELD = [
+  {
+    id: PLACED,
+    postId: "b8d0f1a2-3c45-4e67-89ab-cdef01234567",
+    purpose: "document" as const,
+    url: `/media/${PLACED}/detail/1`,
+    thumbUrl: `/media/${PLACED}/grid/1`,
+    width: 1200,
+    height: 600,
+  },
+];
+
+test("the editor draws a picture from the address Go answered with", () => {
+  const document: PostDocument = {
+    version: POST_DOCUMENT_VERSION,
+    content: [
+      {
+        type: "image",
+        mediaId: PLACED,
+        alt: "The workspace",
+        caption: "One draft.",
+      },
+    ],
+  };
+  const editing = toEditor(document, HELD);
+  expect(editing.content?.[0]?.attrs).toMatchObject({
+    mediaId: PLACED,
+    src: `/media/${PLACED}/detail/1`,
+    width: 1200,
+    height: 600,
+  });
+  expect(fromEditor(editing)).toEqual(document);
+});
+
+test("a gallery keeps the order the author put its pictures in", () => {
+  const second = "1a2b3c4d-5e6f-4071-8293-a4b5c6d7e8f9";
+  const document: PostDocument = {
+    version: POST_DOCUMENT_VERSION,
+    content: [
+      {
+        type: "gallery",
+        content: [
+          { type: "galleryImage", mediaId: second, alt: "Second" },
+          { type: "galleryImage", mediaId: PLACED, alt: "First" },
+        ],
+      },
+    ],
+  };
+  expect(fromEditor(toEditor(document, HELD))).toEqual(document);
+});
+
+test("a picture with nothing said about it travels so Go can refuse it", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "image",
+        attrs: {
+          mediaId: PLACED,
+          alt: "  ",
+          caption: "",
+          src: "/media/x/detail/1",
+        },
+      },
+    ],
+  });
+  expect(carried.content).toEqual([
+    { type: "image", mediaId: PLACED, alt: "" },
+  ]);
+});
+
+test("the editor drops a picture that names no upload", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "image",
+        attrs: { alt: "Hotlinked", src: "https://example.com/p.png" },
+      },
+    ],
+  });
+  expect(carried.content).toEqual([]);
+});

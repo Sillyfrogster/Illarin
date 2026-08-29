@@ -1,4 +1,4 @@
-import type { Post } from "@/lib/api/query";
+import type { Post, PostMedia, PostMediaPurpose } from "@/lib/api/query";
 import type { PostDocument } from "@/lib/post-document";
 import { ask, json } from "./distinctions";
 
@@ -10,6 +10,8 @@ export type WorkingCopy = {
   slug: string;
   document: PostDocument;
   release?: { appId: string; version: string; address?: string } | null;
+  header?: { mediaId: string; alt: string; caption?: string } | null;
+  socialMediaId?: string | null;
 };
 
 export function readPosts() {
@@ -30,6 +32,21 @@ export function readPost(id: string) {
 
 export function saveWorkingCopy(id: string, working: WorkingCopy) {
   return json<Post>(`/publication/posts/${id}`, "PUT", working);
+}
+
+export function uploadPostMedia(
+  id: string,
+  purpose: PostMediaPurpose,
+  file: File,
+) {
+  const body = new FormData();
+  body.append("metadata", JSON.stringify({ purpose }));
+  body.append("file", file, file.name);
+  return ask<PostMedia>(
+    `/publication/posts/${id}/media`,
+    { method: "POST", body },
+    (response) => response.json() as Promise<PostMedia>,
+  );
 }
 
 export function publishPost(id: string) {

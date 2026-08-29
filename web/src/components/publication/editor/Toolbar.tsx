@@ -17,13 +17,26 @@ import {
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { BlockRow, InsertRow, LinkRow } from "./EditorRows";
+import {
+  GalleryPictureRow,
+  PictureFieldsRow,
+  type PictureIntent,
+  PictureRow,
+  type Upload,
+} from "./PictureRows";
 import styles from "./Toolbar.module.css";
 import { type Controls, useControls } from "./use-controls";
 import { useToolbarKeys } from "./use-toolbar-keys";
 
-type Opened = "none" | "link" | "insert";
+type Opened = "none" | "link" | "insert" | PictureIntent;
 
-export function Toolbar({ editor }: { editor: Editor | null }) {
+export function Toolbar({
+  editor,
+  onUpload,
+}: {
+  editor: Editor | null;
+  onUpload: Upload;
+}) {
   const [row, setRow] = useState<Opened>("none");
   const controls = useControls(editor);
   const keys = useToolbarKeys();
@@ -41,7 +54,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
     return <div className={styles.toolbar} aria-busy="true" />;
   }
 
-  function open(which: "link" | "insert") {
+  function open(which: Exclude<Opened, "none">) {
     setRow((current) => (current === which ? "none" : which));
   }
 
@@ -196,6 +209,8 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
         close={() => setRow("none")}
         controls={controls}
         editor={editor}
+        onOpen={open}
+        onUpload={onUpload}
         row={row}
       />
     </div>
@@ -206,16 +221,47 @@ function Row({
   close,
   controls,
   editor,
+  onOpen,
+  onUpload,
   row,
 }: {
   close: () => void;
   controls: Controls;
   editor: Editor;
+  onOpen: (intent: PictureIntent) => void;
+  onUpload: Upload;
   row: Opened;
 }) {
   if (row === "link") return <LinkRow editor={editor} onClose={close} />;
   if (row === "insert") {
-    return <InsertRow controls={controls} editor={editor} onClose={close} />;
+    return (
+      <InsertRow
+        controls={controls}
+        editor={editor}
+        onClose={close}
+        onOpen={onOpen}
+      />
+    );
+  }
+  if (row !== "none") {
+    return (
+      <PictureRow
+        editor={editor}
+        intent={row}
+        onClose={close}
+        onUpload={onUpload}
+      />
+    );
+  }
+  if (controls.block === "picture") {
+    return (
+      <PictureFieldsRow controls={controls} editor={editor} onOpen={onOpen} />
+    );
+  }
+  if (controls.block === "galleryPicture") {
+    return (
+      <GalleryPictureRow controls={controls} editor={editor} onOpen={onOpen} />
+    );
   }
   return <BlockRow controls={controls} editor={editor} />;
 }

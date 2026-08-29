@@ -250,6 +250,65 @@
   pointer-events: none;
 }
 
+/* A picture in the editor reads as it will on the article. */
+.picture,
+.galleryPicture {
+  position: relative;
+}
+
+.picture img,
+.galleryPicture img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: var(--color-muted);
+}
+
+.picture figcaption,
+.galleryPicture figcaption {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.picture img[alt=""],
+.galleryPicture img[alt=""] {
+  outline: 2px solid var(--color-critical-border);
+  outline-offset: 2px;
+}
+
+.gallery {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.galleryPicture {
+  min-width: 0;
+}
+
+.galleryPicture img {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+}
+
+.galleryPicture figcaption {
+  margin-top: 7px;
+  padding-left: 11px;
+  font-size: var(--type-label-size);
+  line-height: 17px;
+}
+
+.surface :global(.ProseMirror-selectednode) img {
+  outline: 2px solid var(--color-emphasis);
+  outline-offset: 2px;
+}
+
 @media (max-width: 700px) {
   .surface {
     min-height: 320px;
@@ -279,5 +338,11 @@
 
   .surface div[data-kind] {
     padding: 15px 18px 17px;
+  }
+}
+
+@media (max-width: 560px) {
+  .gallery {
+    gap: 10px;
   }
 }

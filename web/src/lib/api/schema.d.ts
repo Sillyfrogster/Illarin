@@ -914,6 +914,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/media": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Upload one picture against this post. The record is immutable: replacing a picture uploads new bytes at a new address rather than changing an address readers already hold. */
+    post: operations["addPostMedia"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/publish": {
     parameters: {
       query?: never;
@@ -1755,6 +1772,37 @@ export interface components {
     PostAuthor: {
       handle: string;
     };
+    /** @enum {string} */
+    PostMediaPurpose: "header" | "document" | "social";
+    /** @description One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with. */
+    PostMedia: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      postId: string;
+      purpose: components["schemas"]["PostMediaPurpose"];
+      /** @description The size a picture is shown at on its own. */
+      url: string;
+      /** @description The size a gallery shows a picture at. */
+      thumbUrl: string;
+      width: number;
+      height: number;
+    };
+    PostHeader: {
+      /** Format: uuid */
+      mediaId: string;
+      alt: string;
+      caption?: string;
+    };
+    PostHeaderEdit: {
+      /** Format: uuid */
+      mediaId: string;
+      alt: string;
+      caption?: string;
+    };
+    AddPostMediaRequest: {
+      purpose: components["schemas"]["PostMediaPurpose"];
+    };
     PostRelease: {
       app: components["schemas"]["PublicationApp"];
       version: string;
@@ -1786,6 +1834,9 @@ export interface components {
       document: components["schemas"]["PostDocument"];
       documentVersion: number;
       release?: components["schemas"]["PostRelease"] | null;
+      header?: components["schemas"]["PostHeader"] | null;
+      socialMediaId?: string | null;
+      media: components["schemas"]["PostMedia"][];
       app?: components["schemas"]["PublicationApp"] | null;
       /** Format: uuid */
       grantId?: string;
@@ -1826,6 +1877,8 @@ export interface components {
       slug: string;
       document: components["schemas"]["PostDocument"];
       release?: components["schemas"]["PostReleaseEdit"] | null;
+      header?: components["schemas"]["PostHeaderEdit"] | null;
+      socialMediaId?: string | null;
     };
     PublicPost: {
       /** Format: uuid */
@@ -1836,6 +1889,9 @@ export interface components {
       category: components["schemas"]["PublicationCategory"];
       document: components["schemas"]["PostDocument"];
       release?: components["schemas"]["PostRelease"] | null;
+      header?: components["schemas"]["PostHeader"] | null;
+      socialImage?: components["schemas"]["PostMedia"] | null;
+      media: components["schemas"]["PostMedia"][];
       byline: components["schemas"]["PostByline"];
       /** Format: date-time */
       publishedAt: string;
@@ -5913,6 +5969,79 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["PostConflict"];
         };
+      };
+    };
+  };
+  addPostMedia: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Send the metadata part before the image file part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          metadata: components["schemas"]["AddPostMediaRequest"];
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description A new immutable post picture */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostMedia"];
+        };
+      };
+      /** @description The purpose or the image is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

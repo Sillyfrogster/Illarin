@@ -57,6 +57,20 @@ export type PostCell = {
 
 export type PostRow = { type: "tableRow"; content: PostCell[] };
 
+export type PostImage = {
+  type: "image";
+  mediaId: string;
+  alt: string;
+  caption?: string;
+};
+
+export type PostGalleryImage = {
+  type: "galleryImage";
+  mediaId: string;
+  alt: string;
+  caption?: string;
+};
+
 export type PostBlock =
   | { type: "paragraph"; content: PostSpan[] }
   | { type: "heading"; level: number; anchor?: string; content: PostSpan[] }
@@ -67,6 +81,8 @@ export type PostBlock =
   | { type: "codeBlock"; language: PostLanguage; source: string }
   | { type: "table"; content: PostRow[] }
   | { type: "callout"; kind: PostCalloutKind; content: PostBlock[] }
+  | PostImage
+  | { type: "gallery"; content: PostGalleryImage[] }
   | { type: "divider" };
 
 export type PostDocument = { version: number; content: PostBlock[] };
@@ -87,6 +103,12 @@ export function isPostLanguage(name: string): name is PostLanguage {
 export function isPostCalloutKind(kind: string): kind is PostCalloutKind {
   return (POST_CALLOUT_KINDS as readonly string[]).includes(kind);
 }
+
+/** How many pictures a gallery holds. Go holds the same bound. */
+export const POST_GALLERY_LIMIT = 12;
+
+/** How long alt text and a caption may be. Go holds the same bound. */
+export const POST_PICTURE_TEXT_LIMIT = 300;
 
 /** The one shape a heading address takes. Go writes and validates the same one. */
 export function isPostAnchor(anchor: string): boolean {
@@ -112,6 +134,12 @@ function textLength(blocks: PostBlock[]): number {
         break;
       case "codeBlock":
         total += block.source.trim().length;
+        break;
+      case "image":
+        total += block.alt.trim().length;
+        break;
+      case "gallery":
+        for (const picture of block.content) total += picture.alt.trim().length;
         break;
       case "table":
         for (const row of block.content) {

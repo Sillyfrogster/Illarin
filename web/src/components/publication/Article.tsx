@@ -1,3 +1,4 @@
+import { ArticleHeader } from "@/components/publication/ArticleHeader";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
 import type { PublicPost } from "@/lib/api/query";
@@ -23,7 +24,11 @@ export function Article({ post }: { post: PublicPost }) {
       </div>
       <div className={styles.column}>
         <div className={styles.prose}>
-          <PostBody document={asPostDocument(post.document)} />
+          <ArticleHeader header={post.header} media={post.media} />
+          <PostBody
+            document={asPostDocument(post.document)}
+            media={post.media}
+          />
           {post.release?.address ? (
             <p className={styles.releaseLink}>
               <a

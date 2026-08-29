@@ -5,10 +5,14 @@ import {
   Lightbulb,
   TriangleAlert,
 } from "lucide-react";
+import Image from "next/image";
+import type { PostMedia } from "@/lib/api/query";
 import type {
   PostBlock,
   PostCalloutKind,
   PostDocument,
+  PostGalleryImage,
+  PostImage,
   PostItem,
   PostRow,
   PostSpan,
@@ -27,26 +31,36 @@ const CALLOUTS: Record<PostCalloutKind, { label: string; mark: typeof Info }> =
     warning: { label: "Warning", mark: TriangleAlert },
   };
 
-export function PostBody({ document }: { document: PostDocument }) {
+export function PostBody({
+  document,
+  media,
+}: {
+  document: PostDocument;
+  media: PostMedia[];
+}) {
   return (
     <div className={styles.body}>
-      <Blocks blocks={document.content} />
+      {document.content.map((block, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: Blocks follow the writing and hold no local state.
+        <Block block={block} key={index} media={media} />
+      ))}
     </div>
   );
 }
 
+// Pictures sit at the top level of a body, so nothing nested carries media.
 function Blocks({ blocks }: { blocks: PostBlock[] }) {
   return (
     <>
       {blocks.map((block, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: Blocks follow the writing and hold no local state.
-        <Block block={block} key={index} />
+        <Block block={block} key={index} media={[]} />
       ))}
     </>
   );
 }
 
-function Block({ block }: { block: PostBlock }) {
+function Block({ block, media }: { block: PostBlock; media: PostMedia[] }) {
   switch (block.type) {
     case "paragraph":
       return (
@@ -92,9 +106,67 @@ function Block({ block }: { block: PostBlock }) {
       return <Table rows={block.content} />;
     case "callout":
       return <Callout blocks={block.content} kind={block.kind} />;
+    case "image":
+      return (
+        <Picture className={styles.figure} media={media} picture={block} />
+      );
+    case "gallery":
+      return <Gallery media={media} pictures={block.content} />;
     case "divider":
       return <hr className={styles.divider} />;
   }
+}
+
+function Picture({
+  className,
+  media,
+  picture,
+  thumb,
+}: {
+  className: string;
+  media: PostMedia[];
+  picture: PostImage | PostGalleryImage;
+  thumb?: boolean;
+}) {
+  const held = media.find((one) => one.id === picture.mediaId);
+  if (!held) return null;
+  return (
+    <figure className={className}>
+      <Image
+        alt={picture.alt}
+        className={styles.picture}
+        height={held.height}
+        src={thumb ? held.thumbUrl : held.url}
+        unoptimized
+        width={held.width}
+      />
+      {picture.caption ? (
+        <figcaption className={styles.caption}>{picture.caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+function Gallery({
+  media,
+  pictures,
+}: {
+  media: PostMedia[];
+  pictures: PostGalleryImage[];
+}) {
+  return (
+    <div className={styles.gallery} data-count={Math.min(pictures.length, 3)}>
+      {pictures.map((picture) => (
+        <Picture
+          className={styles.galleryFigure}
+          key={picture.mediaId}
+          media={media}
+          picture={picture}
+          thumb
+        />
+      ))}
+    </div>
+  );
 }
 
 function Heading({
