@@ -314,6 +314,60 @@ type PasswordResetToken struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
+type Post struct {
+	ID               pgtype.UUID
+	AuthorID         pgtype.UUID
+	GrantID          pgtype.UUID
+	CategoryID       pgtype.UUID
+	Status           string
+	Slug             pgtype.Text
+	Title            string
+	Summary          string
+	Document         []byte
+	DocumentVersion  int32
+	ReleaseAppID     pgtype.UUID
+	ReleaseVersion   pgtype.Text
+	ReleaseUrl       pgtype.Text
+	WorkingVersion   int32
+	PublishedAt      pgtype.Timestamptz
+	UpdatedPublicAt  pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	PublicRevisionID pgtype.UUID
+}
+
+type PostByline struct {
+	PostID        pgtype.UUID
+	AccountID     pgtype.UUID
+	Handle        string
+	DisplayName   string
+	ContactEmail  string
+	AvatarMediaID pgtype.UUID
+	Positions     []byte
+	Distinctions  []byte
+	AppID         pgtype.UUID
+	AppSlug       pgtype.Text
+	AppName       pgtype.Text
+	CapturedAt    pgtype.Timestamptz
+}
+
+type PostRevision struct {
+	ID              pgtype.UUID
+	PostID          pgtype.UUID
+	Number          int32
+	Title           string
+	Summary         string
+	Slug            string
+	CategoryID      pgtype.UUID
+	Document        []byte
+	DocumentVersion int32
+	ReleaseAppID    pgtype.UUID
+	ReleaseVersion  pgtype.Text
+	ReleaseUrl      pgtype.Text
+	CapturedBy      pgtype.UUID
+	CapturedAt      pgtype.Timestamptz
+}
+
 type ProfileDistinction struct {
 	ID          pgtype.UUID
 	Form        string
@@ -418,15 +472,20 @@ type PublicationApp struct {
 }
 
 type PublicationAudit struct {
-	ID         pgtype.UUID
-	ActorID    pgtype.UUID
-	Action     string
-	AppID      pgtype.UUID
-	CategoryID pgtype.UUID
-	GrantID    pgtype.UUID
-	SubjectID  pgtype.UUID
-	RecordedAt pgtype.Timestamptz
-	TokenID    pgtype.UUID
+	ID          pgtype.UUID
+	ActorID     pgtype.UUID
+	Action      string
+	AppID       pgtype.UUID
+	CategoryID  pgtype.UUID
+	GrantID     pgtype.UUID
+	SubjectID   pgtype.UUID
+	RecordedAt  pgtype.Timestamptz
+	TokenID     pgtype.UUID
+	Credential  string
+	PostID      pgtype.UUID
+	RevisionID  pgtype.UUID
+	BeforeState pgtype.Text
+	AfterState  pgtype.Text
 }
 
 type PublicationAuthority struct {
@@ -442,6 +501,14 @@ type PublicationCategory struct {
 	RetiredAt pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+}
+
+type PublicationEvent struct {
+	ID         pgtype.UUID
+	PostID     pgtype.UUID
+	RevisionID pgtype.UUID
+	Type       string
+	OccurredAt pgtype.Timestamptz
 }
 
 type PublicationGrant struct {

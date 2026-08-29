@@ -644,13 +644,29 @@ func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 		select count(*) from information_schema.columns
 		 where table_name = 'publication_audits'
 		   and data_type not in ('uuid', 'timestamp with time zone')
-		   and column_name <> 'action'
+		   and column_name not in ('action', 'credential', 'before_state', 'after_state')
 	`).Scan(&columns)
 	if err != nil {
 		t.Fatalf("read audit columns: %v", err)
 	}
 	if columns != 0 {
 		t.Fatalf("the audit table has %d columns that could hold copied content", columns)
+	}
+	for _, pinned := range []string{
+		"publication_audits_credential_check",
+		"publication_audits_state_check",
+		"publication_audits_next_state_check",
+	} {
+		var exists bool
+		err = stack.pool.QueryRow(context.Background(), `
+			select exists (select 1 from pg_constraint where conname = $1)
+		`, pinned).Scan(&exists)
+		if err != nil {
+			t.Fatalf("read %s: %v", pinned, err)
+		}
+		if !exists {
+			t.Errorf("%s does not pin its column to a closed set of words", pinned)
+		}
 	}
 }
 

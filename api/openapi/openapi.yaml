@@ -112,6 +112,14 @@ paths:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1token
   /v1/publication/workspace:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1workspace
+  /v1/publication/posts:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts
+  /v1/publication/posts/{id}:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}
+  /v1/publication/posts/{id}/publish:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
+  /v1/posts/{slug}:
+    $ref: ./posts.yaml#/paths/~1v1~1posts~1{slug}
   /v1/profiles/{handle}:
     $ref: ./accounts.yaml#/paths/~1v1~1profiles~1{handle}
   /v1/profiles/{handle}/restriction:
@@ -321,6 +329,30 @@ components:
       $ref: ./publication.yaml#/components/schemas/IssuedPublicationToken
     PublicationCredential:
       $ref: ./publication.yaml#/components/schemas/PublicationCredential
+    PostStatus:
+      $ref: ./posts.yaml#/components/schemas/PostStatus
+    PostDocument:
+      $ref: ./posts.yaml#/components/schemas/PostDocument
+    PostAuthor:
+      $ref: ./posts.yaml#/components/schemas/PostAuthor
+    PostRelease:
+      $ref: ./posts.yaml#/components/schemas/PostRelease
+    PostReleaseEdit:
+      $ref: ./posts.yaml#/components/schemas/PostReleaseEdit
+    PostByline:
+      $ref: ./posts.yaml#/components/schemas/PostByline
+    Post:
+      $ref: ./posts.yaml#/components/schemas/Post
+    PostList:
+      $ref: ./posts.yaml#/components/schemas/PostList
+    PostConflict:
+      $ref: ./posts.yaml#/components/schemas/PostConflict
+    CreatePostRequest:
+      $ref: ./posts.yaml#/components/schemas/CreatePostRequest
+    SavePostRequest:
+      $ref: ./posts.yaml#/components/schemas/SavePostRequest
+    PublicPost:
+      $ref: ./posts.yaml#/components/schemas/PublicPost
     RenameHandleRequest:
       $ref: ./accounts.yaml#/components/schemas/RenameHandleRequest
     SignUpRequest:

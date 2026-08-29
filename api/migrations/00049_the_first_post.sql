@@ -94,8 +94,14 @@ alter table publication_audits add column before_state text;
 alter table publication_audits add column after_state text;
 alter table publication_audits add constraint publication_audits_credential_check
     check (credential in ('session', 'token', 'system'));
+alter table publication_audits add constraint publication_audits_state_check
+    check (before_state is null or before_state in ('draft', 'published'));
+alter table publication_audits add constraint publication_audits_next_state_check
+    check (after_state is null or after_state in ('draft', 'published'));
 
 -- +goose Down
+alter table publication_audits drop constraint publication_audits_next_state_check;
+alter table publication_audits drop constraint publication_audits_state_check;
 alter table publication_audits drop constraint publication_audits_credential_check;
 alter table publication_audits drop column after_state;
 alter table publication_audits drop column before_state;

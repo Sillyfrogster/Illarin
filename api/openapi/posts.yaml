@@ -1,0 +1,418 @@
+paths:
+  /v1/publication/posts:
+    get:
+      operationId: listPosts
+      description: >-
+        Every post the signed-in account may manage. An admin sees all of them;
+        an approved contributor sees only the posts under their active grant.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The posts this account may manage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+    post:
+      operationId: createPost
+      description: >-
+        Start a draft. A contributor names the grant it belongs to; an admin may
+        omit it and write as Illarin.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: The draft as it was started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: A field is not valid or the grant does not cover the category
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not publish under that identity
+        '404':
+          description: No such category or grant
+  /v1/publication/posts/{id}:
+    get:
+      operationId: getPost
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The post's working copy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+    put:
+      operationId: savePost
+      description: >-
+        Replace the working copy. The request names the version it began from,
+        and a stale version is refused rather than applied.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePostRequest'
+      responses:
+        '200':
+          description: The working copy as it now reads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: A field or the post document is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+        '409':
+          description: The working copy has already moved on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+  /v1/publication/posts/{id}/publish:
+    post:
+      operationId: publishPost
+      description: >-
+        Capture the working copy as an immutable revision and make that exact
+        edition the public one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The post as it now stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: A required field or the post document is not ready
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+  /v1/posts/{slug}:
+    get:
+      operationId: getPublishedPost
+      description: >-
+        The published edition behind one post address. Drafts and working copies
+        are absent from it.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The published post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPost'
+        '404':
+          description: No published post has that address
+components:
+  schemas:
+    PostStatus:
+      type: string
+      enum:
+        - draft
+        - published
+    PostDocument:
+      type: object
+      description: >-
+        The versioned structured body Illarin owns. Go validates its vocabulary
+        for every client, and the site renders it directly.
+      required:
+        - version
+        - content
+      properties:
+        version:
+          type: integer
+        content:
+          type: array
+          items:
+            type: object
+    PostAuthor:
+      type: object
+      required:
+        - handle
+      properties:
+        handle:
+          type: string
+    PostRelease:
+      type: object
+      required:
+        - app
+        - version
+      properties:
+        app:
+          $ref: './publication.yaml#/components/schemas/PublicationApp'
+        version:
+          type: string
+        address:
+          type: string
+    PostReleaseEdit:
+      type: object
+      additionalProperties: false
+      required:
+        - appId
+        - version
+      properties:
+        appId:
+          type: string
+          format: uuid
+        version:
+          type: string
+        address:
+          type: string
+    PostByline:
+      type: object
+      required:
+        - handle
+        - displayName
+        - contactEmail
+        - positions
+        - distinctions
+      properties:
+        handle:
+          type: string
+        displayName:
+          type: string
+        contactEmail:
+          type: string
+        avatar:
+          anyOf:
+            - $ref: './accounts.yaml#/components/schemas/ProfileAvatar'
+            - type: 'null'
+        positions:
+          type: array
+          items:
+            type: string
+        distinctions:
+          type: array
+          items:
+            type: string
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'
+    Post:
+      type: object
+      required:
+        - id
+        - status
+        - title
+        - summary
+        - slug
+        - category
+        - document
+        - documentVersion
+        - version
+        - author
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        documentVersion:
+          type: integer
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostRelease'
+            - type: 'null'
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'
+        grantId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        author:
+          $ref: '#/components/schemas/PostAuthor'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedPublicAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostList:
+      type: object
+      required:
+        - posts
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+    PostConflict:
+      type: object
+      required:
+        - error
+        - version
+      properties:
+        error:
+          type: string
+        field:
+          type: string
+        version:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+    CreatePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - categoryId
+        - title
+      properties:
+        grantId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+    SavePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - categoryId
+        - title
+        - summary
+        - slug
+        - document
+      properties:
+        version:
+          type: integer
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostReleaseEdit'
+            - type: 'null'
+    PublicPost:
+      type: object
+      required:
+        - id
+        - slug
+        - title
+        - summary
+        - category
+        - document
+        - byline
+        - publishedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostRelease'
+            - type: 'null'
+        byline:
+          $ref: '#/components/schemas/PostByline'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

@@ -837,6 +837,24 @@ func (e PendingLinkPollResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for PostStatus.
+const (
+	PostStatusDraft     PostStatus = "draft"
+	PostStatusPublished PostStatus = "published"
+)
+
+// Valid indicates whether the value is a known member of the PostStatus enum.
+func (e PostStatus) Valid() bool {
+	switch e {
+	case PostStatusDraft:
+		return true
+	case PostStatusPublished:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PromptListContentFragmentsPlacement.
 const (
 	InHistory   PromptListContentFragmentsPlacement = "in_history"
@@ -1862,6 +1880,13 @@ type CreateAssetRequest struct {
 // CreateAssetRequestDiscovery defines model for CreateAssetRequest.Discovery.
 type CreateAssetRequestDiscovery string
 
+// CreatePostRequest defines model for CreatePostRequest.
+type CreatePostRequest struct {
+	CategoryId openapi_types.UUID  `json:"categoryId"`
+	GrantId    *openapi_types.UUID `json:"grantId,omitempty"`
+	Title      string              `json:"title"`
+}
+
 // CreatePublicationGrantRequest defines model for CreatePublicationGrantRequest.
 type CreatePublicationGrantRequest struct {
 	AppId             openapi_types.UUID   `json:"appId"`
@@ -2418,6 +2443,81 @@ type PollLinkRequest struct {
 	DeviceCode DeviceCode `json:"deviceCode"`
 }
 
+// Post defines model for Post.
+type Post struct {
+	App       *PublicationApp     `json:"app,omitempty"`
+	Author    PostAuthor          `json:"author"`
+	Category  PublicationCategory `json:"category"`
+	CreatedAt time.Time           `json:"createdAt"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document        PostDocument        `json:"document"`
+	DocumentVersion int                 `json:"documentVersion"`
+	GrantId         *openapi_types.UUID `json:"grantId,omitempty"`
+	Id              openapi_types.UUID  `json:"id"`
+	PublishedAt     *time.Time          `json:"publishedAt,omitempty"`
+	Release         *PostRelease        `json:"release,omitempty"`
+	Slug            string              `json:"slug"`
+	Status          PostStatus          `json:"status"`
+	Summary         string              `json:"summary"`
+	Title           string              `json:"title"`
+	UpdatedAt       time.Time           `json:"updatedAt"`
+	UpdatedPublicAt *time.Time          `json:"updatedPublicAt,omitempty"`
+	Version         int                 `json:"version"`
+}
+
+// PostAuthor defines model for PostAuthor.
+type PostAuthor struct {
+	Handle string `json:"handle"`
+}
+
+// PostByline defines model for PostByline.
+type PostByline struct {
+	App          *PublicationApp `json:"app,omitempty"`
+	Avatar       *ProfileAvatar  `json:"avatar,omitempty"`
+	ContactEmail string          `json:"contactEmail"`
+	DisplayName  string          `json:"displayName"`
+	Distinctions []string        `json:"distinctions"`
+	Handle       string          `json:"handle"`
+	Positions    []string        `json:"positions"`
+}
+
+// PostConflict defines model for PostConflict.
+type PostConflict struct {
+	Error     string     `json:"error"`
+	Field     *string    `json:"field,omitempty"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+	Version   int        `json:"version"`
+}
+
+// PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+type PostDocument struct {
+	Content []map[string]interface{} `json:"content"`
+	Version int                      `json:"version"`
+}
+
+// PostList defines model for PostList.
+type PostList struct {
+	Posts []Post `json:"posts"`
+}
+
+// PostRelease defines model for PostRelease.
+type PostRelease struct {
+	Address *string        `json:"address,omitempty"`
+	App     PublicationApp `json:"app"`
+	Version string         `json:"version"`
+}
+
+// PostReleaseEdit defines model for PostReleaseEdit.
+type PostReleaseEdit struct {
+	Address *string            `json:"address,omitempty"`
+	AppId   openapi_types.UUID `json:"appId"`
+	Version string             `json:"version"`
+}
+
+// PostStatus defines model for PostStatus.
+type PostStatus string
+
 // PreservedNamespace defines model for PreservedNamespace.
 type PreservedNamespace struct {
 	// Bytes How much the asset is holding under this namespace.
@@ -2515,6 +2615,22 @@ type PromptListContentFragmentsRole string
 // ProseContent defines model for ProseContent.
 type ProseContent struct {
 	Text string `json:"text"`
+}
+
+// PublicPost defines model for PublicPost.
+type PublicPost struct {
+	Byline   PostByline          `json:"byline"`
+	Category PublicationCategory `json:"category"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document    PostDocument       `json:"document"`
+	Id          openapi_types.UUID `json:"id"`
+	PublishedAt time.Time          `json:"publishedAt"`
+	Release     *PostRelease       `json:"release,omitempty"`
+	Slug        string             `json:"slug"`
+	Summary     string             `json:"summary"`
+	Title       string             `json:"title"`
+	UpdatedAt   *time.Time         `json:"updatedAt,omitempty"`
 }
 
 // PublicationApp defines model for PublicationApp.
@@ -2725,6 +2841,19 @@ type SaveAssetElement struct {
 
 // SaveAssetElementDisplay defines model for SaveAssetElement.Display.
 type SaveAssetElementDisplay string
+
+// SavePostRequest defines model for SavePostRequest.
+type SavePostRequest struct {
+	CategoryId openapi_types.UUID `json:"categoryId"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document PostDocument     `json:"document"`
+	Release  *PostReleaseEdit `json:"release,omitempty"`
+	Slug     string           `json:"slug"`
+	Summary  string           `json:"summary"`
+	Title    string           `json:"title"`
+	Version  int              `json:"version"`
+}
 
 // SaveProfileRequest defines model for SaveProfileRequest.
 type SaveProfileRequest struct {
@@ -3318,6 +3447,12 @@ type UpdatePublicationGrantJSONRequestBody = UpdatePublicationGrantRequest
 // IssuePublicationTokenJSONRequestBody defines body for IssuePublicationToken for application/json ContentType.
 type IssuePublicationTokenJSONRequestBody = IssuePublicationTokenRequest
 
+// CreatePostJSONRequestBody defines body for CreatePost for application/json ContentType.
+type CreatePostJSONRequestBody = CreatePostRequest
+
+// SavePostJSONRequestBody defines body for SavePost for application/json ContentType.
+type SavePostJSONRequestBody = SavePostRequest
+
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
 	var body PendingLinkPollResult
@@ -3647,6 +3782,9 @@ type ServerInterface interface {
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
 
+	// (GET /v1/posts/{slug})
+	GetPublishedPost(c *gin.Context, slug string)
+
 	// (GET /v1/profiles/{handle})
 	GetProfile(c *gin.Context, handle string)
 
@@ -3703,6 +3841,21 @@ type ServerInterface interface {
 
 	// (POST /v1/publication/grants/{id}/tokens)
 	IssuePublicationToken(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts)
+	ListPosts(c *gin.Context)
+
+	// (POST /v1/publication/posts)
+	CreatePost(c *gin.Context)
+
+	// (GET /v1/publication/posts/{id})
+	GetPost(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/posts/{id})
+	SavePost(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/publish)
+	PublishPost(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/token)
 	GetPublicationCredential(c *gin.Context)
@@ -5663,6 +5816,31 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// GetPublishedPost operation middleware
+func (siw *ServerInterfaceWrapper) GetPublishedPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublishedPost(c, slug)
+}
+
 // GetProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetProfile(c *gin.Context) {
 
@@ -6054,6 +6232,107 @@ func (siw *ServerInterfaceWrapper) IssuePublicationToken(c *gin.Context) {
 	siw.Handler.IssuePublicationToken(c, id)
 }
 
+// ListPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListPosts(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPosts(c)
+}
+
+// CreatePost operation middleware
+func (siw *ServerInterfaceWrapper) CreatePost(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreatePost(c)
+}
+
+// GetPost operation middleware
+func (siw *ServerInterfaceWrapper) GetPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPost(c, id)
+}
+
+// SavePost operation middleware
+func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SavePost(c, id)
+}
+
+// PublishPost operation middleware
+func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PublishPost(c, id)
+}
+
 // GetPublicationCredential operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicationCredential(c *gin.Context) {
 
@@ -6197,6 +6476,12 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/publication/tokens/:id", wrapper.RevokePublicationToken)
 	router.GET(options.BaseURL+"/v1/publication/token", wrapper.GetPublicationCredential)
 	router.GET(options.BaseURL+"/v1/publication/workspace", wrapper.GetPublicationWorkspace)
+	router.GET(options.BaseURL+"/v1/publication/posts", wrapper.ListPosts)
+	router.POST(options.BaseURL+"/v1/publication/posts", wrapper.CreatePost)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id", wrapper.GetPost)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id", wrapper.SavePost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
+	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.GetProfileRestriction)

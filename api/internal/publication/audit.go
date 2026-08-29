@@ -27,26 +27,39 @@ func recordAudit(
 	return nil
 }
 
+// CredentialSession is the credential class of a change made from a browser.
+const CredentialSession = "session"
+
 // change is one entry in the private record of who changed the publication.
 type change struct {
 	Actor      uuid.UUID
+	Credential string
 	Action     string
 	AppID      *uuid.UUID
 	CategoryID *uuid.UUID
 	GrantID    *uuid.UUID
 	TokenID    *uuid.UUID
+	PostID     *uuid.UUID
+	RevisionID *uuid.UUID
 	SubjectID  *uuid.UUID
+	Before     string
+	After      string
 }
 
 // recordPublicationAudit keeps who changed what, as identifiers and never as a
 // token value, a profile field or anything else a reader could spend.
 func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
+	if made.Credential == "" {
+		made.Credential = CredentialSession
+	}
 	_, err := tx.Exec(ctx, `
 		insert into publication_audits
-		       (id, actor_id, action, app_id, category_id, grant_id, token_id, subject_id)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, uuid.New(), made.Actor, made.Action, made.AppID, made.CategoryID,
-		made.GrantID, made.TokenID, made.SubjectID)
+		       (id, actor_id, credential, action, app_id, category_id, grant_id,
+		        token_id, post_id, revision_id, subject_id, before_state, after_state)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, uuid.New(), made.Actor, made.Credential, made.Action, made.AppID, made.CategoryID,
+		made.GrantID, made.TokenID, made.PostID, made.RevisionID, made.SubjectID,
+		nullable(made.Before), nullable(made.After))
 	if err != nil {
 		return fmt.Errorf("record publication audit: %w", err)
 	}
