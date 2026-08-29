@@ -33,7 +33,7 @@ func (p Problem) Error() string {
 var blockPlaces = map[string][]string{
 	"content": {
 		"paragraph", "heading", "bulletList", "orderedList", "taskList",
-		"quote", "codeBlock", "table", "callout", "divider",
+		"quote", "codeBlock", "table", "callout", "image", "gallery", "divider",
 	},
 	"listItem":  {"paragraph", "bulletList", "orderedList", "taskList", "codeBlock"},
 	"taskItem":  {"paragraph", "bulletList", "orderedList", "taskList", "codeBlock"},
@@ -108,6 +108,12 @@ func (d Document) textLength() int {
 				}
 			case Callout:
 				walk(shape.Blocks)
+			case Image:
+				total += len(shape.Alt)
+			case Gallery:
+				for _, picture := range shape.Images {
+					total += len(picture.Alt)
+				}
 			}
 		}
 	}
@@ -184,6 +190,10 @@ func (r *reader) block(path string, raw json.RawMessage, place string, depth int
 		return r.table(path, fields, depth)
 	case "callout":
 		return r.callout(path, fields, depth)
+	case "image":
+		return r.image(path, fields)
+	case "gallery":
+		return r.gallery(path, fields)
 	case "divider":
 		if err := onlyKeys(path, fields, "type"); err != nil {
 			return nil, err

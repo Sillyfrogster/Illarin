@@ -166,6 +166,35 @@ func (c Callout) writeJSON(w *writer) {
 	w.content(c.Blocks)
 }
 
+func (i Image) writeJSON(w *writer) {
+	w.open("image")
+	w.picture(i)
+}
+
+func (g Gallery) writeJSON(w *writer) {
+	w.open("gallery")
+	w.key("content")
+	w.out.WriteString(`[`)
+	for index, picture := range g.Images {
+		if index > 0 {
+			w.out.WriteString(`,`)
+		}
+		w.open("galleryImage")
+		w.picture(picture)
+	}
+	w.out.WriteString(`]}`)
+}
+
+// picture writes the fields an image carries and closes the node.
+func (w *writer) picture(image Image) {
+	w.text("mediaId", image.MediaID)
+	w.text("alt", image.Alt)
+	if image.Caption != "" {
+		w.text("caption", image.Caption)
+	}
+	w.out.WriteString(`}`)
+}
+
 func (Divider) writeJSON(w *writer) {
 	w.open("divider")
 	w.out.WriteString(`}`)

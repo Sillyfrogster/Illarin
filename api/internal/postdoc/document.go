@@ -88,6 +88,18 @@ type Callout struct {
 	Blocks []Block
 }
 
+// Image is one uploaded picture placed in the body.
+type Image struct {
+	MediaID string
+	Alt     string
+	Caption string
+}
+
+// Gallery is a run of pictures the author put in an order.
+type Gallery struct {
+	Images []Image
+}
+
 // Divider separates two parts of a post.
 type Divider struct{}
 
@@ -118,4 +130,6 @@ func (Table) name() string     { return "table" }
 func (Row) name() string       { return "tableRow" }
 func (Cell) name() string      { return "tableCell" }
 func (Callout) name() string   { return "callout" }
+func (Image) name() string     { return "image" }
+func (Gallery) name() string   { return "gallery" }
 func (Divider) name() string   { return "divider" }
