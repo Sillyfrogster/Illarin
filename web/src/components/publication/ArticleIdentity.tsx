@@ -25,38 +25,36 @@ export function ArticleIdentity({
 }) {
   return (
     <header className={styles.identity}>
-      <p className={styles.eyebrow}>
-        <span className={styles.category}>{category}</span>
-        {release ? (
-          <span className={styles.release}>
-            {release.app.name} {release.version}
-          </span>
-        ) : null}
-      </p>
       <h1 className={styles.title}>{title}</h1>
       {summary ? <p className={styles.summary}>{summary}</p> : null}
-      {byline ? (
-        <Byline
-          byline={byline}
-          publishedAt={publishedAt}
-          updatedAt={updatedAt}
-        />
-      ) : (
-        <p className={styles.standing}>{standing}</p>
-      )}
+      <div className={styles.band}>
+        {byline ? (
+          <Byline byline={byline} />
+        ) : (
+          <p className={styles.draft}>{standing}</p>
+        )}
+        <p className={styles.filed}>
+          <span className={styles.category}>{category}</span>
+          {release ? (
+            <span className={styles.release}>
+              {release.app.name} {release.version}
+            </span>
+          ) : null}
+          {publishedAt ? (
+            <time dateTime={publishedAt}>{readableDate(publishedAt)}</time>
+          ) : null}
+          {updatedAt ? (
+            <span className={styles.revised}>
+              Updated {readableDate(updatedAt)}
+            </span>
+          ) : null}
+        </p>
+      </div>
     </header>
   );
 }
 
-function Byline({
-  byline,
-  publishedAt,
-  updatedAt,
-}: {
-  byline: PostByline;
-  publishedAt: string | null;
-  updatedAt: string | null;
-}) {
+function Byline({ byline }: { byline: PostByline }) {
   const name = byline.displayName || `@${byline.handle}`;
   return (
     <div className={styles.byline}>
@@ -83,16 +81,6 @@ function Byline({
           <Attribution byline={byline} />
         </span>
       </span>
-      {publishedAt ? (
-        <span className={styles.when}>
-          <time dateTime={publishedAt}>{readableDate(publishedAt)}</time>
-          {updatedAt ? (
-            <span className={styles.revised}>
-              Updated {readableDate(updatedAt)}
-            </span>
-          ) : null}
-        </span>
-      ) : null}
     </div>
   );
 }

@@ -35,8 +35,15 @@ type Portrait struct {
 	DerivativeVersion uint32
 }
 
-// captureByline copies one person's public identity onto a post, once.
-func captureByline(ctx context.Context, tx pgx.Tx, postID, authorID uuid.UUID, app *App) error {
+// captureByline copies one person's public identity onto a post, once. The app
+// is read from the grant inside the same transaction, so a revocation racing
+// with publication cannot leave an attribution the grant no longer supports.
+func captureByline(
+	ctx context.Context,
+	tx pgx.Tx,
+	postID, authorID uuid.UUID,
+	grantID *uuid.UUID,
+) error {
 	var handle, displayName, contactEmail string
 	var avatarID *uuid.UUID
 	var restricted bool
@@ -72,10 +79,9 @@ func captureByline(ctx context.Context, tx pgx.Tx, postID, authorID uuid.UUID, a
 	if err != nil {
 		return fmt.Errorf("write the author's distinctions: %w", err)
 	}
-	var appID *uuid.UUID
-	var appSlug, appName *string
-	if app != nil {
-		appID, appSlug, appName = &app.ID, &app.Slug, &app.Name
+	appID, appSlug, appName, err := grantApp(ctx, tx, grantID)
+	if err != nil {
+		return err
 	}
 	_, err = tx.Exec(ctx, `
 		insert into post_bylines (post_id, account_id, handle, display_name, contact_email,
@@ -89,6 +95,29 @@ func captureByline(ctx context.Context, tx pgx.Tx, postID, authorID uuid.UUID, a
 		return fmt.Errorf("record the post byline: %w", err)
 	}
 	return nil
+}
+
+// grantApp answers the app a grant publishes for, or nothing for an Illarin post.
+func grantApp(
+	ctx context.Context,
+	tx pgx.Tx,
+	grantID *uuid.UUID,
+) (*uuid.UUID, *string, *string, error) {
+	if grantID == nil {
+		return nil, nil, nil, nil
+	}
+	var id uuid.UUID
+	var slug, name string
+	err := tx.QueryRow(ctx, `
+		select app.id, app.slug, app.name
+		  from publication_grants grant_row
+		  join publication_apps app on app.id = grant_row.app_id
+		 where grant_row.id = $1
+	`, *grantID).Scan(&id, &slug, &name)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("read the app a post publishes for: %w", err)
+	}
+	return &id, &slug, &name, nil
 }
 
 // shownNames answers the positions and the bounded showcase a visitor sees.

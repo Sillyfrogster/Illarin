@@ -1,64 +1,56 @@
 .article {
-  width: min(100%, 680px);
+  width: min(100%, 40rem);
   margin: 0 auto;
-  padding: 72px 0 96px;
+  padding: clamp(40px, 5vw, 80px) 0 clamp(64px, 7vw, 104px);
 }
 
 .identity {
-  margin-bottom: 44px;
-  padding-bottom: 28px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.eyebrow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.category {
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
-  font-weight: 600;
-  line-height: var(--type-label-leading);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.release {
-  padding: 3px 9px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  color: var(--color-text-primary);
-  font-size: var(--type-label-size);
-  font-weight: 600;
-  line-height: var(--type-label-leading);
+  margin-bottom: clamp(32px, 3.6vw, 48px);
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+  font-size: clamp(2.15rem, 4.6vw, 3.2rem);
   font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -0.015em;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
   text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .summary {
-  margin-top: 18px;
+  margin-top: 20px;
   color: var(--color-text-secondary);
   font-size: var(--type-lead-size);
   line-height: var(--type-lead-leading);
   text-wrap: pretty;
 }
 
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-top: clamp(28px, 3vw, 36px);
+  padding-block: 18px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .byline {
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 14px;
-  margin-top: 32px;
+  gap: 13px;
+}
+
+.draft {
+  min-width: 0;
+  max-width: 34ch;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
 }
 
 .portrait {
@@ -87,10 +79,9 @@
 
 .who {
   display: flex;
-  flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .name {
@@ -110,17 +101,21 @@
 
 .standing {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 8px;
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
   line-height: var(--type-secondary-leading);
 }
 
 .affiliation {
+  overflow: hidden;
   color: var(--color-text-primary);
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .publisher {
@@ -130,16 +125,33 @@
   white-space: nowrap;
 }
 
-.when {
+.filed {
   display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
   line-height: var(--type-secondary-leading);
-  text-align: right;
+}
+
+.category {
+  color: var(--color-text-primary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: var(--type-label-leading);
+  text-transform: uppercase;
+}
+
+.release {
+  padding: 2px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  line-height: var(--type-label-leading);
 }
 
 .revised {
@@ -148,8 +160,8 @@
 }
 
 .releaseLink {
-  margin-top: 40px;
-  padding-top: 24px;
+  margin-top: clamp(40px, 4vw, 56px);
+  padding-top: 22px;
   border-top: 1px solid var(--color-border);
   font-size: var(--type-secondary-size);
 }
@@ -161,29 +173,22 @@
   text-underline-offset: 3px;
 }
 
+.releaseLink a:hover {
+  text-decoration-color: var(--color-emphasis);
+}
+
 @media (max-width: 700px) {
-  .article {
-    padding: 40px 0 64px;
-  }
-
-  .identity {
-    margin-bottom: 32px;
-  }
-
-  .byline {
-    flex-wrap: wrap;
-    row-gap: 12px;
-  }
-
-  .who {
-    flex-basis: calc(100% - 58px);
-  }
-
-  .when {
-    flex-basis: 100%;
+  .band {
+    flex-direction: column;
     align-items: flex-start;
-    padding-top: 12px;
-    border-top: 1px solid var(--color-border);
-    text-align: left;
+    gap: 14px;
+  }
+
+  .name,
+  .affiliation,
+  .publisher {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
   }
 }

@@ -58,6 +58,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Bold"
+            shortcut="Ctrl B"
             active={editor.isActive("bold")}
             press={() => editor.chain().focus().toggleBold().run()}
           >
@@ -66,6 +67,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Italic"
+            shortcut="Ctrl I"
             active={editor.isActive("italic")}
             press={() => editor.chain().focus().toggleItalic().run()}
           >
@@ -74,6 +76,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Inline code"
+            shortcut="Ctrl E"
             active={editor.isActive("code")}
             press={() => editor.chain().focus().toggleCode().run()}
           >
@@ -82,6 +85,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Link"
+            shortcut="Ctrl K"
             active={editor.isActive("link")}
             press={() => setLinking((open) => !open)}
             expanded={linking}
@@ -127,6 +131,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Undo"
+            shortcut="Ctrl Z"
             active={false}
             press={() => editor.chain().focus().undo().run()}
           >
@@ -135,6 +140,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
           <Control
             editor={editor}
             label="Redo"
+            shortcut="Ctrl Shift Z"
             active={false}
             press={() => editor.chain().focus().redo().run()}
           >
@@ -161,6 +167,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 function Control({
   editor,
   label,
+  shortcut,
   active,
   expanded,
   press,
@@ -168,6 +175,7 @@ function Control({
 }: {
   editor: Editor;
   label: string;
+  shortcut?: string;
   active: boolean;
   expanded?: boolean;
   press: () => void;
@@ -182,7 +190,7 @@ function Control({
       data-active={active || undefined}
       disabled={!editor.isEditable}
       onClick={press}
-      title={label}
+      title={shortcut ? `${label} (${shortcut})` : label}
       type="button"
     >
       {children}
@@ -213,8 +221,9 @@ function LinkRow({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   }
 
   return (
-    <div className={styles.link}>
-      <label htmlFor={field}>Link address</label>
+    <fieldset className={styles.link}>
+      <legend>Link address</legend>
+      <label htmlFor={field}>Address</label>
       <input
         id={field}
         onChange={(event) => setAddress(event.target.value)}
@@ -243,6 +252,6 @@ function LinkRow({ editor, onClose }: { editor: Editor; onClose: () => void }) {
       >
         Remove
       </button>
-    </div>
+    </fieldset>
   );
 }

@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, PenLine } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
+import { FormDialog } from "@/components/console/FormDialog";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
 import { publishPost, readPost, saveWorkingCopy } from "@/lib/api/posts";
@@ -44,6 +45,7 @@ export function PostWriter({ id }: { id: string }) {
   const [refusal, setRefusal] = useState("");
   const [failure, setFailure] = useState("");
   const [previewing, setPreviewing] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [edition, setEdition] = useState(0);
   const version = useRef(0);
 
@@ -108,11 +110,11 @@ export function PostWriter({ id }: { id: string }) {
   }
 
   async function release() {
+    setAsking(false);
     if (state === "dirty" || state === "refused") await save();
     const answer = await publishPost(id);
     if (answer.error || !answer.value) {
       setRefusal(answer.error ?? "");
-      setState("refused");
       return;
     }
     setPost(answer.value);
@@ -147,6 +149,7 @@ export function PostWriter({ id }: { id: string }) {
 
   return (
     <div className={styles.writer}>
+      <h1 className={styles.heading}>{draft.title || "Untitled post"}</h1>
       <header className={styles.bar}>
         <Link className={styles.back} href="/admin/blog">
           <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
@@ -171,10 +174,10 @@ export function PostWriter({ id }: { id: string }) {
           <button
             className={styles.publish}
             disabled={state === "conflict"}
-            onClick={() => void release()}
+            onClick={() => setAsking(true)}
             type="button"
           >
-            {post.status === "published" ? "Publish the changes" : "Publish"}
+            {post.status === "published" ? "Publish changes" : "Publish"}
           </button>
         </div>
       </header>
@@ -189,6 +192,29 @@ export function PostWriter({ id }: { id: string }) {
           ) : null}
         </p>
       ) : null}
+
+      <FormDialog
+        acknowledge={false}
+        commit={post.status === "published" ? "Publish changes" : "Publish"}
+        hint={
+          post.status === "published"
+            ? "Readers see this edition from the moment you publish it."
+            : "Publishing keeps this edition, fixes the address and records who wrote it. None of the three can be taken back."
+        }
+        onClose={() => setAsking(false)}
+        onCommit={() => void release()}
+        open={asking}
+        title={
+          post.status === "published"
+            ? "Publish the changes?"
+            : "Publish this post?"
+        }
+      >
+        <p className={styles.confirm}>
+          {draft.title}
+          <span>illarin.xyz/blog/{draft.slug}</span>
+        </p>
+      </FormDialog>
 
       {previewing ? (
         <article className={styles.reading}>

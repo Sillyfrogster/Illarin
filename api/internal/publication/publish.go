@@ -73,7 +73,7 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 		return Post{}, fmt.Errorf("put the post in public view: %w", err)
 	}
 	if firstTime {
-		if err := captureByline(ctx, tx, id, locked.AuthorID, current.App); err != nil {
+		if err := captureByline(ctx, tx, id, locked.AuthorID, locked.GrantID); err != nil {
 			return Post{}, err
 		}
 	}
@@ -178,6 +178,7 @@ func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*
 type working struct {
 	ID             uuid.UUID
 	AuthorID       uuid.UUID
+	GrantID        *uuid.UUID
 	CategoryID     uuid.UUID
 	CategorySlug   string
 	Status         string
@@ -195,7 +196,7 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	var locked working
 	var slug *string
 	err := tx.QueryRow(ctx, `
-		select post.id, post.author_id, post.category_id, category.slug, post.status,
+		select post.id, post.author_id, post.grant_id, post.category_id, category.slug, post.status,
 		       post.slug, post.title, post.summary, post.document,
 		       post.release_app_id, post.release_version, post.release_url, post.published_at
 		  from posts post
@@ -203,7 +204,8 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 		 where post.id = $1
 		   for no key update of post
 	`, id).Scan(
-		&locked.ID, &locked.AuthorID, &locked.CategoryID, &locked.CategorySlug, &locked.Status,
+		&locked.ID, &locked.AuthorID, &locked.GrantID, &locked.CategoryID, &locked.CategorySlug,
+		&locked.Status,
 		&slug, &locked.Title, &locked.Summary, &locked.Document,
 		&locked.ReleaseAppID, &locked.ReleaseVersion, &locked.ReleaseAddress, &locked.PublishedAt,
 	)

@@ -9,11 +9,12 @@
 
 .surface {
   min-height: 420px;
-  padding: 28px clamp(20px, 3vw, 36px) 56px;
+  padding: 28px 28px 56px;
   color: var(--color-text-primary);
   font-size: var(--type-lead-size);
   line-height: 30px;
   outline: none;
+  overflow-wrap: break-word;
 }
 
 .surface > * + * {

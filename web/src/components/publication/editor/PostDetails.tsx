@@ -59,7 +59,7 @@ export function PostDetails({
       <Field
         hint={
           locked
-            ? "Fixed once a post is published. An admin can correct it."
+            ? `illarin.xyz/blog/${draft.slug}. Fixed now the post is published, and only an admin can correct it.`
             : "illarin.xyz/blog/ plus this. It is fixed once the post is published."
         }
         htmlFor="post-slug"

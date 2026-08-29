@@ -75,7 +75,17 @@
   align-items: center;
   gap: 8px;
   padding: 10px;
+  border: 0;
   border-top: 1px solid var(--color-border);
+}
+
+.link legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .link label {
@@ -118,17 +128,7 @@
 
 @media (max-width: 700px) {
   .toolbar {
-    flex-wrap: nowrap;
-    gap: 4px 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .toolbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .group {
-    flex: none;
+    gap: 2px 8px;
+    padding: 6px;
   }
 }
