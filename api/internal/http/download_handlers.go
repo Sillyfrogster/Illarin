@@ -105,7 +105,7 @@ func (h *Handlers) GetMediaVariant(
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, asset.ErrMediaNotFound) {
-		h.sharedImageVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion))
+		h.sharedImageVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion), params)
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -130,27 +130,35 @@ func (h *Handlers) GetMediaVariant(
 	c.Status(http.StatusOK)
 }
 
-// sharedImageVariant answers the same address for a public image no asset owns
+// sharedImageVariant answers the same address for an image no asset owns.
 func (h *Handlers) sharedImageVariant(
 	c *gin.Context,
 	mediaID uuid.UUID,
 	variant string,
 	version uint32,
+	params GetMediaVariantParams,
 ) {
 	ctx := c.Request.Context()
-	owners := []func() (string, string, error){
-		func() (string, string, error) {
-			return h.accounts.AvatarVariant(ctx, mediaID, variant, version)
+	owners := []func() (string, string, bool, error){
+		func() (string, string, bool, error) {
+			redirect, mediaType, err := h.accounts.AvatarVariant(ctx, mediaID, variant, version)
+			return redirect, mediaType, false, err
 		},
-		func() (string, string, error) {
-			return h.publications.MarkVariant(ctx, mediaID, variant, version)
+		func() (string, string, bool, error) {
+			redirect, mediaType, err := h.publications.MarkVariant(ctx, mediaID, variant, version)
+			return redirect, mediaType, false, err
+		},
+		func() (string, string, bool, error) {
+			return h.publications.PostMediaVariant(ctx, mediaID, variant, version,
+				valueOrEmpty(params.Expires), valueOrEmpty(params.Signature))
 		},
 	}
 	for _, owner := range owners {
-		redirect, mediaType, err := owner()
+		redirect, mediaType, private, err := owner()
 		switch {
 		case errors.Is(err, account.ErrProfileMediaNotFound),
-			errors.Is(err, publication.ErrNotFound):
+			errors.Is(err, publication.ErrNotFound),
+			errors.Is(err, publication.ErrPostMediaNotFound):
 			continue
 		case errors.Is(err, storage.ErrInsufficientSpace):
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
@@ -159,7 +167,11 @@ func (h *Handlers) sharedImageVariant(
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
 			return
 		}
-		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		cache := "public, max-age=31536000, immutable"
+		if private {
+			cache = "private, no-store"
+		}
+		c.Header("Cache-Control", cache)
 		c.Header("Content-Disposition", "inline")
 		c.Header("Content-Type", mediaType)
 		c.Header("X-Content-Type-Options", "nosniff")

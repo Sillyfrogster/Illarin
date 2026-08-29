@@ -400,3 +400,94 @@ func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
 		t.Fatalf("restore after recovery error = %v, want ErrNotFound", err)
 	}
 }
+
+func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
+	ctx := context.Background()
+	pool := testdb.Connect(t)
+	store, err := storage.NewStore(pool, t.TempDir())
+	if err != nil {
+		t.Fatalf("storage: %v", err)
+	}
+	service := NewService(pool, format.NewRegistry(), store)
+	now := time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+
+	authorID := uuid.New()
+	if _, err := pool.Exec(ctx,
+		`insert into users (id, username) values ($1, 'sweep.author')`, authorID,
+	); err != nil {
+		t.Fatalf("insert author: %v", err)
+	}
+	var categoryID uuid.UUID
+	err = pool.QueryRow(ctx,
+		`select id from publication_categories where slug = 'announcement'`,
+	).Scan(&categoryID)
+	if err != nil {
+		t.Fatalf("read a category: %v", err)
+	}
+	postID := uuid.New()
+	if _, err := pool.Exec(ctx, `
+		insert into posts (id, author_id, category_id, title, document, document_version)
+		values ($1, $2, $3, 'A post with pictures', '{"version":2,"content":[]}', 2)
+	`, postID, authorID, categoryID); err != nil {
+		t.Fatalf("insert post: %v", err)
+	}
+
+	kept, err := store.Put(ctx, bytes.NewReader([]byte("the picture a revision carries")))
+	if err != nil {
+		t.Fatalf("put the kept picture: %v", err)
+	}
+	dropped, err := store.Put(ctx, bytes.NewReader([]byte("the picture nobody placed")))
+	if err != nil {
+		t.Fatalf("put the dropped picture: %v", err)
+	}
+	keptMedia, droppedMedia := uuid.New(), uuid.New()
+	for id, blobID := range map[uuid.UUID]uuid.UUID{keptMedia: kept.ID, droppedMedia: dropped.ID} {
+		if _, err := pool.Exec(ctx, `
+			insert into post_media (id, post_id, blob_id, purpose, width, height)
+			values ($1, $2, $3, 'document', 10, 10)
+		`, id, postID, blobID); err != nil {
+			t.Fatalf("insert post media: %v", err)
+		}
+	}
+	revisionID := uuid.New()
+	if _, err := pool.Exec(ctx, `
+		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
+		                            document, document_version)
+		values ($1, $2, 1, 'A post with pictures', 'A summary.', 'a-post-with-pictures', $3,
+		        '{"version":2,"content":[]}', 2)
+	`, revisionID, postID, categoryID); err != nil {
+		t.Fatalf("insert revision: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		insert into post_media_uses (media_id, post_id, revision_id) values ($1, $2, $3)
+	`, keptMedia, postID, revisionID); err != nil {
+		t.Fatalf("record what the revision refers to: %v", err)
+	}
+
+	if _, err := service.Sweep(ctx); err != nil {
+		t.Fatalf("mark sweep: %v", err)
+	}
+	now = now.Add(sweepDelay + time.Second)
+	if _, err := service.Sweep(ctx); err != nil {
+		t.Fatalf("delete sweep: %v", err)
+	}
+
+	opened, err := store.Open(ctx, kept.ID)
+	if err != nil {
+		t.Fatalf("a picture a revision refers to was swept: %v", err)
+	}
+	opened.Close()
+	if _, err := store.Open(ctx, dropped.ID); !errors.Is(err, storage.ErrBlobNotFound) {
+		t.Fatalf("opening the unplaced picture = %v, want it collected", err)
+	}
+	var blobID *uuid.UUID
+	if err := pool.QueryRow(ctx,
+		`select blob_id from post_media where id = $1`, droppedMedia,
+	).Scan(&blobID); err != nil {
+		t.Fatalf("read the unplaced picture: %v", err)
+	}
+	if blobID != nil {
+		t.Error("the unplaced picture still points at bytes that are gone")
+	}
+}

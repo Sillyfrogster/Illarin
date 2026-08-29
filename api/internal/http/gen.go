@@ -837,6 +837,27 @@ func (e PendingLinkPollResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for PostMediaPurpose.
+const (
+	Document PostMediaPurpose = "document"
+	Header   PostMediaPurpose = "header"
+	Social   PostMediaPurpose = "social"
+)
+
+// Valid indicates whether the value is a known member of the PostMediaPurpose enum.
+func (e PostMediaPurpose) Valid() bool {
+	switch e {
+	case Document:
+		return true
+	case Header:
+		return true
+	case Social:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostStatus.
 const (
 	PostStatusDraft     PostStatus = "draft"
@@ -1499,6 +1520,11 @@ type AddMediaRequest struct {
 
 // AddMediaRequestRole defines model for AddMediaRequest.Role.
 type AddMediaRequestRole string
+
+// AddPostMediaRequest defines model for AddPostMediaRequest.
+type AddPostMediaRequest struct {
+	Purpose PostMediaPurpose `json:"purpose"`
+}
 
 // AddableBlock One block the add tray offers. Where the content ends up is what the tray groups by, so a creator arrives at it by destination.
 type AddableBlock struct {
@@ -2454,10 +2480,13 @@ type Post struct {
 	Document        PostDocument        `json:"document"`
 	DocumentVersion int                 `json:"documentVersion"`
 	GrantId         *openapi_types.UUID `json:"grantId,omitempty"`
+	Header          *PostHeader         `json:"header,omitempty"`
 	Id              openapi_types.UUID  `json:"id"`
+	Media           []PostMedia         `json:"media"`
 	PublishedAt     *time.Time          `json:"publishedAt,omitempty"`
 	Release         *PostRelease        `json:"release,omitempty"`
 	Slug            string              `json:"slug"`
+	SocialMediaId   *openapi_types.UUID `json:"socialMediaId,omitempty"`
 	Status          PostStatus          `json:"status"`
 	Summary         string              `json:"summary"`
 	Title           string              `json:"title"`
@@ -2496,10 +2525,42 @@ type PostDocument struct {
 	Version int                      `json:"version"`
 }
 
+// PostHeader defines model for PostHeader.
+type PostHeader struct {
+	Alt     string             `json:"alt"`
+	Caption *string            `json:"caption,omitempty"`
+	MediaId openapi_types.UUID `json:"mediaId"`
+}
+
+// PostHeaderEdit defines model for PostHeaderEdit.
+type PostHeaderEdit struct {
+	Alt     string             `json:"alt"`
+	Caption *string            `json:"caption,omitempty"`
+	MediaId openapi_types.UUID `json:"mediaId"`
+}
+
 // PostList defines model for PostList.
 type PostList struct {
 	Posts []Post `json:"posts"`
 }
+
+// PostMedia One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with.
+type PostMedia struct {
+	Height  int                `json:"height"`
+	Id      openapi_types.UUID `json:"id"`
+	PostId  openapi_types.UUID `json:"postId"`
+	Purpose PostMediaPurpose   `json:"purpose"`
+
+	// ThumbUrl The size a gallery shows a picture at.
+	ThumbUrl string `json:"thumbUrl"`
+
+	// Url The size a picture is shown at on its own.
+	Url   string `json:"url"`
+	Width int    `json:"width"`
+}
+
+// PostMediaPurpose defines model for PostMediaPurpose.
+type PostMediaPurpose string
 
 // PostRelease defines model for PostRelease.
 type PostRelease struct {
@@ -2624,10 +2685,13 @@ type PublicPost struct {
 
 	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
 	Document    PostDocument       `json:"document"`
+	Header      *PostHeader        `json:"header,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
+	Media       []PostMedia        `json:"media"`
 	PublishedAt time.Time          `json:"publishedAt"`
 	Release     *PostRelease       `json:"release,omitempty"`
 	Slug        string             `json:"slug"`
+	SocialImage *PostMedia         `json:"socialImage,omitempty"`
 	Summary     string             `json:"summary"`
 	Title       string             `json:"title"`
 	UpdatedAt   *time.Time         `json:"updatedAt,omitempty"`
@@ -2854,12 +2918,14 @@ type SavePostRequest struct {
 	CategoryId openapi_types.UUID `json:"categoryId"`
 
 	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
-	Document PostDocument     `json:"document"`
-	Release  *PostReleaseEdit `json:"release,omitempty"`
-	Slug     string           `json:"slug"`
-	Summary  string           `json:"summary"`
-	Title    string           `json:"title"`
-	Version  int              `json:"version"`
+	Document      PostDocument        `json:"document"`
+	Header        *PostHeaderEdit     `json:"header,omitempty"`
+	Release       *PostReleaseEdit    `json:"release,omitempty"`
+	Slug          string              `json:"slug"`
+	SocialMediaId *openapi_types.UUID `json:"socialMediaId,omitempty"`
+	Summary       string              `json:"summary"`
+	Title         string              `json:"title"`
+	Version       int                 `json:"version"`
 }
 
 // SaveProfileRequest defines model for SaveProfileRequest.
@@ -3307,6 +3373,12 @@ type SetPublicationAppMarkMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// AddPostMediaMultipartBody defines parameters for AddPostMedia.
+type AddPostMediaMultipartBody struct {
+	File     openapi_types.File  `json:"file"`
+	Metadata AddPostMediaRequest `json:"metadata"`
+}
+
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
 type ChangeUnverifiedEmailJSONRequestBody = ChangeEmailRequest
 
@@ -3459,6 +3531,9 @@ type CreatePostJSONRequestBody = CreatePostRequest
 
 // SavePostJSONRequestBody defines body for SavePost for application/json ContentType.
 type SavePostJSONRequestBody = SavePostRequest
+
+// AddPostMediaMultipartRequestBody defines body for AddPostMedia for multipart/form-data ContentType.
+type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -3860,6 +3935,9 @@ type ServerInterface interface {
 
 	// (PUT /v1/publication/posts/{id})
 	SavePost(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/media)
+	AddPostMedia(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/posts/{id}/publish)
 	PublishPost(c *gin.Context, id openapi_types.UUID)
@@ -6315,6 +6393,31 @@ func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
 	siw.Handler.SavePost(c, id)
 }
 
+// AddPostMedia operation middleware
+func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPostMedia(c, id)
+}
+
 // PublishPost operation middleware
 func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 
@@ -6487,6 +6590,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/publication/posts", wrapper.CreatePost)
 	router.GET(options.BaseURL+"/v1/publication/posts/:id", wrapper.GetPost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id", wrapper.SavePost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/media", wrapper.AddPostMedia)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)

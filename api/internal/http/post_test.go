@@ -49,6 +49,9 @@ type blogPost struct {
 	Document        postDocument        `json:"document"`
 	DocumentVersion int                 `json:"documentVersion"`
 	Release         *postRelease        `json:"release"`
+	Header          *postHeader         `json:"header"`
+	SocialMediaID   string              `json:"socialMediaId"`
+	Media           []postPicture       `json:"media"`
 	App             *publicationApp     `json:"app"`
 	GrantID         string              `json:"grantId"`
 	Version         int                 `json:"version"`
@@ -69,6 +72,9 @@ type publicPost struct {
 	Category    publicationCategory `json:"category"`
 	Document    postDocument        `json:"document"`
 	Release     *postRelease        `json:"release"`
+	Header      *postHeader         `json:"header"`
+	SocialImage *postPicture        `json:"socialImage"`
+	Media       []postPicture       `json:"media"`
 	Byline      postByline          `json:"byline"`
 	PublishedAt time.Time           `json:"publishedAt"`
 	UpdatedAt   *time.Time          `json:"updatedAt"`

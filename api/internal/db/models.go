@@ -334,6 +334,10 @@ type Post struct {
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	PublicRevisionID pgtype.UUID
+	HeaderMediaID    pgtype.UUID
+	HeaderAlt        pgtype.Text
+	HeaderCaption    pgtype.Text
+	SocialMediaID    pgtype.UUID
 }
 
 type PostByline struct {
@@ -351,6 +355,22 @@ type PostByline struct {
 	CapturedAt    pgtype.Timestamptz
 }
 
+type PostMediaUse struct {
+	MediaID    pgtype.UUID
+	PostID     pgtype.UUID
+	RevisionID pgtype.UUID
+}
+
+type PostMedium struct {
+	ID        pgtype.UUID
+	PostID    pgtype.UUID
+	BlobID    pgtype.UUID
+	Purpose   string
+	Width     int32
+	Height    int32
+	CreatedAt pgtype.Timestamptz
+}
+
 type PostRevision struct {
 	ID              pgtype.UUID
 	PostID          pgtype.UUID
@@ -366,6 +386,10 @@ type PostRevision struct {
 	ReleaseUrl      pgtype.Text
 	CapturedBy      pgtype.UUID
 	CapturedAt      pgtype.Timestamptz
+	HeaderMediaID   pgtype.UUID
+	HeaderAlt       pgtype.Text
+	HeaderCaption   pgtype.Text
+	SocialMediaID   pgtype.UUID
 }
 
 type ProfileDistinction struct {

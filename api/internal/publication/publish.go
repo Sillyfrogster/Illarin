@@ -29,6 +29,9 @@ type PublicPost struct {
 	Category    Category
 	Document    json.RawMessage
 	Release     *Release
+	Header      *Header
+	SocialMedia *PostMedia
+	Media       []PostMedia
 	Byline      Byline
 	PublishedAt time.Time
 	UpdatedAt   *time.Time
@@ -58,6 +61,9 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 	}
 	revisionID, err := captureRevision(ctx, tx, editor, locked)
 	if err != nil {
+		return Post{}, err
+	}
+	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
 	firstTime := locked.PublishedAt == nil
@@ -105,11 +111,15 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 // about the working copy behind it.
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
 	var found PublicPost
+	var headerID, socialID *uuid.UUID
+	var headerAlt, headerCaption *string
 	err := s.pool.QueryRow(ctx, `
 		select post.id, revision.id, revision.slug, revision.title, revision.summary,
 		       category.id, category.slug, category.label, category.position,
 		       category.retired_at is not null,
-		       revision.document, post.published_at, post.updated_public_at
+		       revision.document, revision.header_media_id, revision.header_alt,
+		       revision.header_caption, revision.social_media_id,
+		       post.published_at, post.updated_public_at
 		  from posts post
 		  join post_revisions revision on revision.id = post.public_revision_id
 		  join publication_categories category on category.id = revision.category_id
@@ -118,7 +128,8 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		&found.ID, &found.RevisionID, &found.Slug, &found.Title, &found.Summary,
 		&found.Category.ID, &found.Category.Slug, &found.Category.Label,
 		&found.Category.Position, &found.Category.Retired,
-		&found.Document, &found.PublishedAt, &found.UpdatedAt,
+		&found.Document, &headerID, &headerAlt, &headerCaption, &socialID,
+		&found.PublishedAt, &found.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PublicPost{}, ErrPostNotFound
@@ -131,12 +142,55 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		return PublicPost{}, err
 	}
 	found.Release = release
+	found.Header = scanHeader(headerID, headerAlt, headerCaption)
+	if err := s.attachRevisionMedia(ctx, &found, socialID); err != nil {
+		return PublicPost{}, err
+	}
 	byline, err := readByline(ctx, s.pool, found.ID)
 	if err != nil {
 		return PublicPost{}, err
 	}
 	found.Byline = byline
 	return found, nil
+}
+
+// attachRevisionMedia gives an edition the exact pictures it was captured with.
+func (s *Service) attachRevisionMedia(
+	ctx context.Context,
+	found *PublicPost,
+	socialID *uuid.UUID,
+) error {
+	rows, err := s.pool.Query(ctx, `
+		select media.id, media.post_id, media.purpose, media.width, media.height
+		  from post_media_uses use
+		  join post_media media on media.id = use.media_id
+		 where use.revision_id = $1 and media.blob_id is not null
+		 order by media.created_at
+	`, found.RevisionID)
+	if err != nil {
+		return fmt.Errorf("read the pictures a published edition carries: %w", err)
+	}
+	defer rows.Close()
+	found.Media = []PostMedia{}
+	for rows.Next() {
+		var one PostMedia
+		if err := rows.Scan(&one.ID, &one.PostID, &one.Purpose, &one.Width, &one.Height); err != nil {
+			return fmt.Errorf("read a picture a published edition carries: %w", err)
+		}
+		found.Media = append(found.Media, one)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read the pictures a published edition carries: %w", err)
+	}
+	if socialID != nil {
+		for _, one := range found.Media {
+			if one.ID == *socialID {
+				social := one
+				found.SocialMedia = &social
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*Release, error) {
@@ -189,6 +243,10 @@ type working struct {
 	ReleaseAppID   *uuid.UUID
 	ReleaseVersion *string
 	ReleaseAddress *string
+	HeaderMediaID  *uuid.UUID
+	HeaderAlt      *string
+	HeaderCaption  *string
+	SocialMediaID  *uuid.UUID
 	PublishedAt    *time.Time
 }
 
@@ -198,7 +256,9 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	err := tx.QueryRow(ctx, `
 		select post.id, post.author_id, post.grant_id, post.category_id, category.slug, post.status,
 		       post.slug, post.title, post.summary, post.document,
-		       post.release_app_id, post.release_version, post.release_url, post.published_at
+		       post.release_app_id, post.release_version, post.release_url,
+		       post.header_media_id, post.header_alt, post.header_caption, post.social_media_id,
+		       post.published_at
 		  from posts post
 		  join publication_categories category on category.id = post.category_id
 		 where post.id = $1
@@ -207,7 +267,9 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 		&locked.ID, &locked.AuthorID, &locked.GrantID, &locked.CategoryID, &locked.CategorySlug,
 		&locked.Status,
 		&slug, &locked.Title, &locked.Summary, &locked.Document,
-		&locked.ReleaseAppID, &locked.ReleaseVersion, &locked.ReleaseAddress, &locked.PublishedAt,
+		&locked.ReleaseAppID, &locked.ReleaseVersion, &locked.ReleaseAddress,
+		&locked.HeaderMediaID, &locked.HeaderAlt, &locked.HeaderCaption, &locked.SocialMediaID,
+		&locked.PublishedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return working{}, ErrPostNotFound
@@ -258,6 +320,19 @@ func readyToPublish(locked working) ([]byte, error) {
 	return document, nil
 }
 
+// carryUsesForward gives the revision the pictures the working copy referred to.
+func carryUsesForward(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID) error {
+	_, err := tx.Exec(ctx, `
+		insert into post_media_uses (media_id, post_id, revision_id)
+		select media_id, post_id, $2 from post_media_uses
+		 where post_id = $1 and revision_id is null
+	`, postID, revisionID)
+	if err != nil {
+		return fmt.Errorf("carry the pictures forward into the revision: %w", err)
+	}
+	return nil
+}
+
 func captureRevision(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -268,13 +343,15 @@ func captureRevision(
 	_, err := tx.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
 		                            document, document_version, release_app_id,
-		                            release_version, release_url, captured_by)
+		                            release_version, release_url, header_media_id,
+		                            header_alt, header_caption, social_media_id, captured_by)
 		values ($1, $2,
 		        coalesce((select max(number) from post_revisions where post_id = $2), 0) + 1,
-		        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, id, locked.ID, locked.Title, locked.Summary, locked.Slug, locked.CategoryID,
 		locked.Document, postdoc.Version, locked.ReleaseAppID,
-		locked.ReleaseVersion, locked.ReleaseAddress, editor.ID)
+		locked.ReleaseVersion, locked.ReleaseAddress, locked.HeaderMediaID,
+		locked.HeaderAlt, locked.HeaderCaption, locked.SocialMediaID, editor.ID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("capture the post revision: %w", err)
 	}

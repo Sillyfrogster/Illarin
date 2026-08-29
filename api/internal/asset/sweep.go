@@ -328,6 +328,10 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		select 1 from profile_media media where media.blob_id = ` + blobID + `
 		union all
 		select 1 from publication_media media where media.blob_id = ` + blobID + `
+		union all
+		select 1 from post_media media
+		  join post_media_uses use on use.media_id = media.id
+		 where media.blob_id = ` + blobID + `
 	)`
 }
 
@@ -346,6 +350,14 @@ func releaseExpiredReferences(ctx context.Context, tx pgx.Tx, id uuid.UUID, now 
 		if _, err := tx.Exec(ctx, statement, id, now); err != nil {
 			return fmt.Errorf("release expired blob reference: %w", err)
 		}
+	}
+	_, err := tx.Exec(ctx, `
+		update post_media set blob_id = null
+		 where blob_id = $1
+		   and not exists (select 1 from post_media_uses use where use.media_id = post_media.id)
+	`, id)
+	if err != nil {
+		return fmt.Errorf("release an unused post picture: %w", err)
 	}
 	return nil
 }

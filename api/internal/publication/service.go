@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -43,12 +45,14 @@ func (e FieldError) Error() string { return e.Message }
 
 // Service owns publication authority and the profile distinctions it manages.
 type Service struct {
-	pool  *pgxpool.Pool
-	media *mediaproc.Library
+	pool   *pgxpool.Pool
+	media  *mediaproc.Library
+	signer signing.Key
+	now    func() time.Time
 }
 
 func NewService(pool *pgxpool.Pool, media *mediaproc.Library) *Service {
-	return &Service{pool: pool, media: media}
+	return &Service{pool: pool, media: media, signer: signing.NewKey(), now: time.Now}
 }
 
 // HoldsAuthority answers whether the recorded assignment names this account

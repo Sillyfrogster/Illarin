@@ -1904,6 +1904,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+  /v1/publication/posts/{id}/media:
+    post:
+      operationId: addPostMedia
+      description: >-
+        Upload one picture against this post. The record is immutable: replacing
+        a picture uploads new bytes at a new address rather than changing an
+        address readers already hold.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: Send the metadata part before the image file part.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - metadata
+                - file
+              properties:
+                metadata:
+                  $ref: '#/components/schemas/AddPostMediaRequest'
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: A new immutable post picture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostMedia'
+        '400':
+          description: The purpose or the image is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+        '413':
+          description: The image exceeds the upload limit
+        '503':
+          description: The storage reserve cannot accept the image
   /v1/publication/posts/{id}/publish:
     post:
       operationId: publishPost
@@ -4270,6 +4322,79 @@ components:
       properties:
         handle:
           type: string
+    PostMediaPurpose:
+      type: string
+      enum:
+        - header
+        - document
+        - social
+    PostMedia:
+      type: object
+      description: >-
+        One picture a post owns. Its bytes never change, so an address a reader
+        holds always answers with the picture the edition was written with.
+      required:
+        - id
+        - postId
+        - purpose
+        - url
+        - thumbUrl
+        - width
+        - height
+      properties:
+        id:
+          type: string
+          format: uuid
+        postId:
+          type: string
+          format: uuid
+        purpose:
+          $ref: '#/components/schemas/PostMediaPurpose'
+        url:
+          type: string
+          description: The size a picture is shown at on its own.
+        thumbUrl:
+          type: string
+          description: The size a gallery shows a picture at.
+        width:
+          type: integer
+        height:
+          type: integer
+    PostHeader:
+      type: object
+      required:
+        - mediaId
+        - alt
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        alt:
+          type: string
+        caption:
+          type: string
+    PostHeaderEdit:
+      type: object
+      additionalProperties: false
+      required:
+        - mediaId
+        - alt
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        alt:
+          type: string
+        caption:
+          type: string
+    AddPostMediaRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - purpose
+      properties:
+        purpose:
+          $ref: '#/components/schemas/PostMediaPurpose'
     PostRelease:
       type: object
       required:
@@ -4338,6 +4463,7 @@ components:
         - category
         - document
         - documentVersion
+        - media
         - version
         - author
         - createdAt
@@ -4364,6 +4490,19 @@ components:
           anyOf:
             - $ref: '#/components/schemas/PostRelease'
             - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeader'
+            - type: 'null'
+        socialMediaId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
         app:
           anyOf:
             - $ref: '#/components/schemas/PublicationApp'
@@ -4454,6 +4593,15 @@ components:
           anyOf:
             - $ref: '#/components/schemas/PostReleaseEdit'
             - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeaderEdit'
+            - type: 'null'
+        socialMediaId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
     PublicPost:
       type: object
       required:
@@ -4463,6 +4611,7 @@ components:
         - summary
         - category
         - document
+        - media
         - byline
         - publishedAt
       properties:
@@ -4483,6 +4632,18 @@ components:
           anyOf:
             - $ref: '#/components/schemas/PostRelease'
             - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeader'
+            - type: 'null'
+        socialImage:
+          anyOf:
+            - $ref: '#/components/schemas/PostMedia'
+            - type: 'null'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
         byline:
           $ref: '#/components/schemas/PostByline'
         publishedAt:

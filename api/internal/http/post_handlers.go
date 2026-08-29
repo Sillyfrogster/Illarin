@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/oapi-codegen/runtime/types"
@@ -22,7 +24,7 @@ func (h *Handlers) ListPosts(c *gin.Context) {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, PostList{Posts: toAPIPosts(held)})
+	c.JSON(http.StatusOK, PostList{Posts: h.toAPIPosts(held)})
 }
 
 func (h *Handlers) CreatePost(c *gin.Context) {
@@ -44,7 +46,7 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, toAPIPost(started))
+	c.JSON(http.StatusCreated, h.toAPIPost(started))
 }
 
 func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
@@ -57,7 +59,7 @@ func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIPost(found))
+	c.JSON(http.StatusOK, h.toAPIPost(found))
 }
 
 func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
@@ -77,19 +79,64 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
 	}
 	saved, err := h.publications.SavePost(c.Request.Context(), editor, uuid.UUID(id),
 		publication.PostSave{
-			Version:    request.Version,
-			CategoryID: uuid.UUID(request.CategoryId),
-			Title:      request.Title,
-			Summary:    request.Summary,
-			Slug:       request.Slug,
-			Document:   document,
-			Release:    toReleaseEdit(request.Release),
+			Version:       request.Version,
+			CategoryID:    uuid.UUID(request.CategoryId),
+			Title:         request.Title,
+			Summary:       request.Summary,
+			Slug:          request.Slug,
+			Document:      document,
+			Release:       toReleaseEdit(request.Release),
+			Header:        toHeaderEdit(request.Header),
+			SocialMediaID: optionalID(request.SocialMediaId),
 		})
 	if err != nil {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIPost(saved))
+	c.JSON(http.StatusOK, h.toAPIPost(saved))
+}
+
+func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
+	editor, ok := h.postEditor(c, "adding a picture to a post")
+	if !ok {
+		return
+	}
+	parts, err := c.Request.MultipartReader()
+	if err != nil {
+		h.refusePostMedia(c, refusal{
+			reason: "send the picture as form data, with a metadata part and a file part",
+			cause:  err,
+		})
+		return
+	}
+	metadata, err := readPostMediaMetadata(parts)
+	if err != nil {
+		h.refusePostMedia(c, err)
+		return
+	}
+	file, err := nextPart(parts, filePart)
+	if err != nil {
+		h.refusePostMedia(c, err)
+		return
+	}
+	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
+	defer limitedFile.Close()
+	added, err := h.publications.AddPostMedia(
+		c.Request.Context(), editor, uuid.UUID(id), string(metadata.Purpose), limitedFile,
+	)
+	var refused publication.FieldError
+	switch {
+	case errors.Is(err, publication.ErrPostNotFound), errors.Is(err, publication.ErrNotPostEditor):
+		h.postError(c, err)
+		return
+	case errors.As(err, &refused):
+		h.postError(c, err)
+		return
+	case err != nil:
+		h.refusePostMedia(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.publications.SignPrivate))
 }
 
 func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
@@ -102,7 +149,7 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIPost(published))
+	c.JSON(http.StatusOK, h.toAPIPost(published))
 }
 
 func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
@@ -116,6 +163,25 @@ func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
 		return
 	}
 	c.JSON(http.StatusOK, toAPIPublicPost(found))
+}
+
+// refusePostMedia answers an upload the byte path could not take.
+func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge):
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": "That picture is larger than the upload limit.",
+		})
+	case errors.Is(err, storage.ErrInsufficientSpace):
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Uploads are temporarily unavailable because storage is low.",
+		})
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "That picture could not be read. Use a PNG, JPEG, WebP or GIF.",
+		})
+	}
 }
 
 // postEditor answers the signed-in account and how far its post access reaches.
@@ -156,15 +222,15 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	}
 }
 
-func toAPIPosts(held []publication.Post) []Post {
+func (h *Handlers) toAPIPosts(held []publication.Post) []Post {
 	listed := make([]Post, 0, len(held))
 	for _, one := range held {
-		listed = append(listed, toAPIPost(one))
+		listed = append(listed, h.toAPIPost(one))
 	}
 	return listed
 }
 
-func toAPIPost(found publication.Post) Post {
+func (h *Handlers) toAPIPost(found publication.Post) Post {
 	shown := Post{
 		Id:              types.UUID(found.ID),
 		Status:          PostStatus(found.Status),
@@ -175,6 +241,8 @@ func toAPIPost(found publication.Post) Post {
 		Document:        toAPIDocument(found.Document),
 		DocumentVersion: found.DocumentVersion,
 		Release:         toAPIRelease(found.Release),
+		Header:          toAPIHeader(found.Header),
+		Media:           showPostMedia(found.Media, h.publications.SignPrivate),
 		Version:         found.Version,
 		Author:          PostAuthor{Handle: found.Author.Handle},
 		PublishedAt:     found.PublishedAt,
@@ -190,6 +258,10 @@ func toAPIPost(found publication.Post) Post {
 		app := toAPIApp(*found.App)
 		shown.App = &app
 	}
+	if found.SocialMediaID != nil {
+		social := types.UUID(*found.SocialMediaID)
+		shown.SocialMediaId = &social
+	}
 	return shown
 }
 
@@ -202,10 +274,54 @@ func toAPIPublicPost(found publication.PublicPost) PublicPost {
 		Category:    toAPICategory(found.Category),
 		Document:    toAPIDocument(found.Document),
 		Release:     toAPIRelease(found.Release),
+		Header:      toAPIHeader(found.Header),
+		SocialImage: toAPIPostPicture(found.SocialMedia, nil),
+		Media:       showPostMedia(found.Media, nil),
 		Byline:      toAPIByline(found.Byline),
 		PublishedAt: found.PublishedAt,
 		UpdatedAt:   found.UpdatedAt,
 	}
+}
+
+// showPostMedia addresses a set of pictures, signing a working copy's own.
+func showPostMedia(held []publication.PostMedia, sign func(string) string) []PostMedia {
+	shown := make([]PostMedia, 0, len(held))
+	for _, one := range held {
+		shown = append(shown, *toAPIPostPicture(&one, sign))
+	}
+	return shown
+}
+
+func toAPIPostPicture(found *publication.PostMedia, sign func(string) string) *PostMedia {
+	if found == nil {
+		return nil
+	}
+	address := publication.PostMediaURL(found.ID, found.Purpose, media.DerivativeVersion)
+	thumb := publication.PostMediaThumbURL(found.ID, media.DerivativeVersion)
+	if sign != nil {
+		address = sign(address)
+		thumb = sign(thumb)
+	}
+	return &PostMedia{
+		Id:       types.UUID(found.ID),
+		PostId:   types.UUID(found.PostID),
+		Purpose:  PostMediaPurpose(found.Purpose),
+		Url:      address,
+		ThumbUrl: thumb,
+		Width:    found.Width,
+		Height:   found.Height,
+	}
+}
+
+func toAPIHeader(found *publication.Header) *PostHeader {
+	if found == nil {
+		return nil
+	}
+	shown := &PostHeader{MediaId: types.UUID(found.MediaID), Alt: found.Alt}
+	if found.Caption != "" {
+		shown.Caption = pointer(found.Caption)
+	}
+	return shown
 }
 
 func toAPIByline(found publication.Byline) PostByline {
@@ -263,6 +379,17 @@ func toReleaseEdit(request *PostReleaseEdit) *publication.ReleaseEdit {
 	}
 	if request.Address != nil {
 		edit.Address = *request.Address
+	}
+	return edit
+}
+
+func toHeaderEdit(request *PostHeaderEdit) *publication.HeaderEdit {
+	if request == nil {
+		return nil
+	}
+	edit := &publication.HeaderEdit{MediaID: uuid.UUID(request.MediaId), Alt: request.Alt}
+	if request.Caption != nil {
+		edit.Caption = *request.Caption
 	}
 	return edit
 }

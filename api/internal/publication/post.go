@@ -25,6 +25,7 @@ const (
 	titleLimit          = 160
 	summaryLimit        = 320
 	releaseVersionLimit = 40
+	headerTextLimit     = 300
 )
 
 var (
@@ -74,6 +75,9 @@ type Post struct {
 	Document        json.RawMessage
 	DocumentVersion int
 	Release         *Release
+	Header          *Header
+	SocialMediaID   *uuid.UUID
+	Media           []PostMedia
 	Version         int
 	PublishedAt     *time.Time
 	UpdatedPublicAt *time.Time
@@ -90,13 +94,22 @@ type PostEdit struct {
 
 // PostSave is the whole working copy an autosave replaces.
 type PostSave struct {
-	Version    int
-	CategoryID uuid.UUID
-	Title      string
-	Summary    string
-	Slug       string
-	Document   []byte
-	Release    *ReleaseEdit
+	Version       int
+	CategoryID    uuid.UUID
+	Title         string
+	Summary       string
+	Slug          string
+	Document      []byte
+	Release       *ReleaseEdit
+	Header        *HeaderEdit
+	SocialMediaID *uuid.UUID
+}
+
+// HeaderEdit is the picture an article opens with as a request supplied it.
+type HeaderEdit struct {
+	MediaID uuid.UUID
+	Alt     string
+	Caption string
 }
 
 // ReleaseEdit is the release metadata a request supplied.
@@ -199,16 +212,25 @@ func (s *Service) SavePost(
 	if err != nil {
 		return Post{}, err
 	}
-	tag, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Post{}, fmt.Errorf("begin working copy save: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	tag, err := tx.Exec(ctx, `
 		update posts
 		   set category_id = $3, title = $4, summary = $5, slug = $6,
 		       document = $7, document_version = $8,
 		       release_app_id = $9, release_version = $10, release_url = $11,
+		       header_media_id = $12, header_alt = $13, header_caption = $14,
+		       social_media_id = $15,
 		       working_version = working_version + 1, updated_at = now()
 		 where id = $1 and working_version = $2
 	`, id, in.Version, edition.categoryID, edition.title, edition.summary,
 		nullable(edition.slug), edition.document, postdoc.Version,
-		edition.releaseAppID, nullable(edition.releaseVersion), nullable(edition.releaseAddress))
+		edition.releaseAppID, nullable(edition.releaseVersion), nullable(edition.releaseAddress),
+		headerMediaID(edition.pictures.header), headerAlt(edition.pictures.header),
+		headerCaption(edition.pictures.header), edition.pictures.social)
 	if isUniqueViolation(err) {
 		return Post{}, FieldError{Field: "slug", Message: "Another post already has that address."}
 	}
@@ -221,6 +243,12 @@ func (s *Service) SavePost(
 			return Post{}, readErr
 		}
 		return Post{}, Stale{Version: moved.Version, UpdatedAt: moved.UpdatedAt}
+	}
+	if err := recordUses(ctx, tx, id, nil, edition.pictures.ordered); err != nil {
+		return Post{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Post{}, fmt.Errorf("commit working copy save: %w", err)
 	}
 	return s.post(ctx, id)
 }
@@ -235,6 +263,7 @@ type edition struct {
 	releaseAppID   *uuid.UUID
 	releaseVersion string
 	releaseAddress string
+	pictures       placed
 }
 
 func (s *Service) checkWorkingCopy(
@@ -284,10 +313,15 @@ func (s *Service) checkWorkingCopy(
 	if err != nil {
 		return edition{}, err
 	}
+	pictures, err := s.checkPlacement(ctx, current.ID, body, in)
+	if err != nil {
+		return edition{}, err
+	}
 	return edition{
 		categoryID: category.ID, title: title, summary: summary, slug: slug,
 		document: document, releaseAppID: release.appID,
 		releaseVersion: release.version, releaseAddress: release.address,
+		pictures: pictures,
 	}, nil
 }
 
@@ -432,6 +466,27 @@ func freeSlug(ctx context.Context, tx pgx.Tx, candidate string) *string {
 	return nil
 }
 
+func headerMediaID(header *Header) *uuid.UUID {
+	if header == nil {
+		return nil
+	}
+	return &header.MediaID
+}
+
+func headerAlt(header *Header) *string {
+	if header == nil {
+		return nil
+	}
+	return &header.Alt
+}
+
+func headerCaption(header *Header) *string {
+	if header == nil || header.Caption == "" {
+		return nil
+	}
+	return &header.Caption
+}
+
 func nullable(value string) *string {
 	if value == "" {
 		return nil
@@ -448,6 +503,20 @@ func (s *Service) post(ctx context.Context, id uuid.UUID) (Post, error) {
 		return Post{}, ErrPostNotFound
 	}
 	return found[0], nil
+}
+
+func scanHeader(mediaID *uuid.UUID, alt, caption *string) *Header {
+	if mediaID == nil {
+		return nil
+	}
+	header := &Header{MediaID: *mediaID}
+	if alt != nil {
+		header.Alt = *alt
+	}
+	if caption != nil {
+		header.Caption = *caption
+	}
+	return header
 }
 
 func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([]Post, error) {
@@ -467,7 +536,52 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read posts: %w", err)
 	}
+	if err := s.attachWorkingMedia(ctx, found); err != nil {
+		return nil, err
+	}
 	return found, nil
+}
+
+// attachWorkingMedia gives each working copy the pictures it refers to.
+func (s *Service) attachWorkingMedia(ctx context.Context, posts []Post) error {
+	if len(posts) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(posts))
+	for index := range posts {
+		posts[index].Media = []PostMedia{}
+		ids = append(ids, posts[index].ID)
+	}
+	rows, err := s.pool.Query(ctx, `
+		select use.post_id, media.id, media.post_id, media.purpose, media.width, media.height
+		  from post_media_uses use
+		  join post_media media on media.id = use.media_id
+		 where use.post_id = any($1) and use.revision_id is null and media.blob_id is not null
+		 order by media.created_at
+	`, ids)
+	if err != nil {
+		return fmt.Errorf("read the pictures posts refer to: %w", err)
+	}
+	defer rows.Close()
+	held := make(map[uuid.UUID][]PostMedia, len(posts))
+	for rows.Next() {
+		var postID uuid.UUID
+		var one PostMedia
+		err := rows.Scan(&postID, &one.ID, &one.PostID, &one.Purpose, &one.Width, &one.Height)
+		if err != nil {
+			return fmt.Errorf("read a picture a post refers to: %w", err)
+		}
+		held[postID] = append(held[postID], one)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read the pictures posts refer to: %w", err)
+	}
+	for index := range posts {
+		if pictures, carried := held[posts[index].ID]; carried {
+			posts[index].Media = pictures
+		}
+	}
+	return nil
 }
 
 const selectPosts = `
@@ -482,6 +596,8 @@ const selectPosts = `
 	       release_app.position, release_app.retired_at is not null,
 	       release_mark.id, release_mark.width, release_mark.height,
 	       post.release_version, post.release_url,
+	       post.header_media_id, post.header_alt, post.header_caption,
+	       post.social_media_id,
 	       post.working_version, post.published_at, post.updated_public_at,
 	       post.created_at, post.updated_at
 	  from posts post
@@ -506,6 +622,8 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	var appRetired *bool
 	var release App
 	var releaseSlug, releaseName, releaseHome, releaseVersion, releaseAddress, slug *string
+	var headerID *uuid.UUID
+	var headerAltText, headerCaptionText *string
 	var releasePosition *int
 	var releaseRetired *bool
 	err := rows.Scan(
@@ -520,6 +638,7 @@ func scanPost(rows pgx.Rows) (Post, error) {
 		&releasePosition, &releaseRetired,
 		&releaseMarkID, &releaseMarkWidth, &releaseMarkHeight,
 		&releaseVersion, &releaseAddress,
+		&headerID, &headerAltText, &headerCaptionText, &one.SocialMediaID,
 		&one.Version, &one.PublishedAt, &one.UpdatedPublicAt,
 		&one.CreatedAt, &one.UpdatedAt,
 	)
@@ -529,6 +648,7 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	if slug != nil {
 		one.Slug = *slug
 	}
+	one.Header = scanHeader(headerID, headerAltText, headerCaptionText)
 	if appID != nil {
 		app = App{
 			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,

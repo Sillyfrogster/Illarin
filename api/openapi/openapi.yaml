@@ -116,6 +116,8 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts
   /v1/publication/posts/{id}:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}
+  /v1/publication/posts/{id}/media:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1media
   /v1/publication/posts/{id}/publish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
   /v1/posts/{slug}:
@@ -335,6 +337,16 @@ components:
       $ref: ./posts.yaml#/components/schemas/PostDocument
     PostAuthor:
       $ref: ./posts.yaml#/components/schemas/PostAuthor
+    PostMediaPurpose:
+      $ref: ./posts.yaml#/components/schemas/PostMediaPurpose
+    PostMedia:
+      $ref: ./posts.yaml#/components/schemas/PostMedia
+    PostHeader:
+      $ref: ./posts.yaml#/components/schemas/PostHeader
+    PostHeaderEdit:
+      $ref: ./posts.yaml#/components/schemas/PostHeaderEdit
+    AddPostMediaRequest:
+      $ref: ./posts.yaml#/components/schemas/AddPostMediaRequest
     PostRelease:
       $ref: ./posts.yaml#/components/schemas/PostRelease
     PostReleaseEdit:
