@@ -1,0 +1,197 @@
+import { expect, test } from "bun:test";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { PostBlock, PostDocument } from "@/lib/post-document";
+import { POST_DOCUMENT_VERSION } from "@/lib/post-document";
+import { PostBody } from "./PostBody";
+
+function render(...content: PostBlock[]): string {
+  const document: PostDocument = { version: POST_DOCUMENT_VERSION, content };
+  return renderToStaticMarkup(<PostBody document={document} />);
+}
+
+test("a heading renders at its level and answers to its address", () => {
+  const html = render({
+    type: "heading",
+    level: 3,
+    anchor: "release-notes",
+    content: [{ type: "text", text: "Release notes" }],
+  });
+  expect(html).toContain('<h3 id="release-notes">Release notes</h3>');
+});
+
+test("every mark reaches its own element", () => {
+  const html = render({
+    type: "paragraph",
+    content: [
+      { type: "text", text: "b", marks: [{ type: "bold" }] },
+      { type: "text", text: "i", marks: [{ type: "italic" }] },
+      { type: "text", text: "s", marks: [{ type: "strike" }] },
+      { type: "text", text: "c", marks: [{ type: "code" }] },
+    ],
+  });
+  expect(html).toContain("<strong>b</strong>");
+  expect(html).toContain("<em>i</em>");
+  expect(html).toContain("<s>s</s>");
+  expect(html).toContain(">c</code>");
+});
+
+test("a link that leaves Illarin opens away and says so", () => {
+  const html = render({
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: "Elsewhere",
+        marks: [{ type: "link", href: "https://example.com/notes" }],
+      },
+    ],
+  });
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noreferrer nofollow"');
+  expect(html).toContain("opens in a new tab");
+});
+
+test("a link that stays on Illarin opens in the same tab", () => {
+  const html = render({
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: "Here",
+        marks: [{ type: "link", href: "http://localhost:8000/browse" }],
+      },
+    ],
+  });
+  expect(html).not.toContain('target="_blank"');
+  expect(html).not.toContain("opens in a new tab");
+});
+
+test("a task list says what is done without offering a control", () => {
+  const html = render({
+    type: "taskList",
+    content: [
+      {
+        type: "taskItem",
+        done: true,
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Shipped" }] },
+        ],
+      },
+      {
+        type: "taskItem",
+        done: false,
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Waiting" }] },
+        ],
+      },
+    ],
+  });
+  expect(html).toContain('data-done="true"');
+  expect(html).toContain('data-done="false"');
+  expect(html).toContain("Done:");
+  expect(html).toContain("To do:");
+  expect(html).not.toContain("<input");
+});
+
+test("a callout names its kind", () => {
+  const html = render({
+    type: "callout",
+    kind: "warning",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Careful." }] },
+    ],
+  });
+  expect(html).toContain('data-kind="warning"');
+  expect(html).toContain("Warning");
+  expect(html).toContain("<aside");
+});
+
+test("a heading row becomes column headings and a heading column becomes row headings", () => {
+  const cell = (text: string): PostBlock => ({
+    type: "paragraph",
+    content: [{ type: "text", text }],
+  });
+  const columns = render({
+    type: "table",
+    content: [
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableCell", heading: true, content: [cell("Field")] },
+          { type: "tableCell", heading: true, content: [cell("Type")] },
+        ],
+      },
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableCell", content: [cell("title")] },
+          { type: "tableCell", content: [cell("string")] },
+        ],
+      },
+    ],
+  });
+  expect(columns).toContain("<thead>");
+  expect(columns).toContain('scope="col"');
+  expect(columns).not.toContain('scope="row"');
+
+  const rowHeadings = render({
+    type: "table",
+    content: [
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableCell", heading: true, content: [cell("Draft")] },
+          { type: "tableCell", content: [cell("no")] },
+        ],
+      },
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableCell", heading: true, content: [cell("Published")] },
+          { type: "tableCell", content: [cell("yes")] },
+        ],
+      },
+    ],
+  });
+  expect(rowHeadings).not.toContain("<thead>");
+  expect(rowHeadings).toContain('scope="row"');
+});
+
+test("code keeps its source and is highlighted from it", () => {
+  const html = render({
+    type: "codeBlock",
+    language: "go",
+    source: 'func main() {\n\t// note\n\tprint("hi")\n}',
+  });
+  expect(html).toContain("Go</span>");
+  expect(html).toContain("<span>// note</span>");
+  expect(html).toContain("<span>func</span>");
+  expect(html).toContain("&quot;hi&quot;");
+});
+
+test("plain code is not labelled and carries no highlighting classes", () => {
+  const html = render({
+    type: "codeBlock",
+    language: "plain",
+    source: "illarin publish",
+  });
+  expect(html).toContain("illarin publish");
+  expect(html).not.toContain("Plain text</span>");
+});
+
+test("authored text never becomes markup", () => {
+  const html = render(
+    {
+      type: "paragraph",
+      content: [{ type: "text", text: '<script>alert("x")</script>' }],
+    },
+    {
+      type: "codeBlock",
+      language: "html",
+      source: "<img onerror=alert(1)>",
+    },
+  );
+  expect(html).not.toContain("<script>");
+  expect(html).not.toContain("onerror=alert");
+  expect(html).toContain("&lt;script&gt;");
+});
