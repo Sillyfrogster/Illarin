@@ -2,7 +2,7 @@
   "note": "A quotation cannot go inside a list item",
   "path": "document.content.0.content.0.content.0.type",
   "document": {
-    "version": 1,
+    "version": 2,
     "content": [
       {
         "type": "bulletList",
@@ -10,7 +10,10 @@
           {
             "type": "listItem",
             "content": [
-              { "type": "quote", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "No" }] }] }
+              {
+                "type": "quote",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "No"}]}]
+              }
             ]
           }
         ]

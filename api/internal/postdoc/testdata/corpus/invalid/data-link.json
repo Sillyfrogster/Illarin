@@ -1,5 +1,5 @@
 {
-  "note": "A link scheme that runs code",
+  "note": "A data address is not a link",
   "path": "document.content.0.content.0.marks.0.href",
   "document": {
     "version": 2,
@@ -9,8 +9,8 @@
         "content": [
           {
             "type": "text",
-            "text": "Click",
-            "marks": [{"type": "link", "href": "javascript:alert(1)"}]
+            "text": "Open",
+            "marks": [{"type": "link", "href": "data:text/html,<b>x</b>"}]
           }
         ]
       }

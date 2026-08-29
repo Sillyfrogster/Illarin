@@ -1,0 +1,21 @@
+{
+  "note": "Two headings answering to one address",
+  "path": "document.content.1.anchor",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "heading",
+        "level": 2,
+        "anchor": "notes",
+        "content": [{"type": "text", "text": "Notes"}]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "anchor": "notes",
+        "content": [{"type": "text", "text": "More notes"}]
+      }
+    ]
+  }
+}

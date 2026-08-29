@@ -1,0 +1,40 @@
+{
+  "note": "A task list keeps the state of each task and nests",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "taskList",
+        "content": [
+          {
+            "type": "taskItem",
+            "done": true,
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Write the validator"}]
+              }
+            ]
+          },
+          {
+            "type": "taskItem",
+            "done": false,
+            "content": [
+              {"type": "paragraph", "content": [{"type": "text", "text": "Write the renderer"}]},
+              {
+                "type": "taskList",
+                "content": [
+                  {
+                    "type": "taskItem",
+                    "done": false,
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Tables"}]}]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

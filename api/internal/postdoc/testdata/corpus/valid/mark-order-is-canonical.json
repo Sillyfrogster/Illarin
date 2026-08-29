@@ -1,18 +1,20 @@
 {
-  "note": "Marks arrive in any order and come back in one order",
+  "note": "Marks come back in one order whatever order they arrive in",
   "document": {
-    "version": 1,
+    "version": 2,
     "content": [
       {
         "type": "paragraph",
         "content": [
           {
             "type": "text",
-            "text": "Both",
+            "text": "Every one",
             "marks": [
-              { "type": "link", "href": "https://example.com" },
-              { "type": "italic" },
-              { "type": "bold" }
+              {"type": "link", "href": "https://example.com"},
+              {"type": "code"},
+              {"type": "strike"},
+              {"type": "italic"},
+              {"type": "bold"}
             ]
           }
         ]
@@ -20,18 +22,20 @@
     ]
   },
   "canonical": {
-    "version": 1,
+    "version": 2,
     "content": [
       {
         "type": "paragraph",
         "content": [
           {
             "type": "text",
-            "text": "Both",
+            "text": "Every one",
             "marks": [
-              { "type": "bold" },
-              { "type": "italic" },
-              { "type": "link", "href": "https://example.com" }
+              {"type": "bold"},
+              {"type": "italic"},
+              {"type": "strike"},
+              {"type": "code"},
+              {"type": "link", "href": "https://example.com"}
             ]
           }
         ]

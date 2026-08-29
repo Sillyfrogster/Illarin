@@ -1,18 +1,20 @@
 {
-  "note": "A paragraph carrying every mark the first vocabulary has",
+  "note": "A paragraph carrying every mark a post document has",
   "document": {
-    "version": 1,
+    "version": 2,
     "content": [
       {
         "type": "paragraph",
         "content": [
-          { "type": "text", "text": "Plain, " },
-          { "type": "text", "text": "bold", "marks": [{ "type": "bold" }] },
-          { "type": "text", "text": ", " },
-          { "type": "text", "text": "italic", "marks": [{ "type": "italic" }] },
-          { "type": "text", "text": ", " },
-          { "type": "text", "text": "code", "marks": [{ "type": "code" }] },
-          { "type": "text", "text": " and both", "marks": [{ "type": "bold" }, { "type": "italic" }] }
+          {"type": "text", "text": "Plain, "},
+          {"type": "text", "text": "bold", "marks": [{"type": "bold"}]},
+          {"type": "text", "text": ", "},
+          {"type": "text", "text": "italic", "marks": [{"type": "italic"}]},
+          {"type": "text", "text": ", "},
+          {"type": "text", "text": "struck", "marks": [{"type": "strike"}]},
+          {"type": "text", "text": ", "},
+          {"type": "text", "text": "code", "marks": [{"type": "code"}]},
+          {"type": "text", "text": " and both", "marks": [{"type": "bold"}, {"type": "italic"}]}
         ]
       }
     ]

@@ -1,7 +1,7 @@
 {
   "note": "A list item holding a list of its own",
   "document": {
-    "version": 1,
+    "version": 2,
     "content": [
       {
         "type": "bulletList",
@@ -9,11 +9,14 @@
           {
             "type": "listItem",
             "content": [
-              { "type": "paragraph", "content": [{ "type": "text", "text": "Outer" }] },
+              {"type": "paragraph", "content": [{"type": "text", "text": "Outer"}]},
               {
                 "type": "orderedList",
                 "content": [
-                  { "type": "listItem", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Inner" }] }] }
+                  {
+                    "type": "listItem",
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Inner"}]}]
+                  }
                 ]
               }
             ]

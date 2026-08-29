@@ -1,0 +1,41 @@
+{
+  "note": "A heading cell that is neither a first row nor a first column",
+  "path": "document.content.0.content.1.content.1.heading",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "One"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Two"}]}]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Three"}]}]
+              },
+              {
+                "type": "tableCell",
+                "heading": true,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Four"}]}]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

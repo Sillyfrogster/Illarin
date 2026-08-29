@@ -53,7 +53,7 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 	if err != nil {
 		return Post{}, err
 	}
-	if err := readyToPublish(locked); err != nil {
+	if locked.Document, err = readyToPublish(locked); err != nil {
 		return Post{}, err
 	}
 	revisionID, err := captureRevision(ctx, tx, editor, locked)
@@ -221,35 +221,42 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	return locked, nil
 }
 
-func readyToPublish(locked working) error {
+// readyToPublish checks everything publication requires and answers the body
+// the revision keeps, which is the working copy read at the current document
+// version rather than the bytes a version ago.
+func readyToPublish(locked working) ([]byte, error) {
 	if _, err := checkTitle(locked.Title); err != nil {
-		return err
+		return nil, err
 	}
 	if locked.Summary == "" {
-		return FieldError{
+		return nil, FieldError{
 			Field:   "summary",
 			Message: "Write the summary readers see before the article.",
 		}
 	}
 	if locked.Slug == "" {
-		return FieldError{Field: "slug", Message: "Give the post an address."}
+		return nil, FieldError{Field: "slug", Message: "Give the post an address."}
 	}
 	body, err := postdoc.Read(locked.Document)
 	if err != nil {
-		return documentRefusal(err)
+		return nil, documentRefusal(err)
 	}
 	if body.Empty() {
-		return FieldError{Field: "document", Message: "Write the post before publishing it."}
+		return nil, FieldError{Field: "document", Message: "Write the post before publishing it."}
 	}
 	if locked.CategorySlug == ReleaseCategory {
 		if locked.ReleaseAppID == nil || locked.ReleaseVersion == nil {
-			return FieldError{
+			return nil, FieldError{
 				Field:   "release",
 				Message: "A release names the project it belongs to and its version.",
 			}
 		}
 	}
-	return nil
+	document, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("write the post body: %w", err)
+	}
+	return document, nil
 }
 
 func captureRevision(

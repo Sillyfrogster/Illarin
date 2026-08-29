@@ -2,14 +2,11 @@
 // editor writes a post, this vocabulary is what gets stored and rendered.
 package postdoc
 
-import (
-	"bytes"
-	"encoding/json"
-	"strconv"
-)
-
 // Version is the document version every writer emits.
-const Version = 1
+const Version = 2
+
+// firstVersion is the oldest stored version a reader still upgrades.
+const firstVersion = 1
 
 // Document is one post body, an ordered run of blocks.
 type Document struct {
@@ -19,7 +16,7 @@ type Document struct {
 // Block is one structure in a document. The set of them is closed.
 type Block interface {
 	name() string
-	writeJSON(*bytes.Buffer) error
+	writeJSON(*writer)
 }
 
 // Paragraph is a run of prose.
@@ -30,8 +27,9 @@ type Paragraph struct {
 // Heading is a section title inside the body. The post title is the page
 // heading, so a body heading starts at level two.
 type Heading struct {
-	Level int
-	Spans []Span
+	Level  int
+	Anchor string
+	Spans  []Span
 }
 
 // List is a bulleted or numbered run of items.
@@ -45,8 +43,48 @@ type Item struct {
 	Blocks []Block
 }
 
+// TaskList is a run of items a reader can see the state of.
+type TaskList struct {
+	Tasks []Task
+}
+
+// Task is one entry in a task list.
+type Task struct {
+	Done   bool
+	Blocks []Block
+}
+
 // Quote is quoted material.
 type Quote struct {
+	Blocks []Block
+}
+
+// CodeBlock is source in one language, kept exactly as it was written.
+type CodeBlock struct {
+	Language string
+	Source   string
+}
+
+// Table is a rectangle of cells. Its heading cells fill the first row, the
+// first column, or both.
+type Table struct {
+	Rows []Row
+}
+
+// Row is one row of a table.
+type Row struct {
+	Cells []Cell
+}
+
+// Cell is one cell of a table.
+type Cell struct {
+	Heading bool
+	Blocks  []Block
+}
+
+// Callout is an aside that says what kind of aside it is.
+type Callout struct {
+	Kind   string
 	Blocks []Block
 }
 
@@ -58,6 +96,7 @@ type Span struct {
 	Text   string
 	Bold   bool
 	Italic bool
+	Strike bool
 	Code   bool
 	Link   string
 }
@@ -70,159 +109,13 @@ func (l List) name() string {
 	}
 	return "bulletList"
 }
-func (Item) name() string    { return "listItem" }
-func (Quote) name() string   { return "quote" }
-func (Divider) name() string { return "divider" }
-
-// MarshalJSON writes the one canonical form of a document, so a round trip
-// through any client leaves the stored bytes comparable.
-func (d Document) MarshalJSON() ([]byte, error) {
-	var out bytes.Buffer
-	out.WriteString(`{"version":`)
-	out.WriteString(strconv.Itoa(Version))
-	out.WriteString(`,"content":`)
-	if err := writeBlocks(&out, d.Blocks); err != nil {
-		return nil, err
-	}
-	out.WriteString(`}`)
-	return out.Bytes(), nil
-}
-
-func (p Paragraph) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"paragraph","content":`)
-	if err := writeSpans(out, p.Spans); err != nil {
-		return err
-	}
-	out.WriteString(`}`)
-	return nil
-}
-
-func (h Heading) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"heading","level":`)
-	out.WriteString(strconv.Itoa(h.Level))
-	out.WriteString(`,"content":`)
-	if err := writeSpans(out, h.Spans); err != nil {
-		return err
-	}
-	out.WriteString(`}`)
-	return nil
-}
-
-func (l List) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"`)
-	out.WriteString(l.name())
-	out.WriteString(`","content":[`)
-	for index, item := range l.Items {
-		if index > 0 {
-			out.WriteString(`,`)
-		}
-		if err := item.writeJSON(out); err != nil {
-			return err
-		}
-	}
-	out.WriteString(`]}`)
-	return nil
-}
-
-func (i Item) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"listItem","content":`)
-	if err := writeBlocks(out, i.Blocks); err != nil {
-		return err
-	}
-	out.WriteString(`}`)
-	return nil
-}
-
-func (q Quote) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"quote","content":`)
-	if err := writeBlocks(out, q.Blocks); err != nil {
-		return err
-	}
-	out.WriteString(`}`)
-	return nil
-}
-
-func (Divider) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"divider"}`)
-	return nil
-}
-
-func writeBlocks(out *bytes.Buffer, blocks []Block) error {
-	out.WriteString(`[`)
-	for index, block := range blocks {
-		if index > 0 {
-			out.WriteString(`,`)
-		}
-		if err := block.writeJSON(out); err != nil {
-			return err
-		}
-	}
-	out.WriteString(`]`)
-	return nil
-}
-
-func writeSpans(out *bytes.Buffer, spans []Span) error {
-	out.WriteString(`[`)
-	for index, span := range spans {
-		if index > 0 {
-			out.WriteString(`,`)
-		}
-		if err := span.writeJSON(out); err != nil {
-			return err
-		}
-	}
-	out.WriteString(`]`)
-	return nil
-}
-
-func (s Span) writeJSON(out *bytes.Buffer) error {
-	out.WriteString(`{"type":"text","text":`)
-	text, err := json.Marshal(s.Text)
-	if err != nil {
-		return err
-	}
-	out.Write(text)
-	marks := s.marks()
-	if len(marks) == 0 {
-		out.WriteString(`}`)
-		return nil
-	}
-	out.WriteString(`,"marks":[`)
-	for index, mark := range marks {
-		if index > 0 {
-			out.WriteString(`,`)
-		}
-		out.WriteString(`{"type":"`)
-		out.WriteString(mark)
-		out.WriteString(`"`)
-		if mark == markLink {
-			href, err := json.Marshal(s.Link)
-			if err != nil {
-				return err
-			}
-			out.WriteString(`,"href":`)
-			out.Write(href)
-		}
-		out.WriteString(`}`)
-	}
-	out.WriteString(`]}`)
-	return nil
-}
-
-// marks answers the marks on a span in the one order the canonical form uses.
-func (s Span) marks() []string {
-	ordered := make([]string, 0, 4)
-	if s.Bold {
-		ordered = append(ordered, markBold)
-	}
-	if s.Italic {
-		ordered = append(ordered, markItalic)
-	}
-	if s.Code {
-		ordered = append(ordered, markCode)
-	}
-	if s.Link != "" {
-		ordered = append(ordered, markLink)
-	}
-	return ordered
-}
+func (Item) name() string      { return "listItem" }
+func (TaskList) name() string  { return "taskList" }
+func (Task) name() string      { return "taskItem" }
+func (Quote) name() string     { return "quote" }
+func (CodeBlock) name() string { return "codeBlock" }
+func (Table) name() string     { return "table" }
+func (Row) name() string       { return "tableRow" }
+func (Cell) name() string      { return "tableCell" }
+func (Callout) name() string   { return "callout" }
+func (Divider) name() string   { return "divider" }

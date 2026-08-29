@@ -1,11 +1,14 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -74,7 +77,7 @@ type publicPost struct {
 // paragraph is a one-sentence post body in the document vocabulary.
 func paragraph(words string) string {
 	return fmt.Sprintf(
-		`{"version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":%q}]}]}`,
+		`{"version":2,"content":[{"type":"paragraph","content":[{"type":"text","text":%q}]}]}`,
 		words,
 	)
 }
@@ -243,7 +246,7 @@ func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 	if found.Title != draft.Title || found.Summary != "What Illarin changed this week." {
 		t.Errorf("public post = %q / %q", found.Title, found.Summary)
 	}
-	if len(found.Document.Content) != 1 || found.Document.Version != 1 {
+	if len(found.Document.Content) != 1 || found.Document.Version != 2 {
 		t.Errorf("public body = %+v", found.Document)
 	}
 	if found.Byline.Handle != "illarin.editor" || found.Byline.App != nil {
@@ -467,7 +470,7 @@ func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
 
 	response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 		"document": json.RawMessage(
-			`{"version":1,"content":[{"type":"paragraph","content":[` +
+			`{"version":2,"content":[{"type":"paragraph","content":[` +
 				`{"type":"text","text":"Go","marks":[{"type":"link","href":"javascript:alert(1)"}]}]}]}`,
 		),
 	}))
@@ -760,4 +763,86 @@ func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
 	if !strings.Contains(response.Body.String(), "title") {
 		t.Errorf("the refusal does not name the title: %s", response.Body.String())
 	}
+}
+
+func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	draft := stack.illarinDraft(t, session, "Written a version ago")
+
+	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
+		"document": json.RawMessage(
+			`{"version":1,"content":[` +
+				`{"type":"heading","level":2,"content":[{"type":"text","text":"Release notes"}]},` +
+				`{"type":"paragraph","content":[{"type":"text","text":"Stored before headings had addresses."}]}]}`,
+		),
+	}))
+	if written.Document.Version != 2 || written.DocumentVersion != 2 {
+		t.Fatalf("saved body = version %d, column %d", written.Document.Version, written.DocumentVersion)
+	}
+	if written.Document.Content[0]["anchor"] != "release-notes" {
+		t.Errorf("upgraded heading = %+v, want the address its words make", written.Document.Content[0])
+	}
+
+	stack.published(t, session, draft.ID)
+	found := stack.reader(t, draft.Slug)
+	if found.Document.Version != 2 {
+		t.Errorf("published body = version %d, want the current one", found.Document.Version)
+	}
+	if found.Document.Content[0]["anchor"] != "release-notes" {
+		t.Errorf("published heading = %+v", found.Document.Content[0])
+	}
+}
+
+func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	draft := stack.illarinDraft(t, session, "Every structure at once")
+
+	body := readCorpus(t, "a-dense-technical-post.json")
+	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
+		"document": body,
+	}))
+	stored, err := json.Marshal(written.Document)
+	if err != nil {
+		t.Fatalf("encode the stored body: %v", err)
+	}
+	stack.published(t, session, draft.ID)
+	public, err := json.Marshal(stack.reader(t, draft.Slug).Document)
+	if err != nil {
+		t.Fatalf("encode the public body: %v", err)
+	}
+	if !bytes.Equal(stored, public) {
+		t.Errorf("the published body differs from the working copy:\n%s\n%s", stored, public)
+	}
+	kinds := map[string]bool{}
+	for _, block := range written.Document.Content {
+		kinds[fmt.Sprint(block["type"])] = true
+	}
+	for _, want := range []string{
+		"paragraph", "heading", "bulletList", "taskList", "quote",
+		"codeBlock", "table", "callout", "divider",
+	} {
+		if !kinds[want] {
+			t.Errorf("the stored body lost its %s", want)
+		}
+	}
+}
+
+// readCorpus reads one document from the corpus Go validation and the site share.
+func readCorpus(t *testing.T, name string) json.RawMessage {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(
+		"..", "postdoc", "testdata", "corpus", "valid", name,
+	))
+	if err != nil {
+		t.Fatalf("read the corpus: %v", err)
+	}
+	var one struct {
+		Document json.RawMessage `json:"document"`
+	}
+	if err := json.Unmarshal(raw, &one); err != nil {
+		t.Fatalf("decode %s: %v", name, err)
+	}
+	return one.Document
 }
