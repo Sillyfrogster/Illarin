@@ -34,8 +34,8 @@
 .control {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
@@ -69,26 +69,67 @@
   line-height: 1;
 }
 
-.link {
+/* The row under the bar acts on where the caret is, not on the writing. */
+.row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 10px;
-  border: 0;
+  padding: 9px 12px;
   border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
-.link legend {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.rowMark {
+  margin-right: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: var(--type-label-leading);
+  text-transform: uppercase;
 }
 
-.link label {
+.choice {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  transition:
+    border-color 140ms var(--ease),
+    background 140ms var(--ease);
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--color-emphasis-border);
+  background: var(--color-muted);
+}
+
+.choice:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.strong {
+  border-color: var(--color-emphasis);
+  background: var(--color-emphasis);
+  color: var(--color-on-emphasis);
+}
+
+.strong:hover:not(:disabled) {
+  border-color: var(--color-emphasis);
+  background: var(--color-emphasis-strong);
+}
+
+.pickerLabel {
   color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: 800;
@@ -96,39 +137,48 @@
   text-transform: uppercase;
 }
 
-.link input {
-  flex: 1;
-  min-width: 180px;
-  min-height: 44px;
-  padding: 8px 12px;
+.picker {
+  min-height: 36px;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--color-elevated);
   color: var(--color-text-primary);
-  font-size: var(--type-secondary-size);
-}
-
-.link button {
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--color-emphasis);
-  border-radius: var(--radius-sm);
-  background: var(--color-emphasis);
-  color: var(--color-on-emphasis);
-  cursor: pointer;
   font-size: var(--type-secondary-size);
   font-weight: 600;
 }
 
-.clear {
-  border-color: var(--color-border);
-  background: none;
-  color: var(--color-text-secondary);
+.address {
+  flex: 1;
+  min-width: 180px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  font-size: var(--type-secondary-size);
 }
 
 @media (max-width: 700px) {
   .toolbar {
     gap: 2px 8px;
     padding: 6px;
+  }
+
+  .control {
+    width: 44px;
+    height: 44px;
+  }
+
+  .row {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .choice,
+  .picker,
+  .address {
+    min-height: 44px;
   }
 }

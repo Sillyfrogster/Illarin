@@ -8,40 +8,68 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
-  Minus,
+  ListTodo,
   Pilcrow,
-  Quote,
+  Plus,
   Redo2,
+  Strikethrough,
   Undo2,
 } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { BlockRow, InsertRow, LinkRow } from "./EditorRows";
 import styles from "./Toolbar.module.css";
+import { type Controls, useControls } from "./use-controls";
+import { useToolbarKeys } from "./use-toolbar-keys";
+
+type Opened = "none" | "link" | "insert";
 
 export function Toolbar({ editor }: { editor: Editor | null }) {
-  const [linking, setLinking] = useState(false);
-  if (!editor) return <div className={styles.toolbar} aria-busy="true" />;
+  const [row, setRow] = useState<Opened>("none");
+  const controls = useControls(editor);
+  const keys = useToolbarKeys();
+
+  useEffect(() => {
+    if (!editor) return;
+    const close = () => setRow("none");
+    editor.on("selectionUpdate", close);
+    return () => {
+      editor.off("selectionUpdate", close);
+    };
+  }, [editor]);
+
+  if (!editor || !controls) {
+    return <div className={styles.toolbar} aria-busy="true" />;
+  }
+
+  function open(which: "link" | "insert") {
+    setRow((current) => (current === which ? "none" : which));
+  }
+
   return (
     <div className={styles.bar}>
       <div
-        className={styles.toolbar}
-        role="toolbar"
         aria-label="Post formatting"
+        className={styles.toolbar}
+        onFocus={keys.onFocus}
+        onKeyDown={keys.onKeyDown}
+        ref={keys.bar}
+        role="toolbar"
       >
         <Group label="Text style">
           <Control
-            editor={editor}
+            active={controls.paragraph}
+            controls={controls}
             label="Paragraph"
-            active={editor.isActive("paragraph")}
             press={() => editor.chain().focus().setParagraph().run()}
           >
             <Pilcrow size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           {[2, 3, 4].map((level) => (
             <Control
-              editor={editor}
+              active={controls.heading === level}
+              controls={controls}
               key={level}
               label={`Heading ${level}`}
-              active={editor.isActive("heading", { level })}
               press={() =>
                 editor
                   .chain()
@@ -56,103 +84,138 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
         </Group>
         <Group label="Emphasis">
           <Control
-            editor={editor}
+            active={controls.bold}
+            controls={controls}
             label="Bold"
-            shortcut="Ctrl B"
-            active={editor.isActive("bold")}
             press={() => editor.chain().focus().toggleBold().run()}
+            shortcut="Ctrl B"
           >
             <Bold size={16} strokeWidth={1.9} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
+            active={controls.italic}
+            controls={controls}
             label="Italic"
-            shortcut="Ctrl I"
-            active={editor.isActive("italic")}
             press={() => editor.chain().focus().toggleItalic().run()}
+            shortcut="Ctrl I"
           >
             <Italic size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
+            active={controls.strike}
+            controls={controls}
+            label="Strike-through"
+            press={() => editor.chain().focus().toggleStrike().run()}
+            shortcut="Ctrl Shift S"
+          >
+            <Strikethrough size={16} strokeWidth={1.7} aria-hidden="true" />
+          </Control>
+          <Control
+            active={controls.code}
+            controls={controls}
             label="Inline code"
-            shortcut="Ctrl E"
-            active={editor.isActive("code")}
             press={() => editor.chain().focus().toggleCode().run()}
+            shortcut="Ctrl E"
           >
             <Code size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
+            active={controls.link}
+            controls={controls}
+            expanded={row === "link"}
             label="Link"
+            press={() => open("link")}
             shortcut="Ctrl K"
-            active={editor.isActive("link")}
-            press={() => setLinking((open) => !open)}
-            expanded={linking}
           >
             <LinkIcon size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
         </Group>
-        <Group label="Blocks">
+        <Group label="Lists">
           <Control
-            editor={editor}
+            active={controls.bulletList}
+            controls={controls}
             label="Bulleted list"
-            active={editor.isActive("bulletList")}
             press={() => editor.chain().focus().toggleBulletList().run()}
           >
             <List size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
+            active={controls.orderedList}
+            controls={controls}
             label="Numbered list"
-            active={editor.isActive("orderedList")}
             press={() => editor.chain().focus().toggleOrderedList().run()}
           >
             <ListOrdered size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
-            label="Quotation"
-            active={editor.isActive("blockquote")}
-            press={() => editor.chain().focus().toggleBlockquote().run()}
+            active={controls.taskList}
+            controls={controls}
+            label="Task list"
+            press={() => editor.chain().focus().toggleTaskList().run()}
           >
-            <Quote size={16} strokeWidth={1.7} aria-hidden="true" />
+            <ListTodo size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
+        </Group>
+        <Group label="Structures">
           <Control
-            editor={editor}
-            label="Divider"
             active={false}
-            press={() => editor.chain().focus().setHorizontalRule().run()}
+            controls={controls}
+            expanded={row === "insert"}
+            label="Insert a structure"
+            press={() => open("insert")}
           >
-            <Minus size={16} strokeWidth={1.9} aria-hidden="true" />
+            <Plus size={17} strokeWidth={1.9} aria-hidden="true" />
           </Control>
         </Group>
         <Group label="History">
           <Control
-            editor={editor}
-            label="Undo"
-            shortcut="Ctrl Z"
             active={false}
+            controls={controls}
+            label="Undo"
             press={() => editor.chain().focus().undo().run()}
+            ready={controls.canUndo}
+            shortcut="Ctrl Z"
           >
             <Undo2 size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
           <Control
-            editor={editor}
-            label="Redo"
-            shortcut="Ctrl Shift Z"
             active={false}
+            controls={controls}
+            label="Redo"
             press={() => editor.chain().focus().redo().run()}
+            ready={controls.canRedo}
+            shortcut="Ctrl Shift Z"
           >
             <Redo2 size={16} strokeWidth={1.7} aria-hidden="true" />
           </Control>
         </Group>
       </div>
-      {linking ? (
-        <LinkRow editor={editor} onClose={() => setLinking(false)} />
-      ) : null}
+      <Row
+        close={() => setRow("none")}
+        controls={controls}
+        editor={editor}
+        row={row}
+      />
     </div>
   );
+}
+
+function Row({
+  close,
+  controls,
+  editor,
+  row,
+}: {
+  close: () => void;
+  controls: Controls;
+  editor: Editor;
+  row: Opened;
+}) {
+  if (row === "link") return <LinkRow editor={editor} onClose={close} />;
+  if (row === "insert") {
+    return <InsertRow controls={controls} editor={editor} onClose={close} />;
+  }
+  return <BlockRow controls={controls} editor={editor} />;
 }
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
@@ -165,21 +228,23 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function Control({
-  editor,
-  label,
-  shortcut,
   active,
-  expanded,
-  press,
   children,
+  controls,
+  expanded,
+  label,
+  press,
+  ready,
+  shortcut,
 }: {
-  editor: Editor;
-  label: string;
-  shortcut?: string;
   active: boolean;
-  expanded?: boolean;
-  press: () => void;
   children: ReactNode;
+  controls: Controls;
+  expanded?: boolean;
+  label: string;
+  press: () => void;
+  ready?: boolean;
+  shortcut?: string;
 }) {
   return (
     <button
@@ -188,70 +253,12 @@ function Control({
       aria-pressed={expanded === undefined ? active : undefined}
       className={styles.control}
       data-active={active || undefined}
-      disabled={!editor.isEditable}
+      disabled={!controls.editable || ready === false}
       onClick={press}
       title={shortcut ? `${label} (${shortcut})` : label}
       type="button"
     >
       {children}
     </button>
-  );
-}
-
-function LinkRow({ editor, onClose }: { editor: Editor; onClose: () => void }) {
-  const field = useId();
-  const input = useRef<HTMLInputElement>(null);
-  const [address, setAddress] = useState<string>(
-    () => (editor.getAttributes("link").href as string) ?? "",
-  );
-
-  useEffect(() => {
-    input.current?.focus();
-  }, []);
-
-  function apply() {
-    const trimmed = address.trim();
-    if (!trimmed) {
-      editor.chain().focus().unsetLink().run();
-      onClose();
-      return;
-    }
-    editor.chain().focus().setLink({ href: trimmed }).run();
-    onClose();
-  }
-
-  return (
-    <fieldset className={styles.link}>
-      <legend>Link address</legend>
-      <label htmlFor={field}>Address</label>
-      <input
-        id={field}
-        onChange={(event) => setAddress(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            apply();
-          }
-          if (event.key === "Escape") onClose();
-        }}
-        placeholder="https://"
-        ref={input}
-        type="url"
-        value={address}
-      />
-      <button onClick={apply} type="button">
-        Apply
-      </button>
-      <button
-        className={styles.clear}
-        onClick={() => {
-          editor.chain().focus().unsetLink().run();
-          onClose();
-        }}
-        type="button"
-      >
-        Remove
-      </button>
-    </fieldset>
   );
 }
