@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { Shell } from "@/components/layout/Shell";
 import { Article } from "@/components/publication/Article";
 import { fetchPublishedPost } from "@/lib/api/query";
 import { pageMetadata } from "@/lib/site-metadata";
@@ -36,9 +35,5 @@ export default async function PostPage({
 }) {
   const post = await loadPost((await params).slug);
   if (!post) notFound();
-  return (
-    <Shell>
-      <Article post={post} />
-    </Shell>
-  );
+  return <Article post={post} />;
 }

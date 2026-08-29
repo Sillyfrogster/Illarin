@@ -1,16 +1,57 @@
-.article {
+/* The masthead bleeds the full window; everything readable stays in the column. */
+.masthead {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding-block: clamp(44px, 5.4vw, 88px) clamp(28px, 3vw, 40px);
+}
+
+.art {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background-image: url("../../assets/art/full/illarin-blog-masthead-light-v1.webp");
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  animation: lhArt 1s var(--ease) 0.08s both;
+}
+
+:global(:root[data-theme="dark"]) .art {
+  background-image: url("../../assets/art/full/illarin-blog-masthead-dark-v1.webp");
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme])) .art {
+    background-image: url("../../assets/art/full/illarin-blog-masthead-dark-v1.webp");
+  }
+}
+
+.masthead::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    var(--color-background) 0%,
+    var(--color-background) 56%,
+    color-mix(in srgb, var(--color-background) 90%, transparent) 72%,
+    color-mix(in srgb, var(--color-background) 62%, transparent) 86%,
+    color-mix(in srgb, var(--color-background) 24%, transparent) 100%
+  );
+  content: "";
+}
+
+.column {
   width: min(100%, var(--shell-reading));
   margin: 0 auto;
-  padding: clamp(40px, 5vw, 80px) 0 clamp(64px, 7vw, 104px);
+  padding-inline: var(--gutter);
 }
 
 /* The prose keeps its measure and the masthead's left edge, so the article has one. */
 .prose {
   width: min(100%, 40rem);
-}
-
-.identity {
-  margin-bottom: clamp(32px, 3.6vw, 48px);
+  padding-block: clamp(36px, 4vw, 56px) clamp(64px, 7vw, 104px);
 }
 
 .title {
