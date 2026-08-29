@@ -59,21 +59,18 @@ export function PostDetails({
       <Field
         hint={
           locked
-            ? "The address of a published post is fixed. An admin can correct it."
-            : "The permanent address once the post is published."
+            ? "Fixed once a post is published. An admin can correct it."
+            : "illarin.xyz/blog/ plus this. It is fixed once the post is published."
         }
         htmlFor="post-slug"
         label="Address"
       >
-        <span className={styles.address}>
-          <span aria-hidden="true">/blog/</span>
-          <input
-            id="post-slug"
-            maxLength={80}
-            onChange={(event) => onChange({ slug: event.target.value })}
-            value={draft.slug}
-          />
-        </span>
+        <input
+          id="post-slug"
+          maxLength={80}
+          onChange={(event) => onChange({ slug: event.target.value })}
+          value={draft.slug}
+        />
       </Field>
       {releasing ? (
         <ReleaseFields

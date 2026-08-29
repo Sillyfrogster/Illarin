@@ -1,5 +1,6 @@
 "use client";
 
+import { Placeholder } from "@tiptap/extensions";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { PostDocument } from "@/lib/post-document";
@@ -28,6 +29,9 @@ export function BodyEditor({
           autolink: false,
           protocols: ["https", "mailto"],
         },
+      }),
+      Placeholder.configure({
+        placeholder: "Write the post. Formatting is on the bar above.",
       }),
     ],
     content: toEditor(document),

@@ -16,30 +16,6 @@
   line-height: var(--type-block-title-leading);
 }
 
-.address {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 44px;
-  padding-left: 13px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: var(--type-secondary-size);
-}
-
-.address input {
-  min-width: 0;
-  flex: 1;
-  min-height: 42px;
-  padding: 0 12px 0 0;
-  border: 0;
-  background: none;
-  color: var(--color-text-primary);
-  font-size: var(--type-body-size);
-}
-
 .attribution {
   padding-top: 16px;
   border-top: 1px solid var(--color-border);

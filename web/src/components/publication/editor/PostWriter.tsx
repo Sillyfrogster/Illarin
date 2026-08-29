@@ -16,6 +16,7 @@ import type {
 import { useAuth } from "@/lib/auth";
 import { asPostDocument, type PostDocument } from "@/lib/post-document";
 import { BodyEditor } from "./BodyEditor";
+import { GrowingText } from "./GrowingText";
 import { PostDetails } from "./PostDetails";
 import styles from "./PostWriter.module.css";
 
@@ -209,23 +210,22 @@ export function PostWriter({ id }: { id: string }) {
             <label className={styles.titleLabel} htmlFor="post-title">
               Title
             </label>
-            <input
+            <GrowingText
               className={styles.title}
               id="post-title"
               maxLength={160}
-              onChange={(event) => change({ title: event.target.value })}
+              onChange={(title) => change({ title })}
               value={draft.title}
             />
             <label className={styles.summaryLabel} htmlFor="post-summary">
               Summary
             </label>
-            <textarea
+            <GrowingText
               className={styles.summary}
               id="post-summary"
               maxLength={320}
-              onChange={(event) => change({ summary: event.target.value })}
+              onChange={(summary) => change({ summary })}
               placeholder="One or two sentences a reader sees before the article."
-              rows={2}
               value={draft.summary}
             />
             <BodyEditor

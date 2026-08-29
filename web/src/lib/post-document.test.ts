@@ -131,3 +131,51 @@ test("a body of whitespace does not count as writing", () => {
     }),
   ).toBe(false);
 });
+
+test("a line the author has not typed into stays out of the working copy", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Written" }] },
+      { type: "heading", attrs: { level: 2 }, content: [] },
+      { type: "paragraph" },
+    ],
+  });
+  expect(carried.content).toEqual([
+    { type: "paragraph", content: [{ type: "text", text: "Written" }] },
+  ]);
+});
+
+test("an empty list item and its list stay out of the working copy", () => {
+  const carried = fromEditor({
+    type: "doc",
+    content: [
+      {
+        type: "bulletList",
+        content: [
+          {
+            type: "listItem",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "One" }] },
+            ],
+          },
+          { type: "listItem", content: [{ type: "paragraph" }] },
+        ],
+      },
+      { type: "blockquote", content: [{ type: "paragraph" }] },
+    ],
+  });
+  expect(carried.content).toEqual([
+    {
+      type: "bulletList",
+      content: [
+        {
+          type: "listItem",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "One" }] },
+          ],
+        },
+      ],
+    },
+  ]);
+});

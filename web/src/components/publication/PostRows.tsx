@@ -25,6 +25,7 @@ export function PostRows({
   const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [busy, setBusy] = useState(false);
+  const hasGrant = workspace.grants.length > 0;
   const [grantId, setGrantId] = useState(workspace.grants[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState(
     workspace.categories[0]?.id ?? "",
@@ -129,9 +130,13 @@ export function PostRows({
             ))}
           </select>
         </Field>
-        {workspace.grants.length > 0 ? (
+        {workspace.grants.length > 1 || (workspace.admin && hasGrant) ? (
           <Field
-            hint="An Illarin post carries the Illarin Team byline instead."
+            hint={
+              workspace.admin
+                ? "An Illarin post carries the Illarin Team byline instead."
+                : undefined
+            }
             htmlFor="new-post-grant"
             label="Publish as"
           >

@@ -50,7 +50,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
                   .run()
               }
             >
-              <span className={styles.heading}>H{level - 1}</span>
+              <span className={styles.heading}>H{level}</span>
             </Control>
           ))}
         </Group>

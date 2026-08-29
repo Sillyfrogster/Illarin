@@ -71,23 +71,31 @@ function editorSpan(span: PostSpan): JSONContent {
 function illarinBlock(node: JSONContent): PostBlock[] {
   const type = ILLARIN_BLOCKS[node.type ?? ""] ?? node.type;
   switch (type) {
-    case "paragraph":
-      return [{ type: "paragraph", content: illarinSpans(node.content) }];
-    case "heading":
-      return [
-        {
-          type: "heading",
-          level: headingLevel(node.attrs?.level),
-          content: illarinSpans(node.content),
-        },
-      ];
+    case "paragraph": {
+      const spans = illarinSpans(node.content);
+      return written(spans) ? [{ type: "paragraph", content: spans }] : [];
+    }
+    case "heading": {
+      const spans = illarinSpans(node.content);
+      return written(spans)
+        ? [
+            {
+              type: "heading",
+              level: headingLevel(node.attrs?.level),
+              content: spans,
+            },
+          ]
+        : [];
+    }
     case "bulletList":
-    case "orderedList":
-      return [{ type, content: illarinItems(node.content) }];
-    case "quote":
-      return [
-        { type: "quote", content: (node.content ?? []).flatMap(illarinBlock) },
-      ];
+    case "orderedList": {
+      const items = illarinItems(node.content);
+      return items.length > 0 ? [{ type, content: items }] : [];
+    }
+    case "quote": {
+      const quoted = (node.content ?? []).flatMap(illarinBlock);
+      return quoted.length > 0 ? [{ type: "quote", content: quoted }] : [];
+    }
     case "divider":
       return [{ type: "divider" }];
     default:
@@ -101,7 +109,8 @@ function illarinItems(nodes: JSONContent[] | undefined): PostItem[] {
     .map((node) => ({
       type: "listItem" as const,
       content: (node.content ?? []).flatMap(illarinBlock),
-    }));
+    }))
+    .filter((item) => item.content.length > 0);
 }
 
 function illarinSpans(nodes: JSONContent[] | undefined): PostSpan[] {
@@ -127,6 +136,11 @@ function illarinMarks(marks: JSONContent["marks"]): PostMark[] {
   const href = typeof link?.attrs?.href === "string" ? link.attrs.href : "";
   if (href) carried.push({ type: "link", href });
   return carried;
+}
+
+// written keeps a line the author has not typed into out of the working copy.
+function written(spans: PostSpan[]): boolean {
+  return spans.some((span) => span.text.trim().length > 0);
 }
 
 function headingLevel(value: unknown): number {

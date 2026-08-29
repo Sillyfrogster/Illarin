@@ -115,3 +115,20 @@
   background: none;
   color: var(--color-text-secondary);
 }
+
+@media (max-width: 700px) {
+  .toolbar {
+    flex-wrap: nowrap;
+    gap: 4px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .group {
+    flex: none;
+  }
+}
