@@ -222,6 +222,9 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 }
 
 func readyToPublish(locked working) error {
+	if _, err := checkTitle(locked.Title); err != nil {
+		return err
+	}
 	if locked.Summary == "" {
 		return FieldError{
 			Field:   "summary",

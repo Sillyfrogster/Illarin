@@ -709,3 +709,55 @@ func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
 		t.Errorf("the revision changed from %q to %q", captured, after)
 	}
 }
+
+func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	draft := stack.illarinDraft(t, session, "Not ready yet")
+
+	if code := stack.publish(t, session, draft.ID).Code; code != http.StatusBadRequest {
+		t.Fatalf("an unfinished post published: %d", code)
+	}
+
+	var revisions, events, bylines int
+	err := stack.pool.QueryRow(context.Background(), `
+		select (select count(*) from post_revisions where post_id = $1),
+		       (select count(*) from publication_events where post_id = $1),
+		       (select count(*) from post_bylines where post_id = $1)
+	`, draft.ID).Scan(&revisions, &events, &bylines)
+	if err != nil {
+		t.Fatalf("count what publication left behind: %v", err)
+	}
+	if revisions != 0 || events != 0 || bylines != 0 {
+		t.Errorf("a refused publication left %d revisions, %d events and %d bylines",
+			revisions, events, bylines)
+	}
+
+	current := send(t, stack.router, authorized(
+		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
+	))
+	if status := decodePost(t, current).Status; status != "draft" {
+		t.Errorf("the post is %q after a refused publication", status)
+	}
+}
+
+func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	draft := stack.illarinDraft(t, session, "A title that goes away")
+	stack.saved(t, session, draft.ID, finished(draft, nil))
+
+	_, err := stack.pool.Exec(context.Background(),
+		`update posts set title = ' ' where id = $1`, draft.ID)
+	if err != nil {
+		t.Fatalf("empty the title behind the editor: %v", err)
+	}
+
+	response := stack.publish(t, session, draft.ID)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("a post with no title published: %d", response.Code)
+	}
+	if !strings.Contains(response.Body.String(), "title") {
+		t.Errorf("the refusal does not name the title: %s", response.Body.String())
+	}
+}
