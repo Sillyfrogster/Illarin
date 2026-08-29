@@ -300,7 +300,7 @@ func validateSlug(raw string) (string, error) {
 	return slug, nil
 }
 
-// NameableApps answers the projects one account may name in a release post.
+// NameableApps answers the publication apps one account may name in a release.
 func (s *Service) NameableApps(
 	ctx context.Context,
 	held []Grant,
