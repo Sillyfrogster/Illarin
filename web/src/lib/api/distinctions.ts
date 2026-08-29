@@ -8,7 +8,9 @@ import { browserFetch } from "./browser-mutation";
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-export type Answer<T> = { value?: T; error?: string };
+export type Refusal = { error?: string; field?: string; version?: number };
+
+export type Answer<T> = { value?: T; error?: string; refusal?: Refusal };
 
 export async function ask<T>(
   path: string,
@@ -26,10 +28,11 @@ export async function ask<T>(
     return { error: UNREACHABLE };
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
+    const body = (await response.json().catch(() => ({}))) as Refusal;
+    return {
+      error: body.error ?? "That did not work. Try again.",
+      refusal: body,
     };
-    return { error: body.error ?? "That did not work. Try again." };
   }
   return { value: await read(response) };
 }

@@ -2714,8 +2714,15 @@ type PublicationTokenList struct {
 
 // PublicationWorkspace defines model for PublicationWorkspace.
 type PublicationWorkspace struct {
-	Grants []PublicationGrant `json:"grants"`
-	Handle string             `json:"handle"`
+	Admin bool `json:"admin"`
+
+	// Apps The projects this account may name in a release. A contributor gets the apps they are approved for; an admin gets every live app.
+	Apps []PublicationApp `json:"apps"`
+
+	// Categories The categories this account may start a post in. A contributor gets what their grants allow; an admin gets every live category.
+	Categories []PublicationCategory `json:"categories"`
+	Grants     []PublicationGrant    `json:"grants"`
+	Handle     string                `json:"handle"`
 }
 
 // PublishRefusal defines model for PublishRefusal.

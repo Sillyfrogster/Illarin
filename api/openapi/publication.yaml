@@ -773,11 +773,30 @@ components:
       type: object
       required:
         - handle
+        - admin
         - grants
+        - categories
+        - apps
       properties:
         handle:
           type: string
+        admin:
+          type: boolean
         grants:
           type: array
           items:
             $ref: '#/components/schemas/PublicationGrant'
+        categories:
+          description: >-
+            The categories this account may start a post in. A contributor gets
+            what their grants allow; an admin gets every live category.
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationCategory'
+        apps:
+          description: >-
+            The projects this account may name in a release. A contributor gets
+            the apps they are approved for; an admin gets every live app.
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationApp'

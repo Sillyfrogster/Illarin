@@ -2,8 +2,8 @@ import { ContributorWorkspace } from "@/components/publication/ContributorWorksp
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "What you may publish",
-  "The projects and categories Illarin approved you to publish under.",
+  "Your posts",
+  "Everything you have written for the Illarin blog.",
 );
 
 export default function PublicationWorkspacePage() {

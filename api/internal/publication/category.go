@@ -161,3 +161,36 @@ func collectCategories(rows pgx.Rows) ([]Category, error) {
 	}
 	return found, nil
 }
+
+// WritableCategories answers the categories one account may start a post in.
+func (s *Service) WritableCategories(
+	ctx context.Context,
+	held []Grant,
+	admin bool,
+) ([]Category, error) {
+	if admin {
+		live, err := s.Categories(ctx)
+		if err != nil {
+			return nil, err
+		}
+		open := make([]Category, 0, len(live))
+		for _, one := range live {
+			if !one.Retired {
+				open = append(open, one)
+			}
+		}
+		return open, nil
+	}
+	open := make([]Category, 0, 4)
+	seen := make(map[uuid.UUID]bool)
+	for _, grant := range held {
+		for _, one := range grant.Categories {
+			if seen[one.ID] || one.Retired {
+				continue
+			}
+			seen[one.ID] = true
+			open = append(open, one)
+		}
+	}
+	return open, nil
+}

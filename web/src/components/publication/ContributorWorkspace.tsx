@@ -8,25 +8,36 @@ import rows from "@/components/console/Console.module.css";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { Section } from "@/components/console/Section";
+import { readPosts } from "@/lib/api/posts";
 import { readWorkspace } from "@/lib/api/publication";
-import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
+import type {
+  Post,
+  PublicationGrant,
+  PublicationWorkspace,
+} from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import styles from "./ContributorWorkspace.module.css";
 import { GrantTokens } from "./GrantTokens";
+import { PostRows } from "./PostRows";
 
 export function ContributorWorkspace() {
   const { account } = useAuth();
   const [open, setOpen] = useState<PublicationWorkspace | null>(null);
+  const [posts, setPosts] = useState<Post[] | null>(null);
   const [failure, setFailure] = useState("");
 
   const load = useCallback(async () => {
-    const answer = await readWorkspace();
-    if (answer.error || !answer.value) {
-      setFailure(answer.error ?? "");
+    const [workspace, written] = await Promise.all([
+      readWorkspace(),
+      readPosts(),
+    ]);
+    if (workspace.error || !workspace.value) {
+      setFailure(workspace.error ?? "");
       return;
     }
     setFailure("");
-    setOpen(answer.value);
+    setOpen(workspace.value);
+    setPosts(written.value?.posts ?? []);
   }, []);
 
   useEffect(() => {
@@ -37,10 +48,16 @@ export function ContributorWorkspace() {
   return (
     <ConsolePage
       eyebrow="Publication"
-      heading="What you may publish"
-      hint="The projects Illarin approved you to write for, and the categories each approval covers."
+      heading="Your posts"
+      hint="Everything you have written for the Illarin blog, and what Illarin approved you to publish."
     >
-      <Inside account={account} open={open} failure={failure} />
+      <Inside
+        account={account}
+        failure={failure}
+        onFailure={setFailure}
+        open={open}
+        posts={posts}
+      />
     </ConsolePage>
   );
 }
@@ -48,11 +65,15 @@ export function ContributorWorkspace() {
 function Inside({
   account,
   open,
+  posts,
   failure,
+  onFailure,
 }: {
   account: ReturnType<typeof useAuth>["account"];
   open: PublicationWorkspace | null;
+  posts: Post[] | null;
   failure: string;
+  onFailure: (message: string) => void;
 }) {
   if (account === undefined) {
     return (
@@ -73,7 +94,7 @@ function Inside({
     );
   }
 
-  if (!open) {
+  if (!open || !posts) {
     return (
       <p className={rows.loading} aria-live="polite">
         {failure || "Reading your approvals…"}
@@ -81,7 +102,7 @@ function Inside({
     );
   }
 
-  if (open.grants.length === 0) {
+  if (open.grants.length === 0 && !open.admin) {
     return (
       <ConsoleGate
         heading="Nobody has approved you to publish"
@@ -94,14 +115,27 @@ function Inside({
 
   return (
     <div className={styles.grants}>
+      {failure ? (
+        <p className={styles.failure} role="alert">
+          {failure}
+        </p>
+      ) : null}
+      <PostRows onFailure={onFailure} posts={posts} workspace={open} />
       {open.grants.map((grant) => (
         <Approval key={grant.id} grant={grant} />
       ))}
-      <p className={styles.later}>
-        Writing in the browser happens here once the editor is built. Your{" "}
-        <Link href={`/${open.handle}`}>Verified App Contributor badge</Link>{" "}
-        stays on your profile for as long as an approval stands.
-      </p>
+      {open.grants.length > 0 ? (
+        <p className={styles.later}>
+          Your{" "}
+          <Link href={`/@${open.handle}`}>Verified App Contributor badge</Link>{" "}
+          stays on your profile for as long as an approval stands.
+        </p>
+      ) : (
+        <p className={styles.later}>
+          You write as the Illarin Team. A post carries your name and your
+          public positions.
+        </p>
+      )}
     </div>
   );
 }

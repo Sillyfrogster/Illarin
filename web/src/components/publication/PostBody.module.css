@@ -1,0 +1,129 @@
+.body {
+  display: flow-root;
+  color: var(--color-text-primary);
+  font-size: var(--type-lead-size);
+  line-height: 30px;
+}
+
+.body > * + * {
+  margin-top: 24px;
+}
+
+.paragraph {
+  text-wrap: pretty;
+}
+
+.heading {
+  margin-top: 48px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h2.heading {
+  font-size: var(--type-block-title-size);
+  line-height: var(--type-block-title-leading);
+}
+
+h3.heading {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+h4.heading {
+  font-family: var(--font-body);
+  font-size: var(--type-body-size);
+  font-weight: 700;
+  line-height: var(--type-body-leading);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.heading + * {
+  margin-top: 12px;
+}
+
+.list {
+  padding-left: 26px;
+  list-style: disc;
+}
+
+.ordered {
+  list-style: decimal;
+}
+
+.item {
+  padding-left: 4px;
+}
+
+.item::marker {
+  color: var(--color-text-secondary);
+}
+
+.item + .item {
+  margin-top: 8px;
+}
+
+.item > * + * {
+  margin-top: 12px;
+}
+
+.quote {
+  padding-left: 24px;
+  border-left: 2px solid var(--color-emphasis-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-style: italic;
+  line-height: 32px;
+}
+
+.quote > * + * {
+  margin-top: 16px;
+}
+
+.code {
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.link {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--color-emphasis-border);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms var(--ease);
+}
+
+.link:hover {
+  text-decoration-color: var(--color-emphasis);
+}
+
+.divider {
+  width: 96px;
+  margin-top: 40px;
+  margin-bottom: 40px;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 700px) {
+  .body {
+    font-size: var(--type-body-size);
+    line-height: 27px;
+  }
+
+  .heading {
+    margin-top: 36px;
+  }
+
+  .quote {
+    padding-left: 18px;
+    font-size: 19px;
+    line-height: 29px;
+  }
+}

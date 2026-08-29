@@ -274,9 +274,23 @@ func (h *Handlers) GetPublicationWorkspace(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	admin := current.Role == account.RoleAdmin
+	open, err := h.publications.WritableCategories(c.Request.Context(), held, admin)
+	if err != nil {
+		h.publicationError(c, err)
+		return
+	}
+	named, err := h.publications.NameableApps(c.Request.Context(), held, admin)
+	if err != nil {
+		h.publicationError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, PublicationWorkspace{
-		Handle: current.Handle,
-		Grants: listed,
+		Handle:     current.Handle,
+		Admin:      admin,
+		Grants:     listed,
+		Categories: toAPICategories(open),
+		Apps:       toAPIApps(named),
 	})
 }
 

@@ -879,6 +879,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every post the signed-in account may manage. An admin sees all of them; an approved contributor sees only the posts under their active grant. */
+    get: operations["listPosts"];
+    put?: never;
+    /** @description Start a draft. A contributor names the grant it belongs to; an admin may omit it and write as Illarin. */
+    post: operations["createPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getPost"];
+    /** @description Replace the working copy. The request names the version it began from, and a stale version is refused rather than applied. */
+    put: operations["savePost"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Capture the working copy as an immutable revision and make that exact edition the public one. */
+    post: operations["publishPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/posts/{slug}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The published edition behind one post address. Drafts and working copies are absent from it. */
+    get: operations["getPublishedPost"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/profiles/{handle}": {
     parameters: {
       query?: never;
@@ -1639,7 +1708,12 @@ export interface components {
     };
     PublicationWorkspace: {
       handle: string;
+      admin: boolean;
       grants: components["schemas"]["PublicationGrant"][];
+      /** @description The categories this account may start a post in. A contributor gets what their grants allow; an admin gets every live category. */
+      categories: components["schemas"]["PublicationCategory"][];
+      /** @description The projects this account may name in a release. A contributor gets the apps they are approved for; an admin gets every live app. */
+      apps: components["schemas"]["PublicationApp"][];
     };
     PublicationToken: {
       /** Format: uuid */
@@ -1670,6 +1744,103 @@ export interface components {
     PublicationCredential: {
       token: components["schemas"]["PublicationToken"];
       grant: components["schemas"]["PublicationGrant"];
+    };
+    /** @enum {string} */
+    PostStatus: "draft" | "published";
+    /** @description The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly. */
+    PostDocument: {
+      version: number;
+      content: Record<string, never>[];
+    };
+    PostAuthor: {
+      handle: string;
+    };
+    PostRelease: {
+      app: components["schemas"]["PublicationApp"];
+      version: string;
+      address?: string;
+    };
+    PostReleaseEdit: {
+      /** Format: uuid */
+      appId: string;
+      version: string;
+      address?: string;
+    };
+    PostByline: {
+      handle: string;
+      displayName: string;
+      contactEmail: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      positions: string[];
+      distinctions: string[];
+      app?: components["schemas"]["PublicationApp"] | null;
+    };
+    Post: {
+      /** Format: uuid */
+      id: string;
+      status: components["schemas"]["PostStatus"];
+      title: string;
+      summary: string;
+      slug: string;
+      category: components["schemas"]["PublicationCategory"];
+      document: components["schemas"]["PostDocument"];
+      documentVersion: number;
+      release?: components["schemas"]["PostRelease"] | null;
+      app?: components["schemas"]["PublicationApp"] | null;
+      /** Format: uuid */
+      grantId?: string;
+      version: number;
+      author: components["schemas"]["PostAuthor"];
+      /** Format: date-time */
+      publishedAt?: string;
+      /** Format: date-time */
+      updatedPublicAt?: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    PostList: {
+      posts: components["schemas"]["Post"][];
+    };
+    PostConflict: {
+      error: string;
+      field?: string;
+      version: number;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    CreatePostRequest: {
+      /** Format: uuid */
+      grantId?: string;
+      /** Format: uuid */
+      categoryId: string;
+      title: string;
+    };
+    SavePostRequest: {
+      version: number;
+      /** Format: uuid */
+      categoryId: string;
+      title: string;
+      summary: string;
+      slug: string;
+      document: components["schemas"]["PostDocument"];
+      release?: components["schemas"]["PostReleaseEdit"] | null;
+    };
+    PublicPost: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      title: string;
+      summary: string;
+      category: components["schemas"]["PublicationCategory"];
+      document: components["schemas"]["PostDocument"];
+      release?: components["schemas"]["PostRelease"] | null;
+      byline: components["schemas"]["PostByline"];
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string;
     };
     RenameHandleRequest: {
       handle: string;
@@ -5546,6 +5717,277 @@ export interface operations {
       };
       /** @description The signed-in account has not verified its email */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPosts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The posts this account may manage */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  createPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The draft as it was started */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description A field is not valid or the grant does not cover the category */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not publish under that identity */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such category or grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The post's working copy */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  savePost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SavePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy as it now reads */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description A field or the post document is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy has already moved on */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+    };
+  };
+  publishPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The post as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description A required field or the post document is not ready */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPublishedPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The published post */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicPost"];
+        };
+      };
+      /** @description No published post has that address */
+      404: {
         headers: {
           [name: string]: unknown;
         };

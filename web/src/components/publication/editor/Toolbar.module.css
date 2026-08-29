@@ -1,0 +1,117 @@
+.bar {
+  position: sticky;
+  z-index: 2;
+  top: var(--header-height);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-elevated);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 8px 10px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+}
+
+.group legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.control {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.control:hover:not(:disabled) {
+  background: var(--color-muted);
+  color: var(--color-text-primary);
+}
+
+.control[data-active="true"],
+.control[aria-expanded="true"] {
+  background: var(--color-emphasis);
+  color: var(--color-on-emphasis);
+}
+
+.control:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.link label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.link input {
+  flex: 1;
+  min-width: 180px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--type-secondary-size);
+}
+
+.link button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-emphasis);
+  border-radius: var(--radius-sm);
+  background: var(--color-emphasis);
+  color: var(--color-on-emphasis);
+  cursor: pointer;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+}
+
+.clear {
+  border-color: var(--color-border);
+  background: none;
+  color: var(--color-text-secondary);
+}

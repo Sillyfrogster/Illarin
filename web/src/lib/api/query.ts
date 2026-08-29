@@ -52,6 +52,10 @@ export type PublicationGrant = components["schemas"]["PublicationGrant"];
 export type PublicationWorkspace =
   components["schemas"]["PublicationWorkspace"];
 export type PublicationToken = components["schemas"]["PublicationToken"];
+export type Post = components["schemas"]["Post"];
+export type PublicPost = components["schemas"]["PublicPost"];
+export type PostByline = components["schemas"]["PostByline"];
+export type PostRelease = components["schemas"]["PostRelease"];
 export type IssuedPublicationToken =
   components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
@@ -392,6 +396,16 @@ export async function deletePreservedNamespace(id: string, namespace: string) {
         : "That data could not be deleted. Try again.",
     );
   }
+}
+
+export async function fetchPublishedPost(
+  slug: string,
+): Promise<PublicPost | null> {
+  const { data, error } = await api.GET("/v1/posts/{slug}", {
+    params: { path: { slug } },
+  });
+  if (error || !data) return null;
+  return data;
 }
 
 export async function fetchProfileRestriction(

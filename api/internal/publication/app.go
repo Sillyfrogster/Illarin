@@ -299,3 +299,34 @@ func validateSlug(raw string) (string, error) {
 	}
 	return slug, nil
 }
+
+// NameableApps answers the projects one account may name in a release post.
+func (s *Service) NameableApps(
+	ctx context.Context,
+	held []Grant,
+	admin bool,
+) ([]App, error) {
+	if admin {
+		configured, err := s.Apps(ctx)
+		if err != nil {
+			return nil, err
+		}
+		live := make([]App, 0, len(configured))
+		for _, one := range configured {
+			if !one.Retired {
+				live = append(live, one)
+			}
+		}
+		return live, nil
+	}
+	named := make([]App, 0, len(held))
+	seen := make(map[uuid.UUID]bool, len(held))
+	for _, grant := range held {
+		if seen[grant.App.ID] || grant.App.Retired {
+			continue
+		}
+		seen[grant.App.ID] = true
+		named = append(named, grant.App)
+	}
+	return named, nil
+}
