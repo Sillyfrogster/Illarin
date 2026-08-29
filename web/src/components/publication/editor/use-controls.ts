@@ -41,12 +41,18 @@ export type Controls = {
 
 const NEW_TABLE = { rows: 3, cols: 3, withHeaderRow: true };
 
-/** What the bar and the row below it read, gathered once per change. */
+/**
+ * What the bar and the row below it read, gathered once per change. The watched
+ * snapshot still holds the editor Tiptap had before it mounted, so the live
+ * editor answers until the first change reaches the snapshot.
+ */
 export function useControls(editor: Editor | null): Controls | null {
-  return useEditorState({
+  const watched = useEditorState({
     editor,
     selector: ({ editor: live }) => (live ? read(live) : null),
   });
+  if (watched) return watched;
+  return editor ? read(editor) : null;
 }
 
 function read(editor: Editor): Controls {
