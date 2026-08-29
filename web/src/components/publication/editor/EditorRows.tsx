@@ -21,6 +21,7 @@ import {
   type PostCalloutKind,
   type PostLanguage,
 } from "@/lib/post-document";
+import { isSafeAddress } from "@/lib/post-link";
 import styles from "./Toolbar.module.css";
 import type { Controls } from "./use-controls";
 
@@ -269,6 +270,7 @@ export function LinkRow({
   const [address, setAddress] = useState<string>(
     () => (editor.getAttributes("link").href as string) ?? "",
   );
+  const [refusal, setRefusal] = useState("");
 
   useEffect(() => {
     input.current?.focus();
@@ -281,6 +283,11 @@ export function LinkRow({
       onClose();
       return;
     }
+    if (!isSafeAddress(trimmed)) {
+      setRefusal("A link goes to an https address or a mailto address.");
+      input.current?.focus();
+      return;
+    }
     editor.chain().focus().setLink({ href: trimmed }).run();
     onClose();
   }
@@ -291,9 +298,14 @@ export function LinkRow({
         Address
       </label>
       <input
+        aria-describedby={refusal ? `${field}-refusal` : undefined}
+        aria-invalid={refusal ? true : undefined}
         className={styles.address}
         id={field}
-        onChange={(event) => setAddress(event.target.value)}
+        onChange={(event) => {
+          setAddress(event.target.value);
+          setRefusal("");
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
@@ -314,6 +326,11 @@ export function LinkRow({
           onClose();
         }}
       />
+      {refusal ? (
+        <p className={styles.refusal} id={`${field}-refusal`} role="alert">
+          {refusal}
+        </p>
+      ) : null}
     </Row>
   );
 }

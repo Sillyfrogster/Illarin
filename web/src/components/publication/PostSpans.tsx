@@ -1,5 +1,5 @@
 import type { PostSpan } from "@/lib/post-document";
-import { leavesIllarin } from "@/lib/post-link";
+import { isSafeAddress, leavesIllarin } from "@/lib/post-link";
 import styles from "./PostBody.module.css";
 
 export function PostSpans({ spans }: { spans: PostSpan[] }) {
@@ -38,6 +38,7 @@ function Span({ span }: { span: PostSpan }) {
 }
 
 function Away({ href, children }: { href: string; children: React.ReactNode }) {
+  if (!isSafeAddress(href)) return <>{children}</>;
   const away = leavesIllarin(href);
   return (
     <a

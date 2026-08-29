@@ -1,5 +1,18 @@
 import { siteUrl } from "./site-metadata";
 
+/** The only schemes a post link may use. Go refuses every other one. */
+export function isSafeAddress(href: string): boolean {
+  const address = href.trim();
+  for (const letter of address) {
+    const code = letter.codePointAt(0) ?? 0;
+    if (code <= 0x20 || code === 0x7f) return false;
+  }
+  return (
+    (address.startsWith("https://") && address.length > "https://".length) ||
+    (address.startsWith("mailto:") && address.length > "mailto:".length)
+  );
+}
+
 /** Whether a link in a post leaves Illarin, which decides how it opens. */
 export function leavesIllarin(href: string): boolean {
   if (!href.startsWith("https://")) return false;
