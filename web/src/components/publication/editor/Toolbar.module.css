@@ -62,6 +62,11 @@
   opacity: 0.45;
 }
 
+/* An opener carries an edge, so it reads as a control that reveals a row. */
+.opens {
+  border: 1px solid var(--color-border);
+}
+
 .heading {
   font-family: var(--font-display);
   font-size: 15px;
@@ -127,6 +132,13 @@
 .strong:hover:not(:disabled) {
   border-color: var(--color-emphasis);
   background: var(--color-emphasis-strong);
+}
+
+.refusal {
+  flex-basis: 100%;
+  color: var(--color-critical-strong);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
 }
 
 .pickerLabel {

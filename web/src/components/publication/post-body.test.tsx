@@ -103,7 +103,8 @@ test("a callout names its kind", () => {
   });
   expect(html).toContain('data-kind="warning"');
   expect(html).toContain("Warning");
-  expect(html).toContain("<aside");
+  expect(html).toContain('role="note"');
+  expect(html).not.toContain("<aside");
 });
 
 test("a heading row becomes column headings and a heading column becomes row headings", () => {
@@ -194,4 +195,20 @@ test("authored text never becomes markup", () => {
   expect(html).not.toContain("<script>");
   expect(html).not.toContain("onerror=alert");
   expect(html).toContain("&lt;script&gt;");
+});
+
+test("an address outside the safe schemes never becomes a link", () => {
+  const html = render({
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: "Run it",
+        marks: [{ type: "link", href: "javascript:alert(1)" }],
+      },
+    ],
+  });
+  expect(html).toContain("Run it");
+  expect(html).not.toContain("<a");
+  expect(html).not.toContain("javascript:");
 });

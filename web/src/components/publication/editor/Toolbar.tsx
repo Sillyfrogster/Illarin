@@ -124,6 +124,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
             controls={controls}
             expanded={row === "link"}
             label="Link"
+            opens
             press={() => open("link")}
             shortcut="Ctrl K"
           >
@@ -162,6 +163,7 @@ export function Toolbar({ editor }: { editor: Editor | null }) {
             controls={controls}
             expanded={row === "insert"}
             label="Insert a structure"
+            opens
             press={() => open("insert")}
           >
             <Plus size={17} strokeWidth={1.9} aria-hidden="true" />
@@ -233,6 +235,7 @@ function Control({
   controls,
   expanded,
   label,
+  opens,
   press,
   ready,
   shortcut,
@@ -242,6 +245,7 @@ function Control({
   controls: Controls;
   expanded?: boolean;
   label: string;
+  opens?: boolean;
   press: () => void;
   ready?: boolean;
   shortcut?: string;
@@ -251,7 +255,7 @@ function Control({
       aria-expanded={expanded}
       aria-label={label}
       aria-pressed={expanded === undefined ? active : undefined}
-      className={styles.control}
+      className={opens ? `${styles.control} ${styles.opens}` : styles.control}
       data-active={active || undefined}
       disabled={!controls.editable || ready === false}
       onClick={press}

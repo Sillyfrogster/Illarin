@@ -31,11 +31,11 @@ export const Callout = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: "aside[data-kind]" }];
+    return [{ tag: "div[data-kind]" }, { tag: "aside[data-kind]" }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["aside", mergeAttributes(HTMLAttributes), 0];
+    return ["div", mergeAttributes(HTMLAttributes, { role: "note" }), 0];
   },
 
   addCommands() {

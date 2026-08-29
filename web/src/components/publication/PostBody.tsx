@@ -157,7 +157,7 @@ function Callout({
 }) {
   const { label, mark: Mark } = CALLOUTS[kind] ?? CALLOUTS.note;
   return (
-    <aside className={styles.callout} data-kind={kind}>
+    <div className={styles.callout} data-kind={kind} role="note">
       <p className={styles.calloutKind}>
         <Mark aria-hidden="true" size={17} strokeWidth={1.8} />
         {label}
@@ -165,7 +165,7 @@ function Callout({
       <div className={styles.calloutSaid}>
         <Blocks blocks={blocks} />
       </div>
-    </aside>
+    </div>
   );
 }
 
