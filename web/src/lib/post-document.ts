@@ -88,6 +88,11 @@ export function isPostCalloutKind(kind: string): kind is PostCalloutKind {
   return (POST_CALLOUT_KINDS as readonly string[]).includes(kind);
 }
 
+/** The one shape a heading address takes. Go writes and validates the same one. */
+export function isPostAnchor(anchor: string): boolean {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(anchor) && anchor.length <= 80;
+}
+
 function textLength(blocks: PostBlock[]): number {
   let total = 0;
   for (const block of blocks) {

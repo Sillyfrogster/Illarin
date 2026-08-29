@@ -6,10 +6,16 @@ import {
   toEditor,
 } from "@/components/publication/editor/tiptap-document";
 import {
+  isPostAnchor,
   isWritten,
+  POST_CALLOUT_KINDS,
   POST_DOCUMENT_VERSION,
+  POST_LANGUAGES,
+  type PostBlock,
   type PostDocument,
+  type PostSpan,
 } from "@/lib/post-document";
+import { isSafeAddress } from "@/lib/post-link";
 
 /** The one corpus Go validation and the site both read. Go owns the document. */
 const CORPUS = join(
@@ -387,3 +393,82 @@ test("an inserted table and callout survive before anything is typed into them",
     },
   ]);
 });
+
+// The invalid corpus proves the vocabulary, not the placement rules Go owns.
+for (const [name, one] of corpus("invalid")) {
+  test(`${name} loses what Go refuses before it reaches a working copy`, () => {
+    const carried = fromEditor({
+      type: "doc",
+      content: one.document.content,
+    } as unknown as Parameters<typeof fromEditor>[0]);
+    expect(carried.version).toBe(POST_DOCUMENT_VERSION);
+    walk(carried.content);
+  });
+}
+
+const BLOCKS = new Set([
+  "paragraph",
+  "heading",
+  "bulletList",
+  "orderedList",
+  "taskList",
+  "quote",
+  "codeBlock",
+  "table",
+  "callout",
+  "divider",
+]);
+
+const MARKS = new Set(["bold", "italic", "strike", "code", "link"]);
+
+function walk(blocks: PostBlock[]) {
+  for (const block of blocks) {
+    expect(BLOCKS).toContain(block.type);
+    switch (block.type) {
+      case "paragraph":
+        checkSpans(block.content);
+        break;
+      case "heading":
+        expect(block.level).toBeGreaterThanOrEqual(2);
+        expect(block.level).toBeLessThanOrEqual(4);
+        if (block.anchor !== undefined) {
+          expect(isPostAnchor(block.anchor)).toBe(true);
+        }
+        checkSpans(block.content);
+        break;
+      case "bulletList":
+      case "orderedList":
+      case "taskList":
+        for (const entry of block.content) walk(entry.content);
+        break;
+      case "quote":
+      case "callout":
+        if (block.type === "callout") {
+          expect(POST_CALLOUT_KINDS).toContain(block.kind);
+        }
+        walk(block.content);
+        break;
+      case "codeBlock":
+        expect(POST_LANGUAGES).toContain(block.language);
+        expect(block.source.trim().length).toBeGreaterThan(0);
+        break;
+      case "table": {
+        const width = block.content[0]?.content.length ?? 0;
+        for (const row of block.content) {
+          expect(row.content.length).toBe(width);
+          for (const cell of row.content) walk(cell.content);
+        }
+        break;
+      }
+    }
+  }
+}
+
+function checkSpans(spans: PostSpan[]) {
+  for (const span of spans) {
+    for (const mark of span.marks ?? []) {
+      expect(MARKS).toContain(mark.type);
+      if (mark.type === "link") expect(isSafeAddress(mark.href)).toBe(true);
+    }
+  }
+}

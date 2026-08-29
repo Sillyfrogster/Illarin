@@ -1,5 +1,6 @@
 import type { JSONContent } from "@tiptap/react";
 import {
+  isPostAnchor,
   isPostCalloutKind,
   isPostLanguage,
   POST_DOCUMENT_VERSION,
@@ -12,6 +13,7 @@ import {
   type PostSpan,
   type PostTask,
 } from "@/lib/post-document";
+import { isSafeAddress } from "@/lib/post-link";
 
 /** The editor node each Illarin block is written as, and read back from. */
 const EDITOR_NODES: Record<string, string> = {
@@ -122,11 +124,12 @@ function illarinBlock(node: JSONContent): PostBlock[] {
       const spans = illarinSpans(node.content);
       if (!written(spans)) return [];
       const anchor = node.attrs?.anchor;
+      const kept = typeof anchor === "string" && isPostAnchor(anchor);
       return [
         {
           type: "heading",
           level: headingLevel(node.attrs?.level),
-          ...(typeof anchor === "string" && anchor ? { anchor } : {}),
+          ...(kept ? { anchor: anchor as string } : {}),
           content: spans,
         },
       ];
@@ -272,7 +275,7 @@ function illarinMarks(marks: JSONContent["marks"]): PostMark[] {
   }
   const link = marks?.find((mark) => mark.type === "link");
   const href = typeof link?.attrs?.href === "string" ? link.attrs.href : "";
-  if (href) carried.push({ type: "link", href });
+  if (href && isSafeAddress(href)) carried.push({ type: "link", href });
   return carried;
 }
 

@@ -221,9 +221,8 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	return locked, nil
 }
 
-// readyToPublish checks everything publication requires and answers the body
-// the revision keeps, which is the working copy read at the current document
-// version rather than the bytes a version ago.
+// readyToPublish checks what publication requires and answers the body the
+// revision keeps, read at the current document version.
 func readyToPublish(locked working) ([]byte, error) {
 	if _, err := checkTitle(locked.Title); err != nil {
 		return nil, err
