@@ -116,6 +116,25 @@ func (s *Service) ReleaseAttempt(
 	return nil
 }
 
+// SweepInterval is how often the finished keys past their window are dropped.
+const SweepInterval = time.Hour
+
+// RunSweeper drops outlived idempotency keys until the context is done.
+func (s *Service) RunSweeper(ctx context.Context, onError func(error)) {
+	ticker := time.NewTicker(SweepInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := s.SweepAttempts(ctx); err != nil && ctx.Err() == nil && onError != nil {
+				onError(err)
+			}
+		}
+	}
+}
+
 // SweepAttempts drops the keys that have outlived the retry window.
 func (s *Service) SweepAttempts(ctx context.Context) (int64, error) {
 	command, err := s.pool.Exec(ctx, `

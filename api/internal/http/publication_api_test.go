@@ -551,3 +551,210 @@ func dropGrant(t *testing.T, stack distinctionStack, id string) {
 		t.Fatalf("revoke grant status = %d: %s", response.Code, response.Body.String())
 	}
 }
+
+func TestAKeyStillRunningRefusesRatherThanRepeatingTheWork(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+	claimOnly(t, stack, kit, "POST /v1/publication/posts", "still-running")
+
+	answered := stack.sent(t, kit.value, withKey(jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts",
+		fmt.Sprintf(`{"categoryId":%q,"title":"Held up"}`, announcement.ID),
+	), "still-running"))
+
+	if answered.Code != http.StatusConflict ||
+		refusalOf(t, answered).Code != string(CodeIdempotencyInProgress) {
+		t.Fatalf("a running key answered %d: %s", answered.Code, answered.Body.String())
+	}
+	if listed := stack.toolPosts(t, kit.value); len(listed) != 0 {
+		t.Fatalf("a refused retry wrote %d posts", len(listed))
+	}
+}
+
+func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+	body := fmt.Sprintf(`{"categoryId":%q,"title":"Kept for a day"}`, announcement.ID)
+
+	first := stack.sent(t, kit.value, withKey(jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts", body,
+	), "kept-for-a-day"))
+	if first.Code != http.StatusCreated {
+		t.Fatalf("the first request answered %d: %s", first.Code, first.Body.String())
+	}
+
+	ageEveryKey(t, stack)
+	sweeper := publication.NewService(stack.pool, nil, publication.DefaultRates())
+	swept, err := sweeper.SweepAttempts(context.Background())
+	if err != nil {
+		t.Fatalf("sweep keys: %v", err)
+	}
+	if swept != 1 {
+		t.Fatalf("the sweep dropped %d keys, want 1", swept)
+	}
+
+	second := stack.sent(t, kit.value, withKey(jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts", body,
+	), "kept-for-a-day"))
+	if second.Code != http.StatusCreated ||
+		decodePost(t, first).ID == decodePost(t, second).ID {
+		t.Fatalf("a swept key replayed: %d %s", second.Code, second.Body.String())
+	}
+}
+
+// claimOnly takes an idempotency key the way a request that never finished would.
+func claimOnly(t *testing.T, stack distinctionStack, kit tooling, operation, key string) {
+	t.Helper()
+	_, err := stack.pool.Exec(context.Background(), `
+		insert into publication_idempotency (token_id, operation, key)
+		select token.id, $2, $3
+		  from publication_tokens token
+		 where token.grant_id = $1
+		 order by token.created_at desc
+		 limit 1
+	`, kit.who.grant.ID, operation, key)
+	if err != nil {
+		t.Fatalf("claim a key: %v", err)
+	}
+}
+
+// ageEveryKey moves every stored key past the window its outcome is kept for.
+func ageEveryKey(t *testing.T, stack distinctionStack) {
+	t.Helper()
+	_, err := stack.pool.Exec(context.Background(), `
+		update publication_idempotency set claimed_at = now() - interval '2 days'
+	`)
+	if err != nil {
+		t.Fatalf("age the stored keys: %v", err)
+	}
+}
+
+func TestATokenReadsItsContextAndSubmitsNoIdentityOfItsOwn(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+
+	reading := stack.sent(t, kit.value, httptest.NewRequest(
+		http.MethodGet, "/v1/publication/token", nil,
+	))
+	if reading.Code != http.StatusOK {
+		t.Fatalf("reading the credential answered %d: %s", reading.Code, reading.Body.String())
+	}
+	var held publicationCredential
+	if err := json.Unmarshal(reading.Body.Bytes(), &held); err != nil {
+		t.Fatalf("decode credential: %v", err)
+	}
+	if held.Grant.App.Slug != "illarin" || held.Grant.DefaultCategory.Slug != "announcement" ||
+		len(held.Grant.Categories) != 1 {
+		t.Fatalf("the credential carries %+v", held.Grant)
+	}
+
+	draft := stack.startedByTool(t, kit, fmt.Sprintf(
+		`{"categoryId":%q,"title":"Signed by the grant"}`, announcement.ID,
+	))
+	stack.saved(t, kit.who.session, draft.ID, finished(draft, nil))
+	published := stack.published(t, kit.who.session, draft.ID)
+	if published.Byline == nil || published.Byline.Handle != "publication.writer" ||
+		published.Byline.App == nil || published.Byline.App.Slug != "illarin" {
+		t.Fatalf("the byline reads %+v", published.Byline)
+	}
+
+	for _, correction := range []struct {
+		address string
+		body    string
+	}{
+		{"/v1/publication/posts/" + draft.ID + "/address", `{"slug":"moved-by-a-tool"}`},
+		{"/v1/publication/posts/" + draft.ID + "/byline", `{"handle":"publication.authority"}`},
+	} {
+		refused := stack.sent(t, kit.value, jsonRequest(t,
+			http.MethodPut, correction.address, correction.body,
+		))
+		if refused.Code != http.StatusForbidden {
+			t.Errorf("%s answered a token %d: %s",
+				correction.address, refused.Code, refused.Body.String())
+		}
+	}
+
+	empty := stack.sent(t, kit.value, jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts",
+		fmt.Sprintf(`{"categoryId":%q,"title":"   "}`, announcement.ID),
+	))
+	if empty.Code != http.StatusBadRequest || refusalOf(t, empty).Code != string(CodeInvalid) {
+		t.Fatalf("an empty title answered %d: %s", empty.Code, empty.Body.String())
+	}
+	if refusalOf(t, empty).Field != "title" {
+		t.Fatalf("an empty title named %q", refusalOf(t, empty).Field)
+	}
+}
+
+func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+
+	draft := stack.startedByTool(t, kit, fmt.Sprintf(
+		`{"categoryId":%q,"title":"One vocabulary"}`, announcement.ID,
+	))
+	picture := stack.uploadedByTool(t, kit, draft.ID, "document", httpTestPNG(t, 800, 400))
+	sent := bodyWithPicture(picture.ID, "The workspace")
+	body, err := json.Marshal(finished(draft, map[string]any{"document": sent}))
+	if err != nil {
+		t.Fatalf("encode working copy: %v", err)
+	}
+	saved := stack.sent(t, kit.value, jsonRequest(t,
+		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
+	))
+	held := decodePost(t, saved)
+	if held.DocumentVersion == 0 || len(held.Document.Content) != 2 {
+		t.Fatalf("the saved document reads %+v", held.Document)
+	}
+	if held.Document.Content[1]["mediaId"] != picture.ID {
+		t.Fatalf("the document lost the picture it placed: %+v", held.Document.Content[1])
+	}
+
+	kept := stack.sent(t, kit.value, jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/revisions",
+		fmt.Sprintf(`{"version":%d}`, held.Version),
+	))
+	var checkpoint postRevision
+	if err := json.Unmarshal(kept.Body.Bytes(), &checkpoint); err != nil {
+		t.Fatalf("decode edition: %v", err)
+	}
+
+	published := stack.sent(t, kit.value, jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/publish",
+		fmt.Sprintf(`{"version":%d}`, held.Version),
+	))
+	public := decodePost(t, published)
+
+	editions := stack.sent(t, kit.value, httptest.NewRequest(
+		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/revisions", nil,
+	))
+	var listed struct {
+		Revisions []postRevision `json:"revisions"`
+	}
+	if err := json.Unmarshal(editions.Body.Bytes(), &listed); err != nil {
+		t.Fatalf("decode editions: %v", err)
+	}
+	if len(listed.Revisions) != 2 {
+		t.Fatalf("the post kept %d editions", len(listed.Revisions))
+	}
+	names := map[string]bool{}
+	for _, edition := range listed.Revisions {
+		names[edition.ID] = true
+	}
+	if !names[checkpoint.ID] || !names[public.PublicRevision] {
+		t.Fatalf("the editions %v do not name %q and %q",
+			names, checkpoint.ID, public.PublicRevision)
+	}
+
+	again := decodePost(t, stack.sent(t, kit.value, httptest.NewRequest(
+		http.MethodGet, "/v1/publication/posts/"+draft.ID, nil,
+	)))
+	if again.ID != draft.ID || again.PublicRevision != public.PublicRevision ||
+		len(again.Media) != 1 || again.Media[0].ID != picture.ID {
+		t.Fatalf("reading the post again gave %+v", again)
+	}
+}
