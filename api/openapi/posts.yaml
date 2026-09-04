@@ -188,18 +188,18 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
           $ref: ./publication.yaml#/components/responses/PublicationNotFound
-        '413':
-          description: The image exceeds the upload limit
-        '503':
-          description: The storage reserve cannot accept the image
         '409':
           description: The working copy moved on, or the key was reused for another request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+        '413':
+          description: The image exceeds the upload limit
         '429':
           $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+        '503':
+          description: The storage reserve cannot accept the image
   /v1/publication/posts/{id}/revisions:
     get:
       operationId: listPostRevisions
