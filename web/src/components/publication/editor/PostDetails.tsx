@@ -9,6 +9,7 @@ import type {
   PublicationApp,
   PublicationCategory,
 } from "@/lib/api/query";
+import { normalizedSlug } from "@/lib/post-link";
 import { type Chosen, PicturePicker } from "./PicturePicker";
 import styles from "./PostDetails.module.css";
 import { PublishedIdentity } from "./PublishedIdentity";
@@ -75,7 +76,7 @@ export function PostDetails({
       </Field>
       {locked ? null : (
         <Field
-          hint={`illarin.xyz/blog/${draft.slug || "…"}. You can change this until you publish. After that it is fixed.`}
+          hint={`illarin.xyz/blog/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
           htmlFor="post-slug"
           label="Address"
         >

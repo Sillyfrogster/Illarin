@@ -24,3 +24,13 @@ export function leavesIllarin(href: string): boolean {
     return true;
   }
 }
+
+/** The address form Go stores, so an editor can preview it before saving. */
+export function normalizedSlug(candidate: string): string {
+  return candidate
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/, "");
+}

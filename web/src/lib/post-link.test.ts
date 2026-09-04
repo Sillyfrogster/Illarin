@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isSafeAddress, leavesIllarin } from "./post-link";
+import { isSafeAddress, leavesIllarin, normalizedSlug } from "./post-link";
 
 test("an address on another site leaves Illarin", () => {
   expect(leavesIllarin("https://example.com/notes")).toBe(true);
@@ -29,4 +29,22 @@ test("only an https or mailto address is safe", () => {
   expect(isSafeAddress("http://example.com")).toBe(false);
   expect(isSafeAddress("https://")).toBe(false);
   expect(isSafeAddress("https://exa mple.com")).toBe(false);
+});
+
+test("a typed address previews as the one the server will store", () => {
+  expect(normalizedSlug("  What's  New — in Illarin 3!  ")).toBe(
+    "what-s-new-in-illarin-3",
+  );
+  expect(normalizedSlug("WHAT_IS_NEW")).toBe("what-is-new");
+  expect(normalizedSlug("Header plates & galleries")).toBe(
+    "header-plates-galleries",
+  );
+  expect(normalizedSlug("---")).toBe("");
+  expect(normalizedSlug("")).toBe("");
+});
+
+test("a preview never runs past the address limit", () => {
+  const long = normalizedSlug("a".repeat(120));
+  expect(long.length).toBe(80);
+  expect(normalizedSlug(`${"b".repeat(79)} tail`).endsWith("-")).toBe(false);
 });

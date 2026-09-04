@@ -4,6 +4,7 @@ import Image from "next/image";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { correctPostAddress, correctPostByline } from "@/lib/api/posts";
 import type { Post } from "@/lib/api/query";
+import { normalizedSlug } from "@/lib/post-link";
 import styles from "./PublishedIdentity.module.css";
 
 export function PublishedIdentity({
@@ -206,7 +207,7 @@ function ChangeAddress({
       </p>
       <Commit
         busy={busy}
-        commit={`Move it to /blog/${normalized(slug) || "…"}`}
+        commit={`Move it to /blog/${normalizedSlug(slug) || "…"}`}
         onCancel={onCancel}
         ready={ready}
         working="Moving…"
@@ -271,15 +272,6 @@ function ChangeName({
       />
     </form>
   );
-}
-
-// normalized previews the address Go will store, so the button names the real one.
-function normalized(candidate: string): string {
-  return candidate
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
 }
 
 function Commit({
