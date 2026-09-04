@@ -121,12 +121,14 @@ func (s *Service) PostMediaVariant(
 	var published bool
 	err := s.pool.QueryRow(ctx, `
 		select media.blob_id, blob.sha256,
-		       exists (select 1 from post_media_uses use
-		                where use.media_id = media.id and use.revision_id is not null)
+		       exists (select 1
+		                 from post_media_uses use
+		                 join post_revisions revision on revision.id = use.revision_id
+		                where use.media_id = media.id and revision.captured_for = $2)
 		  from post_media media
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
-	`, mediaID).Scan(&blobID, &digestBytes, &published)
+	`, mediaID, RevisionPublication).Scan(&blobID, &digestBytes, &published)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", false, ErrPostMediaNotFound
 	}

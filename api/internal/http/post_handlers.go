@@ -144,7 +144,13 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 	if !ok {
 		return
 	}
-	published, err := h.publications.PublishPost(c.Request.Context(), editor, uuid.UUID(id))
+	version, ok := h.workingVersion(c)
+	if !ok {
+		return
+	}
+	published, err := h.publications.PublishPost(
+		c.Request.Context(), editor, uuid.UUID(id), version,
+	)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -241,6 +247,8 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, publication.ErrPostNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such post."})
+	case errors.Is(err, publication.ErrRevisionNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "This post has no such edition."})
 	case errors.Is(err, publication.ErrNotPostEditor):
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "Only this post's contributor or an Illarin admin can do that.",

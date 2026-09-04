@@ -390,6 +390,14 @@ type PostRevision struct {
 	HeaderAlt       pgtype.Text
 	HeaderCaption   pgtype.Text
 	SocialMediaID   pgtype.UUID
+	CapturedFor     string
+}
+
+type PostSlug struct {
+	Slug       string
+	PostID     pgtype.UUID
+	ReservedBy pgtype.UUID
+	ReservedAt pgtype.Timestamptz
 }
 
 type ProfileDistinction struct {

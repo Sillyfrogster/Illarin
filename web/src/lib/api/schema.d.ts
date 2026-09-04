@@ -931,6 +931,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/revisions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every edition this post has kept, newest first. It names titles, times and keepers, and never compares two editions for a reader. */
+    get: operations["listPostRevisions"];
+    put?: never;
+    /** @description Keep the named working copy as an immutable edition. Readers see nothing new, and the working copy carries on unchanged. */
+    post: operations["checkpointPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/revisions/{revisionId}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Copy a kept edition into a new working copy. Every edition, and the one readers have, stay exactly as they were. */
+    post: operations["restorePostRevision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What has been done to this post, newest first. It carries actors, editions and times, and never a word anyone wrote. */
+    get: operations["readPostHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/publish": {
     parameters: {
       query?: never;
@@ -940,7 +992,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** @description Capture the working copy as an immutable revision and make that exact edition the public one. */
+    /** @description Capture the named working copy as an immutable revision and make that exact edition the public one. */
     post: operations["publishPost"];
     delete?: never;
     options?: never;
@@ -2835,6 +2887,50 @@ export interface components {
     SendAssetRequest: {
       /** Format: uuid */
       instanceId: string;
+    };
+    /**
+     * @description Why an edition was kept.
+     * @enum {string}
+     */
+    PostRevisionReason: "checkpoint" | "publication";
+    /** @description One immutable edition of a post. It carries what the edition was called and when it was kept, not the words it holds. */
+    PostRevision: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      title: string;
+      summary: string;
+      slug: string;
+      category: components["schemas"]["PublicationCategory"];
+      capturedFor: components["schemas"]["PostRevisionReason"];
+      capturedBy: string;
+      /** Format: date-time */
+      capturedAt: string;
+      /** @description Whether this is the edition readers are being given. */
+      public: boolean;
+    };
+    PostRevisionList: {
+      revisions: components["schemas"]["PostRevision"][];
+    };
+    PostVersionRequest: {
+      /** @description The working-copy version the action means to act on. */
+      version: number;
+    };
+    /** @description One thing that was done to a post, named by who did it, what it was and which edition it touched. */
+    PostAction: {
+      /** Format: uuid */
+      id: string;
+      actor: string;
+      credential: string;
+      action: string;
+      revision?: number | null;
+      before?: string;
+      after?: string;
+      /** Format: date-time */
+      at: string;
+    };
+    PostActionList: {
+      actions: components["schemas"]["PostAction"][];
     };
     LegacyAsset: {
       /** Format: uuid */
@@ -6088,7 +6184,7 @@ export interface operations {
       };
     };
   };
-  publishPost: {
+  listPostRevisions: {
     parameters: {
       query?: never;
       header?: never;
@@ -6098,6 +6194,209 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      /** @description The editions this post has kept */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostRevisionList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  checkpointPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The edition that was kept */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostRevision"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy has already moved on */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+    };
+  };
+  restorePostRevision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        revisionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy the edition was copied into */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post or edition of it */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy has already moved on */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+    };
+  };
+  readPostHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description What has been done to this post */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostActionList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account may not manage that post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publishPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
     responses: {
       /** @description The post as it now stands */
       200: {
@@ -6135,6 +6434,15 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description The working copy has already moved on */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
       };
     };
   };

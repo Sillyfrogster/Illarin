@@ -37,9 +37,14 @@ type PublicPost struct {
 	UpdatedAt   *time.Time
 }
 
-// PublishPost captures the working copy and puts that exact edition in public
-// view. Nothing leaves Illarin while the transaction is open.
-func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) (Post, error) {
+// PublishPost captures the named working copy and puts that exact edition in
+// public view. Nothing leaves Illarin while the transaction is open.
+func (s *Service) PublishPost(
+	ctx context.Context,
+	editor Editor,
+	id uuid.UUID,
+	version int,
+) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
 		return Post{}, err
@@ -56,10 +61,13 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 	if err != nil {
 		return Post{}, err
 	}
+	if locked.Version != version {
+		return Post{}, Stale{Version: locked.Version, UpdatedAt: locked.UpdatedAt}
+	}
 	if locked.Document, err = readyToPublish(locked); err != nil {
 		return Post{}, err
 	}
-	revisionID, err := captureRevision(ctx, tx, editor, locked)
+	revisionID, err := captureRevision(ctx, tx, editor, locked, RevisionPublication)
 	if err != nil {
 		return Post{}, err
 	}
@@ -251,7 +259,9 @@ type working struct {
 	HeaderAlt      *string
 	HeaderCaption  *string
 	SocialMediaID  *uuid.UUID
+	Version        int
 	PublishedAt    *time.Time
+	UpdatedAt      time.Time
 }
 
 func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
@@ -262,7 +272,7 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 		       post.slug, post.title, post.summary, post.document,
 		       post.release_app_id, post.release_version, post.release_url,
 		       post.header_media_id, post.header_alt, post.header_caption, post.social_media_id,
-		       post.published_at
+		       post.working_version, post.published_at, post.updated_at
 		  from posts post
 		  join publication_categories category on category.id = post.category_id
 		 where post.id = $1
@@ -273,7 +283,7 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 		&slug, &locked.Title, &locked.Summary, &locked.Document,
 		&locked.ReleaseAppID, &locked.ReleaseVersion, &locked.ReleaseAddress,
 		&locked.HeaderMediaID, &locked.HeaderAlt, &locked.HeaderCaption, &locked.SocialMediaID,
-		&locked.PublishedAt,
+		&locked.Version, &locked.PublishedAt, &locked.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return working{}, ErrPostNotFound
@@ -322,42 +332,4 @@ func readyToPublish(locked working) ([]byte, error) {
 		return nil, fmt.Errorf("write the post body: %w", err)
 	}
 	return document, nil
-}
-
-// carryUsesForward gives the revision the pictures the working copy referred to.
-func carryUsesForward(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID) error {
-	_, err := tx.Exec(ctx, `
-		insert into post_media_uses (media_id, post_id, revision_id)
-		select media_id, post_id, $2 from post_media_uses
-		 where post_id = $1 and revision_id is null
-	`, postID, revisionID)
-	if err != nil {
-		return fmt.Errorf("carry the pictures forward into the revision: %w", err)
-	}
-	return nil
-}
-
-func captureRevision(
-	ctx context.Context,
-	tx pgx.Tx,
-	editor Editor,
-	locked working,
-) (uuid.UUID, error) {
-	id := uuid.New()
-	_, err := tx.Exec(ctx, `
-		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
-		                            document, document_version, release_app_id,
-		                            release_version, release_url, header_media_id,
-		                            header_alt, header_caption, social_media_id, captured_by)
-		values ($1, $2,
-		        coalesce((select max(number) from post_revisions where post_id = $2), 0) + 1,
-		        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-	`, id, locked.ID, locked.Title, locked.Summary, locked.Slug, locked.CategoryID,
-		locked.Document, postdoc.Version, locked.ReleaseAppID,
-		locked.ReleaseVersion, locked.ReleaseAddress, locked.HeaderMediaID,
-		locked.HeaderAlt, locked.HeaderCaption, locked.SocialMediaID, editor.ID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("capture the post revision: %w", err)
-	}
-	return id, nil
 }

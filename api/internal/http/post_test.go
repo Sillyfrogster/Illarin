@@ -156,20 +156,66 @@ func (s distinctionStack) saved(
 	return decodePost(t, response)
 }
 
+// publish releases whatever the working copy holds now. An account that cannot
+// read the post names version one and still meets the refusal it came for.
 func (s distinctionStack) publish(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
+	version := 1
+	reading := send(t, s.router, authorized(
+		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
+	))
+	if reading.Code == http.StatusOK {
+		version = decodePost(t, reading).Version
+	}
+	return s.publishAt(t, session, id, version)
+}
+
+func (s distinctionStack) publishAt(
+	t *testing.T,
+	session *http.Cookie,
+	id string,
+	version int,
+) *httptest.ResponseRecorder {
+	t.Helper()
 	return send(t, s.router, authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/publish", "",
+		http.MethodPost, "/v1/publication/posts/"+id+"/publish",
+		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
+}
+
+// working reads the post's current working copy.
+func (s distinctionStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
+	t.Helper()
+	response := send(t, s.router, authorized(
+		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
+	))
+	if response.Code != http.StatusOK {
+		t.Fatalf("read post status = %d: %s", response.Code, response.Body.String())
+	}
+	return decodePost(t, response)
 }
 
 func (s distinctionStack) published(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := s.publish(t, session, id)
+	if response.Code != http.StatusOK {
+		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
+	}
+	return decodePost(t, response)
+}
+
+func (s distinctionStack) publishedAt(
+	t *testing.T,
+	session *http.Cookie,
+	id string,
+	version int,
+) blogPost {
+	t.Helper()
+	response := s.publishAt(t, session, id, version)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}

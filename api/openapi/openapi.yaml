@@ -118,6 +118,12 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}
   /v1/publication/posts/{id}/media:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1media
+  /v1/publication/posts/{id}/revisions:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1revisions
+  /v1/publication/posts/{id}/revisions/{revisionId}/restore:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1revisions~1{revisionId}~1restore
+  /v1/publication/posts/{id}/history:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1history
   /v1/publication/posts/{id}/publish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
   /v1/publication/posts/{id}/address:

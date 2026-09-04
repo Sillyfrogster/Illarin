@@ -858,6 +858,24 @@ func (e PostMediaPurpose) Valid() bool {
 	}
 }
 
+// Defines values for PostRevisionReason.
+const (
+	Checkpoint  PostRevisionReason = "checkpoint"
+	Publication PostRevisionReason = "publication"
+)
+
+// Valid indicates whether the value is a known member of the PostRevisionReason enum.
+func (e PostRevisionReason) Valid() bool {
+	switch e {
+	case Checkpoint:
+		return true
+	case Publication:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostStatus.
 const (
 	PostStatusDraft     PostStatus = "draft"
@@ -2509,6 +2527,23 @@ type Post struct {
 	Version         int                 `json:"version"`
 }
 
+// PostAction One thing that was done to a post, named by who did it, what it was and which edition it touched.
+type PostAction struct {
+	Action     string             `json:"action"`
+	Actor      string             `json:"actor"`
+	After      *string            `json:"after,omitempty"`
+	At         time.Time          `json:"at"`
+	Before     *string            `json:"before,omitempty"`
+	Credential string             `json:"credential"`
+	Id         openapi_types.UUID `json:"id"`
+	Revision   *int               `json:"revision,omitempty"`
+}
+
+// PostActionList defines model for PostActionList.
+type PostActionList struct {
+	Actions []PostAction `json:"actions"`
+}
+
 // PostAuthor defines model for PostAuthor.
 type PostAuthor struct {
 	Handle string `json:"handle"`
@@ -2590,8 +2625,40 @@ type PostReleaseEdit struct {
 	Version string             `json:"version"`
 }
 
+// PostRevision One immutable edition of a post. It carries what the edition was called and when it was kept, not the words it holds.
+type PostRevision struct {
+	CapturedAt time.Time `json:"capturedAt"`
+	CapturedBy string    `json:"capturedBy"`
+
+	// CapturedFor Why an edition was kept.
+	CapturedFor PostRevisionReason  `json:"capturedFor"`
+	Category    PublicationCategory `json:"category"`
+	Id          openapi_types.UUID  `json:"id"`
+	Number      int                 `json:"number"`
+
+	// Public Whether this is the edition readers are being given.
+	Public  bool   `json:"public"`
+	Slug    string `json:"slug"`
+	Summary string `json:"summary"`
+	Title   string `json:"title"`
+}
+
+// PostRevisionList defines model for PostRevisionList.
+type PostRevisionList struct {
+	Revisions []PostRevision `json:"revisions"`
+}
+
+// PostRevisionReason Why an edition was kept.
+type PostRevisionReason string
+
 // PostStatus defines model for PostStatus.
 type PostStatus string
+
+// PostVersionRequest defines model for PostVersionRequest.
+type PostVersionRequest struct {
+	// Version The working-copy version the action means to act on.
+	Version int `json:"version"`
+}
 
 // PreservedNamespace defines model for PreservedNamespace.
 type PreservedNamespace struct {
@@ -3555,6 +3622,15 @@ type CorrectPostBylineJSONRequestBody = CorrectPostBylineRequest
 // AddPostMediaMultipartRequestBody defines body for AddPostMedia for multipart/form-data ContentType.
 type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 
+// PublishPostJSONRequestBody defines body for PublishPost for application/json ContentType.
+type PublishPostJSONRequestBody = PostVersionRequest
+
+// CheckpointPostJSONRequestBody defines body for CheckpointPost for application/json ContentType.
+type CheckpointPostJSONRequestBody = PostVersionRequest
+
+// RestorePostRevisionJSONRequestBody defines body for RestorePostRevision for application/json ContentType.
+type RestorePostRevisionJSONRequestBody = PostVersionRequest
+
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
 	var body PendingLinkPollResult
@@ -3962,11 +4038,23 @@ type ServerInterface interface {
 	// (PUT /v1/publication/posts/{id}/byline)
 	CorrectPostByline(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/publication/posts/{id}/history)
+	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
+
 	// (POST /v1/publication/posts/{id}/media)
 	AddPostMedia(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/posts/{id}/publish)
 	PublishPost(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts/{id}/revisions)
+	ListPostRevisions(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/revisions)
+	CheckpointPost(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/revisions/{revisionId}/restore)
+	RestorePostRevision(c *gin.Context, id openapi_types.UUID, revisionId openapi_types.UUID)
 
 	// (GET /v1/publication/token)
 	GetPublicationCredential(c *gin.Context)
@@ -6469,6 +6557,31 @@ func (siw *ServerInterfaceWrapper) CorrectPostByline(c *gin.Context) {
 	siw.Handler.CorrectPostByline(c, id)
 }
 
+// ReadPostHistory operation middleware
+func (siw *ServerInterfaceWrapper) ReadPostHistory(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReadPostHistory(c, id)
+}
+
 // AddPostMedia operation middleware
 func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
 
@@ -6517,6 +6630,90 @@ func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 	}
 
 	siw.Handler.PublishPost(c, id)
+}
+
+// ListPostRevisions operation middleware
+func (siw *ServerInterfaceWrapper) ListPostRevisions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostRevisions(c, id)
+}
+
+// CheckpointPost operation middleware
+func (siw *ServerInterfaceWrapper) CheckpointPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CheckpointPost(c, id)
+}
+
+// RestorePostRevision operation middleware
+func (siw *ServerInterfaceWrapper) RestorePostRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestorePostRevision(c, id, revisionId)
 }
 
 // GetPublicationCredential operation middleware
@@ -6667,6 +6864,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/publication/posts/:id", wrapper.GetPost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id", wrapper.SavePost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/media", wrapper.AddPostMedia)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.ListPostRevisions)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.CheckpointPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions/:revisionId/restore", wrapper.RestorePostRevision)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)

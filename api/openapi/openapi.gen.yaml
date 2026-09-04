@@ -1956,12 +1956,39 @@ paths:
           description: The image exceeds the upload limit
         '503':
           description: The storage reserve cannot accept the image
-  /v1/publication/posts/{id}/publish:
-    post:
-      operationId: publishPost
+  /v1/publication/posts/{id}/revisions:
+    get:
+      operationId: listPostRevisions
       description: >-
-        Capture the working copy as an immutable revision and make that exact
-        edition the public one.
+        Every edition this post has kept, newest first. It names titles, times
+        and keepers, and never compares two editions for a reader.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The editions this post has kept
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRevisionList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+    post:
+      operationId: checkpointPost
+      description: >-
+        Keep the named working copy as an immutable edition. Readers see nothing
+        new, and the working copy carries on unchanged.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -1972,6 +1999,128 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '201':
+          description: The edition that was kept
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRevision'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+        '409':
+          description: The working copy has already moved on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+  /v1/publication/posts/{id}/revisions/{revisionId}/restore:
+    post:
+      operationId: restorePostRevision
+      description: >-
+        Copy a kept edition into a new working copy. Every edition, and the one
+        readers have, stay exactly as they were.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: revisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The working copy the edition was copied into
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post or edition of it
+        '409':
+          description: The working copy has already moved on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+  /v1/publication/posts/{id}/history:
+    get:
+      operationId: readPostHistory
+      description: >-
+        What has been done to this post, newest first. It carries actors,
+        editions and times, and never a word anyone wrote.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: What has been done to this post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostActionList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account may not manage that post
+        '404':
+          description: No such post
+  /v1/publication/posts/{id}/publish:
+    post:
+      operationId: publishPost
+      description: >-
+        Capture the named working copy as an immutable revision and make that
+        exact edition the public one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
       responses:
         '200':
           description: The post as it now stands
@@ -1987,6 +2136,12 @@ paths:
           description: The account may not manage that post
         '404':
           description: No such post
+        '409':
+          description: The working copy has already moved on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
   /v1/publication/posts/{id}/address:
     put:
       operationId: correctPostAddress
@@ -6880,6 +7035,111 @@ components:
         instanceId:
           type: string
           format: uuid
+    PostRevisionReason:
+      type: string
+      description: Why an edition was kept.
+      enum:
+        - checkpoint
+        - publication
+    PostRevision:
+      type: object
+      description: >-
+        One immutable edition of a post. It carries what the edition was called
+        and when it was kept, not the words it holds.
+      required:
+        - id
+        - number
+        - title
+        - summary
+        - slug
+        - category
+        - capturedFor
+        - capturedBy
+        - capturedAt
+        - public
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        category:
+          $ref: '#/components/schemas/PublicationCategory'
+        capturedFor:
+          $ref: '#/components/schemas/PostRevisionReason'
+        capturedBy:
+          type: string
+        capturedAt:
+          type: string
+          format: date-time
+        public:
+          type: boolean
+          description: Whether this is the edition readers are being given.
+    PostRevisionList:
+      type: object
+      required:
+        - revisions
+      properties:
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostRevision'
+    PostVersionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the action means to act on.
+    PostAction:
+      type: object
+      description: >-
+        One thing that was done to a post, named by who did it, what it was and
+        which edition it touched.
+      required:
+        - id
+        - actor
+        - credential
+        - action
+        - at
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          type: string
+        credential:
+          type: string
+        action:
+          type: string
+        revision:
+          anyOf:
+            - type: integer
+            - type: 'null'
+        before:
+          type: string
+        after:
+          type: string
+        at:
+          type: string
+          format: date-time
+    PostActionList:
+      type: object
+      required:
+        - actions
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostAction'
     LegacyAsset:
       type: object
       required:
