@@ -132,8 +132,7 @@ func (s *Service) Checkpoint(
 	return s.revision(ctx, id, revisionID)
 }
 
-// RestoreRevision copies a kept edition into a new working copy. Every kept
-// edition, and the one readers have, stay exactly as they were.
+// RestoreRevision copies a kept edition into a new working copy and changes no history.
 func (s *Service) RestoreRevision(
 	ctx context.Context,
 	editor Editor,
@@ -207,7 +206,6 @@ func (s *Service) RestoreRevision(
 }
 
 // restoredAddress keeps a published post at the address readers already have.
-// An unpublished one takes back the edition's address if it is still free.
 func restoredAddress(ctx context.Context, tx pgx.Tx, locked working, kept working) (*string, error) {
 	if locked.Status == StatusPublished || kept.Slug == "" || kept.Slug == locked.Slug {
 		return nullable(locked.Slug), nil

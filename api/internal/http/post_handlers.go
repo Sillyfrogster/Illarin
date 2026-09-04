@@ -319,6 +319,10 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		social := types.UUID(*found.SocialMediaID)
 		shown.SocialMediaId = &social
 	}
+	if found.PublicRevision != nil {
+		public := types.UUID(*found.PublicRevision)
+		shown.PublicRevisionId = &public
+	}
 	if found.Byline != nil {
 		byline := toAPIByline(*found.Byline)
 		shown.Byline = &byline

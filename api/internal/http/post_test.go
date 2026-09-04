@@ -51,6 +51,7 @@ type blogPost struct {
 	Release         *postRelease        `json:"release"`
 	Header          *postHeader         `json:"header"`
 	SocialMediaID   string              `json:"socialMediaId"`
+	PublicRevision  string              `json:"publicRevisionId"`
 	Media           []postPicture       `json:"media"`
 	Byline          *postByline         `json:"byline"`
 	FormerAddresses []string            `json:"formerAddresses"`
@@ -156,8 +157,7 @@ func (s distinctionStack) saved(
 	return decodePost(t, response)
 }
 
-// publish releases whatever the working copy holds now. An account that cannot
-// read the post names version one and still meets the refusal it came for.
+// publish releases whatever the working copy holds now.
 func (s distinctionStack) publish(
 	t *testing.T,
 	session *http.Cookie,

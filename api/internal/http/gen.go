@@ -2515,16 +2515,19 @@ type Post struct {
 	Header          *PostHeader         `json:"header,omitempty"`
 	Id              openapi_types.UUID  `json:"id"`
 	Media           []PostMedia         `json:"media"`
-	PublishedAt     *time.Time          `json:"publishedAt,omitempty"`
-	Release         *PostRelease        `json:"release,omitempty"`
-	Slug            string              `json:"slug"`
-	SocialMediaId   *openapi_types.UUID `json:"socialMediaId,omitempty"`
-	Status          PostStatus          `json:"status"`
-	Summary         string              `json:"summary"`
-	Title           string              `json:"title"`
-	UpdatedAt       time.Time           `json:"updatedAt"`
-	UpdatedPublicAt *time.Time          `json:"updatedPublicAt,omitempty"`
-	Version         int                 `json:"version"`
+
+	// PublicRevisionId The edition readers are being given, once there is one.
+	PublicRevisionId *openapi_types.UUID `json:"publicRevisionId,omitempty"`
+	PublishedAt      *time.Time          `json:"publishedAt,omitempty"`
+	Release          *PostRelease        `json:"release,omitempty"`
+	Slug             string              `json:"slug"`
+	SocialMediaId    *openapi_types.UUID `json:"socialMediaId,omitempty"`
+	Status           PostStatus          `json:"status"`
+	Summary          string              `json:"summary"`
+	Title            string              `json:"title"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
+	UpdatedPublicAt  *time.Time          `json:"updatedPublicAt,omitempty"`
+	Version          int                 `json:"version"`
 }
 
 // PostAction One thing that was done to a post, named by who did it, what it was and which edition it touched.

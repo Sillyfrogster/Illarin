@@ -37,8 +37,7 @@ type PublicPost struct {
 	UpdatedAt   *time.Time
 }
 
-// PublishPost captures the named working copy and puts that exact edition in
-// public view. Nothing leaves Illarin while the transaction is open.
+// PublishPost puts the exact edition a named working copy holds into public view.
 func (s *Service) PublishPost(
 	ctx context.Context,
 	editor Editor,

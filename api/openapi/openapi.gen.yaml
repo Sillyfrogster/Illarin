@@ -4730,6 +4730,12 @@ components:
             - type: string
               format: uuid
             - type: 'null'
+        publicRevisionId:
+          description: The edition readers are being given, once there is one.
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
         media:
           type: array
           items:

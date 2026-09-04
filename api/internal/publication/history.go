@@ -20,8 +20,7 @@ type Action struct {
 	At         time.Time
 }
 
-// PostHistory answers what has been done to one post, newest first. It names
-// actors, editions and times, and never carries a word anyone wrote.
+// PostHistory answers what has been done to one post, newest first.
 func (s *Service) PostHistory(ctx context.Context, editor Editor, id uuid.UUID) ([]Action, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {

@@ -1922,6 +1922,8 @@ export interface components {
       release?: components["schemas"]["PostRelease"] | null;
       header?: components["schemas"]["PostHeader"] | null;
       socialMediaId?: string | null;
+      /** @description The edition readers are being given, once there is one. */
+      publicRevisionId?: string | null;
       media: components["schemas"]["PostMedia"][];
       byline?: components["schemas"]["PostByline"] | null;
       /** @description Addresses this post published under and has since left. Every one of them still reaches it. */

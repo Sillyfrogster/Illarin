@@ -220,6 +220,10 @@ func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
 		t.Fatalf("kept editions = %+v, want one published edition", before)
 	}
 
+	if live.PublicRevision != before[0].ID {
+		t.Errorf("the post names %q as its public edition", live.PublicRevision)
+	}
+
 	back := stack.restored(t, session, draft.ID, before[0].ID, second.Version)
 	if back.Title != first.Title || back.Summary != first.Summary {
 		t.Errorf("the restored working copy reads %q / %q", back.Title, back.Summary)

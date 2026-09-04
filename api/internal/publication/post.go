@@ -77,6 +77,7 @@ type Post struct {
 	Release         *Release
 	Header          *Header
 	SocialMediaID   *uuid.UUID
+	PublicRevision  *uuid.UUID
 	Media           []PostMedia
 	Byline          *Byline
 	FormerAddresses []string
@@ -677,7 +678,7 @@ const selectPosts = `
 	       release_mark.id, release_mark.width, release_mark.height,
 	       post.release_version, post.release_url,
 	       post.header_media_id, post.header_alt, post.header_caption,
-	       post.social_media_id,
+	       post.social_media_id, post.public_revision_id,
 	       post.working_version, post.published_at, post.updated_public_at,
 	       post.created_at, post.updated_at
 	  from posts post
@@ -719,6 +720,7 @@ func scanPost(rows pgx.Rows) (Post, error) {
 		&releaseMarkID, &releaseMarkWidth, &releaseMarkHeight,
 		&releaseVersion, &releaseAddress,
 		&headerID, &headerAltText, &headerCaptionText, &one.SocialMediaID,
+		&one.PublicRevision,
 		&one.Version, &one.PublishedAt, &one.UpdatedPublicAt,
 		&one.CreatedAt, &one.UpdatedAt,
 	)
