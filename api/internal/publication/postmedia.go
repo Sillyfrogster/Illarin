@@ -282,31 +282,3 @@ func recordUses(
 	}
 	return nil
 }
-
-// postMedia answers the pictures behind a set of ids that still have bytes.
-func (s *Service) postMedia(ctx context.Context, ids []uuid.UUID) ([]PostMedia, error) {
-	if len(ids) == 0 {
-		return []PostMedia{}, nil
-	}
-	rows, err := s.pool.Query(ctx, `
-		select id, post_id, purpose, width, height
-		  from post_media
-		 where id = any($1) and blob_id is not null
-	`, ids)
-	if err != nil {
-		return nil, fmt.Errorf("read post media: %w", err)
-	}
-	defer rows.Close()
-	found := make([]PostMedia, 0, len(ids))
-	for rows.Next() {
-		var one PostMedia
-		if err := rows.Scan(&one.ID, &one.PostID, &one.Purpose, &one.Width, &one.Height); err != nil {
-			return nil, fmt.Errorf("read a post picture: %w", err)
-		}
-		found = append(found, one)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read post media: %w", err)
-	}
-	return found, nil
-}
