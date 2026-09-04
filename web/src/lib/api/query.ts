@@ -58,6 +58,8 @@ export type PostMedia = components["schemas"]["PostMedia"];
 export type PostMediaPurpose = components["schemas"]["PostMediaPurpose"];
 export type PostByline = components["schemas"]["PostByline"];
 export type PostRelease = components["schemas"]["PostRelease"];
+export type PostRevision = components["schemas"]["PostRevision"];
+export type PostAction = components["schemas"]["PostAction"];
 export type IssuedPublicationToken =
   components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];

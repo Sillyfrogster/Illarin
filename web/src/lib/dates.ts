@@ -6,3 +6,14 @@ export function readableDate(value: string): string {
     year: "numeric",
   });
 }
+
+/** A date and time as a person reads it, like 14 August 2026, 14:02. */
+export function readableMoment(value: string): string {
+  return new Date(value).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

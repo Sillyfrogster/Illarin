@@ -1,4 +1,10 @@
-import type { Post, PostMedia, PostMediaPurpose } from "@/lib/api/query";
+import type {
+  Post,
+  PostAction,
+  PostMedia,
+  PostMediaPurpose,
+  PostRevision,
+} from "@/lib/api/query";
 import type { PostDocument } from "@/lib/post-document";
 import { ask, json } from "./distinctions";
 
@@ -57,10 +63,38 @@ export function correctPostByline(id: string, handle: string) {
   return json<Post>(`/publication/posts/${id}/byline`, "PUT", { handle });
 }
 
-export function publishPost(id: string) {
-  return ask<Post>(
-    `/publication/posts/${id}/publish`,
-    { method: "POST" },
-    (response) => response.json() as Promise<Post>,
+export function publishPost(id: string, version: number) {
+  return json<Post>(`/publication/posts/${id}/publish`, "POST", { version });
+}
+
+export function readPostRevisions(id: string) {
+  return json<{ revisions: PostRevision[] }>(
+    `/publication/posts/${id}/revisions`,
+    "GET",
+  );
+}
+
+export function keepPostVersion(id: string, version: number) {
+  return json<PostRevision>(`/publication/posts/${id}/revisions`, "POST", {
+    version,
+  });
+}
+
+export function restorePostRevision(
+  id: string,
+  revisionId: string,
+  version: number,
+) {
+  return json<Post>(
+    `/publication/posts/${id}/revisions/${revisionId}/restore`,
+    "POST",
+    { version },
+  );
+}
+
+export function readPostHistory(id: string) {
+  return json<{ actions: PostAction[] }>(
+    `/publication/posts/${id}/history`,
+    "GET",
   );
 }

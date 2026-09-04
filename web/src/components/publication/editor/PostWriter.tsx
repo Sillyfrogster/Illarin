@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Eye, PenLine } from "lucide-react";
+import { ArrowLeft, BookmarkPlus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
@@ -9,6 +9,7 @@ import { ArticleHeader } from "@/components/publication/ArticleHeader";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
 import {
+  keepPostVersion,
   publishPost,
   readPost,
   saveWorkingCopy,
@@ -27,6 +28,7 @@ import { asPostDocument, type PostDocument } from "@/lib/post-document";
 import { BodyEditor } from "./BodyEditor";
 import { GrowingText } from "./GrowingText";
 import { PostDetails } from "./PostDetails";
+import { PostHistory } from "./PostHistory";
 import styles from "./PostWriter.module.css";
 
 /** How long the writer pauses before the working copy is saved. */
@@ -45,6 +47,14 @@ type Draft = {
 
 type Saving = "clean" | "dirty" | "saving" | "saved" | "conflict" | "refused";
 
+type View = "write" | "preview" | "history";
+
+const VIEWS: { view: View; label: string }[] = [
+  { view: "write", label: "Write" },
+  { view: "preview", label: "Preview" },
+  { view: "history", label: "History" },
+];
+
 export function PostWriter({ id }: { id: string }) {
   const { account } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
@@ -56,10 +66,14 @@ export function PostWriter({ id }: { id: string }) {
   const [state, setState] = useState<Saving>("clean");
   const [refusal, setRefusal] = useState("");
   const [failure, setFailure] = useState("");
-  const [previewing, setPreviewing] = useState(false);
+  const [view, setView] = useState<View>("write");
   const [asking, setAsking] = useState(false);
+  const [keeping, setKeeping] = useState(false);
+  const [kept, setKept] = useState("");
   const [edition, setEdition] = useState(0);
+  const [stamp, setStamp] = useState(0);
   const version = useRef(0);
+  const writing = useRef<HTMLElement | null>(null);
 
   const load = useCallback(async () => {
     const answer = await readPost(id);
@@ -134,6 +148,12 @@ export function PostWriter({ id }: { id: string }) {
     [id],
   );
 
+  function look(at: View) {
+    if (view === "write") writing.current = focused();
+    setView(at);
+    if (at === "write") queueMicrotask(() => writing.current?.focus());
+  }
+
   function change(patch: Partial<Draft>) {
     setDraft((current) => (current ? { ...current, ...patch } : current));
     setState("dirty");
@@ -147,10 +167,21 @@ export function PostWriter({ id }: { id: string }) {
     );
   }
 
+  function restored(post: Post) {
+    setPost(post);
+    setDraft(asDraft(post));
+    setMedia(post.media);
+    version.current = post.version;
+    setState("clean");
+    setRefusal("");
+    setKept("");
+    setEdition((count) => count + 1);
+  }
+
   async function release() {
     setAsking(false);
     if (state === "dirty" || state === "refused") await save();
-    const answer = await publishPost(id);
+    const answer = await publishPost(id, version.current);
     if (answer.error || !answer.value) {
       setRefusal(answer.error ?? "");
       return;
@@ -158,7 +189,23 @@ export function PostWriter({ id }: { id: string }) {
     setPost(answer.value);
     version.current = answer.value.version;
     setRefusal("");
+    setKept("");
     setState("clean");
+    setStamp((count) => count + 1);
+  }
+
+  async function keep() {
+    setKeeping(true);
+    if (state === "dirty" || state === "refused") await save();
+    const answer = await keepPostVersion(id, version.current);
+    setKeeping(false);
+    if (answer.error || !answer.value) {
+      setRefusal(answer.error ?? "");
+      return;
+    }
+    setRefusal("");
+    setKept(`Kept as edition ${answer.value.number}.`);
+    setStamp((count) => count + 1);
   }
 
   if (account === undefined) {
@@ -196,18 +243,29 @@ export function PostWriter({ id }: { id: string }) {
         <p aria-live="polite" className={styles.state} data-state={state}>
           {stateWords(state, post)}
         </p>
+        <fieldset className={styles.views}>
+          <legend className={styles.heading}>What you are looking at</legend>
+          {VIEWS.map((one) => (
+            <button
+              aria-pressed={view === one.view}
+              className={styles.view}
+              key={one.view}
+              onClick={() => look(one.view)}
+              type="button"
+            >
+              {one.label}
+            </button>
+          ))}
+        </fieldset>
         <div className={styles.actions}>
           <button
-            className={styles.preview}
-            onClick={() => setPreviewing((open) => !open)}
+            className={styles.keep}
+            disabled={keeping || state === "conflict"}
+            onClick={() => void keep()}
             type="button"
           >
-            {previewing ? (
-              <PenLine size={15} strokeWidth={1.8} aria-hidden="true" />
-            ) : (
-              <Eye size={15} strokeWidth={1.8} aria-hidden="true" />
-            )}
-            {previewing ? "Write" : "Preview"}
+            <BookmarkPlus size={15} strokeWidth={1.8} aria-hidden="true" />
+            {keeping ? "Keeping…" : "Keep this version"}
           </button>
           <button
             className={styles.publish}
@@ -219,6 +277,10 @@ export function PostWriter({ id }: { id: string }) {
           </button>
         </div>
       </header>
+
+      <p aria-live="polite" className={styles.kept}>
+        {kept}
+      </p>
 
       {refusal ? (
         <p className={styles.refusal} role="alert">
@@ -254,7 +316,7 @@ export function PostWriter({ id }: { id: string }) {
         </p>
       </FormDialog>
 
-      {previewing ? (
+      {view === "preview" ? (
         <article className={styles.reading}>
           <ArticleIdentity
             byline={null}
@@ -271,52 +333,62 @@ export function PostWriter({ id }: { id: string }) {
             <PostBody document={draft.document} media={media} />
           </div>
         </article>
-      ) : (
-        <div className={styles.desk}>
-          <div className={styles.writing}>
-            <label className={styles.titleLabel} htmlFor="post-title">
-              Title
-            </label>
-            <GrowingText
-              className={styles.title}
-              id="post-title"
-              maxLength={160}
-              onChange={(title) => change({ title })}
-              value={draft.title}
-            />
-            <label className={styles.summaryLabel} htmlFor="post-summary">
-              Summary
-            </label>
-            <GrowingText
-              className={styles.summary}
-              id="post-summary"
-              maxLength={320}
-              onChange={(summary) => change({ summary })}
-              placeholder="One or two sentences a reader sees before the article."
-              value={draft.summary}
-            />
-            <BodyEditor
-              document={draft.document}
-              key={edition}
-              media={media}
-              onChange={(document) => change({ document })}
-              onUpload={(file) => upload("document", file)}
-            />
-          </div>
-          <PostDetails
-            admin={admin}
-            apps={releaseApps(apps, post)}
-            categories={categories.length > 0 ? categories : [post.category]}
-            draft={draft}
-            locked={post.status === "published"}
+      ) : null}
+
+      {view === "history" ? (
+        <PostHistory
+          handle={account.handle}
+          key={stamp}
+          onFailure={setRefusal}
+          onRestored={restored}
+          post={post}
+        />
+      ) : null}
+
+      <div className={styles.desk} hidden={view !== "write"}>
+        <div className={styles.writing}>
+          <label className={styles.titleLabel} htmlFor="post-title">
+            Title
+          </label>
+          <GrowingText
+            className={styles.title}
+            id="post-title"
+            maxLength={160}
+            onChange={(title) => change({ title })}
+            value={draft.title}
+          />
+          <label className={styles.summaryLabel} htmlFor="post-summary">
+            Summary
+          </label>
+          <GrowingText
+            className={styles.summary}
+            id="post-summary"
+            maxLength={320}
+            onChange={(summary) => change({ summary })}
+            placeholder="One or two sentences a reader sees before the article."
+            value={draft.summary}
+          />
+          <BodyEditor
+            document={draft.document}
+            key={edition}
             media={media}
-            onChange={change}
-            onCorrected={corrected}
-            onUpload={upload}
-            post={post}
+            onChange={(document) => change({ document })}
+            onUpload={(file) => upload("document", file)}
           />
         </div>
-      )}
+        <PostDetails
+          admin={admin}
+          apps={releaseApps(apps, post)}
+          categories={categories.length > 0 ? categories : [post.category]}
+          draft={draft}
+          locked={post.status === "published"}
+          media={media}
+          onChange={change}
+          onCorrected={corrected}
+          onUpload={upload}
+          post={post}
+        />
+      </div>
     </div>
   );
 }
@@ -344,6 +416,13 @@ function asDraft(post: Post): Draft {
         }
       : null,
   };
+}
+
+// focused answers the writing element the keyboard is in, if it is in one.
+function focused(): HTMLElement | null {
+  const element = document.activeElement;
+  if (!(element instanceof HTMLElement)) return null;
+  return element.closest("textarea, .ProseMirror") as HTMLElement | null;
 }
 
 // refreshed keeps an upload the working copy has not been saved with yet.
