@@ -87,7 +87,7 @@ export function DefinitionList({
           onClick={() => setAdding(true)}
         >
           <Plus size={15} strokeWidth={2} aria-hidden="true" />
-          {kind === "position" ? "Add a position" : "Add a recognition"}
+          {kind === "position" ? "Add a position" : "Add a title or badge"}
         </button>
       }
       retiredLabel={

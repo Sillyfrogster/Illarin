@@ -110,7 +110,7 @@ export function RecognitionDialog({
   return (
     <FormDialog
       open={open}
-      title={existing ? "Edit this recognition" : "Add a recognition"}
+      title={existing ? "Edit this title or badge" : "Add a title or badge"}
       hint="Give it a mark and it shows as a badge. Leave the mark off and it shows as a title."
       commit={existing ? "Save" : "Add"}
       busy={busy}
@@ -142,7 +142,7 @@ export function RecognitionDialog({
       <Field
         label="What earns it"
         htmlFor="recognition-earned"
-        hint="Written for the person reading a profile. A recognition nobody can explain is one nobody wants."
+        hint="Written for the person reading a profile. Say what someone did to get it."
       >
         <input
           id="recognition-earned"

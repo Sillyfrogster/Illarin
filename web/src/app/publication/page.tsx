@@ -3,16 +3,16 @@ import { PublicationHub } from "@/components/publication/PublicationHub";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Publication",
-  "Approve who publishes official updates for a project, and keep the apps and categories they publish under.",
+  "Writers",
+  "Who may write for the Illarin blog, for which project, and what kind of post they may write.",
 );
 
 export default function PublicationPage() {
   return (
     <AuthorityConsole
-      eyebrow="Publication"
-      heading="Publication"
-      hint="Who may publish official updates on Illarin, for which project, and under which categories."
+      eyebrow="Writers"
+      heading="Writers"
+      hint="Who may write for the Illarin blog, for which project, and what kind of post they may write."
     >
       <PublicationHub />
     </AuthorityConsole>

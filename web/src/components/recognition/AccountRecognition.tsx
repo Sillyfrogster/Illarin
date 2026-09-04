@@ -158,7 +158,7 @@ export function AccountRecognition({
                 <option value="">Choose one to give…</option>
                 {offered.map((one) => (
                   <option key={one.id} value={one.id}>
-                    {one.form === "position" ? "Position" : "Recognition"} —{" "}
+                    {one.form === "position" ? "Position" : "Title or badge"} —{" "}
                     {one.name}
                   </option>
                 ))}

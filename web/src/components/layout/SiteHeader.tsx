@@ -217,7 +217,7 @@ export function SiteHeader() {
                         }
                         onClick={closeAccountMenu}
                       >
-                        Publication
+                        Writers
                       </Link>
                       <Link
                         href="/recognition"
@@ -228,7 +228,7 @@ export function SiteHeader() {
                         }
                         onClick={closeAccountMenu}
                       >
-                        Recognition
+                        Profile badges
                       </Link>
                     </>
                   ) : null}
@@ -378,7 +378,7 @@ export function SiteHeader() {
                       }
                       onClick={closeMobileMenu}
                     >
-                      Publication
+                      Writers
                     </Link>
                     <Link
                       href="/recognition"
@@ -389,7 +389,7 @@ export function SiteHeader() {
                       }
                       onClick={closeMobileMenu}
                     >
-                      Recognition
+                      Profile badges
                     </Link>
                   </>
                 ) : null}
