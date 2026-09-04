@@ -120,6 +120,10 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1media
   /v1/publication/posts/{id}/publish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
+  /v1/publication/posts/{id}/address:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1address
+  /v1/publication/posts/{id}/byline:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1byline
   /v1/posts/{slug}:
     $ref: ./posts.yaml#/paths/~1v1~1posts~1{slug}
   /v1/profiles/{handle}:
@@ -363,6 +367,10 @@ components:
       $ref: ./posts.yaml#/components/schemas/CreatePostRequest
     SavePostRequest:
       $ref: ./posts.yaml#/components/schemas/SavePostRequest
+    CorrectPostAddressRequest:
+      $ref: ./posts.yaml#/components/schemas/CorrectPostAddressRequest
+    CorrectPostBylineRequest:
+      $ref: ./posts.yaml#/components/schemas/CorrectPostBylineRequest
     PublicPost:
       $ref: ./posts.yaml#/components/schemas/PublicPost
     RenameHandleRequest:

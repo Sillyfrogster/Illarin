@@ -197,6 +197,81 @@ paths:
           description: The account may not manage that post
         '404':
           description: No such post
+  /v1/publication/posts/{id}/address:
+    put:
+      operationId: correctPostAddress
+      description: >-
+        Move a published post to a corrected permalink. The address it leaves
+        keeps pointing at the post and can never belong to another one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectPostAddressRequest'
+      responses:
+        '200':
+          description: The post at its corrected address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The address is reserved, taken or the post is not published
+        '401':
+          description: No account is signed in
+        '403':
+          description: Only an Illarin admin may correct a published post
+        '404':
+          description: No such post
+  /v1/publication/posts/{id}/byline:
+    put:
+      operationId: correctPostByline
+      description: >-
+        Replace the attribution a published post carries with a fresh snapshot
+        of another account's public identity. The author, grant and captured
+        revisions are unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectPostBylineRequest'
+      responses:
+        '200':
+          description: The post carrying its corrected byline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The post is not published
+        '401':
+          description: No account is signed in
+        '403':
+          description: Only an Illarin admin may correct a published post
+        '404':
+          description: No such post or account
   /v1/posts/{slug}:
     get:
       operationId: getPublishedPost
@@ -389,6 +464,7 @@ components:
         - document
         - documentVersion
         - media
+        - formerAddresses
         - version
         - author
         - createdAt
@@ -428,6 +504,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PostMedia'
+        byline:
+          anyOf:
+            - $ref: '#/components/schemas/PostByline'
+            - type: 'null'
+        formerAddresses:
+          type: array
+          description: >-
+            Addresses this post published under and has since left. Every one of
+            them still reaches it.
+          items:
+            type: string
         app:
           anyOf:
             - $ref: './publication.yaml#/components/schemas/PublicationApp'
@@ -527,6 +614,22 @@ components:
             - type: string
               format: uuid
             - type: 'null'
+    CorrectPostAddressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+      properties:
+        slug:
+          type: string
+    CorrectPostBylineRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - handle
+      properties:
+        handle:
+          type: string
     PublicPost:
       type: object
       required:

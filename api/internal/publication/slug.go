@@ -1,28 +1,39 @@
 package publication
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"unicode"
+
+	"github.com/google/uuid"
 )
 
 const postSlugLimit = 80
 
-// reservedSlugs are the blog's own route prefixes and file names, so no post
-// can ever take an address the publication already answers on.
+// reservedSlugs are the blog's own route prefixes and feed file names, so no
+// post can take an address the publication already answers on. Each is written
+// in the form normalization leaves it in.
 var reservedSlugs = map[string]bool{
-	"admin":    true,
-	"api":      true,
-	"app":      true,
-	"apps":     true,
-	"blog":     true,
-	"category": true,
-	"feed":     true,
-	"feeds":    true,
-	"page":     true,
-	"robots":   true,
-	"sitemap":  true,
-	"tag":      true,
-	"tags":     true,
+	"admin":     true,
+	"api":       true,
+	"app":       true,
+	"apps":      true,
+	"archive":   true,
+	"atom":      true,
+	"blog":      true,
+	"category":  true,
+	"feed":      true,
+	"feed-json": true,
+	"feed-xml":  true,
+	"feeds":     true,
+	"page":      true,
+	"preview":   true,
+	"robots":    true,
+	"rss":       true,
+	"sitemap":   true,
+	"tag":       true,
+	"tags":      true,
 }
 
 // normalizeSlug turns whatever an author typed into the address form, which is
@@ -57,4 +68,42 @@ func checkSlug(candidate string) (string, error) {
 		return "", FieldError{Field: "slug", Message: "The blog already answers on that address."}
 	}
 	return slug, nil
+}
+
+// addressTaken answers whether another post carries this address or ever did.
+// A published address is never released, so an old one stays out of reach even
+// after the post that held it is gone.
+func addressTaken(
+	ctx context.Context,
+	reader queryRower,
+	postID uuid.UUID,
+	slug string,
+) (bool, error) {
+	var taken bool
+	err := reader.QueryRow(ctx, `
+		select exists (select 1 from posts where slug = $2 and id <> $1)
+		    or exists (select 1 from post_slugs where slug = $2 and post_id is distinct from $1)
+	`, postID, slug).Scan(&taken)
+	if err != nil {
+		return false, fmt.Errorf("read who holds a post address: %w", err)
+	}
+	return taken, nil
+}
+
+// reserveAddress keeps an address for one post for good, so a corrected
+// permalink still reaches the writing a reader saved it for.
+func reserveAddress(
+	ctx context.Context,
+	writer execer,
+	postID, actorID uuid.UUID,
+	slug string,
+) error {
+	_, err := writer.Exec(ctx, `
+		insert into post_slugs (slug, post_id, reserved_by) values ($1, $2, $3)
+		on conflict (slug) do nothing
+	`, slug, postID, actorID)
+	if err != nil {
+		return fmt.Errorf("reserve the post address: %w", err)
+	}
+	return nil
 }

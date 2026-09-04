@@ -52,6 +52,8 @@ type blogPost struct {
 	Header          *postHeader         `json:"header"`
 	SocialMediaID   string              `json:"socialMediaId"`
 	Media           []postPicture       `json:"media"`
+	Byline          *postByline         `json:"byline"`
+	FormerAddresses []string            `json:"formerAddresses"`
 	App             *publicationApp     `json:"app"`
 	GrantID         string              `json:"grantId"`
 	Version         int                 `json:"version"`
@@ -628,36 +630,6 @@ func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
 		"slug": first.Slug,
 	})).Code; code != http.StatusBadRequest {
 		t.Errorf("a taken address saved: %d", code)
-	}
-}
-
-func TestOnlyAnAdminChangesTheAddressOfAPublishedPost(t *testing.T) {
-	stack := newDistinctionStack(t)
-	writer := stack.contributor(t, "writer@example.com", "writer.dev")
-	announcement := stack.categoryBySlug(t, "announcement")
-	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Address locked"}`, writer.grant.ID, announcement.ID,
-	))
-	written := stack.saved(t, writer.session, draft.ID, finished(draft, map[string]any{
-		"slug": "address-locked",
-	}))
-	live := stack.published(t, writer.session, draft.ID)
-
-	response := stack.save(t, writer.session, draft.ID, finished(written, map[string]any{
-		"version": live.Version,
-		"slug":    "somewhere-else",
-	}))
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("a contributor moved a published post: %d", response.Code)
-	}
-
-	admin := stack.admin(t, "admin@example.com", "the.admin")
-	corrected := stack.saved(t, admin, draft.ID, finished(written, map[string]any{
-		"version": live.Version,
-		"slug":    "address-corrected",
-	}))
-	if corrected.Slug != "address-corrected" {
-		t.Errorf("admin address = %q", corrected.Slug)
 	}
 }
 

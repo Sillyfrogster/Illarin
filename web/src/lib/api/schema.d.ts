@@ -948,6 +948,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/address": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Move a published post to a corrected permalink. The address it leaves keeps pointing at the post and can never belong to another one. */
+    put: operations["correctPostAddress"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/byline": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Replace the attribution a published post carries with a fresh snapshot of another account's public identity. The author, grant and captured revisions are unchanged. */
+    put: operations["correctPostByline"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/posts/{slug}": {
     parameters: {
       query?: never;
@@ -1837,6 +1871,9 @@ export interface components {
       header?: components["schemas"]["PostHeader"] | null;
       socialMediaId?: string | null;
       media: components["schemas"]["PostMedia"][];
+      byline?: components["schemas"]["PostByline"] | null;
+      /** @description Addresses this post published under and has since left. Every one of them still reaches it. */
+      formerAddresses: string[];
       app?: components["schemas"]["PublicationApp"] | null;
       /** Format: uuid */
       grantId?: string;
@@ -1879,6 +1916,12 @@ export interface components {
       release?: components["schemas"]["PostReleaseEdit"] | null;
       header?: components["schemas"]["PostHeaderEdit"] | null;
       socialMediaId?: string | null;
+    };
+    CorrectPostAddressRequest: {
+      slug: string;
+    };
+    CorrectPostBylineRequest: {
+      handle: string;
     };
     PublicPost: {
       /** Format: uuid */
@@ -6087,6 +6130,114 @@ export interface operations {
         content?: never;
       };
       /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  correctPostAddress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CorrectPostAddressRequest"];
+      };
+    };
+    responses: {
+      /** @description The post at its corrected address */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description The address is reserved, taken or the post is not published */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Only an Illarin admin may correct a published post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  correctPostByline: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CorrectPostBylineRequest"];
+      };
+    };
+    responses: {
+      /** @description The post carrying its corrected byline */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description The post is not published */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Only an Illarin admin may correct a published post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post or account */
       404: {
         headers: {
           [name: string]: unknown;

@@ -78,6 +78,8 @@ type Post struct {
 	Header          *Header
 	SocialMediaID   *uuid.UUID
 	Media           []PostMedia
+	Byline          *Byline
+	FormerAddresses []string
 	Version         int
 	PublishedAt     *time.Time
 	UpdatedPublicAt *time.Time
@@ -293,11 +295,14 @@ func (s *Service) checkWorkingCopy(
 		}
 	}
 	slug := normalizeSlug(in.Slug)
-	if current.Status == StatusPublished && slug != current.Slug && !editor.Admin {
+	if current.Status == StatusPublished && slug != current.Slug {
 		return edition{}, ErrSlugLocked
 	}
 	if slug != "" {
 		if slug, err = checkSlug(slug); err != nil {
+			return edition{}, err
+		}
+		if err := s.refuseTakenAddress(ctx, current.ID, slug); err != nil {
 			return edition{}, err
 		}
 	}
@@ -323,6 +328,18 @@ func (s *Service) checkWorkingCopy(
 		releaseVersion: release.version, releaseAddress: release.address,
 		pictures: pictures,
 	}, nil
+}
+
+// refuseTakenAddress keeps a post off an address another post holds or ever held.
+func (s *Service) refuseTakenAddress(ctx context.Context, postID uuid.UUID, slug string) error {
+	taken, err := addressTaken(ctx, s.pool, postID, slug)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return FieldError{Field: "slug", Message: "Another post already has that address."}
+	}
+	return nil
 }
 
 // releaseFields is the release metadata after it has been checked.
@@ -454,9 +471,8 @@ func freeSlug(ctx context.Context, tx pgx.Tx, candidate string) *string {
 		if attempt > 0 {
 			trying = fmt.Sprintf("%s-%d", candidate, attempt+1)
 		}
-		var taken bool
-		if err := tx.QueryRow(ctx,
-			`select exists (select 1 from posts where slug = $1)`, trying).Scan(&taken); err != nil {
+		taken, err := addressTaken(ctx, tx, uuid.Nil, trying)
+		if err != nil {
 			return nil
 		}
 		if !taken {
@@ -539,7 +555,73 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	if err := s.attachWorkingMedia(ctx, found); err != nil {
 		return nil, err
 	}
+	if err := s.attachAttribution(ctx, found); err != nil {
+		return nil, err
+	}
 	return found, nil
+}
+
+// attachAttribution gives each post the byline it carries and the addresses it
+// has left behind.
+func (s *Service) attachAttribution(ctx context.Context, posts []Post) error {
+	if len(posts) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(posts))
+	for index := range posts {
+		posts[index].FormerAddresses = []string{}
+		ids = append(ids, posts[index].ID)
+	}
+	bylines, err := bylinesFor(ctx, s.pool, ids)
+	if err != nil {
+		return err
+	}
+	former, err := s.formerAddresses(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for index := range posts {
+		if carried, held := bylines[posts[index].ID]; held {
+			byline := carried
+			posts[index].Byline = &byline
+		}
+		if left, held := former[posts[index].ID]; held {
+			posts[index].FormerAddresses = left
+		}
+	}
+	return nil
+}
+
+// formerAddresses answers the addresses each post published under and has since
+// left, newest first. Every one of them still reaches the post.
+func (s *Service) formerAddresses(
+	ctx context.Context,
+	ids []uuid.UUID,
+) (map[uuid.UUID][]string, error) {
+	rows, err := s.pool.Query(ctx, `
+		select reservation.post_id, reservation.slug
+		  from post_slugs reservation
+		  join posts post on post.id = reservation.post_id
+		 where reservation.post_id = any($1) and reservation.slug is distinct from post.slug
+		 order by reservation.reserved_at desc
+	`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read the addresses posts have left: %w", err)
+	}
+	defer rows.Close()
+	left := make(map[uuid.UUID][]string, len(ids))
+	for rows.Next() {
+		var postID uuid.UUID
+		var slug string
+		if err := rows.Scan(&postID, &slug); err != nil {
+			return nil, fmt.Errorf("read an address a post has left: %w", err)
+		}
+		left[postID] = append(left[postID], slug)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the addresses posts have left: %w", err)
+	}
+	return left, nil
 }
 
 // attachWorkingMedia gives each working copy the pictures it refers to.

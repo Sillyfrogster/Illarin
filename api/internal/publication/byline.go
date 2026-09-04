@@ -3,11 +3,13 @@ package publication
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Byline is the public attribution one post carries. It is copied when the post
@@ -35,17 +37,30 @@ type Portrait struct {
 	DerivativeVersion uint32
 }
 
-// captureByline copies one person's public identity onto a post, once. The app
-// is read from the grant inside the same transaction, so a revocation racing
-// with publication cannot leave an attribution the grant no longer supports.
-func captureByline(
+// snapshot is one person's public identity as a post will carry it for good.
+type snapshot struct {
+	AccountID    uuid.UUID
+	Handle       string
+	DisplayName  string
+	ContactEmail string
+	AvatarID     *uuid.UUID
+	Positions    []byte
+	Distinctions []byte
+	AppID        *uuid.UUID
+	AppSlug      *string
+	AppName      *string
+}
+
+// takeSnapshot reads one person's approved public identity and the app their
+// grant publishes for. Reading the grant in the caller's transaction keeps a
+// revocation from leaving behind an attribution it no longer supports.
+func takeSnapshot(
 	ctx context.Context,
 	tx pgx.Tx,
-	postID, authorID uuid.UUID,
+	accountID uuid.UUID,
 	grantID *uuid.UUID,
-) error {
-	var handle, displayName, contactEmail string
-	var avatarID *uuid.UUID
+) (snapshot, error) {
+	taken := snapshot{AccountID: accountID}
 	var restricted bool
 	err := tx.QueryRow(ctx, `
 		select account.username, restriction.user_id is not null,
@@ -57,40 +72,90 @@ func captureByline(
 		  left join profile_media avatar
 		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
 		 where account.id = $1
-	`, authorID).Scan(&handle, &restricted, &displayName, &contactEmail, &avatarID)
+	`, accountID).Scan(
+		&taken.Handle, &restricted, &taken.DisplayName, &taken.ContactEmail, &taken.AvatarID,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return snapshot{}, ErrAccountNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("read the author's public identity: %w", err)
+		return snapshot{}, fmt.Errorf("read the author's public identity: %w", err)
 	}
 	if restricted {
-		displayName, contactEmail, avatarID = "", "", nil
+		taken.DisplayName, taken.ContactEmail, taken.AvatarID = "", "", nil
 	}
 	positions, distinctions := []string{}, []string{}
 	if !restricted {
-		positions, distinctions, err = shownNames(ctx, tx, authorID)
+		positions, distinctions, err = shownNames(ctx, tx, accountID)
 		if err != nil {
-			return err
+			return snapshot{}, err
 		}
 	}
-	shownPositions, err := json.Marshal(positions)
-	if err != nil {
-		return fmt.Errorf("write the author's positions: %w", err)
+	if taken.Positions, err = json.Marshal(positions); err != nil {
+		return snapshot{}, fmt.Errorf("write the author's positions: %w", err)
 	}
-	shownDistinctions, err := json.Marshal(distinctions)
-	if err != nil {
-		return fmt.Errorf("write the author's distinctions: %w", err)
+	if taken.Distinctions, err = json.Marshal(distinctions); err != nil {
+		return snapshot{}, fmt.Errorf("write the author's distinctions: %w", err)
 	}
-	appID, appSlug, appName, err := grantApp(ctx, tx, grantID)
+	taken.AppID, taken.AppSlug, taken.AppName, err = grantApp(ctx, tx, grantID)
+	if err != nil {
+		return snapshot{}, err
+	}
+	return taken, nil
+}
+
+// captureByline copies one person's public identity onto a post, once. A post
+// that already carries a byline keeps the one it has.
+func captureByline(
+	ctx context.Context,
+	tx pgx.Tx,
+	postID, authorID uuid.UUID,
+	grantID *uuid.UUID,
+) error {
+	taken, err := takeSnapshot(ctx, tx, authorID, grantID)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `
+	return writeByline(ctx, tx, postID, taken, `on conflict (post_id) do nothing`)
+}
+
+// replaceByline puts a corrected attribution on a post that already went public.
+func replaceByline(
+	ctx context.Context,
+	tx pgx.Tx,
+	postID, accountID uuid.UUID,
+	grantID *uuid.UUID,
+) error {
+	taken, err := takeSnapshot(ctx, tx, accountID, grantID)
+	if err != nil {
+		return err
+	}
+	return writeByline(ctx, tx, postID, taken, `
+		on conflict (post_id) do update
+		   set account_id = excluded.account_id, handle = excluded.handle,
+		       display_name = excluded.display_name, contact_email = excluded.contact_email,
+		       avatar_media_id = excluded.avatar_media_id, positions = excluded.positions,
+		       distinctions = excluded.distinctions, app_id = excluded.app_id,
+		       app_slug = excluded.app_slug, app_name = excluded.app_name,
+		       captured_at = now()`)
+}
+
+func writeByline(
+	ctx context.Context,
+	tx pgx.Tx,
+	postID uuid.UUID,
+	taken snapshot,
+	whenHeld string,
+) error {
+	_, err := tx.Exec(ctx, `
 		insert into post_bylines (post_id, account_id, handle, display_name, contact_email,
 		                          avatar_media_id, positions, distinctions,
 		                          app_id, app_slug, app_name)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		on conflict (post_id) do nothing
-	`, postID, authorID, handle, displayName, contactEmail, avatarID,
-		shownPositions, shownDistinctions, appID, appSlug, appName)
+	`+whenHeld,
+		postID, taken.AccountID, taken.Handle, taken.DisplayName, taken.ContactEmail,
+		taken.AvatarID, taken.Positions, taken.Distinctions,
+		taken.AppID, taken.AppSlug, taken.AppName)
 	if err != nil {
 		return fmt.Errorf("record the post byline: %w", err)
 	}
@@ -155,7 +220,51 @@ func shownNames(ctx context.Context, tx pgx.Tx, accountID uuid.UUID) ([]string, 
 	return positions, distinctions, nil
 }
 
+const selectBylines = `
+	select byline.post_id, byline.account_id, byline.handle, byline.display_name,
+	       byline.contact_email, avatar.id, avatar.width, avatar.height,
+	       byline.positions, byline.distinctions,
+	       app.id, app.slug, app.name, app.home_url, app.position,
+	       app.retired_at is not null
+	  from post_bylines byline
+	  left join profile_media avatar
+	         on avatar.id = byline.avatar_media_id and avatar.blob_id is not null
+	  left join publication_apps app on app.id = byline.app_id
+	`
+
 func readByline(ctx context.Context, pool queryRower, postID uuid.UUID) (Byline, error) {
+	_, found, err := scanByline(pool.QueryRow(ctx,
+		selectBylines+` where byline.post_id = $1`, postID))
+	return found, err
+}
+
+// bylinesFor answers the attribution each of these posts carries, if any has one.
+func bylinesFor(
+	ctx context.Context,
+	pool rowQuerier,
+	ids []uuid.UUID,
+) (map[uuid.UUID]Byline, error) {
+	rows, err := pool.Query(ctx, selectBylines+` where byline.post_id = any($1)`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read the post bylines: %w", err)
+	}
+	defer rows.Close()
+	held := make(map[uuid.UUID]Byline, len(ids))
+	for rows.Next() {
+		postID, one, err := scanByline(rows)
+		if err != nil {
+			return nil, err
+		}
+		held[postID] = one
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the post bylines: %w", err)
+	}
+	return held, nil
+}
+
+func scanByline(row rowScanner) (uuid.UUID, Byline, error) {
+	var postID uuid.UUID
 	var found Byline
 	var positions, distinctions []byte
 	var avatarID *uuid.UUID
@@ -164,31 +273,20 @@ func readByline(ctx context.Context, pool queryRower, postID uuid.UUID) (Byline,
 	var appSlug, appName, appHome *string
 	var appPosition *int
 	var appRetired *bool
-	err := pool.QueryRow(ctx, `
-		select byline.account_id, byline.handle, byline.display_name, byline.contact_email,
-		       avatar.id, avatar.width, avatar.height,
-		       byline.positions, byline.distinctions,
-		       app.id, app.slug, app.name, app.home_url, app.position,
-		       app.retired_at is not null
-		  from post_bylines byline
-		  left join profile_media avatar
-		         on avatar.id = byline.avatar_media_id and avatar.blob_id is not null
-		  left join publication_apps app on app.id = byline.app_id
-		 where byline.post_id = $1
-	`, postID).Scan(
-		&found.AccountID, &found.Handle, &found.DisplayName, &found.ContactEmail,
+	err := row.Scan(
+		&postID, &found.AccountID, &found.Handle, &found.DisplayName, &found.ContactEmail,
 		&avatarID, &width, &height, &positions, &distinctions,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
 	)
 	if err != nil {
-		return Byline{}, fmt.Errorf("read the post byline: %w", err)
+		return uuid.Nil, Byline{}, fmt.Errorf("read the post byline: %w", err)
 	}
 	found.Avatar = scanPortrait(avatarID, width, height)
 	if err := json.Unmarshal(positions, &found.Positions); err != nil {
-		return Byline{}, fmt.Errorf("read the byline positions: %w", err)
+		return uuid.Nil, Byline{}, fmt.Errorf("read the byline positions: %w", err)
 	}
 	if err := json.Unmarshal(distinctions, &found.Distinctions); err != nil {
-		return Byline{}, fmt.Errorf("read the byline distinctions: %w", err)
+		return uuid.Nil, Byline{}, fmt.Errorf("read the byline distinctions: %w", err)
 	}
 	if appID != nil {
 		found.App = &App{
@@ -196,7 +294,7 @@ func readByline(ctx context.Context, pool queryRower, postID uuid.UUID) (Byline,
 			Position: *appPosition, Retired: *appRetired,
 		}
 	}
-	return found, nil
+	return postID, found, nil
 }
 
 func scanPortrait(mediaID *uuid.UUID, width, height *int) *Portrait {
@@ -215,4 +313,19 @@ func scanPortrait(mediaID *uuid.UUID, width, height *int) *Portrait {
 // the transaction that just wrote one.
 type queryRower interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// execer is the little an address reservation needs of whatever writes it.
+type execer interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+// rowQuerier is the little a batched attribution read needs of a pool.
+type rowQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+// rowScanner is what a single row and a row in a set have in common.
+type rowScanner interface {
+	Scan(into ...any) error
 }

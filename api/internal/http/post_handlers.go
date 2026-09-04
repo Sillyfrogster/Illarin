@@ -152,6 +152,46 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(published))
 }
 
+func (h *Handlers) CorrectPostAddress(c *gin.Context, id types.UUID) {
+	editor, ok := h.postEditor(c, "correcting a post address")
+	if !ok {
+		return
+	}
+	var request CorrectPostAddressRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the address as JSON."})
+		return
+	}
+	moved, err := h.publications.CorrectAddress(
+		c.Request.Context(), editor, uuid.UUID(id), request.Slug,
+	)
+	if err != nil {
+		h.postError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, h.toAPIPost(moved))
+}
+
+func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
+	editor, ok := h.postEditor(c, "correcting a post byline")
+	if !ok {
+		return
+	}
+	var request CorrectPostBylineRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the handle as JSON."})
+		return
+	}
+	corrected, err := h.publications.CorrectByline(
+		c.Request.Context(), editor, uuid.UUID(id), request.Handle,
+	)
+	if err != nil {
+		h.postError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, h.toAPIPost(corrected))
+}
+
 func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
 	found, err := h.publications.PublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, publication.ErrPostNotFound) {
@@ -210,6 +250,14 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 			"error": "The address of a published post is fixed. An admin can correct it.",
 			"field": "slug",
 		})
+	case errors.Is(err, publication.ErrNotPostAdmin):
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Only an Illarin admin can correct a published post.",
+		})
+	case errors.Is(err, publication.ErrPostUnpublished):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "There is nothing to correct until the post is published.",
+		})
 	case errors.As(err, &stale):
 		c.JSON(http.StatusConflict, PostConflict{
 			Error:     "Someone saved this post while you were writing. Reload to carry on.",
@@ -243,6 +291,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		Release:         toAPIRelease(found.Release),
 		Header:          toAPIHeader(found.Header),
 		Media:           showPostMedia(found.Media, h.publications.SignPrivate),
+		FormerAddresses: found.FormerAddresses,
 		Version:         found.Version,
 		Author:          PostAuthor{Handle: found.Author.Handle},
 		PublishedAt:     found.PublishedAt,
@@ -261,6 +310,10 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 	if found.SocialMediaID != nil {
 		social := types.UUID(*found.SocialMediaID)
 		shown.SocialMediaId = &social
+	}
+	if found.Byline != nil {
+		byline := toAPIByline(*found.Byline)
+		shown.Byline = &byline
 	}
 	return shown
 }

@@ -82,6 +82,9 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 		if err := captureByline(ctx, tx, id, locked.AuthorID, locked.GrantID); err != nil {
 			return Post{}, err
 		}
+		if err := reserveAddress(ctx, tx, id, editor.ID, locked.Slug); err != nil {
+			return Post{}, err
+		}
 	}
 	event := EventUpdated
 	if firstTime {
@@ -108,13 +111,14 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 }
 
 // PublishedPost answers the public edition behind one address, and nothing
-// about the working copy behind it.
+// about the working copy behind it. An address the post used to carry reaches
+// the same edition, and the answer always names the address it lives at now.
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
 	var found PublicPost
 	var headerID, socialID *uuid.UUID
 	var headerAlt, headerCaption *string
 	err := s.pool.QueryRow(ctx, `
-		select post.id, revision.id, revision.slug, revision.title, revision.summary,
+		select post.id, revision.id, post.slug, revision.title, revision.summary,
 		       category.id, category.slug, category.label, category.position,
 		       category.retired_at is not null,
 		       revision.document, revision.header_media_id, revision.header_alt,
@@ -123,7 +127,9 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		  from posts post
 		  join post_revisions revision on revision.id = post.public_revision_id
 		  join publication_categories category on category.id = revision.category_id
-		 where post.slug = $1 and post.status = $2
+		 where post.status = $2
+		   and (post.slug = $1
+		        or post.id = (select post_id from post_slugs where slug = $1))
 	`, slug, StatusPublished).Scan(
 		&found.ID, &found.RevisionID, &found.Slug, &found.Title, &found.Summary,
 		&found.Category.ID, &found.Category.Slug, &found.Category.Label,

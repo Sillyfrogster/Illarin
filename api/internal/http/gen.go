@@ -1893,6 +1893,16 @@ type CompletePasswordResetRequest struct {
 	Token    string `json:"token"`
 }
 
+// CorrectPostAddressRequest defines model for CorrectPostAddressRequest.
+type CorrectPostAddressRequest struct {
+	Slug string `json:"slug"`
+}
+
+// CorrectPostBylineRequest defines model for CorrectPostBylineRequest.
+type CorrectPostBylineRequest struct {
+	Handle string `json:"handle"`
+}
+
 // CreateAssetRequest defines model for CreateAssetRequest.
 type CreateAssetRequest struct {
 	Blurb     *string                      `json:"blurb,omitempty"`
@@ -2473,12 +2483,16 @@ type PollLinkRequest struct {
 type Post struct {
 	App       *PublicationApp     `json:"app,omitempty"`
 	Author    PostAuthor          `json:"author"`
+	Byline    *PostByline         `json:"byline,omitempty"`
 	Category  PublicationCategory `json:"category"`
 	CreatedAt time.Time           `json:"createdAt"`
 
 	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
-	Document        PostDocument        `json:"document"`
-	DocumentVersion int                 `json:"documentVersion"`
+	Document        PostDocument `json:"document"`
+	DocumentVersion int          `json:"documentVersion"`
+
+	// FormerAddresses Addresses this post published under and has since left. Every one of them still reaches it.
+	FormerAddresses []string            `json:"formerAddresses"`
 	GrantId         *openapi_types.UUID `json:"grantId,omitempty"`
 	Header          *PostHeader         `json:"header,omitempty"`
 	Id              openapi_types.UUID  `json:"id"`
@@ -3532,6 +3546,12 @@ type CreatePostJSONRequestBody = CreatePostRequest
 // SavePostJSONRequestBody defines body for SavePost for application/json ContentType.
 type SavePostJSONRequestBody = SavePostRequest
 
+// CorrectPostAddressJSONRequestBody defines body for CorrectPostAddress for application/json ContentType.
+type CorrectPostAddressJSONRequestBody = CorrectPostAddressRequest
+
+// CorrectPostBylineJSONRequestBody defines body for CorrectPostByline for application/json ContentType.
+type CorrectPostBylineJSONRequestBody = CorrectPostBylineRequest
+
 // AddPostMediaMultipartRequestBody defines body for AddPostMedia for multipart/form-data ContentType.
 type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 
@@ -3935,6 +3955,12 @@ type ServerInterface interface {
 
 	// (PUT /v1/publication/posts/{id})
 	SavePost(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/posts/{id}/address)
+	CorrectPostAddress(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/posts/{id}/byline)
+	CorrectPostByline(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/posts/{id}/media)
 	AddPostMedia(c *gin.Context, id openapi_types.UUID)
@@ -6393,6 +6419,56 @@ func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
 	siw.Handler.SavePost(c, id)
 }
 
+// CorrectPostAddress operation middleware
+func (siw *ServerInterfaceWrapper) CorrectPostAddress(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectPostAddress(c, id)
+}
+
+// CorrectPostByline operation middleware
+func (siw *ServerInterfaceWrapper) CorrectPostByline(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectPostByline(c, id)
+}
+
 // AddPostMedia operation middleware
 func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
 
@@ -6592,6 +6668,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id", wrapper.SavePost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/media", wrapper.AddPostMedia)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
