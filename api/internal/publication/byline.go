@@ -51,9 +51,7 @@ type snapshot struct {
 	AppName      *string
 }
 
-// takeSnapshot reads one person's approved public identity and the app their
-// grant publishes for. Reading the grant in the caller's transaction keeps a
-// revocation from leaving behind an attribution it no longer supports.
+// takeSnapshot reads one person's approved public identity and the app their grant publishes for, inside the caller's transaction.
 func takeSnapshot(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -104,8 +102,7 @@ func takeSnapshot(
 	return taken, nil
 }
 
-// captureByline copies one person's public identity onto a post, once. A post
-// that already carries a byline keeps the one it has.
+// captureByline copies one person's public identity onto a post once, leaving a post that already carries a byline alone.
 func captureByline(
 	ctx context.Context,
 	tx pgx.Tx,

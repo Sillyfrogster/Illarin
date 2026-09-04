@@ -561,8 +561,7 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	return found, nil
 }
 
-// attachAttribution gives each post the byline it carries and the addresses it
-// has left behind.
+// attachAttribution gives each post the byline it carries and the addresses it has left behind.
 func (s *Service) attachAttribution(ctx context.Context, posts []Post) error {
 	if len(posts) == 0 {
 		return nil
@@ -592,8 +591,7 @@ func (s *Service) attachAttribution(ctx context.Context, posts []Post) error {
 	return nil
 }
 
-// formerAddresses answers the addresses each post published under and has since
-// left, newest first. Every one of them still reaches the post.
+// formerAddresses answers the addresses each post published under and has since left, newest first.
 func (s *Service) formerAddresses(
 	ctx context.Context,
 	ids []uuid.UUID,

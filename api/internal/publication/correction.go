@@ -13,9 +13,7 @@ var (
 	ErrPostUnpublished = errors.New("the post has not been published")
 )
 
-// CorrectAddress moves a published post to a new permalink. The address it left
-// keeps pointing at the post, so a link a reader saved still opens the writing
-// they saved it for.
+// CorrectAddress moves a published post to a new permalink and keeps the address it left pointing at the post.
 func (s *Service) CorrectAddress(
 	ctx context.Context,
 	editor Editor,
@@ -74,9 +72,7 @@ func (s *Service) CorrectAddress(
 	return s.post(ctx, id)
 }
 
-// CorrectByline replaces the attribution a published post carries with a fresh
-// snapshot of another account's public identity. The post keeps its author,
-// grant and every revision it already captured.
+// CorrectByline replaces the attribution a published post carries, keeping its author, grant and every captured revision.
 func (s *Service) CorrectByline(
 	ctx context.Context,
 	editor Editor,

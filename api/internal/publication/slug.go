@@ -11,9 +11,7 @@ import (
 
 const postSlugLimit = 80
 
-// reservedSlugs are the blog's own route prefixes and feed file names, so no
-// post can take an address the publication already answers on. Each is written
-// in the form normalization leaves it in.
+// reservedSlugs are the blog's own route prefixes and feed file names, written in the form normalization leaves them in.
 var reservedSlugs = map[string]bool{
 	"admin":     true,
 	"api":       true,
@@ -36,8 +34,7 @@ var reservedSlugs = map[string]bool{
 	"tags":      true,
 }
 
-// normalizeSlug turns whatever an author typed into the address form, which is
-// lowercase words joined by single hyphens.
+// normalizeSlug turns whatever an author typed into the address form, which is lowercase words joined by single hyphens.
 func normalizeSlug(candidate string) string {
 	var out strings.Builder
 	previousHyphen := true
@@ -70,9 +67,7 @@ func checkSlug(candidate string) (string, error) {
 	return slug, nil
 }
 
-// addressTaken answers whether another post carries this address or ever did.
-// A published address is never released, so an old one stays out of reach even
-// after the post that held it is gone.
+// addressTaken answers whether another post carries this address or ever did, because a published address is never released.
 func addressTaken(
 	ctx context.Context,
 	reader queryRower,
@@ -90,8 +85,7 @@ func addressTaken(
 	return taken, nil
 }
 
-// reserveAddress keeps an address for one post for good, so a corrected
-// permalink still reaches the writing a reader saved it for.
+// reserveAddress keeps an address for one post for good, so a corrected permalink still reaches the writing a reader saved it for.
 func reserveAddress(
 	ctx context.Context,
 	writer execer,

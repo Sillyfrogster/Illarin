@@ -110,9 +110,7 @@ func (s *Service) PublishPost(ctx context.Context, editor Editor, id uuid.UUID) 
 	return s.post(ctx, id)
 }
 
-// PublishedPost answers the public edition behind one address, and nothing
-// about the working copy behind it. An address the post used to carry reaches
-// the same edition, and the answer always names the address it lives at now.
+// PublishedPost answers the public edition behind one address, current or former, and always names the address it lives at now.
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
 	var found PublicPost
 	var headerID, socialID *uuid.UUID
