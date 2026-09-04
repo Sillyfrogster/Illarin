@@ -942,6 +942,57 @@ func (e PromptListContentFragmentsRole) Valid() bool {
 	}
 }
 
+// Defines values for PublicationErrorCode.
+const (
+	CodeCategoryRefused       PublicationErrorCode = "category_refused"
+	CodeForbidden             PublicationErrorCode = "forbidden"
+	CodeGrantRevoked          PublicationErrorCode = "grant_revoked"
+	CodeIdempotencyInProgress PublicationErrorCode = "idempotency_in_progress"
+	CodeIdempotencyMismatch   PublicationErrorCode = "idempotency_mismatch"
+	CodeInvalid               PublicationErrorCode = "invalid"
+	CodeNotFound              PublicationErrorCode = "not_found"
+	CodeRateLimited           PublicationErrorCode = "rate_limited"
+	CodeServerError           PublicationErrorCode = "server_error"
+	CodeStaleVersion          PublicationErrorCode = "stale_version"
+	CodeTokenExpired          PublicationErrorCode = "token_expired"
+	CodeTokenRevoked          PublicationErrorCode = "token_revoked"
+	CodeUnauthenticated       PublicationErrorCode = "unauthenticated"
+)
+
+// Valid indicates whether the value is a known member of the PublicationErrorCode enum.
+func (e PublicationErrorCode) Valid() bool {
+	switch e {
+	case CodeCategoryRefused:
+		return true
+	case CodeForbidden:
+		return true
+	case CodeGrantRevoked:
+		return true
+	case CodeIdempotencyInProgress:
+		return true
+	case CodeIdempotencyMismatch:
+		return true
+	case CodeInvalid:
+		return true
+	case CodeNotFound:
+		return true
+	case CodeRateLimited:
+		return true
+	case CodeServerError:
+		return true
+	case CodeStaleVersion:
+		return true
+	case CodeTokenExpired:
+		return true
+	case CodeTokenRevoked:
+		return true
+	case CodeUnauthenticated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QueuedDeliveryReason.
 const (
 	QueuedDeliveryReasonAbandoned   QueuedDeliveryReason = "abandoned"
@@ -2563,12 +2614,14 @@ type PostByline struct {
 	Positions    []string        `json:"positions"`
 }
 
-// PostConflict defines model for PostConflict.
+// PostConflict A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version.
 type PostConflict struct {
-	Error     string     `json:"error"`
-	Field     *string    `json:"field,omitempty"`
-	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
-	Version   int        `json:"version"`
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code      PublicationErrorCode `json:"code"`
+	Error     string               `json:"error"`
+	Field     *string              `json:"field,omitempty"`
+	UpdatedAt *time.Time           `json:"updatedAt,omitempty"`
+	Version   *int                 `json:"version,omitempty"`
 }
 
 // PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
@@ -2816,6 +2869,19 @@ type PublicationCredential struct {
 	Grant PublicationGrant `json:"grant"`
 	Token PublicationToken `json:"token"`
 }
+
+// PublicationError How every publication route refuses. It never names another account, grant or token.
+type PublicationError struct {
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code  PublicationErrorCode `json:"code"`
+	Error string               `json:"error"`
+
+	// Field The request field the refusal is about, where there is one.
+	Field *string `json:"field,omitempty"`
+}
+
+// PublicationErrorCode The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+type PublicationErrorCode string
 
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
@@ -3280,8 +3346,26 @@ type WithholdAssetRequest struct {
 	Reason string `json:"reason"`
 }
 
+// IdempotencyKey defines model for IdempotencyKey.
+type IdempotencyKey = string
+
 // IllarinRequest defines model for IllarinRequest.
 type IllarinRequest string
+
+// PublicationForbidden How every publication route refuses. It never names another account, grant or token.
+type PublicationForbidden = PublicationError
+
+// PublicationInvalid How every publication route refuses. It never names another account, grant or token.
+type PublicationInvalid = PublicationError
+
+// PublicationNotFound How every publication route refuses. It never names another account, grant or token.
+type PublicationNotFound = PublicationError
+
+// PublicationTooManyRequests How every publication route refuses. It never names another account, grant or token.
+type PublicationTooManyRequests = PublicationError
+
+// PublicationUnauthenticated How every publication route refuses. It never names another account, grant or token.
+type PublicationUnauthenticated = PublicationError
 
 // DownloadDeliveryExportParams defines parameters for DownloadDeliveryExport.
 type DownloadDeliveryExportParams struct {
@@ -3457,10 +3541,46 @@ type SetPublicationAppMarkMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// CreatePostParams defines parameters for CreatePost.
+type CreatePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// SavePostParams defines parameters for SavePost.
+type SavePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // AddPostMediaMultipartBody defines parameters for AddPostMedia.
 type AddPostMediaMultipartBody struct {
 	File     openapi_types.File  `json:"file"`
 	Metadata AddPostMediaRequest `json:"metadata"`
+}
+
+// AddPostMediaParams defines parameters for AddPostMedia.
+type AddPostMediaParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// PublishPostParams defines parameters for PublishPost.
+type PublishPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// CheckpointPostParams defines parameters for CheckpointPost.
+type CheckpointPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RestorePostRevisionParams defines parameters for RestorePostRevision.
+type RestorePostRevisionParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
@@ -4027,13 +4147,13 @@ type ServerInterface interface {
 	ListPosts(c *gin.Context)
 
 	// (POST /v1/publication/posts)
-	CreatePost(c *gin.Context)
+	CreatePost(c *gin.Context, params CreatePostParams)
 
 	// (GET /v1/publication/posts/{id})
 	GetPost(c *gin.Context, id openapi_types.UUID)
 
 	// (PUT /v1/publication/posts/{id})
-	SavePost(c *gin.Context, id openapi_types.UUID)
+	SavePost(c *gin.Context, id openapi_types.UUID, params SavePostParams)
 
 	// (PUT /v1/publication/posts/{id}/address)
 	CorrectPostAddress(c *gin.Context, id openapi_types.UUID)
@@ -4045,19 +4165,19 @@ type ServerInterface interface {
 	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/posts/{id}/media)
-	AddPostMedia(c *gin.Context, id openapi_types.UUID)
+	AddPostMedia(c *gin.Context, id openapi_types.UUID, params AddPostMediaParams)
 
 	// (POST /v1/publication/posts/{id}/publish)
-	PublishPost(c *gin.Context, id openapi_types.UUID)
+	PublishPost(c *gin.Context, id openapi_types.UUID, params PublishPostParams)
 
 	// (GET /v1/publication/posts/{id}/revisions)
 	ListPostRevisions(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/posts/{id}/revisions)
-	CheckpointPost(c *gin.Context, id openapi_types.UUID)
+	CheckpointPost(c *gin.Context, id openapi_types.UUID, params CheckpointPostParams)
 
 	// (POST /v1/publication/posts/{id}/revisions/{revisionId}/restore)
-	RestorePostRevision(c *gin.Context, id openapi_types.UUID, revisionId openapi_types.UUID)
+	RestorePostRevision(c *gin.Context, id openapi_types.UUID, revisionId openapi_types.UUID, params RestorePostRevisionParams)
 
 	// (GET /v1/publication/token)
 	GetPublicationCredential(c *gin.Context)
@@ -6450,6 +6570,33 @@ func (siw *ServerInterfaceWrapper) ListPosts(c *gin.Context) {
 // CreatePost operation middleware
 func (siw *ServerInterfaceWrapper) CreatePost(c *gin.Context) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreatePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6457,7 +6604,7 @@ func (siw *ServerInterfaceWrapper) CreatePost(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.CreatePost(c)
+	siw.Handler.CreatePost(c, params)
 }
 
 // GetPost operation middleware
@@ -6500,6 +6647,30 @@ func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SavePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6507,7 +6678,7 @@ func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.SavePost(c, id)
+	siw.Handler.SavePost(c, id, params)
 }
 
 // CorrectPostAddress operation middleware
@@ -6600,6 +6771,30 @@ func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddPostMediaParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6607,7 +6802,7 @@ func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddPostMedia(c, id)
+	siw.Handler.AddPostMedia(c, id, params)
 }
 
 // PublishPost operation middleware
@@ -6625,6 +6820,30 @@ func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6632,7 +6851,7 @@ func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PublishPost(c, id)
+	siw.Handler.PublishPost(c, id, params)
 }
 
 // ListPostRevisions operation middleware
@@ -6675,6 +6894,30 @@ func (siw *ServerInterfaceWrapper) CheckpointPost(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CheckpointPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6682,7 +6925,7 @@ func (siw *ServerInterfaceWrapper) CheckpointPost(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.CheckpointPost(c, id)
+	siw.Handler.CheckpointPost(c, id, params)
 }
 
 // RestorePostRevision operation middleware
@@ -6709,6 +6952,30 @@ func (siw *ServerInterfaceWrapper) RestorePostRevision(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestorePostRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6716,7 +6983,7 @@ func (siw *ServerInterfaceWrapper) RestorePostRevision(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.RestorePostRevision(c, id, revisionId)
+	siw.Handler.RestorePostRevision(c, id, revisionId, params)
 }
 
 // GetPublicationCredential operation middleware

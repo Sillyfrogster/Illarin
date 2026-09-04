@@ -119,7 +119,9 @@ func newTestHandlersWithPool(
 	sender account.EmailSender,
 ) *Handlers {
 	t.Helper()
-	return newTestHandlersWithDelivery(t, pool, maxUploadBytes, sender, testDeliverySettings())
+	return newTestHandlersWithDelivery(
+		t, pool, maxUploadBytes, sender, testDeliverySettings(), publication.DefaultRates(),
+	)
 }
 
 func newTestHandlersWithDelivery(
@@ -128,6 +130,7 @@ func newTestHandlersWithDelivery(
 	maxUploadBytes int64,
 	sender account.EmailSender,
 	settings delivery.Settings,
+	rates publication.Rates,
 ) *Handlers {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -141,7 +144,10 @@ func newTestHandlersWithDelivery(
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
 
-	return NewHandlers(svc, accounts, links, deliveries, newTestPublicationService(pool, blob), maxUploadBytes)
+	return NewHandlers(
+		svc, accounts, links, deliveries,
+		publication.NewService(pool, testMediaLibrary(blob), rates), maxUploadBytes,
+	)
 }
 
 func newTestRouterWithDiscord(
@@ -190,7 +196,7 @@ func testMediaLibrary(store storage.Store) *mediaproc.Library {
 }
 
 func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
-	return publication.NewService(pool, testMediaLibrary(store))
+	return publication.NewService(pool, testMediaLibrary(store), publication.DefaultRates())
 }
 
 func newTestLinkingService(pool *pgxpool.Pool) *linking.Service {

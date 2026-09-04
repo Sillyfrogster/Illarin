@@ -22,7 +22,7 @@ func (h *Handlers) ListPostRevisions(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, PostRevisionList{Revisions: toAPIRevisions(kept)})
 }
 
-func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID, _ CheckpointPostParams) {
 	editor, ok := h.postEditor(c, "keeping an edition of a post")
 	if !ok {
 		return
@@ -39,7 +39,12 @@ func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, toAPIRevision(kept))
 }
 
-func (h *Handlers) RestorePostRevision(c *gin.Context, id types.UUID, revisionID types.UUID) {
+func (h *Handlers) RestorePostRevision(
+	c *gin.Context,
+	id types.UUID,
+	revisionID types.UUID,
+	_ RestorePostRevisionParams,
+) {
 	editor, ok := h.postEditor(c, "restoring an edition of a post")
 	if !ok {
 		return

@@ -120,7 +120,8 @@ func (s *Service) Checkpoint(
 		return Revision{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.checkpointed", GrantID: locked.GrantID,
+		Actor: editor.ID, Credential: editor.Credential(), Action: "post.checkpointed",
+		GrantID: locked.GrantID, TokenID: editor.Token,
 		PostID: &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -193,7 +194,8 @@ func (s *Service) RestoreRevision(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.revision.restored", GrantID: locked.GrantID,
+		Actor: editor.ID, Credential: editor.Credential(), Action: "post.revision.restored",
+		GrantID: locked.GrantID, TokenID: editor.Token,
 		PostID: &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {

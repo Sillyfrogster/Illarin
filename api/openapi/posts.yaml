@@ -3,10 +3,13 @@ paths:
     get:
       operationId: listPosts
       description: >-
-        Every post the signed-in account may manage. An admin sees all of them;
-        an approved contributor sees only the posts under their active grant.
+        Every post this credential may manage. An admin sees all of them, an
+        approved contributor sees the posts under their active grants, and a
+        publication token sees only the posts under the one grant it was issued
+        for.
       security:
         - sessionCookie: []
+        - publicationToken: []
       responses:
         '200':
           description: The posts this account may manage
@@ -15,17 +18,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostList'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The signed-in account has not verified its email
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     post:
       operationId: createPost
       description: >-
-        Start a draft. A contributor names the grant it belongs to; an admin may
-        omit it and write as Illarin.
+        Start a draft. A contributor names the grant it belongs to and an admin
+        may omit it and write as Illarin. A publication token writes under its
+        own grant and may not name another.
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
+      parameters:
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -40,18 +49,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '400':
-          description: A field is not valid or the grant does not cover the category
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not publish under that identity
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such category or grant
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}:
     get:
       operationId: getPost
       security:
         - sessionCookie: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -67,11 +85,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     put:
       operationId: savePost
       description: >-
@@ -80,6 +100,7 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -87,6 +108,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -101,19 +123,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '400':
-          description: A field or the post document is not valid
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '409':
-          description: The working copy has already moved on
+          description: The working copy moved on, or the key was reused for another request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/media:
     post:
       operationId: addPostMedia
@@ -124,6 +148,7 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -131,6 +156,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         description: Send the metadata part before the image file part.
@@ -155,17 +181,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostMedia'
         '400':
-          description: The purpose or the image is not valid
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '413':
           description: The image exceeds the upload limit
         '503':
           description: The storage reserve cannot accept the image
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/revisions:
     get:
       operationId: listPostRevisions
@@ -174,6 +208,7 @@ paths:
         and keepers, and never compares two editions for a reader.
       security:
         - sessionCookie: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -189,11 +224,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostRevisionList'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     post:
       operationId: checkpointPost
       description: >-
@@ -202,6 +239,7 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -209,6 +247,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -223,17 +262,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostRevision'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '409':
-          description: The working copy has already moved on
+          description: The working copy moved on, or the key was reused for another request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/revisions/{revisionId}/restore:
     post:
       operationId: restorePostRevision
@@ -243,6 +284,7 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -256,6 +298,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -270,17 +313,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post or edition of it
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '409':
-          description: The working copy has already moved on
+          description: The working copy moved on, or the key was reused for another request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/history:
     get:
       operationId: readPostHistory
@@ -289,6 +334,7 @@ paths:
         editions and times, and never a word anyone wrote.
       security:
         - sessionCookie: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -304,11 +350,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostActionList'
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/publish:
     post:
       operationId: publishPost
@@ -318,6 +366,7 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
+        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -325,6 +374,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -339,19 +389,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '400':
-          description: A required field or the post document is not ready
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':
-          description: No account is signed in
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
-          description: The account may not manage that post
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
-          description: No such post
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '409':
-          description: The working copy has already moved on
+          description: The working copy moved on, or the key was reused for another request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/address:
     put:
       operationId: correctPostAddress
@@ -710,12 +762,18 @@ components:
             $ref: '#/components/schemas/Post'
     PostConflict:
       type: object
+      description: >-
+        A refusal that names the current state where there is one. A stale
+        working copy carries the version to reload from; a reused idempotency
+        key carries no version.
       required:
         - error
-        - version
+        - code
       properties:
         error:
           type: string
+        code:
+          $ref: ./publication.yaml#/components/schemas/PublicationErrorCode
         field:
           type: string
         version:

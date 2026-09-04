@@ -298,40 +298,46 @@ func (h *Handlers) publicationError(c *gin.Context, err error) {
 	var field publication.FieldError
 	switch {
 	case errors.As(err, &field):
-		c.JSON(http.StatusBadRequest, gin.H{"error": field.Message, "field": field.Field})
+		refuseField(c, http.StatusBadRequest, categoryOr(err, CodeInvalid),
+			field.Message, field.Field)
 	case errors.Is(err, publication.ErrAccountNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such account."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such account.")
 	case errors.Is(err, publication.ErrAppNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication app."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such publication app.")
 	case errors.Is(err, publication.ErrCategoryNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication category."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such publication category.")
 	case errors.Is(err, publication.ErrGrantNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such approval."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such approval.")
 	case errors.Is(err, publication.ErrGrantRevoked):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "That approval has been revoked."})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"That approval has been revoked.")
 	case errors.Is(err, publication.ErrAccountUnverified):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "That account has not verified its email yet.",
-			"field": "handle",
-		})
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"That account has not verified its email yet.", "handle")
 	case errors.Is(err, publication.ErrSlugTaken):
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "Another app already uses that slug.",
-			"field": "slug",
-		})
+		refuseField(c, http.StatusConflict, CodeInvalid,
+			"Another app already uses that slug.", "slug")
 	case errors.Is(err, publication.ErrAlreadyGranted):
-		c.JSON(http.StatusConflict, gin.H{"error": "That account already publishes for that app."})
+		refusePublication(c, http.StatusConflict, CodeInvalid,
+			"That account already publishes for that app.")
 	case errors.Is(err, publication.ErrIncompleteOrder):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Name every one of them exactly once to set the order.",
-		})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"Name every one of them exactly once to set the order.")
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Uploads are temporarily unavailable because storage is low.",
-		})
+		refusePublication(c, http.StatusServiceUnavailable, CodeServerError,
+			"Uploads are temporarily unavailable because storage is low.")
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not change the publication."})
+		refusePublication(c, http.StatusInternalServerError, CodeServerError,
+			"Could not change the publication.")
 	}
+}
+
+// categoryOr names a refusal the grant's allowed categories caused.
+func categoryOr(err error, otherwise PublicationErrorCode) PublicationErrorCode {
+	if errors.Is(err, publication.ErrCategoryRefused) {
+		return CodeCategoryRefused
+	}
+	return otherwise
 }
 
 func toAPIApps(configured []publication.App) []PublicationApp {

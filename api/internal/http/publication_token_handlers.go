@@ -31,7 +31,7 @@ func (h *Handlers) IssuePublicationToken(c *gin.Context, id types.UUID) {
 	}
 	var request IssuePublicationTokenRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the token as JSON."})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the token as JSON.")
 		return
 	}
 	made, err := h.publications.IssueToken(
@@ -77,26 +77,14 @@ func (h *Handlers) GetPublicationCredential(c *gin.Context) {
 	})
 }
 
-// publicationBearer answers the grant a publication token authenticates as. It
-// reads only the Authorization header, so a session cookie cannot stand in for
-// a token and a token cannot stand in for a session.
+// publicationBearer answers the grant a publication token authenticates as.
+// The token was checked before any handler ran, so a session cookie cannot
+// stand in for a token and a token cannot stand in for a session.
 func (h *Handlers) publicationBearer(c *gin.Context) (publication.Bearer, bool) {
-	value := bearerToken(c)
-	if value == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Send a publication token as a bearer credential.",
-		})
-		return publication.Bearer{}, false
-	}
-	bearing, err := h.publications.Bearing(c.Request.Context(), value)
-	if errors.Is(err, publication.ErrTokenCredential) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This publication token is not live."})
-		return publication.Bearer{}, false
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not check the publication token.",
-		})
+	bearing, ok := publicationBearing(c)
+	if !ok {
+		refusePublication(c, http.StatusUnauthorized, CodeUnauthenticated,
+			"Send a publication token as a bearer credential.")
 		return publication.Bearer{}, false
 	}
 	return bearing, true
@@ -105,11 +93,10 @@ func (h *Handlers) publicationBearer(c *gin.Context) (publication.Bearer, bool) 
 func (h *Handlers) publicationTokenError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, publication.ErrTokenNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication token."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such publication token.")
 	case errors.Is(err, publication.ErrNotTokenOwner):
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only the approved contributor or Illarin's publication authority can do that.",
-		})
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"Only the approved contributor or Illarin's publication authority can do that.")
 	default:
 		h.publicationError(c, err)
 	}

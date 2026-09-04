@@ -140,7 +140,7 @@ func run() error {
 	}
 	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
-	publications := publication.NewService(pool, images)
+	publications := publication.NewService(pool, images, publication.DefaultRates())
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	background.Add(1)

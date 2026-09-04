@@ -350,8 +350,10 @@ func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
 
 	signedIn := httptest.NewRequest(http.MethodGet, "/v1/auth/session", nil)
 	signedIn.Header.Set("Authorization", "Bearer "+made.Value)
-	if answered := send(t, stack.router, signedIn); !strings.Contains(answered.Body.String(), `"user":null`) {
-		t.Fatalf("a publication token signed somebody in: %s", answered.Body.String())
+	answered := send(t, stack.router, signedIn)
+	if answered.Code != http.StatusUnauthorized || strings.Contains(answered.Body.String(), "user") {
+		t.Fatalf("a publication token reached the session route: %d %s",
+			answered.Code, answered.Body.String())
 	}
 
 	if session := send(t, stack.router, authorized(

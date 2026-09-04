@@ -800,3 +800,88 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicationApp'
+    PublicationErrorCode:
+      type: string
+      description: >-
+        The stable name of a refusal. A client reads this rather than the
+        sentence beside it, which is written for a person and may change.
+      enum:
+        - unauthenticated
+        - token_expired
+        - token_revoked
+        - grant_revoked
+        - forbidden
+        - not_found
+        - invalid
+        - category_refused
+        - stale_version
+        - idempotency_mismatch
+        - idempotency_in_progress
+        - rate_limited
+        - server_error
+      x-enum-varnames:
+        - CodeUnauthenticated
+        - CodeTokenExpired
+        - CodeTokenRevoked
+        - CodeGrantRevoked
+        - CodeForbidden
+        - CodeNotFound
+        - CodeInvalid
+        - CodeCategoryRefused
+        - CodeStaleVersion
+        - CodeIdempotencyMismatch
+        - CodeIdempotencyInProgress
+        - CodeRateLimited
+        - CodeServerError
+    PublicationError:
+      type: object
+      description: >-
+        How every publication route refuses. It never names another account,
+        grant or token.
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/PublicationErrorCode'
+        field:
+          type: string
+          description: The request field the refusal is about, where there is one.
+  responses:
+    PublicationInvalid:
+      description: A field, the post document or the request itself is not valid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'
+    PublicationUnauthenticated:
+      description: The request carries no live credential
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'
+    PublicationForbidden:
+      description: The credential may not reach that
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'
+    PublicationNotFound:
+      description: Nothing this credential may reach has that identifier
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'
+    PublicationTooManyRequests:
+      description: The credential has gone past the pace this operation allows
+      headers:
+        Retry-After:
+          description: Seconds to wait before repeating the request
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'

@@ -42,10 +42,34 @@ type Stale struct {
 
 func (Stale) Error() string { return "the working copy has already moved on" }
 
-// Editor is the account acting on a post and how far it may reach.
+// Editor is the credential acting on a post and how far it may reach. A session
+// leaves Grant empty. A publication token fills it in and can never reach past
+// the one grant it was issued under.
 type Editor struct {
 	ID    uuid.UUID
 	Admin bool
+	Grant *uuid.UUID
+	Token *uuid.UUID
+}
+
+// Credential names the kind of credential the editor is acting through.
+func (e Editor) Credential() string {
+	if e.Token != nil {
+		return CredentialToken
+	}
+	return CredentialSession
+}
+
+// writesAs answers the grant a new post belongs to, refusing a credential
+// bound to one grant that named another.
+func (e Editor) writesAs(named *uuid.UUID) (*uuid.UUID, error) {
+	if e.Grant == nil {
+		return named, nil
+	}
+	if named != nil && *named != *e.Grant {
+		return nil, ErrNotPostEditor
+	}
+	return e.Grant, nil
 }
 
 // Author names the account a post belongs to.
@@ -124,6 +148,12 @@ type ReleaseEdit struct {
 
 // Posts answers every post the editor may manage, newest first.
 func (s *Service) Posts(ctx context.Context, editor Editor) ([]Post, error) {
+	if editor.Grant != nil {
+		return s.postsWhere(ctx, `
+			where post.grant_id = $1 and grant_row.active
+			order by post.created_at desc
+		`, *editor.Grant)
+	}
 	if editor.Admin {
 		return s.postsWhere(ctx, `order by post.created_at desc`)
 	}
@@ -154,7 +184,11 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 	if category.Retired {
 		return Post{}, FieldError{Field: "categoryId", Message: "That category has been retired."}
 	}
-	if err := s.mayWriteAs(ctx, editor, in.GrantID, category); err != nil {
+	grantID, err := editor.writesAs(in.GrantID)
+	if err != nil {
+		return Post{}, err
+	}
+	if err := s.mayWriteAs(ctx, editor, grantID, category); err != nil {
 		return Post{}, err
 	}
 	title, err := checkTitle(in.Title)
@@ -175,13 +209,14 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 		insert into posts (id, author_id, grant_id, category_id, title, slug,
 		                   document, document_version)
 		values ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, id, editor.ID, in.GrantID, category.ID, title,
+	`, id, editor.ID, grantID, category.ID, title,
 		freeSlug(ctx, tx, normalizeSlug(title)), empty, postdoc.Version)
 	if err != nil {
 		return Post{}, fmt.Errorf("create post: %w", err)
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.created", GrantID: in.GrantID,
+		Actor: editor.ID, Credential: editor.Credential(), Action: "post.created",
+		GrantID: grantID, TokenID: editor.Token,
 		CategoryID: &category.ID, PostID: &id, After: StatusDraft,
 	})
 	if err != nil {
@@ -421,10 +456,17 @@ func (s *Service) mayWriteAs(
 	return FieldError{
 		Field:   "categoryId",
 		Message: "Your approval does not cover " + category.Label + " posts.",
+		cause:   ErrCategoryRefused,
 	}
 }
 
 func (s *Service) mayManage(ctx context.Context, editor Editor, found Post) error {
+	if editor.Grant != nil {
+		if found.GrantID == nil || *found.GrantID != *editor.Grant {
+			return ErrNotPostEditor
+		}
+		return nil
+	}
 	if editor.Admin {
 		return nil
 	}

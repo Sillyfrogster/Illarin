@@ -104,7 +104,8 @@ func (s *Service) PublishPost(
 		return Post{}, fmt.Errorf("record the publication event: %w", err)
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.published", GrantID: current.GrantID,
+		Actor: editor.ID, Credential: editor.Credential(), Action: "post.published",
+		GrantID: current.GrantID, TokenID: editor.Token,
 		PostID: &id, RevisionID: &revisionID,
 		Before: locked.Status, After: StatusPublished,
 	})

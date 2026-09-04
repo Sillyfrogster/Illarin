@@ -559,12 +559,30 @@ type PublicationGrantCategory struct {
 	CategoryID pgtype.UUID
 }
 
+type PublicationIdempotency struct {
+	TokenID     pgtype.UUID
+	Operation   string
+	Key         string
+	Fingerprint []byte
+	Status      pgtype.Int4
+	Response    []byte
+	ClaimedAt   pgtype.Timestamptz
+	CompletedAt pgtype.Timestamptz
+}
+
 type PublicationMedium struct {
 	ID        pgtype.UUID
 	BlobID    pgtype.UUID
 	Width     int32
 	Height    int32
 	CreatedAt pgtype.Timestamptz
+}
+
+type PublicationRateLimit struct {
+	TokenID     pgtype.UUID
+	Operation   string
+	Attempts    int32
+	WindowStart pgtype.Timestamptz
 }
 
 type PublicationToken struct {

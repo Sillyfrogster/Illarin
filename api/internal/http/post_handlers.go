@@ -27,7 +27,7 @@ func (h *Handlers) ListPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, PostList{Posts: h.toAPIPosts(held)})
 }
 
-func (h *Handlers) CreatePost(c *gin.Context) {
+func (h *Handlers) CreatePost(c *gin.Context, _ CreatePostParams) {
 	editor, ok := h.postEditor(c, "starting a post")
 	if !ok {
 		return
@@ -62,7 +62,7 @@ func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(found))
 }
 
-func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
+func (h *Handlers) SavePost(c *gin.Context, id types.UUID, _ SavePostParams) {
 	editor, ok := h.postEditor(c, "saving a post")
 	if !ok {
 		return
@@ -96,7 +96,7 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(saved))
 }
 
-func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID, _ AddPostMediaParams) {
 	editor, ok := h.postEditor(c, "adding a picture to a post")
 	if !ok {
 		return
@@ -139,7 +139,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.publications.SignPrivate))
 }
 
-func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParams) {
 	editor, ok := h.postEditor(c, "publishing a post")
 	if !ok {
 		return
@@ -230,8 +230,13 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	}
 }
 
-// postEditor answers the signed-in account and how far its post access reaches.
+// postEditor answers the credential acting on a post and how far its access
+// reaches. A publication token reaches its own grant; a session reaches
+// everything the account behind it may manage.
 func (h *Handlers) postEditor(c *gin.Context, action string) (publication.Editor, bool) {
+	if bearing, ok := publicationBearing(c); ok {
+		return bearing.Editor(), true
+	}
 	current, ok := h.verifiedAccount(c, action)
 	if !ok {
 		return publication.Editor{}, false
@@ -246,31 +251,28 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	var stale publication.Stale
 	switch {
 	case errors.Is(err, publication.ErrPostNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such post."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such post.")
 	case errors.Is(err, publication.ErrRevisionNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "This post has no such edition."})
+		refusePublication(c, http.StatusNotFound, CodeNotFound,
+			"This post has no such edition.")
 	case errors.Is(err, publication.ErrNotPostEditor):
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only this post's contributor or an Illarin admin can do that.",
-		})
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"Only this post's contributor or an Illarin admin can do that.")
 	case errors.Is(err, publication.ErrSlugLocked):
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "The address of a published post is fixed. An admin can correct it.",
-			"field": "slug",
-		})
+		refuseField(c, http.StatusForbidden, CodeForbidden,
+			"The address of a published post is fixed. An admin can correct it.", "slug")
 	case errors.Is(err, publication.ErrNotPostAdmin):
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only an Illarin admin can correct a published post.",
-		})
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"Only an Illarin admin can correct a published post.")
 	case errors.Is(err, publication.ErrPostUnpublished):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "There is nothing to correct until the post is published.",
-		})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"There is nothing to correct until the post is published.")
 	case errors.As(err, &stale):
-		c.JSON(http.StatusConflict, PostConflict{
+		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error:     "Someone saved this post while you were writing. Reload to carry on.",
+			Code:      CodeStaleVersion,
 			Field:     pointer("version"),
-			Version:   stale.Version,
+			Version:   &stale.Version,
 			UpdatedAt: &stale.UpdatedAt,
 		})
 	default:

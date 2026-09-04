@@ -51,6 +51,12 @@ type Bearer struct {
 	Grant Grant
 }
 
+// Editor answers how far a publication token reaches on posts. It is the grant
+// holder acting for one grant and never for anything else that holder owns.
+func (b Bearer) Editor() Editor {
+	return Editor{ID: b.Grant.Holder.ID, Grant: &b.Grant.ID, Token: &b.Token.ID}
+}
+
 // Live answers whether a token still authenticates at the given moment.
 func (t Token) Live(now time.Time) bool {
 	return t.RevokedAt == nil && (t.ExpiresAt == nil || t.ExpiresAt.After(now))
@@ -172,8 +178,9 @@ func (s *Service) RevokeToken(ctx context.Context, actor uuid.UUID, id uuid.UUID
 }
 
 // Bearing answers the token and grant a supplied value authenticates as. It
-// refuses anything the wrong shape without reading the database, and rechecks
-// the account and grant every time rather than trusting the stored hash alone.
+// refuses anything the wrong shape without reading the database, rechecks the
+// account and grant every time rather than trusting the stored hash alone, and
+// names the reason only once the supplied secret has proved it holds the token.
 func (s *Service) Bearing(ctx context.Context, value string) (Bearer, error) {
 	supplied, ok := credential.Read(value, credential.Publication)
 	if !ok {
@@ -181,18 +188,20 @@ func (s *Service) Bearing(ctx context.Context, value string) (Bearer, error) {
 	}
 	var found Token
 	var stored []byte
+	var live bool
 	err := s.pool.QueryRow(ctx, `
 		select token.id, token.grant_id, token.name, token.prefix, token.created_at,
-		       token.expires_at, token.last_used_at, token.revoked_at, token.token_hash
+		       token.expires_at, token.last_used_at, token.revoked_at, token.token_hash,
+		       grant_row.active and holder.email_verified_at is not null
+		         and app.retired_at is null
 		  from publication_tokens token
 		  join publication_grants grant_row on grant_row.id = token.grant_id
 		  join users holder on holder.id = grant_row.user_id
 		  join publication_apps app on app.id = grant_row.app_id
-		 where token.prefix = $1 and grant_row.active
-		   and holder.email_verified_at is not null and app.retired_at is null
+		 where token.prefix = $1
 	`, supplied.Prefix).Scan(
 		&found.ID, &found.GrantID, &found.Name, &found.Prefix, &found.CreatedAt,
-		&found.ExpiresAt, &found.LastUsedAt, &found.RevokedAt, &stored,
+		&found.ExpiresAt, &found.LastUsedAt, &found.RevokedAt, &stored, &live,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Bearer{}, ErrTokenCredential
@@ -200,8 +209,16 @@ func (s *Service) Bearing(ctx context.Context, value string) (Bearer, error) {
 	if err != nil {
 		return Bearer{}, fmt.Errorf("read a publication token: %w", err)
 	}
-	if !credential.Matches(supplied.Hash, stored) || !found.Live(time.Now()) {
+	if !credential.Matches(supplied.Hash, stored) {
 		return Bearer{}, ErrTokenCredential
+	}
+	switch {
+	case found.RevokedAt != nil:
+		return Bearer{}, ErrTokenRevoked
+	case !found.Live(time.Now()):
+		return Bearer{}, ErrTokenExpired
+	case !live:
+		return Bearer{}, ErrGrantRevoked
 	}
 	held, err := s.grant(ctx, found.GrantID)
 	if err != nil {

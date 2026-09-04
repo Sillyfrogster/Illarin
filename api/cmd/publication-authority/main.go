@@ -34,7 +34,7 @@ func run(ctx context.Context, handle string) error {
 	}
 	defer pool.Close()
 
-	accountID, err := publication.NewService(pool, nil).AssignAuthority(ctx, handle)
+	accountID, err := publication.NewService(pool, nil, publication.DefaultRates()).AssignAuthority(ctx, handle)
 	if errors.Is(err, publication.ErrAccountNotFound) {
 		return fmt.Errorf("no account uses the handle %q", handle)
 	}

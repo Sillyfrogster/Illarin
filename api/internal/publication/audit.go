@@ -30,6 +30,9 @@ func recordAudit(
 // CredentialSession is the credential class of a change made from a browser.
 const CredentialSession = "session"
 
+// CredentialToken is the credential class of a change made through the publication API.
+const CredentialToken = "token"
+
 // change is one entry in the private record of who changed the publication.
 type change struct {
 	Actor      uuid.UUID

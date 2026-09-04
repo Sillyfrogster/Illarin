@@ -33,26 +33,37 @@ var (
 	ErrTokenNotFound     = errors.New("no such publication token")
 	ErrNotTokenOwner     = errors.New("the account neither holds the grant nor publication authority")
 	ErrTokenCredential   = errors.New("the value does not identify a live publication token")
+	ErrTokenExpired      = errors.New("the publication token has expired")
+	ErrTokenRevoked      = errors.New("the publication token has been revoked")
 )
+
+// ErrCategoryRefused says a grant does not cover the category a post named.
+var ErrCategoryRefused = errors.New("the grant does not cover that category")
 
 // FieldError names the field a request was refused over.
 type FieldError struct {
 	Field   string
 	Message string
+	cause   error
 }
 
 func (e FieldError) Error() string { return e.Message }
+
+func (e FieldError) Unwrap() error { return e.cause }
 
 // Service owns publication authority and the profile distinctions it manages.
 type Service struct {
 	pool   *pgxpool.Pool
 	media  *mediaproc.Library
 	signer signing.Key
+	rates  Rates
 	now    func() time.Time
 }
 
-func NewService(pool *pgxpool.Pool, media *mediaproc.Library) *Service {
-	return &Service{pool: pool, media: media, signer: signing.NewKey(), now: time.Now}
+func NewService(pool *pgxpool.Pool, media *mediaproc.Library, rates Rates) *Service {
+	return &Service{
+		pool: pool, media: media, signer: signing.NewKey(), rates: rates, now: time.Now,
+	}
 }
 
 // HoldsAuthority answers whether the recorded assignment names this account

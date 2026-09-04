@@ -886,10 +886,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Every post the signed-in account may manage. An admin sees all of them; an approved contributor sees only the posts under their active grant. */
+    /** @description Every post this credential may manage. An admin sees all of them, an approved contributor sees the posts under their active grants, and a publication token sees only the posts under the one grant it was issued for. */
     get: operations["listPosts"];
     put?: never;
-    /** @description Start a draft. A contributor names the grant it belongs to; an admin may omit it and write as Illarin. */
+    /** @description Start a draft. A contributor names the grant it belongs to and an admin may omit it and write as Illarin. A publication token writes under its own grant and may not name another. */
     post: operations["createPost"];
     delete?: never;
     options?: never;
@@ -1848,6 +1848,31 @@ export interface components {
       token: components["schemas"]["PublicationToken"];
       grant: components["schemas"]["PublicationGrant"];
     };
+    /**
+     * @description The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+     * @enum {string}
+     */
+    PublicationErrorCode:
+      | "unauthenticated"
+      | "token_expired"
+      | "token_revoked"
+      | "grant_revoked"
+      | "forbidden"
+      | "not_found"
+      | "invalid"
+      | "category_refused"
+      | "stale_version"
+      | "idempotency_mismatch"
+      | "idempotency_in_progress"
+      | "rate_limited"
+      | "server_error";
+    /** @description How every publication route refuses. It never names another account, grant or token. */
+    PublicationError: {
+      error: string;
+      code: components["schemas"]["PublicationErrorCode"];
+      /** @description The request field the refusal is about, where there is one. */
+      field?: string;
+    };
     /** @enum {string} */
     PostStatus: "draft" | "published";
     /** @description The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly. */
@@ -1945,10 +1970,12 @@ export interface components {
     PostList: {
       posts: components["schemas"]["Post"][];
     };
+    /** @description A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version. */
     PostConflict: {
       error: string;
+      code: components["schemas"]["PublicationErrorCode"];
       field?: string;
-      version: number;
+      version?: number;
       /** Format: date-time */
       updatedAt?: string;
     };
@@ -2940,8 +2967,58 @@ export interface components {
       name: string;
     };
   };
-  responses: never;
+  responses: {
+    /** @description The request carries no live credential */
+    PublicationUnauthenticated: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description The credential may not reach that */
+    PublicationForbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description The credential has gone past the pace this operation allows */
+    PublicationTooManyRequests: {
+      headers: {
+        /** @description Seconds to wait before repeating the request */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description A field, the post document or the request itself is not valid */
+    PublicationInvalid: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description Nothing this credential may reach has that identifier */
+    PublicationNotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+  };
   parameters: {
+    /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+    IdempotencyKey: string;
     /** @description Illarin's browser request proof. The value must be 1. */
     IllarinRequest: "1";
   };
@@ -5939,26 +6016,18 @@ export interface operations {
           "application/json": components["schemas"]["PostList"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account has not verified its email */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   createPost: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -5977,34 +6046,20 @@ export interface operations {
           "application/json": components["schemas"]["Post"];
         };
       };
-      /** @description A field is not valid or the grant does not cover the category */
-      400: {
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
         };
-        content?: never;
       };
-      /** @description The account may not publish under that identity */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such category or grant */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   getPost: {
@@ -6027,33 +6082,19 @@ export interface operations {
           "application/json": components["schemas"]["Post"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   savePost: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: string;
       };
@@ -6074,35 +6115,11 @@ export interface operations {
           "application/json": components["schemas"]["Post"];
         };
       };
-      /** @description A field or the post document is not valid */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The working copy has already moved on */
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6111,12 +6128,16 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   addPostMedia: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: string;
       };
@@ -6142,33 +6163,18 @@ export interface operations {
           "application/json": components["schemas"]["PostMedia"];
         };
       };
-      /** @description The purpose or the image is not valid */
-      400: {
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
         };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
       };
       /** @description The image exceeds the upload limit */
       413: {
@@ -6177,6 +6183,7 @@ export interface operations {
         };
         content?: never;
       };
+      429: components["responses"]["PublicationTooManyRequests"];
       /** @description The storage reserve cannot accept the image */
       503: {
         headers: {
@@ -6206,33 +6213,19 @@ export interface operations {
           "application/json": components["schemas"]["PostRevisionList"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   checkpointPost: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: string;
       };
@@ -6253,28 +6246,10 @@ export interface operations {
           "application/json": components["schemas"]["PostRevision"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The working copy has already moved on */
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6283,12 +6258,16 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   restorePostRevision: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: string;
         revisionId: string;
@@ -6310,28 +6289,10 @@ export interface operations {
           "application/json": components["schemas"]["Post"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post or edition of it */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The working copy has already moved on */
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6340,6 +6301,7 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   readPostHistory: {
@@ -6362,33 +6324,19 @@ export interface operations {
           "application/json": components["schemas"]["PostActionList"];
         };
       };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   publishPost: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: string;
       };
@@ -6409,35 +6357,11 @@ export interface operations {
           "application/json": components["schemas"]["Post"];
         };
       };
-      /** @description A required field or the post document is not ready */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account may not manage that post */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such post */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The working copy has already moved on */
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6446,6 +6370,7 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
+      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   correctPostAddress: {

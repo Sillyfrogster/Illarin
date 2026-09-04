@@ -167,6 +167,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		deadlineByRoute(limits),
 		noStoreCredentialResponses(),
 		h.guardBrowserMutations(),
+		h.publicationAPI(),
 	)
 	routes.GET("/healthz", health)
 	routes.GET("/readyz", ready(readiness))

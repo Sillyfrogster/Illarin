@@ -192,6 +192,8 @@ components:
     publicationToken:
       $ref: ./common.yaml#/components/securitySchemes/publicationToken
   parameters:
+    IdempotencyKey:
+      $ref: ./common.yaml#/components/parameters/IdempotencyKey
     IllarinRequest:
       $ref: ./common.yaml#/components/parameters/IllarinRequest
   schemas:
@@ -341,6 +343,10 @@ components:
       $ref: ./publication.yaml#/components/schemas/IssuedPublicationToken
     PublicationCredential:
       $ref: ./publication.yaml#/components/schemas/PublicationCredential
+    PublicationErrorCode:
+      $ref: ./publication.yaml#/components/schemas/PublicationErrorCode
+    PublicationError:
+      $ref: ./publication.yaml#/components/schemas/PublicationError
     PostStatus:
       $ref: ./posts.yaml#/components/schemas/PostStatus
     PostDocument:
