@@ -11,6 +11,7 @@ import type {
 } from "@/lib/api/query";
 import { type Chosen, PicturePicker } from "./PicturePicker";
 import styles from "./PostDetails.module.css";
+import { PublishedIdentity } from "./PublishedIdentity";
 
 type Release = { appId: string; version: string; address: string };
 
@@ -23,6 +24,7 @@ type Draft = {
 };
 
 export function PostDetails({
+  admin,
   apps,
   categories,
   draft,
@@ -30,8 +32,10 @@ export function PostDetails({
   media,
   post,
   onChange,
+  onCorrected,
   onUpload,
 }: {
+  admin: boolean;
   apps: PublicationApp[];
   categories: PublicationCategory[];
   draft: Draft;
@@ -39,6 +43,7 @@ export function PostDetails({
   media: PostMedia[];
   post: Post;
   onChange: (patch: Partial<Draft>) => void;
+  onCorrected: (post: Post) => void;
   onUpload: (
     purpose: PostMediaPurpose,
     file: File,
@@ -68,22 +73,20 @@ export function PostDetails({
           ))}
         </select>
       </Field>
-      <Field
-        hint={
-          locked
-            ? `illarin.xyz/blog/${draft.slug}. Fixed now the post is published, and only an admin can correct it.`
-            : "illarin.xyz/blog/ plus this. It is fixed once the post is published."
-        }
-        htmlFor="post-slug"
-        label="Address"
-      >
-        <input
-          id="post-slug"
-          maxLength={80}
-          onChange={(event) => onChange({ slug: event.target.value })}
-          value={draft.slug}
-        />
-      </Field>
+      {locked ? null : (
+        <Field
+          hint={`illarin.xyz/blog/${draft.slug || "…"}. You can change this until you publish. After that it is fixed.`}
+          htmlFor="post-slug"
+          label="Address"
+        >
+          <input
+            id="post-slug"
+            maxLength={80}
+            onChange={(event) => onChange({ slug: event.target.value })}
+            value={draft.slug}
+          />
+        </Field>
+      )}
       {releasing ? (
         <ReleaseFields
           apps={apps}
@@ -117,14 +120,21 @@ export function PostDetails({
         onUpload={onUpload}
         purpose="social"
       />
-      {post.app ? (
+      {locked ? (
+        <PublishedIdentity
+          admin={admin}
+          onCorrected={onCorrected}
+          post={post}
+        />
+      ) : post.app ? (
         <p className={styles.attribution}>
-          This post carries your name and {post.app.name}. Illarin stays the
-          publisher.
+          When you publish, this post takes your name and {post.app.name}.
+          Illarin stays the publisher.
         </p>
       ) : (
         <p className={styles.attribution}>
-          This post carries the Illarin Team byline and your public positions.
+          When you publish, this post takes your name, your jobs at Illarin and
+          the Illarin Team line.
         </p>
       )}
     </aside>

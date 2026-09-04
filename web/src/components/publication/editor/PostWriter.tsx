@@ -52,6 +52,7 @@ export function PostWriter({ id }: { id: string }) {
   const [media, setMedia] = useState<PostMedia[]>([]);
   const [categories, setCategories] = useState<PublicationCategory[]>([]);
   const [apps, setApps] = useState<PublicationApp[]>([]);
+  const [admin, setAdmin] = useState(false);
   const [state, setState] = useState<Saving>("clean");
   const [refusal, setRefusal] = useState("");
   const [failure, setFailure] = useState("");
@@ -83,6 +84,7 @@ export function PostWriter({ id }: { id: string }) {
       if (!answer.value) return;
       setCategories(answer.value.categories);
       setApps(answer.value.apps);
+      setAdmin(answer.value.admin);
     });
   }, [account, load]);
 
@@ -135,6 +137,14 @@ export function PostWriter({ id }: { id: string }) {
   function change(patch: Partial<Draft>) {
     setDraft((current) => (current ? { ...current, ...patch } : current));
     setState("dirty");
+  }
+
+  function corrected(post: Post) {
+    setPost(post);
+    version.current = post.version;
+    setDraft((current) =>
+      current ? { ...current, slug: post.slug } : current,
+    );
   }
 
   async function release() {
@@ -226,8 +236,8 @@ export function PostWriter({ id }: { id: string }) {
         commit={post.status === "published" ? "Publish changes" : "Publish"}
         hint={
           post.status === "published"
-            ? "Readers see this edition from the moment you publish it."
-            : "Publishing keeps this edition, fixes the address and records who wrote it. None of the three can be taken back."
+            ? "Readers see this version from the moment you publish it."
+            : "This fixes the address and puts your name on the post. Only an admin can change either afterwards."
         }
         onClose={() => setAsking(false)}
         onCommit={() => void release()}
@@ -251,7 +261,7 @@ export function PostWriter({ id }: { id: string }) {
             category={category.label}
             publishedAt={post.publishedAt ?? null}
             release={post.release ?? null}
-            standing="A preview of the working copy. The byline is written when the post is first published."
+            standing="A preview. The name goes on when you first publish."
             summary={draft.summary}
             title={draft.title}
             updatedAt={post.updatedPublicAt ?? null}
@@ -294,12 +304,14 @@ export function PostWriter({ id }: { id: string }) {
             />
           </div>
           <PostDetails
+            admin={admin}
             apps={releaseApps(apps, post)}
             categories={categories.length > 0 ? categories : [post.category]}
             draft={draft}
             locked={post.status === "published"}
             media={media}
             onChange={change}
+            onCorrected={corrected}
             onUpload={upload}
             post={post}
           />

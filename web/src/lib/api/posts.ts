@@ -49,6 +49,14 @@ export function uploadPostMedia(
   );
 }
 
+export function correctPostAddress(id: string, slug: string) {
+  return json<Post>(`/publication/posts/${id}/address`, "PUT", { slug });
+}
+
+export function correctPostByline(id: string, handle: string) {
+  return json<Post>(`/publication/posts/${id}/byline`, "PUT", { handle });
+}
+
 export function publishPost(id: string) {
   return ask<Post>(
     `/publication/posts/${id}/publish`,

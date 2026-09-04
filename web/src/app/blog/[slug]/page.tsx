@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { Article } from "@/components/publication/Article";
 import { fetchPublishedPost } from "@/lib/api/query";
 import { pageMetadata } from "@/lib/site-metadata";
 
-const loadPost = cache(async (slug: string) => fetchPublishedPost(slug));
+const loadPost = cache(async (slug: string) =>
+  fetchPublishedPost(decodeURIComponent(slug)),
+);
 
 export async function generateMetadata({
   params,
@@ -33,7 +35,11 @@ export default async function PostPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const post = await loadPost((await params).slug);
+  const requested = (await params).slug;
+  const post = await loadPost(requested);
   if (!post) notFound();
+  if (decodeURIComponent(requested) !== post.slug) {
+    permanentRedirect(`/blog/${post.slug}`);
+  }
   return <Article post={post} />;
 }
