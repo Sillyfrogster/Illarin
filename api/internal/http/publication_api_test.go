@@ -758,3 +758,23 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 		t.Fatalf("reading the post again gave %+v", again)
 	}
 }
+
+func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+	body := fmt.Sprintf(`{"categoryId":%q,"title":"Short key"}`, announcement.ID)
+
+	for _, key := range []string{"short", " padded-key ", strings.Repeat("x", 201)} {
+		refused := stack.sent(t, kit.value, withKey(jsonRequest(t,
+			http.MethodPost, "/v1/publication/posts", body,
+		), key))
+		if refused.Code != http.StatusBadRequest ||
+			refusalOf(t, refused).Field != idempotencyKeyHeader {
+			t.Errorf("the key %q answered %d: %s", key, refused.Code, refused.Body.String())
+		}
+	}
+	if listed := stack.toolPosts(t, kit.value); len(listed) != 0 {
+		t.Fatalf("a refused key wrote %d posts", len(listed))
+	}
+}

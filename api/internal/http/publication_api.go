@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/credential"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
@@ -87,7 +88,8 @@ func (h *Handlers) replayable(c *gin.Context, bearing publication.Bearer) {
 		c.Next()
 		return
 	}
-	if len(key) < minIdempotencyKey || len(key) > maxIdempotencyKey ||
+	length := utf8.RuneCountInString(key)
+	if length < minIdempotencyKey || length > maxIdempotencyKey ||
 		key != strings.TrimSpace(key) {
 		refuseField(c, http.StatusBadRequest, CodeInvalid,
 			"Send an idempotency key of 8 to 200 characters.", idempotencyKeyHeader)
@@ -112,7 +114,10 @@ func (h *Handlers) replayable(c *gin.Context, bearing publication.Bearer) {
 	h.runOnce(c, bearing, operation, key)
 }
 
-// runOnce serves the request and keeps what it answered against the key.
+// runOnce serves the request and keeps what it answered against the key. A
+// refusal is kept as faithfully as a success, and a failure the caller is meant
+// to retry hands the key back instead. The answer has already gone out by then,
+// so there is nobody left to tell if keeping it fails.
 func (h *Handlers) runOnce(
 	c *gin.Context,
 	bearing publication.Bearer,
@@ -123,19 +128,21 @@ func (h *Handlers) runOnce(
 	kept := &keptResponse{ResponseWriter: c.Writer, body: &bytes.Buffer{}}
 	c.Request.Body = sent
 	c.Writer = kept
+	defer func() {
+		c.Writer = kept.ResponseWriter
+		after := context.WithoutCancel(c.Request.Context())
+		_, drained := io.Copy(io.Discard, sent)
+		if drained != nil || kept.overflowed ||
+			kept.Status() >= http.StatusInternalServerError {
+			_ = h.publications.ReleaseAttempt(after, bearing.Token.ID, operation, key)
+			return
+		}
+		_ = h.publications.FinishAttempt(
+			after, bearing.Token.ID, operation, key,
+			sent.sum.Sum(nil), kept.Status(), kept.answer(),
+		)
+	}()
 	c.Next()
-	c.Writer = kept.ResponseWriter
-
-	after := context.WithoutCancel(c.Request.Context())
-	_, drained := io.Copy(io.Discard, sent)
-	if drained != nil || kept.overflowed || kept.Status() >= http.StatusInternalServerError {
-		_ = h.publications.ReleaseAttempt(after, bearing.Token.ID, operation, key)
-		return
-	}
-	_ = h.publications.FinishAttempt(
-		after, bearing.Token.ID, operation, key,
-		sent.sum.Sum(nil), kept.Status(), kept.body.Bytes(),
-	)
 }
 
 // answerEarlierAttempt gives a repeat of a stored request its stored answer and
@@ -266,6 +273,14 @@ func (k *keptResponse) Write(p []byte) (int, error) {
 func (k *keptResponse) WriteString(s string) (int, error) {
 	k.keep([]byte(s))
 	return k.ResponseWriter.WriteString(s)
+}
+
+// answer is what was written, never nil, so an empty answer is still an answer.
+func (k *keptResponse) answer() []byte {
+	if k.body.Len() == 0 {
+		return []byte{}
+	}
+	return k.body.Bytes()
 }
 
 func (k *keptResponse) keep(p []byte) {
