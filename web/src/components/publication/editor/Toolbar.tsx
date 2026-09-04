@@ -250,6 +250,7 @@ function Row({
         intent={row}
         onClose={close}
         onUpload={onUpload}
+        said={controls.picture}
       />
     );
   }

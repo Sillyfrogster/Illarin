@@ -29,11 +29,14 @@ const pictureAttributes = {
   height: { default: null },
 };
 
+// figure draws one picture and marks it so the same node parses back.
 function figure(
   attributes: Record<string, unknown>,
+  marker: string,
   className: string,
 ): DOMOutputSpec {
   const caption = String(attributes.caption ?? "");
+  const frame = { class: className, [marker]: "" };
   const picture = [
     "img",
     {
@@ -44,8 +47,8 @@ function figure(
     },
   ];
   return caption
-    ? ["figure", { class: className }, picture, ["figcaption", caption]]
-    : ["figure", { class: className }, picture];
+    ? ["figure", frame, picture, ["figcaption", caption]]
+    : ["figure", frame, picture];
 }
 
 /** A picture placed on its own. Illarin owns the shape; Tiptap only draws it. */
@@ -63,10 +66,7 @@ export const Picture = Node.create({
   },
 
   renderHTML({ node }) {
-    return figure(
-      mergeAttributes(node.attrs, { "data-picture": "" }),
-      styles.picture,
-    );
+    return figure(node.attrs, "data-picture", styles.picture);
   },
 });
 
@@ -83,10 +83,7 @@ export const GalleryPicture = Node.create({
   },
 
   renderHTML({ node }) {
-    return figure(
-      mergeAttributes(node.attrs, { "data-gallery-picture": "" }),
-      styles.galleryPicture,
-    );
+    return figure(node.attrs, "data-gallery-picture", styles.galleryPicture);
   },
 
   addCommands() {

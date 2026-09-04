@@ -32,23 +32,25 @@ const INTENT_LABELS: Record<PictureIntent, string> = {
 export function PictureRow({
   editor,
   intent,
+  said,
   onClose,
   onUpload,
 }: {
   editor: Editor;
   intent: PictureIntent;
+  said: Controls["picture"];
   onClose: () => void;
   onUpload: Upload;
 }) {
   const field = useId();
   const chooser = useRef<HTMLInputElement>(null);
   const description = useRef<HTMLInputElement>(null);
+  const replacing = intent === "replace";
   const [held, setHeld] = useState<PostMedia | null>(null);
-  const [alt, setAlt] = useState("");
-  const [caption, setCaption] = useState("");
+  const [alt, setAlt] = useState(replacing ? said.alt : "");
+  const [caption, setCaption] = useState(replacing ? said.caption : "");
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState("");
-  const describing = intent !== "replace";
 
   async function choose(file: File | undefined) {
     if (!file) return;
@@ -65,7 +67,7 @@ export function PictureRow({
   }
 
   function place() {
-    if (!held || (describing && !alt.trim())) return;
+    if (!held || !alt.trim()) return;
     const picture: PictureAttributes = {
       mediaId: held.id,
       alt: alt.trim(),
@@ -75,18 +77,9 @@ export function PictureRow({
       height: held.height,
     };
     const writing = editor.chain().focus();
-    if (intent === "replace") {
-      writing
-        .updateAttributes(
-          editor.isActive("galleryImage") ? "galleryImage" : "image",
-          {
-            mediaId: held.id,
-            src: held.url,
-            width: held.width,
-            height: held.height,
-          },
-        )
-        .run();
+    if (replacing) {
+      const node = editor.isActive("galleryImage") ? "galleryImage" : "image";
+      writing.updateAttributes(node, picture).run();
     } else {
       writing
         .insertContentAt(editor.state.selection.to, placement(intent, picture))
@@ -124,43 +117,39 @@ export function PictureRow({
         ref={chooser}
         type="file"
       />
-      {describing ? (
-        <>
-          <Pair field={`${field}-alt`} label="Description">
-            <input
-              aria-describedby={`${field}-note`}
-              aria-invalid={held !== null && !alt.trim() ? true : undefined}
-              className={styles.address}
-              id={`${field}-alt`}
-              maxLength={POST_PICTURE_TEXT_LIMIT}
-              onChange={(event) => setAlt(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  place();
-                }
-              }}
-              placeholder="What the picture shows"
-              ref={description}
-              value={alt}
-            />
-          </Pair>
-          <Pair field={`${field}-caption`} label="Caption">
-            <input
-              className={styles.address}
-              id={`${field}-caption`}
-              maxLength={POST_PICTURE_TEXT_LIMIT}
-              onChange={(event) => setCaption(event.target.value)}
-              placeholder="Optional"
-              value={caption}
-            />
-          </Pair>
-        </>
-      ) : null}
+      <Pair field={`${field}-alt`} label="Description">
+        <input
+          aria-describedby={`${field}-note`}
+          aria-invalid={held !== null && !alt.trim() ? true : undefined}
+          className={styles.address}
+          id={`${field}-alt`}
+          maxLength={POST_PICTURE_TEXT_LIMIT}
+          onChange={(event) => setAlt(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              place();
+            }
+          }}
+          placeholder="What the picture shows"
+          ref={description}
+          value={alt}
+        />
+      </Pair>
+      <Pair field={`${field}-caption`} label="Caption">
+        <input
+          className={styles.address}
+          id={`${field}-caption`}
+          maxLength={POST_PICTURE_TEXT_LIMIT}
+          onChange={(event) => setCaption(event.target.value)}
+          placeholder="Optional"
+          value={caption}
+        />
+      </Pair>
       <Choice
-        label={intent === "replace" ? "Replace" : "Place"}
+        label={replacing ? "Replace" : "Place"}
         press={place}
-        ready={held !== null && (!describing || alt.trim().length > 0)}
+        ready={held !== null && alt.trim().length > 0}
         strong
       />
       <output className={styles.note} id={`${field}-note`}>
@@ -169,9 +158,9 @@ export function PictureRow({
           : refusal ||
             (held === null
               ? "Choose a picture to upload."
-              : describing && !alt.trim()
-                ? "Every picture needs a description before it can be placed."
-                : "")}
+              : alt.trim()
+                ? ""
+                : "Every picture needs a description before it can be placed.")}
       </output>
     </Row>
   );
