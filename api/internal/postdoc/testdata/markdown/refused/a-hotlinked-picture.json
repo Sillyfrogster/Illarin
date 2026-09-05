@@ -1,0 +1,10 @@
+{
+  "note": "A picture cannot come from somewhere else",
+  "markdown": "![Photo](https://example.com/photo.png)\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "media:"
+    }
+  ]
+}

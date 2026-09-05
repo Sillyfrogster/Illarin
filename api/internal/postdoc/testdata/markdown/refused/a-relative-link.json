@@ -1,0 +1,10 @@
+{
+  "note": "A link has to say where it goes in full",
+  "markdown": "[Home](/blog)\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "https"
+    }
+  ]
+}

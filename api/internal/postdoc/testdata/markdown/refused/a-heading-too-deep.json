@@ -1,0 +1,10 @@
+{
+  "note": "Headings stop at level four",
+  "markdown": "##### Deep\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "level 4"
+    }
+  ]
+}

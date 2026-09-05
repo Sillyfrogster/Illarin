@@ -120,17 +120,25 @@ func (s *Span) wear(mark string) {
 }
 
 func checkAddress(path, address string) error {
+	if said := addressProblem(address); said != "" {
+		return Problem{Path: path, Message: said}
+	}
+	return nil
+}
+
+// addressProblem says why a link address cannot be followed, or nothing.
+func addressProblem(address string) string {
 	if len(address) > maxAddress {
-		return Problem{Path: path, Message: "This link address is too long."}
+		return "This link address is too long."
 	}
 	if strings.ContainsFunc(address, isControl) || strings.ContainsRune(address, ' ') {
-		return Problem{Path: path, Message: "A link address carries no spaces or control characters."}
+		return "A link address carries no spaces or control characters."
 	}
 	if strings.HasPrefix(address, "https://") && len(address) > len("https://") {
-		return nil
+		return ""
 	}
 	if strings.HasPrefix(address, "mailto:") && len(address) > len("mailto:") {
-		return nil
+		return ""
 	}
-	return Problem{Path: path, Message: "A link goes to an https address or a mailto address."}
+	return "A link goes to an https address or a mailto address."
 }

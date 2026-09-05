@@ -1,0 +1,15 @@
+{
+  "note": "A picture names a file the post already owns and carries its caption",
+  "markdown": "![A workspace](media:6f2c1b40-9d38-4a7e-b512-0c8e37a41d59 \"One draft.\")\n",
+  "document": {
+    "content": [
+      {
+        "alt": "A workspace",
+        "caption": "One draft.",
+        "mediaId": "6f2c1b40-9d38-4a7e-b512-0c8e37a41d59",
+        "type": "image"
+      }
+    ],
+    "version": 2
+  }
+}

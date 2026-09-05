@@ -69,7 +69,9 @@ func (h Heading) writeJSON(w *writer) {
 	w.open("heading")
 	w.key("level")
 	w.out.WriteString(strconv.Itoa(h.Level))
-	w.text("anchor", h.Anchor)
+	if h.Anchor != "" {
+		w.text("anchor", h.Anchor)
+	}
 	w.key("content")
 	w.spans(h.Spans)
 	w.out.WriteString(`}`)

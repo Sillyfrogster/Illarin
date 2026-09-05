@@ -1,0 +1,18 @@
+{
+  "note": "Every refusal comes back at once, in the order they were written",
+  "markdown": "<div>One</div>\n\n![Photo](https://example.com/photo.png)\n\n[Click](javascript:alert)\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "HTML"
+    },
+    {
+      "line": 3,
+      "says": "media:"
+    },
+    {
+      "line": 5,
+      "says": "https"
+    }
+  ]
+}

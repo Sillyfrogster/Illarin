@@ -1,0 +1,10 @@
+{
+  "note": "MDX is not content",
+  "markdown": "import Callout from './callout'\n\nWords.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "MDX"
+    }
+  ]
+}

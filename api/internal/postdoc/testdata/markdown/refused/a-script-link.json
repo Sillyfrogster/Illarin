@@ -1,0 +1,10 @@
+{
+  "note": "A link outside the safe schemes is refused",
+  "markdown": "[Click](javascript:alert)\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "https"
+    }
+  ]
+}

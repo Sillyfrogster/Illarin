@@ -1,0 +1,10 @@
+{
+  "note": "A checklist marks every one of its items",
+  "markdown": "- [x] Written\n- Not a task\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "marks every one"
+    }
+  ]
+}

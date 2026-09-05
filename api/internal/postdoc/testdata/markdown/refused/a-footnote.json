@@ -1,0 +1,14 @@
+{
+  "note": "Illarin has no footnotes",
+  "markdown": "Text[^1]\n\n[^1]: The note.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "footnotes"
+    },
+    {
+      "line": 3,
+      "says": "footnotes"
+    }
+  ]
+}

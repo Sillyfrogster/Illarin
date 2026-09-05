@@ -1,0 +1,10 @@
+{
+  "note": "HTML among words is not content either",
+  "markdown": "Words with <b>bold</b> in them.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "HTML"
+    }
+  ]
+}

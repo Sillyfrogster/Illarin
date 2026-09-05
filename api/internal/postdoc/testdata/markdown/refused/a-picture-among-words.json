@@ -1,0 +1,10 @@
+{
+  "note": "A picture is a block of its own",
+  "markdown": "Look at ![A workspace](media:6f2c1b40-9d38-4a7e-b512-0c8e37a41d59) here.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "line of its own"
+    }
+  ]
+}

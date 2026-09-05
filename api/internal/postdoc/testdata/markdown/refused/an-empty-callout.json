@@ -1,0 +1,10 @@
+{
+  "note": "A callout with nothing in it says nothing",
+  "markdown": "> [!note]\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "needs something in it"
+    }
+  ]
+}

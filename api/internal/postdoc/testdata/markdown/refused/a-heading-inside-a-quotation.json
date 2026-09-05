@@ -1,0 +1,10 @@
+{
+  "note": "A quotation holds no heading",
+  "markdown": "> ## Inside\n>\n> Words.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "does not go inside a quotation"
+    }
+  ]
+}

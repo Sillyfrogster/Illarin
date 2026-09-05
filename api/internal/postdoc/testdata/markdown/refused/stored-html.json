@@ -1,0 +1,10 @@
+{
+  "note": "HTML is not content",
+  "markdown": "Words.\n\n<div>Not content</div>\n",
+  "refusals": [
+    {
+      "line": 3,
+      "says": "HTML"
+    }
+  ]
+}

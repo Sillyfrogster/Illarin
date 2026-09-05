@@ -1,0 +1,10 @@
+{
+  "note": "A callout is one of the four kinds",
+  "markdown": "> [!caution]\n> Careful.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "note, tip, important, warning"
+    }
+  ]
+}
