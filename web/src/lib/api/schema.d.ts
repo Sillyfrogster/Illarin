@@ -2031,12 +2031,12 @@ export interface components {
       post: components["schemas"]["Post"];
       warnings: components["schemas"]["PostImportNote"][];
     };
-    /** @description An import that did not happen, and every line that stopped it. The working copy is left exactly as it was. */
+    /** @description An import that did not happen. The working copy is left exactly as it was. A refusal that came from reading the Markdown names every line that stopped it; one about the request or the post it was aimed at does not. */
     PostImportRefusal: {
       error: string;
       code: components["schemas"]["PublicationErrorCode"];
       field?: string;
-      refusals: components["schemas"]["PostImportNote"][];
+      refusals?: components["schemas"]["PostImportNote"][];
     };
     CorrectPostAddressRequest: {
       slug: string;

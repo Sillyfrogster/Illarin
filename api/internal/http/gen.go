@@ -2665,13 +2665,13 @@ type PostImportNote struct {
 	Message string `json:"message"`
 }
 
-// PostImportRefusal An import that did not happen, and every line that stopped it. The working copy is left exactly as it was.
+// PostImportRefusal An import that did not happen. The working copy is left exactly as it was. A refusal that came from reading the Markdown names every line that stopped it; one about the request or the post it was aimed at does not.
 type PostImportRefusal struct {
 	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
 	Code     PublicationErrorCode `json:"code"`
 	Error    string               `json:"error"`
 	Field    *string              `json:"field,omitempty"`
-	Refusals []PostImportNote     `json:"refusals"`
+	Refusals *[]PostImportNote    `json:"refusals,omitempty"`
 }
 
 // PostList defines model for PostList.

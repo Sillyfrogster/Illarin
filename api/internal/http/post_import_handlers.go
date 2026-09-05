@@ -32,19 +32,19 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPos
 	c.JSON(http.StatusOK, PostImport{Post: h.toAPIPost(saved), Warnings: toAPINotes(notes)})
 }
 
-// importError names the lines that stopped an import, or refuses as any other
-// post route would.
+// importError names the lines that stopped an import, or refuses as usual.
 func (h *Handlers) importError(c *gin.Context, err error) {
 	var refused postdoc.Refused
 	if !errors.As(err, &refused) {
 		h.postError(c, err)
 		return
 	}
+	lines := toAPINotes(refused.Notes)
 	c.AbortWithStatusJSON(http.StatusBadRequest, PostImportRefusal{
-		Error:    "This Markdown carries things a post does not.",
+		Error:    "This Markdown carries things a post cannot hold.",
 		Code:     CodeInvalid,
 		Field:    pointer("markdown"),
-		Refusals: toAPINotes(refused.Notes),
+		Refusals: &lines,
 	})
 }
 

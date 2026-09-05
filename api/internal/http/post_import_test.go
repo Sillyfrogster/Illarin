@@ -380,6 +380,20 @@ func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
 	}
 }
 
+func TestMarkdownLongerThanAPostRefusesTheFieldItWasSentIn(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+
+	response := stack.imported(t, kit, draft.ID, strings.Repeat("word ", 60000))
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
+	}
+	if refused := refusalOf(t, response); refused.Field != "markdown" {
+		t.Errorf("the refusal reads %+v", refused)
+	}
+}
+
 func (s distinctionStack) toolDraft(t *testing.T, kit tooling, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")

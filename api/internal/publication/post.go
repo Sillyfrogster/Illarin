@@ -317,13 +317,23 @@ func (s *Service) ImportPost(
 	}
 	document, notes, err := postdoc.FromMarkdown(in.Markdown)
 	if err != nil {
-		return Post{}, nil, documentRefusal(err)
+		return Post{}, nil, importRefusal(err)
 	}
 	saved, err := s.SavePost(ctx, editor, id, current.carrying(document))
 	if err != nil {
 		return Post{}, nil, err
 	}
 	return saved, notes, nil
+}
+
+// importRefusal names the field the caller sent, not a path inside the document
+// the conversion was building.
+func importRefusal(err error) error {
+	var problem postdoc.Problem
+	if errors.As(err, &problem) {
+		return FieldError{Field: "markdown", Message: problem.Message}
+	}
+	return err
 }
 
 // carrying answers this working copy as a save with a different document in it.
