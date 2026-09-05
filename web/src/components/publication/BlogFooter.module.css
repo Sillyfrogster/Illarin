@@ -70,9 +70,22 @@
 }
 
 .legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
   color: var(--color-text-secondary);
 }
 
 .legal a:hover {
   color: var(--color-text-primary);
+}
+
+@media (max-width: 700px) {
+  .legal {
+    gap: 0 22px;
+  }
+
+  .legal a {
+    min-height: 44px;
+  }
 }
