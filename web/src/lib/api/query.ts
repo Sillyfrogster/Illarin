@@ -58,6 +58,8 @@ export type PostMedia = components["schemas"]["PostMedia"];
 export type PostMediaPurpose = components["schemas"]["PostMediaPurpose"];
 export type PostByline = components["schemas"]["PostByline"];
 export type PostRelease = components["schemas"]["PostRelease"];
+export type PostSummary = components["schemas"]["PostSummary"];
+export type PostArchive = components["schemas"]["PostArchive"];
 export type PostRevision = components["schemas"]["PostRevision"];
 export type PostAction = components["schemas"]["PostAction"];
 export type PostSchedule = components["schemas"]["PostSchedule"];
@@ -411,6 +413,26 @@ export async function fetchPublishedPost(
   });
   if (error || !data) return null;
   return data;
+}
+
+export async function fetchPostArchive(query: {
+  page?: number;
+  category?: string;
+  app?: string;
+}): Promise<PostArchive | null> {
+  const { data, error, response } = await api.GET("/v1/posts", {
+    params: { query },
+  });
+  if (response.status === 404) return null;
+  if (error || !data)
+    throw new Error("Could not read the publication archive.");
+  return data;
+}
+
+export async function fetchPostCategories(): Promise<PublicationCategory[]> {
+  const { data, error } = await api.GET("/v1/post-categories", {});
+  if (error || !data) return [];
+  return data.categories;
 }
 
 export async function fetchProfileRestriction(

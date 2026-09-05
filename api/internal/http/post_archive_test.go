@@ -43,6 +43,20 @@ func (s distinctionStack) browse(t *testing.T, query string) *httptest.ResponseR
 	return send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts"+query, nil))
 }
 
+func (s distinctionStack) readableCategories(t *testing.T) []publicationCategory {
+	t.Helper()
+	response := send(t, s.router,
+		httptest.NewRequest(http.MethodGet, "/v1/post-categories", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("read the blog categories status = %d: %s", response.Code, response.Body.String())
+	}
+	var found publicationCategoryList
+	if err := json.Unmarshal(response.Body.Bytes(), &found); err != nil {
+		t.Fatalf("decode the blog categories: %v", err)
+	}
+	return found.Categories
+}
+
 func (s distinctionStack) archive(t *testing.T, query string) postArchive {
 	t.Helper()
 	response := s.browse(t, query)
@@ -306,5 +320,23 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 	}
 	if len(alone.Related) != 3 {
 		t.Errorf("a post with no app or category match offers %d posts", len(alone.Related))
+	}
+}
+
+func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+
+	if len(stack.readableCategories(t)) != 0 {
+		t.Fatalf("an empty publication offers %v", stack.readableCategories(t))
+	}
+
+	stack.publishedOn(t, session, "Illarin opens the blog",
+		time.Date(2026, time.July, 1, 9, 0, 0, 0, time.UTC))
+	stack.illarinDraft(t, session, "A draft nobody has seen")
+
+	offered := stack.readableCategories(t)
+	if len(offered) != 1 || offered[0].Slug != "announcement" {
+		t.Errorf("the blog offers %v, want announcement alone", offered)
 	}
 }

@@ -4268,6 +4268,9 @@ type ServerInterface interface {
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
 
+	// (GET /v1/post-categories)
+	ListPostCategories(c *gin.Context)
+
 	// (GET /v1/posts)
 	ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams)
 
@@ -6338,6 +6341,19 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ListPostCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListPostCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostCategories(c)
+}
+
 // ListPublishedPosts operation middleware
 func (siw *ServerInterfaceWrapper) ListPublishedPosts(c *gin.Context) {
 
@@ -7584,6 +7600,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
+	router.GET(options.BaseURL+"/v1/post-categories", wrapper.ListPostCategories)
 	router.GET(options.BaseURL+"/v1/posts", wrapper.ListPublishedPosts)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)

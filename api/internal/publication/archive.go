@@ -76,6 +76,25 @@ const selectSummaries = `
 	 where post.status = 'published'
 	`
 
+// ReadableCategories answers the categories that carry published posts, in the
+// order the publication shows them.
+func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
+	rows, err := s.pool.Query(ctx, selectCategories+`
+		 where exists (
+		       select 1
+		         from posts post
+		         join post_revisions revision on revision.id = post.public_revision_id
+		        where post.status = 'published' and revision.category_id = category.id
+		 )
+		 order by category.position, category.created_at
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("read the categories a reader can browse: %w", err)
+	}
+	defer rows.Close()
+	return collectCategories(rows)
+}
+
 // Archive answers one page of the publication, newest first, narrowed to a
 // category or an app where the reader named one.
 func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, error) {

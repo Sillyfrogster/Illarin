@@ -1070,6 +1070,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/post-categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The publication categories that carry published posts, in the order the publication shows them. A category nobody has published in is absent, so every category the blog offers leads to writing. */
+    get: operations["listPostCategories"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/posts": {
     parameters: {
       query?: never;
@@ -6812,6 +6829,26 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  listPostCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The categories a reader can browse */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCategoryList"];
+        };
       };
     };
   };

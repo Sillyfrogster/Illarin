@@ -1,0 +1,121 @@
+.byline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+}
+
+.portrait {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-muted);
+}
+
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.monogram {
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.standing {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.affiliation {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.affiliation:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.publisher {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.lineName {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.lineName:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lineApp {
+  color: var(--color-text-secondary);
+}
+
+a.lineApp:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .name,
+  .affiliation,
+  .publisher {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}

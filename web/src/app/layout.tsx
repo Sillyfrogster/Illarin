@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Manrope } from "next/font/google";
 import { ArtFilters } from "@/components/art/ArtFilters";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -64,11 +62,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <ArtFilters />
-        <Providers>
-          <SiteHeader />
-          <main>{children}</main>
-          <SiteFooter />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

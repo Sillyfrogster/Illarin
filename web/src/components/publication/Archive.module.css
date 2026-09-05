@@ -1,0 +1,107 @@
+/* The masthead bleeds the full window; everything readable stays in the column. */
+.masthead {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding-block: clamp(44px, 5.4vw, 88px) clamp(28px, 3vw, 40px);
+}
+
+.column {
+  width: min(100%, var(--shell-reading));
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.scope {
+  padding-block: clamp(40px, 5vw, 72px) clamp(20px, 2vw, 28px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scopeHeading {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.3vw, 3.2rem);
+  font-weight: 500;
+  line-height: 1.07;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+.scopeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-top: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.scopeMeta a {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--color-emphasis-border);
+  text-underline-offset: 3px;
+}
+
+.scopeMeta a:hover {
+  text-decoration-color: var(--color-emphasis);
+}
+
+.list {
+  padding-block: clamp(4px, 1vw, 12px);
+}
+
+.empty {
+  max-width: 44ch;
+  padding-block: clamp(48px, 6vw, 88px);
+  color: var(--color-text-secondary);
+  font-size: var(--type-lead-size);
+  line-height: var(--type-lead-leading);
+}
+
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: clamp(64px, 7vw, 104px);
+  padding-block: 20px;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.step {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.step:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.spent {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+}
+
+.count {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  letter-spacing: 0.04em;
+  line-height: var(--type-label-leading);
+}
+
+.list + .pages {
+  margin-top: clamp(12px, 2vw, 24px);
+}

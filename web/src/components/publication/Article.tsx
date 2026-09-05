@@ -4,12 +4,14 @@ import { PostBody } from "@/components/publication/PostBody";
 import type { PublicPost } from "@/lib/api/query";
 import { asPostDocument } from "@/lib/post-document";
 import styles from "./Article.module.css";
+import { FurtherReading } from "./FurtherReading";
+import { PublicationArt } from "./PublicationArt";
 
 export function Article({ post }: { post: PublicPost }) {
   return (
     <article>
       <div className={styles.masthead}>
-        <span aria-hidden="true" className={styles.art} />
+        <PublicationArt />
         <div className={styles.column}>
           <ArticleIdentity
             byline={post.byline}
@@ -41,6 +43,7 @@ export function Article({ post }: { post: PublicPost }) {
             </p>
           ) : null}
         </div>
+        <FurtherReading posts={post.related} />
       </div>
     </article>
   );

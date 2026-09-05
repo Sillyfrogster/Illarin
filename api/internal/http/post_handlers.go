@@ -198,6 +198,15 @@ func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(corrected))
 }
 
+func (h *Handlers) ListPostCategories(c *gin.Context) {
+	found, err := h.publications.ReadableCategories(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the categories."})
+		return
+	}
+	c.JSON(http.StatusOK, PublicationCategoryList{Categories: toAPICategories(found)})
+}
+
 func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams) {
 	asked := publication.ArchiveQuery{Page: 1}
 	if params.Page != nil {

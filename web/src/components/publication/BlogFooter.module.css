@@ -1,0 +1,78 @@
+.footer {
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 58px);
+  width: min(100%, var(--shell-reading));
+  margin: 0 auto;
+  padding-block: 30px;
+  padding-inline: var(--gutter);
+}
+
+.meta {
+  display: grid;
+  min-width: min(100%, 34ch);
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wordmark {
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  line-height: var(--type-secondary-leading);
+  text-transform: uppercase;
+}
+
+.brand:hover .wordmark {
+  color: var(--color-text-primary);
+}
+
+.description {
+  max-width: 40ch;
+  text-wrap: pretty;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: 1.55;
+}
+
+.copyright {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-leading);
+}
+
+.aside {
+  display: grid;
+  gap: 14px;
+  min-width: 210px;
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-leading);
+}
+
+.legal a {
+  color: var(--color-text-secondary);
+}
+
+.legal a:hover {
+  color: var(--color-text-primary);
+}

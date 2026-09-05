@@ -2455,6 +2455,20 @@ paths:
           description: Only an Illarin admin may correct a published post
         '404':
           description: No such post or account
+  /v1/post-categories:
+    get:
+      operationId: listPostCategories
+      description: >-
+        The publication categories that carry published posts, in the order the
+        publication shows them. A category nobody has published in is absent, so
+        every category the blog offers leads to writing.
+      responses:
+        '200':
+          description: The categories a reader can browse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationCategoryList'
   /v1/posts:
     get:
       operationId: listPublishedPosts
