@@ -49,6 +49,22 @@
   line-height: 1.55;
 }
 
+.feed {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  line-height: var(--type-label-leading);
+  justify-self: start;
+}
+
+.feed:hover {
+  color: var(--color-text-primary);
+}
+
 .copyright {
   color: var(--color-text-secondary);
   font-size: var(--type-label-size);
@@ -85,7 +101,8 @@
     gap: 0 22px;
   }
 
-  .legal a {
+  .legal a,
+  .feed {
     min-height: 44px;
   }
 }

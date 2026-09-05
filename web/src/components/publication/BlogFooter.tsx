@@ -1,7 +1,9 @@
+import { Rss } from "lucide-react";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { ThemeControl } from "@/components/layout/ThemeControl";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
+import { FEED_ADDRESS } from "@/lib/publication-feed";
 import styles from "./BlogFooter.module.css";
 
 /** The blog's footer carries the way back to Illarin and nothing a reader cannot use here. */
@@ -17,6 +19,10 @@ export function BlogFooter() {
           <p className={styles.description}>
             Official writing from Illarin and the projects it publishes for.
           </p>
+          <a className={styles.feed} href={FEED_ADDRESS}>
+            <Rss aria-hidden="true" size={13} strokeWidth={1.9} />
+            RSS feed
+          </a>
           <span className={styles.copyright}>© 2026 Illarin</span>
         </div>
 
