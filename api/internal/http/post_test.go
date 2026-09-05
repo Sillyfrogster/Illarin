@@ -80,6 +80,7 @@ type publicPost struct {
 	SocialImage *postPicture        `json:"socialImage"`
 	Media       []postPicture       `json:"media"`
 	Byline      postByline          `json:"byline"`
+	Related     []postSummary       `json:"related"`
 	PublishedAt time.Time           `json:"publishedAt"`
 	UpdatedAt   *time.Time          `json:"updatedAt"`
 }

@@ -33,6 +33,7 @@ type PublicPost struct {
 	SocialMedia *PostMedia
 	Media       []PostMedia
 	Byline      Byline
+	Related     []PostSummary
 	PublishedAt time.Time
 	UpdatedAt   *time.Time
 }
@@ -183,7 +184,23 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		return PublicPost{}, err
 	}
 	found.Byline = byline
+	found.Related, err = s.RelatedPosts(ctx, found.ID, found.Category.ID, postApp(found))
+	if err != nil {
+		return PublicPost{}, err
+	}
 	return found, nil
+}
+
+// postApp answers the app a post belongs to, taken from its release where it
+// has one and from its byline otherwise.
+func postApp(found PublicPost) *uuid.UUID {
+	if found.Release != nil {
+		return &found.Release.App.ID
+	}
+	if found.Byline.App != nil {
+		return &found.Byline.App.ID
+	}
+	return nil
 }
 
 // attachRevisionMedia gives an edition the exact pictures it was captured with.

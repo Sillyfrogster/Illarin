@@ -1070,6 +1070,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/posts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description One page of the published archive, newest first. A category or app slug narrows the same chronology. Drafts, working copies, editions held for a later instant and posts out of public view are absent from it. */
+    get: operations["listPublishedPosts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/posts/{slug}": {
     parameters: {
       query?: never;
@@ -2079,6 +2096,8 @@ export interface components {
       socialImage?: components["schemas"]["PostMedia"] | null;
       media: components["schemas"]["PostMedia"][];
       byline: components["schemas"]["PostByline"];
+      /** @description At most three other published posts, preferring the same publication app and then the same category, newest first. */
+      related: components["schemas"]["PostSummary"][];
       /** Format: date-time */
       publishedAt: string;
       /** Format: date-time */
@@ -3069,6 +3088,37 @@ export interface components {
        * @description When the edition goes live, with an explicit offset.
        */
       at: string;
+    };
+    /** @description The picture an archive entry shows, taken from the published edition. */
+    PostSummaryImage: {
+      media: components["schemas"]["PostMedia"];
+      alt: string;
+    };
+    /** @description One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile. */
+    PostSummary: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      title: string;
+      summary: string;
+      category: components["schemas"]["PublicationCategory"];
+      app?: components["schemas"]["PublicationApp"] | null;
+      releaseVersion?: string;
+      image?: components["schemas"]["PostSummaryImage"] | null;
+      byline: components["schemas"]["PostByline"];
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    /** @description One page of the published archive and the scope it was read under. */
+    PostArchive: {
+      posts: components["schemas"]["PostSummary"][];
+      page: number;
+      pages: number;
+      total: number;
+      category?: components["schemas"]["PublicationCategory"] | null;
+      app?: components["schemas"]["PublicationApp"] | null;
     };
     LegacyAsset: {
       /** Format: uuid */
@@ -6757,6 +6807,40 @@ export interface operations {
         content?: never;
       };
       /** @description No such post or account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublishedPosts: {
+    parameters: {
+      query?: {
+        /** @description The archive page to read, counting from one. */
+        page?: number;
+        /** @description A publication category slug the archive is narrowed to. */
+        category?: string;
+        /** @description A publication app slug the archive is narrowed to. */
+        app?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The page of posts and the scope it was read under */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostArchive"];
+        };
+      };
+      /** @description No such publication category or app */
       404: {
         headers: {
           [name: string]: unknown;

@@ -198,6 +198,36 @@ func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(corrected))
 }
 
+func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams) {
+	asked := publication.ArchiveQuery{Page: 1}
+	if params.Page != nil {
+		asked.Page = *params.Page
+	}
+	if asked.Page < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Archive pages count from one."})
+		return
+	}
+	if params.Category != nil {
+		asked.Category = *params.Category
+	}
+	if params.App != nil {
+		asked.App = *params.App
+	}
+	found, err := h.publications.Archive(c.Request.Context(), asked)
+	switch {
+	case errors.Is(err, publication.ErrCategoryNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication category."})
+		return
+	case errors.Is(err, publication.ErrAppNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication app."})
+		return
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the archive."})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIArchive(found))
+}
+
 func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
 	found, err := h.publications.PublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, publication.ErrPostNotFound) {
@@ -346,9 +376,63 @@ func toAPIPublicPost(found publication.PublicPost) PublicPost {
 		SocialImage: toAPIPostPicture(found.SocialMedia, nil),
 		Media:       showPostMedia(found.Media, nil),
 		Byline:      toAPIByline(found.Byline),
+		Related:     toAPISummaries(found.Related),
 		PublishedAt: found.PublishedAt,
 		UpdatedAt:   found.UpdatedAt,
 	}
+}
+
+func toAPIArchive(found publication.Archive) PostArchive {
+	shown := PostArchive{
+		Posts: toAPISummaries(found.Posts),
+		Page:  found.Page,
+		Pages: found.Pages,
+		Total: found.Total,
+	}
+	if found.Category != nil {
+		category := toAPICategory(*found.Category)
+		shown.Category = &category
+	}
+	if found.App != nil {
+		app := toAPIApp(*found.App)
+		shown.App = &app
+	}
+	return shown
+}
+
+func toAPISummaries(listed []publication.PostSummary) []PostSummary {
+	shown := make([]PostSummary, 0, len(listed))
+	for _, one := range listed {
+		shown = append(shown, toAPISummary(one))
+	}
+	return shown
+}
+
+func toAPISummary(found publication.PostSummary) PostSummary {
+	shown := PostSummary{
+		Id:          types.UUID(found.ID),
+		Slug:        found.Slug,
+		Title:       found.Title,
+		Summary:     found.Summary,
+		Category:    toAPICategory(found.Category),
+		Byline:      toAPIByline(found.Byline),
+		PublishedAt: found.PublishedAt,
+		UpdatedAt:   found.UpdatedAt,
+	}
+	if found.App != nil {
+		app := toAPIApp(*found.App)
+		shown.App = &app
+	}
+	if found.ReleaseVersion != "" {
+		shown.ReleaseVersion = pointer(found.ReleaseVersion)
+	}
+	if found.Image != nil {
+		shown.Image = &PostSummaryImage{
+			Media: *toAPIPostPicture(found.Image, nil),
+			Alt:   found.ImageAlt,
+		}
+	}
+	return shown
 }
 
 // showPostMedia addresses a set of pictures, signing a working copy's own.

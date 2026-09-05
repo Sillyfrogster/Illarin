@@ -2644,6 +2644,16 @@ type PostActionList struct {
 	Actions []PostAction `json:"actions"`
 }
 
+// PostArchive One page of the published archive and the scope it was read under.
+type PostArchive struct {
+	App      *PublicationApp      `json:"app,omitempty"`
+	Category *PublicationCategory `json:"category,omitempty"`
+	Page     int                  `json:"page"`
+	Pages    int                  `json:"pages"`
+	Posts    []PostSummary        `json:"posts"`
+	Total    int                  `json:"total"`
+}
+
 // PostAuthor defines model for PostAuthor.
 type PostAuthor struct {
 	Handle string `json:"handle"`
@@ -2796,6 +2806,29 @@ type PostScheduleState string
 // PostStatus defines model for PostStatus.
 type PostStatus string
 
+// PostSummary One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile.
+type PostSummary struct {
+	App            *PublicationApp     `json:"app,omitempty"`
+	Byline         PostByline          `json:"byline"`
+	Category       PublicationCategory `json:"category"`
+	Id             openapi_types.UUID  `json:"id"`
+	Image          *PostSummaryImage   `json:"image,omitempty"`
+	PublishedAt    time.Time           `json:"publishedAt"`
+	ReleaseVersion *string             `json:"releaseVersion,omitempty"`
+	Slug           string              `json:"slug"`
+	Summary        string              `json:"summary"`
+	Title          string              `json:"title"`
+	UpdatedAt      *time.Time          `json:"updatedAt,omitempty"`
+}
+
+// PostSummaryImage The picture an archive entry shows, taken from the published edition.
+type PostSummaryImage struct {
+	Alt string `json:"alt"`
+
+	// Media One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with.
+	Media PostMedia `json:"media"`
+}
+
 // PostVersionRequest defines model for PostVersionRequest.
 type PostVersionRequest struct {
 	// Version The working-copy version the action means to act on.
@@ -2912,12 +2945,15 @@ type PublicPost struct {
 	Id          openapi_types.UUID `json:"id"`
 	Media       []PostMedia        `json:"media"`
 	PublishedAt time.Time          `json:"publishedAt"`
-	Release     *PostRelease       `json:"release,omitempty"`
-	Slug        string             `json:"slug"`
-	SocialImage *PostMedia         `json:"socialImage,omitempty"`
-	Summary     string             `json:"summary"`
-	Title       string             `json:"title"`
-	UpdatedAt   *time.Time         `json:"updatedAt,omitempty"`
+
+	// Related At most three other published posts, preferring the same publication app and then the same category, newest first.
+	Related     []PostSummary `json:"related"`
+	Release     *PostRelease  `json:"release,omitempty"`
+	Slug        string        `json:"slug"`
+	SocialImage *PostMedia    `json:"socialImage,omitempty"`
+	Summary     string        `json:"summary"`
+	Title       string        `json:"title"`
+	UpdatedAt   *time.Time    `json:"updatedAt,omitempty"`
 }
 
 // PublicationApp defines model for PublicationApp.
@@ -3640,6 +3676,18 @@ type DenyLinkRequestParams struct {
 // DenyLinkRequestParamsXIllarinRequest defines parameters for DenyLinkRequest.
 type DenyLinkRequestParamsXIllarinRequest string
 
+// ListPublishedPostsParams defines parameters for ListPublishedPosts.
+type ListPublishedPostsParams struct {
+	// Page The archive page to read, counting from one.
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Category A publication category slug the archive is narrowed to.
+	Category *string `form:"category,omitempty" json:"category,omitempty"`
+
+	// App A publication app slug the archive is narrowed to.
+	App *string `form:"app,omitempty" json:"app,omitempty"`
+}
+
 // SetPublicationAppMarkMultipartBody defines parameters for SetPublicationAppMark.
 type SetPublicationAppMarkMultipartBody struct {
 	File openapi_types.File `json:"file"`
@@ -4219,6 +4267,9 @@ type ServerInterface interface {
 
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
+
+	// (GET /v1/posts)
+	ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams)
 
 	// (GET /v1/posts/{slug})
 	GetPublishedPost(c *gin.Context, slug string)
@@ -6287,6 +6338,49 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ListPublishedPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListPublishedPosts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPublishedPostsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", c.Request.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter page: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category", c.Request.URL.Query(), &params.Category, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter category: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "app" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "app", c.Request.URL.Query(), &params.App, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter app: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublishedPosts(c, params)
+}
+
 // GetPublishedPost operation middleware
 func (siw *ServerInterfaceWrapper) GetPublishedPost(c *gin.Context) {
 
@@ -7490,6 +7584,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
+	router.GET(options.BaseURL+"/v1/posts", wrapper.ListPublishedPosts)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)

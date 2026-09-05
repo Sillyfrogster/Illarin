@@ -129,6 +129,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodDelete, "/v1/publication/posts/:id/schedule"):                    d.JSON,
 		routeKey(http.MethodPut, "/v1/publication/posts/:id/address"):                        d.JSON,
 		routeKey(http.MethodPut, "/v1/publication/posts/:id/byline"):                         d.JSON,
+		routeKey(http.MethodGet, "/v1/posts"):                                                d.JSON,
 		routeKey(http.MethodGet, "/v1/posts/:slug"):                                          d.JSON,
 		routeKey(http.MethodGet, "/v1/profiles/:handle"):                                     d.JSON,
 		routeKey(http.MethodGet, "/v1/profiles/:handle/deleted"):                             d.JSON,

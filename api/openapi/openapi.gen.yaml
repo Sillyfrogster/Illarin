@@ -2455,6 +2455,40 @@ paths:
           description: Only an Illarin admin may correct a published post
         '404':
           description: No such post or account
+  /v1/posts:
+    get:
+      operationId: listPublishedPosts
+      description: >-
+        One page of the published archive, newest first. A category or app slug
+        narrows the same chronology. Drafts, working copies, editions held for a
+        later instant and posts out of public view are absent from it.
+      parameters:
+        - name: page
+          in: query
+          description: The archive page to read, counting from one.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: category
+          in: query
+          description: A publication category slug the archive is narrowed to.
+          schema:
+            type: string
+        - name: app
+          in: query
+          description: A publication app slug the archive is narrowed to.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The page of posts and the scope it was read under
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostArchive'
+        '404':
+          description: No such publication category or app
   /v1/posts/{slug}:
     get:
       operationId: getPublishedPost
@@ -5251,6 +5285,7 @@ components:
         - document
         - media
         - byline
+        - related
         - publishedAt
       properties:
         id:
@@ -5284,6 +5319,13 @@ components:
             $ref: '#/components/schemas/PostMedia'
         byline:
           $ref: '#/components/schemas/PostByline'
+        related:
+          type: array
+          description: >-
+            At most three other published posts, preferring the same publication
+            app and then the same category, newest first.
+          items:
+            $ref: '#/components/schemas/PostSummary'
         publishedAt:
           type: string
           format: date-time
@@ -7594,6 +7636,88 @@ components:
           type: string
           format: date-time
           description: When the edition goes live, with an explicit offset.
+    PostSummaryImage:
+      type: object
+      description: The picture an archive entry shows, taken from the published edition.
+      required:
+        - media
+        - alt
+      properties:
+        media:
+          $ref: '#/components/schemas/PostMedia'
+        alt:
+          type: string
+    PostSummary:
+      type: object
+      description: >-
+        One published post as an archive lists it. Every field is stored on the
+        published edition, so a listing writes no excerpt and reads no live
+        profile.
+      required:
+        - id
+        - slug
+        - title
+        - summary
+        - category
+        - byline
+        - publishedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        category:
+          $ref: '#/components/schemas/PublicationCategory'
+        app:
+          anyOf:
+            - $ref: '#/components/schemas/PublicationApp'
+            - type: 'null'
+        releaseVersion:
+          type: string
+        image:
+          anyOf:
+            - $ref: '#/components/schemas/PostSummaryImage'
+            - type: 'null'
+        byline:
+          $ref: '#/components/schemas/PostByline'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostArchive:
+      type: object
+      description: One page of the published archive and the scope it was read under.
+      required:
+        - posts
+        - page
+        - pages
+        - total
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostSummary'
+        page:
+          type: integer
+        pages:
+          type: integer
+        total:
+          type: integer
+        category:
+          anyOf:
+            - $ref: '#/components/schemas/PublicationCategory'
+            - type: 'null'
+        app:
+          anyOf:
+            - $ref: '#/components/schemas/PublicationApp'
+            - type: 'null'
     LegacyAsset:
       type: object
       required:

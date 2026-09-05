@@ -134,6 +134,8 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1address
   /v1/publication/posts/{id}/byline:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1byline
+  /v1/posts:
+    $ref: ./posts.yaml#/paths/~1v1~1posts
   /v1/posts/{slug}:
     $ref: ./posts.yaml#/paths/~1v1~1posts~1{slug}
   /v1/profiles/{handle}:
