@@ -190,8 +190,8 @@ export function PostWriter({ id }: { id: string }) {
     setEdition((count) => count + 1);
   }
 
-  function ask() {
-    setDoor("now");
+  function askAt(door: Door) {
+    setDoor(door);
     setWhen(atLeastAnHourAhead());
     setAsking(true);
   }
@@ -299,7 +299,7 @@ export function PostWriter({ id }: { id: string }) {
           <button
             className={styles.publish}
             disabled={state === "conflict"}
-            onClick={ask}
+            onClick={() => askAt("now")}
             type="button"
           >
             {post.status === "published" ? "Publish changes" : "Publish"}
@@ -311,7 +311,12 @@ export function PostWriter({ id }: { id: string }) {
         {kept}
       </p>
 
-      <ScheduleBand onChanged={settled} onFailure={setRefusal} post={post} />
+      <ScheduleBand
+        onChanged={settled}
+        onFailure={setRefusal}
+        onScheduleAgain={() => askAt("later")}
+        post={post}
+      />
 
       {refusal ? (
         <p className={styles.refusal} role="alert">

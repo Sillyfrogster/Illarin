@@ -11,7 +11,12 @@ import {
 import type { Post, PostRevision } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 import { revisionWords } from "@/lib/post-history";
-import { type LocalParts, localParts, toInstant } from "@/lib/schedule-time";
+import {
+  howSoon,
+  type LocalParts,
+  localParts,
+  toInstant,
+} from "@/lib/schedule-time";
 import styles from "./ScheduleBand.module.css";
 import { ScheduleFields } from "./ScheduleFields";
 
@@ -19,10 +24,12 @@ export function ScheduleBand({
   post,
   onChanged,
   onFailure,
+  onScheduleAgain,
 }: {
   post: Post;
   onChanged: (post: Post) => void;
   onFailure: (message: string) => void;
+  onScheduleAgain: () => void;
 }) {
   const schedule = post.schedule;
   const [kept, setKept] = useState<PostRevision[] | null>(null);
@@ -37,6 +44,7 @@ export function ScheduleBand({
 
   const running = schedule.state === "publishing";
   const stopped = schedule.state === "stopped";
+  const soon = running ? "" : howSoon(schedule.at);
 
   async function open() {
     if (!schedule) return;
@@ -100,6 +108,7 @@ export function ScheduleBand({
           <>
             Edition {schedule.revisionNumber} goes live{" "}
             <time dateTime={schedule.at}>{readableMoment(schedule.at)}</time>.
+            {soon ? <span className={styles.soon}>{soon}</span> : null}
           </>
         )}
       </p>
@@ -112,22 +121,34 @@ export function ScheduleBand({
             : "Readers cannot see this post until then."}
       </p>
 
-      {stopped || running ? null : (
+      {running ? null : (
         <div className={styles.actions}>
-          <button
-            className={styles.act}
-            onClick={() => void open()}
-            type="button"
-          >
-            Replace edition
-          </button>
-          <button
-            className={styles.stop}
-            onClick={() => setCancelling(true)}
-            type="button"
-          >
-            Cancel
-          </button>
+          {stopped ? (
+            <button
+              className={styles.act}
+              onClick={onScheduleAgain}
+              type="button"
+            >
+              Schedule again
+            </button>
+          ) : (
+            <>
+              <button
+                className={styles.act}
+                onClick={() => void open()}
+                type="button"
+              >
+                Replace edition
+              </button>
+              <button
+                className={styles.stop}
+                onClick={() => setCancelling(true)}
+                type="button"
+              >
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -158,7 +179,10 @@ export function ScheduleBand({
                 <span>{readableMoment(one.capturedAt)}</span>
               </span>
               {standingOf(one.id, schedule.revisionId, one.public) ? (
-                <span className={styles.standing}>
+                <span
+                  className={styles.standing}
+                  data-waiting={one.id === schedule.revisionId || undefined}
+                >
                   {standingOf(one.id, schedule.revisionId, one.public)}
                 </span>
               ) : null}
@@ -178,7 +202,7 @@ export function ScheduleBand({
         title="Stop this from going live?"
       >
         <p className={styles.confirm}>
-          {post.title}
+          Edition {schedule.revisionNumber}, due {readableMoment(schedule.at)}
           <span>
             {post.status === "published"
               ? "Readers keep the edition on the blog now."

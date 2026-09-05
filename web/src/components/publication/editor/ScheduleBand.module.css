@@ -60,6 +60,16 @@
   white-space: nowrap;
 }
 
+.soon {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--type-secondary-size);
+  font-weight: 400;
+  line-height: var(--type-secondary-leading);
+}
+
 .meanwhile {
   grid-area: meanwhile;
   margin-top: 4px;
@@ -178,6 +188,12 @@
   font-weight: 400;
 }
 
+.standing[data-waiting] {
+  border-color: var(--color-emphasis);
+  background: var(--color-emphasis);
+  color: var(--color-on-emphasis);
+}
+
 .standing {
   padding: 3px 10px;
   border: 1px solid var(--color-border);
@@ -219,6 +235,7 @@
   }
 
   .actions {
+    align-self: stretch;
     margin-top: 14px;
   }
 
