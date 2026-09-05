@@ -1,3 +1,5 @@
+import { siteUrl } from "./site-metadata";
+
 const HANDLE = /^[a-z0-9._]{3,32}$/;
 
 const PUNCTUATION_ONLY = /^[._]+$/;
@@ -13,4 +15,9 @@ export function readProfileAddress(segment: string): ProfileAddress | null {
   const handle = (isCanonical ? segment.slice(1) : segment).toLowerCase();
   if (!HANDLE.test(handle) || PUNCTUATION_ONLY.test(handle)) return null;
   return { form: isCanonical ? "canonical" : "legacy", handle };
+}
+
+/** The whole address a profile answers to, so the blog can link one from its own origin. */
+export function profileAddress(handle: string): string {
+  return new URL(`/@${encodeURI(handle)}`, siteUrl).href;
 }

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { PostByline } from "@/lib/api/query";
+import { profileAddress } from "@/lib/profile-address";
 import styles from "./Byline.module.css";
 
 /** Who wrote a post and what they were writing as, exactly as its byline was stored. */
@@ -24,9 +25,9 @@ export function Byline({ byline }: { byline: PostByline }) {
         )}
       </span>
       <span className={styles.who}>
-        <Link className={styles.name} href={`/@${byline.handle}`}>
+        <a className={styles.name} href={profileAddress(byline.handle)}>
           {name}
-        </Link>
+        </a>
         <span className={styles.standing}>
           {byline.app ? (
             <>
@@ -65,9 +66,9 @@ export function BylineLine({
   const name = byline.displayName || `@${byline.handle}`;
   return (
     <span className={styles.line}>
-      <Link className={styles.lineName} href={`/@${byline.handle}`}>
+      <a className={styles.lineName} href={profileAddress(byline.handle)}>
         {name}
-      </Link>
+      </a>
       {quiet ? null : byline.app ? (
         <Link className={styles.lineApp} href={`/blog/app/${byline.app.slug}`}>
           {byline.app.name}
