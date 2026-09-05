@@ -79,9 +79,9 @@ function When({ post }: { post: PostSummary }) {
     <>
       <time dateTime={post.publishedAt}>{readableDate(post.publishedAt)}</time>
       {post.updatedAt ? (
-        <span className={styles.revised}>
+        <time className={styles.revised} dateTime={post.updatedAt}>
           Updated {readableDate(post.updatedAt)}
-        </span>
+        </time>
       ) : null}
     </>
   );

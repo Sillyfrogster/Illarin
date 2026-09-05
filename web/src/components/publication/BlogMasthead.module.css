@@ -58,6 +58,7 @@
 }
 
 .publication {
+  position: relative;
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -138,4 +139,14 @@
     margin-inline: -8px;
     padding-bottom: 4px;
   }
+}
+
+.publication[aria-current="page"]::after {
+  position: absolute;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
 }

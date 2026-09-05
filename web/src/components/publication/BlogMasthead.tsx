@@ -13,6 +13,7 @@ export function BlogMasthead({
   categories: PublicationCategory[];
 }) {
   const pathname = usePathname();
+  const onArchive = pathname === "/blog" || pathname.startsWith("/blog/page/");
   return (
     <header className={styles.masthead}>
       <div className={styles.bar}>
@@ -23,7 +24,7 @@ export function BlogMasthead({
           </Link>
           <span aria-hidden="true" className={styles.divider} />
           <Link
-            aria-current={pathname === "/blog" ? "page" : undefined}
+            aria-current={onArchive ? "page" : undefined}
             className={styles.publication}
             href="/blog"
           >

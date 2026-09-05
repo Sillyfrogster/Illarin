@@ -49,9 +49,9 @@ export function ArticleIdentity({
             <time dateTime={publishedAt}>{readableDate(publishedAt)}</time>
           ) : null}
           {updatedAt ? (
-            <span className={styles.revised}>
+            <time className={styles.revised} dateTime={updatedAt}>
               Updated {readableDate(updatedAt)}
-            </span>
+            </time>
           ) : null}
         </p>
       </div>
