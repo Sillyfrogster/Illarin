@@ -34,3 +34,8 @@ export function normalizedSlug(candidate: string): string {
     .slice(0, 80)
     .replace(/-+$/, "");
 }
+
+/** The whole address a post answers to, which is what sharing hands to someone else. */
+export function postPermalink(slug: string): string {
+  return new URL(`/blog/${encodeURI(slug)}`, siteUrl).href;
+}

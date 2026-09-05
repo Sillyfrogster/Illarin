@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { isSafeAddress, leavesIllarin, normalizedSlug } from "./post-link";
+import {
+  isSafeAddress,
+  leavesIllarin,
+  normalizedSlug,
+  postPermalink,
+} from "./post-link";
 
 test("an address on another site leaves Illarin", () => {
   expect(leavesIllarin("https://example.com/notes")).toBe(true);
@@ -47,4 +52,16 @@ test("a preview never runs past the address limit", () => {
   const long = normalizedSlug("a".repeat(120));
   expect(long.length).toBe(80);
   expect(normalizedSlug(`${"b".repeat(79)} tail`).endsWith("-")).toBe(false);
+});
+
+test("a permalink is the whole address a reader can hand to someone", () => {
+  expect(postPermalink("first-post")).toBe(
+    "http://localhost:8000/blog/first-post",
+  );
+});
+
+test("a permalink escapes an address that needs it", () => {
+  expect(postPermalink("café notes")).toBe(
+    "http://localhost:8000/blog/caf%C3%A9%20notes",
+  );
 });

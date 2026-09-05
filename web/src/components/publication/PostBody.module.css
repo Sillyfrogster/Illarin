@@ -422,10 +422,6 @@ h4.heading {
 }
 
 @media (min-width: 980px) {
-  .gallery {
-    width: calc(var(--shell-reading) - 2 * var(--gutter));
-  }
-
   .gallery[data-count="3"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

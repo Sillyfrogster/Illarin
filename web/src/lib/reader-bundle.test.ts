@@ -8,6 +8,9 @@ const READER_FILES = [
   "src/components/publication/Article.tsx",
   "src/components/publication/ArticleIdentity.tsx",
   "src/components/publication/PostBody.tsx",
+  "src/components/publication/ArticleContents.tsx",
+  "src/components/publication/ShareArticle.tsx",
+  "src/app/blog/feed.xml/route.ts",
 ];
 
 const ROOT = join(import.meta.dir, "../..");
