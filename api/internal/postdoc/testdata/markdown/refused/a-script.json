@@ -1,0 +1,10 @@
+{
+  "note": "A script is not content",
+  "markdown": "<script>alert(1)</script>\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "HTML"
+    }
+  ]
+}

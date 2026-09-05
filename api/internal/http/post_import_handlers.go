@@ -11,14 +11,16 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
+// maxImportBytes bounds an import, which is the Markdown and the JSON it rides in.
+const maxImportBytes = 1 << 20
+
 func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPostMarkdownParams) {
 	editor, ok := h.postEditor(c, "importing Markdown into a post")
 	if !ok {
 		return
 	}
 	var request ImportPostMarkdownRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the import as JSON."})
+	if !readBoundedJSON(c, &request, maxImportBytes, "This import is too large.") {
 		return
 	}
 	saved, notes, err := h.publications.ImportPost(c.Request.Context(), editor, uuid.UUID(id),

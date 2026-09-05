@@ -362,6 +362,24 @@ func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
 	}
 }
 
+func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	body, err := json.Marshal(map[string]any{
+		"version": draft.Version, "markdown": strings.Repeat("word ", 500000),
+	})
+	if err != nil {
+		t.Fatalf("encode import: %v", err)
+	}
+	response := stack.sent(t, kit.value, jsonRequest(t,
+		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/import", string(body),
+	))
+	if response.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
+	}
+}
+
 func (s distinctionStack) toolDraft(t *testing.T, kit tooling, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")
