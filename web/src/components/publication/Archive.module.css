@@ -12,6 +12,16 @@
   padding-inline: var(--gutter);
 }
 
+/* The publication says what it is once, above its newest writing. */
+.statement {
+  max-width: 46ch;
+  padding-bottom: clamp(20px, 2.4vw, 30px);
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+  text-wrap: pretty;
+}
+
 .scope {
   padding-block: clamp(40px, 5vw, 72px) clamp(20px, 2vw, 28px);
   border-bottom: 1px solid var(--color-border);
@@ -36,6 +46,15 @@
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
   line-height: var(--type-secondary-leading);
+}
+
+.scopeKind {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: var(--type-label-leading);
+  text-transform: uppercase;
 }
 
 .scopeMeta a {
@@ -78,6 +97,7 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
+  gap: 5px;
   color: var(--color-text-primary);
   font-weight: 600;
 }
@@ -103,5 +123,5 @@
 }
 
 .list + .pages {
-  margin-top: clamp(12px, 2vw, 24px);
+  margin-top: clamp(4px, 1vw, 12px);
 }

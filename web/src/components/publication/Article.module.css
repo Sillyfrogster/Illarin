@@ -18,6 +18,10 @@
   padding-block: clamp(36px, 4vw, 56px) clamp(64px, 7vw, 104px);
 }
 
+.title a {
+  color: inherit;
+}
+
 .title {
   max-width: 20ch;
   font-family: var(--font-display);
@@ -52,12 +56,13 @@
   text-wrap: pretty;
 }
 
+/* The band stays inside the copy measure, so no reading text sits on the artwork. */
 .band {
   display: flex;
+  max-width: 46ch;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px 24px;
+  gap: 12px 20px;
   margin-top: clamp(28px, 3vw, 36px);
   padding-block: 18px;
   border-top: 1px solid var(--color-border);
@@ -83,7 +88,7 @@
 }
 
 .category {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -95,7 +100,7 @@
   padding: 2px 9px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: 600;
   line-height: var(--type-label-leading);
@@ -103,6 +108,7 @@
 
 a.release:hover {
   border-color: var(--color-emphasis-border);
+  color: var(--color-text-primary);
 }
 
 .revised {

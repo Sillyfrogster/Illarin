@@ -37,6 +37,7 @@ export default async function CategoryArchivePage({
     <ScopedArchive
       archive={archive}
       scope={{
+        kind: "Category",
         heading: archive.category.label,
         address: `/blog/category/${slug}`,
         narrowed: "category",

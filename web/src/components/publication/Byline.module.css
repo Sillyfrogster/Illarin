@@ -91,11 +91,12 @@ a.affiliation:hover {
 }
 
 .lineName {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
 .lineName:hover {
+  color: var(--color-text-primary);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

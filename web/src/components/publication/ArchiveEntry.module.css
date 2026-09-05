@@ -27,6 +27,10 @@
   letter-spacing: -0.015em;
 }
 
+.leadTitle a {
+  color: inherit;
+}
+
 .leadTitle a:hover {
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -42,12 +46,13 @@
   text-wrap: pretty;
 }
 
+/* The band stays inside the copy measure, so no reading text sits on the artwork. */
 .leadBand {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px 24px;
+  gap: 12px 20px;
+  max-width: 46ch;
   margin-top: clamp(28px, 3vw, 36px);
   padding-top: 18px;
   border-top: 1px solid var(--color-border);
@@ -72,6 +77,10 @@
 
 .row:first-child {
   border-top: 0;
+}
+
+.rowTitle a {
+  color: inherit;
 }
 
 .rowTitle {
@@ -120,7 +129,7 @@
 }
 
 .category {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -129,6 +138,7 @@
 }
 
 .category:hover {
+  color: var(--color-text-primary);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -137,7 +147,7 @@
   padding: 2px 9px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: 600;
   line-height: var(--type-label-leading);
@@ -145,6 +155,7 @@
 
 .app:hover {
   border-color: var(--color-emphasis-border);
+  color: var(--color-text-primary);
 }
 
 .revised {
@@ -152,10 +163,27 @@
   line-height: var(--type-label-leading);
 }
 
+/* A thumb gets a real target, and the row's own overlay stops competing for it. */
 @media (max-width: 700px) {
   .leadBand {
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+  }
+
+  .reach::after {
+    display: none;
+  }
+
+  .rowFiled {
+    margin-block: 4px -14px;
+    gap: 0 14px;
+  }
+
+  .rowFiled a,
+  .rowFiled time {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
   }
 }

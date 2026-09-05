@@ -46,7 +46,7 @@ export function ArchiveRow({
       ) : null}
       <p className={styles.rowFiled}>
         {narrowed === "category" ? null : <Category post={post} />}
-        <BylineLine byline={post.byline} />
+        <BylineLine byline={post.byline} quiet={narrowed === "app"} />
         {narrowed === "app" ? null : <App post={post} />}
         <When post={post} />
       </p>

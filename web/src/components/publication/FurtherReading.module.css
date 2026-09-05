@@ -16,7 +16,6 @@
 
 .list {
   display: grid;
-  gap: 1px;
   margin-top: 18px;
   list-style: none;
 }
@@ -25,6 +24,10 @@
   position: relative;
   padding-block: 18px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.title a {
+  color: inherit;
 }
 
 .title {
@@ -62,13 +65,13 @@
 }
 
 .category {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-weight: 800;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 .app {
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }

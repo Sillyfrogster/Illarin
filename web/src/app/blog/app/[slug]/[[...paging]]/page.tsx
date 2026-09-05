@@ -35,10 +35,11 @@ export default async function AppArchivePage({
     <ScopedArchive
       archive={archive}
       scope={{
+        kind: "Publication app",
         heading: archive.app.name,
         address: `/blog/app/${slug}`,
         narrowed: "app",
-        home: { label: `Visit ${archive.app.name}`, href: archive.app.home },
+        home: archive.app.home,
       }}
     />
   );

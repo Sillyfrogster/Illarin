@@ -23,17 +23,20 @@ export function BlogMasthead({
             <span className={styles.wordmark}>Illarin</span>
           </Link>
           <span aria-hidden="true" className={styles.divider} />
-          <Link
-            aria-current={onArchive ? "page" : undefined}
-            className={styles.publication}
-            href="/blog"
-          >
+          <Link className={styles.publication} href="/blog">
             Blog
           </Link>
         </div>
 
         {categories.length > 0 ? (
           <nav className={styles.nav} aria-label="Publication categories">
+            <Link
+              aria-current={onArchive ? "page" : undefined}
+              className={styles.category}
+              href="/blog"
+            >
+              All
+            </Link>
             {categories.map((category) => {
               const address = `/blog/category/${category.slug}`;
               const current =

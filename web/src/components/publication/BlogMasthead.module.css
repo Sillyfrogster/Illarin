@@ -58,7 +58,6 @@
 }
 
 .publication {
-  position: relative;
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -141,12 +140,6 @@
   }
 }
 
-.publication[aria-current="page"]::after {
-  position: absolute;
-  right: 0;
-  bottom: 12px;
-  left: 0;
-  height: 1px;
-  background: currentColor;
-  content: "";
+.publication:hover {
+  color: var(--color-text-secondary);
 }

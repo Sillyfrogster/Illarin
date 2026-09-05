@@ -1,25 +1,42 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { PostArchive } from "@/lib/api/query";
+import { BLOG_DESCRIPTION, BLOG_TITLE } from "@/lib/publication-metadata";
 import styles from "./Archive.module.css";
 import { ArchiveLead, ArchiveRow } from "./ArchiveEntry";
 import { PublicationArt } from "./PublicationArt";
 
 export type ArchiveScope = {
+  kind: string;
   heading: string;
   address: string;
   narrowed: "category" | "app" | null;
-  home: { label: string; href: string } | null;
+  home: string | null;
 };
 
 /** The publication's front page: the newest post over the masthead art, then the rest. */
 export function PublicationFront({ archive }: { archive: PostArchive }) {
   const [lead, ...rest] = archive.posts;
-  if (!lead) return <EmptyArchive />;
+  if (!lead) {
+    return (
+      <ScopedArchive
+        archive={archive}
+        scope={{
+          kind: "Publication",
+          heading: BLOG_TITLE,
+          address: "/blog",
+          narrowed: null,
+          home: null,
+        }}
+      />
+    );
+  }
   return (
     <div>
       <div className={styles.masthead}>
         <PublicationArt />
         <div className={styles.column}>
+          <p className={styles.statement}>{BLOG_DESCRIPTION}</p>
           <ArchiveLead post={lead} />
         </div>
       </div>
@@ -48,12 +65,18 @@ export function ScopedArchive({
       <header className={styles.scope}>
         <h1 className={styles.scopeHeading}>{scope.heading}</h1>
         <p className={styles.scopeMeta}>
+          <span className={styles.scopeKind}>{scope.kind}</span>
           <span>
             {archive.total} {archive.total === 1 ? "post" : "posts"}
           </span>
+          {archive.pages > 1 ? (
+            <span>
+              Page {archive.page} of {archive.pages}
+            </span>
+          ) : null}
           {scope.home ? (
-            <a href={scope.home.href} rel="noreferrer noopener" target="_blank">
-              {scope.home.label}
+            <a href={scope.home} rel="noreferrer noopener" target="_blank">
+              {siteName(scope.home)}
             </a>
           ) : null}
         </p>
@@ -90,6 +113,7 @@ function ArchivePages({
           href={pageAddress(address, archive.page - 1)}
           rel="prev"
         >
+          <ChevronLeft aria-hidden="true" size={15} strokeWidth={1.9} />
           Newer posts
         </Link>
       ) : (
@@ -105,6 +129,7 @@ function ArchivePages({
           rel="next"
         >
           Older posts
+          <ChevronRight aria-hidden="true" size={15} strokeWidth={1.9} />
         </Link>
       ) : (
         <span className={styles.spent}>Older posts</span>
@@ -117,6 +142,15 @@ function EmptyArchive() {
   return (
     <p className={styles.empty}>Illarin has not published anything here yet.</p>
   );
+}
+
+/** The address a reader would recognise, without the scheme they never type. */
+function siteName(address: string): string {
+  try {
+    return new URL(address).host.replace(/^www\./, "");
+  } catch {
+    return address;
+  }
 }
 
 /** Page one of any archive lives at the archive's own address, not under /page/1. */

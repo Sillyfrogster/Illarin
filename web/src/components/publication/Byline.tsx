@@ -55,14 +55,20 @@ export function Byline({ byline }: { byline: PostByline }) {
 }
 
 /** The same attribution on one line, for a list where a portrait in every row is noise. */
-export function BylineLine({ byline }: { byline: PostByline }) {
+export function BylineLine({
+  byline,
+  quiet,
+}: {
+  byline: PostByline;
+  quiet?: boolean;
+}) {
   const name = byline.displayName || `@${byline.handle}`;
   return (
     <span className={styles.line}>
       <Link className={styles.lineName} href={`/@${byline.handle}`}>
         {name}
       </Link>
-      {byline.app ? (
+      {quiet ? null : byline.app ? (
         <Link className={styles.lineApp} href={`/blog/app/${byline.app.slug}`}>
           {byline.app.name}
         </Link>
