@@ -102,6 +102,7 @@ type Post struct {
 	Header          *Header
 	SocialMediaID   *uuid.UUID
 	PublicRevision  *uuid.UUID
+	Schedule        *Schedule
 	Media           []PostMedia
 	Byline          *Byline
 	FormerAddresses []string
@@ -672,6 +673,9 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 		return nil, err
 	}
 	if err := s.attachAttribution(ctx, found); err != nil {
+		return nil, err
+	}
+	if err := s.attachSchedules(ctx, found); err != nil {
 		return nil, err
 	}
 	return found, nil

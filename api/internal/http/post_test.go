@@ -52,6 +52,7 @@ type blogPost struct {
 	Header          *postHeader         `json:"header"`
 	SocialMediaID   string              `json:"socialMediaId"`
 	PublicRevision  string              `json:"publicRevisionId"`
+	Schedule        *postSchedule       `json:"schedule"`
 	Media           []postPicture       `json:"media"`
 	Byline          *postByline         `json:"byline"`
 	FormerAddresses []string            `json:"formerAddresses"`

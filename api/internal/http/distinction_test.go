@@ -61,6 +61,7 @@ type profileDistinction struct {
 type distinctionStack struct {
 	router    *gin.Engine
 	pool      *pgxpool.Pool
+	handlers  *Handlers
 	outbox    *verificationOutbox
 	authority *http.Cookie
 }
@@ -68,10 +69,14 @@ type distinctionStack struct {
 func newDistinctionStack(t *testing.T) distinctionStack {
 	t.Helper()
 	outbox := &verificationOutbox{}
-	router, pool, _ := newTestRouterWithSenderPoolAndHandlers(t, 1<<20, DefaultDeadlines(), outbox)
+	router, pool, handlers := newTestRouterWithSenderPoolAndHandlers(
+		t, 1<<20, DefaultDeadlines(), outbox,
+	)
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
-	return distinctionStack{router: router, pool: pool, outbox: outbox, authority: session}
+	return distinctionStack{
+		router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
+	}
 }
 
 func (s distinctionStack) member(t *testing.T, email, handle string) *http.Cookie {

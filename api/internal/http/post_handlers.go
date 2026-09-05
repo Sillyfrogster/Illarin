@@ -325,6 +325,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		public := types.UUID(*found.PublicRevision)
 		shown.PublicRevisionId = &public
 	}
+	shown.Schedule = toAPISchedule(found.Schedule)
 	if found.Byline != nil {
 		byline := toAPIByline(*found.Byline)
 		shown.Byline = &byline

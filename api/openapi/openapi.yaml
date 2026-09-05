@@ -128,6 +128,8 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1import
   /v1/publication/posts/{id}/publish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
+  /v1/publication/posts/{id}/schedule:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1schedule
   /v1/publication/posts/{id}/address:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1address
   /v1/publication/posts/{id}/byline:

@@ -73,35 +73,8 @@ func (s *Service) PublishPost(
 	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
-	firstTime := locked.PublishedAt == nil
-	_, err = tx.Exec(ctx, `
-		update posts
-		   set status = $2, public_revision_id = $3,
-		       published_at = coalesce(published_at, now()),
-		       updated_public_at = case when published_at is null then null else now() end,
-		       updated_at = now()
-		 where id = $1
-	`, id, StatusPublished, revisionID)
-	if err != nil {
-		return Post{}, fmt.Errorf("put the post in public view: %w", err)
-	}
-	if firstTime {
-		if err := captureByline(ctx, tx, id, locked.AuthorID, locked.GrantID); err != nil {
-			return Post{}, err
-		}
-		if err := reserveAddress(ctx, tx, id, editor.ID, locked.Slug); err != nil {
-			return Post{}, err
-		}
-	}
-	event := EventUpdated
-	if firstTime {
-		event = EventPublished
-	}
-	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type) values ($1, $2, $3, $4)
-	`, uuid.New(), id, revisionID, event)
-	if err != nil {
-		return Post{}, fmt.Errorf("record the publication event: %w", err)
+	if err := makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug); err != nil {
+		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.published",
@@ -116,6 +89,50 @@ func (s *Service) PublishPost(
 		return Post{}, fmt.Errorf("commit publication: %w", err)
 	}
 	return s.post(ctx, id)
+}
+
+// makePublic puts one already-captured edition in front of readers, and is the
+// whole of what publishing does whether an author asked now or a schedule did.
+func makePublic(
+	ctx context.Context,
+	tx pgx.Tx,
+	locked working,
+	revisionID uuid.UUID,
+	actor uuid.UUID,
+	address string,
+) error {
+	firstTime := locked.PublishedAt == nil
+	_, err := tx.Exec(ctx, `
+		update posts
+		   set status = $2, public_revision_id = $3,
+		       slug = case when published_at is null then $4 else slug end,
+		       published_at = coalesce(published_at, now()),
+		       updated_public_at = case when published_at is null then null else now() end,
+		       updated_at = now()
+		 where id = $1
+	`, locked.ID, StatusPublished, revisionID, address)
+	if err != nil {
+		return fmt.Errorf("put the post in public view: %w", err)
+	}
+	if firstTime {
+		if err := captureByline(ctx, tx, locked.ID, locked.AuthorID, locked.GrantID); err != nil {
+			return err
+		}
+		if err := reserveAddress(ctx, tx, locked.ID, actor, address); err != nil {
+			return err
+		}
+	}
+	event := EventUpdated
+	if firstTime {
+		event = EventPublished
+	}
+	_, err = tx.Exec(ctx, `
+		insert into publication_events (id, post_id, revision_id, type) values ($1, $2, $3, $4)
+	`, uuid.New(), locked.ID, revisionID, event)
+	if err != nil {
+		return fmt.Errorf("record the publication event: %w", err)
+	}
+	return nil
 }
 
 // PublishedPost answers the public edition behind one address, current or former, and always names the address it lives at now.

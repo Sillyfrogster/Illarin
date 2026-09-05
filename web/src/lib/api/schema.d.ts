@@ -1017,6 +1017,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Point a waiting schedule at another edition the post has already kept, at the same instant or a new one. The edition it leaves is untouched. */
+    put: operations["replacePostSchedule"];
+    /** @description Capture the named working copy as an immutable revision and set it to go live at one instant. Editing the working copy afterwards does not reach the edition that will publish. */
+    post: operations["schedulePost"];
+    /** @description Stop a waiting schedule. The post keeps whatever it shows readers now, and the edition the schedule named stays in its history. */
+    delete: operations["cancelPostSchedule"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/address": {
     parameters: {
       query?: never;
@@ -1879,6 +1898,8 @@ export interface components {
       | "invalid"
       | "category_refused"
       | "stale_version"
+      | "already_scheduled"
+      | "schedule_running"
       | "idempotency_mismatch"
       | "idempotency_in_progress"
       | "rate_limited"
@@ -1966,6 +1987,7 @@ export interface components {
       socialMediaId?: string | null;
       /** @description The edition readers are being given, once there is one. */
       publicRevisionId?: string | null;
+      schedule?: components["schemas"]["PostSchedule"] | null;
       media: components["schemas"]["PostMedia"][];
       byline?: components["schemas"]["PostByline"] | null;
       /** @description Addresses this post published under and has since left. Every one of them still reaches it. */
@@ -2958,6 +2980,32 @@ export interface components {
       instanceId: string;
     };
     /**
+     * @description Where a schedule got to.
+     * @enum {string}
+     */
+    PostScheduleState:
+      | "pending"
+      | "publishing"
+      | "published"
+      | "cancelled"
+      | "stopped";
+    /** @description The post's most recent schedule. It names the exact edition that will go live and the instant it goes, both in UTC. */
+    PostSchedule: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      revisionId: string;
+      revisionNumber: number;
+      /** Format: date-time */
+      at: string;
+      state: components["schemas"]["PostScheduleState"];
+      /** @description Why Illarin stopped a schedule instead of publishing it. */
+      stoppedBecause?: string;
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    /**
      * @description Why an edition was kept.
      * @enum {string}
      */
@@ -3000,6 +3048,27 @@ export interface components {
     };
     PostActionList: {
       actions: components["schemas"]["PostAction"][];
+    };
+    ReplacePostScheduleRequest: {
+      /**
+       * Format: uuid
+       * @description An edition the post has already kept.
+       */
+      revisionId: string;
+      /**
+       * Format: date-time
+       * @description When the edition goes live, with an explicit offset.
+       */
+      at: string;
+    };
+    SchedulePostRequest: {
+      /** @description The working-copy version the edition is captured from. */
+      version: number;
+      /**
+       * Format: date-time
+       * @description When the edition goes live, with an explicit offset.
+       */
+      at: string;
     };
     LegacyAsset: {
       /** Format: uuid */
@@ -6453,6 +6522,130 @@ export interface operations {
       403: components["responses"]["PublicationForbidden"];
       404: components["responses"]["PublicationNotFound"];
       /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  replacePostSchedule: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplacePostScheduleRequest"];
+      };
+    };
+    responses: {
+      /** @description The post with the edition it will now publish */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The schedule is already publishing, or the key was reused */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  schedulePost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SchedulePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post with the edition it will publish */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, the post is already scheduled, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  cancelPostSchedule: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The post with nothing waiting to publish */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The schedule is already publishing, or the key was reused */
       409: {
         headers: {
           [name: string]: unknown;

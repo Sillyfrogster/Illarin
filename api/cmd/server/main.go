@@ -143,7 +143,7 @@ func run() error {
 	publications := publication.NewService(pool, images, publication.DefaultRates())
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(2)
+	background.Add(3)
 	go func() {
 		defer background.Done()
 		deliveries.RunSweeper(runtimeContext, func(err error) {
@@ -154,6 +154,12 @@ func run() error {
 		defer background.Done()
 		publications.RunSweeper(runtimeContext, func(err error) {
 			log.Printf("publication sweeper: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		publications.RunScheduler(runtimeContext, func(err error) {
+			log.Printf("publication scheduler: %v", err)
 		})
 	}()
 

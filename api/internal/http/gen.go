@@ -876,6 +876,33 @@ func (e PostRevisionReason) Valid() bool {
 	}
 }
 
+// Defines values for PostScheduleState.
+const (
+	PostScheduleStateCancelled  PostScheduleState = "cancelled"
+	PostScheduleStatePending    PostScheduleState = "pending"
+	PostScheduleStatePublished  PostScheduleState = "published"
+	PostScheduleStatePublishing PostScheduleState = "publishing"
+	PostScheduleStateStopped    PostScheduleState = "stopped"
+)
+
+// Valid indicates whether the value is a known member of the PostScheduleState enum.
+func (e PostScheduleState) Valid() bool {
+	switch e {
+	case PostScheduleStateCancelled:
+		return true
+	case PostScheduleStatePending:
+		return true
+	case PostScheduleStatePublished:
+		return true
+	case PostScheduleStatePublishing:
+		return true
+	case PostScheduleStateStopped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostStatus.
 const (
 	PostStatusDraft     PostStatus = "draft"
@@ -944,6 +971,7 @@ func (e PromptListContentFragmentsRole) Valid() bool {
 
 // Defines values for PublicationErrorCode.
 const (
+	CodeAlreadyScheduled      PublicationErrorCode = "already_scheduled"
 	CodeCategoryRefused       PublicationErrorCode = "category_refused"
 	CodeForbidden             PublicationErrorCode = "forbidden"
 	CodeGrantRevoked          PublicationErrorCode = "grant_revoked"
@@ -952,6 +980,7 @@ const (
 	CodeInvalid               PublicationErrorCode = "invalid"
 	CodeNotFound              PublicationErrorCode = "not_found"
 	CodeRateLimited           PublicationErrorCode = "rate_limited"
+	CodeScheduleRunning       PublicationErrorCode = "schedule_running"
 	CodeServerError           PublicationErrorCode = "server_error"
 	CodeStaleVersion          PublicationErrorCode = "stale_version"
 	CodeTokenExpired          PublicationErrorCode = "token_expired"
@@ -962,6 +991,8 @@ const (
 // Valid indicates whether the value is a known member of the PublicationErrorCode enum.
 func (e PublicationErrorCode) Valid() bool {
 	switch e {
+	case CodeAlreadyScheduled:
+		return true
 	case CodeCategoryRefused:
 		return true
 	case CodeForbidden:
@@ -977,6 +1008,8 @@ func (e PublicationErrorCode) Valid() bool {
 	case CodeNotFound:
 		return true
 	case CodeRateLimited:
+		return true
+	case CodeScheduleRunning:
 		return true
 	case CodeServerError:
 		return true
@@ -2580,6 +2613,7 @@ type Post struct {
 	PublicRevisionId *openapi_types.UUID `json:"publicRevisionId,omitempty"`
 	PublishedAt      *time.Time          `json:"publishedAt,omitempty"`
 	Release          *PostRelease        `json:"release,omitempty"`
+	Schedule         *PostSchedule       `json:"schedule,omitempty"`
 	Slug             string              `json:"slug"`
 	SocialMediaId    *openapi_types.UUID `json:"socialMediaId,omitempty"`
 	Status           PostStatus          `json:"status"`
@@ -2736,6 +2770,25 @@ type PostRevisionList struct {
 
 // PostRevisionReason Why an edition was kept.
 type PostRevisionReason string
+
+// PostSchedule The post's most recent schedule. It names the exact edition that will go live and the instant it goes, both in UTC.
+type PostSchedule struct {
+	At             time.Time          `json:"at"`
+	CreatedAt      time.Time          `json:"createdAt"`
+	CreatedBy      string             `json:"createdBy"`
+	Id             openapi_types.UUID `json:"id"`
+	RevisionId     openapi_types.UUID `json:"revisionId"`
+	RevisionNumber int                `json:"revisionNumber"`
+
+	// State Where a schedule got to.
+	State PostScheduleState `json:"state"`
+
+	// StoppedBecause Why Illarin stopped a schedule instead of publishing it.
+	StoppedBecause *string `json:"stoppedBecause,omitempty"`
+}
+
+// PostScheduleState Where a schedule got to.
+type PostScheduleState string
 
 // PostStatus defines model for PostStatus.
 type PostStatus string
@@ -3043,6 +3096,15 @@ type RenameHandleRequest struct {
 	Handle string `json:"handle"`
 }
 
+// ReplacePostScheduleRequest defines model for ReplacePostScheduleRequest.
+type ReplacePostScheduleRequest struct {
+	// At When the edition goes live, with an explicit offset.
+	At time.Time `json:"at"`
+
+	// RevisionId An edition the post has already kept.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+}
+
 // RequestCode defines model for RequestCode.
 type RequestCode = string
 
@@ -3114,6 +3176,15 @@ type SaveProfileRequest struct {
 	ContactEmail string        `json:"contactEmail"`
 	DisplayName  string        `json:"displayName"`
 	Links        []ProfileLink `json:"links"`
+}
+
+// SchedulePostRequest defines model for SchedulePostRequest.
+type SchedulePostRequest struct {
+	// At When the edition goes live, with an explicit offset.
+	At time.Time `json:"at"`
+
+	// Version The working-copy version the edition is captured from.
+	Version int `json:"version"`
 }
 
 // Scope asset:receive lets an instance receive assets sent to it. library:sync lets it report what it has installed.
@@ -3619,6 +3690,24 @@ type RestorePostRevisionParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// CancelPostScheduleParams defines parameters for CancelPostSchedule.
+type CancelPostScheduleParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// SchedulePostParams defines parameters for SchedulePost.
+type SchedulePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ReplacePostScheduleParams defines parameters for ReplacePostSchedule.
+type ReplacePostScheduleParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
 type ChangeUnverifiedEmailJSONRequestBody = ChangeEmailRequest
 
@@ -3792,6 +3881,12 @@ type CheckpointPostJSONRequestBody = PostVersionRequest
 
 // RestorePostRevisionJSONRequestBody defines body for RestorePostRevision for application/json ContentType.
 type RestorePostRevisionJSONRequestBody = PostVersionRequest
+
+// SchedulePostJSONRequestBody defines body for SchedulePost for application/json ContentType.
+type SchedulePostJSONRequestBody = SchedulePostRequest
+
+// ReplacePostScheduleJSONRequestBody defines body for ReplacePostSchedule for application/json ContentType.
+type ReplacePostScheduleJSONRequestBody = ReplacePostScheduleRequest
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -4220,6 +4315,15 @@ type ServerInterface interface {
 
 	// (POST /v1/publication/posts/{id}/revisions/{revisionId}/restore)
 	RestorePostRevision(c *gin.Context, id openapi_types.UUID, revisionId openapi_types.UUID, params RestorePostRevisionParams)
+
+	// (DELETE /v1/publication/posts/{id}/schedule)
+	CancelPostSchedule(c *gin.Context, id openapi_types.UUID, params CancelPostScheduleParams)
+
+	// (POST /v1/publication/posts/{id}/schedule)
+	SchedulePost(c *gin.Context, id openapi_types.UUID, params SchedulePostParams)
+
+	// (PUT /v1/publication/posts/{id}/schedule)
+	ReplacePostSchedule(c *gin.Context, id openapi_types.UUID, params ReplacePostScheduleParams)
 
 	// (GET /v1/publication/token)
 	GetPublicationCredential(c *gin.Context)
@@ -7077,6 +7181,153 @@ func (siw *ServerInterfaceWrapper) RestorePostRevision(c *gin.Context) {
 	siw.Handler.RestorePostRevision(c, id, revisionId, params)
 }
 
+// CancelPostSchedule operation middleware
+func (siw *ServerInterfaceWrapper) CancelPostSchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CancelPostScheduleParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelPostSchedule(c, id, params)
+}
+
+// SchedulePost operation middleware
+func (siw *ServerInterfaceWrapper) SchedulePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SchedulePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SchedulePost(c, id, params)
+}
+
+// ReplacePostSchedule operation middleware
+func (siw *ServerInterfaceWrapper) ReplacePostSchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReplacePostScheduleParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplacePostSchedule(c, id, params)
+}
+
 // GetPublicationCredential operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicationCredential(c *gin.Context) {
 
@@ -7231,6 +7482,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/import", wrapper.ImportPostMarkdown)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
+	router.DELETE(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.CancelPostSchedule)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.SchedulePost)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)

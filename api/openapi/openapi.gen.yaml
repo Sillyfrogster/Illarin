@@ -2246,6 +2246,140 @@ paths:
                 $ref: '#/components/schemas/PostConflict'
         '429':
           $ref: '#/components/responses/PublicationTooManyRequests'
+  /v1/publication/posts/{id}/schedule:
+    post:
+      operationId: schedulePost
+      description: >-
+        Capture the named working copy as an immutable revision and set it to go
+        live at one instant. Editing the working copy afterwards does not reach
+        the edition that will publish.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePostRequest'
+      responses:
+        '201':
+          description: The post with the edition it will publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          $ref: '#/components/responses/PublicationUnauthenticated'
+        '403':
+          $ref: '#/components/responses/PublicationForbidden'
+        '404':
+          $ref: '#/components/responses/PublicationNotFound'
+        '409':
+          description: >-
+            The working copy moved on, the post is already scheduled, or the key
+            was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: '#/components/responses/PublicationTooManyRequests'
+    put:
+      operationId: replacePostSchedule
+      description: >-
+        Point a waiting schedule at another edition the post has already kept,
+        at the same instant or a new one. The edition it leaves is untouched.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplacePostScheduleRequest'
+      responses:
+        '200':
+          description: The post with the edition it will now publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          $ref: '#/components/responses/PublicationUnauthenticated'
+        '403':
+          $ref: '#/components/responses/PublicationForbidden'
+        '404':
+          $ref: '#/components/responses/PublicationNotFound'
+        '409':
+          description: The schedule is already publishing, or the key was reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: '#/components/responses/PublicationTooManyRequests'
+    delete:
+      operationId: cancelPostSchedule
+      description: >-
+        Stop a waiting schedule. The post keeps whatever it shows readers now,
+        and the edition the schedule named stays in its history.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The post with nothing waiting to publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          $ref: '#/components/responses/PublicationUnauthenticated'
+        '403':
+          $ref: '#/components/responses/PublicationForbidden'
+        '404':
+          $ref: '#/components/responses/PublicationNotFound'
+        '409':
+          description: The schedule is already publishing, or the key was reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/address:
     put:
       operationId: correctPostAddress
@@ -4656,6 +4790,8 @@ components:
         - invalid
         - category_refused
         - stale_version
+        - already_scheduled
+        - schedule_running
         - idempotency_mismatch
         - idempotency_in_progress
         - rate_limited
@@ -4670,6 +4806,8 @@ components:
         - CodeInvalid
         - CodeCategoryRefused
         - CodeStaleVersion
+        - CodeAlreadyScheduled
+        - CodeScheduleRunning
         - CodeIdempotencyMismatch
         - CodeIdempotencyInProgress
         - CodeRateLimited
@@ -4900,6 +5038,10 @@ components:
           anyOf:
             - type: string
               format: uuid
+            - type: 'null'
+        schedule:
+          anyOf:
+            - $ref: '#/components/schemas/PostSchedule'
             - type: 'null'
         media:
           type: array
@@ -7273,6 +7415,50 @@ components:
         instanceId:
           type: string
           format: uuid
+    PostScheduleState:
+      type: string
+      description: Where a schedule got to.
+      enum:
+        - pending
+        - publishing
+        - published
+        - cancelled
+        - stopped
+    PostSchedule:
+      type: object
+      description: >-
+        The post's most recent schedule. It names the exact edition that will go
+        live and the instant it goes, both in UTC.
+      required:
+        - id
+        - revisionId
+        - revisionNumber
+        - at
+        - state
+        - createdBy
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        revisionId:
+          type: string
+          format: uuid
+        revisionNumber:
+          type: integer
+        at:
+          type: string
+          format: date-time
+        state:
+          $ref: '#/components/schemas/PostScheduleState'
+        stoppedBecause:
+          type: string
+          description: Why Illarin stopped a schedule instead of publishing it.
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     PostRevisionReason:
       type: string
       description: Why an edition was kept.
@@ -7378,6 +7564,35 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PostAction'
+    ReplacePostScheduleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - revisionId
+        - at
+      properties:
+        revisionId:
+          type: string
+          format: uuid
+          description: An edition the post has already kept.
+        at:
+          type: string
+          format: date-time
+          description: When the edition goes live, with an explicit offset.
+    SchedulePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - at
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the edition is captured from.
+        at:
+          type: string
+          format: date-time
+          description: When the edition goes live, with an explicit offset.
     LegacyAsset:
       type: object
       required:

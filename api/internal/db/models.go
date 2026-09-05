@@ -393,6 +393,22 @@ type PostRevision struct {
 	CapturedFor     string
 }
 
+type PostSchedule struct {
+	ID             pgtype.UUID
+	PostID         pgtype.UUID
+	RevisionID     pgtype.UUID
+	DueAt          pgtype.Timestamptz
+	State          string
+	CreatedBy      pgtype.UUID
+	Attempts       int32
+	LeaseToken     pgtype.UUID
+	LeaseExpiresAt pgtype.Timestamptz
+	StoppedBecause pgtype.Text
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	SettledAt      pgtype.Timestamptz
+}
+
 type PostSlug struct {
 	Slug       string
 	PostID     pgtype.UUID
@@ -518,6 +534,7 @@ type PublicationAudit struct {
 	RevisionID  pgtype.UUID
 	BeforeState pgtype.Text
 	AfterState  pgtype.Text
+	ScheduleID  pgtype.UUID
 }
 
 type PublicationAuthority struct {

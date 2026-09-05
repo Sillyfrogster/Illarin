@@ -33,6 +33,9 @@ const CredentialSession = "session"
 // CredentialToken is the credential class of a change made through the publication API.
 const CredentialToken = "token"
 
+// CredentialSystem is the credential class of a change Illarin made unattended.
+const CredentialSystem = "system"
+
 // change is one entry in the private record of who changed the publication.
 type change struct {
 	Actor      uuid.UUID
@@ -44,6 +47,7 @@ type change struct {
 	TokenID    *uuid.UUID
 	PostID     *uuid.UUID
 	RevisionID *uuid.UUID
+	ScheduleID *uuid.UUID
 	SubjectID  *uuid.UUID
 	Before     string
 	After      string
@@ -58,11 +62,12 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 	_, err := tx.Exec(ctx, `
 		insert into publication_audits
 		       (id, actor_id, credential, action, app_id, category_id, grant_id,
-		        token_id, post_id, revision_id, subject_id, before_state, after_state)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		        token_id, post_id, revision_id, schedule_id, subject_id,
+		        before_state, after_state)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`, uuid.New(), made.Actor, made.Credential, made.Action, made.AppID, made.CategoryID,
-		made.GrantID, made.TokenID, made.PostID, made.RevisionID, made.SubjectID,
-		nullable(made.Before), nullable(made.After))
+		made.GrantID, made.TokenID, made.PostID, made.RevisionID, made.ScheduleID,
+		made.SubjectID, nullable(made.Before), nullable(made.After))
 	if err != nil {
 		return fmt.Errorf("record publication audit: %w", err)
 	}

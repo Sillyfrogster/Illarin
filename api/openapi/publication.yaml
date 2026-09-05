@@ -815,6 +815,8 @@ components:
         - invalid
         - category_refused
         - stale_version
+        - already_scheduled
+        - schedule_running
         - idempotency_mismatch
         - idempotency_in_progress
         - rate_limited
@@ -829,6 +831,8 @@ components:
         - CodeInvalid
         - CodeCategoryRefused
         - CodeStaleVersion
+        - CodeAlreadyScheduled
+        - CodeScheduleRunning
         - CodeIdempotencyMismatch
         - CodeIdempotencyInProgress
         - CodeRateLimited

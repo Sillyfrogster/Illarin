@@ -200,6 +200,9 @@ func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	if err := dropBadgeWhenLastGrant(ctx, tx, holderID); err != nil {
 		return err
 	}
+	if err := stopSchedulesUnder(ctx, tx, id); err != nil {
+		return err
+	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: actor, Action: "grant.revoked",
 		AppID: &appID, GrantID: &id, SubjectID: &holderID,
