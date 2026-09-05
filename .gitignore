@@ -13,6 +13,9 @@ ops/.production-secrets/
 # Logs
 *.log
 
+# Browser-pass screenshots, which are working notes rather than repository content
+/*.png
+
 # Editor and operating system files
 .vscode/*
 !.vscode/extensions.json
