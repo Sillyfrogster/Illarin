@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -623,5 +624,23 @@ func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 	done, _ := stack.history(t, session, waiting.ID)
 	if !hasAction(done, "post.schedule.cancelled") {
 		t.Errorf("overtaking a schedule recorded no action: %+v", done)
+	}
+}
+
+func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
+	stack := newDistinctionStack(t)
+	ctx, stop := context.WithCancel(t.Context())
+	stopped := make(chan struct{})
+
+	go func() {
+		defer close(stopped)
+		stack.handlers.publications.RunScheduler(ctx, func(error) {})
+	}()
+	stop()
+
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the scheduler kept running after its context was cancelled")
 	}
 }

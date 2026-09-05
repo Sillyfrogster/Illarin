@@ -57,11 +57,6 @@ type Schedule struct {
 	CreatedAt      time.Time
 }
 
-// Waiting says the schedule still means to publish something.
-func (s Schedule) Waiting() bool {
-	return s.State == SchedulePending || s.State == SchedulePublishing
-}
-
 // SchedulePost captures the named working copy and sets that exact edition to
 // go live at one instant. Editing the working copy afterwards cannot reach it.
 func (s *Service) SchedulePost(
@@ -317,15 +312,19 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 		return fmt.Errorf("begin scheduled publication: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	still, err := heldByThisAttempt(ctx, tx, held)
-	if err != nil || !still {
-		return err
-	}
 	locked, err := lockPost(ctx, tx, held.PostID)
 	if err != nil {
 		return err
 	}
-	refusal, err := s.refusesLeased(ctx, tx, held, locked)
+	still, err := heldByThisAttempt(ctx, tx, held)
+	if err != nil || !still {
+		return err
+	}
+	kept, err := lockedRevision(ctx, tx, held.PostID, held.RevisionID)
+	if err != nil {
+		return err
+	}
+	refusal, err := refusesLeased(ctx, tx, held, locked, kept)
 	if err != nil {
 		return err
 	}
@@ -333,14 +332,11 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 		if err := settleSchedule(ctx, tx, held.ID, ScheduleStopped, refusal); err != nil {
 			return err
 		}
-		if err := recordScheduleRun(ctx, tx, held, locked, "post.schedule.stopped"); err != nil {
+		err = recordScheduleRun(ctx, tx, held, locked, "post.schedule.stopped", locked.Status)
+		if err != nil {
 			return err
 		}
 		return commitScheduleRun(ctx, tx)
-	}
-	kept, err := lockedRevision(ctx, tx, held.PostID, held.RevisionID)
-	if err != nil {
-		return err
 	}
 	if err := makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug); err != nil {
 		return err
@@ -348,7 +344,8 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 	if err := settleSchedule(ctx, tx, held.ID, SchedulePublished, ""); err != nil {
 		return err
 	}
-	if err := recordScheduleRun(ctx, tx, held, locked, "post.published"); err != nil {
+	err = recordScheduleRun(ctx, tx, held, locked, "post.published", StatusPublished)
+	if err != nil {
 		return err
 	}
 	return commitScheduleRun(ctx, tx)
@@ -356,11 +353,12 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 
 // refusesLeased answers why this edition may no longer go live, or the empty
 // string when nothing stands in its way.
-func (s *Service) refusesLeased(
+func refusesLeased(
 	ctx context.Context,
 	tx pgx.Tx,
 	held leased,
 	locked working,
+	kept working,
 ) (string, error) {
 	if held.Attempts > ScheduleAttempts {
 		return stoppedByFailure, nil
@@ -380,17 +378,7 @@ func (s *Service) refusesLeased(
 	if locked.PublishedAt != nil {
 		return "", nil
 	}
-	var address string
-	err := tx.QueryRow(ctx, `
-		select slug from post_revisions where id = $1 and post_id = $2
-	`, held.RevisionID, held.PostID).Scan(&address)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stoppedByFailure, nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("read the address a scheduled edition wants: %w", err)
-	}
-	taken, err := addressTaken(ctx, tx, held.PostID, address)
+	taken, err := addressTaken(ctx, tx, held.PostID, kept.Slug)
 	if err != nil {
 		return "", err
 	}
@@ -461,11 +449,8 @@ func recordScheduleRun(
 	held leased,
 	locked working,
 	action string,
+	after string,
 ) error {
-	after := locked.Status
-	if action == "post.published" {
-		after = StatusPublished
-	}
 	return recordPublicationAudit(ctx, tx, change{
 		Actor: actorOf(held, locked), Credential: CredentialSystem, Action: action,
 		GrantID: locked.GrantID, PostID: &held.PostID, RevisionID: &held.RevisionID,
