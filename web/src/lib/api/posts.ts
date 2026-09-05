@@ -98,3 +98,25 @@ export function readPostHistory(id: string) {
     "GET",
   );
 }
+
+export function schedulePost(id: string, version: number, at: string) {
+  return json<Post>(`/publication/posts/${id}/schedule`, "POST", {
+    version,
+    at,
+  });
+}
+
+export function replacePostSchedule(
+  id: string,
+  revisionId: string,
+  at: string,
+) {
+  return json<Post>(`/publication/posts/${id}/schedule`, "PUT", {
+    revisionId,
+    at,
+  });
+}
+
+export function cancelPostSchedule(id: string) {
+  return json<Post>(`/publication/posts/${id}/schedule`, "DELETE");
+}

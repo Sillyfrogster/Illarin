@@ -96,7 +96,7 @@ func (s *Service) SchedulePost(
 	if locked.Document, err = readyToPublish(locked); err != nil {
 		return Post{}, err
 	}
-	revisionID, err := captureRevision(ctx, tx, editor, locked, RevisionPublication)
+	revisionID, err := captureRevision(ctx, tx, editor, locked, RevisionSchedule)
 	if err != nil {
 		return Post{}, err
 	}
@@ -571,4 +571,25 @@ func (s *Service) attachSchedules(ctx context.Context, posts []Post) error {
 		}
 	}
 	return nil
+}
+
+// overtakeSchedule stops a schedule an author has just published past, so a
+// waiting edition cannot pull readers back to older words.
+func overtakeSchedule(ctx context.Context, tx pgx.Tx, editor Editor, locked working) error {
+	waiting, err := lockWaitingSchedule(ctx, tx, locked.ID)
+	if errors.Is(err, ErrScheduleNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := settleSchedule(ctx, tx, waiting, ScheduleCancelled, ""); err != nil {
+		return err
+	}
+	return recordPublicationAudit(ctx, tx, change{
+		Actor: editor.ID, Credential: editor.Credential(),
+		Action: "post.schedule.cancelled", GrantID: locked.GrantID, TokenID: editor.Token,
+		PostID: &locked.ID, ScheduleID: &waiting,
+		Before: locked.Status, After: StatusPublished,
+	})
 }

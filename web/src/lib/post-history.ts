@@ -6,7 +6,11 @@ export type HistoryEntry =
   | { kind: "note"; at: string; action: PostAction };
 
 // keptBy names the actions an edition card already accounts for.
-const keptBy = new Set(["post.checkpointed", "post.published"]);
+const keptBy = new Set([
+  "post.checkpointed",
+  "post.published",
+  "post.scheduled",
+]);
 
 /** The editions and what was done around them as one stream, newest first. */
 export function historyStream(
@@ -43,6 +47,14 @@ export function noteWords(done: PostAction): string {
       return "kept an edition";
     case "post.published":
       return "published an edition";
+    case "post.schedule.replaced":
+      return done.revision
+        ? `set edition ${done.revision} to go live instead`
+        : "changed what goes live";
+    case "post.schedule.cancelled":
+      return "stopped this going live";
+    case "post.schedule.stopped":
+      return "could not publish the edition that was waiting";
     default:
       return done.action;
   }
@@ -50,5 +62,7 @@ export function noteWords(done: PostAction): string {
 
 /** What one kept edition reads as beside its number. */
 export function revisionWords(capturedFor: string): string {
-  return capturedFor === "publication" ? "Published" : "Kept while writing";
+  if (capturedFor === "publication") return "Published";
+  if (capturedFor === "schedule") return "Kept to go live later";
+  return "Kept while writing";
 }

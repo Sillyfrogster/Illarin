@@ -1,0 +1,229 @@
+.band {
+  display: grid;
+  gap: 4px 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  grid-template-areas:
+    "mark actions"
+    "said actions"
+    "meanwhile actions";
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.band[data-state="stopped"] {
+  border-color: var(--color-critical-border);
+  background: var(--color-critical-soft);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  grid-area: mark;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.band[data-state="stopped"] .mark {
+  color: var(--color-critical-strong);
+}
+
+.band[data-state="publishing"] .mark svg {
+  animation: lhSpin 1.4s linear infinite;
+}
+
+.said {
+  grid-area: said;
+  margin-top: 6px;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: var(--type-title-size);
+  font-weight: 600;
+  line-height: var(--type-title-leading);
+}
+
+.band[data-state="stopped"] .said {
+  color: var(--color-critical-strong);
+  font-family: var(--font-body);
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  line-height: var(--type-body-leading);
+}
+
+.said time {
+  white-space: nowrap;
+}
+
+.meanwhile {
+  grid-area: meanwhile;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.band[data-state="stopped"] .meanwhile {
+  color: var(--color-critical-strong);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  grid-area: actions;
+  align-self: center;
+}
+
+.act,
+.stop {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.act:hover {
+  border-color: var(--color-emphasis-border);
+}
+
+.stop {
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.stop:hover {
+  color: var(--color-critical-strong);
+}
+
+.editions {
+  display: flex;
+  flex-direction: column;
+  max-height: 244px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  overflow-y: auto;
+}
+
+.editions legend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.edition {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.edition input {
+  accent-color: var(--color-accent);
+}
+
+.edition:hover {
+  background: var(--color-muted);
+}
+
+.edition:has(input:checked) {
+  background: var(--color-emphasis-soft);
+}
+
+.number {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 700;
+}
+
+.editionName {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.editionName span {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.standing {
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  line-height: var(--type-body-leading);
+  overflow-wrap: break-word;
+}
+
+.confirm span {
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  font-weight: 400;
+}
+
+@media (max-width: 720px) {
+  .band {
+    grid-template-areas:
+      "mark"
+      "said"
+      "meanwhile"
+      "actions";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    margin-top: 14px;
+  }
+
+  .act,
+  .stop {
+    flex: 1;
+  }
+}

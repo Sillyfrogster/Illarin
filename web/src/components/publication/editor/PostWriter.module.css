@@ -329,3 +329,57 @@
   font-size: var(--type-label-size);
   font-weight: 400;
 }
+
+.doors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.doors legend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.door {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.door input {
+  accent-color: var(--color-accent);
+  margin-top: 2px;
+}
+
+.door > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+}
+
+.door > span span {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.door:hover {
+  background: var(--color-muted);
+}
+
+.door:has(input:checked) {
+  background: var(--color-emphasis-soft);
+}

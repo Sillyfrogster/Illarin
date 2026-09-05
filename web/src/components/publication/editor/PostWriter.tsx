@@ -13,6 +13,7 @@ import {
   publishPost,
   readPost,
   saveWorkingCopy,
+  schedulePost,
   uploadPostMedia,
 } from "@/lib/api/posts";
 import { readWorkspace } from "@/lib/api/publication";
@@ -25,11 +26,18 @@ import type {
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { asPostDocument, type PostDocument } from "@/lib/post-document";
+import {
+  atLeastAnHourAhead,
+  type LocalParts,
+  toInstant,
+} from "@/lib/schedule-time";
 import { BodyEditor } from "./BodyEditor";
 import { GrowingText } from "./GrowingText";
 import { PostDetails } from "./PostDetails";
 import { PostHistory } from "./PostHistory";
 import styles from "./PostWriter.module.css";
+import { ScheduleBand } from "./ScheduleBand";
+import { ScheduleFields } from "./ScheduleFields";
 
 /** How long the writer pauses before the working copy is saved. */
 const AUTOSAVE_PAUSE = 1200;
@@ -46,6 +54,8 @@ type Draft = {
 };
 
 type Saving = "clean" | "dirty" | "saving" | "saved" | "conflict" | "refused";
+
+type Door = "now" | "later";
 
 type View = "write" | "preview" | "history";
 
@@ -68,6 +78,8 @@ export function PostWriter({ id }: { id: string }) {
   const [failure, setFailure] = useState("");
   const [view, setView] = useState<View>("write");
   const [asking, setAsking] = useState(false);
+  const [door, setDoor] = useState<Door>("now");
+  const [when, setWhen] = useState<LocalParts>({ date: "", time: "" });
   const [keeping, setKeeping] = useState(false);
   const [kept, setKept] = useState("");
   const [edition, setEdition] = useState(0);
@@ -178,16 +190,33 @@ export function PostWriter({ id }: { id: string }) {
     setEdition((count) => count + 1);
   }
 
+  function ask() {
+    setDoor("now");
+    setWhen(atLeastAnHourAhead());
+    setAsking(true);
+  }
+
   async function release() {
     setAsking(false);
     if (state === "dirty" || state === "refused") await save();
-    const answer = await publishPost(id, version.current);
+    const answer =
+      door === "later"
+        ? await schedulePost(
+            id,
+            version.current,
+            toInstant(when.date, when.time),
+          )
+        : await publishPost(id, version.current);
     if (answer.error || !answer.value) {
       setRefusal(answer.error ?? "");
       return;
     }
-    setPost(answer.value);
-    version.current = answer.value.version;
+    settled(answer.value);
+  }
+
+  function settled(post: Post) {
+    setPost(post);
+    version.current = post.version;
     setRefusal("");
     setKept("");
     setState("clean");
@@ -270,7 +299,7 @@ export function PostWriter({ id }: { id: string }) {
           <button
             className={styles.publish}
             disabled={state === "conflict"}
-            onClick={() => setAsking(true)}
+            onClick={ask}
             type="button"
           >
             {post.status === "published" ? "Publish changes" : "Publish"}
@@ -281,6 +310,8 @@ export function PostWriter({ id }: { id: string }) {
       <p aria-live="polite" className={styles.kept}>
         {kept}
       </p>
+
+      <ScheduleBand onChanged={settled} onFailure={setRefusal} post={post} />
 
       {refusal ? (
         <p className={styles.refusal} role="alert">
@@ -295,15 +326,12 @@ export function PostWriter({ id }: { id: string }) {
 
       <FormDialog
         acknowledge={false}
-        commit={post.status === "published" ? "Publish changes" : "Publish"}
-        hint={
-          post.status === "published"
-            ? "Readers see this version from the moment you publish it."
-            : "This fixes the address and puts your name on the post. Only an admin can change either afterwards."
-        }
+        commit={commitWords(door, post)}
+        hint={publishHint(door, post)}
         onClose={() => setAsking(false)}
         onCommit={() => void release()}
         open={asking}
+        ready={door === "now" || toInstant(when.date, when.time) !== ""}
         title={
           post.status === "published"
             ? "Publish the changes?"
@@ -314,6 +342,40 @@ export function PostWriter({ id }: { id: string }) {
           {draft.title}
           <span>illarin.xyz/blog/{draft.slug}</span>
         </p>
+        <fieldset className={styles.doors}>
+          <legend>When</legend>
+          <label className={styles.door}>
+            <input
+              checked={door === "now"}
+              name="publish-door"
+              onChange={() => setDoor("now")}
+              type="radio"
+            />
+            <span>
+              Now
+              <span>Readers see it as soon as you press the button.</span>
+            </span>
+          </label>
+          <label className={styles.door}>
+            <input
+              checked={door === "later"}
+              name="publish-door"
+              onChange={() => setDoor("later")}
+              type="radio"
+            />
+            <span>
+              At a set time
+              <span>Illarin publishes this exact version for you.</span>
+            </span>
+          </label>
+        </fieldset>
+        {door === "later" ? (
+          <ScheduleFields
+            id="publish-schedule"
+            onChange={setWhen}
+            parts={when}
+          />
+        ) : null}
       </FormDialog>
 
       {view === "preview" ? (
@@ -391,6 +453,26 @@ export function PostWriter({ id }: { id: string }) {
       </div>
     </div>
   );
+}
+
+// publishHint says what this button will do, including to a waiting schedule.
+function publishHint(door: Door, post: Post): string {
+  const schedule = post.schedule;
+  const waiting =
+    schedule?.state === "pending" || schedule?.state === "publishing";
+  if (door === "now" && waiting) {
+    return "Publishing now stops the edition waiting to go live.";
+  }
+  if (post.status === "published") {
+    return "The version in front of you is captured either way, and later edits do not change it.";
+  }
+  return "This fixes the address and puts your name on the post. Only an admin can change either afterwards.";
+}
+
+// commitWords names the button by the door the author chose.
+function commitWords(door: Door, post: Post): string {
+  if (door === "later") return "Schedule";
+  return post.status === "published" ? "Publish changes" : "Publish";
 }
 
 function asDraft(post: Post): Draft {

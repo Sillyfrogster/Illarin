@@ -3009,7 +3009,7 @@ export interface components {
      * @description Why an edition was kept.
      * @enum {string}
      */
-    PostRevisionReason: "checkpoint" | "publication";
+    PostRevisionReason: "checkpoint" | "publication" | "schedule";
     /** @description One immutable edition of a post. It carries what the edition was called and when it was kept, not the words it holds. */
     PostRevision: {
       /** Format: uuid */

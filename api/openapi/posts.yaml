@@ -1172,6 +1172,7 @@ components:
       enum:
         - checkpoint
         - publication
+        - schedule
     PostRevision:
       type: object
       description: >-

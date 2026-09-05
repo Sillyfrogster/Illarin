@@ -597,3 +597,31 @@ func scheduleCount(t *testing.T, stack distinctionStack, postID string) int {
 	}
 	return held
 }
+
+func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+
+	waiting, due := stack.scheduledDraft(t, session, "Out early", "The scheduled words.")
+
+	edited := stack.saved(t, session, waiting.ID, finished(waiting, map[string]any{
+		"version":  waiting.Version,
+		"document": json.RawMessage(paragraph("The words the author sent out early.")),
+	}))
+	live := stack.publishedAt(t, session, edited.ID, edited.Version)
+	if live.Schedule == nil || live.Schedule.State != "cancelled" {
+		t.Fatalf("publishing left the schedule %+v", live.Schedule)
+	}
+
+	if settled := stack.runSchedules(t, due.Add(time.Second)); settled != 0 {
+		t.Fatalf("an overtaken schedule published %d editions", settled)
+	}
+	found := stack.reader(t, waiting.Slug)
+	if !strings.Contains(firstWords(found.Document), "early") {
+		t.Fatalf("readers were sent back to %s", firstWords(found.Document))
+	}
+	done, _ := stack.history(t, session, waiting.ID)
+	if !hasAction(done, "post.schedule.cancelled") {
+		t.Errorf("overtaking a schedule recorded no action: %+v", done)
+	}
+}

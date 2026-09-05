@@ -76,6 +76,9 @@ func (s *Service) PublishPost(
 	if err := makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug); err != nil {
 		return Post{}, err
 	}
+	if err := overtakeSchedule(ctx, tx, editor, locked); err != nil {
+		return Post{}, err
+	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.published",
 		GrantID: current.GrantID, TokenID: editor.Token,

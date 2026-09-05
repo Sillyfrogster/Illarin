@@ -12,10 +12,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// RevisionCheckpoint and RevisionPublication are the two reasons an edition is kept.
+// The three reasons an edition is kept: while writing, to publish now, or to
+// publish at a set time.
 const (
 	RevisionCheckpoint  = "checkpoint"
 	RevisionPublication = "publication"
+	RevisionSchedule    = "schedule"
 )
 
 var ErrRevisionNotFound = errors.New("no such revision of that post")

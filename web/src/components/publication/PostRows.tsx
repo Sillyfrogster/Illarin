@@ -10,7 +10,7 @@ import { FormDialog } from "@/components/console/FormDialog";
 import { Section } from "@/components/console/Section";
 import { startPost } from "@/lib/api/posts";
 import type { Post, PublicationWorkspace } from "@/lib/api/query";
-import { readableDate } from "@/lib/dates";
+import { readableDate, readableMoment } from "@/lib/dates";
 import styles from "./PostRows.module.css";
 
 export function PostRows({
@@ -70,31 +70,7 @@ export function PostRows({
       ) : (
         <ol className={rows.list}>
           {posts.map((post) => (
-            <li className={rows.row} data-plain="true" key={post.id}>
-              <span className={rows.name}>
-                <Link href={`/admin/blog/${post.id}`}>{post.title}</Link>
-              </span>
-              <span className={rows.detail}>
-                {post.category.label}
-                {post.app ? ` · ${post.app.name}` : ""} ·{" "}
-                {post.publishedAt
-                  ? `Published ${readableDate(post.publishedAt)}`
-                  : `Started ${readableDate(post.createdAt)}`}
-              </span>
-              <span className={rows.actions}>
-                <span
-                  className={styles.status}
-                  data-live={post.status === "published" || undefined}
-                >
-                  {post.status === "published" ? "Published" : "Draft"}
-                </span>
-                {post.status === "published" ? (
-                  <Link className={styles.read} href={`/blog/${post.slug}`}>
-                    Read
-                  </Link>
-                ) : null}
-              </span>
-            </li>
+            <PostLine key={post.id} post={post} />
           ))}
         </ol>
       )}
@@ -157,4 +133,47 @@ export function PostRows({
       </FormDialog>
     </Section>
   );
+}
+
+function PostLine({ post }: { post: Post }) {
+  const going = waiting(post);
+  const live = post.status === "published";
+  return (
+    <li className={rows.row} data-plain="true">
+      <span className={rows.name}>
+        <Link href={`/admin/blog/${post.id}`}>{post.title}</Link>
+      </span>
+      <span className={rows.detail}>
+        {post.category.label}
+        {post.app ? ` · ${post.app.name}` : ""} ·{" "}
+        {post.publishedAt
+          ? `Published ${readableDate(post.publishedAt)}`
+          : `Started ${readableDate(post.createdAt)}`}
+      </span>
+      <span className={rows.actions}>
+        {going ? (
+          <span className={styles.waiting}>
+            Goes live {readableMoment(going)}
+          </span>
+        ) : null}
+        <span className={styles.status} data-live={live || undefined}>
+          {live ? "Published" : "Draft"}
+        </span>
+        {live ? (
+          <Link className={styles.read} href={`/blog/${post.slug}`}>
+            Read
+          </Link>
+        ) : null}
+      </span>
+    </li>
+  );
+}
+
+// waiting answers when a post has an edition still on its way to readers.
+function waiting(post: Post): string | null {
+  const schedule = post.schedule;
+  if (!schedule) return null;
+  const onItsWay =
+    schedule.state === "pending" || schedule.state === "publishing";
+  return onItsWay ? schedule.at : null;
 }

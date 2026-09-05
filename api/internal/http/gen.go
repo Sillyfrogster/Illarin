@@ -862,6 +862,7 @@ func (e PostMediaPurpose) Valid() bool {
 const (
 	Checkpoint  PostRevisionReason = "checkpoint"
 	Publication PostRevisionReason = "publication"
+	Schedule    PostRevisionReason = "schedule"
 )
 
 // Valid indicates whether the value is a known member of the PostRevisionReason enum.
@@ -870,6 +871,8 @@ func (e PostRevisionReason) Valid() bool {
 	case Checkpoint:
 		return true
 	case Publication:
+		return true
+	case Schedule:
 		return true
 	default:
 		return false
