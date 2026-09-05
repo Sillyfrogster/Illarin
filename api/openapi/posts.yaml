@@ -357,6 +357,58 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationNotFound
         '429':
           $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/import:
+    post:
+      operationId: importPostMarkdown
+      description: >-
+        Convert constrained Markdown into the working copy's document. The
+        Markdown is read once and never kept beside the document it became, and
+        anything that could not be carried across exactly comes back with it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPostMarkdownRequest'
+      responses:
+        '200':
+          description: The working copy as the import left it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostImport'
+        '400':
+          description: The request, a field or the Markdown itself is not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostImportRefusal'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/publish:
     post:
       operationId: publishPost
@@ -833,6 +885,67 @@ components:
             - type: string
               format: uuid
             - type: 'null'
+    ImportPostMarkdownRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - markdown
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the import means to replace.
+        markdown:
+          type: string
+          description: >-
+            Constrained Markdown. Raw HTML, MDX and pictures from anywhere but
+            this post are refused rather than quietly dropped.
+    PostImportNote:
+      type: object
+      description: One line of an import and what could not be carried across it.
+      required:
+        - line
+        - message
+      properties:
+        line:
+          type: integer
+        message:
+          type: string
+    PostImport:
+      type: object
+      description: >-
+        The working copy an import produced, together with everything the
+        conversion could not carry across exactly.
+      required:
+        - post
+        - warnings
+      properties:
+        post:
+          $ref: '#/components/schemas/Post'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostImportNote'
+    PostImportRefusal:
+      type: object
+      description: >-
+        An import that did not happen, and every line that stopped it. The
+        working copy is left exactly as it was.
+      required:
+        - error
+        - code
+        - refusals
+      properties:
+        error:
+          type: string
+        code:
+          $ref: ./publication.yaml#/components/schemas/PublicationErrorCode
+        field:
+          type: string
+        refusals:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostImportNote'
     PostVersionRequest:
       type: object
       additionalProperties: false

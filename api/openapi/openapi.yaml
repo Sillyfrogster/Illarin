@@ -124,6 +124,8 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1revisions~1{revisionId}~1restore
   /v1/publication/posts/{id}/history:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1history
+  /v1/publication/posts/{id}/import:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1import
   /v1/publication/posts/{id}/publish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1publish
   /v1/publication/posts/{id}/address:
@@ -379,6 +381,14 @@ components:
       $ref: ./posts.yaml#/components/schemas/CreatePostRequest
     SavePostRequest:
       $ref: ./posts.yaml#/components/schemas/SavePostRequest
+    ImportPostMarkdownRequest:
+      $ref: ./posts.yaml#/components/schemas/ImportPostMarkdownRequest
+    PostImportNote:
+      $ref: ./posts.yaml#/components/schemas/PostImportNote
+    PostImport:
+      $ref: ./posts.yaml#/components/schemas/PostImport
+    PostImportRefusal:
+      $ref: ./posts.yaml#/components/schemas/PostImportRefusal
     CorrectPostAddressRequest:
       $ref: ./posts.yaml#/components/schemas/CorrectPostAddressRequest
     CorrectPostBylineRequest:

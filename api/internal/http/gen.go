@@ -2236,6 +2236,15 @@ type ImageSetContent struct {
 	} `json:"images"`
 }
 
+// ImportPostMarkdownRequest defines model for ImportPostMarkdownRequest.
+type ImportPostMarkdownRequest struct {
+	// Markdown Constrained Markdown. Raw HTML, MDX and pictures from anywhere but this post are refused rather than quietly dropped.
+	Markdown string `json:"markdown"`
+
+	// Version The working-copy version the import means to replace.
+	Version int `json:"version"`
+}
+
 // IngestFailure defines model for IngestFailure.
 type IngestFailure struct {
 	Message string              `json:"message"`
@@ -2642,6 +2651,27 @@ type PostHeaderEdit struct {
 	Alt     string             `json:"alt"`
 	Caption *string            `json:"caption,omitempty"`
 	MediaId openapi_types.UUID `json:"mediaId"`
+}
+
+// PostImport The working copy an import produced, together with everything the conversion could not carry across exactly.
+type PostImport struct {
+	Post     Post             `json:"post"`
+	Warnings []PostImportNote `json:"warnings"`
+}
+
+// PostImportNote One line of an import and what could not be carried across it.
+type PostImportNote struct {
+	Line    int    `json:"line"`
+	Message string `json:"message"`
+}
+
+// PostImportRefusal An import that did not happen, and every line that stopped it. The working copy is left exactly as it was.
+type PostImportRefusal struct {
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code     PublicationErrorCode `json:"code"`
+	Error    string               `json:"error"`
+	Field    *string              `json:"field,omitempty"`
+	Refusals []PostImportNote     `json:"refusals"`
 }
 
 // PostList defines model for PostList.
@@ -3553,6 +3583,12 @@ type SavePostParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ImportPostMarkdownParams defines parameters for ImportPostMarkdown.
+type ImportPostMarkdownParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // AddPostMediaMultipartBody defines parameters for AddPostMedia.
 type AddPostMediaMultipartBody struct {
 	File     openapi_types.File  `json:"file"`
@@ -3741,6 +3777,9 @@ type CorrectPostAddressJSONRequestBody = CorrectPostAddressRequest
 
 // CorrectPostBylineJSONRequestBody defines body for CorrectPostByline for application/json ContentType.
 type CorrectPostBylineJSONRequestBody = CorrectPostBylineRequest
+
+// ImportPostMarkdownJSONRequestBody defines body for ImportPostMarkdown for application/json ContentType.
+type ImportPostMarkdownJSONRequestBody = ImportPostMarkdownRequest
 
 // AddPostMediaMultipartRequestBody defines body for AddPostMedia for multipart/form-data ContentType.
 type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
@@ -4163,6 +4202,9 @@ type ServerInterface interface {
 
 	// (GET /v1/publication/posts/{id}/history)
 	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/import)
+	ImportPostMarkdown(c *gin.Context, id openapi_types.UUID, params ImportPostMarkdownParams)
 
 	// (POST /v1/publication/posts/{id}/media)
 	AddPostMedia(c *gin.Context, id openapi_types.UUID, params AddPostMediaParams)
@@ -6756,6 +6798,55 @@ func (siw *ServerInterfaceWrapper) ReadPostHistory(c *gin.Context) {
 	siw.Handler.ReadPostHistory(c, id)
 }
 
+// ImportPostMarkdown operation middleware
+func (siw *ServerInterfaceWrapper) ImportPostMarkdown(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ImportPostMarkdownParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ImportPostMarkdown(c, id, params)
+}
+
 // AddPostMedia operation middleware
 func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
 
@@ -7138,6 +7229,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.CheckpointPost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions/:revisionId/restore", wrapper.RestorePostRevision)
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/import", wrapper.ImportPostMarkdown)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)

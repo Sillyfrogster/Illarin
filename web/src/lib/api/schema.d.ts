@@ -983,6 +983,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Convert constrained Markdown into the working copy's document. The Markdown is read once and never kept beside the document it became, and anything that could not be carried across exactly comes back with it. */
+    post: operations["importPostMarkdown"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/publish": {
     parameters: {
       query?: never;
@@ -1997,6 +2014,29 @@ export interface components {
       release?: components["schemas"]["PostReleaseEdit"] | null;
       header?: components["schemas"]["PostHeaderEdit"] | null;
       socialMediaId?: string | null;
+    };
+    ImportPostMarkdownRequest: {
+      /** @description The working-copy version the import means to replace. */
+      version: number;
+      /** @description Constrained Markdown. Raw HTML, MDX and pictures from anywhere but this post are refused rather than quietly dropped. */
+      markdown: string;
+    };
+    /** @description One line of an import and what could not be carried across it. */
+    PostImportNote: {
+      line: number;
+      message: string;
+    };
+    /** @description The working copy an import produced, together with everything the conversion could not carry across exactly. */
+    PostImport: {
+      post: components["schemas"]["Post"];
+      warnings: components["schemas"]["PostImportNote"][];
+    };
+    /** @description An import that did not happen, and every line that stopped it. The working copy is left exactly as it was. */
+    PostImportRefusal: {
+      error: string;
+      code: components["schemas"]["PublicationErrorCode"];
+      field?: string;
+      refusals: components["schemas"]["PostImportNote"][];
     };
     CorrectPostAddressRequest: {
       slug: string;
@@ -6327,6 +6367,57 @@ export interface operations {
       401: components["responses"]["PublicationUnauthenticated"];
       403: components["responses"]["PublicationForbidden"];
       404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  importPostMarkdown: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportPostMarkdownRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy as the import left it */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostImport"];
+        };
+      };
+      /** @description The request, a field or the Markdown itself is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostImportRefusal"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
       429: components["responses"]["PublicationTooManyRequests"];
     };
   };

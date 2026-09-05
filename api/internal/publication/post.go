@@ -291,6 +291,69 @@ func (s *Service) SavePost(
 	return s.post(ctx, id)
 }
 
+// PostImport is the Markdown to convert and the working copy it replaces.
+type PostImport struct {
+	Version  int
+	Markdown string
+}
+
+// ImportPost converts constrained Markdown into the working copy's document,
+// leaving everything else about the post as it stands.
+func (s *Service) ImportPost(
+	ctx context.Context,
+	editor Editor,
+	id uuid.UUID,
+	in PostImport,
+) (Post, []postdoc.Note, error) {
+	current, err := s.post(ctx, id)
+	if err != nil {
+		return Post{}, nil, err
+	}
+	if err := s.mayManage(ctx, editor, current); err != nil {
+		return Post{}, nil, err
+	}
+	if in.Version != current.Version {
+		return Post{}, nil, Stale{Version: current.Version, UpdatedAt: current.UpdatedAt}
+	}
+	document, notes, err := postdoc.FromMarkdown(in.Markdown)
+	if err != nil {
+		return Post{}, nil, documentRefusal(err)
+	}
+	saved, err := s.SavePost(ctx, editor, id, current.carrying(document))
+	if err != nil {
+		return Post{}, nil, err
+	}
+	return saved, notes, nil
+}
+
+// carrying answers this working copy as a save with a different document in it.
+func (p Post) carrying(document []byte) PostSave {
+	save := PostSave{
+		Version:       p.Version,
+		CategoryID:    p.Category.ID,
+		Title:         p.Title,
+		Summary:       p.Summary,
+		Slug:          p.Slug,
+		Document:      document,
+		SocialMediaID: p.SocialMediaID,
+	}
+	if p.Release != nil {
+		save.Release = &ReleaseEdit{
+			AppID:   p.Release.App.ID,
+			Version: p.Release.Version,
+			Address: p.Release.Address,
+		}
+	}
+	if p.Header != nil {
+		save.Header = &HeaderEdit{
+			MediaID: p.Header.MediaID,
+			Alt:     p.Header.Alt,
+			Caption: p.Header.Caption,
+		}
+	}
+	return save
+}
+
 // edition is one checked working copy on its way into the database.
 type edition struct {
 	categoryID     uuid.UUID
