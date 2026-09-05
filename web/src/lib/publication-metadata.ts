@@ -14,6 +14,11 @@ export function archivePage(paging: string[] | undefined): number | null {
   return Number(paging[1]);
 }
 
+/** Page one of any archive lives at the archive's own address, not under /page/1. */
+export function pageAddress(address: string, page: number): string {
+  return page === 1 ? address : `${address}/page/${page}`;
+}
+
 /** A short tab title under the publication's template, and the full name in a link preview. */
 export function blogMetadata(
   name: string,

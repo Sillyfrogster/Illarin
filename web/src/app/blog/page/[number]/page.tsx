@@ -6,13 +6,18 @@ import {
   BLOG_DESCRIPTION,
   BLOG_TITLE,
   blogMetadata,
+  pageAddress,
 } from "@/lib/publication-metadata";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/blog/page/[number]">): Promise<Metadata> {
   const page = readPage((await params).number);
-  return blogMetadata(`Page ${page}`, BLOG_DESCRIPTION, `/blog/page/${page}`);
+  return blogMetadata(
+    `Page ${page}`,
+    BLOG_DESCRIPTION,
+    pageAddress("/blog", page),
+  );
 }
 
 export default async function BlogArchivePage({
@@ -29,7 +34,6 @@ export default async function BlogArchivePage({
         kind: "Publication",
         heading: BLOG_TITLE,
         address: "/blog",
-        narrowed: null,
         home: null,
       }}
     />

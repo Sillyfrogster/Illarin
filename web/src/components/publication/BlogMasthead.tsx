@@ -6,7 +6,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import type { PublicationCategory } from "@/lib/api/query";
 import styles from "./BlogMasthead.module.css";
 
-/** The blog's own chrome: Illarin's identity, the publication's home, and its categories. */
+/** The blog's own chrome, carrying Illarin's identity, the publication's home and its categories. */
 export function BlogMasthead({
   categories,
 }: {

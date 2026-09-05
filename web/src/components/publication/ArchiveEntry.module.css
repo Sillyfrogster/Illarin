@@ -3,32 +3,7 @@
 }
 
 .leadTitle {
-  max-width: 20ch;
-  font-family: var(--font-display);
-  font-size: clamp(2.3rem, 5.4vw, 4.1rem);
-  font-weight: 500;
-  line-height: 1.04;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
-  overflow-wrap: break-word;
-}
-
-.leadTitle[data-length="medium"] {
-  max-width: 24ch;
-  font-size: clamp(2.1rem, 4.3vw, 3.2rem);
-  line-height: 1.07;
-  letter-spacing: -0.02em;
-}
-
-.leadTitle[data-length="long"] {
-  max-width: 30ch;
-  font-size: clamp(1.95rem, 3.2vw, 2.5rem);
-  line-height: 1.14;
-  letter-spacing: -0.015em;
-}
-
-.leadTitle a {
-  color: inherit;
+  composes: title from "./PostTitle.module.css";
 }
 
 .leadTitle a:hover {
@@ -38,12 +13,7 @@
 }
 
 .leadSummary {
-  max-width: 46ch;
-  margin-top: 22px;
-  color: var(--color-text-secondary);
-  font-size: var(--type-lead-size);
-  line-height: var(--type-lead-leading);
-  text-wrap: pretty;
+  composes: summary from "./PostTitle.module.css";
 }
 
 /* The band stays inside the copy measure, so no reading text sits on the artwork. */

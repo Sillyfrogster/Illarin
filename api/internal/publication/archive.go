@@ -27,8 +27,6 @@ type PostSummary struct {
 	Category       Category
 	App            *App
 	ReleaseVersion string
-	Image          *PostMedia
-	ImageAlt       string
 	Byline         Byline
 	PublishedAt    time.Time
 	UpdatedAt      *time.Time
@@ -60,8 +58,7 @@ const selectSummaries = `
 	       category.retired_at is not null,
 	       app.id, app.slug, app.name, app.home_url, app.position,
 	       app.retired_at is not null, mark.id, mark.width, mark.height,
-	       revision.release_version, picture.id, picture.post_id, picture.purpose,
-	       picture.width, picture.height, revision.header_alt,
+	       revision.release_version,
 	       post.published_at, post.updated_public_at
 	  from posts post
 	  join post_revisions revision on revision.id = post.public_revision_id
@@ -71,9 +68,15 @@ const selectSummaries = `
 	         on app.id = coalesce(revision.release_app_id, byline.app_id)
 	  left join publication_media mark
 	         on mark.id = app.mark_media_id and mark.blob_id is not null
-	  left join post_media picture
-	         on picture.id = revision.header_media_id and picture.blob_id is not null
 	 where post.status = 'published'
+	`
+
+// narrowArchive holds an archive to one category and one app, and both the
+// count and the page read it.
+const narrowArchive = `
+		   and ($1::uuid is null or revision.category_id = $1)
+		   and ($2::uuid is null
+		        or coalesce(revision.release_app_id, byline.app_id) = $2)
 	`
 
 // ReadableCategories answers the categories that carry published posts, in the
@@ -120,18 +123,13 @@ func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, err
 		  join post_revisions revision on revision.id = post.public_revision_id
 		  left join post_bylines byline on byline.post_id = post.id
 		 where post.status = 'published'
-		   and ($1::uuid is null or revision.category_id = $1)
-		   and ($2::uuid is null
-		        or coalesce(revision.release_app_id, byline.app_id) = $2)
-	`, categoryID, appID).Scan(&found.Total); err != nil {
+	`+narrowArchive, categoryID, appID).Scan(&found.Total); err != nil {
 		return Archive{}, fmt.Errorf("count the published archive: %w", err)
 	}
 	found.Pages = (found.Total + ArchivePageSize - 1) / ArchivePageSize
-	rows, err := s.pool.Query(ctx, selectSummaries+`
-		   and ($1::uuid is null or revision.category_id = $1)
-		   and ($2::uuid is null
-		        or coalesce(revision.release_app_id, byline.app_id) = $2)
-		 order by post.published_at desc, post.id desc
+	rows, err := s.pool.Query(ctx, selectSummaries+narrowArchive+`
+		 order by greatest(post.published_at, post.updated_public_at) desc,
+		          post.id desc
 		 limit $3 offset $4
 	`, categoryID, appID, ArchivePageSize, (asked.Page-1)*ArchivePageSize)
 	if err != nil {
@@ -157,7 +155,8 @@ func (s *Service) RelatedPosts(
 		           and coalesce(revision.release_app_id, byline.app_id)
 		               is not distinct from $2::uuid) desc,
 		          revision.category_id = $3 desc,
-		          post.published_at desc, post.id desc
+		          greatest(post.published_at, post.updated_public_at) desc,
+		          post.id desc
 		 limit $4
 	`, postID, app, category, relatedLimit)
 	if err != nil {
@@ -210,17 +209,12 @@ func scanSummary(row rowScanner) (PostSummary, error) {
 	var markID *uuid.UUID
 	var markWidth, markHeight *int
 	var version *string
-	var pictureID, picturePostID *uuid.UUID
-	var picturePurpose, headerAlt *string
-	var pictureWidth, pictureHeight *int
 	err := row.Scan(
 		&one.ID, &one.Slug, &one.Title, &one.Summary,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
 		&markID, &markWidth, &markHeight, &version,
-		&pictureID, &picturePostID, &picturePurpose,
-		&pictureWidth, &pictureHeight, &headerAlt,
 		&one.PublishedAt, &one.UpdatedAt,
 	)
 	if err != nil {
@@ -235,13 +229,6 @@ func scanSummary(row rowScanner) (PostSummary, error) {
 	}
 	if version != nil {
 		one.ReleaseVersion = *version
-	}
-	if pictureID != nil && headerAlt != nil {
-		one.Image = &PostMedia{
-			ID: *pictureID, PostID: *picturePostID, Purpose: *picturePurpose,
-			Width: *pictureWidth, Height: *pictureHeight,
-		}
-		one.ImageAlt = *headerAlt
 	}
 	return one, nil
 }

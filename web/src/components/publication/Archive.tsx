@@ -1,20 +1,32 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { PostArchive } from "@/lib/api/query";
-import { BLOG_DESCRIPTION, BLOG_TITLE } from "@/lib/publication-metadata";
+import {
+  BLOG_DESCRIPTION,
+  BLOG_TITLE,
+  pageAddress,
+} from "@/lib/publication-metadata";
 import styles from "./Archive.module.css";
 import { ArchiveLead, ArchiveRow } from "./ArchiveEntry";
 import { PublicationArt } from "./PublicationArt";
 
+/** What an archive was narrowed by, which is also the word it shows a reader. */
+export type ArchiveKind = "Publication" | "Category" | "Publication app";
+
 export type ArchiveScope = {
-  kind: string;
+  kind: ArchiveKind;
   heading: string;
   address: string;
-  narrowed: "category" | "app" | null;
   home: string | null;
 };
 
-/** The publication's front page: the newest post over the masthead art, then the rest. */
+const NARROWED = {
+  Publication: null,
+  Category: "category",
+  "Publication app": "app",
+} as const;
+
+/** The publication's front page, leading with the newest post over the masthead art. */
 export function PublicationFront({ archive }: { archive: PostArchive }) {
   const [lead, ...rest] = archive.posts;
   if (!lead) {
@@ -25,7 +37,6 @@ export function PublicationFront({ archive }: { archive: PostArchive }) {
           kind: "Publication",
           heading: BLOG_TITLE,
           address: "/blog",
-          narrowed: null,
           home: null,
         }}
       />
@@ -52,7 +63,7 @@ export function PublicationFront({ archive }: { archive: PostArchive }) {
   );
 }
 
-/** A numbered, category or app archive: a stated scope, then the same chronology. */
+/** A numbered, category or app archive, which states its scope above the same chronology. */
 export function ScopedArchive({
   archive,
   scope,
@@ -69,11 +80,6 @@ export function ScopedArchive({
           <span>
             {archive.total} {archive.total === 1 ? "post" : "posts"}
           </span>
-          {archive.pages > 1 ? (
-            <span>
-              Page {archive.page} of {archive.pages}
-            </span>
-          ) : null}
           {scope.home ? (
             <a href={scope.home} rel="noreferrer noopener" target="_blank">
               {siteName(scope.home)}
@@ -84,7 +90,11 @@ export function ScopedArchive({
       {archive.posts.length > 0 ? (
         <div className={styles.list}>
           {archive.posts.map((post) => (
-            <ArchiveRow key={post.id} narrowed={scope.narrowed} post={post} />
+            <ArchiveRow
+              key={post.id}
+              narrowed={NARROWED[scope.kind]}
+              post={post}
+            />
           ))}
         </div>
       ) : (
@@ -151,9 +161,4 @@ function siteName(address: string): string {
   } catch {
     return address;
   }
-}
-
-/** Page one of any archive lives at the archive's own address, not under /page/1. */
-export function pageAddress(address: string, page: number): string {
-  return page === 1 ? address : `${address}/page/${page}`;
 }

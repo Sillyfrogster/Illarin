@@ -3106,11 +3106,6 @@ export interface components {
        */
       at: string;
     };
-    /** @description The picture an archive entry shows, taken from the published edition. */
-    PostSummaryImage: {
-      media: components["schemas"]["PostMedia"];
-      alt: string;
-    };
     /** @description One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile. */
     PostSummary: {
       /** Format: uuid */
@@ -3121,7 +3116,6 @@ export interface components {
       category: components["schemas"]["PublicationCategory"];
       app?: components["schemas"]["PublicationApp"] | null;
       releaseVersion?: string;
-      image?: components["schemas"]["PostSummaryImage"] | null;
       byline: components["schemas"]["PostByline"];
       /** Format: date-time */
       publishedAt: string;

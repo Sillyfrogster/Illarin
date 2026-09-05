@@ -7650,17 +7650,6 @@ components:
           type: string
           format: date-time
           description: When the edition goes live, with an explicit offset.
-    PostSummaryImage:
-      type: object
-      description: The picture an archive entry shows, taken from the published edition.
-      required:
-        - media
-        - alt
-      properties:
-        media:
-          $ref: '#/components/schemas/PostMedia'
-        alt:
-          type: string
     PostSummary:
       type: object
       description: >-
@@ -7693,10 +7682,6 @@ components:
             - type: 'null'
         releaseVersion:
           type: string
-        image:
-          anyOf:
-            - $ref: '#/components/schemas/PostSummaryImage'
-            - type: 'null'
         byline:
           $ref: '#/components/schemas/PostByline'
         publishedAt:

@@ -3,6 +3,7 @@ import type { PostByline, PostRelease } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 import styles from "./Article.module.css";
 import { Byline } from "./Byline";
+import { titleBand } from "./post-title";
 
 export function ArticleIdentity({
   category,
@@ -57,11 +58,4 @@ export function ArticleIdentity({
       </div>
     </header>
   );
-}
-
-/** Sizes the display type to the title rather than to the page. */
-function titleBand(title: string): "short" | "medium" | "long" {
-  if (title.length > 78) return "long";
-  if (title.length > 42) return "medium";
-  return "short";
 }

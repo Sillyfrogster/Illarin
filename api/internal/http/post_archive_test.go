@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-type postSummaryImage struct {
-	Media postPicture `json:"media"`
-	Alt   string      `json:"alt"`
-}
-
 type postSummary struct {
 	ID             string              `json:"id"`
 	Slug           string              `json:"slug"`
@@ -23,7 +18,6 @@ type postSummary struct {
 	Category       publicationCategory `json:"category"`
 	App            *publicationApp     `json:"app"`
 	ReleaseVersion string              `json:"releaseVersion"`
-	Image          *postSummaryImage   `json:"image"`
 	Byline         postByline          `json:"byline"`
 	PublishedAt    time.Time           `json:"publishedAt"`
 	UpdatedAt      *time.Time          `json:"updatedAt"`
@@ -78,6 +72,17 @@ func (s distinctionStack) dated(t *testing.T, id string, at time.Time) {
 	`, id, at)
 	if err != nil {
 		t.Fatalf("date the post: %v", err)
+	}
+}
+
+// revisedOn moves a published post's last public change to the given day.
+func (s distinctionStack) revisedOn(t *testing.T, id string, at time.Time) {
+	t.Helper()
+	_, err := s.pool.Exec(context.Background(), `
+		update posts set updated_public_at = $2 where id = $1
+	`, id, at)
+	if err != nil {
+		t.Fatalf("revise the post: %v", err)
 	}
 }
 
@@ -197,6 +202,18 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 	releaseLive := stack.publishedAt(t, session, releaseWritten.ID, releaseWritten.Version)
 	stack.dated(t, releaseLive.ID, day.AddDate(0, 0, 1))
 
+	announcementCategory := stack.categoryBySlug(t, "announcement")
+	contributor := stack.member(t, "dev@example.com", "lumiverse.dev")
+	grant := stack.approved(t, "lumiverse.dev", lumiverse.ID,
+		[]string{announcementCategory.ID}, announcementCategory.ID)
+	filed := stack.started(t, contributor, fmt.Sprintf(
+		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse says hello"}`,
+		grant.ID, announcementCategory.ID,
+	))
+	filedWritten := stack.saved(t, contributor, filed.ID, finished(filed, nil))
+	filedLive := stack.publishedAt(t, contributor, filedWritten.ID, filedWritten.Version)
+	stack.dated(t, filedLive.ID, day.AddDate(0, 0, -1))
+
 	byCategory := stack.archive(t, "?category=release")
 	if len(byCategory.Posts) != 1 || byCategory.Posts[0].Title != "Lumiverse 2.0 is out" {
 		t.Fatalf("the release archive holds %v", titlesOf(byCategory))
@@ -209,14 +226,18 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 	}
 
 	byApp := stack.archive(t, "?app=lumiverse")
-	if len(byApp.Posts) != 1 || byApp.Posts[0].Title != "Lumiverse 2.0 is out" {
+	if len(byApp.Posts) != 2 {
 		t.Fatalf("the Lumiverse archive holds %v", titlesOf(byApp))
+	}
+	if byApp.Posts[0].Title != "Lumiverse 2.0 is out" ||
+		byApp.Posts[1].Title != "Lumiverse says hello" {
+		t.Errorf("the Lumiverse archive holds %v", titlesOf(byApp))
 	}
 	if byApp.App == nil || byApp.App.Name != "Lumiverse" {
 		t.Errorf("the app archive names the scope %+v", byApp.App)
 	}
 
-	if whole := stack.archive(t, ""); len(whole.Posts) != 2 {
+	if whole := stack.archive(t, ""); len(whole.Posts) != 3 {
 		t.Errorf("the whole archive holds %v", titlesOf(whole))
 	}
 	if announcement.Slug == "" {
@@ -338,5 +359,31 @@ func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
 	offered := stack.readableCategories(t)
 	if len(offered) != 1 || offered[0].Slug != "announcement" {
 		t.Errorf("the blog offers %v, want announcement alone", offered)
+	}
+}
+
+func TestAPostCorrectedInPublicRetakesTheLead(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	day := time.Date(2026, time.May, 1, 9, 0, 0, 0, time.UTC)
+
+	corrected := stack.publishedOn(t, session, "The older post", day)
+	stack.publishedOn(t, session, "The newer post", day.AddDate(0, 0, 3))
+
+	if first := stack.archive(t, ""); first.Posts[0].Title != "The newer post" {
+		t.Fatalf("the archive leads with %v", titlesOf(first))
+	}
+
+	stack.revisedOn(t, corrected.ID, day.AddDate(0, 0, 5))
+
+	after := stack.archive(t, "")
+	if after.Posts[0].Title != "The older post" {
+		t.Errorf("a corrected post did not retake the lead: %v", titlesOf(after))
+	}
+	if after.Posts[0].UpdatedAt == nil {
+		t.Error("the corrected post carries no updated date")
+	}
+	if !after.Posts[0].PublishedAt.Equal(day) {
+		t.Errorf("a correction moved the published date to %v", after.Posts[0].PublishedAt)
 	}
 }

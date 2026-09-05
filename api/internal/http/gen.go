@@ -2812,21 +2812,12 @@ type PostSummary struct {
 	Byline         PostByline          `json:"byline"`
 	Category       PublicationCategory `json:"category"`
 	Id             openapi_types.UUID  `json:"id"`
-	Image          *PostSummaryImage   `json:"image,omitempty"`
 	PublishedAt    time.Time           `json:"publishedAt"`
 	ReleaseVersion *string             `json:"releaseVersion,omitempty"`
 	Slug           string              `json:"slug"`
 	Summary        string              `json:"summary"`
 	Title          string              `json:"title"`
 	UpdatedAt      *time.Time          `json:"updatedAt,omitempty"`
-}
-
-// PostSummaryImage The picture an archive entry shows, taken from the published edition.
-type PostSummaryImage struct {
-	Alt string `json:"alt"`
-
-	// Media One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with.
-	Media PostMedia `json:"media"`
 }
 
 // PostVersionRequest defines model for PostVersionRequest.

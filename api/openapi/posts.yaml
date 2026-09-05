@@ -1385,17 +1385,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    PostSummaryImage:
-      type: object
-      description: The picture an archive entry shows, taken from the published edition.
-      required:
-        - media
-        - alt
-      properties:
-        media:
-          $ref: '#/components/schemas/PostMedia'
-        alt:
-          type: string
     PostSummary:
       type: object
       description: >-
@@ -1428,10 +1417,6 @@ components:
             - type: 'null'
         releaseVersion:
           type: string
-        image:
-          anyOf:
-            - $ref: '#/components/schemas/PostSummaryImage'
-            - type: 'null'
         byline:
           $ref: '#/components/schemas/PostByline'
         publishedAt:

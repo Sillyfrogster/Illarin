@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
 import { ScopedArchive } from "@/components/publication/Archive";
-import { fetchPostArchive } from "@/lib/api/query";
-import { archivePage, blogMetadata } from "@/lib/publication-metadata";
+import { blogMetadata } from "@/lib/publication-metadata";
+import { scopedArchive } from "@/lib/scoped-archive";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/blog/category/[slug]/[[...paging]]">): Promise<Metadata> {
   const { slug, paging } = await params;
-  const page = archivePage(paging);
-  if (page === null) return { title: "Not found" };
-  const archive = await fetchPostArchive({ page, category: slug });
-  if (!archive?.category) return { title: "Not found" };
+  const { found, canonical } = await scopedArchive("category", slug, paging);
   return blogMetadata(
-    archive.category.label,
-    `Everything Illarin has published under ${archive.category.label}.`,
-    page === 1
-      ? `/blog/category/${slug}`
-      : `/blog/category/${slug}/page/${page}`,
+    found.label,
+    `Everything Illarin has published under ${found.label}.`,
+    canonical,
   );
 }
 
@@ -25,22 +19,18 @@ export default async function CategoryArchivePage({
   params,
 }: PageProps<"/blog/category/[slug]/[[...paging]]">) {
   const { slug, paging } = await params;
-  const page = archivePage(paging);
-  if (page === null) notFound();
-  if (paging?.length === 2 && page === 1) {
-    permanentRedirect(`/blog/category/${slug}`);
-  }
-  const archive = await fetchPostArchive({ page, category: slug });
-  if (!archive?.category) notFound();
-  if (page > 1 && archive.posts.length === 0) notFound();
+  const { archive, found, address } = await scopedArchive(
+    "category",
+    slug,
+    paging,
+  );
   return (
     <ScopedArchive
       archive={archive}
       scope={{
         kind: "Category",
-        heading: archive.category.label,
-        address: `/blog/category/${slug}`,
-        narrowed: "category",
+        heading: found.label,
+        address,
         home: null,
       }}
     />

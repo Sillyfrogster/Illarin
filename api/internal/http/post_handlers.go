@@ -435,12 +435,6 @@ func toAPISummary(found publication.PostSummary) PostSummary {
 	if found.ReleaseVersion != "" {
 		shown.ReleaseVersion = pointer(found.ReleaseVersion)
 	}
-	if found.Image != nil {
-		shown.Image = &PostSummaryImage{
-			Media: *toAPIPostPicture(found.Image, nil),
-			Alt:   found.ImageAlt,
-		}
-	}
 	return shown
 }
 
