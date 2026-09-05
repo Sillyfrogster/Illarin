@@ -1,7 +1,8 @@
 import Link from "next/link";
-import type { PostByline, PostRelease } from "@/lib/api/query";
+import type { PostByline, PostMedia, PostRelease } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 import styles from "./Article.module.css";
+import { ArticleHeader, type Header } from "./ArticleHeader";
 import { Byline } from "./Byline";
 import { titleBand } from "./post-title";
 
@@ -11,6 +12,8 @@ export function ArticleIdentity({
   summary,
   release,
   byline,
+  header,
+  media,
   publishedAt,
   updatedAt,
   standing,
@@ -20,6 +23,8 @@ export function ArticleIdentity({
   summary: string;
   release: PostRelease | null;
   byline: PostByline | null;
+  header?: Header | null;
+  media?: PostMedia[];
   publishedAt: string | null;
   updatedAt: string | null;
   standing?: string;
@@ -56,6 +61,7 @@ export function ArticleIdentity({
           ) : null}
         </p>
       </div>
+      <ArticleHeader header={header} media={media ?? []} />
     </header>
   );
 }

@@ -1,7 +1,7 @@
 /* The plate an article opens on. It stands for the post, so it breaks the measure. */
 .header {
   width: 100%;
-  margin-bottom: clamp(30px, 3.4vw, 44px);
+  margin-top: clamp(26px, 3vw, 38px);
 }
 
 .picture {

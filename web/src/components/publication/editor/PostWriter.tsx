@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
 import { FormDialog } from "@/components/console/FormDialog";
-import { ArticleHeader } from "@/components/publication/ArticleHeader";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
 import {
@@ -388,6 +387,8 @@ export function PostWriter({ id }: { id: string }) {
           <ArticleIdentity
             byline={null}
             category={category.label}
+            header={draft.header}
+            media={media}
             publishedAt={post.publishedAt ?? null}
             release={post.release ?? null}
             standing="A preview. The name goes on when you first publish."
@@ -396,7 +397,6 @@ export function PostWriter({ id }: { id: string }) {
             updatedAt={post.updatedPublicAt ?? null}
           />
           <div className={styles.prose}>
-            <ArticleHeader header={draft.header} media={media} />
             <PostBody document={draft.document} media={media} />
           </div>
         </article>
