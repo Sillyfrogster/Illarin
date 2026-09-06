@@ -168,19 +168,19 @@ func (s *Service) DeletedPosts(ctx context.Context, editor Editor) ([]Post, erro
 func (s *Service) postsFor(
 	ctx context.Context,
 	editor Editor,
-	standing, order string,
+	standingClause, orderClause string,
 ) ([]Post, error) {
 	if editor.Grant != nil {
 		return s.postsWhere(ctx, `
-			where `+standing+` and post.grant_id = $1 and grant_row.active
-		`+order, *editor.Grant)
+			where `+standingClause+` and post.grant_id = $1 and grant_row.active
+		`+orderClause, *editor.Grant)
 	}
 	if editor.Admin {
-		return s.postsWhere(ctx, `where `+standing+` `+order)
+		return s.postsWhere(ctx, `where `+standingClause+` `+orderClause)
 	}
 	return s.postsWhere(ctx, `
-		where `+standing+` and grant_row.user_id = $1 and grant_row.active
-	`+order, editor.ID)
+		where `+standingClause+` and grant_row.user_id = $1 and grant_row.active
+	`+orderClause, editor.ID)
 }
 
 // Post answers one working copy to the account allowed to manage it.

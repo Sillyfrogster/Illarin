@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// StatusDeleted is what the private record calls a post nobody is meant to
-// find. It is not a public state, so the posts table keeps the one readers saw.
+// StatusDeleted is what the private record calls a deleted post, which is not a
+// public state, so the posts table goes on holding the one readers last saw.
 const StatusDeleted = "deleted"
 
 // RecoveryDays is how long a deleted post can still be brought back.
