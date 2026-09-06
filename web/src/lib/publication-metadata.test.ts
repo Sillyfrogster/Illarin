@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import type { PublicPost } from "@/lib/api/query";
 import {
+  archiveDescription,
   archivePage,
+  blogMetadata,
   postMetadata,
   postStructuredData,
 } from "./publication-metadata";
@@ -151,4 +153,34 @@ test("the article data carries the update it has and nothing more", () => {
   );
   expect(article.dateModified).toBe("2026-09-02T11:15:00Z");
   expect(article.image).toBe("http://localhost:8000/blog/first-post/card.png");
+});
+
+test("a narrowed archive is canonical on the blog origin and offers its own feeds", () => {
+  const metadata = blogMetadata(
+    "Release",
+    archiveDescription("category", "Release"),
+    "/blog/category/release/page/2",
+    "/blog/category/release",
+  );
+  expect(metadata.alternates?.canonical).toBe(
+    "http://localhost:8000/blog/category/release/page/2",
+  );
+  expect(metadata.alternates?.types).toEqual({
+    "application/rss+xml":
+      "http://localhost:8000/blog/category/release/feed.xml",
+    "application/feed+json":
+      "http://localhost:8000/blog/category/release/feed.json",
+  });
+});
+
+test("a title cannot close the script the article data is written in", () => {
+  const attacked = postStructuredData({
+    ...POST,
+    title: "</script><script>alert(1)</script>",
+  });
+  expect(attacked).not.toContain("</script>");
+  expect(attacked).not.toContain("<");
+  expect(JSON.parse(attacked).headline).toBe(
+    "</script><script>alert(1)</script>",
+  );
 });

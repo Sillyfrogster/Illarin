@@ -58,7 +58,10 @@ export function blogMetadata(
   return {
     ...pageMetadata(`${name} · ${BLOG_TITLE}`, description),
     title: name,
-    alternates: { canonical, types: feedTypes(archive) },
+    alternates: {
+      canonical: blogAddress(canonical),
+      types: feedTypes(archive),
+    },
   };
 }
 
@@ -103,23 +106,36 @@ export function postMetadata(post: PublicPost): Metadata {
 /** The same published facts as the page's own tags, in the form a search engine indexes. */
 export function postStructuredData(post: PublicPost): string {
   const profile = bylineProfile(post.byline);
-  return JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.summary,
-    url: postPermalink(post.slug),
-    mainEntityOfPage: postPermalink(post.slug),
-    image: socialCard(post).url,
-    datePublished: post.publishedAt,
-    ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
-    author: {
-      "@type": "Person",
-      name: bylineName(post.byline),
-      ...(profile ? { url: profile } : {}),
-    },
-    publisher: { "@type": "Organization", name: SITE_NAME, url: siteUrl },
-  });
+  return inertInAScript(
+    JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title,
+      description: post.summary,
+      url: postPermalink(post.slug),
+      mainEntityOfPage: postPermalink(post.slug),
+      image: socialCard(post).url,
+      datePublished: post.publishedAt,
+      ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
+      author: {
+        "@type": "Person",
+        name: bylineName(post.byline),
+        ...(profile ? { url: profile } : {}),
+      },
+      publisher: { "@type": "Organization", name: SITE_NAME, url: siteUrl },
+    }),
+  );
+}
+
+// A browser reads a script element's text before it parses the JSON, so anything
+// that could close the element early is written as an escape instead.
+const CLOSES_A_SCRIPT = /[<>&\u2028\u2029]/g;
+
+function inertInAScript(json: string): string {
+  return json.replace(
+    CLOSES_A_SCRIPT,
+    (letter) => `\\u${letter.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 }
 
 /** The picture a shared link shows: the author's own upload, or the card Illarin composes. */
