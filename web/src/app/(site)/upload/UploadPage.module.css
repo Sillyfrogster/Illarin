@@ -116,7 +116,7 @@
 .archiveHost {
   position: absolute;
   inset: 0;
-  background-image: url("../../assets/art/full/illarin-mascot-archive-light-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-mascot-archive-light-v1.webp");
   background-position: center bottom;
   background-repeat: no-repeat;
   background-size: auto 96%;
@@ -126,12 +126,12 @@
 }
 
 :global(:root[data-theme="dark"]) .archiveHost {
-  background-image: url("../../assets/art/full/illarin-mascot-archive-dark-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-mascot-archive-dark-v1.webp");
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .archiveHost {
-    background-image: url("../../assets/art/full/illarin-mascot-archive-dark-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-mascot-archive-dark-v1.webp");
   }
 }
 

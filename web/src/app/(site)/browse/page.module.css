@@ -46,7 +46,7 @@
   position: absolute;
   z-index: -2;
   inset: 0;
-  background-image: url("../../assets/art/full/illarin-browse-aperture-light-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-browse-aperture-light-v1.webp");
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -54,12 +54,12 @@
 }
 
 :global(:root[data-theme="dark"]) .friezeArt {
-  background-image: url("../../assets/art/full/illarin-browse-aperture-dark-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-browse-aperture-dark-v1.webp");
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .friezeArt {
-    background-image: url("../../assets/art/full/illarin-browse-aperture-dark-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-browse-aperture-dark-v1.webp");
   }
 }
 
@@ -100,12 +100,12 @@
   }
 
   .friezeArt {
-    background-image: url("../../assets/art/full/illarin-browse-aperture-light-phone-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-browse-aperture-light-phone-v1.webp");
     background-position: center 50%;
   }
 
   :global(:root[data-theme="dark"]) .friezeArt {
-    background-image: url("../../assets/art/full/illarin-browse-aperture-dark-phone-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-browse-aperture-dark-phone-v1.webp");
   }
 
   .masthead::before {
@@ -115,6 +115,6 @@
 
 @media (max-width: 760px) and (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .friezeArt {
-    background-image: url("../../assets/art/full/illarin-browse-aperture-dark-phone-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-browse-aperture-dark-phone-v1.webp");
   }
 }

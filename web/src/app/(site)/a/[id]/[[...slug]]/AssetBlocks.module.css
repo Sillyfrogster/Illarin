@@ -250,7 +250,7 @@
 .ornament::before {
   position: absolute;
   z-index: -1;
-  background-image: url("../../../../assets/art/full/illarin-detail-page-art-light-v2.webp");
+  background-image: url("../../../../../assets/art/full/illarin-detail-page-art-light-v2.webp");
   background-repeat: no-repeat;
   background-position: center 32%;
   background-size: cover;
@@ -277,13 +277,13 @@
 }
 
 :global(:root[data-theme="dark"]) .ornament::before {
-  background-image: url("../../../../assets/art/full/illarin-detail-page-art-dark-v2.webp");
+  background-image: url("../../../../../assets/art/full/illarin-detail-page-art-dark-v2.webp");
   opacity: 0.78;
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .ornament::before {
-    background-image: url("../../../../assets/art/full/illarin-detail-page-art-dark-v2.webp");
+    background-image: url("../../../../../assets/art/full/illarin-detail-page-art-dark-v2.webp");
     opacity: 0.78;
   }
 }

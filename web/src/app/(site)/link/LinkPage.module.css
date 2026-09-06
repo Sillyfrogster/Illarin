@@ -48,19 +48,19 @@
   min-height: 640px;
   overflow: hidden;
   background: var(--color-media-surface);
-  background-image: url("../../assets/art/full/illarin-link-passage-light-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-link-passage-light-v1.webp");
   background-position: 66% 50%;
   background-repeat: no-repeat;
   background-size: cover;
 }
 
 :global(:root[data-theme="dark"]) .artwork {
-  background-image: url("../../assets/art/full/illarin-link-passage-dark-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-link-passage-dark-v1.webp");
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .artwork {
-    background-image: url("../../assets/art/full/illarin-link-passage-dark-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-link-passage-dark-v1.webp");
   }
 }
 

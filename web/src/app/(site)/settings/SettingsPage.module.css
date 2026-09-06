@@ -20,7 +20,7 @@
   position: absolute;
   z-index: 0;
   inset: 0;
-  background-image: url("../../assets/art/full/illarin-settings-identity-light-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-settings-identity-light-v1.webp");
   background-position: left center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -28,12 +28,12 @@
 }
 
 :global(:root[data-theme="dark"]) .identityScene {
-  background-image: url("../../assets/art/full/illarin-settings-identity-dark-v1.webp");
+  background-image: url("../../../assets/art/full/illarin-settings-identity-dark-v1.webp");
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme])) .identityScene {
-    background-image: url("../../assets/art/full/illarin-settings-identity-dark-v1.webp");
+    background-image: url("../../../assets/art/full/illarin-settings-identity-dark-v1.webp");
   }
 }
 
