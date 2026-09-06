@@ -11,6 +11,15 @@ import (
 
 const postSlugLimit = 80
 
+// firstAddress reads the address a post first published under. A correction
+// leaves that address still reaching the post, so it never changes.
+const firstAddress = `coalesce((
+	                 select earliest.slug from post_slugs earliest
+	                  where earliest.post_id = post.id
+	                  order by earliest.reserved_at, earliest.slug
+	                  limit 1
+	               ), post.slug)`
+
 // reservedSlugs are the blog's own route prefixes and feed file names, written in the form normalization leaves them in.
 var reservedSlugs = map[string]bool{
 	"admin":     true,

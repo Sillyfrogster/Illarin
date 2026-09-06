@@ -2811,16 +2811,19 @@ type PostStatus string
 
 // PostSummary One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile.
 type PostSummary struct {
-	App            *PublicationApp     `json:"app,omitempty"`
-	Byline         PostByline          `json:"byline"`
-	Category       PublicationCategory `json:"category"`
-	Id             openapi_types.UUID  `json:"id"`
-	PublishedAt    time.Time           `json:"publishedAt"`
-	ReleaseVersion *string             `json:"releaseVersion,omitempty"`
-	Slug           string              `json:"slug"`
-	Summary        string              `json:"summary"`
-	Title          string              `json:"title"`
-	UpdatedAt      *time.Time          `json:"updatedAt,omitempty"`
+	App      *PublicationApp     `json:"app,omitempty"`
+	Byline   PostByline          `json:"byline"`
+	Category PublicationCategory `json:"category"`
+	Id       openapi_types.UUID  `json:"id"`
+
+	// OriginalSlug The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes.
+	OriginalSlug   string     `json:"originalSlug"`
+	PublishedAt    time.Time  `json:"publishedAt"`
+	ReleaseVersion *string    `json:"releaseVersion,omitempty"`
+	Slug           string     `json:"slug"`
+	Summary        string     `json:"summary"`
+	Title          string     `json:"title"`
+	UpdatedAt      *time.Time `json:"updatedAt,omitempty"`
 }
 
 // PostVersionRequest defines model for PostVersionRequest.
@@ -2934,11 +2937,14 @@ type PublicPost struct {
 	Category PublicationCategory `json:"category"`
 
 	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
-	Document    PostDocument       `json:"document"`
-	Header      *PostHeader        `json:"header,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
-	Media       []PostMedia        `json:"media"`
-	PublishedAt time.Time          `json:"publishedAt"`
+	Document PostDocument       `json:"document"`
+	Header   *PostHeader        `json:"header,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Media    []PostMedia        `json:"media"`
+
+	// OriginalSlug The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes.
+	OriginalSlug string    `json:"originalSlug"`
+	PublishedAt  time.Time `json:"publishedAt"`
 
 	// Related At most three other published posts, preferring the same publication app and then the same category, newest first.
 	Related     []PostSummary `json:"related"`
@@ -4261,6 +4267,9 @@ type ServerInterface interface {
 
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
+
+	// (GET /v1/post-apps)
+	ListPostApps(c *gin.Context)
 
 	// (GET /v1/post-categories)
 	ListPostCategories(c *gin.Context)
@@ -6335,6 +6344,19 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ListPostApps operation middleware
+func (siw *ServerInterfaceWrapper) ListPostApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostApps(c)
+}
+
 // ListPostCategories operation middleware
 func (siw *ServerInterfaceWrapper) ListPostCategories(c *gin.Context) {
 
@@ -7595,6 +7617,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
 	router.GET(options.BaseURL+"/v1/post-categories", wrapper.ListPostCategories)
+	router.GET(options.BaseURL+"/v1/post-apps", wrapper.ListPostApps)
 	router.GET(options.BaseURL+"/v1/posts", wrapper.ListPublishedPosts)
 	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)

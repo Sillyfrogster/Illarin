@@ -22,6 +22,7 @@ const relatedLimit = 3
 type PostSummary struct {
 	ID             uuid.UUID
 	Slug           string
+	OriginalSlug   string
 	Title          string
 	Summary        string
 	Category       Category
@@ -53,7 +54,7 @@ type Archive struct {
 // A post's app is the one its release names, and otherwise the one its byline
 // was captured under.
 const selectSummaries = `
-	select post.id, post.slug, revision.title, revision.summary,
+	select post.id, post.slug, ` + firstAddress + `, revision.title, revision.summary,
 	       category.id, category.slug, category.label, category.position,
 	       category.retired_at is not null,
 	       app.id, app.slug, app.name, app.home_url, app.position,
@@ -96,6 +97,27 @@ func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
 	}
 	defer rows.Close()
 	return collectCategories(rows)
+}
+
+// ReadableApps answers the apps that carry published posts, in the order the
+// publication shows them.
+func (s *Service) ReadableApps(ctx context.Context) ([]App, error) {
+	rows, err := s.pool.Query(ctx, selectApps+`
+		 where exists (
+		       select 1
+		         from posts post
+		         join post_revisions revision on revision.id = post.public_revision_id
+		         left join post_bylines byline on byline.post_id = post.id
+		        where post.status = 'published'
+		          and coalesce(revision.release_app_id, byline.app_id) = app.id
+		 )
+		 order by app.position, app.created_at
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("read the apps a reader can browse: %w", err)
+	}
+	defer rows.Close()
+	return collectApps(rows)
 }
 
 // Archive answers one page of the publication, newest first, narrowed to a
@@ -210,7 +232,7 @@ func scanSummary(row rowScanner) (PostSummary, error) {
 	var markWidth, markHeight *int
 	var version *string
 	err := row.Scan(
-		&one.ID, &one.Slug, &one.Title, &one.Summary,
+		&one.ID, &one.Slug, &one.OriginalSlug, &one.Title, &one.Summary,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,

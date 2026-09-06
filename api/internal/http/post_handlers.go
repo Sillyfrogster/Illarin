@@ -198,6 +198,15 @@ func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(corrected))
 }
 
+func (h *Handlers) ListPostApps(c *gin.Context) {
+	found, err := h.publications.ReadableApps(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the apps."})
+		return
+	}
+	c.JSON(http.StatusOK, PublicationAppList{Apps: toAPIApps(found)})
+}
+
 func (h *Handlers) ListPostCategories(c *gin.Context) {
 	found, err := h.publications.ReadableCategories(c.Request.Context())
 	if err != nil {
@@ -374,20 +383,21 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 
 func toAPIPublicPost(found publication.PublicPost) PublicPost {
 	return PublicPost{
-		Id:          types.UUID(found.ID),
-		Slug:        found.Slug,
-		Title:       found.Title,
-		Summary:     found.Summary,
-		Category:    toAPICategory(found.Category),
-		Document:    toAPIDocument(found.Document),
-		Release:     toAPIRelease(found.Release),
-		Header:      toAPIHeader(found.Header),
-		SocialImage: toAPIPostPicture(found.SocialMedia, nil),
-		Media:       showPostMedia(found.Media, nil),
-		Byline:      toAPIByline(found.Byline),
-		Related:     toAPISummaries(found.Related),
-		PublishedAt: found.PublishedAt,
-		UpdatedAt:   found.UpdatedAt,
+		Id:           types.UUID(found.ID),
+		Slug:         found.Slug,
+		OriginalSlug: found.OriginalSlug,
+		Title:        found.Title,
+		Summary:      found.Summary,
+		Category:     toAPICategory(found.Category),
+		Document:     toAPIDocument(found.Document),
+		Release:      toAPIRelease(found.Release),
+		Header:       toAPIHeader(found.Header),
+		SocialImage:  toAPIPostPicture(found.SocialMedia, nil),
+		Media:        showPostMedia(found.Media, nil),
+		Byline:       toAPIByline(found.Byline),
+		Related:      toAPISummaries(found.Related),
+		PublishedAt:  found.PublishedAt,
+		UpdatedAt:    found.UpdatedAt,
 	}
 }
 
@@ -419,14 +429,15 @@ func toAPISummaries(listed []publication.PostSummary) []PostSummary {
 
 func toAPISummary(found publication.PostSummary) PostSummary {
 	shown := PostSummary{
-		Id:          types.UUID(found.ID),
-		Slug:        found.Slug,
-		Title:       found.Title,
-		Summary:     found.Summary,
-		Category:    toAPICategory(found.Category),
-		Byline:      toAPIByline(found.Byline),
-		PublishedAt: found.PublishedAt,
-		UpdatedAt:   found.UpdatedAt,
+		Id:           types.UUID(found.ID),
+		Slug:         found.Slug,
+		OriginalSlug: found.OriginalSlug,
+		Title:        found.Title,
+		Summary:      found.Summary,
+		Category:     toAPICategory(found.Category),
+		Byline:       toAPIByline(found.Byline),
+		PublishedAt:  found.PublishedAt,
+		UpdatedAt:    found.UpdatedAt,
 	}
 	if found.App != nil {
 		app := toAPIApp(*found.App)

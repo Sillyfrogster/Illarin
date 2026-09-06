@@ -679,6 +679,20 @@ paths:
             application/json:
               schema:
                 $ref: './publication.yaml#/components/schemas/PublicationCategoryList'
+  /v1/post-apps:
+    get:
+      operationId: listPostApps
+      description: >-
+        The publication apps that carry published posts, in the order the
+        publication shows them. An app nobody has published for is absent, so
+        every app archive the blog offers leads to writing.
+      responses:
+        '200':
+          description: The apps a reader can browse
+          content:
+            application/json:
+              schema:
+                $ref: './publication.yaml#/components/schemas/PublicationAppList'
   /v1/posts:
     get:
       operationId: listPublishedPosts
@@ -1338,6 +1352,7 @@ components:
       required:
         - id
         - slug
+        - originalSlug
         - title
         - summary
         - category
@@ -1352,6 +1367,12 @@ components:
           format: uuid
         slug:
           type: string
+        originalSlug:
+          type: string
+          description: >-
+            The address the post first published under. It still reaches the
+            post after an address correction, so a feed can name the post by an
+            address that never changes.
         title:
           type: string
         summary:
@@ -1400,6 +1421,7 @@ components:
       required:
         - id
         - slug
+        - originalSlug
         - title
         - summary
         - category
@@ -1411,6 +1433,12 @@ components:
           format: uuid
         slug:
           type: string
+        originalSlug:
+          type: string
+          description: >-
+            The address the post first published under. It still reaches the
+            post after an address correction, so a feed can name the post by an
+            address that never changes.
         title:
           type: string
         summary:

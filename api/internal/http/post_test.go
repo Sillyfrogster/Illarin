@@ -69,20 +69,21 @@ type postList struct {
 }
 
 type publicPost struct {
-	ID          string              `json:"id"`
-	Slug        string              `json:"slug"`
-	Title       string              `json:"title"`
-	Summary     string              `json:"summary"`
-	Category    publicationCategory `json:"category"`
-	Document    postDocument        `json:"document"`
-	Release     *postRelease        `json:"release"`
-	Header      *postHeader         `json:"header"`
-	SocialImage *postPicture        `json:"socialImage"`
-	Media       []postPicture       `json:"media"`
-	Byline      postByline          `json:"byline"`
-	Related     []postSummary       `json:"related"`
-	PublishedAt time.Time           `json:"publishedAt"`
-	UpdatedAt   *time.Time          `json:"updatedAt"`
+	ID           string              `json:"id"`
+	Slug         string              `json:"slug"`
+	OriginalSlug string              `json:"originalSlug"`
+	Title        string              `json:"title"`
+	Summary      string              `json:"summary"`
+	Category     publicationCategory `json:"category"`
+	Document     postDocument        `json:"document"`
+	Release      *postRelease        `json:"release"`
+	Header       *postHeader         `json:"header"`
+	SocialImage  *postPicture        `json:"socialImage"`
+	Media        []postPicture       `json:"media"`
+	Byline       postByline          `json:"byline"`
+	Related      []postSummary       `json:"related"`
+	PublishedAt  time.Time           `json:"publishedAt"`
+	UpdatedAt    *time.Time          `json:"updatedAt"`
 }
 
 // paragraph is a one-sentence post body in the document vocabulary.

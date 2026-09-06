@@ -13,6 +13,7 @@ import (
 type postSummary struct {
 	ID             string              `json:"id"`
 	Slug           string              `json:"slug"`
+	OriginalSlug   string              `json:"originalSlug"`
 	Title          string              `json:"title"`
 	Summary        string              `json:"summary"`
 	Category       publicationCategory `json:"category"`

@@ -1087,6 +1087,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/post-apps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The publication apps that carry published posts, in the order the publication shows them. An app nobody has published for is absent, so every app archive the blog offers leads to writing. */
+    get: operations["listPostApps"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/posts": {
     parameters: {
       query?: never;
@@ -2106,6 +2123,8 @@ export interface components {
       /** Format: uuid */
       id: string;
       slug: string;
+      /** @description The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes. */
+      originalSlug: string;
       title: string;
       summary: string;
       category: components["schemas"]["PublicationCategory"];
@@ -3113,6 +3132,8 @@ export interface components {
       /** Format: uuid */
       id: string;
       slug: string;
+      /** @description The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes. */
+      originalSlug: string;
       title: string;
       summary: string;
       category: components["schemas"]["PublicationCategory"];
@@ -6844,6 +6865,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PublicationCategoryList"];
+        };
+      };
+    };
+  };
+  listPostApps: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The apps a reader can browse */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationAppList"];
         };
       };
     };

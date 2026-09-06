@@ -21,21 +21,22 @@ const (
 
 // PublicPost is the one edition a signed-out reader receives.
 type PublicPost struct {
-	ID          uuid.UUID
-	RevisionID  uuid.UUID
-	Slug        string
-	Title       string
-	Summary     string
-	Category    Category
-	Document    json.RawMessage
-	Release     *Release
-	Header      *Header
-	SocialMedia *PostMedia
-	Media       []PostMedia
-	Byline      Byline
-	Related     []PostSummary
-	PublishedAt time.Time
-	UpdatedAt   *time.Time
+	ID           uuid.UUID
+	RevisionID   uuid.UUID
+	Slug         string
+	OriginalSlug string
+	Title        string
+	Summary      string
+	Category     Category
+	Document     json.RawMessage
+	Release      *Release
+	Header       *Header
+	SocialMedia  *PostMedia
+	Media        []PostMedia
+	Byline       Byline
+	Related      []PostSummary
+	PublishedAt  time.Time
+	UpdatedAt    *time.Time
 }
 
 // PublishPost puts the exact edition a named working copy holds into public view.
@@ -145,7 +146,7 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 	var headerID, socialID *uuid.UUID
 	var headerAlt, headerCaption *string
 	err := s.pool.QueryRow(ctx, `
-		select post.id, revision.id, post.slug, revision.title, revision.summary,
+		select post.id, revision.id, post.slug, `+firstAddress+`, revision.title, revision.summary,
 		       category.id, category.slug, category.label, category.position,
 		       category.retired_at is not null,
 		       revision.document, revision.header_media_id, revision.header_alt,
@@ -158,7 +159,8 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		   and (post.slug = $1
 		        or post.id = (select post_id from post_slugs where slug = $1))
 	`, slug, StatusPublished).Scan(
-		&found.ID, &found.RevisionID, &found.Slug, &found.Title, &found.Summary,
+		&found.ID, &found.RevisionID, &found.Slug, &found.OriginalSlug,
+		&found.Title, &found.Summary,
 		&found.Category.ID, &found.Category.Slug, &found.Category.Label,
 		&found.Category.Position, &found.Category.Retired,
 		&found.Document, &headerID, &headerAlt, &headerCaption, &socialID,
