@@ -132,6 +132,10 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1withdraw
   /v1/publication/posts/{id}/republish:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1republish
+  /v1/publication/posts/{id}/delete:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1delete
+  /v1/publication/posts/{id}/recover:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1recover
   /v1/publication/posts/{id}/schedule:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1schedule
   /v1/publication/posts/{id}/address:

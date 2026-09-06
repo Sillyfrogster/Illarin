@@ -2603,6 +2603,7 @@ type Post struct {
 	Byline    *PostByline         `json:"byline,omitempty"`
 	Category  PublicationCategory `json:"category"`
 	CreatedAt time.Time           `json:"createdAt"`
+	Deletion  *PostDeletion       `json:"deletion,omitempty"`
 
 	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
 	Document        PostDocument `json:"document"`
@@ -2685,6 +2686,15 @@ type PostConflict struct {
 	Field     *string              `json:"field,omitempty"`
 	UpdatedAt *time.Time           `json:"updatedAt,omitempty"`
 	Version   *int                 `json:"version,omitempty"`
+}
+
+// PostDeletion A deleted post and the deadline it has to come back by. Nothing about it is public, and readers were never shown any of it.
+type PostDeletion struct {
+	At time.Time `json:"at"`
+	By string    `json:"by"`
+
+	// Until When the post and everything it holds are removed for good.
+	Until time.Time `json:"until"`
 }
 
 // PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
@@ -3732,6 +3742,12 @@ type SetPublicationAppMarkMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// ListPostsParams defines parameters for ListPosts.
+type ListPostsParams struct {
+	// Deleted Ask for the deleted posts still inside their recovery window instead of the active ones.
+	Deleted *bool `form:"deleted,omitempty" json:"deleted,omitempty"`
+}
+
 // CreatePostParams defines parameters for CreatePost.
 type CreatePostParams struct {
 	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
@@ -3740,6 +3756,12 @@ type CreatePostParams struct {
 
 // SavePostParams defines parameters for SavePost.
 type SavePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// DeletePostParams defines parameters for DeletePost.
+type DeletePostParams struct {
 	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
@@ -3764,6 +3786,12 @@ type AddPostMediaParams struct {
 
 // PublishPostParams defines parameters for PublishPost.
 type PublishPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RecoverPostParams defines parameters for RecoverPost.
+type RecoverPostParams struct {
 	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
@@ -3969,6 +3997,9 @@ type CorrectPostAddressJSONRequestBody = CorrectPostAddressRequest
 // CorrectPostBylineJSONRequestBody defines body for CorrectPostByline for application/json ContentType.
 type CorrectPostBylineJSONRequestBody = CorrectPostBylineRequest
 
+// DeletePostJSONRequestBody defines body for DeletePost for application/json ContentType.
+type DeletePostJSONRequestBody = PostVersionRequest
+
 // ImportPostMarkdownJSONRequestBody defines body for ImportPostMarkdown for application/json ContentType.
 type ImportPostMarkdownJSONRequestBody = ImportPostMarkdownRequest
 
@@ -3977,6 +4008,9 @@ type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 
 // PublishPostJSONRequestBody defines body for PublishPost for application/json ContentType.
 type PublishPostJSONRequestBody = PostVersionRequest
+
+// RecoverPostJSONRequestBody defines body for RecoverPost for application/json ContentType.
+type RecoverPostJSONRequestBody = PostVersionRequest
 
 // RepublishPostJSONRequestBody defines body for RepublishPost for application/json ContentType.
 type RepublishPostJSONRequestBody = RepublishPostRequest
@@ -4395,7 +4429,7 @@ type ServerInterface interface {
 	IssuePublicationToken(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/posts)
-	ListPosts(c *gin.Context)
+	ListPosts(c *gin.Context, params ListPostsParams)
 
 	// (POST /v1/publication/posts)
 	CreatePost(c *gin.Context, params CreatePostParams)
@@ -4412,6 +4446,9 @@ type ServerInterface interface {
 	// (PUT /v1/publication/posts/{id}/byline)
 	CorrectPostByline(c *gin.Context, id openapi_types.UUID)
 
+	// (POST /v1/publication/posts/{id}/delete)
+	DeletePost(c *gin.Context, id openapi_types.UUID, params DeletePostParams)
+
 	// (GET /v1/publication/posts/{id}/history)
 	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
 
@@ -4423,6 +4460,9 @@ type ServerInterface interface {
 
 	// (POST /v1/publication/posts/{id}/publish)
 	PublishPost(c *gin.Context, id openapi_types.UUID, params PublishPostParams)
+
+	// (POST /v1/publication/posts/{id}/recover)
+	RecoverPost(c *gin.Context, id openapi_types.UUID, params RecoverPostParams)
 
 	// (POST /v1/publication/posts/{id}/republish)
 	RepublishPost(c *gin.Context, id openapi_types.UUID, params RepublishPostParams)
@@ -6895,6 +6935,20 @@ func (siw *ServerInterfaceWrapper) IssuePublicationToken(c *gin.Context) {
 // ListPosts operation middleware
 func (siw *ServerInterfaceWrapper) ListPosts(c *gin.Context) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPostsParams
+
+	// ------------- Optional query parameter "deleted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deleted", c.Request.URL.Query(), &params.Deleted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter deleted: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6902,7 +6956,7 @@ func (siw *ServerInterfaceWrapper) ListPosts(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ListPosts(c)
+	siw.Handler.ListPosts(c, params)
 }
 
 // CreatePost operation middleware
@@ -7067,6 +7121,55 @@ func (siw *ServerInterfaceWrapper) CorrectPostByline(c *gin.Context) {
 	}
 
 	siw.Handler.CorrectPostByline(c, id)
+}
+
+// DeletePost operation middleware
+func (siw *ServerInterfaceWrapper) DeletePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeletePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeletePost(c, id, params)
 }
 
 // ReadPostHistory operation middleware
@@ -7239,6 +7342,55 @@ func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 	}
 
 	siw.Handler.PublishPost(c, id, params)
+}
+
+// RecoverPost operation middleware
+func (siw *ServerInterfaceWrapper) RecoverPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecoverPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecoverPost(c, id, params)
 }
 
 // RepublishPost operation middleware
@@ -7774,6 +7926,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/withdraw", wrapper.WithdrawPost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/republish", wrapper.RepublishPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/delete", wrapper.DeletePost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/recover", wrapper.RecoverPost)
 	router.DELETE(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.CancelPostSchedule)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.SchedulePost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)

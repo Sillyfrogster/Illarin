@@ -284,37 +284,56 @@ func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*
 
 // working is the exact edition a publish transaction locked and will capture.
 type working struct {
-	ID             uuid.UUID
-	AuthorID       uuid.UUID
-	GrantID        *uuid.UUID
-	CategoryID     uuid.UUID
-	CategorySlug   string
-	Status         string
-	Slug           string
-	Title          string
-	Summary        string
-	Document       []byte
-	ReleaseAppID   *uuid.UUID
-	ReleaseVersion *string
-	ReleaseAddress *string
-	HeaderMediaID  *uuid.UUID
-	HeaderAlt      *string
-	HeaderCaption  *string
-	SocialMediaID  *uuid.UUID
-	Version        int
-	PublishedAt    *time.Time
-	UpdatedAt      time.Time
+	ID               uuid.UUID
+	AuthorID         uuid.UUID
+	GrantID          *uuid.UUID
+	CategoryID       uuid.UUID
+	CategorySlug     string
+	Status           string
+	Slug             string
+	Title            string
+	Summary          string
+	Document         []byte
+	ReleaseAppID     *uuid.UUID
+	ReleaseVersion   *string
+	ReleaseAddress   *string
+	HeaderMediaID    *uuid.UUID
+	HeaderAlt        *string
+	HeaderCaption    *string
+	SocialMediaID    *uuid.UUID
+	Version          int
+	PublishedAt      *time.Time
+	DeletedAt        *time.Time
+	RecoverableUntil time.Time
+	UpdatedAt        time.Time
 }
 
+// lockPost holds the post a change is about to be made to, refusing one that
+// has been deleted, because nothing is edited or published out of recovery.
 func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
+	locked, err := lockRemovedPost(ctx, tx, id)
+	if err != nil {
+		return working{}, err
+	}
+	if locked.DeletedAt != nil {
+		return working{}, ErrPostDeleted
+	}
+	return locked, nil
+}
+
+// lockRemovedPost holds a post whether or not it has been deleted, which is
+// what recovery and removal both act on.
+func lockRemovedPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	var locked working
 	var slug *string
+	var recoverableUntil *time.Time
 	err := tx.QueryRow(ctx, `
 		select post.id, post.author_id, post.grant_id, post.category_id, category.slug, post.status,
 		       post.slug, post.title, post.summary, post.document,
 		       post.release_app_id, post.release_version, post.release_url,
 		       post.header_media_id, post.header_alt, post.header_caption, post.social_media_id,
-		       post.working_version, post.published_at, post.updated_at
+		       post.working_version, post.published_at,
+		       post.deleted_at, post.recoverable_until, post.updated_at
 		  from posts post
 		  join publication_categories category on category.id = post.category_id
 		 where post.id = $1
@@ -325,16 +344,20 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 		&slug, &locked.Title, &locked.Summary, &locked.Document,
 		&locked.ReleaseAppID, &locked.ReleaseVersion, &locked.ReleaseAddress,
 		&locked.HeaderMediaID, &locked.HeaderAlt, &locked.HeaderCaption, &locked.SocialMediaID,
-		&locked.Version, &locked.PublishedAt, &locked.UpdatedAt,
+		&locked.Version, &locked.PublishedAt,
+		&locked.DeletedAt, &recoverableUntil, &locked.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return working{}, ErrPostNotFound
 	}
 	if err != nil {
-		return working{}, fmt.Errorf("lock the post being published: %w", err)
+		return working{}, fmt.Errorf("lock the post being changed: %w", err)
 	}
 	if slug != nil {
 		locked.Slug = *slug
+	}
+	if recoverableUntil != nil {
+		locked.RecoverableUntil = *recoverableUntil
 	}
 	return locked, nil
 }

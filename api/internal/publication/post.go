@@ -104,6 +104,7 @@ type Post struct {
 	PublicRevision  *uuid.UUID
 	Schedule        *Schedule
 	Withdrawal      *Withdrawal
+	Deletion        *Deletion
 	Media           []PostMedia
 	Byline          *Byline
 	FormerAddresses []string
@@ -148,21 +149,38 @@ type ReleaseEdit struct {
 	Address string
 }
 
-// Posts answers every post the editor may manage, newest first.
+// Posts answers every post the editor may manage and has not deleted, newest first.
 func (s *Service) Posts(ctx context.Context, editor Editor) ([]Post, error) {
+	return s.postsFor(ctx, editor,
+		`post.deleted_at is null`, `order by post.created_at desc`)
+}
+
+// DeletedPosts answers the posts the editor may still recover, the ones
+// closest to their deadline first.
+func (s *Service) DeletedPosts(ctx context.Context, editor Editor) ([]Post, error) {
+	return s.postsFor(ctx, editor,
+		`post.deleted_at is not null`, `order by post.recoverable_until`)
+}
+
+// postsFor answers one standing of the posts this editor reaches. A token
+// reaches its own grant, an admin reaches everything, and anybody else reaches
+// the posts under the approvals they hold.
+func (s *Service) postsFor(
+	ctx context.Context,
+	editor Editor,
+	standing, order string,
+) ([]Post, error) {
 	if editor.Grant != nil {
 		return s.postsWhere(ctx, `
-			where post.grant_id = $1 and grant_row.active
-			order by post.created_at desc
-		`, *editor.Grant)
+			where `+standing+` and post.grant_id = $1 and grant_row.active
+		`+order, *editor.Grant)
 	}
 	if editor.Admin {
-		return s.postsWhere(ctx, `order by post.created_at desc`)
+		return s.postsWhere(ctx, `where `+standing+` `+order)
 	}
 	return s.postsWhere(ctx, `
-		where grant_row.user_id = $1 and grant_row.active
-		order by post.created_at desc
-	`, editor.ID)
+		where `+standing+` and grant_row.user_id = $1 and grant_row.active
+	`+order, editor.ID)
 }
 
 // Post answers one working copy to the account allowed to manage it.
@@ -244,6 +262,9 @@ func (s *Service) SavePost(
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
+	}
+	if current.Deletion != nil {
+		return Post{}, ErrPostDeleted
 	}
 	if in.Version != current.Version {
 		return Post{}, Stale{Version: current.Version, UpdatedAt: current.UpdatedAt}
@@ -639,6 +660,17 @@ func (s *Service) post(ctx context.Context, id uuid.UUID) (Post, error) {
 	return found[0], nil
 }
 
+func scanDeletion(at, until *time.Time, by *string) *Deletion {
+	if at == nil || until == nil {
+		return nil
+	}
+	removed := &Deletion{At: *at, Until: *until}
+	if by != nil {
+		removed.By = *by
+	}
+	return removed
+}
+
 func scanHeader(mediaID *uuid.UUID, alt, caption *string) *Header {
 	if mediaID == nil {
 		return nil
@@ -827,9 +859,11 @@ const selectPosts = `
 	       post.header_media_id, post.header_alt, post.header_caption,
 	       post.social_media_id, post.public_revision_id,
 	       post.working_version, post.published_at, post.updated_public_at,
+	       post.deleted_at, post.recoverable_until, remover.username,
 	       post.created_at, post.updated_at
 	  from posts post
 	  join users author on author.id = post.author_id
+	  left join users remover on remover.id = post.deleted_by
 	  join publication_categories category on category.id = post.category_id
 	  left join publication_grants grant_row on grant_row.id = post.grant_id
 	  left join publication_apps app on app.id = grant_row.app_id
@@ -854,6 +888,8 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	var headerAltText, headerCaptionText *string
 	var releasePosition *int
 	var releaseRetired *bool
+	var deletedAt, recoverableUntil *time.Time
+	var remover *string
 	err := rows.Scan(
 		&one.ID, &one.Author.ID, &one.Author.Handle, &one.GrantID,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
@@ -869,6 +905,7 @@ func scanPost(rows pgx.Rows) (Post, error) {
 		&headerID, &headerAltText, &headerCaptionText, &one.SocialMediaID,
 		&one.PublicRevision,
 		&one.Version, &one.PublishedAt, &one.UpdatedPublicAt,
+		&deletedAt, &recoverableUntil, &remover,
 		&one.CreatedAt, &one.UpdatedAt,
 	)
 	if err != nil {
@@ -877,6 +914,7 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	if slug != nil {
 		one.Slug = *slug
 	}
+	one.Deletion = scanDeletion(deletedAt, recoverableUntil, remover)
 	one.Header = scanHeader(headerID, headerAltText, headerCaptionText)
 	if appID != nil {
 		app = App{

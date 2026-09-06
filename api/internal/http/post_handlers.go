@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,17 +15,28 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListPosts(c *gin.Context) {
+func (h *Handlers) ListPosts(c *gin.Context, params ListPostsParams) {
 	editor, ok := h.postEditor(c, "reading posts")
 	if !ok {
 		return
 	}
-	held, err := h.publications.Posts(c.Request.Context(), editor)
+	held, err := h.listing(params)(c.Request.Context(), editor)
 	if err != nil {
 		h.postError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, PostList{Posts: h.toAPIPosts(held)})
+}
+
+// listing answers the reader the request asked for, which is the active posts
+// unless it asked for the deleted ones.
+func (h *Handlers) listing(params ListPostsParams) func(
+	context.Context, publication.Editor,
+) ([]publication.Post, error) {
+	if params.Deleted != nil && *params.Deleted {
+		return h.publications.DeletedPosts
+	}
+	return h.publications.Posts
 }
 
 func (h *Handlers) CreatePost(c *gin.Context, _ CreatePostParams) {
@@ -327,6 +339,21 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrPostWithdrawn):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
 			"This post is out of public view. Put it back with republish.")
+	case errors.Is(err, publication.ErrPostDeleted):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"This post has been deleted. Recover it before changing it.")
+	case errors.Is(err, publication.ErrPostNotDeleted):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"This post has not been deleted.")
+	case errors.Is(err, publication.ErrPostInPublicView):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"Take the post out of public view before deleting it.")
+	case errors.Is(err, publication.ErrRecoveryExpired):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"The window for recovering this post has closed.")
+	case errors.Is(err, publication.ErrDeletePublished):
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"Only an Illarin admin can delete or recover a post that has been published.")
 	case errors.Is(err, publication.ErrSchedulePublishing):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This edition is going live now and can no longer be changed.",
@@ -392,6 +419,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 	}
 	shown.Schedule = toAPISchedule(found.Schedule)
 	shown.Withdrawal = toAPIWithdrawal(found.Withdrawal)
+	shown.Deletion = toAPIDeletion(found.Deletion)
 	if found.Byline != nil {
 		byline := toAPIByline(*found.Byline)
 		shown.Byline = &byline

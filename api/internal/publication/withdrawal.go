@@ -200,7 +200,7 @@ func (s *Service) WithdrawnPost(ctx context.Context, slug string) (Tombstone, er
 		 limit 1
 	`, slug, StatusWithdrawn).Scan(&found.Slug, &found.Explanation)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Tombstone{}, ErrPostNotFound
+		return s.retiredAddress(ctx, slug)
 	}
 	if err != nil {
 		return Tombstone{}, fmt.Errorf("read a withdrawn address: %w", err)

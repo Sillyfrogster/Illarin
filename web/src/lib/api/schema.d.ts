@@ -886,7 +886,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Every post this credential may manage. An admin sees all of them, an approved contributor sees the posts under their active grants, and a publication token sees only the posts under the one grant it was issued for. */
+    /** @description Every post this credential may manage. An admin sees all of them, an approved contributor sees the posts under their active grants, and a publication token sees only the posts under the one grant it was issued for. Deleted posts are left out unless they are the ones asked for. */
     get: operations["listPosts"];
     put?: never;
     /** @description Start a draft. A contributor names the grant it belongs to and an admin may omit it and write as Illarin. A publication token writes under its own grant and may not name another. */
@@ -1045,6 +1045,40 @@ export interface paths {
     put?: never;
     /** @description Put a withdrawn post back in public view showing one edition it has already kept. It returns to the same address under the date it first published. */
     post: operations["republishPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/delete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Delete a post and start its thirty-day recovery window. A contributor may delete their own post up to the moment it first publishes; after that only an admin may, and only once the post is out of public view. Its working copy, editions and pictures are all kept until the window closes. */
+    post: operations["deletePost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/recover": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Bring a deleted post back before its recovery window closes. It returns with the working copy, editions and pictures it was deleted with, and may be scheduled and published again. */
+    post: operations["recoverPost"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2076,6 +2110,7 @@ export interface components {
       publicRevisionId?: string | null;
       schedule?: components["schemas"]["PostSchedule"] | null;
       withdrawal?: components["schemas"]["PostWithdrawal"] | null;
+      deletion?: components["schemas"]["PostDeletion"] | null;
       media: components["schemas"]["PostMedia"][];
       byline?: components["schemas"]["PostByline"] | null;
       /** @description Addresses this post published under and has since left. Every one of them still reaches it. */
@@ -3126,6 +3161,17 @@ export interface components {
       createdBy: string;
       /** Format: date-time */
       createdAt: string;
+    };
+    /** @description A deleted post and the deadline it has to come back by. Nothing about it is public, and readers were never shown any of it. */
+    PostDeletion: {
+      /** Format: date-time */
+      at: string;
+      /**
+       * Format: date-time
+       * @description When the post and everything it holds are removed for good.
+       */
+      until: string;
+      by: string;
     };
     /**
      * @description Why an edition was kept.
@@ -6258,7 +6304,10 @@ export interface operations {
   };
   listPosts: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Ask for the deleted posts still inside their recovery window instead of the active ones. */
+        deleted?: boolean;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -6744,6 +6793,92 @@ export interface operations {
     };
     responses: {
       /** @description The post, back in public view */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  deletePost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, waiting out its recovery window */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, an edition is publishing, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  recoverPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, back in the workspace */
       200: {
         headers: {
           [name: string]: unknown;

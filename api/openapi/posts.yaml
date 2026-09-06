@@ -6,10 +6,19 @@ paths:
         Every post this credential may manage. An admin sees all of them, an
         approved contributor sees the posts under their active grants, and a
         publication token sees only the posts under the one grant it was issued
-        for.
+        for. Deleted posts are left out unless they are the ones asked for.
       security:
         - sessionCookie: []
         - publicationToken: []
+      parameters:
+        - name: deleted
+          in: query
+          required: false
+          description: >-
+            Ask for the deleted posts still inside their recovery window instead
+            of the active ones.
+          schema:
+            type: boolean
       responses:
         '200':
           description: The posts this account may manage
@@ -534,6 +543,106 @@ paths:
       responses:
         '200':
           description: The post, back in public view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/delete:
+    post:
+      operationId: deletePost
+      description: >-
+        Delete a post and start its thirty-day recovery window. A contributor
+        may delete their own post up to the moment it first publishes; after
+        that only an admin may, and only once the post is out of public view.
+        Its working copy, editions and pictures are all kept until the window
+        closes.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The post, waiting out its recovery window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: >-
+            The working copy moved on, an edition is publishing, or the key was
+            reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/recover:
+    post:
+      operationId: recoverPost
+      description: >-
+        Bring a deleted post back before its recovery window closes. It returns
+        with the working copy, editions and pictures it was deleted with, and
+        may be scheduled and published again.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The post, back in the workspace
           content:
             application/json:
               schema:
@@ -1080,6 +1189,10 @@ components:
           anyOf:
             - $ref: '#/components/schemas/PostWithdrawal'
             - type: 'null'
+        deletion:
+          anyOf:
+            - $ref: '#/components/schemas/PostDeletion'
+            - type: 'null'
         media:
           type: array
           items:
@@ -1354,6 +1467,25 @@ components:
         at:
           type: string
           format: date-time
+    PostDeletion:
+      type: object
+      description: >-
+        A deleted post and the deadline it has to come back by. Nothing about it
+        is public, and readers were never shown any of it.
+      required:
+        - at
+        - until
+        - by
+      properties:
+        at:
+          type: string
+          format: date-time
+        until:
+          type: string
+          format: date-time
+          description: When the post and everything it holds are removed for good.
+        by:
+          type: string
     WithdrawPostRequest:
       type: object
       additionalProperties: false

@@ -338,6 +338,16 @@ type Post struct {
 	HeaderAlt        pgtype.Text
 	HeaderCaption    pgtype.Text
 	SocialMediaID    pgtype.UUID
+	DeletedAt        pgtype.Timestamptz
+	RecoverableUntil pgtype.Timestamptz
+	DeletedBy        pgtype.UUID
+}
+
+type PostAddress struct {
+	Slug        string
+	CurrentSlug string
+	Explanation string
+	RetiredAt   pgtype.Timestamptz
 }
 
 type PostByline struct {

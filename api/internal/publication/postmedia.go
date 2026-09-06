@@ -79,6 +79,9 @@ func (s *Service) AddPostMedia(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return PostMedia{}, err
 	}
+	if current.Deletion != nil {
+		return PostMedia{}, ErrPostDeleted
+	}
 	if purpose != PurposeHeader && purpose != PurposeDocument && purpose != PurposeSocial {
 		return PostMedia{}, FieldError{
 			Field:   "purpose",

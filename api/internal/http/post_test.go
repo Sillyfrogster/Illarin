@@ -54,6 +54,7 @@ type blogPost struct {
 	PublicRevision  string              `json:"publicRevisionId"`
 	Schedule        *postSchedule       `json:"schedule"`
 	Withdrawal      *postWithdrawal     `json:"withdrawal"`
+	Deletion        *postDeletion       `json:"deletion"`
 	Media           []postPicture       `json:"media"`
 	Byline          *postByline         `json:"byline"`
 	FormerAddresses []string            `json:"formerAddresses"`

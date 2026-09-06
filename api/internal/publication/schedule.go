@@ -43,6 +43,7 @@ const (
 	stoppedByAddress    = "Another post took this address before the edition went live."
 	stoppedByFailure    = "Illarin could not publish this edition."
 	stoppedByWithdrawal = "The post left public view before this edition went live."
+	stoppedByDeletion   = "The post was deleted before this edition went live."
 )
 
 // Schedule is a post's most recent plan to publish one exact edition at one
@@ -316,7 +317,7 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 		return fmt.Errorf("begin scheduled publication: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	locked, err := lockPost(ctx, tx, held.PostID)
+	locked, err := lockRemovedPost(ctx, tx, held.PostID)
 	if err != nil {
 		return err
 	}
@@ -378,6 +379,9 @@ func refusesLeased(
 		if !active {
 			return stoppedByRevocation, nil
 		}
+	}
+	if locked.DeletedAt != nil {
+		return stoppedByDeletion, nil
 	}
 	if locked.Status == StatusWithdrawn {
 		return stoppedByWithdrawal, nil
