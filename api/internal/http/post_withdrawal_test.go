@@ -182,6 +182,12 @@ func TestAWithdrawnPostLeavesEveryPlaceAReaderCouldFindIt(t *testing.T) {
 	if narrowed.Total != 1 {
 		t.Errorf("the category archive holds %d posts, want 1", narrowed.Total)
 	}
+	if staying.App != nil {
+		byApp := stack.archive(t, "?app="+staying.App.Slug)
+		if byApp.Total != 1 {
+			t.Errorf("the app archive holds %d posts, want 1", byApp.Total)
+		}
+	}
 	for _, further := range stack.reader(t, staying.Slug).Related {
 		if further.ID == going.ID {
 			t.Error("further reading offers a withdrawn post")
@@ -431,5 +437,94 @@ func TestARetriedWithdrawalThroughTheApiChangesNothingTwice(t *testing.T) {
 	}
 	if got := stack.events(t, live.ID); len(got) != 2 {
 		t.Errorf("events = %v, want the publication and one withdrawal", got)
+	}
+}
+
+func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	live := stack.livePost(t, session, "A post the record follows")
+
+	gone := stack.withdrawn(t, session, live.ID, live.Version, "The build slipped.", "")
+	stack.republished(t, session, gone.ID, gone.Version, live.PublicRevision)
+
+	done, body := stack.history(t, session, live.ID)
+	names := taken(done)
+	for _, wanted := range []string{"post.withdrawn", "post.republished"} {
+		if !slices.Contains(names, wanted) {
+			t.Errorf("the history is %v, want it to name %s", names, wanted)
+		}
+	}
+	if strings.Contains(body, "The build slipped.") {
+		t.Errorf("the action log copied the withdrawal reason: %s", body)
+	}
+	var states []string
+	rows, err := stack.pool.Query(context.Background(), `
+		select before_state || ' to ' || after_state
+		  from publication_audits
+		 where post_id = $1 and action in ('post.withdrawn', 'post.republished')
+		 order by recorded_at
+	`, live.ID)
+	if err != nil {
+		t.Fatalf("read the withdrawal audits: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var one string
+		if err := rows.Scan(&one); err != nil {
+			t.Fatalf("read a withdrawal audit: %v", err)
+		}
+		states = append(states, one)
+	}
+	want := []string{"published to withdrawn", "withdrawn to published"}
+	if !slices.Equal(states, want) {
+		t.Errorf("audited states = %v, want %v", states, want)
+	}
+}
+
+func TestAStaleOrUnknownEditionNeverPutsAPostBack(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	other := stack.livePost(t, session, "Another post entirely")
+	live := stack.livePost(t, session, "A post somebody raced")
+	gone := stack.withdrawn(t, session, live.ID, live.Version, "It named the wrong date.", "")
+
+	stale := stack.republish(t, session, gone.ID, fmt.Sprintf(
+		`{"version":%d,"revisionId":%q}`, gone.Version-1, live.PublicRevision,
+	))
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("a stale republication returned %d: %s", stale.Code, stale.Body.String())
+	}
+	borrowed := stack.republish(t, session, gone.ID, fmt.Sprintf(
+		`{"version":%d,"revisionId":%q}`, gone.Version, other.PublicRevision,
+	))
+	if borrowed.Code != http.StatusNotFound {
+		t.Fatalf("another post's edition returned %d: %s", borrowed.Code, borrowed.Body.String())
+	}
+	if stack.read(t, live.Slug).Code != http.StatusGone {
+		t.Error("a refused republication put the post back")
+	}
+}
+
+func TestWhatIsSaidAboutAWithdrawalIsKeptAsOneParagraph(t *testing.T) {
+	stack := newDistinctionStack(t)
+	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	live := stack.livePost(t, session, "A post with a wordy reason")
+
+	gone := stack.withdrawn(t, session, live.ID, live.Version,
+		"  Legal\n\nasked   for it.  ", "We are\nchecking   a claim.")
+
+	if gone.Withdrawal.Reason != "Legal asked for it." {
+		t.Errorf("kept reason = %q", gone.Withdrawal.Reason)
+	}
+	if gone.Withdrawal.Explanation != "We are checking a claim." {
+		t.Errorf("kept explanation = %q", gone.Withdrawal.Explanation)
+	}
+	long := strings.Repeat("a", 501)
+	refused := stack.withdraw(t, session, live.ID, fmt.Sprintf(
+		`{"version":%d,"reason":%q}`, gone.Version, long,
+	))
+	if refused.Code != http.StatusBadRequest {
+		t.Fatalf("an overlong reason returned %d: %s", refused.Code, refused.Body.String())
 	}
 }

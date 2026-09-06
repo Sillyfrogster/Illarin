@@ -1,0 +1,45 @@
+.open {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.open:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  line-height: var(--type-body-leading);
+  overflow-wrap: break-word;
+}
+
+.confirm span {
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  font-weight: 400;
+}
+
+.refusal {
+  color: var(--color-critical-strong);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}

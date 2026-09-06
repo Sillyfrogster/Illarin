@@ -215,10 +215,7 @@ type said struct {
 }
 
 func checkWithdrawal(reason, explanation string) (said, error) {
-	held := said{
-		reason:      strings.TrimSpace(reason),
-		explanation: strings.TrimSpace(explanation),
-	}
+	held := said{reason: oneParagraph(reason), explanation: oneParagraph(explanation)}
 	if held.reason == "" {
 		return said{}, FieldError{
 			Field:   "reason",
@@ -244,6 +241,12 @@ func checkWithdrawal(reason, explanation string) (said, error) {
 		}
 	}
 	return held, nil
+}
+
+// oneParagraph answers what somebody typed as a single run of prose, so a
+// tombstone never carries the shape of the box it was written in.
+func oneParagraph(written string) string {
+	return strings.Join(strings.Fields(written), " ")
 }
 
 // publicRevision reads the edition a post is showing readers inside the

@@ -120,3 +120,23 @@ export function replacePostSchedule(
 export function cancelPostSchedule(id: string) {
   return json<Post>(`/publication/posts/${id}/schedule`, "DELETE");
 }
+
+export function withdrawPost(
+  id: string,
+  version: number,
+  reason: string,
+  explanation: string,
+) {
+  return json<Post>(`/publication/posts/${id}/withdraw`, "POST", {
+    version,
+    reason,
+    explanation,
+  });
+}
+
+export function republishPost(id: string, version: number, revisionId: string) {
+  return json<Post>(`/publication/posts/${id}/republish`, "POST", {
+    version,
+    revisionId,
+  });
+}

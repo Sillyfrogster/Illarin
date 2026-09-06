@@ -41,6 +41,7 @@ var reservedSlugs = map[string]bool{
 	"sitemap":   true,
 	"tag":       true,
 	"tags":      true,
+	"withdrawn": true,
 }
 
 // normalizeSlug turns whatever an author typed into the address form, which is lowercase words joined by single hyphens.

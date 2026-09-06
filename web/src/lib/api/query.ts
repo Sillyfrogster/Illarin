@@ -63,6 +63,7 @@ export type PostArchive = components["schemas"]["PostArchive"];
 export type PostRevision = components["schemas"]["PostRevision"];
 export type PostAction = components["schemas"]["PostAction"];
 export type PostSchedule = components["schemas"]["PostSchedule"];
+export type PostWithdrawal = components["schemas"]["PostWithdrawal"];
 export type IssuedPublicationToken =
   components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];

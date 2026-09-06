@@ -37,6 +37,8 @@ import { PostHistory } from "./PostHistory";
 import styles from "./PostWriter.module.css";
 import { ScheduleBand } from "./ScheduleBand";
 import { ScheduleFields } from "./ScheduleFields";
+import { TakeDown } from "./TakeDown";
+import { WithdrawalBand } from "./WithdrawalBand";
 
 /** How long the writer pauses before the working copy is saved. */
 const AUTOSAVE_PAUSE = 1200;
@@ -295,9 +297,12 @@ export function PostWriter({ id }: { id: string }) {
             <BookmarkPlus size={15} strokeWidth={1.8} aria-hidden="true" />
             {keeping ? "Keeping…" : "Keep this version"}
           </button>
+          {post.status === "published" ? (
+            <TakeDown onWithdrawn={settled} post={post} />
+          ) : null}
           <button
             className={styles.publish}
-            disabled={state === "conflict"}
+            disabled={state === "conflict" || post.status === "withdrawn"}
             onClick={() => askAt("now")}
             type="button"
           >
@@ -309,6 +314,8 @@ export function PostWriter({ id }: { id: string }) {
       <p aria-live="polite" className={styles.kept}>
         {kept}
       </p>
+
+      <WithdrawalBand onChanged={settled} onFailure={setRefusal} post={post} />
 
       <ScheduleBand
         onChanged={settled}
@@ -448,7 +455,7 @@ export function PostWriter({ id }: { id: string }) {
           apps={releaseApps(apps, post)}
           categories={categories.length > 0 ? categories : [post.category]}
           draft={draft}
-          locked={post.status === "published"}
+          locked={post.publishedAt !== undefined}
           media={media}
           onChange={change}
           onCorrected={corrected}
@@ -525,6 +532,14 @@ function releaseApps(open: PublicationApp[], post: Post): PublicationApp[] {
   return [named, ...open];
 }
 
+// standing names the post's own state, which is what the writer sees when
+// nothing about the working copy needs saying.
+function standing(status: Post["status"]): string {
+  if (status === "published") return "Published";
+  if (status === "withdrawn") return "Out of public view";
+  return "Draft";
+}
+
 function stateWords(state: Saving, post: Post): string {
   switch (state) {
     case "saving":
@@ -538,6 +553,6 @@ function stateWords(state: Saving, post: Post): string {
     case "refused":
       return "Not saved";
     default:
-      return post.status === "published" ? "Published" : "Draft";
+      return standing(post.status);
   }
 }
