@@ -6,16 +6,19 @@ import { FormDialog } from "@/components/console/FormDialog";
 import {
   approveContributor,
   revokeGrant,
+  setGrantDestinations,
   updateGrant,
 } from "@/lib/api/publication";
 import type {
   PublicationApp,
   PublicationCategory,
+  PublicationDestination,
   PublicationGrant,
 } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
 import { CategoryChoice } from "./CategoryChoice";
 import tokenStyles from "./ContributorDialog.module.css";
+import { DestinationChoice } from "./DestinationChoice";
 import { TokenRows } from "./TokenRows";
 import { useGrantTokens } from "./use-grant-tokens";
 
@@ -23,6 +26,7 @@ export function ContributorDialog({
   existing,
   apps,
   categories,
+  destinations,
   onClose,
   onSaved,
   onRevoked,
@@ -31,6 +35,7 @@ export function ContributorDialog({
   existing: PublicationGrant | null;
   apps: PublicationApp[];
   categories: PublicationCategory[];
+  destinations: PublicationDestination[];
   onClose: () => void;
   onSaved: (saved: PublicationGrant) => void;
   onRevoked: () => void;
@@ -42,6 +47,19 @@ export function ContributorDialog({
     existing ? existing.categories.map((category) => category.id) : [],
   );
   const [fallback, setFallback] = useState(existing?.defaultCategory.id ?? "");
+  const [follows, setFollows] = useState(
+    existing ? existing.destinationsInherited : true,
+  );
+  const [reaching, setReaching] = useState<string[]>(
+    existing ? existing.destinations.map((one) => one.id) : [],
+  );
+  const [sends, setSends] = useState<string[]>(
+    existing
+      ? existing.destinations
+          .filter((one) => one.byDefault)
+          .map((one) => one.id)
+      : [],
+  );
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -65,12 +83,22 @@ export function ContributorDialog({
           categoryIds: allowed,
           defaultCategoryId: fallback,
         });
-    setBusy(false);
     if (written.error || !written.value) {
+      setBusy(false);
       onFailure(written.error ?? "");
       return;
     }
-    onSaved(written.value);
+    const policed = await setGrantDestinations(written.value.id, {
+      destinationIds: follows ? null : reaching,
+      defaultDestinationIds: follows ? [] : sends,
+    });
+    setBusy(false);
+    if (policed.error || !policed.value) {
+      onSaved(written.value);
+      onFailure(policed.error ?? "");
+      return;
+    }
+    onSaved(policed.value);
     onClose();
   }
 
@@ -156,6 +184,18 @@ export function ContributorDialog({
         onFallback={setFallback}
       />
 
+      <DestinationChoice
+        allowed={reaching}
+        defaults={sends}
+        destinations={destinations}
+        inherit={{ label: appPolicy(existing, apps, appId), on: follows }}
+        legend="Where they may announce"
+        name={existing?.id ?? "approve"}
+        onAllowed={setReaching}
+        onDefaults={setSends}
+        onInherit={setFollows}
+      />
+
       {existing ? <TheirTokens grant={existing} onFailure={onFailure} /> : null}
 
       {confirming && existing ? (
@@ -166,6 +206,19 @@ export function ContributorDialog({
       ) : null}
     </FormDialog>
   );
+}
+
+// appPolicy says what following the app means for this contributor, naming the
+// app so the choice is not an abstraction.
+function appPolicy(
+  existing: PublicationGrant | null,
+  apps: PublicationApp[],
+  appId: string,
+): string {
+  const app = existing?.app ?? apps.find((one) => one.id === appId);
+  return app
+    ? `Send wherever ${app.name} sends`
+    : "Send wherever the app sends";
 }
 
 function TheirTokens({

@@ -2016,6 +2016,8 @@ export interface components {
       mark?: components["schemas"]["DistinctionMark"] | null;
       position: number;
       retired: boolean;
+      /** @description The destinations every grant on this app follows unless the grant names its own. */
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
     };
     PublicationAppList: {
       apps: components["schemas"]["PublicationApp"][];
@@ -2065,6 +2067,10 @@ export interface components {
       app: components["schemas"]["PublicationApp"];
       categories: components["schemas"]["PublicationCategory"][];
       defaultCategory: components["schemas"]["PublicationCategory"];
+      /** @description The destinations this contributor may send to. */
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+      /** @description Whether the set comes from the app rather than the grant itself. */
+      destinationsInherited: boolean;
       /** Format: date-time */
       grantedAt: string;
       revokedAt?: string | null;
@@ -3259,6 +3265,22 @@ export interface components {
       instanceId: string;
     };
     /**
+     * @description Whether a destination is ready to receive anything.
+     * @enum {string}
+     */
+    PublicationDestinationState: "unverified" | "active" | "disabled";
+    /** @description One destination a post may send to. It carries no address and no secret, which is the whole point of it. */
+    PublicationDestinationChoice: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** @enum {string} */
+      kind: "webhook";
+      state: components["schemas"]["PublicationDestinationState"];
+      /** @description Whether a publication starts with this one selected. */
+      byDefault: boolean;
+    };
+    /**
      * @description Where a schedule got to.
      * @enum {string}
      */
@@ -3323,11 +3345,6 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
     };
-    /**
-     * @description Whether a destination is ready to receive anything.
-     * @enum {string}
-     */
-    PublicationDestinationState: "unverified" | "active" | "disabled";
     /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
     PublicationDestination: {
       /** Format: uuid */
@@ -3371,17 +3388,6 @@ export interface components {
       destinationIds?: string[] | null;
       /** @description Which of the allowed destinations a publication starts with. */
       defaultDestinationIds?: string[];
-    };
-    /** @description One destination a post may send to. It carries no address and no secret, which is the whole point of it. */
-    PublicationDestinationChoice: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      /** @enum {string} */
-      kind: "webhook";
-      state: components["schemas"]["PublicationDestinationState"];
-      /** @description Whether a publication starts with this one selected. */
-      byDefault: boolean;
     };
     PublicationDestinationChoiceList: {
       destinations: components["schemas"]["PublicationDestinationChoice"][];
@@ -7119,13 +7125,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description The destinations the app now allows */
+      /** @description The app with the destinations it now allows */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+          "application/json": components["schemas"]["PublicationApp"];
         };
       };
       400: components["responses"]["PublicationInvalid"];
@@ -7167,13 +7173,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description The destinations the grant now allows */
+      /** @description The grant with the destinations it now allows */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+          "application/json": components["schemas"]["PublicationGrant"];
         };
       };
       400: components["responses"]["PublicationInvalid"];

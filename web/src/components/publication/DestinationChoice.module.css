@@ -1,0 +1,30 @@
+.inherit {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--type-body-size);
+  transition: background 140ms var(--ease);
+}
+
+.inherit:hover {
+  background: var(--color-muted);
+}
+
+.inherit input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--color-emphasis);
+}
+
+.none {
+  padding-left: 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}

@@ -6,17 +6,19 @@ import { useState } from "react";
 import rows from "@/components/console/Console.module.css";
 import { Section } from "@/components/console/Section";
 import { orderApps, updateApp } from "@/lib/api/publication";
-import type { PublicationApp } from "@/lib/api/query";
+import type { PublicationApp, PublicationDestination } from "@/lib/api/query";
 import { moved } from "@/lib/reorder";
 import { AppDialog } from "./AppDialog";
 import styles from "./PublicationHub.module.css";
 
 export function AppList({
   apps,
+  destinations,
   onChanged,
   onFailure,
 }: {
   apps: PublicationApp[];
+  destinations: PublicationDestination[];
   onChanged: (apps: PublicationApp[]) => void;
   onFailure: (message: string) => void;
 }) {
@@ -163,6 +165,7 @@ export function AppList({
       {adding ? (
         <AppDialog
           key="adding"
+          destinations={destinations}
           existing={null}
           onClose={() => setAdding(false)}
           onSaved={replace}
@@ -172,6 +175,7 @@ export function AppList({
       {editing ? (
         <AppDialog
           key={editing.id}
+          destinations={destinations}
           existing={editing}
           onClose={() => setEditing(null)}
           onSaved={replace}

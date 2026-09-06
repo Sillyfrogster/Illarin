@@ -5,17 +5,25 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
-import { configureApp, updateApp, uploadAppMark } from "@/lib/api/publication";
-import type { PublicationApp } from "@/lib/api/query";
+import {
+  configureApp,
+  setAppDestinations,
+  updateApp,
+  uploadAppMark,
+} from "@/lib/api/publication";
+import type { PublicationApp, PublicationDestination } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
+import { DestinationChoice } from "./DestinationChoice";
 
 export function AppDialog({
   existing,
+  destinations,
   onClose,
   onSaved,
   onFailure,
 }: {
   existing: PublicationApp | null;
+  destinations: PublicationDestination[];
   onClose: () => void;
   onSaved: (saved: PublicationApp, added: boolean) => void;
   onFailure: (message: string) => void;
@@ -23,6 +31,16 @@ export function AppDialog({
   const [name, setName] = useState(existing?.name ?? "");
   const [slug, setSlug] = useState(existing?.slug ?? "");
   const [home, setHome] = useState(existing?.home ?? "");
+  const [allowed, setAllowed] = useState<string[]>(
+    existing ? existing.destinations.map((one) => one.id) : [],
+  );
+  const [defaults, setDefaults] = useState<string[]>(
+    existing
+      ? existing.destinations
+          .filter((one) => one.byDefault)
+          .map((one) => one.id)
+      : [],
+  );
   const [chosen, setChosen] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
@@ -61,8 +79,17 @@ export function AppDialog({
       }
       saved = marked.value;
     }
+    const policed = await setAppDestinations(saved.id, {
+      destinationIds: allowed,
+      defaultDestinationIds: defaults,
+    });
     setBusy(false);
-    onSaved(saved, !existing);
+    if (policed.error || !policed.value) {
+      onSaved(saved, !existing);
+      onFailure(policed.error ?? "");
+      return;
+    }
+    onSaved(policed.value, !existing);
     onClose();
   }
 
@@ -160,6 +187,16 @@ export function AppDialog({
           />
         </div>
       </Field>
+
+      <DestinationChoice
+        allowed={allowed}
+        defaults={defaults}
+        destinations={destinations}
+        legend="Where its posts may announce"
+        name={existing?.id ?? "app"}
+        onAllowed={setAllowed}
+        onDefaults={setDefaults}
+      />
     </FormDialog>
   );
 }

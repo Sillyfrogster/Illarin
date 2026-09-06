@@ -51,6 +51,7 @@ const RELEASE: PostSummary = {
     home: "https://lumiverse.example",
     position: 0,
     retired: false,
+    destinations: [],
   },
   releaseVersion: "2.0",
   publishedAt: "2026-08-30T08:00:00Z",

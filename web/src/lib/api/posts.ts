@@ -1,9 +1,11 @@
 import type {
   Post,
   PostAction,
+  PostDelivery,
   PostMedia,
   PostMediaPurpose,
   PostRevision,
+  PublicationDestinationChoiceList,
 } from "@/lib/api/query";
 import type { PostDocument } from "@/lib/post-document";
 import { ask, json } from "./distinctions";
@@ -67,8 +69,34 @@ export function correctPostByline(id: string, handle: string) {
   return json<Post>(`/publication/posts/${id}/byline`, "PUT", { handle });
 }
 
-export function publishPost(id: string, version: number) {
-  return json<Post>(`/publication/posts/${id}/publish`, "POST", { version });
+export type Announcement = {
+  destinationIds?: string[] | null;
+  note?: string;
+};
+
+export function publishPost(
+  id: string,
+  version: number,
+  announcement: Announcement = {},
+) {
+  return json<Post>(`/publication/posts/${id}/publish`, "POST", {
+    version,
+    ...announcement,
+  });
+}
+
+export function readPostDestinations(id: string) {
+  return json<PublicationDestinationChoiceList>(
+    `/publication/posts/${id}/destinations`,
+    "GET",
+  );
+}
+
+export function readPostDeliveries(id: string) {
+  return json<{ deliveries: PostDelivery[] }>(
+    `/publication/posts/${id}/deliveries`,
+    "GET",
+  );
 }
 
 export function readPostRevisions(id: string) {
@@ -103,10 +131,16 @@ export function readPostHistory(id: string) {
   );
 }
 
-export function schedulePost(id: string, version: number, at: string) {
+export function schedulePost(
+  id: string,
+  version: number,
+  at: string,
+  announcement: Announcement = {},
+) {
   return json<Post>(`/publication/posts/${id}/schedule`, "POST", {
     version,
     at,
+    ...announcement,
   });
 }
 

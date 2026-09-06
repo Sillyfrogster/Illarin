@@ -1,7 +1,9 @@
 import type {
+  AddedPublicationDestination,
   IssuedPublicationToken,
   PublicationApp,
   PublicationCategory,
+  PublicationDestination,
   PublicationGrant,
   PublicationToken,
   PublicationWorkspace,
@@ -94,6 +96,79 @@ export function revokeGrant(id: string) {
     `/publication/grants/${id}`,
     { method: "DELETE" },
     async () => null,
+  );
+}
+
+export function readDestinations() {
+  return json<{ destinations: PublicationDestination[] }>(
+    "/publication/destinations",
+    "GET",
+  );
+}
+
+export function addDestination(endpoint: { name: string; address: string }) {
+  return json<AddedPublicationDestination>(
+    "/publication/destinations",
+    "POST",
+    endpoint,
+  );
+}
+
+export function updateDestination(
+  id: string,
+  change: { name?: string; address?: string },
+) {
+  return json<PublicationDestination>(
+    `/publication/destinations/${id}`,
+    "PATCH",
+    change,
+  );
+}
+
+export function verifyDestination(id: string) {
+  return json<PublicationDestination>(
+    `/publication/destinations/${id}/verification`,
+    "POST",
+  );
+}
+
+export function disableDestination(id: string) {
+  return json<PublicationDestination>(
+    `/publication/destinations/${id}/verification`,
+    "DELETE",
+  );
+}
+
+export function removeDestination(id: string) {
+  return ask<null>(
+    `/publication/destinations/${id}`,
+    { method: "DELETE" },
+    async () => null,
+  );
+}
+
+export function setAppDestinations(
+  appId: string,
+  policy: { destinationIds: string[]; defaultDestinationIds: string[] },
+) {
+  return json<PublicationApp>(
+    `/publication/apps/${appId}/destinations`,
+    "PUT",
+    policy,
+  );
+}
+
+export function setGrantDestinations(
+  grantId: string,
+  policy: {
+    destinationIds: string[] | null;
+    defaultDestinationIds: string[];
+  },
+) {
+  return json<PublicationGrant>(
+    `/publication/grants/${grantId}/destinations`,
+    "PUT",
+    policy,
   );
 }
 

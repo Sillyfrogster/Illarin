@@ -1,0 +1,17 @@
+.state {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  grid-area: mark;
+}
+
+.state[data-state="active"] {
+  color: var(--color-text-primary);
+}
+
+.state[data-state="disabled"] {
+  color: var(--color-critical-strong);
+}

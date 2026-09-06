@@ -9,6 +9,7 @@ import { Section } from "@/components/console/Section";
 import type {
   PublicationApp,
   PublicationCategory,
+  PublicationDestination,
   PublicationGrant,
 } from "@/lib/api/query";
 import { ContributorDialog } from "./ContributorDialog";
@@ -19,6 +20,7 @@ export function ContributorList({
   grants,
   apps,
   categories,
+  destinations,
   onChanged,
   onReload,
   onFailure,
@@ -26,6 +28,7 @@ export function ContributorList({
   grants: PublicationGrant[];
   apps: PublicationApp[];
   categories: PublicationCategory[];
+  destinations: PublicationDestination[];
   onChanged: (grants: PublicationGrant[]) => void;
   onReload: () => void;
   onFailure: (message: string) => void;
@@ -131,6 +134,7 @@ export function ContributorList({
           existing={null}
           apps={open}
           categories={categories}
+          destinations={destinations}
           onClose={() => setApproving(false)}
           onSaved={(saved) => onChanged([saved, ...grants])}
           onRevoked={onReload}
@@ -143,6 +147,7 @@ export function ContributorList({
           existing={editing}
           apps={open}
           categories={categories}
+          destinations={destinations}
           onClose={() => setEditing(null)}
           onSaved={(saved) =>
             onChanged(grants.map((one) => (one.id === saved.id ? saved : one)))

@@ -1,12 +1,11 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
+import { RevealOnce } from "@/components/console/RevealOnce";
 import { issueToken } from "@/lib/api/publication";
 import type { IssuedPublicationToken } from "@/lib/api/query";
-import styles from "./TokenDialog.module.css";
 
 export function TokenDialog({
   grantId,
@@ -53,7 +52,12 @@ export function TokenDialog({
         onClose={onClose}
         onCommit={onClose}
       >
-        <Reveal value={made.value} copied={copied} onCopied={setCopied} />
+        <RevealOnce
+          carry="Send it as a bearer credential on the publication API. Keep it out of anything you commit or share."
+          copied={copied}
+          onCopied={setCopied}
+          value={made.value}
+        />
       </FormDialog>
     );
   }
@@ -97,50 +101,6 @@ export function TokenDialog({
         />
       </Field>
     </FormDialog>
-  );
-}
-
-function Reveal({
-  value,
-  copied,
-  onCopied,
-}: {
-  value: string;
-  copied: boolean;
-  onCopied: (copied: boolean) => void;
-}) {
-  const [trouble, setTrouble] = useState("");
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      onCopied(true);
-    } catch {
-      setTrouble("Your browser would not let us copy. Select it and copy it.");
-    }
-  }
-
-  return (
-    <div className={styles.reveal}>
-      <code className={styles.value}>{value}</code>
-      <button
-        type="button"
-        className={styles.copy}
-        onClick={copy}
-        aria-live="polite"
-      >
-        {copied ? (
-          <Check size={15} strokeWidth={2} aria-hidden="true" />
-        ) : (
-          <Copy size={15} strokeWidth={1.8} aria-hidden="true" />
-        )}
-        {copied ? "Copied" : "Copy"}
-      </button>
-      <p className={styles.carry} aria-live="polite">
-        {trouble ||
-          "Send it as a bearer credential on the publication API. Keep it out of anything you commit or share."}
-      </p>
-    </div>
   );
 }
 

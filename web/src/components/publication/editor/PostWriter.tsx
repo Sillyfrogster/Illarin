@@ -30,7 +30,9 @@ import {
   type LocalParts,
   toInstant,
 } from "@/lib/schedule-time";
+import { AnnouncementChoice } from "./AnnouncementChoice";
 import { BodyEditor } from "./BodyEditor";
+import { DeliveryBand } from "./DeliveryBand";
 import { Discard } from "./Discard";
 import { GrowingText } from "./GrowingText";
 import { PostDetails } from "./PostDetails";
@@ -83,6 +85,8 @@ export function PostWriter({ id }: { id: string }) {
   const [asking, setAsking] = useState(false);
   const [door, setDoor] = useState<Door>("now");
   const [when, setWhen] = useState<LocalParts>({ date: "", time: "" });
+  const [sending, setSending] = useState<string[] | null>(null);
+  const [note, setNote] = useState("");
   const [keeping, setKeeping] = useState(false);
   const [kept, setKept] = useState("");
   const [edition, setEdition] = useState(0);
@@ -196,20 +200,27 @@ export function PostWriter({ id }: { id: string }) {
   function askAt(door: Door) {
     setDoor(door);
     setWhen(atLeastAnHourAhead());
+    setSending(null);
+    setNote("");
     setAsking(true);
   }
 
   async function release() {
     setAsking(false);
     if (state === "dirty" || state === "refused") await save();
+    const announcement = {
+      destinationIds: sending ?? undefined,
+      note: note.trim() || undefined,
+    };
     const answer =
       door === "later"
         ? await schedulePost(
             id,
             version.current,
             toInstant(when.date, when.time),
+            announcement,
           )
-        : await publishPost(id, version.current);
+        : await publishPost(id, version.current, announcement);
     if (answer.error || !answer.value) {
       setRefusal(answer.error ?? "");
       return;
@@ -372,6 +383,8 @@ export function PostWriter({ id }: { id: string }) {
         post={post}
       />
 
+      <DeliveryBand key={stamp} postId={post.id} />
+
       {refusal ? (
         <p className={styles.refusal} role="alert">
           {refusal}
@@ -435,6 +448,15 @@ export function PostWriter({ id }: { id: string }) {
             parts={when}
           />
         ) : null}
+        {post.status === "published" ? null : (
+          <AnnouncementChoice
+            chosen={sending}
+            note={note}
+            onChosen={setSending}
+            onNote={setNote}
+            postId={post.id}
+          />
+        )}
       </FormDialog>
 
       {view === "preview" ? (

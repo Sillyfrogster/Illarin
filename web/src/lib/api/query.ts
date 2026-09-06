@@ -52,6 +52,15 @@ export type PublicationGrant = components["schemas"]["PublicationGrant"];
 export type PublicationWorkspace =
   components["schemas"]["PublicationWorkspace"];
 export type PublicationToken = components["schemas"]["PublicationToken"];
+export type PublicationDestination =
+  components["schemas"]["PublicationDestination"];
+export type AddedPublicationDestination =
+  components["schemas"]["AddedPublicationDestination"];
+export type PublicationDestinationChoice =
+  components["schemas"]["PublicationDestinationChoice"];
+export type PublicationDestinationChoiceList =
+  components["schemas"]["PublicationDestinationChoiceList"];
+export type PostDelivery = components["schemas"]["PostDelivery"];
 export type Post = components["schemas"]["Post"];
 export type PublicPost = components["schemas"]["PublicPost"];
 export type PostMedia = components["schemas"]["PostMedia"];
