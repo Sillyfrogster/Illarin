@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Rss } from "lucide-react";
 import Link from "next/link";
 import type { PostArchive } from "@/lib/api/query";
 import {
   BLOG_DESCRIPTION,
   BLOG_TITLE,
+  feedAddresses,
   pageAddress,
 } from "@/lib/publication-metadata";
 import styles from "./Archive.module.css";
@@ -85,6 +86,10 @@ export function ScopedArchive({
               {siteName(scope.home)}
             </a>
           ) : null}
+          <a className={styles.feed} href={feedAddresses(scope.address).rss}>
+            <Rss aria-hidden="true" size={13} strokeWidth={1.9} />
+            RSS feed
+          </a>
         </p>
       </header>
       {archive.posts.length > 0 ? (

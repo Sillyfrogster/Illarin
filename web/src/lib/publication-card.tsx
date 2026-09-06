@@ -63,12 +63,12 @@ export function PostCard({ title, app, plate }: CardSubject): ReactElement {
         }}
       >
         <div style={{ alignItems: "center", display: "flex", gap: 15 }}>
-          <img alt="" height={28} src={markImage(INK)} width={28} />
+          <img alt="" height={34} src={markImage(INK)} width={34} />
           <span
             style={{
               fontSize: 19,
               fontWeight: 700,
-              letterSpacing: "0.15em",
+              letterSpacing: "0.12em",
               opacity: 0.72,
             }}
           >
@@ -84,8 +84,9 @@ export function PostCard({ title, app, plate }: CardSubject): ReactElement {
               fontSize: cardTitleSize(title),
               fontWeight: 500,
               letterSpacing: "-0.022em",
-              lineHeight: 1.14,
+              lineHeight: 1.16,
               paddingRight: 28,
+              wordBreak: "break-word",
             }}
           >
             {title}
@@ -95,9 +96,9 @@ export function PostCard({ title, app, plate }: CardSubject): ReactElement {
         {app ? (
           <div style={{ alignItems: "center", display: "flex", gap: 14 }}>
             {app.mark ? (
-              <img alt="" height={30} src={app.mark} width={30} />
+              <img alt="" height={32} src={app.mark} width={32} />
             ) : null}
-            <span style={{ fontSize: 25, fontWeight: 500, opacity: 0.6 }}>
+            <span style={{ fontSize: 27, fontWeight: 500, opacity: 0.72 }}>
               {app.name}
             </span>
           </div>
@@ -144,10 +145,10 @@ function CornerMark(): ReactElement {
   return (
     <img
       alt=""
-      height={30}
+      height={34}
       src={markImage(INK)}
-      style={{ opacity: 0.5, position: "absolute", right: 76, top: 61 }}
-      width={30}
+      style={{ opacity: 0.55, position: "absolute", right: 76, top: 62 }}
+      width={34}
     />
   );
 }

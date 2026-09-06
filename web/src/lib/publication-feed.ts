@@ -132,8 +132,13 @@ function jsonItem(post: PostSummary): Record<string, unknown> {
   };
 }
 
+// XML 1.0 has no way to write most control characters, so they are dropped rather than escaped.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
+const UNWRITABLE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+
 function escaped(said: string): string {
   return said
+    .replace(UNWRITABLE, "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

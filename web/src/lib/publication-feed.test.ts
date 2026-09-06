@@ -214,3 +214,11 @@ test("an empty publication is still a valid json feed", () => {
   const feed = JSON.parse(publicationJsonFeed(PUBLICATION_SCOPE, []));
   expect(feed.items).toEqual([]);
 });
+
+test("a character XML cannot carry is dropped rather than written", () => {
+  const feed = publicationFeed(PUBLICATION_SCOPE, [
+    { ...POST, title: `A title with a ${String.fromCharCode(7)} bell in it` },
+  ]);
+  expect(feed).toContain("<title>A title with a  bell in it</title>");
+  expect(feed).not.toContain(String.fromCharCode(7));
+});

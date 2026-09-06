@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicationFront } from "@/components/publication/Archive";
 import { fetchPostArchive } from "@/lib/api/query";
+import { blogAddress } from "@/lib/post-link";
 import {
   BLOG_DESCRIPTION,
   BLOG_HOME,
@@ -13,7 +14,10 @@ import { pageMetadata } from "@/lib/site-metadata";
 export const metadata: Metadata = {
   ...pageMetadata(BLOG_TITLE, BLOG_DESCRIPTION),
   title: { absolute: BLOG_TITLE },
-  alternates: { canonical: BLOG_HOME, types: feedTypes(BLOG_HOME) },
+  alternates: {
+    canonical: blogAddress(BLOG_HOME),
+    types: feedTypes(BLOG_HOME),
+  },
 };
 
 export default async function BlogHomePage() {

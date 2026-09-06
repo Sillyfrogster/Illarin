@@ -59,8 +59,8 @@ async function composed(post: PublicPost): Promise<CardSubject> {
 async function drawable(address: string): Promise<string | null> {
   try {
     const response = await fetch(new URL(address, mediaUrl));
-    if (!response.ok) return null;
-    const type = response.headers.get("content-type") ?? "image/png";
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !type.startsWith("image/")) return null;
     const bytes = Buffer.from(await response.arrayBuffer());
     return `data:${type};base64,${bytes.toString("base64")}`;
   } catch {

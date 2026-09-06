@@ -64,6 +64,12 @@
   text-underline-offset: 3px;
 }
 
+.feed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .scopeMeta a:hover {
   text-decoration-color: var(--color-emphasis);
 }
