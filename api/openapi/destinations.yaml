@@ -192,11 +192,11 @@ paths:
               $ref: '#/components/schemas/DestinationPolicyRequest'
       responses:
         '200':
-          description: The destinations the app now allows
+          description: The app with the destinations it now allows
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+                $ref: './publication.yaml#/components/schemas/PublicationApp'
         '400':
           $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':
@@ -229,11 +229,11 @@ paths:
               $ref: '#/components/schemas/DestinationPolicyRequest'
       responses:
         '200':
-          description: The destinations the grant now allows
+          description: The grant with the destinations it now allows
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+                $ref: './publication.yaml#/components/schemas/PublicationGrant'
         '400':
           $ref: ./publication.yaml#/components/responses/PublicationInvalid
         '401':

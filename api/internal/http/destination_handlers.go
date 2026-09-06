@@ -130,12 +130,12 @@ func (h *Handlers) SetPublicationAppDestinations(c *gin.Context, id types.UUID) 
 		h.destinationError(c, err)
 		return
 	}
-	allowed, err := h.publications.AppChoices(c.Request.Context(), uuid.UUID(id))
+	app, err := h.publications.App(c.Request.Context(), uuid.UUID(id))
 	if err != nil {
 		h.destinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIChoices(allowed, false))
+	c.JSON(http.StatusOK, toAPIApp(app))
 }
 
 func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID) {
@@ -154,12 +154,16 @@ func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID
 		h.destinationError(c, err)
 		return
 	}
-	allowed, err := h.publications.GrantChoices(c.Request.Context(), uuid.UUID(id))
+	grant, err := h.publications.Grant(c.Request.Context(), uuid.UUID(id))
 	if err != nil {
 		h.destinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIChoices(allowed, policy.Allowed == nil))
+	listed, err := h.withHolders(c, []publication.Grant{grant})
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, listed[0])
 }
 
 func (h *Handlers) ListPostDestinations(c *gin.Context, id types.UUID) {
@@ -265,6 +269,13 @@ func toAPIDestination(found publication.Destination) PublicationDestination {
 }
 
 func toAPIChoices(held []publication.Choice, inherited bool) PublicationDestinationChoiceList {
+	return PublicationDestinationChoiceList{
+		Destinations: toAPIChoiceRows(held),
+		Inherited:    inherited,
+	}
+}
+
+func toAPIChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
 	listed := make([]PublicationDestinationChoice, 0, len(held))
 	for _, one := range held {
 		listed = append(listed, PublicationDestinationChoice{
@@ -275,7 +286,7 @@ func toAPIChoices(held []publication.Choice, inherited bool) PublicationDestinat
 			ByDefault: one.ByDefault,
 		})
 	}
-	return PublicationDestinationChoiceList{Destinations: listed, Inherited: inherited}
+	return listed
 }
 
 func toAPIDeliveries(sent []publication.Delivery) []PostDelivery {

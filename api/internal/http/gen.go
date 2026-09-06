@@ -3149,13 +3149,15 @@ type PublicPost struct {
 
 // PublicationApp defines model for PublicationApp.
 type PublicationApp struct {
-	Home     string             `json:"home"`
-	Id       openapi_types.UUID `json:"id"`
-	Mark     *DistinctionMark   `json:"mark,omitempty"`
-	Name     string             `json:"name"`
-	Position int                `json:"position"`
-	Retired  bool               `json:"retired"`
-	Slug     string             `json:"slug"`
+	// Destinations The destinations every grant on this app follows unless the grant names its own.
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+	Home         string                         `json:"home"`
+	Id           openapi_types.UUID             `json:"id"`
+	Mark         *DistinctionMark               `json:"mark,omitempty"`
+	Name         string                         `json:"name"`
+	Position     int                            `json:"position"`
+	Retired      bool                           `json:"retired"`
+	Slug         string                         `json:"slug"`
 }
 
 // PublicationAppList defines model for PublicationAppList.
@@ -3252,14 +3254,20 @@ type PublicationErrorCode string
 
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
-	Active          bool                   `json:"active"`
-	App             PublicationApp         `json:"app"`
-	Categories      []PublicationCategory  `json:"categories"`
-	DefaultCategory PublicationCategory    `json:"defaultCategory"`
-	GrantedAt       time.Time              `json:"grantedAt"`
-	Holder          PublicationGrantHolder `json:"holder"`
-	Id              openapi_types.UUID     `json:"id"`
-	RevokedAt       *time.Time             `json:"revokedAt,omitempty"`
+	Active          bool                  `json:"active"`
+	App             PublicationApp        `json:"app"`
+	Categories      []PublicationCategory `json:"categories"`
+	DefaultCategory PublicationCategory   `json:"defaultCategory"`
+
+	// Destinations The destinations this contributor may send to.
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+
+	// DestinationsInherited Whether the set comes from the app rather than the grant itself.
+	DestinationsInherited bool                   `json:"destinationsInherited"`
+	GrantedAt             time.Time              `json:"grantedAt"`
+	Holder                PublicationGrantHolder `json:"holder"`
+	Id                    openapi_types.UUID     `json:"id"`
+	RevokedAt             *time.Time             `json:"revokedAt,omitempty"`
 }
 
 // PublicationGrantHolder defines model for PublicationGrantHolder.

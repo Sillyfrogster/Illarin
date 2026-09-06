@@ -24,15 +24,17 @@ type Holder struct {
 
 // Grant is one account's approval to publish for one app.
 type Grant struct {
-	ID              uuid.UUID
-	Holder          Holder
-	App             App
-	Categories      []Category
-	DefaultCategory Category
-	GrantedBy       *uuid.UUID
-	GrantedAt       time.Time
-	RevokedAt       *time.Time
-	Active          bool
+	ID                    uuid.UUID
+	Holder                Holder
+	App                   App
+	Categories            []Category
+	DefaultCategory       Category
+	Destinations          []Choice
+	DestinationsInherited bool
+	GrantedBy             *uuid.UUID
+	GrantedAt             time.Time
+	RevokedAt             *time.Time
+	Active                bool
 }
 
 // GrantEdit is what the authority supplies to approve one contributor.
@@ -319,6 +321,11 @@ func (s *Service) verifiedAccountByHandle(ctx context.Context, handle string) (H
 	return holder, nil
 }
 
+// Grant answers one approval and everything it bounds.
+func (s *Service) Grant(ctx context.Context, id uuid.UUID) (Grant, error) {
+	return s.grant(ctx, id)
+}
+
 func (s *Service) grant(ctx context.Context, id uuid.UUID) (Grant, error) {
 	found, err := s.grantsWhere(ctx, `where grant_row.id = $1`, id)
 	if err != nil {
@@ -339,7 +346,27 @@ func (s *Service) grantsWhere(ctx context.Context, clause string, args ...any) (
 	if err != nil {
 		return nil, err
 	}
-	return s.withAllowedCategories(ctx, found)
+	found, err = s.withAllowedCategories(ctx, found)
+	if err != nil {
+		return nil, err
+	}
+	return s.withAllowedDestinations(ctx, found)
+}
+
+// withAllowedDestinations gives each grant the safe destination identities it
+// may send to, which is its own set where it has one and its app's otherwise.
+func (s *Service) withAllowedDestinations(ctx context.Context, found []Grant) ([]Grant, error) {
+	for index := range found {
+		allowed, err := s.GrantChoices(ctx, found[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		found[index].Destinations = allowed
+		if found[index].App.Destinations, err = s.AppChoices(ctx, found[index].App.ID); err != nil {
+			return nil, err
+		}
+	}
+	return found, nil
 }
 
 // withAllowedCategories fills each grant's category set in one further read.
@@ -387,7 +414,7 @@ const selectGrants = `
 	       app.id, app.slug, app.name, app.home_url, app.position,
 	       app.retired_at is not null, mark.id, mark.width, mark.height,
 	       fallback.id, fallback.slug, fallback.label, fallback.position,
-	       fallback.retired_at is not null,
+	       fallback.retired_at is not null, not grant_row.destinations_overridden,
 	       grant_row.granted_by, grant_row.granted_at, grant_row.revoked_at, grant_row.active
 	  from publication_grants grant_row
 	  join users holder on holder.id = grant_row.user_id
@@ -410,6 +437,7 @@ func collectGrants(rows pgx.Rows) ([]Grant, error) {
 			&one.App.Retired, &markID, &width, &height,
 			&one.DefaultCategory.ID, &one.DefaultCategory.Slug, &one.DefaultCategory.Label,
 			&one.DefaultCategory.Position, &one.DefaultCategory.Retired,
+			&one.DestinationsInherited,
 			&one.GrantedBy, &one.GrantedAt, &one.RevokedAt, &one.Active,
 		)
 		if err != nil {

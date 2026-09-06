@@ -350,13 +350,14 @@ func toAPIApps(configured []publication.App) []PublicationApp {
 
 func toAPIApp(found publication.App) PublicationApp {
 	return PublicationApp{
-		Id:       types.UUID(found.ID),
-		Slug:     found.Slug,
-		Name:     found.Name,
-		Home:     found.Home,
-		Mark:     toAPIMark(found.Mark),
-		Position: found.Position,
-		Retired:  found.Retired,
+		Id:           types.UUID(found.ID),
+		Slug:         found.Slug,
+		Name:         found.Name,
+		Home:         found.Home,
+		Mark:         toAPIMark(found.Mark),
+		Position:     found.Position,
+		Retired:      found.Retired,
+		Destinations: toAPIChoiceRows(found.Destinations),
 	}
 }
 
@@ -409,13 +410,15 @@ func toAPIGrant(found publication.Grant, holder account.PublicProfile) Publicati
 		}
 	}
 	return PublicationGrant{
-		Id:              types.UUID(found.ID),
-		Holder:          shown,
-		App:             toAPIApp(found.App),
-		Categories:      toAPICategories(found.Categories),
-		DefaultCategory: toAPICategory(found.DefaultCategory),
-		GrantedAt:       found.GrantedAt,
-		RevokedAt:       found.RevokedAt,
-		Active:          found.Active,
+		Id:                    types.UUID(found.ID),
+		Holder:                shown,
+		App:                   toAPIApp(found.App),
+		Categories:            toAPICategories(found.Categories),
+		DefaultCategory:       toAPICategory(found.DefaultCategory),
+		Destinations:          toAPIChoiceRows(found.Destinations),
+		DestinationsInherited: found.DestinationsInherited,
+		GrantedAt:             found.GrantedAt,
+		RevokedAt:             found.RevokedAt,
+		Active:                found.Active,
 	}
 }

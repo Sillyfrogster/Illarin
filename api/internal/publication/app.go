@@ -22,13 +22,14 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // App is one project the publication carries posts for.
 type App struct {
-	ID       uuid.UUID
-	Slug     string
-	Name     string
-	Home     string
-	Mark     *Mark
-	Position int
-	Retired  bool
+	ID           uuid.UUID
+	Slug         string
+	Name         string
+	Home         string
+	Mark         *Mark
+	Position     int
+	Retired      bool
+	Destinations []Choice
 }
 
 // AppEdit is the app text the authority supplies.
@@ -53,7 +54,24 @@ func (s *Service) Apps(ctx context.Context) ([]App, error) {
 		return nil, fmt.Errorf("read publication apps: %w", err)
 	}
 	defer rows.Close()
-	return collectApps(rows)
+	found, err := collectApps(rows)
+	if err != nil {
+		return nil, err
+	}
+	return s.withAppDestinations(ctx, found)
+}
+
+// withAppDestinations gives each app the destinations it allows, which is what
+// every grant on it follows unless the grant names its own.
+func (s *Service) withAppDestinations(ctx context.Context, found []App) ([]App, error) {
+	for index := range found {
+		allowed, err := s.AppChoices(ctx, found[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		found[index].Destinations = allowed
+	}
+	return found, nil
 }
 
 // DefineApp records a new app below the ones already configured.
@@ -212,6 +230,11 @@ func (s *Service) SetAppMark(
 	return s.app(ctx, id)
 }
 
+// App answers one configured app and the destinations it allows.
+func (s *Service) App(ctx context.Context, id uuid.UUID) (App, error) {
+	return s.app(ctx, id)
+}
+
 func (s *Service) app(ctx context.Context, id uuid.UUID) (App, error) {
 	rows, err := s.pool.Query(ctx, selectApps+` where app.id = $1`, id)
 	if err != nil {
@@ -224,6 +247,10 @@ func (s *Service) app(ctx context.Context, id uuid.UUID) (App, error) {
 	}
 	if len(found) == 0 {
 		return App{}, ErrAppNotFound
+	}
+	found, err = s.withAppDestinations(ctx, found)
+	if err != nil {
+		return App{}, err
 	}
 	return found[0], nil
 }

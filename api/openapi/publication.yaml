@@ -480,6 +480,7 @@ components:
         - home
         - position
         - retired
+        - destinations
       properties:
         id:
           type: string
@@ -498,6 +499,13 @@ components:
           type: integer
         retired:
           type: boolean
+        destinations:
+          type: array
+          description: >-
+            The destinations every grant on this app follows unless the grant
+            names its own.
+          items:
+            $ref: './destinations.yaml#/components/schemas/PublicationDestinationChoice'
     PublicationAppList:
       type: object
       required:
@@ -619,6 +627,8 @@ components:
         - defaultCategory
         - grantedAt
         - active
+        - destinations
+        - destinationsInherited
       properties:
         id:
           type: string
@@ -633,6 +643,14 @@ components:
             $ref: '#/components/schemas/PublicationCategory'
         defaultCategory:
           $ref: '#/components/schemas/PublicationCategory'
+        destinations:
+          type: array
+          description: The destinations this contributor may send to.
+          items:
+            $ref: './destinations.yaml#/components/schemas/PublicationDestinationChoice'
+        destinationsInherited:
+          type: boolean
+          description: Whether the set comes from the app rather than the grant itself.
         grantedAt:
           type: string
           format: date-time

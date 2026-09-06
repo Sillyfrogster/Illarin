@@ -2318,11 +2318,11 @@ paths:
               $ref: '#/components/schemas/DestinationPolicyRequest'
       responses:
         '200':
-          description: The destinations the app now allows
+          description: The app with the destinations it now allows
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+                $ref: '#/components/schemas/PublicationApp'
         '400':
           $ref: '#/components/responses/PublicationInvalid'
         '401':
@@ -2355,11 +2355,11 @@ paths:
               $ref: '#/components/schemas/DestinationPolicyRequest'
       responses:
         '200':
-          description: The destinations the grant now allows
+          description: The grant with the destinations it now allows
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+                $ref: '#/components/schemas/PublicationGrant'
         '400':
           $ref: '#/components/responses/PublicationInvalid'
         '401':
@@ -5031,6 +5031,7 @@ components:
         - home
         - position
         - retired
+        - destinations
       properties:
         id:
           type: string
@@ -5049,6 +5050,13 @@ components:
           type: integer
         retired:
           type: boolean
+        destinations:
+          type: array
+          description: >-
+            The destinations every grant on this app follows unless the grant
+            names its own.
+          items:
+            $ref: '#/components/schemas/PublicationDestinationChoice'
     PublicationAppList:
       type: object
       required:
@@ -5170,6 +5178,8 @@ components:
         - defaultCategory
         - grantedAt
         - active
+        - destinations
+        - destinationsInherited
       properties:
         id:
           type: string
@@ -5184,6 +5194,14 @@ components:
             $ref: '#/components/schemas/PublicationCategory'
         defaultCategory:
           $ref: '#/components/schemas/PublicationCategory'
+        destinations:
+          type: array
+          description: The destinations this contributor may send to.
+          items:
+            $ref: '#/components/schemas/PublicationDestinationChoice'
+        destinationsInherited:
+          type: boolean
+          description: Whether the set comes from the app rather than the grant itself.
         grantedAt:
           type: string
           format: date-time
@@ -8086,6 +8104,40 @@ components:
         instanceId:
           type: string
           format: uuid
+    PublicationDestinationState:
+      type: string
+      description: Whether a destination is ready to receive anything.
+      enum:
+        - unverified
+        - active
+        - disabled
+    PublicationDestinationChoice:
+      type: object
+      description: >-
+        One destination a post may send to. It carries no address and no secret,
+        which is the whole point of it.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - state
+        - byDefault
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - webhook
+        state:
+          $ref: '#/components/schemas/PublicationDestinationState'
+        byDefault:
+          type: boolean
+          description: Whether a publication starts with this one selected.
     PostScheduleState:
       type: string
       description: Where a schedule got to.
@@ -8214,13 +8266,6 @@ components:
         version:
           type: integer
           description: The working-copy version the action means to act on.
-    PublicationDestinationState:
-      type: string
-      description: Whether a destination is ready to receive anything.
-      enum:
-        - unverified
-        - active
-        - disabled
     PublicationDestination:
       type: object
       description: >-
@@ -8335,33 +8380,6 @@ components:
           items:
             type: string
             format: uuid
-    PublicationDestinationChoice:
-      type: object
-      description: >-
-        One destination a post may send to. It carries no address and no secret,
-        which is the whole point of it.
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - kind
-        - state
-        - byDefault
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        kind:
-          type: string
-          enum:
-            - webhook
-        state:
-          $ref: '#/components/schemas/PublicationDestinationState'
-        byDefault:
-          type: boolean
-          description: Whether a publication starts with this one selected.
     PublicationDestinationChoiceList:
       type: object
       additionalProperties: false
