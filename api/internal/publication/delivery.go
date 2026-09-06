@@ -229,7 +229,6 @@ func (s *Service) ReplayDelivery(
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: actor, Action: "delivery.replayed", DeliveryID: &id, PostID: &held.PostID,
-		Before: held.State, After: DeliveryPending,
 	})
 	if err != nil {
 		return Delivery{}, err

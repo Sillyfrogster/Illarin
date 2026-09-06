@@ -1799,7 +1799,59 @@ export interface paths {
     trace?: never;
   };
 }
-export type webhooks = Record<string, never>;
+export interface webhooks {
+  "publication.post.published.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to published events when a post first reaches public view, and again when a withdrawn post is put back. It summarizes the post and links to it; the article itself lives only on the blog. */
+    post: operations["publicationPostPublished"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "publication.post.updated.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to updated events when a post that is already public is published again with changes. Saving a working copy, scheduling, deleting, recovering and every administrative action send nothing. */
+    post: operations["publicationPostUpdated"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "publication.post.withdrawn.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to withdrawn events when a post leaves public view. Its permalink answers 410 from then on, so a receiver holding a copy of the summary should stop showing it. */
+    post: operations["publicationPostWithdrawn"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+}
 export interface components {
   schemas: {
     /**
@@ -3659,6 +3711,70 @@ export interface components {
       id: string;
       name: string;
     };
+    PublicationEventApp: {
+      slug: string;
+      name: string;
+      url: string;
+    };
+    /** @description What the post was at the moment of the transition. It never carries the article body. */
+    PublicationPostSummary: {
+      /**
+       * Format: uuid
+       * @description The post, which is the same across its whole public life.
+       */
+      id: string;
+      /**
+       * Format: uuid
+       * @description The exact edition this event is about.
+       */
+      revisionId: string;
+      title: string;
+      /** @description The hand-written summary readers see before the article. */
+      summary: string;
+      category: {
+        slug: string;
+        label: string;
+      };
+      /** @description The permanent address of the post. */
+      url: string;
+      /** @description The composed sharing image, absent when the post has none. */
+      socialImageUrl?: string;
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string | null;
+      /** @description The release this post announces, absent when it announces none. */
+      release?: {
+        app: components["schemas"]["PublicationEventApp"];
+        version: string;
+        url?: string;
+      };
+      /** @description Who the post was published under, as it stood at first publication. */
+      byline: {
+        handle: string;
+        name: string;
+        url: string;
+        positions: string[];
+        app?: components["schemas"]["PublicationEventApp"];
+      };
+    };
+    /** @description One public transition of one post, as a summary. Illarin promises no global ordering between events. Compare `occurredAt` and treat `post.revisionId` as the identity of the edition, so an event that arrives after a newer one can be discarded rather than applied. */
+    PublicationPostEvent: {
+      /**
+       * Format: uuid
+       * @description The Publication event, stable across every attempt and replay.
+       */
+      id: string;
+      type: components["schemas"]["PublicationEvent"];
+      /**
+       * Format: date-time
+       * @description When the transition happened, which is what orders two events.
+       */
+      occurredAt: string;
+      /** @description One line the publisher wrote for this transition alone. It is never part of the post and is absent when nothing was written. */
+      note?: string;
+      post: components["schemas"]["PublicationPostSummary"];
+    };
   };
   responses: {
     /** @description The request carries no live credential */
@@ -3714,6 +3830,12 @@ export interface components {
     IdempotencyKey: string;
     /** @description Illarin's browser request proof. The value must be 1. */
     IllarinRequest: "1";
+    /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+    WebhookId: string;
+    /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+    WebhookTimestamp: number;
+    /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+    WebhookSignature: string;
   };
   requestBodies: never;
   headers: never;
@@ -9737,6 +9859,93 @@ export interface operations {
       };
       /** @description No such ingest operation for this creator */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostPublished: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Any 2xx counts as delivered. A redirect is never followed and counts as a wrong address. 410 stops Illarin sending to the endpoint again. 429 is honored, including its Retry-After. A network failure, 408, 425 or any 5xx is retried on the schedule. Any other 4xx stops the attempt sequence until an admin replays it. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostUpdated: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Handled the same way as a published event. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostWithdrawn: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Handled the same way as a published event. */
+      "2xx": {
         headers: {
           [name: string]: unknown;
         };

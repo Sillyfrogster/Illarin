@@ -7,6 +7,13 @@ info:
     browser-mutation proof and exact browser origin.
 servers:
   - url: /api
+webhooks:
+  publication.post.published.v1:
+    $ref: ./publication-events.yaml#/webhooks/publication.post.published.v1
+  publication.post.updated.v1:
+    $ref: ./publication-events.yaml#/webhooks/publication.post.updated.v1
+  publication.post.withdrawn.v1:
+    $ref: ./publication-events.yaml#/webhooks/publication.post.withdrawn.v1
 paths:
   /v1/account/discord:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1discord

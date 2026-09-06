@@ -3347,6 +3347,13 @@ type PublicationErrorCode string
 // PublicationEvent One Publication event a destination may subscribe to.
 type PublicationEvent string
 
+// PublicationEventApp defines model for PublicationEventApp.
+type PublicationEventApp struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+	Url  string `json:"url"`
+}
+
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
 	Active          bool                  `json:"active"`
@@ -3376,6 +3383,65 @@ type PublicationGrantHolder struct {
 // PublicationGrantList defines model for PublicationGrantList.
 type PublicationGrantList struct {
 	Grants []PublicationGrant `json:"grants"`
+}
+
+// PublicationPostEvent One public transition of one post, as a summary. Illarin promises no global ordering between events. Compare `occurredAt` and treat `post.revisionId` as the identity of the edition, so an event that arrives after a newer one can be discarded rather than applied.
+type PublicationPostEvent struct {
+	// Id The Publication event, stable across every attempt and replay.
+	Id openapi_types.UUID `json:"id"`
+
+	// Note One line the publisher wrote for this transition alone. It is never part of the post and is absent when nothing was written.
+	Note *string `json:"note,omitempty"`
+
+	// OccurredAt When the transition happened, which is what orders two events.
+	OccurredAt time.Time `json:"occurredAt"`
+
+	// Post What the post was at the moment of the transition. It never carries the article body.
+	Post PublicationPostSummary `json:"post"`
+
+	// Type One Publication event a destination may subscribe to.
+	Type PublicationEvent `json:"type"`
+}
+
+// PublicationPostSummary What the post was at the moment of the transition. It never carries the article body.
+type PublicationPostSummary struct {
+	// Byline Who the post was published under, as it stood at first publication.
+	Byline struct {
+		App       *PublicationEventApp `json:"app,omitempty"`
+		Handle    string               `json:"handle"`
+		Name      string               `json:"name"`
+		Positions []string             `json:"positions"`
+		Url       string               `json:"url"`
+	} `json:"byline"`
+	Category struct {
+		Label string `json:"label"`
+		Slug  string `json:"slug"`
+	} `json:"category"`
+
+	// Id The post, which is the same across its whole public life.
+	Id          openapi_types.UUID `json:"id"`
+	PublishedAt time.Time          `json:"publishedAt"`
+
+	// Release The release this post announces, absent when it announces none.
+	Release *struct {
+		App     PublicationEventApp `json:"app"`
+		Url     *string             `json:"url,omitempty"`
+		Version string              `json:"version"`
+	} `json:"release,omitempty"`
+
+	// RevisionId The exact edition this event is about.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// SocialImageUrl The composed sharing image, absent when the post has none.
+	SocialImageUrl *string `json:"socialImageUrl,omitempty"`
+
+	// Summary The hand-written summary readers see before the article.
+	Summary   string     `json:"summary"`
+	Title     string     `json:"title"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+
+	// Url The permanent address of the post.
+	Url string `json:"url"`
 }
 
 // PublicationToken defines model for PublicationToken.
@@ -3909,6 +3975,15 @@ type IdempotencyKey = string
 // IllarinRequest defines model for IllarinRequest.
 type IllarinRequest string
 
+// WebhookId defines model for WebhookId.
+type WebhookId = openapi_types.UUID
+
+// WebhookSignature defines model for WebhookSignature.
+type WebhookSignature = string
+
+// WebhookTimestamp defines model for WebhookTimestamp.
+type WebhookTimestamp = int
+
 // PublicationForbidden How every publication route refuses. It never names another account, grant or token.
 type PublicationForbidden = PublicationError
 
@@ -4213,6 +4288,42 @@ type WithdrawPostParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// PublicationPostPublishedParams defines parameters for PublicationPostPublished.
+type PublicationPostPublishedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
+// PublicationPostUpdatedParams defines parameters for PublicationPostUpdated.
+type PublicationPostUpdatedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
+// PublicationPostWithdrawnParams defines parameters for PublicationPostWithdrawn.
+type PublicationPostWithdrawnParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
 type ChangeUnverifiedEmailJSONRequestBody = ChangeEmailRequest
 
@@ -4416,6 +4527,15 @@ type ReplacePostScheduleJSONRequestBody = ReplacePostScheduleRequest
 
 // WithdrawPostJSONRequestBody defines body for WithdrawPost for application/json ContentType.
 type WithdrawPostJSONRequestBody = WithdrawPostRequest
+
+// PublicationPostPublishedJSONRequestBody defines body for PublicationPostPublished for application/json ContentType.
+type PublicationPostPublishedJSONRequestBody = PublicationPostEvent
+
+// PublicationPostUpdatedJSONRequestBody defines body for PublicationPostUpdated for application/json ContentType.
+type PublicationPostUpdatedJSONRequestBody = PublicationPostEvent
+
+// PublicationPostWithdrawnJSONRequestBody defines body for PublicationPostWithdrawn for application/json ContentType.
+type PublicationPostWithdrawnJSONRequestBody = PublicationPostEvent
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -8748,4 +8868,264 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/media", wrapper.AddMedia)
 	router.GET(options.BaseURL+"/media/:media_id/:variant/:derivative_version", wrapper.GetMediaVariant)
 	router.GET(options.BaseURL+"/v1/ingests/:id", wrapper.GetIngest)
+}
+
+// WebhookReceiverInterface represents handlers for receiving inbound
+// webhook requests. Each webhook becomes a Handle*Webhook
+// method that the implementation fills in. The caller mounts the per-
+// webhook gin.HandlerFunc returned by {Op}WebhookHandler at
+// whatever URL path they advertise to senders.
+type WebhookReceiverInterface interface {
+
+	// HandlePublicationPostPublishedWebhook handles the POST webhook for publication.post.published.v1.
+	HandlePublicationPostPublishedWebhook(c *gin.Context, params PublicationPostPublishedParams)
+
+	// HandlePublicationPostUpdatedWebhook handles the POST webhook for publication.post.updated.v1.
+	HandlePublicationPostUpdatedWebhook(c *gin.Context, params PublicationPostUpdatedParams)
+
+	// HandlePublicationPostWithdrawnWebhook handles the POST webhook for publication.post.withdrawn.v1.
+	HandlePublicationPostWithdrawnWebhook(c *gin.Context, params PublicationPostWithdrawnParams)
+}
+
+// PublicationPostPublishedWebhookHandler returns the gin.HandlerFunc for the publication.post.published.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostPublishedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostPublishedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostPublishedWebhook(c, params)
+	}
+}
+
+// PublicationPostUpdatedWebhookHandler returns the gin.HandlerFunc for the publication.post.updated.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostUpdatedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostUpdatedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostUpdatedWebhook(c, params)
+	}
+}
+
+// PublicationPostWithdrawnWebhookHandler returns the gin.HandlerFunc for the publication.post.withdrawn.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostWithdrawnWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostWithdrawnParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostWithdrawnWebhook(c, params)
+	}
 }

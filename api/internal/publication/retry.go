@@ -9,9 +9,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
 )
 
-// deliveryDelays is the gap before each attempt of one run. The first attempt
-// is immediate and the gaps after it leave the run about 76 hours long.
-var deliveryDelays = []time.Duration{
+// DeliveryDelays is the gap before each attempt of one run, before jitter. The
+// first attempt is immediate and the gaps after it leave the run about 76
+// hours long.
+var DeliveryDelays = []time.Duration{
 	0,
 	5 * time.Second,
 	5 * time.Minute,
@@ -25,7 +26,7 @@ var deliveryDelays = []time.Duration{
 }
 
 // DeliveryAttempts is how many attempts one run of a delivery makes.
-var DeliveryAttempts = len(deliveryDelays)
+var DeliveryAttempts = len(DeliveryDelays)
 
 // deliveryJitter is how far either side of the agreed gap an attempt may fall,
 // so a shared outage does not bring every receiver back at the same instant.
@@ -49,7 +50,7 @@ func deliveryDelay(made int, spread float64) (time.Duration, bool) {
 	if made < 0 || made >= DeliveryAttempts {
 		return 0, false
 	}
-	agreed := deliveryDelays[made]
+	agreed := DeliveryDelays[made]
 	return agreed + time.Duration(float64(agreed)*deliveryJitter*(spread*2-1)), true
 }
 

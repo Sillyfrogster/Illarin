@@ -20,14 +20,17 @@ import (
 )
 
 type destination struct {
-	ID         string  `json:"id"`
-	Kind       string  `json:"kind"`
-	Name       string  `json:"name"`
-	Host       string  `json:"host"`
-	Address    string  `json:"address"`
-	State      string  `json:"state"`
-	VerifiedAt *string `json:"verifiedAt"`
-	DisabledAt *string `json:"disabledAt"`
+	ID          string     `json:"id"`
+	Kind        string     `json:"kind"`
+	Name        string     `json:"name"`
+	Host        string     `json:"host"`
+	Address     string     `json:"address"`
+	State       string     `json:"state"`
+	Events      []string   `json:"events"`
+	SecretSetAt time.Time  `json:"secretSetAt"`
+	OldUntil    *time.Time `json:"previousSecretUntil"`
+	VerifiedAt  *string    `json:"verifiedAt"`
+	DisabledAt  *string    `json:"disabledAt"`
 }
 
 type addedDestination struct {
@@ -53,6 +56,7 @@ type destinationChoiceList struct {
 }
 
 type deliveryAttempt struct {
+	Run         int       `json:"run"`
 	Number      int       `json:"number"`
 	Outcome     string    `json:"outcome"`
 	Status      *int      `json:"status"`
@@ -62,19 +66,29 @@ type deliveryAttempt struct {
 }
 
 type postDelivery struct {
-	ID          string           `json:"id"`
-	EventID     string           `json:"eventId"`
-	EventType   string           `json:"eventType"`
-	PostID      string           `json:"postId"`
-	RevisionID  string           `json:"revisionId"`
-	Destination string           `json:"destination"`
-	State       string           `json:"state"`
-	Attempts    int              `json:"attempts"`
-	Last        *deliveryAttempt `json:"last"`
+	ID            string           `json:"id"`
+	EventID       string           `json:"eventId"`
+	EventType     string           `json:"eventType"`
+	PostID        string           `json:"postId"`
+	PostTitle     string           `json:"postTitle"`
+	RevisionID    string           `json:"revisionId"`
+	Destination   string           `json:"destination"`
+	Removed       bool             `json:"removed"`
+	State         string           `json:"state"`
+	SettledReason string           `json:"settledReason"`
+	Run           int              `json:"run"`
+	Attempts      int              `json:"attempts"`
+	OccurredAt    time.Time        `json:"occurredAt"`
+	DueAt         time.Time        `json:"dueAt"`
+	Last          *deliveryAttempt `json:"last"`
 }
 
 type deliveryList struct {
 	Deliveries []postDelivery `json:"deliveries"`
+}
+
+type attemptList struct {
+	Attempts []deliveryAttempt `json:"attempts"`
 }
 
 // arrived is one request a test receiver was sent.
@@ -88,6 +102,7 @@ type arrived struct {
 type receiver struct {
 	server *httptest.Server
 	answer func(arrived) (int, string)
+	extra  http.Header
 
 	mu  sync.Mutex
 	got []arrived
@@ -106,11 +121,14 @@ func newReceiver(t *testing.T) *receiver {
 		one := arrived{Headers: r.Header.Clone(), Body: body}
 		held.mu.Lock()
 		held.got = append(held.got, one)
-		answer := held.answer
+		answer, extra := held.answer, held.extra
 		held.mu.Unlock()
 		status, said := http.StatusOK, ""
 		if answer != nil {
 			status, said = answer(one)
+		}
+		for name, values := range extra {
+			w.Header().Set(name, values[0])
 		}
 		w.WriteHeader(status)
 		w.Write([]byte(said))
@@ -138,6 +156,16 @@ func (r *receiver) answers(with func(arrived) (int, string)) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.answer = with
+}
+
+// holds puts one header on everything the receiver answers with.
+func (r *receiver) holds(name, value string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.extra == nil {
+		r.extra = http.Header{}
+	}
+	r.extra.Set(name, value)
 }
 
 // echoesTheChallenge is the answer an endpoint gives to prove it is under the
