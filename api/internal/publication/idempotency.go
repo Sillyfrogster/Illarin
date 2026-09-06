@@ -119,7 +119,9 @@ func (s *Service) ReleaseAttempt(
 // SweepInterval is how often the finished keys past their window are dropped.
 const SweepInterval = time.Hour
 
-// RunSweeper drops outlived idempotency keys until the context is done.
+// RunSweeper drops what the publication has outlived until the context is
+// done: idempotency keys past their window, and rotated signing secrets past
+// the overlap they were kept for.
 func (s *Service) RunSweeper(ctx context.Context, onError func(error)) {
 	ticker := time.NewTicker(SweepInterval)
 	defer ticker.Stop()
@@ -129,6 +131,10 @@ func (s *Service) RunSweeper(ctx context.Context, onError func(error)) {
 			return
 		case <-ticker.C:
 			if _, err := s.SweepAttempts(ctx); err != nil && ctx.Err() == nil && onError != nil {
+				onError(err)
+			}
+			_, err := s.ForgetOldSecrets(ctx, s.now())
+			if err != nil && ctx.Err() == nil && onError != nil {
 				onError(err)
 			}
 		}

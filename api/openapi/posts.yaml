@@ -1578,6 +1578,18 @@ components:
         explanation:
           type: string
           description: A separate sentence for readers, shown on the withdrawn address.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this withdrawal announces. An absent list takes the policy
+            defaults; an empty one withdraws quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
     RepublishPostRequest:
       type: object
       additionalProperties: false
@@ -1592,6 +1604,18 @@ components:
           type: string
           format: uuid
           description: The edition readers are given when the post returns.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this republication announces. An absent list takes the policy
+            defaults; an empty one puts the post back quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
     WithdrawnPost:
       type: object
       description: >-
@@ -1649,6 +1673,17 @@ components:
         - sending
         - delivered
         - failed
+    PostDeliverySettledReason:
+      type: string
+      description: Why a delivery stopped, absent while it is still going.
+      enum:
+        - arrived
+        - exhausted
+        - refused
+        - gone
+        - removed
+        - disabled
+        - moved
     PostDeliveryAttempt:
       type: object
       description: >-
@@ -1656,12 +1691,16 @@ components:
         and no header Illarin signed it with.
       additionalProperties: false
       required:
+        - run
         - number
         - outcome
         - detail
         - tookMs
         - attemptedAt
       properties:
+        run:
+          type: integer
+          description: Which attempt sequence this belongs to; a replay opens the next.
         number:
           type: integer
         outcome:
@@ -1687,11 +1726,15 @@ components:
         - eventId
         - eventType
         - postId
+        - postTitle
         - revisionId
         - destination
+        - removed
         - state
+        - run
         - attempts
         - occurredAt
+        - dueAt
       properties:
         id:
           type: string
@@ -1704,19 +1747,34 @@ components:
         postId:
           type: string
           format: uuid
+        postTitle:
+          type: string
+          description: The title the edition behind this event carries.
         revisionId:
           type: string
           format: uuid
         destination:
           type: string
           description: The name the destination carried when this event was captured.
+        removed:
+          type: boolean
+          description: Whether the destination behind this delivery is gone.
         state:
           $ref: '#/components/schemas/PostDeliveryState'
+        settledReason:
+          $ref: '#/components/schemas/PostDeliverySettledReason'
+        run:
+          type: integer
+          description: Which attempt sequence the delivery is on; a replay opens the next.
         attempts:
           type: integer
         occurredAt:
           type: string
           format: date-time
+        dueAt:
+          type: string
+          format: date-time
+          description: When the next attempt is due, in the past once it has settled.
         settledAt:
           type: string
           format: date-time
@@ -1735,6 +1793,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PostDelivery'
+    PostDeliveryAttemptList:
+      type: object
+      description: Every attempt one delivery has made, oldest first.
+      additionalProperties: false
+      required:
+        - attempts
+      properties:
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDeliveryAttempt'
 
     PostRevisionReason:
       type: string

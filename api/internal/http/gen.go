@@ -858,6 +858,39 @@ func (e PostDeliveryOutcome) Valid() bool {
 	}
 }
 
+// Defines values for PostDeliverySettledReason.
+const (
+	PostDeliverySettledReasonArrived   PostDeliverySettledReason = "arrived"
+	PostDeliverySettledReasonDisabled  PostDeliverySettledReason = "disabled"
+	PostDeliverySettledReasonExhausted PostDeliverySettledReason = "exhausted"
+	PostDeliverySettledReasonGone      PostDeliverySettledReason = "gone"
+	PostDeliverySettledReasonMoved     PostDeliverySettledReason = "moved"
+	PostDeliverySettledReasonRefused   PostDeliverySettledReason = "refused"
+	PostDeliverySettledReasonRemoved   PostDeliverySettledReason = "removed"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliverySettledReason enum.
+func (e PostDeliverySettledReason) Valid() bool {
+	switch e {
+	case PostDeliverySettledReasonArrived:
+		return true
+	case PostDeliverySettledReasonDisabled:
+		return true
+	case PostDeliverySettledReasonExhausted:
+		return true
+	case PostDeliverySettledReasonGone:
+		return true
+	case PostDeliverySettledReasonMoved:
+		return true
+	case PostDeliverySettledReasonRefused:
+		return true
+	case PostDeliverySettledReasonRemoved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostDeliveryState.
 const (
 	PostDeliveryStateDelivered PostDeliveryState = "delivered"
@@ -1052,19 +1085,19 @@ func (e PublicationDestinationChoiceKind) Valid() bool {
 
 // Defines values for PublicationDestinationState.
 const (
-	Active     PublicationDestinationState = "active"
-	Disabled   PublicationDestinationState = "disabled"
-	Unverified PublicationDestinationState = "unverified"
+	PublicationDestinationStateActive     PublicationDestinationState = "active"
+	PublicationDestinationStateDisabled   PublicationDestinationState = "disabled"
+	PublicationDestinationStateUnverified PublicationDestinationState = "unverified"
 )
 
 // Valid indicates whether the value is a known member of the PublicationDestinationState enum.
 func (e PublicationDestinationState) Valid() bool {
 	switch e {
-	case Active:
+	case PublicationDestinationStateActive:
 		return true
-	case Disabled:
+	case PublicationDestinationStateDisabled:
 		return true
-	case Unverified:
+	case PublicationDestinationStateUnverified:
 		return true
 	default:
 		return false
@@ -1122,6 +1155,27 @@ func (e PublicationErrorCode) Valid() bool {
 	case CodeTokenRevoked:
 		return true
 	case CodeUnauthenticated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationEvent.
+const (
+	PublicationPostPublishedV1 PublicationEvent = "publication.post.published.v1"
+	PublicationPostUpdatedV1   PublicationEvent = "publication.post.updated.v1"
+	PublicationPostWithdrawnV1 PublicationEvent = "publication.post.withdrawn.v1"
+)
+
+// Valid indicates whether the value is a known member of the PublicationEvent enum.
+func (e PublicationEvent) Valid() bool {
+	switch e {
+	case PublicationPostPublishedV1:
+		return true
+	case PublicationPostUpdatedV1:
+		return true
+	case PublicationPostWithdrawnV1:
 		return true
 	default:
 		return false
@@ -1734,7 +1788,10 @@ type AddPostMediaRequest struct {
 type AddPublicationDestinationRequest struct {
 	// Address An https address on port 443 with no username, password or fragment, whose host resolves into public address space.
 	Address string `json:"address"`
-	Name    string `json:"name"`
+
+	// Events Which Publication events this endpoint receives. An absent list takes published events and nothing else.
+	Events *[]PublicationEvent `json:"events,omitempty"`
+	Name   string              `json:"name"`
 }
 
 // AddableBlock One block the add tray offers. Where the content ends up is what the tray groups by, so a creator arrives at it by destination.
@@ -2823,17 +2880,32 @@ type PostDelivery struct {
 	Attempts int `json:"attempts"`
 
 	// Destination The name the destination carried when this event was captured.
-	Destination string             `json:"destination"`
-	EventId     openapi_types.UUID `json:"eventId"`
-	EventType   string             `json:"eventType"`
-	Id          openapi_types.UUID `json:"id"`
+	Destination string `json:"destination"`
+
+	// DueAt When the next attempt is due, in the past once it has settled.
+	DueAt     time.Time          `json:"dueAt"`
+	EventId   openapi_types.UUID `json:"eventId"`
+	EventType string             `json:"eventType"`
+	Id        openapi_types.UUID `json:"id"`
 
 	// Last The most recent attempt, absent until one has been made.
 	Last       *PostDeliveryAttempt `json:"last,omitempty"`
 	OccurredAt time.Time            `json:"occurredAt"`
 	PostId     openapi_types.UUID   `json:"postId"`
-	RevisionId openapi_types.UUID   `json:"revisionId"`
-	SettledAt  *time.Time           `json:"settledAt,omitempty"`
+
+	// PostTitle The title the edition behind this event carries.
+	PostTitle string `json:"postTitle"`
+
+	// Removed Whether the destination behind this delivery is gone.
+	Removed    bool               `json:"removed"`
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// Run Which attempt sequence the delivery is on; a replay opens the next.
+	Run       int        `json:"run"`
+	SettledAt *time.Time `json:"settledAt,omitempty"`
+
+	// SettledReason Why a delivery stopped, absent while it is still going.
+	SettledReason *PostDeliverySettledReason `json:"settledReason,omitempty"`
 
 	// State Where one delivery stands. Neither settled state changes whether the post is public.
 	State PostDeliveryState `json:"state"`
@@ -2850,9 +2922,17 @@ type PostDeliveryAttempt struct {
 	// Outcome What one attempt found at the far end.
 	Outcome PostDeliveryOutcome `json:"outcome"`
 
+	// Run Which attempt sequence this belongs to; a replay opens the next.
+	Run int `json:"run"`
+
 	// Status What the endpoint answered, absent when nothing was reached.
 	Status *int `json:"status,omitempty"`
 	TookMs int  `json:"tookMs"`
+}
+
+// PostDeliveryAttemptList Every attempt one delivery has made, oldest first.
+type PostDeliveryAttemptList struct {
+	Attempts []PostDeliveryAttempt `json:"attempts"`
 }
 
 // PostDeliveryList defines model for PostDeliveryList.
@@ -2862,6 +2942,9 @@ type PostDeliveryList struct {
 
 // PostDeliveryOutcome What one attempt found at the far end.
 type PostDeliveryOutcome string
+
+// PostDeliverySettledReason Why a delivery stopped, absent while it is still going.
+type PostDeliverySettledReason string
 
 // PostDeliveryState Where one delivery stands. Neither settled state changes whether the post is public.
 type PostDeliveryState string
@@ -3192,6 +3275,9 @@ type PublicationDestination struct {
 	CreatedAt  time.Time  `json:"createdAt"`
 	DisabledAt *time.Time `json:"disabledAt,omitempty"`
 
+	// Events Which Publication events this endpoint asked for.
+	Events []PublicationEvent `json:"events"`
+
 	// Host The host the endpoint answers on.
 	Host string                     `json:"host"`
 	Id   openapi_types.UUID         `json:"id"`
@@ -3199,6 +3285,12 @@ type PublicationDestination struct {
 
 	// Name What the authority calls this endpoint, and all a contributor sees.
 	Name string `json:"name"`
+
+	// PreviousSecretUntil How long a rotated secret keeps producing an accepted signature, absent when no rotation is in its overlap.
+	PreviousSecretUntil *time.Time `json:"previousSecretUntil,omitempty"`
+
+	// SecretSetAt When the current signing secret was drawn.
+	SecretSetAt time.Time `json:"secretSetAt"`
 
 	// State Whether a destination is ready to receive anything.
 	State      PublicationDestinationState `json:"state"`
@@ -3251,6 +3343,9 @@ type PublicationError struct {
 
 // PublicationErrorCode The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
 type PublicationErrorCode string
+
+// PublicationEvent One Publication event a destination may subscribe to.
+type PublicationEvent string
 
 // PublicationGrant defines model for PublicationGrant.
 type PublicationGrant struct {
@@ -3410,6 +3505,10 @@ type ReplacePostScheduleRequest struct {
 
 // RepublishPostRequest defines model for RepublishPostRequest.
 type RepublishPostRequest struct {
+	// DestinationIds Where this republication announces. An absent list takes the policy defaults; an empty one puts the post back quietly.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
 	// RevisionId The edition readers are given when the post returns.
 	RevisionId openapi_types.UUID `json:"revisionId"`
 
@@ -3423,6 +3522,18 @@ type RequestCode = string
 // RestrictProfileRequest defines model for RestrictProfileRequest.
 type RestrictProfileRequest struct {
 	Reason string `json:"reason"`
+}
+
+// RotatedPublicationSecret A destination's new signing secret and how long the old one stays acceptable alongside it.
+type RotatedPublicationSecret struct {
+	// Destination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+	Destination PublicationDestination `json:"destination"`
+
+	// PreviousSecretUntil When the old secret stops producing an accepted signature.
+	PreviousSecretUntil time.Time `json:"previousSecretUntil"`
+
+	// Secret The signing secret this endpoint's requests now carry. Illarin cannot show it again.
+	Secret string `json:"secret"`
 }
 
 // SaveAssetBlockRequest defines model for SaveAssetBlockRequest.
@@ -3704,7 +3815,10 @@ type UpdatePublicationCategoryRequest struct {
 // UpdatePublicationDestinationRequest defines model for UpdatePublicationDestinationRequest.
 type UpdatePublicationDestinationRequest struct {
 	Address *string `json:"address,omitempty"`
-	Name    *string `json:"name,omitempty"`
+
+	// Events Which Publication events this endpoint receives. An absent list leaves the subscription alone.
+	Events *[]PublicationEvent `json:"events,omitempty"`
+	Name   *string             `json:"name,omitempty"`
 }
 
 // UpdatePublicationGrantRequest defines model for UpdatePublicationGrantRequest.
@@ -3764,8 +3878,12 @@ type VerifyEmailRequest struct {
 
 // WithdrawPostRequest defines model for WithdrawPostRequest.
 type WithdrawPostRequest struct {
+	// DestinationIds Where this withdrawal announces. An absent list takes the policy defaults; an empty one withdraws quietly.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+
 	// Explanation A separate sentence for readers, shown on the withdrawn address.
 	Explanation *string `json:"explanation,omitempty"`
+	Note        *string `json:"note,omitempty"`
 
 	// Reason Why the post is coming down. Illarin keeps this and readers never see it.
 	Reason string `json:"reason"`
@@ -3990,6 +4108,13 @@ type ListPublishedPostsParams struct {
 // SetPublicationAppMarkMultipartBody defines parameters for SetPublicationAppMark.
 type SetPublicationAppMarkMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// ListPublicationDeliveriesParams defines parameters for ListPublicationDeliveries.
+type ListPublicationDeliveriesParams struct {
+	// State Narrow the listing to one state.
+	State *PostDeliveryState `form:"state,omitempty" json:"state,omitempty"`
+	Limit *int               `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListPostsParams defines parameters for ListPosts.
@@ -4675,6 +4800,15 @@ type ServerInterface interface {
 	// (PATCH /v1/publication/categories/{id})
 	UpdatePublicationCategory(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/publication/deliveries)
+	ListPublicationDeliveries(c *gin.Context, params ListPublicationDeliveriesParams)
+
+	// (GET /v1/publication/deliveries/{id}/attempts)
+	ListPublicationDeliveryAttempts(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/deliveries/{id}/replay)
+	ReplayPublicationDelivery(c *gin.Context, id openapi_types.UUID)
+
 	// (GET /v1/publication/destinations)
 	ListPublicationDestinations(c *gin.Context)
 
@@ -4686,6 +4820,9 @@ type ServerInterface interface {
 
 	// (PATCH /v1/publication/destinations/{id})
 	UpdatePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/destinations/{id}/secret)
+	RotatePublicationDestinationSecret(c *gin.Context, id openapi_types.UUID)
 
 	// (DELETE /v1/publication/destinations/{id}/verification)
 	DisablePublicationDestination(c *gin.Context, id openapi_types.UUID)
@@ -7123,6 +7260,91 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationCategory(c *gin.Context) {
 	siw.Handler.UpdatePublicationCategory(c, id)
 }
 
+// ListPublicationDeliveries operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDeliveries(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPublicationDeliveriesParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", c.Request.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter state: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDeliveries(c, params)
+}
+
+// ListPublicationDeliveryAttempts operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDeliveryAttempts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDeliveryAttempts(c, id)
+}
+
+// ReplayPublicationDelivery operation middleware
+func (siw *ServerInterfaceWrapper) ReplayPublicationDelivery(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayPublicationDelivery(c, id)
+}
+
 // ListPublicationDestinations operation middleware
 func (siw *ServerInterfaceWrapper) ListPublicationDestinations(c *gin.Context) {
 
@@ -7197,6 +7419,31 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationDestination(c *gin.Context) 
 	}
 
 	siw.Handler.UpdatePublicationDestination(c, id)
+}
+
+// RotatePublicationDestinationSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotatePublicationDestinationSecret(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RotatePublicationDestinationSecret(c, id)
 }
 
 // DisablePublicationDestination operation middleware
@@ -8445,6 +8692,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/v1/publication/destinations/:id", wrapper.UpdatePublicationDestination)
 	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.DisablePublicationDestination)
 	router.POST(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.VerifyPublicationDestination)
+	router.POST(options.BaseURL+"/v1/publication/destinations/:id/secret", wrapper.RotatePublicationDestinationSecret)
+	router.GET(options.BaseURL+"/v1/publication/deliveries", wrapper.ListPublicationDeliveries)
+	router.GET(options.BaseURL+"/v1/publication/deliveries/:id/attempts", wrapper.ListPublicationDeliveryAttempts)
+	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/replay", wrapper.ReplayPublicationDelivery)
 	router.PUT(options.BaseURL+"/v1/publication/apps/:id/destinations", wrapper.SetPublicationAppDestinations)
 	router.PUT(options.BaseURL+"/v1/publication/grants/:id/destinations", wrapper.SetPublicationGrantDestinations)
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/destinations", wrapper.ListPostDestinations)

@@ -2294,6 +2294,129 @@ paths:
           description: The signed-in account is not the publication authority
         '404':
           description: No such destination
+  /v1/publication/destinations/{id}/secret:
+    post:
+      operationId: rotatePublicationDestinationSecret
+      description: >-
+        Draw a new signing secret. The old one keeps producing an accepted
+        signature for a bounded overlap, so a receiver changes over without
+        dropping an event, and is then forgotten.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The new signing secret, shown once
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotatedPublicationSecret'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
+  /v1/publication/deliveries:
+    get:
+      operationId: listPublicationDeliveries
+      description: >-
+        The delivery work the authority is diagnosing, newest first. It carries
+        no endpoint address, secret or response body.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: state
+          in: query
+          required: false
+          description: Narrow the listing to one state.
+          schema:
+            $ref: '#/components/schemas/PostDeliveryState'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: The delivery work on record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDeliveryList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+  /v1/publication/deliveries/{id}/attempts:
+    get:
+      operationId: listPublicationDeliveryAttempts
+      description: >-
+        Every attempt one delivery has made, across every run, so a replay never
+        hides what the runs before it found.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The attempts this delivery has made
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDeliveryAttemptList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such delivery
+  /v1/publication/deliveries/{id}/replay:
+    post:
+      operationId: replayPublicationDelivery
+      description: >-
+        Put settled work back in the queue under a new run. The Publication
+        event it carries and every attempt already made stay as they are.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The delivery, queued again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDelivery'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such delivery
   /v1/publication/apps/{id}/destinations:
     put:
       operationId: setPublicationAppDestinations
@@ -5952,6 +6075,18 @@ components:
         explanation:
           type: string
           description: A separate sentence for readers, shown on the withdrawn address.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this withdrawal announces. An absent list takes the policy
+            defaults; an empty one withdraws quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
     RepublishPostRequest:
       type: object
       additionalProperties: false
@@ -5966,6 +6101,18 @@ components:
           type: string
           format: uuid
           description: The edition readers are given when the post returns.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this republication announces. An absent list takes the policy
+            defaults; an empty one puts the post back quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
     WithdrawnPost:
       type: object
       description: >-
@@ -8266,6 +8413,13 @@ components:
         version:
           type: integer
           description: The working-copy version the action means to act on.
+    PublicationEvent:
+      type: string
+      description: One Publication event a destination may subscribe to.
+      enum:
+        - publication.post.published.v1
+        - publication.post.updated.v1
+        - publication.post.withdrawn.v1
     PublicationDestination:
       type: object
       description: >-
@@ -8279,6 +8433,8 @@ components:
         - host
         - address
         - state
+        - events
+        - secretSetAt
         - createdAt
       properties:
         id:
@@ -8299,6 +8455,22 @@ components:
           description: The masked address, which names the host and hides the rest.
         state:
           $ref: '#/components/schemas/PublicationDestinationState'
+        events:
+          type: array
+          description: Which Publication events this endpoint asked for.
+          items:
+            $ref: '#/components/schemas/PublicationEvent'
+        secretSetAt:
+          type: string
+          format: date-time
+          description: When the current signing secret was drawn.
+        previousSecretUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            How long a rotated secret keeps producing an accepted signature,
+            absent when no rotation is in its overlap.
         verifiedAt:
           type: string
           format: date-time
@@ -8336,6 +8508,13 @@ components:
           description: >-
             An https address on port 443 with no username, password or fragment,
             whose host resolves into public address space.
+        events:
+          type: array
+          description: >-
+            Which Publication events this endpoint receives. An absent list
+            takes published events and nothing else.
+          items:
+            $ref: '#/components/schemas/PublicationEvent'
     AddedPublicationDestination:
       type: object
       description: A new destination and the one showing its signing secret ever gets.
@@ -8361,6 +8540,183 @@ components:
         address:
           type: string
           maxLength: 300
+        events:
+          type: array
+          description: >-
+            Which Publication events this endpoint receives. An absent list
+            leaves the subscription alone.
+          items:
+            $ref: '#/components/schemas/PublicationEvent'
+    RotatedPublicationSecret:
+      type: object
+      description: >-
+        A destination's new signing secret and how long the old one stays
+        acceptable alongside it.
+      additionalProperties: false
+      required:
+        - destination
+        - secret
+        - previousSecretUntil
+      properties:
+        destination:
+          $ref: '#/components/schemas/PublicationDestination'
+        secret:
+          type: string
+          description: >-
+            The signing secret this endpoint's requests now carry. Illarin
+            cannot show it again.
+        previousSecretUntil:
+          type: string
+          format: date-time
+          description: When the old secret stops producing an accepted signature.
+    PostDeliveryState:
+      type: string
+      description: >-
+        Where one delivery stands. Neither settled state changes whether the
+        post is public.
+      enum:
+        - pending
+        - sending
+        - delivered
+        - failed
+    PostDeliverySettledReason:
+      type: string
+      description: Why a delivery stopped, absent while it is still going.
+      enum:
+        - arrived
+        - exhausted
+        - refused
+        - gone
+        - removed
+        - disabled
+        - moved
+    PostDeliveryOutcome:
+      type: string
+      description: What one attempt found at the far end.
+      enum:
+        - delivered
+        - refused
+        - unreachable
+    PostDeliveryAttempt:
+      type: object
+      description: >-
+        The safe record of one request. It holds no body, in either direction,
+        and no header Illarin signed it with.
+      additionalProperties: false
+      required:
+        - run
+        - number
+        - outcome
+        - detail
+        - tookMs
+        - attemptedAt
+      properties:
+        run:
+          type: integer
+          description: Which attempt sequence this belongs to; a replay opens the next.
+        number:
+          type: integer
+        outcome:
+          $ref: '#/components/schemas/PostDeliveryOutcome'
+        status:
+          type: integer
+          nullable: true
+          description: What the endpoint answered, absent when nothing was reached.
+        detail:
+          type: string
+          description: A safe sentence about the attempt, never a response body.
+        tookMs:
+          type: integer
+        attemptedAt:
+          type: string
+          format: date-time
+    PostDelivery:
+      type: object
+      description: One publication event on its way to one destination.
+      additionalProperties: false
+      required:
+        - id
+        - eventId
+        - eventType
+        - postId
+        - postTitle
+        - revisionId
+        - destination
+        - removed
+        - state
+        - run
+        - attempts
+        - occurredAt
+        - dueAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        postId:
+          type: string
+          format: uuid
+        postTitle:
+          type: string
+          description: The title the edition behind this event carries.
+        revisionId:
+          type: string
+          format: uuid
+        destination:
+          type: string
+          description: The name the destination carried when this event was captured.
+        removed:
+          type: boolean
+          description: Whether the destination behind this delivery is gone.
+        state:
+          $ref: '#/components/schemas/PostDeliveryState'
+        settledReason:
+          $ref: '#/components/schemas/PostDeliverySettledReason'
+        run:
+          type: integer
+          description: Which attempt sequence the delivery is on; a replay opens the next.
+        attempts:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+          description: When the next attempt is due, in the past once it has settled.
+        settledAt:
+          type: string
+          format: date-time
+          nullable: true
+        last:
+          allOf:
+            - $ref: '#/components/schemas/PostDeliveryAttempt'
+          description: The most recent attempt, absent until one has been made.
+    PostDeliveryList:
+      type: object
+      additionalProperties: false
+      required:
+        - deliveries
+      properties:
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDelivery'
+    PostDeliveryAttemptList:
+      type: object
+      description: Every attempt one delivery has made, oldest first.
+      additionalProperties: false
+      required:
+        - attempts
+      properties:
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDeliveryAttempt'
     DestinationPolicyRequest:
       type: object
       additionalProperties: false
@@ -8394,109 +8750,6 @@ components:
         inherited:
           type: boolean
           description: Whether this set comes from the app rather than being its own.
-    PostDeliveryState:
-      type: string
-      description: >-
-        Where one delivery stands. Neither settled state changes whether the
-        post is public.
-      enum:
-        - pending
-        - sending
-        - delivered
-        - failed
-    PostDeliveryOutcome:
-      type: string
-      description: What one attempt found at the far end.
-      enum:
-        - delivered
-        - refused
-        - unreachable
-    PostDeliveryAttempt:
-      type: object
-      description: >-
-        The safe record of one request. It holds no body, in either direction,
-        and no header Illarin signed it with.
-      additionalProperties: false
-      required:
-        - number
-        - outcome
-        - detail
-        - tookMs
-        - attemptedAt
-      properties:
-        number:
-          type: integer
-        outcome:
-          $ref: '#/components/schemas/PostDeliveryOutcome'
-        status:
-          type: integer
-          nullable: true
-          description: What the endpoint answered, absent when nothing was reached.
-        detail:
-          type: string
-          description: A safe sentence about the attempt, never a response body.
-        tookMs:
-          type: integer
-        attemptedAt:
-          type: string
-          format: date-time
-    PostDelivery:
-      type: object
-      description: One publication event on its way to one destination.
-      additionalProperties: false
-      required:
-        - id
-        - eventId
-        - eventType
-        - postId
-        - revisionId
-        - destination
-        - state
-        - attempts
-        - occurredAt
-      properties:
-        id:
-          type: string
-          format: uuid
-        eventId:
-          type: string
-          format: uuid
-        eventType:
-          type: string
-        postId:
-          type: string
-          format: uuid
-        revisionId:
-          type: string
-          format: uuid
-        destination:
-          type: string
-          description: The name the destination carried when this event was captured.
-        state:
-          $ref: '#/components/schemas/PostDeliveryState'
-        attempts:
-          type: integer
-        occurredAt:
-          type: string
-          format: date-time
-        settledAt:
-          type: string
-          format: date-time
-          nullable: true
-        last:
-          allOf:
-            - $ref: '#/components/schemas/PostDeliveryAttempt'
-          description: The most recent attempt, absent until one has been made.
-    PostDeliveryList:
-      type: object
-      additionalProperties: false
-      required:
-        - deliveries
-      properties:
-        deliveries:
-          type: array
-          items:
-            $ref: '#/components/schemas/PostDelivery'
     PostAction:
       type: object
       description: >-

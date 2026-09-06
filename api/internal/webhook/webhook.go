@@ -54,17 +54,41 @@ func Sign(secret, id string, at time.Time, body []byte) (string, error) {
 	return Version + "," + base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-// Headers answers what one signed request sends alongside its body.
-func Headers(secret, id string, at time.Time, body []byte) (map[string]string, error) {
-	signature, err := Sign(secret, id, at, body)
-	if err != nil {
-		return nil, err
+// Headers answers what one signed request sends alongside its body. Every
+// secret given produces a signature and all of them travel together, which is
+// how a receiver part way through a rotation accepts either one.
+func Headers(secrets []string, id string, at time.Time, body []byte) (map[string]string, error) {
+	if len(secrets) == 0 {
+		return nil, errors.New("a signed request carries at least one secret")
+	}
+	signatures := make([]string, 0, len(secrets))
+	for _, secret := range secrets {
+		signature, err := Sign(secret, id, at, body)
+		if err != nil {
+			return nil, err
+		}
+		signatures = append(signatures, signature)
 	}
 	return map[string]string{
 		IDHeader:        id,
 		TimestampHeader: strconv.FormatInt(at.Unix(), 10),
-		SignatureHeader: signature,
+		SignatureHeader: strings.Join(signatures, " "),
 	}, nil
+}
+
+// Accepts answers whether a signature header carries the one a secret
+// produces, which is what a receiver checking a rotated request does.
+func Accepts(header, secret, id string, at time.Time, body []byte) bool {
+	want, err := Sign(secret, id, at, body)
+	if err != nil {
+		return false
+	}
+	for _, held := range strings.Fields(header) {
+		if hmac.Equal([]byte(held), []byte(want)) {
+			return true
+		}
+	}
+	return false
 }
 
 func keyOf(secret string) ([]byte, error) {

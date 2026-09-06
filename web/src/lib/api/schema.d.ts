@@ -1020,6 +1020,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/destinations/{id}/secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Draw a new signing secret. The old one keeps producing an accepted signature for a bounded overlap, so a receiver changes over without dropping an event, and is then forgotten. */
+    post: operations["rotatePublicationDestinationSecret"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The delivery work the authority is diagnosing, newest first. It carries no endpoint address, secret or response body. */
+    get: operations["listPublicationDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries/{id}/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every attempt one delivery has made, across every run, so a replay never hides what the runs before it found. */
+    get: operations["listPublicationDeliveryAttempts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries/{id}/replay": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Put settled work back in the queue under a new run. The Publication event it carries and every attempt already made stay as they are. */
+    post: operations["replayPublicationDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/apps/{id}/destinations": {
     parameters: {
       query?: never;
@@ -2354,6 +2422,9 @@ export interface components {
       reason: string;
       /** @description A separate sentence for readers, shown on the withdrawn address. */
       explanation?: string;
+      /** @description Where this withdrawal announces. An absent list takes the policy defaults; an empty one withdraws quietly. */
+      destinationIds?: string[] | null;
+      note?: string;
     };
     RepublishPostRequest: {
       /** @description The working-copy version the republication means to act on. */
@@ -2363,6 +2434,9 @@ export interface components {
        * @description The edition readers are given when the post returns.
        */
       revisionId: string;
+      /** @description Where this republication announces. An absent list takes the policy defaults; an empty one puts the post back quietly. */
+      destinationIds?: string[] | null;
+      note?: string;
     };
     /** @description The whole of what a withdrawn address answers with. It carries the address the tombstone lives at and nothing the post used to say. */
     WithdrawnPost: {
@@ -3345,6 +3419,14 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
     };
+    /**
+     * @description One Publication event a destination may subscribe to.
+     * @enum {string}
+     */
+    PublicationEvent:
+      | "publication.post.published.v1"
+      | "publication.post.updated.v1"
+      | "publication.post.withdrawn.v1";
     /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
     PublicationDestination: {
       /** Format: uuid */
@@ -3358,6 +3440,18 @@ export interface components {
       /** @description The masked address, which names the host and hides the rest. */
       address: string;
       state: components["schemas"]["PublicationDestinationState"];
+      /** @description Which Publication events this endpoint asked for. */
+      events: components["schemas"]["PublicationEvent"][];
+      /**
+       * Format: date-time
+       * @description When the current signing secret was drawn.
+       */
+      secretSetAt: string;
+      /**
+       * Format: date-time
+       * @description How long a rotated secret keeps producing an accepted signature, absent when no rotation is in its overlap.
+       */
+      previousSecretUntil?: string | null;
       /** Format: date-time */
       verifiedAt?: string | null;
       /** Format: date-time */
@@ -3372,6 +3466,8 @@ export interface components {
       name: string;
       /** @description An https address on port 443 with no username, password or fragment, whose host resolves into public address space. */
       address: string;
+      /** @description Which Publication events this endpoint receives. An absent list takes published events and nothing else. */
+      events?: components["schemas"]["PublicationEvent"][];
     };
     /** @description A new destination and the one showing its signing secret ever gets. */
     AddedPublicationDestination: {
@@ -3382,17 +3478,19 @@ export interface components {
     UpdatePublicationDestinationRequest: {
       name?: string;
       address?: string;
+      /** @description Which Publication events this endpoint receives. An absent list leaves the subscription alone. */
+      events?: components["schemas"]["PublicationEvent"][];
     };
-    DestinationPolicyRequest: {
-      /** @description The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing. */
-      destinationIds?: string[] | null;
-      /** @description Which of the allowed destinations a publication starts with. */
-      defaultDestinationIds?: string[];
-    };
-    PublicationDestinationChoiceList: {
-      destinations: components["schemas"]["PublicationDestinationChoice"][];
-      /** @description Whether this set comes from the app rather than being its own. */
-      inherited: boolean;
+    /** @description A destination's new signing secret and how long the old one stays acceptable alongside it. */
+    RotatedPublicationSecret: {
+      destination: components["schemas"]["PublicationDestination"];
+      /** @description The signing secret this endpoint's requests now carry. Illarin cannot show it again. */
+      secret: string;
+      /**
+       * Format: date-time
+       * @description When the old secret stops producing an accepted signature.
+       */
+      previousSecretUntil: string;
     };
     /**
      * @description Where one delivery stands. Neither settled state changes whether the post is public.
@@ -3400,12 +3498,26 @@ export interface components {
      */
     PostDeliveryState: "pending" | "sending" | "delivered" | "failed";
     /**
+     * @description Why a delivery stopped, absent while it is still going.
+     * @enum {string}
+     */
+    PostDeliverySettledReason:
+      | "arrived"
+      | "exhausted"
+      | "refused"
+      | "gone"
+      | "removed"
+      | "disabled"
+      | "moved";
+    /**
      * @description What one attempt found at the far end.
      * @enum {string}
      */
     PostDeliveryOutcome: "delivered" | "refused" | "unreachable";
     /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
     PostDeliveryAttempt: {
+      /** @description Which attempt sequence this belongs to; a replay opens the next. */
+      run: number;
       number: number;
       outcome: components["schemas"]["PostDeliveryOutcome"];
       /** @description What the endpoint answered, absent when nothing was reached. */
@@ -3425,14 +3537,26 @@ export interface components {
       eventType: string;
       /** Format: uuid */
       postId: string;
+      /** @description The title the edition behind this event carries. */
+      postTitle: string;
       /** Format: uuid */
       revisionId: string;
       /** @description The name the destination carried when this event was captured. */
       destination: string;
+      /** @description Whether the destination behind this delivery is gone. */
+      removed: boolean;
       state: components["schemas"]["PostDeliveryState"];
+      settledReason?: components["schemas"]["PostDeliverySettledReason"];
+      /** @description Which attempt sequence the delivery is on; a replay opens the next. */
+      run: number;
       attempts: number;
       /** Format: date-time */
       occurredAt: string;
+      /**
+       * Format: date-time
+       * @description When the next attempt is due, in the past once it has settled.
+       */
+      dueAt: string;
       /** Format: date-time */
       settledAt?: string | null;
       /** @description The most recent attempt, absent until one has been made. */
@@ -3440,6 +3564,21 @@ export interface components {
     };
     PostDeliveryList: {
       deliveries: components["schemas"]["PostDelivery"][];
+    };
+    /** @description Every attempt one delivery has made, oldest first. */
+    PostDeliveryAttemptList: {
+      attempts: components["schemas"]["PostDeliveryAttempt"][];
+    };
+    DestinationPolicyRequest: {
+      /** @description The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing. */
+      destinationIds?: string[] | null;
+      /** @description Which of the allowed destinations a publication starts with. */
+      defaultDestinationIds?: string[];
+    };
+    PublicationDestinationChoiceList: {
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+      /** @description Whether this set comes from the app rather than being its own. */
+      inherited: boolean;
     };
     /** @description One thing that was done to a post, named by who did it, what it was and which edition it touched. */
     PostAction: {
@@ -7102,6 +7241,174 @@ export interface operations {
         content?: never;
       };
       /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  rotatePublicationDestinationSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The new signing secret, shown once */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RotatedPublicationSecret"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationDeliveries: {
+    parameters: {
+      query?: {
+        /** @description Narrow the listing to one state. */
+        state?: components["schemas"]["PostDeliveryState"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The delivery work on record */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationDeliveryAttempts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The attempts this delivery has made */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryAttemptList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  replayPublicationDelivery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The delivery, queued again */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDelivery"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery */
       404: {
         headers: {
           [name: string]: unknown;

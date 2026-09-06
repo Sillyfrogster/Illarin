@@ -128,6 +128,14 @@ paths:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}
   /v1/publication/destinations/{id}/verification:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}~1verification
+  /v1/publication/destinations/{id}/secret:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}~1secret
+  /v1/publication/deliveries:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries
+  /v1/publication/deliveries/{id}/attempts:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries~1{id}~1attempts
+  /v1/publication/deliveries/{id}/replay:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries~1{id}~1replay
   /v1/publication/apps/{id}/destinations:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1apps~1{id}~1destinations
   /v1/publication/grants/{id}/destinations:

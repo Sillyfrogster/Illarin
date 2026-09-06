@@ -10,6 +10,9 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
+// defaultDeliveryListing is how much delivery work the console reads at once.
+const defaultDeliveryListing = 50
+
 func (h *Handlers) ListPublicationDestinations(c *gin.Context) {
 	if _, ok := h.publicationAuthority(c, "reading publication destinations"); !ok {
 		return
@@ -37,7 +40,9 @@ func (h *Handlers) AddPublicationDestination(c *gin.Context) {
 	}
 	added, err := h.publications.AddDestination(
 		c.Request.Context(), authority.ID,
-		publication.DestinationEdit{Name: request.Name, Address: request.Address},
+		publication.DestinationEdit{
+			Name: request.Name, Address: request.Address, Events: readEvents(request.Events),
+		},
 	)
 	if err != nil {
 		h.destinationError(c, err)
@@ -62,7 +67,9 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context, id types.UUID) {
 	}
 	updated, err := h.publications.UpdateDestination(
 		c.Request.Context(), authority.ID, uuid.UUID(id),
-		publication.DestinationUpdate{Name: request.Name, Address: request.Address},
+		publication.DestinationUpdate{
+			Name: request.Name, Address: request.Address, Events: readEvents(request.Events),
+		},
 	)
 	if err != nil {
 		h.destinationError(c, err)
@@ -112,6 +119,71 @@ func (h *Handlers) DisablePublicationDestination(c *gin.Context, id types.UUID) 
 		return
 	}
 	c.JSON(http.StatusOK, toAPIDestination(disabled))
+}
+
+func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context, id types.UUID) {
+	authority, ok := h.publicationAuthority(c, "rotating a destination's signing secret")
+	if !ok {
+		return
+	}
+	rotated, err := h.publications.RotateSecret(c.Request.Context(), authority.ID, uuid.UUID(id))
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, RotatedPublicationSecret{
+		Destination:         toAPIDestination(rotated.Destination),
+		Secret:              rotated.Secret,
+		PreviousSecretUntil: rotated.OldUntil,
+	})
+}
+
+func (h *Handlers) ListPublicationDeliveries(
+	c *gin.Context,
+	params ListPublicationDeliveriesParams,
+) {
+	if _, ok := h.publicationAuthority(c, "reading publication deliveries"); !ok {
+		return
+	}
+	state := ""
+	if params.State != nil {
+		state = string(*params.State)
+	}
+	limit := defaultDeliveryListing
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	sent, err := h.publications.Deliveries(c.Request.Context(), state, limit)
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, PostDeliveryList{Deliveries: toAPIDeliveries(sent)})
+}
+
+func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context, id types.UUID) {
+	if _, ok := h.publicationAuthority(c, "reading what a delivery tried"); !ok {
+		return
+	}
+	made, err := h.publications.DeliveryHistory(c.Request.Context(), uuid.UUID(id))
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, PostDeliveryAttemptList{Attempts: toAPIAttempts(made)})
+}
+
+func (h *Handlers) ReplayPublicationDelivery(c *gin.Context, id types.UUID) {
+	authority, ok := h.publicationAuthority(c, "replaying a publication delivery")
+	if !ok {
+		return
+	}
+	queued, err := h.publications.ReplayDelivery(c.Request.Context(), authority.ID, uuid.UUID(id))
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIDelivery(queued))
 }
 
 func (h *Handlers) SetPublicationAppDestinations(c *gin.Context, id types.UUID) {
@@ -206,6 +278,19 @@ func announcementOf(destinations *[]types.UUID, note *string) publication.Announ
 	return made
 }
 
+// readEvents reads a subscription, keeping an absent list apart from an empty
+// one because they mean opposite things.
+func readEvents(named *[]PublicationEvent) *[]string {
+	if named == nil {
+		return nil
+	}
+	events := make([]string, 0, len(*named))
+	for _, one := range *named {
+		events = append(events, string(one))
+	}
+	return &events
+}
+
 // readDestinationPolicy reads an allowed and default set, keeping an absent
 // list apart from an empty one because they mean opposite things.
 func readDestinationPolicy(c *gin.Context) (publication.DestinationPolicy, bool) {
@@ -241,6 +326,14 @@ func (h *Handlers) destinationError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrDestinationRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"This post may not send to that destination.")
+	case errors.Is(err, publication.ErrDeliveryNotFound):
+		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such delivery.")
+	case errors.Is(err, publication.ErrDeliveryUnsettled):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"This delivery is still trying on its own.")
+	case errors.Is(err, publication.ErrDeliveryUnsendable):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"There is nowhere left to send this delivery.")
 	default:
 		h.publicationError(c, err)
 	}
@@ -255,16 +348,23 @@ func toAPIDestinations(configured []publication.Destination) []PublicationDestin
 }
 
 func toAPIDestination(found publication.Destination) PublicationDestination {
+	events := make([]PublicationEvent, 0, len(found.Events))
+	for _, one := range found.Events {
+		events = append(events, PublicationEvent(one))
+	}
 	return PublicationDestination{
-		Id:         types.UUID(found.ID),
-		Kind:       PublicationDestinationKind(found.Kind),
-		Name:       found.Name,
-		Host:       found.Host,
-		Address:    found.Address,
-		State:      PublicationDestinationState(found.State),
-		VerifiedAt: found.VerifiedAt,
-		DisabledAt: found.DisabledAt,
-		CreatedAt:  found.CreatedAt,
+		Id:                  types.UUID(found.ID),
+		Kind:                PublicationDestinationKind(found.Kind),
+		Name:                found.Name,
+		Host:                found.Host,
+		Address:             found.Address,
+		State:               PublicationDestinationState(found.State),
+		Events:              events,
+		SecretSetAt:         found.SecretSetAt,
+		PreviousSecretUntil: found.OldUntil,
+		VerifiedAt:          found.VerifiedAt,
+		DisabledAt:          found.DisabledAt,
+		CreatedAt:           found.CreatedAt,
 	}
 }
 
@@ -292,29 +392,55 @@ func toAPIChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
 func toAPIDeliveries(sent []publication.Delivery) []PostDelivery {
 	listed := make([]PostDelivery, 0, len(sent))
 	for _, one := range sent {
-		shown := PostDelivery{
-			Id:          types.UUID(one.ID),
-			EventId:     types.UUID(one.EventID),
-			EventType:   one.EventType,
-			PostId:      types.UUID(one.PostID),
-			RevisionId:  types.UUID(one.RevisionID),
-			Destination: one.Destination,
-			State:       PostDeliveryState(one.State),
-			Attempts:    one.Attempts,
-			OccurredAt:  one.OccurredAt,
-			SettledAt:   one.SettledAt,
-		}
-		if one.Last != nil {
-			shown.Last = &PostDeliveryAttempt{
-				Number:      one.Last.Number,
-				Outcome:     PostDeliveryOutcome(one.Last.Outcome),
-				Status:      one.Last.Status,
-				Detail:      one.Last.Detail,
-				TookMs:      int(one.Last.Took.Milliseconds()),
-				AttemptedAt: one.Last.Attempted,
-			}
-		}
-		listed = append(listed, shown)
+		listed = append(listed, toAPIDelivery(one))
 	}
 	return listed
+}
+
+func toAPIDelivery(one publication.Delivery) PostDelivery {
+	shown := PostDelivery{
+		Id:          types.UUID(one.ID),
+		EventId:     types.UUID(one.EventID),
+		EventType:   one.EventType,
+		PostId:      types.UUID(one.PostID),
+		PostTitle:   one.PostTitle,
+		RevisionId:  types.UUID(one.RevisionID),
+		Destination: one.Destination,
+		Removed:     one.Removed,
+		State:       PostDeliveryState(one.State),
+		Run:         one.Run,
+		Attempts:    one.Attempts,
+		OccurredAt:  one.OccurredAt,
+		DueAt:       one.DueAt,
+		SettledAt:   one.SettledAt,
+	}
+	if one.SettledReason != "" {
+		reason := PostDeliverySettledReason(one.SettledReason)
+		shown.SettledReason = &reason
+	}
+	if one.Last != nil {
+		made := toAPIAttempt(*one.Last)
+		shown.Last = &made
+	}
+	return shown
+}
+
+func toAPIAttempts(made []publication.DeliveryAttempt) []PostDeliveryAttempt {
+	listed := make([]PostDeliveryAttempt, 0, len(made))
+	for _, one := range made {
+		listed = append(listed, toAPIAttempt(one))
+	}
+	return listed
+}
+
+func toAPIAttempt(one publication.DeliveryAttempt) PostDeliveryAttempt {
+	return PostDeliveryAttempt{
+		Run:         one.Run,
+		Number:      one.Number,
+		Outcome:     PostDeliveryOutcome(one.Outcome),
+		Status:      one.Status,
+		Detail:      one.Detail,
+		TookMs:      int(one.Took.Milliseconds()),
+		AttemptedAt: one.Attempted,
+	}
 }

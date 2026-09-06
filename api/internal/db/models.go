@@ -599,6 +599,8 @@ type PublicationDelivery struct {
 	SettledAt       pgtype.Timestamptz
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	Run             int32
+	SettledReason   pgtype.Text
 }
 
 type PublicationDeliveryAttempt struct {
@@ -610,21 +612,26 @@ type PublicationDeliveryAttempt struct {
 	Detail      string
 	TookMs      int32
 	AttemptedAt pgtype.Timestamptz
+	Run         int32
 }
 
 type PublicationDestination struct {
-	ID            pgtype.UUID
-	Kind          string
-	Name          string
-	Host          string
-	Address       []byte
-	SigningSecret []byte
-	State         string
-	VerifiedAt    pgtype.Timestamptz
-	DisabledAt    pgtype.Timestamptz
-	CreatedBy     pgtype.UUID
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	ID                  pgtype.UUID
+	Kind                string
+	Name                string
+	Host                string
+	Address             []byte
+	SigningSecret       []byte
+	State               string
+	VerifiedAt          pgtype.Timestamptz
+	DisabledAt          pgtype.Timestamptz
+	CreatedBy           pgtype.UUID
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	Events              []string
+	PreviousSecret      []byte
+	PreviousSecretUntil pgtype.Timestamptz
+	SigningSecretSetAt  pgtype.Timestamptz
 }
 
 type PublicationEvent struct {

@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -125,12 +126,17 @@ func DefaultLimits() Limits {
 	return Limits{Connect: 5 * time.Second, Request: 10 * time.Second, ReadBytes: 8 << 10}
 }
 
+// MaxRetryAfter is the longest wait Illarin will take from an endpoint, so a
+// receiver asking for a month cannot park work indefinitely.
+const MaxRetryAfter = 24 * time.Hour
+
 // Answer is the safe part of what an endpoint said back. The body is bounded
 // and is compared, never logged.
 type Answer struct {
-	Status int
-	Body   []byte
-	Took   time.Duration
+	Status     int
+	Body       []byte
+	Took       time.Duration
+	RetryAfter time.Duration
 }
 
 // Reaching turns a host into the one address a request is dialed at.
@@ -241,7 +247,29 @@ func (c *Caller) Post(
 	if err != nil {
 		return Answer{}, fmt.Errorf("read what %s said back: %w", checked.Host, err)
 	}
-	return Answer{Status: response.StatusCode, Body: read, Took: time.Since(started)}, nil
+	return Answer{
+		Status: response.StatusCode, Body: read, Took: time.Since(started),
+		RetryAfter: RetryAfter(response.Header.Get("Retry-After"), started),
+	}, nil
+}
+
+// RetryAfter reads how long an endpoint asked to be left alone, in either form
+// the header takes, and holds the answer inside what Illarin will wait.
+func RetryAfter(header string, from time.Time) time.Duration {
+	header = strings.TrimSpace(header)
+	if header == "" {
+		return 0
+	}
+	wait := time.Duration(0)
+	if seconds, err := strconv.Atoi(header); err == nil {
+		wait = time.Duration(seconds) * time.Second
+	} else if at, err := http.ParseTime(header); err == nil {
+		wait = at.Sub(from)
+	}
+	if wait < 0 {
+		return 0
+	}
+	return min(wait, MaxRetryAfter)
 }
 
 // trust lets a test point a caller at a receiver holding its own certificate.

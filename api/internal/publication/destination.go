@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,6 +26,12 @@ const (
 
 const destinationNameLimit = 48
 
+// PostEvents are the Publication events a generic destination may subscribe to.
+var PostEvents = []string{EventPublished, EventUpdated, EventWithdrawn}
+
+// ErrEventUnknown says a subscription named something Illarin does not send.
+var ErrEventUnknown = errors.New("no such publication event")
+
 var (
 	ErrDestinationNotFound = errors.New("no such publication destination")
 	ErrDestinationRefused  = errors.New("the destination is not one this post may send to")
@@ -34,27 +41,33 @@ var (
 // Destination is one endpoint the authority has configured. Nothing outside
 // this package ever sees the address it stands for or the secret it signs with.
 type Destination struct {
-	ID         uuid.UUID
-	Kind       string
-	Name       string
-	Host       string
-	Address    string
-	State      string
-	VerifiedAt *time.Time
-	DisabledAt *time.Time
-	CreatedAt  time.Time
+	ID          uuid.UUID
+	Kind        string
+	Name        string
+	Host        string
+	Address     string
+	State       string
+	Events      []string
+	SecretSetAt time.Time
+	OldUntil    *time.Time
+	VerifiedAt  *time.Time
+	DisabledAt  *time.Time
+	CreatedAt   time.Time
 }
 
-// DestinationEdit is what the authority supplies to add one endpoint.
+// DestinationEdit is what the authority supplies to add one endpoint. An
+// absent subscription takes the published event and nothing else.
 type DestinationEdit struct {
 	Name    string
 	Address string
+	Events  *[]string
 }
 
 // DestinationUpdate carries only the parts of a destination a request named.
 type DestinationUpdate struct {
 	Name    *string
 	Address *string
+	Events  *[]string
 }
 
 // AddedDestination is a destination and the one showing its secret ever gets.
@@ -93,6 +106,10 @@ func (s *Service) AddDestination(
 	if err != nil {
 		return AddedDestination{}, err
 	}
+	events, err := checkEvents(in.Events)
+	if err != nil {
+		return AddedDestination{}, err
+	}
 	secret, err := webhook.MintSecret()
 	if err != nil {
 		return AddedDestination{}, err
@@ -113,9 +130,9 @@ func (s *Service) AddDestination(
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
 		insert into publication_destinations
-		       (id, kind, name, host, address, signing_secret, created_by)
-		values ($1, $2, $3, $4, $5, $6, $7)
-	`, id, KindWebhook, name, host, sealedAddress, sealedSecret, actor)
+		       (id, kind, name, host, address, signing_secret, events, created_by)
+		values ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, id, KindWebhook, name, host, sealedAddress, sealedSecret, events, actor)
 	if err != nil {
 		return AddedDestination{}, fmt.Errorf("record the destination: %w", err)
 	}
@@ -155,6 +172,12 @@ func (s *Service) UpdateDestination(
 	if name == "" {
 		return Destination{}, FieldError{Field: "name", Message: "Give the destination a name."}
 	}
+	events := current.Events
+	if in.Events != nil {
+		if events, err = checkEvents(in.Events); err != nil {
+			return Destination{}, err
+		}
+	}
 	moved := in.Address != nil && *in.Address != ""
 	var host string
 	var sealedAddress []byte
@@ -176,20 +199,22 @@ func (s *Service) UpdateDestination(
 	if moved {
 		_, err = tx.Exec(ctx, `
 			update publication_destinations
-			   set name = $2, host = $3, address = $4, state = $5,
+			   set name = $2, events = $6, host = $3, address = $4, state = $5,
 			       verified_at = null, disabled_at = null, updated_at = now()
 			 where id = $1
-		`, id, name, host, sealedAddress, DestinationUnverified)
+		`, id, name, host, sealedAddress, DestinationUnverified, events)
 	} else {
 		_, err = tx.Exec(ctx, `
-			update publication_destinations set name = $2, updated_at = now() where id = $1
-		`, id, name)
+			update publication_destinations
+			   set name = $2, events = $3, updated_at = now()
+			 where id = $1
+		`, id, name, events)
 	}
 	if err != nil {
 		return Destination{}, fmt.Errorf("update the destination: %w", err)
 	}
 	if moved {
-		if err := stopDeliveriesTo(ctx, tx, id, stoppedByMoving); err != nil {
+		if err := stopDeliveriesTo(ctx, tx, id, SettledMoved); err != nil {
 			return Destination{}, err
 		}
 	}
@@ -228,7 +253,7 @@ func (s *Service) DisableDestination(
 	if err != nil {
 		return Destination{}, fmt.Errorf("disable the destination: %w", err)
 	}
-	if err := stopDeliveriesTo(ctx, tx, id, stoppedByDisabling); err != nil {
+	if err := stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
 		return Destination{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -254,7 +279,7 @@ func (s *Service) RemoveDestination(ctx context.Context, actor uuid.UUID, id uui
 		return fmt.Errorf("begin destination removal: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := stopDeliveriesTo(ctx, tx, id, stoppedByRemoval); err != nil {
+	if err := stopDeliveriesTo(ctx, tx, id, SettledRemoved); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
@@ -305,6 +330,32 @@ func (s *Service) checkDestination(name, address string) (string, string, string
 	return checked, address, host, nil
 }
 
+// checkEvents answers the subscription a request named, in the order Illarin
+// lists events and with nothing repeated. An absent one takes the default.
+func checkEvents(named *[]string) ([]string, error) {
+	if named == nil {
+		return []string{EventPublished}, nil
+	}
+	wanted := make(map[string]bool, len(*named))
+	for _, one := range *named {
+		if !slices.Contains(PostEvents, one) {
+			return nil, FieldError{
+				Field:   "events",
+				Message: "Subscribe to published, updated or withdrawn events.",
+				cause:   ErrEventUnknown,
+			}
+		}
+		wanted[one] = true
+	}
+	events := make([]string, 0, len(PostEvents))
+	for _, one := range PostEvents {
+		if wanted[one] {
+			events = append(events, one)
+		}
+	}
+	return events, nil
+}
+
 func checkDestinationName(name string) string {
 	trimmed := strings.TrimSpace(name)
 	if len(trimmed) > destinationNameLimit {
@@ -327,7 +378,8 @@ func maskAddress(host string) string {
 }
 
 const selectDestinations = `
-	select held.id, held.kind, held.name, held.host, held.state,
+	select held.id, held.kind, held.name, held.host, held.state, held.events,
+	       held.signing_secret_set_at, held.previous_secret_until,
 	       held.verified_at, held.disabled_at, held.created_at
 	  from publication_destinations held
 	`
@@ -338,7 +390,8 @@ func collectDestinations(rows pgx.Rows) ([]Destination, error) {
 	for rows.Next() {
 		var one Destination
 		err := rows.Scan(
-			&one.ID, &one.Kind, &one.Name, &one.Host, &one.State,
+			&one.ID, &one.Kind, &one.Name, &one.Host, &one.State, &one.Events,
+			&one.SecretSetAt, &one.OldUntil,
 			&one.VerifiedAt, &one.DisabledAt, &one.CreatedAt,
 		)
 		if err != nil {

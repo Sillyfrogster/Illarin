@@ -48,7 +48,7 @@ func (s *Service) VerifyDestination(
 	if _, err := s.Destination(ctx, id); err != nil {
 		return Destination{}, err
 	}
-	address, secret, err := s.endpointOf(ctx, id)
+	address, secrets, err := s.endpointOf(ctx, id)
 	if err != nil {
 		return Destination{}, err
 	}
@@ -63,7 +63,7 @@ func (s *Service) VerifyDestination(
 	if err != nil {
 		return Destination{}, fmt.Errorf("write the verification event: %w", err)
 	}
-	headers, err := webhook.Headers(secret, uuid.New().String(), sent, body)
+	headers, err := webhook.Headers(secrets, uuid.New().String(), sent, body)
 	if err != nil {
 		return Destination{}, err
 	}
@@ -136,25 +136,4 @@ func newChallenge() (string, error) {
 		return "", fmt.Errorf("make a challenge: %w", err)
 	}
 	return base64.RawURLEncoding.EncodeToString(body), nil
-}
-
-// endpointOf opens the address and secret one destination was configured with.
-// They leave this package only as a request already made.
-func (s *Service) endpointOf(ctx context.Context, id uuid.UUID) (string, string, error) {
-	var sealedAddress, sealedSecret []byte
-	err := s.pool.QueryRow(ctx, `
-		select address, signing_secret from publication_destinations where id = $1
-	`, id).Scan(&sealedAddress, &sealedSecret)
-	if err != nil {
-		return "", "", fmt.Errorf("read the destination configuration: %w", err)
-	}
-	address, err := s.sealing.Open(sealedAddress)
-	if err != nil {
-		return "", "", fmt.Errorf("open the endpoint address: %w", err)
-	}
-	secret, err := s.sealing.Open(sealedSecret)
-	if err != nil {
-		return "", "", fmt.Errorf("open the signing secret: %w", err)
-	}
-	return string(address), string(secret), nil
 }

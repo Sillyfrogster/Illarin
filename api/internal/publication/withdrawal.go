@@ -49,6 +49,7 @@ func (s *Service) WithdrawPost(
 	id uuid.UUID,
 	version int,
 	reason, explanation string,
+	announcement Announcement,
 ) (Post, error) {
 	said, err := checkWithdrawal(reason, explanation)
 	if err != nil {
@@ -59,6 +60,10 @@ func (s *Service) WithdrawPost(
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
+		return Post{}, err
+	}
+	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -96,11 +101,16 @@ func (s *Service) WithdrawPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("take the post out of public view: %w", err)
 	}
+	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type) values ($1, $2, $3, $4)
-	`, uuid.New(), id, public, EventWithdrawn)
+		insert into publication_events (id, post_id, revision_id, type, note)
+		values ($1, $2, $3, $4, $5)
+	`, eventID, id, public, EventWithdrawn, note)
 	if err != nil {
 		return Post{}, fmt.Errorf("record the withdrawal event: %w", err)
+	}
+	if err := queueDeliveries(ctx, tx, eventID, EventWithdrawn, chosen); err != nil {
+		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.withdrawn",
@@ -124,12 +134,17 @@ func (s *Service) RepublishPost(
 	editor Editor,
 	id, revisionID uuid.UUID,
 	version int,
+	announcement Announcement,
 ) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
+		return Post{}, err
+	}
+	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -164,11 +179,16 @@ func (s *Service) RepublishPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("put the post back in public view: %w", err)
 	}
+	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type) values ($1, $2, $3, $4)
-	`, uuid.New(), id, revisionID, EventPublished)
+		insert into publication_events (id, post_id, revision_id, type, note)
+		values ($1, $2, $3, $4, $5)
+	`, eventID, id, revisionID, EventPublished, note)
 	if err != nil {
 		return Post{}, fmt.Errorf("record the republication event: %w", err)
+	}
+	if err := queueDeliveries(ctx, tx, eventID, EventPublished, chosen); err != nil {
+		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.republished",

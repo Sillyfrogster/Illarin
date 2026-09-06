@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
@@ -152,9 +153,12 @@ func echoesTheChallenge(one arrived) (int, string) {
 }
 
 // throughLoopback widens the outbound address policy by one thing, the
-// receiver this test runs, and holds every other address to the real rule.
+// receiver this test runs, and holds every other address to the real rule. It
+// resolves the host on every request the way the real caller does, so a test
+// can move a host out of public space between attempts.
 type throughLoopback struct {
 	receiver string
+	resolves func(host string) ([]netip.Addr, error)
 }
 
 func (t throughLoopback) Check(address string) (string, error) {
@@ -167,12 +171,26 @@ func (t throughLoopback) Check(address string) (string, error) {
 	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
 }
 
-func (throughLoopback) Post(
+func (t throughLoopback) Post(
 	ctx context.Context,
 	address string,
 	headers map[string]string,
 	body []byte,
 ) (outbound.Answer, error) {
+	parsed, err := url.Parse(address)
+	if err != nil {
+		return outbound.Answer{}, err
+	}
+	if t.resolves != nil {
+		reaching := outbound.Reaching{
+			Resolve: func(context.Context, string) ([]netip.Addr, error) {
+				return t.resolves(parsed.Hostname())
+			},
+		}
+		if _, err := reaching.At(ctx, parsed.Hostname(), "443"); err != nil {
+			return outbound.Answer{}, err
+		}
+	}
 	request, err := http.NewRequestWithContext(
 		ctx, http.MethodPost, address, strings.NewReader(string(body)),
 	)
@@ -192,7 +210,10 @@ func (throughLoopback) Post(
 	if response.ContentLength > 0 {
 		response.Body.Read(said)
 	}
-	return outbound.Answer{Status: response.StatusCode, Body: said}, nil
+	return outbound.Answer{
+		Status: response.StatusCode, Body: said,
+		RetryAfter: outbound.RetryAfter(response.Header.Get("Retry-After"), time.Now()),
+	}, nil
 }
 
 type destinationStack struct {
@@ -203,12 +224,22 @@ type destinationStack struct {
 
 func newDestinationStack(t *testing.T) destinationStack {
 	t.Helper()
+	return newDestinationStackThrough(t, nil)
+}
+
+// newDestinationStackThrough builds the stack with a resolver a test controls,
+// so an attempt can find a host somewhere Illarin refuses to connect.
+func newDestinationStackThrough(
+	t *testing.T,
+	resolves func(host string) ([]netip.Addr, error),
+) destinationStack {
+	t.Helper()
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	to := newReceiver(t)
 	handlers := newTestHandlersWithDelivery(
 		t, pool, 1<<20, outbox, testDeliverySettings(), publication.DefaultRates(),
-		throughLoopback{receiver: to.server.URL},
+		throughLoopback{receiver: to.server.URL, resolves: resolves},
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
@@ -359,11 +390,18 @@ func (s destinationStack) publishTo(
 // sendQueued runs the delivery worker the way the API process does.
 func (s destinationStack) sendQueued(t *testing.T) int {
 	t.Helper()
-	sent, err := s.handlers.publications.SendDueDeliveries(t.Context(), time.Now())
+	return s.sendQueuedAt(t, time.Now())
+}
+
+// sendQueuedAt runs the worker at an instant the test chooses, which is how the
+// retry schedule is proved without waiting on it.
+func (s destinationStack) sendQueuedAt(t *testing.T, at time.Time) int {
+	t.Helper()
+	made, err := s.handlers.publications.SendDueDeliveries(t.Context(), at)
 	if err != nil {
 		t.Fatalf("send queued deliveries: %v", err)
 	}
-	return sent
+	return made
 }
 
 // readyPost is one admin post with everything publication asks for.
@@ -630,8 +668,8 @@ func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
 		t.Errorf("the post is not readable: %d", reading.Code)
 	}
 	sent := stack.deliveries(t, stack.editor, ready.ID)
-	if sent.Deliveries[0].State != "failed" {
-		t.Errorf("delivery state = %q, want failed", sent.Deliveries[0].State)
+	if sent.Deliveries[0].State != "pending" {
+		t.Errorf("delivery state = %q, want pending for another attempt", sent.Deliveries[0].State)
 	}
 	if *sent.Deliveries[0].Last.Status != http.StatusInternalServerError {
 		t.Errorf("attempt status = %d, want 500", *sent.Deliveries[0].Last.Status)
