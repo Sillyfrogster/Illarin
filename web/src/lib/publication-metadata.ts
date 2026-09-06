@@ -127,8 +127,7 @@ export function postStructuredData(post: PublicPost): string {
   );
 }
 
-// A browser reads a script element's text before it parses the JSON, so anything
-// that could close the element early is written as an escape instead.
+/** The characters that could close a script element early, which the article data escapes. */
 const CLOSES_A_SCRIPT = /[<>&\u2028\u2029]/g;
 
 function inertInAScript(json: string): string {

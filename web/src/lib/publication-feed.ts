@@ -132,7 +132,7 @@ function jsonItem(post: PostSummary): Record<string, unknown> {
   };
 }
 
-// XML 1.0 has no way to write most control characters, so they are dropped rather than escaped.
+/** The characters XML 1.0 cannot carry, which a feed drops rather than escapes. */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
 const UNWRITABLE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
 

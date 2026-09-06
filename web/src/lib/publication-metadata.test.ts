@@ -178,8 +178,9 @@ test("a title cannot close the script the article data is written in", () => {
     ...POST,
     title: "</script><script>alert(1)</script>",
   });
-  expect(attacked).not.toContain("</script>");
   expect(attacked).not.toContain("<");
+  expect(attacked).not.toContain(">");
+  expect(attacked).not.toContain("&");
   expect(JSON.parse(attacked).headline).toBe(
     "</script><script>alert(1)</script>",
   );

@@ -29,11 +29,7 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
   }
   return (
     <>
-      <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: the article data is composed from the validated post
-        dangerouslySetInnerHTML={{ __html: postStructuredData(post) }}
-        type="application/ld+json"
-      />
+      <script type="application/ld+json">{postStructuredData(post)}</script>
       <Article post={post} />
     </>
   );
