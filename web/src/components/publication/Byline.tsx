@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { PostByline } from "@/lib/api/query";
-import { profileAddress } from "@/lib/profile-address";
+import { bylineName, bylineProfile } from "@/lib/byline";
 import styles from "./Byline.module.css";
 
 /** Who wrote a post and what they were writing as, exactly as its byline was stored. */
 export function Byline({ byline }: { byline: PostByline }) {
-  const name = byline.displayName || `@${byline.handle}`;
+  const name = bylineName(byline);
+  const profile = bylineProfile(byline);
   return (
     <div className={styles.byline}>
       <span className={styles.portrait} aria-hidden="true">
@@ -25,12 +26,12 @@ export function Byline({ byline }: { byline: PostByline }) {
         )}
       </span>
       <span className={styles.who}>
-        {byline.historical ? (
-          <span className={styles.name}>{name}</span>
-        ) : (
-          <a className={styles.name} href={profileAddress(byline.handle)}>
+        {profile ? (
+          <a className={styles.name} href={profile}>
             {name}
           </a>
+        ) : (
+          <span className={styles.name}>{name}</span>
         )}
         <span className={styles.standing}>
           {byline.app ? (
@@ -67,15 +68,16 @@ export function BylineLine({
   byline: PostByline;
   quiet?: boolean;
 }) {
-  const name = byline.displayName || `@${byline.handle}`;
+  const name = bylineName(byline);
+  const profile = bylineProfile(byline);
   return (
     <span className={styles.line}>
-      {byline.historical ? (
-        <span className={styles.lineName}>{name}</span>
-      ) : (
-        <a className={styles.lineName} href={profileAddress(byline.handle)}>
+      {profile ? (
+        <a className={styles.lineName} href={profile}>
           {name}
         </a>
+      ) : (
+        <span className={styles.lineName}>{name}</span>
       )}
       {quiet ? null : byline.app ? (
         <Link className={styles.lineApp} href={`/blog/app/${byline.app.slug}`}>

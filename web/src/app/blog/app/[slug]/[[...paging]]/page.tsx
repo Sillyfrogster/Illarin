@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
 import { ScopedArchive } from "@/components/publication/Archive";
-import { blogMetadata } from "@/lib/publication-metadata";
+import { archiveDescription, blogMetadata } from "@/lib/publication-metadata";
 import { scopedArchive } from "@/lib/scoped-archive";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/blog/app/[slug]/[[...paging]]">): Promise<Metadata> {
   const { slug, paging } = await params;
-  const { found, canonical } = await scopedArchive("app", slug, paging);
+  const { found, address, canonical } = await scopedArchive(
+    "app",
+    slug,
+    paging,
+  );
   return blogMetadata(
     found.name,
-    `Everything Illarin has published about ${found.name}.`,
+    archiveDescription("app", found.name),
     canonical,
+    address,
   );
 }
 

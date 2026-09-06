@@ -1,4 +1,9 @@
-import { siteUrl } from "./site-metadata";
+import { blogUrl, siteUrl } from "./site-metadata";
+
+/** The whole address of anything the blog publishes, on the blog's own origin. */
+export function blogAddress(path: string): string {
+  return new URL(path, blogUrl).href;
+}
 
 /** The only schemes a post link may use. Go refuses every other one. */
 export function isSafeAddress(href: string): boolean {
@@ -37,5 +42,5 @@ export function normalizedSlug(candidate: string): string {
 
 /** The whole address a post answers to, which is what sharing hands to someone else. */
 export function postPermalink(slug: string): string {
-  return new URL(`/blog/${encodeURI(slug)}`, siteUrl).href;
+  return blogAddress(`/blog/${encodeURI(slug)}`);
 }

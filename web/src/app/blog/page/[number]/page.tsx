@@ -4,6 +4,7 @@ import { ScopedArchive } from "@/components/publication/Archive";
 import { fetchPostArchive } from "@/lib/api/query";
 import {
   BLOG_DESCRIPTION,
+  BLOG_HOME,
   BLOG_TITLE,
   blogMetadata,
   pageAddress,
@@ -16,7 +17,8 @@ export async function generateMetadata({
   return blogMetadata(
     `Page ${page}`,
     BLOG_DESCRIPTION,
-    pageAddress("/blog", page),
+    pageAddress(BLOG_HOME, page),
+    BLOG_HOME,
   );
 }
 
@@ -24,7 +26,7 @@ export default async function BlogArchivePage({
   params,
 }: PageProps<"/blog/page/[number]">) {
   const page = readPage((await params).number);
-  if (page === 1) permanentRedirect("/blog");
+  if (page === 1) permanentRedirect(BLOG_HOME);
   const archive = await fetchPostArchive({ page });
   if (!archive || archive.posts.length === 0) notFound();
   return (
@@ -33,7 +35,7 @@ export default async function BlogArchivePage({
       scope={{
         kind: "Publication",
         heading: BLOG_TITLE,
-        address: "/blog",
+        address: BLOG_HOME,
         home: null,
       }}
     />

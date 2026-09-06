@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 /** The public origin, so previews, canonicals and the sitemap carry absolute URLs */
 export const siteUrl = process.env.SITE_URL ?? "http://localhost:8000";
 
+/** The blog's own public origin, which every publication address is built from */
+export const blogUrl = process.env.BLOG_URL ?? siteUrl;
+
 export const SITE_NAME = "Illarin";
 
 export const SITE_DESCRIPTION =
