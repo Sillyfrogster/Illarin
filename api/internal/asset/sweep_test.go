@@ -453,9 +453,9 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	revisionID := uuid.New()
 	if _, err := pool.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
-		                            document, document_version)
+		                            document, document_version, captured_for)
 		values ($1, $2, 1, 'A post with pictures', 'A summary.', 'a-post-with-pictures', $3,
-		        '{"version":2,"content":[]}', 2)
+		        '{"version":2,"content":[]}', 2, 'publication')
 	`, revisionID, postID, categoryID); err != nil {
 		t.Fatalf("insert revision: %v", err)
 	}
