@@ -8,7 +8,7 @@ import rows from "@/components/console/Console.module.css";
 import { ConsoleGate } from "@/components/console/ConsoleGate";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { Section } from "@/components/console/Section";
-import { readPosts } from "@/lib/api/posts";
+import { readDeletedPosts, readPosts } from "@/lib/api/posts";
 import { readWorkspace } from "@/lib/api/publication";
 import type {
   Post,
@@ -24,12 +24,14 @@ export function ContributorWorkspace() {
   const { account } = useAuth();
   const [open, setOpen] = useState<PublicationWorkspace | null>(null);
   const [posts, setPosts] = useState<Post[] | null>(null);
+  const [deleted, setDeleted] = useState<Post[]>([]);
   const [failure, setFailure] = useState("");
 
   const load = useCallback(async () => {
-    const [workspace, written] = await Promise.all([
+    const [workspace, written, waiting] = await Promise.all([
       readWorkspace(),
       readPosts(),
+      readDeletedPosts(),
     ]);
     if (workspace.error || !workspace.value) {
       setFailure(workspace.error ?? "");
@@ -38,6 +40,7 @@ export function ContributorWorkspace() {
     setFailure("");
     setOpen(workspace.value);
     setPosts(written.value?.posts ?? []);
+    setDeleted(waiting.value?.posts ?? []);
   }, []);
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export function ContributorWorkspace() {
     >
       <Inside
         account={account}
+        deleted={deleted}
         failure={failure}
         onFailure={setFailure}
         open={open}
@@ -66,12 +70,14 @@ function Inside({
   account,
   open,
   posts,
+  deleted,
   failure,
   onFailure,
 }: {
   account: ReturnType<typeof useAuth>["account"];
   open: PublicationWorkspace | null;
   posts: Post[] | null;
+  deleted: Post[];
   failure: string;
   onFailure: (message: string) => void;
 }) {
@@ -120,7 +126,12 @@ function Inside({
           {failure}
         </p>
       ) : null}
-      <PostRows onFailure={onFailure} posts={posts} workspace={open} />
+      <PostRows
+        deleted={deleted}
+        onFailure={onFailure}
+        posts={posts}
+        workspace={open}
+      />
       {open.grants.map((grant) => (
         <Approval key={grant.id} grant={grant} />
       ))}

@@ -1,0 +1,28 @@
+.open {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.open:hover {
+  border-color: var(--color-critical-border);
+  color: var(--color-critical-strong);
+}
+
+.confirm {
+  composes: confirm from "./TakeDown.module.css";
+}
+
+.refusal {
+  composes: refusal from "./TakeDown.module.css";
+}

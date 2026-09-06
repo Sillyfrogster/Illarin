@@ -12,6 +12,7 @@ export function FormDialog({
   busy,
   ready = true,
   acknowledge,
+  critical,
   destructive,
   onClose,
   onCommit,
@@ -24,6 +25,7 @@ export function FormDialog({
   busy?: boolean;
   ready?: boolean;
   acknowledge?: boolean;
+  critical?: boolean;
   destructive?: ReactNode;
   onClose: () => void;
   onCommit: () => void;
@@ -84,6 +86,7 @@ export function FormDialog({
           <button
             type="submit"
             className={styles.keep}
+            data-critical={critical || undefined}
             disabled={!ready || busy}
           >
             {commit}

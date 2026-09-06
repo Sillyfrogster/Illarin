@@ -20,6 +20,12 @@
   grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) auto;
 }
 
+/* A listing of long titles gives the name the room the detail does not need. */
+.row[data-name="wide"] {
+  grid-template-areas: "name detail actions";
+  grid-template-columns: minmax(0, 24rem) minmax(0, 1fr) auto;
+}
+
 .mark {
   display: flex;
   grid-area: mark;
@@ -177,7 +183,8 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .row[data-plain="true"] {
+  .row[data-plain="true"],
+  .row[data-name="wide"] {
     grid-template-areas:
       "name"
       "detail"

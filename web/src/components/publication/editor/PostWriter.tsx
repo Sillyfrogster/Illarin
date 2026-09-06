@@ -31,10 +31,12 @@ import {
   toInstant,
 } from "@/lib/schedule-time";
 import { BodyEditor } from "./BodyEditor";
+import { Discard } from "./Discard";
 import { GrowingText } from "./GrowingText";
 import { PostDetails } from "./PostDetails";
 import { PostHistory } from "./PostHistory";
 import styles from "./PostWriter.module.css";
+import { RecoveryBand } from "./RecoveryBand";
 import { ScheduleBand } from "./ScheduleBand";
 import { ScheduleFields } from "./ScheduleFields";
 import { TakeDown } from "./TakeDown";
@@ -262,6 +264,49 @@ export function PostWriter({ id }: { id: string }) {
   const category =
     categories.find((one) => one.id === draft.categoryId) ?? post.category;
 
+  if (post.deletion) {
+    return (
+      <div className={styles.writer}>
+        <h1 className={styles.heading}>{draft.title || "Untitled post"}</h1>
+        <header className={styles.bar}>
+          <Link className={styles.back} href="/admin/blog">
+            <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+            Posts
+          </Link>
+          <p className={styles.state} data-state="refused">
+            Deleted
+          </p>
+        </header>
+
+        <RecoveryBand onChanged={restored} onFailure={setRefusal} post={post} />
+
+        {refusal ? (
+          <p className={styles.refusal} role="alert">
+            {refusal}
+          </p>
+        ) : null}
+
+        <article className={styles.reading}>
+          <ArticleIdentity
+            byline={null}
+            category={category.label}
+            header={draft.header}
+            media={media}
+            publishedAt={post.publishedAt ?? null}
+            release={post.release ?? null}
+            standing="Deleted. Nobody can read this until you bring it back."
+            summary={draft.summary}
+            title={draft.title}
+            updatedAt={post.updatedPublicAt ?? null}
+          />
+          <div className={styles.prose}>
+            <PostBody document={draft.document} media={media} />
+          </div>
+        </article>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.writer}>
       <h1 className={styles.heading}>{draft.title || "Untitled post"}</h1>
@@ -299,6 +344,9 @@ export function PostWriter({ id }: { id: string }) {
           </button>
           {post.status === "published" ? (
             <TakeDown onWithdrawn={settled} post={post} />
+          ) : null}
+          {mayDelete(post, admin) ? (
+            <Discard onDeleted={settled} post={post} />
           ) : null}
           <button
             className={styles.publish}
@@ -465,6 +513,12 @@ export function PostWriter({ id }: { id: string }) {
       </div>
     </div>
   );
+}
+
+// mayDelete answers whether this editor is allowed to delete this post at all.
+function mayDelete(post: Post, admin: boolean): boolean {
+  if (post.status === "published") return false;
+  return admin || post.publishedAt === undefined;
 }
 
 // publishHint says what this button will do, including to a waiting schedule.

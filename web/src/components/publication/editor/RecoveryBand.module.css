@@ -1,0 +1,25 @@
+.band {
+  composes: band from "./WithdrawalBand.module.css";
+  border-color: var(--color-critical-border);
+}
+
+.mark {
+  composes: mark from "./WithdrawalBand.module.css";
+  color: var(--color-critical-strong);
+}
+
+.said {
+  composes: said from "./WithdrawalBand.module.css";
+}
+
+.wording {
+  composes: wording from "./WithdrawalBand.module.css";
+}
+
+.actions {
+  composes: actions from "./WithdrawalBand.module.css";
+}
+
+.act {
+  composes: act from "./WithdrawalBand.module.css";
+}

@@ -24,6 +24,10 @@ export function readPosts() {
   return json<{ posts: Post[] }>("/publication/posts", "GET");
 }
 
+export function readDeletedPosts() {
+  return json<{ posts: Post[] }>("/publication/posts?deleted=true", "GET");
+}
+
 export function startPost(draft: {
   grantId?: string;
   categoryId: string;
@@ -139,4 +143,12 @@ export function republishPost(id: string, version: number, revisionId: string) {
     version,
     revisionId,
   });
+}
+
+export function deletePost(id: string, version: number) {
+  return json<Post>(`/publication/posts/${id}/delete`, "POST", { version });
+}
+
+export function recoverPost(id: string, version: number) {
+  return json<Post>(`/publication/posts/${id}/recover`, "POST", { version });
 }

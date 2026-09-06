@@ -144,6 +144,11 @@
   color: var(--color-on-emphasis);
 }
 
+.keep[data-critical] {
+  background: var(--color-critical);
+  color: var(--color-on-critical);
+}
+
 .keep:disabled {
   background: var(--color-muted);
   color: var(--color-text-secondary);
