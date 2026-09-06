@@ -16,7 +16,10 @@ import (
 const alreadyPast = time.Nanosecond
 
 func deadlines(json time.Duration) Deadlines {
-	return Deadlines{JSON: json, Upload: time.Minute, Download: time.Minute, Deliver: time.Minute}
+	return Deadlines{
+		JSON: json, Upload: time.Minute, Download: time.Minute,
+		Deliver: time.Minute, Verify: time.Minute,
+	}
 }
 
 func TestAListingPastItsDeadlineFailsRatherThanAnswers(t *testing.T) {

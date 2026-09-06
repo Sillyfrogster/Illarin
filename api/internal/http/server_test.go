@@ -56,6 +56,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		Upload:   30 * time.Second,
 		Download: 30 * time.Second,
 		Deliver:  30 * time.Second,
+		Verify:   30 * time.Second,
 	})
 	base := serve(t, r, Timeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})
 
