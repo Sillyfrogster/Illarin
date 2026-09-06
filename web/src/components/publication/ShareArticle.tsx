@@ -27,6 +27,7 @@ export function ShareArticle({
   useEffect(() => setSheet(hasNativeShare(navigator)), []);
 
   useEffect(() => {
+    if (state === "refused") address.current?.select();
     if (state !== "copied") return;
     const timer = setTimeout(() => setState("ready"), REPORT_LINGERS);
     return () => clearTimeout(timer);
@@ -38,7 +39,6 @@ export function ShareArticle({
       setState("copied");
     } catch {
       setState("refused");
-      requestAnimationFrame(() => address.current?.select());
     }
   }
 

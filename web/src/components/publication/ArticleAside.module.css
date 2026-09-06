@@ -26,14 +26,18 @@
 }
 
 .reach {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   padding: 6px 0 6px 14px;
   border-radius: var(--radius-xs);
   color: var(--color-text-secondary);
   font-size: var(--type-secondary-size);
   line-height: 19px;
+  overflow-wrap: break-word;
   text-wrap: pretty;
   transition: color 160ms var(--ease);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .reach:hover {
@@ -150,9 +154,7 @@
 
   .reach {
     min-height: 44px;
-    padding-block: 12px;
-    display: flex;
-    align-items: center;
+    padding-block: 13px;
   }
 
   .action {
