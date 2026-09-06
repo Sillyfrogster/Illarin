@@ -18,6 +18,7 @@ const POST: PostSummary = {
     handle: "wren",
     displayName: "Wren Ashdown",
     contactEmail: "",
+    historical: false,
     positions: [],
     distinctions: [],
   },

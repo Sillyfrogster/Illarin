@@ -1999,6 +1999,8 @@ export interface components {
     };
     PostByline: {
       handle: string;
+      /** @description True when the byline is an admin-supplied snapshot with no account behind it, so nothing should link it to a public profile. */
+      historical: boolean;
       displayName: string;
       contactEmail: string;
       avatar?: components["schemas"]["ProfileAvatar"] | null;

@@ -5010,9 +5010,15 @@ components:
         - contactEmail
         - positions
         - distinctions
+        - historical
       properties:
         handle:
           type: string
+        historical:
+          type: boolean
+          description: >-
+            True when the byline is an admin-supplied snapshot with no account
+            behind it, so nothing should link it to a public profile.
         displayName:
           type: string
         contactEmail:

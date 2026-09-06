@@ -25,9 +25,13 @@ export function Byline({ byline }: { byline: PostByline }) {
         )}
       </span>
       <span className={styles.who}>
-        <a className={styles.name} href={profileAddress(byline.handle)}>
-          {name}
-        </a>
+        {byline.historical ? (
+          <span className={styles.name}>{name}</span>
+        ) : (
+          <a className={styles.name} href={profileAddress(byline.handle)}>
+            {name}
+          </a>
+        )}
         <span className={styles.standing}>
           {byline.app ? (
             <>
@@ -66,9 +70,13 @@ export function BylineLine({
   const name = byline.displayName || `@${byline.handle}`;
   return (
     <span className={styles.line}>
-      <a className={styles.lineName} href={profileAddress(byline.handle)}>
-        {name}
-      </a>
+      {byline.historical ? (
+        <span className={styles.lineName}>{name}</span>
+      ) : (
+        <a className={styles.lineName} href={profileAddress(byline.handle)}>
+          {name}
+        </a>
+      )}
       {quiet ? null : byline.app ? (
         <Link className={styles.lineApp} href={`/blog/app/${byline.app.slug}`}>
           {byline.app.name}

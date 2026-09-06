@@ -486,6 +486,7 @@ func toAPIByline(found publication.Byline) PostByline {
 		ContactEmail: found.ContactEmail,
 		Positions:    found.Positions,
 		Distinctions: found.Distinctions,
+		Historical:   found.AccountID == nil,
 	}
 	if found.Avatar != nil {
 		shown.Avatar = &ProfileAvatar{

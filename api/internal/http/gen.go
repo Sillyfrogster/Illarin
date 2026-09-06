@@ -2667,7 +2667,10 @@ type PostByline struct {
 	DisplayName  string          `json:"displayName"`
 	Distinctions []string        `json:"distinctions"`
 	Handle       string          `json:"handle"`
-	Positions    []string        `json:"positions"`
+
+	// Historical True when the byline is an admin-supplied snapshot with no account behind it, so nothing should link it to a public profile.
+	Historical bool     `json:"historical"`
+	Positions  []string `json:"positions"`
 }
 
 // PostConflict A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version.
