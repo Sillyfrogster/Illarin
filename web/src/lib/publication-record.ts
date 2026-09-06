@@ -8,6 +8,7 @@ import {
 /** The published chronology a pull surface reads, and the scope it was read under. */
 export type PublicationRecord = {
   posts: PostSummary[];
+  pages: number;
   category: PublicationCategory | null;
   app: PublicationApp | null;
 };
@@ -29,6 +30,7 @@ export async function readPublication(
   }
   return {
     posts: posts.slice(0, wanted),
+    pages: first.pages,
     category: first.category ?? null,
     app: first.app ?? null,
   };

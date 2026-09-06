@@ -5,8 +5,11 @@ const robots = buildRobots("https://illarin.xyz");
 const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
 const disallowed = [rules.disallow ?? []].flat();
 
-test("points crawlers at the sitemap", () => {
-  expect(robots.sitemap).toBe("https://illarin.xyz/sitemap.xml");
+test("points crawlers at the catalog and the publication sitemaps", () => {
+  expect(robots.sitemap).toEqual([
+    "https://illarin.xyz/sitemap.xml",
+    "http://localhost:8000/blog/sitemap.xml",
+  ]);
 });
 
 test("keeps crawlers off the API, downloads and the link handover", () => {

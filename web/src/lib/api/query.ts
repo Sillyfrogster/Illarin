@@ -435,6 +435,12 @@ export async function fetchPostCategories(): Promise<PublicationCategory[]> {
   return data.categories;
 }
 
+export async function fetchPostApps(): Promise<PublicationApp[]> {
+  const { data, error } = await api.GET("/v1/post-apps", {});
+  if (error || !data) return [];
+  return data.apps;
+}
+
 export async function fetchProfileRestriction(
   handle: string,
 ): Promise<ProfileRestriction | null> {
