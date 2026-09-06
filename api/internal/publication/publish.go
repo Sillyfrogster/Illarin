@@ -116,8 +116,8 @@ type captured struct {
 
 // makePublic puts one already-captured edition in front of readers, and is the
 // whole of what publishing does whether an author asked now or a schedule did.
-// It queues the delivery work but makes no request, so the transaction that
-// puts a post live never waits on anything outside Illarin.
+// A first publication queues the delivery work but makes no request, so the
+// transaction that puts a post live never waits on anything outside Illarin.
 func makePublic(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -159,6 +159,9 @@ func makePublic(
 	`, eventID, locked.ID, revisionID, event, choice.Note)
 	if err != nil {
 		return fmt.Errorf("record the publication event: %w", err)
+	}
+	if !firstTime {
+		return nil
 	}
 	return queueDeliveries(ctx, tx, eventID, choice.Chosen)
 }

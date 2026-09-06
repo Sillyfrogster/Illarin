@@ -551,6 +551,29 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 	}
 }
 
+func TestPublishingChangesToALivePostSendsNothing(t *testing.T) {
+	stack := newDestinationStack(t)
+	made := stack.active(t, "Release feed")
+	live := stack.publishedTo(t, stack.readyPost(t), made.Destination.ID, "")
+	if sent := stack.sendQueued(t); sent != 1 {
+		t.Fatalf("the first publication settled %d deliveries, want 1", sent)
+	}
+
+	again := stack.publishTo(t, stack.editor, live.ID, live.Version, fmt.Sprintf(
+		`{"version":%d,"destinationIds":[%q]}`, live.Version, made.Destination.ID,
+	))
+
+	if again.Code != http.StatusOK {
+		t.Fatalf("publish status = %d: %s", again.Code, again.Body.String())
+	}
+	if sent := stack.sendQueued(t); sent != 0 {
+		t.Fatalf("publishing changes settled %d deliveries, want 0", sent)
+	}
+	if arrivals := stack.to.arrivals(); len(arrivals) != 1 {
+		t.Fatalf("the receiver was sent %d requests, want 1", len(arrivals))
+	}
+}
+
 func TestTheWebhookIdIsTheDeliveryAndTheBodyIsWhatWasSigned(t *testing.T) {
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
