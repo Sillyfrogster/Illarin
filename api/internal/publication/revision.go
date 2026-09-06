@@ -211,7 +211,7 @@ func (s *Service) RestoreRevision(
 
 // restoredAddress keeps a published post at the address readers already have.
 func restoredAddress(ctx context.Context, tx pgx.Tx, locked working, kept working) (*string, error) {
-	if locked.Status == StatusPublished || kept.Slug == "" || kept.Slug == locked.Slug {
+	if locked.PublishedAt != nil || kept.Slug == "" || kept.Slug == locked.Slug {
 		return nullable(locked.Slug), nil
 	}
 	taken, err := addressTaken(ctx, tx, locked.ID, kept.Slug)

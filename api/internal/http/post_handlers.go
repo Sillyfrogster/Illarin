@@ -249,6 +249,9 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsP
 func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
 	found, err := h.publications.PublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, publication.ErrPostNotFound) {
+		if h.withdrawnPost(c, slug) {
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such post."})
 		return
 	}
@@ -315,6 +318,20 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrPostUnpublished):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
 			"There is nothing to correct until the post is published.")
+	case errors.Is(err, publication.ErrPostNotPublic):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"Only a post readers can see right now can be withdrawn.")
+	case errors.Is(err, publication.ErrPostNotWithdrawn):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"This post is not out of public view.")
+	case errors.Is(err, publication.ErrPostWithdrawn):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"This post is out of public view. Put it back with republish.")
+	case errors.Is(err, publication.ErrSchedulePublishing):
+		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
+			Error: "This edition is going live now and can no longer be changed.",
+			Code:  CodeScheduleRunning,
+		})
 	case errors.As(err, &stale):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error:     "Someone saved this post while you were writing. Reload to carry on.",
@@ -374,6 +391,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		shown.PublicRevisionId = &public
 	}
 	shown.Schedule = toAPISchedule(found.Schedule)
+	shown.Withdrawal = toAPIWithdrawal(found.Withdrawal)
 	if found.Byline != nil {
 		byline := toAPIByline(*found.Byline)
 		shown.Byline = &byline

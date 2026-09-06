@@ -42,6 +42,7 @@ const (
 	stoppedByRevocation = "The approval behind this post was revoked."
 	stoppedByAddress    = "Another post took this address before the edition went live."
 	stoppedByFailure    = "Illarin could not publish this edition."
+	stoppedByWithdrawal = "The post left public view before this edition went live."
 )
 
 // Schedule is a post's most recent plan to publish one exact edition at one
@@ -87,6 +88,9 @@ func (s *Service) SchedulePost(
 	}
 	if locked.Version != version {
 		return Post{}, Stale{Version: locked.Version, UpdatedAt: locked.UpdatedAt}
+	}
+	if locked.Status == StatusWithdrawn {
+		return Post{}, ErrPostWithdrawn
 	}
 	if locked.Document, err = readyToPublish(locked); err != nil {
 		return Post{}, err
@@ -375,6 +379,9 @@ func refusesLeased(
 			return stoppedByRevocation, nil
 		}
 	}
+	if locked.Status == StatusWithdrawn {
+		return stoppedByWithdrawal, nil
+	}
 	if locked.PublishedAt != nil {
 		return "", nil
 	}
@@ -560,7 +567,13 @@ func (s *Service) attachSchedules(ctx context.Context, posts []Post) error {
 
 // overtakeSchedule stops a schedule an author has just published past, so a
 // waiting edition cannot pull readers back to older words.
-func overtakeSchedule(ctx context.Context, tx pgx.Tx, editor Editor, locked working) error {
+func overtakeSchedule(
+	ctx context.Context,
+	tx pgx.Tx,
+	editor Editor,
+	locked working,
+	after string,
+) error {
 	waiting, err := lockWaitingSchedule(ctx, tx, locked.ID)
 	if errors.Is(err, ErrScheduleNotFound) {
 		return nil
@@ -575,6 +588,6 @@ func overtakeSchedule(ctx context.Context, tx pgx.Tx, editor Editor, locked work
 		Actor: editor.ID, Credential: editor.Credential(),
 		Action: "post.schedule.cancelled", GrantID: locked.GrantID, TokenID: editor.Token,
 		PostID: &locked.ID, ScheduleID: &waiting,
-		Before: locked.Status, After: StatusPublished,
+		Before: locked.Status, After: after,
 	})
 }

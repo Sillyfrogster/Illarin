@@ -1017,6 +1017,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/posts/{id}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Take a published post out of public view. Its address answers with a tombstone, its editions and dates stay exactly as they are, and only Illarin reads the reason. */
+    post: operations["withdrawPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/republish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Put a withdrawn post back in public view showing one edition it has already kept. It returns to the same address under the date it first published. */
+    post: operations["republishPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/schedule": {
     parameters: {
       query?: never;
@@ -1963,7 +1997,7 @@ export interface components {
       field?: string;
     };
     /** @enum {string} */
-    PostStatus: "draft" | "published";
+    PostStatus: "draft" | "published" | "withdrawn";
     /** @description The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly. */
     PostDocument: {
       version: number;
@@ -2041,6 +2075,7 @@ export interface components {
       /** @description The edition readers are being given, once there is one. */
       publicRevisionId?: string | null;
       schedule?: components["schemas"]["PostSchedule"] | null;
+      withdrawal?: components["schemas"]["PostWithdrawal"] | null;
       media: components["schemas"]["PostMedia"][];
       byline?: components["schemas"]["PostByline"] | null;
       /** @description Addresses this post published under and has since left. Every one of them still reaches it. */
@@ -2140,6 +2175,36 @@ export interface components {
       publishedAt: string;
       /** Format: date-time */
       updatedAt?: string;
+    };
+    /** @description Why a post is out of public view. The reason is Illarin's own record; the explanation is the only part a reader is ever shown. */
+    PostWithdrawal: {
+      reason: string;
+      explanation: string;
+      by: string;
+      /** Format: date-time */
+      at: string;
+    };
+    WithdrawPostRequest: {
+      /** @description The working-copy version the withdrawal means to act on. */
+      version: number;
+      /** @description Why the post is coming down. Illarin keeps this and readers never see it. */
+      reason: string;
+      /** @description A separate sentence for readers, shown on the withdrawn address. */
+      explanation?: string;
+    };
+    RepublishPostRequest: {
+      /** @description The working-copy version the republication means to act on. */
+      version: number;
+      /**
+       * Format: uuid
+       * @description The edition readers are given when the post returns.
+       */
+      revisionId: string;
+    };
+    /** @description The whole of what a withdrawn address answers with. It carries the address the tombstone lives at and nothing the post used to say. */
+    WithdrawnPost: {
+      slug: string;
+      explanation: string;
     };
     RenameHandleRequest: {
       handle: string;
@@ -6617,6 +6682,92 @@ export interface operations {
       429: components["responses"]["PublicationTooManyRequests"];
     };
   };
+  withdrawPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WithdrawPostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, out of public view */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, an edition is publishing, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  republishPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RepublishPostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, back in public view */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
   replacePostSchedule: {
     parameters: {
       query?: never;
@@ -6949,6 +7100,15 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description The post at that address was withdrawn */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WithdrawnPost"];
+        };
       };
     };
   };

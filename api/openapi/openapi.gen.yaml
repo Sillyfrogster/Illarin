@@ -2246,6 +2246,104 @@ paths:
                 $ref: '#/components/schemas/PostConflict'
         '429':
           $ref: '#/components/responses/PublicationTooManyRequests'
+  /v1/publication/posts/{id}/withdraw:
+    post:
+      operationId: withdrawPost
+      description: >-
+        Take a published post out of public view. Its address answers with a
+        tombstone, its editions and dates stay exactly as they are, and only
+        Illarin reads the reason.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawPostRequest'
+      responses:
+        '200':
+          description: The post, out of public view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          $ref: '#/components/responses/PublicationUnauthenticated'
+        '403':
+          $ref: '#/components/responses/PublicationForbidden'
+        '404':
+          $ref: '#/components/responses/PublicationNotFound'
+        '409':
+          description: >-
+            The working copy moved on, an edition is publishing, or the key was
+            reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: '#/components/responses/PublicationTooManyRequests'
+  /v1/publication/posts/{id}/republish:
+    post:
+      operationId: republishPost
+      description: >-
+        Put a withdrawn post back in public view showing one edition it has
+        already kept. It returns to the same address under the date it first
+        published.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepublishPostRequest'
+      responses:
+        '200':
+          description: The post, back in public view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          $ref: '#/components/responses/PublicationUnauthenticated'
+        '403':
+          $ref: '#/components/responses/PublicationForbidden'
+        '404':
+          $ref: '#/components/responses/PublicationNotFound'
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/schedule:
     post:
       operationId: schedulePost
@@ -2538,6 +2636,12 @@ paths:
                 $ref: '#/components/schemas/PublicPost'
         '404':
           description: No published post has that address
+        '410':
+          description: The post at that address was withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawnPost'
   /v1/profiles/{handle}:
     get:
       operationId: getProfile
@@ -4895,6 +4999,7 @@ components:
       enum:
         - draft
         - published
+        - withdrawn
     PostDocument:
       type: object
       description: >-
@@ -5110,6 +5215,10 @@ components:
         schedule:
           anyOf:
             - $ref: '#/components/schemas/PostSchedule'
+            - type: 'null'
+        withdrawal:
+          anyOf:
+            - $ref: '#/components/schemas/PostWithdrawal'
             - type: 'null'
         media:
           type: array
@@ -5373,6 +5482,71 @@ components:
         updatedAt:
           type: string
           format: date-time
+    PostWithdrawal:
+      type: object
+      description: >-
+        Why a post is out of public view. The reason is Illarin's own record;
+        the explanation is the only part a reader is ever shown.
+      required:
+        - reason
+        - explanation
+        - by
+        - at
+      properties:
+        reason:
+          type: string
+        explanation:
+          type: string
+        by:
+          type: string
+        at:
+          type: string
+          format: date-time
+    WithdrawPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - reason
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the withdrawal means to act on.
+        reason:
+          type: string
+          description: >-
+            Why the post is coming down. Illarin keeps this and readers never
+            see it.
+        explanation:
+          type: string
+          description: A separate sentence for readers, shown on the withdrawn address.
+    RepublishPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - revisionId
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the republication means to act on.
+        revisionId:
+          type: string
+          format: uuid
+          description: The edition readers are given when the post returns.
+    WithdrawnPost:
+      type: object
+      description: >-
+        The whole of what a withdrawn address answers with. It carries the
+        address the tombstone lives at and nothing the post used to say.
+      required:
+        - slug
+        - explanation
+      properties:
+        slug:
+          type: string
+        explanation:
+          type: string
     RenameHandleRequest:
       type: object
       required:

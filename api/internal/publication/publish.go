@@ -65,6 +65,9 @@ func (s *Service) PublishPost(
 	if locked.Version != version {
 		return Post{}, Stale{Version: locked.Version, UpdatedAt: locked.UpdatedAt}
 	}
+	if locked.Status == StatusWithdrawn {
+		return Post{}, ErrPostWithdrawn
+	}
 	if locked.Document, err = readyToPublish(locked); err != nil {
 		return Post{}, err
 	}
@@ -78,7 +81,7 @@ func (s *Service) PublishPost(
 	if err := makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug); err != nil {
 		return Post{}, err
 	}
-	if err := overtakeSchedule(ctx, tx, editor, locked); err != nil {
+	if err := overtakeSchedule(ctx, tx, editor, locked, StatusPublished); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{

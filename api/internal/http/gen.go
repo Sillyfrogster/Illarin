@@ -910,6 +910,7 @@ func (e PostScheduleState) Valid() bool {
 const (
 	PostStatusDraft     PostStatus = "draft"
 	PostStatusPublished PostStatus = "published"
+	PostStatusWithdrawn PostStatus = "withdrawn"
 )
 
 // Valid indicates whether the value is a known member of the PostStatus enum.
@@ -918,6 +919,8 @@ func (e PostStatus) Valid() bool {
 	case PostStatusDraft:
 		return true
 	case PostStatusPublished:
+		return true
+	case PostStatusWithdrawn:
 		return true
 	default:
 		return false
@@ -2625,6 +2628,7 @@ type Post struct {
 	UpdatedAt        time.Time           `json:"updatedAt"`
 	UpdatedPublicAt  *time.Time          `json:"updatedPublicAt,omitempty"`
 	Version          int                 `json:"version"`
+	Withdrawal       *PostWithdrawal     `json:"withdrawal,omitempty"`
 }
 
 // PostAction One thing that was done to a post, named by who did it, what it was and which edition it touched.
@@ -2830,6 +2834,14 @@ type PostSummary struct {
 type PostVersionRequest struct {
 	// Version The working-copy version the action means to act on.
 	Version int `json:"version"`
+}
+
+// PostWithdrawal Why a post is out of public view. The reason is Illarin's own record; the explanation is the only part a reader is ever shown.
+type PostWithdrawal struct {
+	At          time.Time `json:"at"`
+	By          string    `json:"by"`
+	Explanation string    `json:"explanation"`
+	Reason      string    `json:"reason"`
 }
 
 // PreservedNamespace defines model for PreservedNamespace.
@@ -3142,6 +3154,15 @@ type ReplacePostScheduleRequest struct {
 
 	// RevisionId An edition the post has already kept.
 	RevisionId openapi_types.UUID `json:"revisionId"`
+}
+
+// RepublishPostRequest defines model for RepublishPostRequest.
+type RepublishPostRequest struct {
+	// RevisionId The edition readers are given when the post returns.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// Version The working-copy version the republication means to act on.
+	Version int `json:"version"`
 }
 
 // RequestCode defines model for RequestCode.
@@ -3481,6 +3502,24 @@ type VerifyEmailRequest struct {
 	Token string `json:"token"`
 }
 
+// WithdrawPostRequest defines model for WithdrawPostRequest.
+type WithdrawPostRequest struct {
+	// Explanation A separate sentence for readers, shown on the withdrawn address.
+	Explanation *string `json:"explanation,omitempty"`
+
+	// Reason Why the post is coming down. Illarin keeps this and readers never see it.
+	Reason string `json:"reason"`
+
+	// Version The working-copy version the withdrawal means to act on.
+	Version int `json:"version"`
+}
+
+// WithdrawnPost The whole of what a withdrawn address answers with. It carries the address the tombstone lives at and nothing the post used to say.
+type WithdrawnPost struct {
+	Explanation string `json:"explanation"`
+	Slug        string `json:"slug"`
+}
+
 // WithholdAssetRequest defines model for WithholdAssetRequest.
 type WithholdAssetRequest struct {
 	Reason string `json:"reason"`
@@ -3729,6 +3768,12 @@ type PublishPostParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// RepublishPostParams defines parameters for RepublishPost.
+type RepublishPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // CheckpointPostParams defines parameters for CheckpointPost.
 type CheckpointPostParams struct {
 	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
@@ -3755,6 +3800,12 @@ type SchedulePostParams struct {
 
 // ReplacePostScheduleParams defines parameters for ReplacePostSchedule.
 type ReplacePostScheduleParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// WithdrawPostParams defines parameters for WithdrawPost.
+type WithdrawPostParams struct {
 	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
@@ -3927,6 +3978,9 @@ type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 // PublishPostJSONRequestBody defines body for PublishPost for application/json ContentType.
 type PublishPostJSONRequestBody = PostVersionRequest
 
+// RepublishPostJSONRequestBody defines body for RepublishPost for application/json ContentType.
+type RepublishPostJSONRequestBody = RepublishPostRequest
+
 // CheckpointPostJSONRequestBody defines body for CheckpointPost for application/json ContentType.
 type CheckpointPostJSONRequestBody = PostVersionRequest
 
@@ -3938,6 +3992,9 @@ type SchedulePostJSONRequestBody = SchedulePostRequest
 
 // ReplacePostScheduleJSONRequestBody defines body for ReplacePostSchedule for application/json ContentType.
 type ReplacePostScheduleJSONRequestBody = ReplacePostScheduleRequest
+
+// WithdrawPostJSONRequestBody defines body for WithdrawPost for application/json ContentType.
+type WithdrawPostJSONRequestBody = WithdrawPostRequest
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -4367,6 +4424,9 @@ type ServerInterface interface {
 	// (POST /v1/publication/posts/{id}/publish)
 	PublishPost(c *gin.Context, id openapi_types.UUID, params PublishPostParams)
 
+	// (POST /v1/publication/posts/{id}/republish)
+	RepublishPost(c *gin.Context, id openapi_types.UUID, params RepublishPostParams)
+
 	// (GET /v1/publication/posts/{id}/revisions)
 	ListPostRevisions(c *gin.Context, id openapi_types.UUID)
 
@@ -4384,6 +4444,9 @@ type ServerInterface interface {
 
 	// (PUT /v1/publication/posts/{id}/schedule)
 	ReplacePostSchedule(c *gin.Context, id openapi_types.UUID, params ReplacePostScheduleParams)
+
+	// (POST /v1/publication/posts/{id}/withdraw)
+	WithdrawPost(c *gin.Context, id openapi_types.UUID, params WithdrawPostParams)
 
 	// (GET /v1/publication/token)
 	GetPublicationCredential(c *gin.Context)
@@ -7178,6 +7241,55 @@ func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
 	siw.Handler.PublishPost(c, id, params)
 }
 
+// RepublishPost operation middleware
+func (siw *ServerInterfaceWrapper) RepublishPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RepublishPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RepublishPost(c, id, params)
+}
+
 // ListPostRevisions operation middleware
 func (siw *ServerInterfaceWrapper) ListPostRevisions(c *gin.Context) {
 
@@ -7457,6 +7569,55 @@ func (siw *ServerInterfaceWrapper) ReplacePostSchedule(c *gin.Context) {
 	siw.Handler.ReplacePostSchedule(c, id, params)
 }
 
+// WithdrawPost operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params WithdrawPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WithdrawPost(c, id, params)
+}
+
 // GetPublicationCredential operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicationCredential(c *gin.Context) {
 
@@ -7611,6 +7772,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/import", wrapper.ImportPostMarkdown)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/withdraw", wrapper.WithdrawPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/republish", wrapper.RepublishPost)
 	router.DELETE(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.CancelPostSchedule)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.SchedulePost)
 	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)

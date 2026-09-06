@@ -75,11 +75,6 @@ func (h *Handlers) scheduleError(c *gin.Context, err error) {
 			Error: "This post already has an edition waiting to publish. Replace it instead.",
 			Code:  CodeAlreadyScheduled,
 		})
-	case errors.Is(err, publication.ErrSchedulePublishing):
-		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
-			Error: "This edition is going live now and can no longer be changed.",
-			Code:  CodeScheduleRunning,
-		})
 	default:
 		h.postError(c, err)
 	}

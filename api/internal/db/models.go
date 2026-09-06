@@ -416,6 +416,16 @@ type PostSlug struct {
 	ReservedAt pgtype.Timestamptz
 }
 
+type PostWithdrawal struct {
+	ID          pgtype.UUID
+	PostID      pgtype.UUID
+	RevisionID  pgtype.UUID
+	Reason      string
+	Explanation string
+	WithdrawnBy pgtype.UUID
+	WithdrawnAt pgtype.Timestamptz
+}
+
 type ProfileDistinction struct {
 	ID          pgtype.UUID
 	Form        string

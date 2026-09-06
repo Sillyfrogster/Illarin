@@ -103,6 +103,7 @@ type Post struct {
 	SocialMediaID   *uuid.UUID
 	PublicRevision  *uuid.UUID
 	Schedule        *Schedule
+	Withdrawal      *Withdrawal
 	Media           []PostMedia
 	Byline          *Byline
 	FormerAddresses []string
@@ -405,7 +406,7 @@ func (s *Service) checkWorkingCopy(
 		}
 	}
 	slug := normalizeSlug(in.Slug)
-	if current.Status == StatusPublished && slug != current.Slug {
+	if current.PublishedAt != nil && slug != current.Slug {
 		return edition{}, ErrSlugLocked
 	}
 	if slug != "" {
@@ -678,7 +679,34 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	if err := s.attachSchedules(ctx, found); err != nil {
 		return nil, err
 	}
+	if err := s.attachWithdrawals(ctx, found); err != nil {
+		return nil, err
+	}
 	return found, nil
+}
+
+// attachWithdrawals tells each post still out of public view why it came down.
+func (s *Service) attachWithdrawals(ctx context.Context, posts []Post) error {
+	ids := make([]uuid.UUID, 0, len(posts))
+	for index := range posts {
+		if posts[index].Status == StatusWithdrawn {
+			ids = append(ids, posts[index].ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	latest, err := s.withdrawalsFor(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for index := range posts {
+		if found, held := latest[posts[index].ID]; held {
+			withdrawal := found
+			posts[index].Withdrawal = &withdrawal
+		}
+	}
+	return nil
 }
 
 // attachAttribution gives each post the byline it carries and the addresses it has left behind.

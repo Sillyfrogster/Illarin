@@ -53,6 +53,7 @@ type blogPost struct {
 	SocialMediaID   string              `json:"socialMediaId"`
 	PublicRevision  string              `json:"publicRevisionId"`
 	Schedule        *postSchedule       `json:"schedule"`
+	Withdrawal      *postWithdrawal     `json:"withdrawal"`
 	Media           []postPicture       `json:"media"`
 	Byline          *postByline         `json:"byline"`
 	FormerAddresses []string            `json:"formerAddresses"`

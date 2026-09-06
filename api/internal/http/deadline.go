@@ -124,6 +124,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodGet, "/v1/publication/posts/:id/history"):                        d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/import"):                        d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/publish"):                       d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/posts/:id/withdraw"):                      d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/posts/:id/republish"):                     d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/schedule"):                      d.JSON,
 		routeKey(http.MethodPut, "/v1/publication/posts/:id/schedule"):                       d.JSON,
 		routeKey(http.MethodDelete, "/v1/publication/posts/:id/schedule"):                    d.JSON,
