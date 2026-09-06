@@ -1,0 +1,408 @@
+paths:
+  /v1/publication/destinations:
+    get:
+      operationId: listPublicationDestinations
+      description: >-
+        Every configured destination, masked. Only the publication authority
+        may read it, and even it cannot read back an endpoint address or a
+        signing secret.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The configured destinations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestinationList'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+    post:
+      operationId: addPublicationDestination
+      description: >-
+        Configure one endpoint. The response is the only time Illarin can show
+        its signing secret, and the endpoint receives nothing until it has
+        answered a verification challenge.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPublicationDestinationRequest'
+      responses:
+        '201':
+          description: The destination and its signing secret, shown once
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedPublicationDestination'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+  /v1/publication/destinations/{id}:
+    patch:
+      operationId: updatePublicationDestination
+      description: >-
+        Rename a destination or point it somewhere else. A new address takes it
+        back to unverified, because control of the old one proves nothing about
+        the new one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationDestinationRequest'
+      responses:
+        '200':
+          description: The destination as it now stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestination'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
+    delete:
+      operationId: removePublicationDestination
+      description: >-
+        Take a destination out of the configuration. Every delivery it already
+        holds keeps the name it was sent under.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The destination is gone
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
+  /v1/publication/destinations/{id}/verification:
+    post:
+      operationId: verifyPublicationDestination
+      description: >-
+        Send one signed challenge and activate the destination only when the
+        exact value comes back.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The destination, now active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestination'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
+    delete:
+      operationId: disablePublicationDestination
+      description: >-
+        Stop a destination receiving anything further. What it has already
+        received stays where it is.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The destination, now disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestination'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
+  /v1/publication/apps/{id}/destinations:
+    put:
+      operationId: setPublicationAppDestinations
+      description: >-
+        Record the destinations every grant on one app may send to, and which
+        of them a publication starts with.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DestinationPolicyRequest'
+      responses:
+        '200':
+          description: The destinations the app now allows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such app or destination
+  /v1/publication/grants/{id}/destinations:
+    put:
+      operationId: setPublicationGrantDestinations
+      description: >-
+        Narrow one contributor to its own destinations, or send an absent set
+        to put the grant back on its app's baseline.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DestinationPolicyRequest'
+      responses:
+        '200':
+          description: The destinations the grant now allows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestinationChoiceList'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such grant or destination
+components:
+  schemas:
+    PublicationDestinationState:
+      type: string
+      description: Whether a destination is ready to receive anything.
+      enum:
+        - unverified
+        - active
+        - disabled
+    PublicationDestination:
+      type: object
+      description: >-
+        One configured endpoint as anybody is ever shown it. The address is
+        masked to its host and the signing secret is absent.
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - name
+        - host
+        - address
+        - state
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - webhook
+        name:
+          type: string
+          description: What the authority calls this endpoint, and all a contributor sees.
+        host:
+          type: string
+          description: The host the endpoint answers on.
+        address:
+          type: string
+          description: The masked address, which names the host and hides the rest.
+        state:
+          $ref: '#/components/schemas/PublicationDestinationState'
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        disabledAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    PublicationDestinationList:
+      type: object
+      additionalProperties: false
+      required:
+        - destinations
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationDestination'
+    AddedPublicationDestination:
+      type: object
+      description: A new destination and the one showing its signing secret ever gets.
+      additionalProperties: false
+      required:
+        - destination
+        - secret
+      properties:
+        destination:
+          $ref: '#/components/schemas/PublicationDestination'
+        secret:
+          type: string
+          description: >-
+            The signing secret this endpoint's requests carry. Illarin cannot
+            show it again.
+    AddPublicationDestinationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - address
+      properties:
+        name:
+          type: string
+          maxLength: 48
+        address:
+          type: string
+          maxLength: 300
+          description: >-
+            An https address on port 443 with no username, password or
+            fragment, whose host resolves into public address space.
+    UpdatePublicationDestinationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 48
+        address:
+          type: string
+          maxLength: 300
+    PublicationDestinationChoice:
+      type: object
+      description: >-
+        One destination a post may send to. It carries no address and no
+        secret, which is the whole point of it.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - state
+        - byDefault
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - webhook
+        state:
+          $ref: '#/components/schemas/PublicationDestinationState'
+        byDefault:
+          type: boolean
+          description: Whether a publication starts with this one selected.
+    PublicationDestinationChoiceList:
+      type: object
+      additionalProperties: false
+      required:
+        - destinations
+        - inherited
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationDestinationChoice'
+        inherited:
+          type: boolean
+          description: Whether this set comes from the app rather than being its own.
+    DestinationPolicyRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            The destinations this policy allows. An absent list on a grant puts
+            it back on its app's baseline; an empty list allows nothing.
+          items:
+            type: string
+            format: uuid
+        defaultDestinationIds:
+          type: array
+          description: Which of the allowed destinations a publication starts with.
+          items:
+            type: string
+            format: uuid

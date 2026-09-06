@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 type Config struct {
 	Port                         string
 	SiteURL                      string
+	BlogURL                      string
 	SMTP                         SMTPSettings
 	Microsoft365                 Microsoft365Settings
 	Discord                      DiscordSettings
@@ -32,6 +35,7 @@ type Config struct {
 	StorageFreeSpaceReserveBytes int64
 	AccountStorageCapBytes       int64
 	LinkingHMACKey               []byte
+	PublicationSecretKey         []byte
 	ProbeLimits                  probe.Limits
 	IngestWorkers                int
 	Server                       apihttp.Timeouts
@@ -63,6 +67,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		Port:       get("PORT", "8080"),
 		SiteURL:    get("SITE_URL", "http://localhost:3000"),
+		BlogURL:    get("BLOG_URL", ""),
 		Database:   postgres.DefaultSettings(databaseURL),
 		UploadsDir: get("UPLOADS_DIR", ""),
 		Server:     apihttp.DefaultTimeouts(),
@@ -115,6 +120,23 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("LINKING_HMAC_KEY must be 32 bytes encoded as unpadded base64url")
 	}
 	cfg.LinkingHMACKey = linkingKey
+	publicationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
+	if err != nil || len(publicationKey) != secrets.KeyBytes {
+		return Config{}, fmt.Errorf(
+			"PUBLICATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
+			secrets.KeyBytes,
+		)
+	}
+	if bytes.Equal(publicationKey, linkingKey) {
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
+	}
+	if _, err := secrets.NewKey(publicationKey); err != nil {
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
+	}
+	cfg.PublicationSecretKey = publicationKey
+	if cfg.BlogURL == "" {
+		cfg.BlogURL = cfg.SiteURL
+	}
 	limits := probe.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {

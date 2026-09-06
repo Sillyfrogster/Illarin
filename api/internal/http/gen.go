@@ -837,6 +837,51 @@ func (e PendingLinkPollResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for PostDeliveryOutcome.
+const (
+	PostDeliveryOutcomeDelivered   PostDeliveryOutcome = "delivered"
+	PostDeliveryOutcomeRefused     PostDeliveryOutcome = "refused"
+	PostDeliveryOutcomeUnreachable PostDeliveryOutcome = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryOutcome enum.
+func (e PostDeliveryOutcome) Valid() bool {
+	switch e {
+	case PostDeliveryOutcomeDelivered:
+		return true
+	case PostDeliveryOutcomeRefused:
+		return true
+	case PostDeliveryOutcomeUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostDeliveryState.
+const (
+	PostDeliveryStateDelivered PostDeliveryState = "delivered"
+	PostDeliveryStateFailed    PostDeliveryState = "failed"
+	PostDeliveryStatePending   PostDeliveryState = "pending"
+	PostDeliveryStateSending   PostDeliveryState = "sending"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryState enum.
+func (e PostDeliveryState) Valid() bool {
+	switch e {
+	case PostDeliveryStateDelivered:
+		return true
+	case PostDeliveryStateFailed:
+		return true
+	case PostDeliveryStatePending:
+		return true
+	case PostDeliveryStateSending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostMediaPurpose.
 const (
 	Document PostMediaPurpose = "document"
@@ -969,6 +1014,57 @@ func (e PromptListContentFragmentsRole) Valid() bool {
 	case PromptListContentFragmentsRoleUser:
 		return true
 	case PromptListContentFragmentsRoleUserAppend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationDestinationKind.
+const (
+	PublicationDestinationKindWebhook PublicationDestinationKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the PublicationDestinationKind enum.
+func (e PublicationDestinationKind) Valid() bool {
+	switch e {
+	case PublicationDestinationKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationDestinationChoiceKind.
+const (
+	PublicationDestinationChoiceKindWebhook PublicationDestinationChoiceKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the PublicationDestinationChoiceKind enum.
+func (e PublicationDestinationChoiceKind) Valid() bool {
+	switch e {
+	case PublicationDestinationChoiceKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationDestinationState.
+const (
+	Active     PublicationDestinationState = "active"
+	Disabled   PublicationDestinationState = "disabled"
+	Unverified PublicationDestinationState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the PublicationDestinationState enum.
+func (e PublicationDestinationState) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Disabled:
+		return true
+	case Unverified:
 		return true
 	default:
 		return false
@@ -1634,6 +1730,13 @@ type AddPostMediaRequest struct {
 	Purpose PostMediaPurpose `json:"purpose"`
 }
 
+// AddPublicationDestinationRequest defines model for AddPublicationDestinationRequest.
+type AddPublicationDestinationRequest struct {
+	// Address An https address on port 443 with no username, password or fragment, whose host resolves into public address space.
+	Address string `json:"address"`
+	Name    string `json:"name"`
+}
+
 // AddableBlock One block the add tray offers. Where the content ends up is what the tray groups by, so a creator arrives at it by destination.
 type AddableBlock struct {
 	// Choices The elements a creator may start the block with. One choice needs no question asking.
@@ -1655,6 +1758,15 @@ type AddableBlockChoice struct {
 
 	// Type What an element's data structure is, from the global vocabulary.
 	Type ElementType `json:"type"`
+}
+
+// AddedPublicationDestination A new destination and the one showing its signing secret ever gets.
+type AddedPublicationDestination struct {
+	// Destination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+	Destination PublicationDestination `json:"destination"`
+
+	// Secret The signing secret this endpoint's requests carry. Illarin cannot show it again.
+	Secret string `json:"secret"`
 }
 
 // ApplicationName A self-asserted, unverified application name.
@@ -2109,6 +2221,15 @@ type DeliveryWork struct {
 // DeliveryWorkList defines model for DeliveryWorkList.
 type DeliveryWorkList struct {
 	Deliveries []DeliveryWork `json:"deliveries"`
+}
+
+// DestinationPolicyRequest defines model for DestinationPolicyRequest.
+type DestinationPolicyRequest struct {
+	// DefaultDestinationIds Which of the allowed destinations a publication starts with.
+	DefaultDestinationIds *[]openapi_types.UUID `json:"defaultDestinationIds,omitempty"`
+
+	// DestinationIds The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
 }
 
 // DeviceCode defines model for DeviceCode.
@@ -2697,6 +2818,54 @@ type PostDeletion struct {
 	Until time.Time `json:"until"`
 }
 
+// PostDelivery One publication event on its way to one destination.
+type PostDelivery struct {
+	Attempts int `json:"attempts"`
+
+	// Destination The name the destination carried when this event was captured.
+	Destination string             `json:"destination"`
+	EventId     openapi_types.UUID `json:"eventId"`
+	EventType   string             `json:"eventType"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// Last The most recent attempt, absent until one has been made.
+	Last       *PostDeliveryAttempt `json:"last,omitempty"`
+	OccurredAt time.Time            `json:"occurredAt"`
+	PostId     openapi_types.UUID   `json:"postId"`
+	RevisionId openapi_types.UUID   `json:"revisionId"`
+	SettledAt  *time.Time           `json:"settledAt,omitempty"`
+
+	// State Where one delivery stands. Neither settled state changes whether the post is public.
+	State PostDeliveryState `json:"state"`
+}
+
+// PostDeliveryAttempt The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with.
+type PostDeliveryAttempt struct {
+	AttemptedAt time.Time `json:"attemptedAt"`
+
+	// Detail A safe sentence about the attempt, never a response body.
+	Detail string `json:"detail"`
+	Number int    `json:"number"`
+
+	// Outcome What one attempt found at the far end.
+	Outcome PostDeliveryOutcome `json:"outcome"`
+
+	// Status What the endpoint answered, absent when nothing was reached.
+	Status *int `json:"status,omitempty"`
+	TookMs int  `json:"tookMs"`
+}
+
+// PostDeliveryList defines model for PostDeliveryList.
+type PostDeliveryList struct {
+	Deliveries []PostDelivery `json:"deliveries"`
+}
+
+// PostDeliveryOutcome What one attempt found at the far end.
+type PostDeliveryOutcome string
+
+// PostDeliveryState Where one delivery stands. Neither settled state changes whether the post is public.
+type PostDeliveryState string
+
 // PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
 type PostDocument struct {
 	Content []map[string]interface{} `json:"content"`
@@ -3014,6 +3183,60 @@ type PublicationCredential struct {
 	Token PublicationToken `json:"token"`
 }
 
+// PublicationDestination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+type PublicationDestination struct {
+	// Address The masked address, which names the host and hides the rest.
+	Address    string     `json:"address"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	DisabledAt *time.Time `json:"disabledAt,omitempty"`
+
+	// Host The host the endpoint answers on.
+	Host string                     `json:"host"`
+	Id   openapi_types.UUID         `json:"id"`
+	Kind PublicationDestinationKind `json:"kind"`
+
+	// Name What the authority calls this endpoint, and all a contributor sees.
+	Name string `json:"name"`
+
+	// State Whether a destination is ready to receive anything.
+	State      PublicationDestinationState `json:"state"`
+	VerifiedAt *time.Time                  `json:"verifiedAt,omitempty"`
+}
+
+// PublicationDestinationKind defines model for PublicationDestination.Kind.
+type PublicationDestinationKind string
+
+// PublicationDestinationChoice One destination a post may send to. It carries no address and no secret, which is the whole point of it.
+type PublicationDestinationChoice struct {
+	// ByDefault Whether a publication starts with this one selected.
+	ByDefault bool                             `json:"byDefault"`
+	Id        openapi_types.UUID               `json:"id"`
+	Kind      PublicationDestinationChoiceKind `json:"kind"`
+	Name      string                           `json:"name"`
+
+	// State Whether a destination is ready to receive anything.
+	State PublicationDestinationState `json:"state"`
+}
+
+// PublicationDestinationChoiceKind defines model for PublicationDestinationChoice.Kind.
+type PublicationDestinationChoiceKind string
+
+// PublicationDestinationChoiceList defines model for PublicationDestinationChoiceList.
+type PublicationDestinationChoiceList struct {
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+
+	// Inherited Whether this set comes from the app rather than being its own.
+	Inherited bool `json:"inherited"`
+}
+
+// PublicationDestinationList defines model for PublicationDestinationList.
+type PublicationDestinationList struct {
+	Destinations []PublicationDestination `json:"destinations"`
+}
+
+// PublicationDestinationState Whether a destination is ready to receive anything.
+type PublicationDestinationState string
+
 // PublicationError How every publication route refuses. It never names another account, grant or token.
 type PublicationError struct {
 	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
@@ -3081,6 +3304,15 @@ type PublicationWorkspace struct {
 	Categories []PublicationCategory `json:"categories"`
 	Grants     []PublicationGrant    `json:"grants"`
 	Handle     string                `json:"handle"`
+}
+
+// PublishPostRequest defines model for PublishPostRequest.
+type PublishPostRequest struct {
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
+	// Version The working-copy version the action means to act on.
+	Version int `json:"version"`
 }
 
 // PublishRefusal defines model for PublishRefusal.
@@ -3160,7 +3392,9 @@ type RenameHandleRequest struct {
 // ReplacePostScheduleRequest defines model for ReplacePostScheduleRequest.
 type ReplacePostScheduleRequest struct {
 	// At When the edition goes live, with an explicit offset.
-	At time.Time `json:"at"`
+	At             time.Time             `json:"at"`
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
 
 	// RevisionId An edition the post has already kept.
 	RevisionId openapi_types.UUID `json:"revisionId"`
@@ -3251,7 +3485,9 @@ type SaveProfileRequest struct {
 // SchedulePostRequest defines model for SchedulePostRequest.
 type SchedulePostRequest struct {
 	// At When the edition goes live, with an explicit offset.
-	At time.Time `json:"at"`
+	At             time.Time             `json:"at"`
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
 
 	// Version The working-copy version the edition is captured from.
 	Version int `json:"version"`
@@ -3455,6 +3691,12 @@ type UpdatePublicationAppRequest struct {
 type UpdatePublicationCategoryRequest struct {
 	Label   *string `json:"label,omitempty"`
 	Retired *bool   `json:"retired,omitempty"`
+}
+
+// UpdatePublicationDestinationRequest defines model for UpdatePublicationDestinationRequest.
+type UpdatePublicationDestinationRequest struct {
+	Address *string `json:"address,omitempty"`
+	Name    *string `json:"name,omitempty"`
 }
 
 // UpdatePublicationGrantRequest defines model for UpdatePublicationGrantRequest.
@@ -3967,6 +4209,9 @@ type OrderPublicationAppsJSONRequestBody = OrderPublicationAppsRequest
 // UpdatePublicationAppJSONRequestBody defines body for UpdatePublicationApp for application/json ContentType.
 type UpdatePublicationAppJSONRequestBody = UpdatePublicationAppRequest
 
+// SetPublicationAppDestinationsJSONRequestBody defines body for SetPublicationAppDestinations for application/json ContentType.
+type SetPublicationAppDestinationsJSONRequestBody = DestinationPolicyRequest
+
 // SetPublicationAppMarkMultipartRequestBody defines body for SetPublicationAppMark for multipart/form-data ContentType.
 type SetPublicationAppMarkMultipartRequestBody SetPublicationAppMarkMultipartBody
 
@@ -3976,11 +4221,20 @@ type OrderPublicationCategoriesJSONRequestBody = OrderPublicationCategoriesReque
 // UpdatePublicationCategoryJSONRequestBody defines body for UpdatePublicationCategory for application/json ContentType.
 type UpdatePublicationCategoryJSONRequestBody = UpdatePublicationCategoryRequest
 
+// AddPublicationDestinationJSONRequestBody defines body for AddPublicationDestination for application/json ContentType.
+type AddPublicationDestinationJSONRequestBody = AddPublicationDestinationRequest
+
+// UpdatePublicationDestinationJSONRequestBody defines body for UpdatePublicationDestination for application/json ContentType.
+type UpdatePublicationDestinationJSONRequestBody = UpdatePublicationDestinationRequest
+
 // CreatePublicationGrantJSONRequestBody defines body for CreatePublicationGrant for application/json ContentType.
 type CreatePublicationGrantJSONRequestBody = CreatePublicationGrantRequest
 
 // UpdatePublicationGrantJSONRequestBody defines body for UpdatePublicationGrant for application/json ContentType.
 type UpdatePublicationGrantJSONRequestBody = UpdatePublicationGrantRequest
+
+// SetPublicationGrantDestinationsJSONRequestBody defines body for SetPublicationGrantDestinations for application/json ContentType.
+type SetPublicationGrantDestinationsJSONRequestBody = DestinationPolicyRequest
 
 // IssuePublicationTokenJSONRequestBody defines body for IssuePublicationToken for application/json ContentType.
 type IssuePublicationTokenJSONRequestBody = IssuePublicationTokenRequest
@@ -4007,7 +4261,7 @@ type ImportPostMarkdownJSONRequestBody = ImportPostMarkdownRequest
 type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
 
 // PublishPostJSONRequestBody defines body for PublishPost for application/json ContentType.
-type PublishPostJSONRequestBody = PostVersionRequest
+type PublishPostJSONRequestBody = PublishPostRequest
 
 // RecoverPostJSONRequestBody defines body for RecoverPost for application/json ContentType.
 type RecoverPostJSONRequestBody = PostVersionRequest
@@ -4398,6 +4652,9 @@ type ServerInterface interface {
 	// (PATCH /v1/publication/apps/{id})
 	UpdatePublicationApp(c *gin.Context, id openapi_types.UUID)
 
+	// (PUT /v1/publication/apps/{id}/destinations)
+	SetPublicationAppDestinations(c *gin.Context, id openapi_types.UUID)
+
 	// (PUT /v1/publication/apps/{id}/mark)
 	SetPublicationAppMark(c *gin.Context, id openapi_types.UUID)
 
@@ -4410,6 +4667,24 @@ type ServerInterface interface {
 	// (PATCH /v1/publication/categories/{id})
 	UpdatePublicationCategory(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/publication/destinations)
+	ListPublicationDestinations(c *gin.Context)
+
+	// (POST /v1/publication/destinations)
+	AddPublicationDestination(c *gin.Context)
+
+	// (DELETE /v1/publication/destinations/{id})
+	RemovePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/publication/destinations/{id})
+	UpdatePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (DELETE /v1/publication/destinations/{id}/verification)
+	DisablePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/destinations/{id}/verification)
+	VerifyPublicationDestination(c *gin.Context, id openapi_types.UUID)
+
 	// (GET /v1/publication/grants)
 	ListPublicationGrants(c *gin.Context)
 
@@ -4421,6 +4696,9 @@ type ServerInterface interface {
 
 	// (PATCH /v1/publication/grants/{id})
 	UpdatePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/grants/{id}/destinations)
+	SetPublicationGrantDestinations(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/grants/{id}/tokens)
 	ListPublicationTokens(c *gin.Context, id openapi_types.UUID)
@@ -4448,6 +4726,12 @@ type ServerInterface interface {
 
 	// (POST /v1/publication/posts/{id}/delete)
 	DeletePost(c *gin.Context, id openapi_types.UUID, params DeletePostParams)
+
+	// (GET /v1/publication/posts/{id}/deliveries)
+	ListPostDeliveries(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts/{id}/destinations)
+	ListPostDestinations(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/posts/{id}/history)
 	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
@@ -6730,6 +7014,31 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationApp(c *gin.Context) {
 	siw.Handler.UpdatePublicationApp(c, id)
 }
 
+// SetPublicationAppDestinations operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationAppDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationAppDestinations(c, id)
+}
+
 // SetPublicationAppMark operation middleware
 func (siw *ServerInterfaceWrapper) SetPublicationAppMark(c *gin.Context) {
 
@@ -6806,6 +7115,132 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationCategory(c *gin.Context) {
 	siw.Handler.UpdatePublicationCategory(c, id)
 }
 
+// ListPublicationDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDestinations(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDestinations(c)
+}
+
+// AddPublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) AddPublicationDestination(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPublicationDestination(c)
+}
+
+// RemovePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) RemovePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemovePublicationDestination(c, id)
+}
+
+// UpdatePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationDestination(c, id)
+}
+
+// DisablePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) DisablePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DisablePublicationDestination(c, id)
+}
+
+// VerifyPublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) VerifyPublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.VerifyPublicationDestination(c, id)
+}
+
 // ListPublicationGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListPublicationGrants(c *gin.Context) {
 
@@ -6880,6 +7315,31 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationGrant(c *gin.Context) {
 	}
 
 	siw.Handler.UpdatePublicationGrant(c, id)
+}
+
+// SetPublicationGrantDestinations operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationGrantDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationGrantDestinations(c, id)
 }
 
 // ListPublicationTokens operation middleware
@@ -7170,6 +7630,56 @@ func (siw *ServerInterfaceWrapper) DeletePost(c *gin.Context) {
 	}
 
 	siw.Handler.DeletePost(c, id, params)
+}
+
+// ListPostDeliveries operation middleware
+func (siw *ServerInterfaceWrapper) ListPostDeliveries(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostDeliveries(c, id)
+}
+
+// ListPostDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListPostDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostDestinations(c, id)
 }
 
 // ReadPostHistory operation middleware
@@ -7921,6 +8431,16 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.ListPostRevisions)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.CheckpointPost)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions/:revisionId/restore", wrapper.RestorePostRevision)
+	router.GET(options.BaseURL+"/v1/publication/destinations", wrapper.ListPublicationDestinations)
+	router.POST(options.BaseURL+"/v1/publication/destinations", wrapper.AddPublicationDestination)
+	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id", wrapper.RemovePublicationDestination)
+	router.PATCH(options.BaseURL+"/v1/publication/destinations/:id", wrapper.UpdatePublicationDestination)
+	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.DisablePublicationDestination)
+	router.POST(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.VerifyPublicationDestination)
+	router.PUT(options.BaseURL+"/v1/publication/apps/:id/destinations", wrapper.SetPublicationAppDestinations)
+	router.PUT(options.BaseURL+"/v1/publication/grants/:id/destinations", wrapper.SetPublicationGrantDestinations)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/destinations", wrapper.ListPostDestinations)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/deliveries", wrapper.ListPostDeliveries)
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/import", wrapper.ImportPostMarkdown)
 	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)

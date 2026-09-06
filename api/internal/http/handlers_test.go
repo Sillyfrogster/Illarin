@@ -1,8 +1,10 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,7 +19,9 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
@@ -120,7 +124,7 @@ func newTestHandlersWithPool(
 ) *Handlers {
 	t.Helper()
 	return newTestHandlersWithDelivery(
-		t, pool, maxUploadBytes, sender, testDeliverySettings(), publication.DefaultRates(),
+		t, pool, maxUploadBytes, sender, testDeliverySettings(), publication.DefaultRates(), nil,
 	)
 }
 
@@ -131,6 +135,7 @@ func newTestHandlersWithDelivery(
 	sender account.EmailSender,
 	settings delivery.Settings,
 	rates publication.Rates,
+	to publication.Sender,
 ) *Handlers {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -146,7 +151,8 @@ func newTestHandlersWithDelivery(
 
 	return NewHandlers(
 		svc, accounts, links, deliveries,
-		publication.NewService(pool, testMediaLibrary(blob), rates), maxUploadBytes,
+		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
+		maxUploadBytes,
 	)
 }
 
@@ -196,7 +202,45 @@ func testMediaLibrary(store storage.Store) *mediaproc.Library {
 }
 
 func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
-	return publication.NewService(pool, testMediaLibrary(store), publication.DefaultRates())
+	return publication.NewService(
+		pool, testMediaLibrary(store), publication.DefaultRates(), testPublishing(nil),
+	)
+}
+
+// testPublishing keeps publication deliveries on this machine. A test that
+// needs one to arrive passes the receiver it is running.
+func testPublishing(to publication.Sender) publication.Publishing {
+	if to == nil {
+		to = closedSender{}
+	}
+	return publication.Publishing{
+		Sealing: testSealingKey(),
+		Sender:  to,
+		Site:    "http://localhost:3000",
+		Blog:    "http://localhost:3000",
+	}
+}
+
+func testSealingKey() secrets.Key {
+	key, err := secrets.NewKey(bytes.Repeat([]byte{3}, secrets.KeyBytes))
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+// closedSender checks an address the way production does and sends nowhere,
+// which is what a test stack running no receiver needs.
+type closedSender struct{}
+
+func (closedSender) Check(address string) (string, error) {
+	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
+}
+
+func (closedSender) Post(
+	context.Context, string, map[string]string, []byte,
+) (outbound.Answer, error) {
+	return outbound.Answer{}, errors.New("this test stack sends nowhere")
 }
 
 func newTestLinkingService(pool *pgxpool.Pool) *linking.Service {

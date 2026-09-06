@@ -21,6 +21,9 @@ type Deadlines struct {
 	// longest hold the delivery queue takes, or the wait would end in a cut
 	// connection instead of an empty answer.
 	Deliver time.Duration
+	// Verify is the one route that makes a request of its own while the caller
+	// waits, so it outlasts the limits that request runs under.
+	Verify time.Duration
 }
 
 type Readiness func(context.Context) error
@@ -34,6 +37,7 @@ func DefaultDeadlines() Deadlines {
 		Upload:   15 * time.Minute,
 		Download: 15 * time.Minute,
 		Deliver:  45 * time.Second,
+		Verify:   20 * time.Second,
 	}
 }
 
@@ -113,6 +117,14 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodDelete, "/v1/publication/tokens/:id"):                            d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/token"):                                    d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/workspace"):                                d.JSON,
+		routeKey(http.MethodGet, "/v1/publication/destinations"):                             d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/destinations"):                            d.JSON,
+		routeKey(http.MethodPatch, "/v1/publication/destinations/:id"):                       d.JSON,
+		routeKey(http.MethodDelete, "/v1/publication/destinations/:id"):                      d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/destinations/:id/verification"):           d.Verify,
+		routeKey(http.MethodDelete, "/v1/publication/destinations/:id/verification"):         d.JSON,
+		routeKey(http.MethodPut, "/v1/publication/apps/:id/destinations"):                    d.JSON,
+		routeKey(http.MethodPut, "/v1/publication/grants/:id/destinations"):                  d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/posts"):                                    d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts"):                                   d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/posts/:id"):                                d.JSON,
@@ -122,6 +134,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/revisions"):                     d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/revisions/:revisionId/restore"): d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/posts/:id/history"):                        d.JSON,
+		routeKey(http.MethodGet, "/v1/publication/posts/:id/destinations"):                   d.JSON,
+		routeKey(http.MethodGet, "/v1/publication/posts/:id/deliveries"):                     d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/import"):                        d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/publish"):                       d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts/:id/withdraw"):                      d.JSON,

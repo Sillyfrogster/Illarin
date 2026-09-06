@@ -33,6 +33,8 @@ setup: ## Get a fresh clone ready to run
 	@test -f api/.env || { cp api/.env.example api/.env; \
 		linking_key=$$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'); \
 		sed -i "s/^LINKING_HMAC_KEY=$$/LINKING_HMAC_KEY=$$linking_key/" api/.env; \
+		publication_key=$$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'); \
+		sed -i "s/^PUBLICATION_SECRET_KEY=$$/PUBLICATION_SECRET_KEY=$$publication_key/" api/.env; \
 		echo "Wrote api/.env from the example. Check the database URLs in it."; }
 	$(MAKE) web-install
 	$(MAKE) migrate migrate-test

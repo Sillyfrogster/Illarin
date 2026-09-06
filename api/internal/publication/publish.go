@@ -45,12 +45,17 @@ func (s *Service) PublishPost(
 	editor Editor,
 	id uuid.UUID,
 	version int,
+	announcement Announcement,
 ) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
+		return Post{}, err
+	}
+	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -78,7 +83,10 @@ func (s *Service) PublishPost(
 	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
-	if err := makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug); err != nil {
+	err = makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug, captured{
+		Chosen: chosen, Note: note,
+	})
+	if err != nil {
 		return Post{}, err
 	}
 	if err := overtakeSchedule(ctx, tx, editor, locked, StatusPublished); err != nil {
@@ -99,8 +107,17 @@ func (s *Service) PublishPost(
 	return s.post(ctx, id)
 }
 
+// captured is the delivery choice one public transition is making. It belongs
+// to that transition, so nothing edited afterwards can rewrite it.
+type captured struct {
+	Chosen []Choice
+	Note   string
+}
+
 // makePublic puts one already-captured edition in front of readers, and is the
 // whole of what publishing does whether an author asked now or a schedule did.
+// It queues the delivery work but makes no request, so the transaction that
+// puts a post live never waits on anything outside Illarin.
 func makePublic(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -108,6 +125,7 @@ func makePublic(
 	revisionID uuid.UUID,
 	actor uuid.UUID,
 	address string,
+	choice captured,
 ) error {
 	firstTime := locked.PublishedAt == nil
 	_, err := tx.Exec(ctx, `
@@ -134,13 +152,15 @@ func makePublic(
 	if firstTime {
 		event = EventPublished
 	}
+	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type) values ($1, $2, $3, $4)
-	`, uuid.New(), locked.ID, revisionID, event)
+		insert into publication_events (id, post_id, revision_id, type, note)
+		values ($1, $2, $3, $4, $5)
+	`, eventID, locked.ID, revisionID, event, choice.Note)
 	if err != nil {
 		return fmt.Errorf("record the publication event: %w", err)
 	}
-	return nil
+	return queueDeliveries(ctx, tx, eventID, choice.Chosen)
 }
 
 // PublishedPost answers the public edition behind one address, current or former, and always names the address it lives at now.

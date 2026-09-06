@@ -77,6 +77,7 @@ printf '%s' 'test-client-secret' >"$TEST_DIR/secrets/microsoft-365-client-secret
   printf 'POSTGRES_PASSWORD=illarin-test-password\n'
   printf 'DATABASE_URL=postgres://illarin:illarin-test-password@db:5432/illarin\n'
   printf 'LINKING_HMAC_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+  printf 'PUBLICATION_SECRET_KEY=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n'
   printf 'SMTP_ADDR=smtp.illarin.test:25\n'
   printf 'SMTP_FROM=mail@illarin.test\n'
   printf 'DD_API_KEY=00000000000000000000000000000000\n'

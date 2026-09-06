@@ -23,6 +23,7 @@ func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID, _ SchedulePostPar
 	}
 	scheduled, err := h.publications.SchedulePost(
 		c.Request.Context(), editor, uuid.UUID(id), request.Version, request.At,
+		announcementOf(request.DestinationIds, request.Note),
 	)
 	if err != nil {
 		h.scheduleError(c, err)
@@ -44,6 +45,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID, _ ReplaceP
 	}
 	replaced, err := h.publications.ReplaceSchedule(
 		c.Request.Context(), editor, uuid.UUID(id), uuid.UUID(request.RevisionId), request.At,
+		announcementOf(request.DestinationIds, request.Note),
 	)
 	if err != nil {
 		h.scheduleError(c, err)

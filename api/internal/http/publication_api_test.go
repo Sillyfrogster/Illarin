@@ -129,7 +129,7 @@ func newPacedDistinctionStack(t *testing.T, rates publication.Rates) distinction
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	handlers := newTestHandlersWithDelivery(
-		t, pool, 1<<20, outbox, testDeliverySettings(), rates,
+		t, pool, 1<<20, outbox, testDeliverySettings(), rates, nil,
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
@@ -586,7 +586,9 @@ func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
 	}
 
 	ageEveryKey(t, stack)
-	sweeper := publication.NewService(stack.pool, nil, publication.DefaultRates())
+	sweeper := publication.NewService(
+		stack.pool, nil, publication.DefaultRates(), testPublishing(nil),
+	)
 	swept, err := sweeper.SweepAttempts(context.Background())
 	if err != nil {
 		t.Fatalf("sweep keys: %v", err)

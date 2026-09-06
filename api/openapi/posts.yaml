@@ -335,6 +335,64 @@ paths:
                 $ref: '#/components/schemas/PostConflict'
         '429':
           $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/destinations:
+    get:
+      operationId: listPostDestinations
+      description: >-
+        The destinations this post may send to, and which of them a publication
+        starts with. A contributor sees safe identities only.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The destinations this post may send to
+          content:
+            application/json:
+              schema:
+                $ref: ./destinations.yaml#/components/schemas/PublicationDestinationChoiceList
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+  /v1/publication/posts/{id}/deliveries:
+    get:
+      operationId: listPostDeliveries
+      description: >-
+        What this post's public transitions have sent, and how each attempt
+        ended. It carries no endpoint address, secret or response body.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: What the post has sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDeliveryList'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
   /v1/publication/posts/{id}/history:
     get:
       operationId: readPostHistory
@@ -441,7 +499,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PostVersionRequest'
+              $ref: '#/components/schemas/PublishPostRequest'
       responses:
         '200':
           description: The post as it now stands
@@ -1432,6 +1490,15 @@ components:
           type: string
           format: date-time
           description: When the edition goes live, with an explicit offset.
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
     ReplacePostScheduleRequest:
       type: object
       additionalProperties: false
@@ -1439,6 +1506,15 @@ components:
         - revisionId
         - at
       properties:
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
         revisionId:
           type: string
           format: uuid
@@ -1538,6 +1614,128 @@ components:
         version:
           type: integer
           description: The working-copy version the action means to act on.
+    PublishPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the action means to act on.
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+    PostDeliveryOutcome:
+      type: string
+      description: What one attempt found at the far end.
+      enum:
+        - delivered
+        - refused
+        - unreachable
+    PostDeliveryState:
+      type: string
+      description: >-
+        Where one delivery stands. Neither settled state changes whether the
+        post is public.
+      enum:
+        - pending
+        - sending
+        - delivered
+        - failed
+    PostDeliveryAttempt:
+      type: object
+      description: >-
+        The safe record of one request. It holds no body, in either direction,
+        and no header Illarin signed it with.
+      additionalProperties: false
+      required:
+        - number
+        - outcome
+        - detail
+        - tookMs
+        - attemptedAt
+      properties:
+        number:
+          type: integer
+        outcome:
+          $ref: '#/components/schemas/PostDeliveryOutcome'
+        status:
+          type: integer
+          nullable: true
+          description: What the endpoint answered, absent when nothing was reached.
+        detail:
+          type: string
+          description: A safe sentence about the attempt, never a response body.
+        tookMs:
+          type: integer
+        attemptedAt:
+          type: string
+          format: date-time
+    PostDelivery:
+      type: object
+      description: One publication event on its way to one destination.
+      additionalProperties: false
+      required:
+        - id
+        - eventId
+        - eventType
+        - postId
+        - revisionId
+        - destination
+        - state
+        - attempts
+        - occurredAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        postId:
+          type: string
+          format: uuid
+        revisionId:
+          type: string
+          format: uuid
+        destination:
+          type: string
+          description: The name the destination carried when this event was captured.
+        state:
+          $ref: '#/components/schemas/PostDeliveryState'
+        attempts:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        settledAt:
+          type: string
+          format: date-time
+          nullable: true
+        last:
+          allOf:
+            - $ref: '#/components/schemas/PostDeliveryAttempt'
+          description: The most recent attempt, absent until one has been made.
+    PostDeliveryList:
+      type: object
+      additionalProperties: false
+      required:
+        - deliveries
+      properties:
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDelivery'
+
     PostRevisionReason:
       type: string
       description: Why an edition was kept.

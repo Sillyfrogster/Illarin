@@ -228,6 +228,10 @@ LINKING_HMAC_KEY="$(_existing LINKING_HMAC_KEY || true)"
 if [[ -z "$LINKING_HMAC_KEY" ]]; then
   LINKING_HMAC_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 fi
+PUBLICATION_SECRET_KEY="$(_existing PUBLICATION_SECRET_KEY || true)"
+if [[ -z "$PUBLICATION_SECRET_KEY" ]]; then
+  PUBLICATION_SECRET_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
+fi
 
 write_env ILLARIN_IMAGE_REGISTRY "$ILLARIN_IMAGE_REGISTRY"
 write_env ILLARIN_DATA_DIR "/srv/illarin"
@@ -241,6 +245,7 @@ write_env POSTGRES_USER "illarin"
 write_env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
 write_env DATABASE_URL "postgres://illarin:$POSTGRES_PASSWORD@db:5432/illarin"
 write_env LINKING_HMAC_KEY "$LINKING_HMAC_KEY"
+write_env PUBLICATION_SECRET_KEY "$PUBLICATION_SECRET_KEY"
 write_env DISCORD_CLIENT_ID "$DISCORD_CLIENT_ID"
 write_env DISCORD_CLIENT_SECRET "$DISCORD_CLIENT_SECRET"
 write_env BACKUPS_ENABLED "false"

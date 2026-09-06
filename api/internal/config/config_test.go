@@ -7,9 +7,52 @@ import (
 	"testing"
 )
 
+const (
+	linkingKey     = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	publicationKey = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+)
+
 func setLinkingKey(t *testing.T) {
 	t.Helper()
-	t.Setenv("LINKING_HMAC_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	t.Setenv("LINKING_HMAC_KEY", linkingKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+}
+
+func TestLoadRequiresAnExactUnpaddedPublicationSecretKey(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
+	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
+	t.Setenv("LINKING_HMAC_KEY", linkingKey)
+
+	for _, key := range []string{
+		"",
+		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB==",
+		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+	} {
+		t.Setenv("PUBLICATION_SECRET_KEY", key)
+		if _, err := Load(); err == nil {
+			t.Errorf("Load accepted publication secret key %q", key)
+		}
+	}
+
+	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load with a 32-byte key: %v", err)
+	}
+	if len(cfg.PublicationSecretKey) != 32 {
+		t.Errorf("PublicationSecretKey is %d bytes, want 32", len(cfg.PublicationSecretKey))
+	}
+}
+
+func TestThePublicationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
+	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
+	t.Setenv("LINKING_HMAC_KEY", linkingKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", linkingKey)
+
+	if _, err := Load(); err == nil {
+		t.Error("Load accepted one key doing two jobs")
+	}
 }
 
 func TestLoadRequiresDatabaseURL(t *testing.T) {
@@ -41,6 +84,7 @@ func TestLoadUsesDefaultPort(t *testing.T) {
 func TestLoadRequiresAnExactUnpaddedLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
+	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
 
 	for _, key := range []string{
 		"",
@@ -53,7 +97,7 @@ func TestLoadRequiresAnExactUnpaddedLinkingKey(t *testing.T) {
 		}
 	}
 
-	t.Setenv("LINKING_HMAC_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	t.Setenv("LINKING_HMAC_KEY", linkingKey)
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load with a 32-byte key: %v", err)

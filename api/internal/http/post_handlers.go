@@ -156,12 +156,16 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParam
 	if !ok {
 		return
 	}
-	version, ok := h.workingVersion(c)
-	if !ok {
+	var request PublishPostRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Name the version of the working copy you mean.",
+		})
 		return
 	}
 	published, err := h.publications.PublishPost(
-		c.Request.Context(), editor, uuid.UUID(id), version,
+		c.Request.Context(), editor, uuid.UUID(id), request.Version,
+		announcementOf(request.DestinationIds, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -318,6 +322,9 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrRevisionNotFound):
 		refusePublication(c, http.StatusNotFound, CodeNotFound,
 			"This post has no such edition.")
+	case errors.Is(err, publication.ErrDestinationRefused):
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"This post may not send to that destination.")
 	case errors.Is(err, publication.ErrNotPostEditor):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")

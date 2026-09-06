@@ -90,7 +90,7 @@ func newLinkingRouterWith(
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	handlers := newTestHandlersWithDelivery(
-		t, pool, 1<<20, outbox, settings, publication.DefaultRates(),
+		t, pool, 1<<20, outbox, settings, publication.DefaultRates(), nil,
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 

@@ -25,6 +25,7 @@ import (
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -140,10 +141,15 @@ func run() error {
 	}
 	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
-	publications := publication.NewService(pool, images, publication.DefaultRates())
+	sealing, err := secrets.NewKey(cfg.PublicationSecretKey)
+	if err != nil {
+		return fmt.Errorf("publication secret key: %w", err)
+	}
+	publications := publication.NewService(pool, images, publication.DefaultRates(),
+		publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL))
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(4)
+	background.Add(5)
 	go func() {
 		defer background.Done()
 		deliveries.RunSweeper(runtimeContext, func(err error) {
@@ -166,6 +172,12 @@ func run() error {
 		defer background.Done()
 		publications.RunRecovery(runtimeContext, func(err error) {
 			log.Printf("publication recovery: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		publications.RunDeliveries(runtimeContext, func(err error) {
+			log.Printf("publication delivery: %v", err)
 		})
 	}()
 

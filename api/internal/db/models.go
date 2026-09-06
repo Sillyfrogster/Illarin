@@ -417,6 +417,12 @@ type PostSchedule struct {
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 	SettledAt      pgtype.Timestamptz
+	Note           string
+}
+
+type PostScheduleDestination struct {
+	ScheduleID    pgtype.UUID
+	DestinationID pgtype.UUID
 }
 
 type PostSlug struct {
@@ -539,22 +545,30 @@ type PublicationApp struct {
 	UpdatedAt   pgtype.Timestamptz
 }
 
+type PublicationAppDestination struct {
+	AppID         pgtype.UUID
+	DestinationID pgtype.UUID
+	ByDefault     bool
+}
+
 type PublicationAudit struct {
-	ID          pgtype.UUID
-	ActorID     pgtype.UUID
-	Action      string
-	AppID       pgtype.UUID
-	CategoryID  pgtype.UUID
-	GrantID     pgtype.UUID
-	SubjectID   pgtype.UUID
-	RecordedAt  pgtype.Timestamptz
-	TokenID     pgtype.UUID
-	Credential  string
-	PostID      pgtype.UUID
-	RevisionID  pgtype.UUID
-	BeforeState pgtype.Text
-	AfterState  pgtype.Text
-	ScheduleID  pgtype.UUID
+	ID            pgtype.UUID
+	ActorID       pgtype.UUID
+	Action        string
+	AppID         pgtype.UUID
+	CategoryID    pgtype.UUID
+	GrantID       pgtype.UUID
+	SubjectID     pgtype.UUID
+	RecordedAt    pgtype.Timestamptz
+	TokenID       pgtype.UUID
+	Credential    string
+	PostID        pgtype.UUID
+	RevisionID    pgtype.UUID
+	BeforeState   pgtype.Text
+	AfterState    pgtype.Text
+	ScheduleID    pgtype.UUID
+	DestinationID pgtype.UUID
+	DeliveryID    pgtype.UUID
 }
 
 type PublicationAuthority struct {
@@ -572,28 +586,77 @@ type PublicationCategory struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type PublicationDelivery struct {
+	ID              pgtype.UUID
+	EventID         pgtype.UUID
+	DestinationID   pgtype.UUID
+	DestinationName string
+	State           string
+	Attempts        int32
+	LeaseToken      pgtype.UUID
+	LeaseExpiresAt  pgtype.Timestamptz
+	DueAt           pgtype.Timestamptz
+	SettledAt       pgtype.Timestamptz
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type PublicationDeliveryAttempt struct {
+	ID          pgtype.UUID
+	DeliveryID  pgtype.UUID
+	Number      int32
+	Outcome     string
+	Status      pgtype.Int4
+	Detail      string
+	TookMs      int32
+	AttemptedAt pgtype.Timestamptz
+}
+
+type PublicationDestination struct {
+	ID            pgtype.UUID
+	Kind          string
+	Name          string
+	Host          string
+	Address       []byte
+	SigningSecret []byte
+	State         string
+	VerifiedAt    pgtype.Timestamptz
+	DisabledAt    pgtype.Timestamptz
+	CreatedBy     pgtype.UUID
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
 type PublicationEvent struct {
 	ID         pgtype.UUID
 	PostID     pgtype.UUID
 	RevisionID pgtype.UUID
 	Type       string
 	OccurredAt pgtype.Timestamptz
+	Note       string
 }
 
 type PublicationGrant struct {
-	ID                pgtype.UUID
-	UserID            pgtype.UUID
-	AppID             pgtype.UUID
-	DefaultCategoryID pgtype.UUID
-	GrantedBy         pgtype.UUID
-	GrantedAt         pgtype.Timestamptz
-	RevokedAt         pgtype.Timestamptz
-	Active            bool
+	ID                     pgtype.UUID
+	UserID                 pgtype.UUID
+	AppID                  pgtype.UUID
+	DefaultCategoryID      pgtype.UUID
+	GrantedBy              pgtype.UUID
+	GrantedAt              pgtype.Timestamptz
+	RevokedAt              pgtype.Timestamptz
+	Active                 bool
+	DestinationsOverridden bool
 }
 
 type PublicationGrantCategory struct {
 	GrantID    pgtype.UUID
 	CategoryID pgtype.UUID
+}
+
+type PublicationGrantDestination struct {
+	GrantID       pgtype.UUID
+	DestinationID pgtype.UUID
+	ByDefault     bool
 }
 
 type PublicationIdempotency struct {

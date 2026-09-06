@@ -67,6 +67,7 @@ func (s *Service) SchedulePost(
 	id uuid.UUID,
 	version int,
 	at time.Time,
+	announcement Announcement,
 ) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
@@ -76,6 +77,10 @@ func (s *Service) SchedulePost(
 		return Post{}, err
 	}
 	if err := s.checkInstant(at); err != nil {
+		return Post{}, err
+	}
+	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -105,14 +110,17 @@ func (s *Service) SchedulePost(
 	}
 	scheduleID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into post_schedules (id, post_id, revision_id, due_at, created_by)
-		values ($1, $2, $3, $4, $5)
-	`, scheduleID, id, revisionID, at.UTC(), editor.ID)
+		insert into post_schedules (id, post_id, revision_id, due_at, created_by, note)
+		values ($1, $2, $3, $4, $5, $6)
+	`, scheduleID, id, revisionID, at.UTC(), editor.ID, note)
 	if isUniqueViolation(err) {
 		return Post{}, ErrAlreadyScheduled
 	}
 	if err != nil {
 		return Post{}, fmt.Errorf("keep the schedule: %w", err)
+	}
+	if err := keepScheduleChoice(ctx, tx, scheduleID, chosen); err != nil {
+		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.scheduled",
@@ -136,6 +144,7 @@ func (s *Service) ReplaceSchedule(
 	editor Editor,
 	id, revisionID uuid.UUID,
 	at time.Time,
+	announcement Announcement,
 ) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
@@ -145,6 +154,10 @@ func (s *Service) ReplaceSchedule(
 		return Post{}, err
 	}
 	if err := s.checkInstant(at); err != nil {
+		return Post{}, err
+	}
+	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -165,12 +178,20 @@ func (s *Service) ReplaceSchedule(
 	}
 	_, err = tx.Exec(ctx, `
 		update post_schedules
-		   set revision_id = $2, due_at = $3, attempts = 0,
+		   set revision_id = $2, due_at = $3, note = $4, attempts = 0,
 		       lease_token = null, lease_expires_at = null, updated_at = now()
 		 where id = $1
-	`, waiting, revisionID, at.UTC())
+	`, waiting, revisionID, at.UTC(), note)
 	if err != nil {
 		return Post{}, fmt.Errorf("replace the scheduled edition: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		delete from post_schedule_destinations where schedule_id = $1
+	`, waiting); err != nil {
+		return Post{}, fmt.Errorf("clear the scheduled delivery choice: %w", err)
+	}
+	if err := keepScheduleChoice(ctx, tx, waiting, chosen); err != nil {
+		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: editor.ID, Credential: editor.Credential(), Action: "post.schedule.replaced",
@@ -270,6 +291,7 @@ type leased struct {
 	PostID     uuid.UUID
 	RevisionID uuid.UUID
 	CreatedBy  *uuid.UUID
+	Note       string
 	Token      uuid.UUID
 	Attempts   int
 }
@@ -296,9 +318,9 @@ func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, 
 		  from candidate
 		 where schedule.id = candidate.id
 		returning schedule.id, schedule.post_id, schedule.revision_id,
-		          schedule.created_by, schedule.attempts
+		          schedule.created_by, schedule.note, schedule.attempts
 	`, now, held.Token, now.Add(ScheduleLease), SchedulePending, SchedulePublishing).Scan(
-		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Attempts,
+		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Note, &held.Attempts,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return leased{}, false, nil
@@ -343,7 +365,14 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 		}
 		return commitScheduleRun(ctx, tx)
 	}
-	if err := makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug); err != nil {
+	chosen, err := scheduledChoice(ctx, tx, held.ID)
+	if err != nil {
+		return err
+	}
+	err = makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug, captured{
+		Chosen: chosen, Note: held.Note,
+	})
+	if err != nil {
 		return err
 	}
 	if err := settleSchedule(ctx, tx, held.ID, SchedulePublished, ""); err != nil {
@@ -437,6 +466,42 @@ func lockWaitingSchedule(ctx context.Context, tx pgx.Tx, postID uuid.UUID) (uuid
 		return uuid.Nil, ErrSchedulePublishing
 	}
 	return id, nil
+}
+
+// keepScheduleChoice holds the destinations a scheduled edition will send to,
+// so a policy narrowed afterwards cannot widen what was already agreed.
+func keepScheduleChoice(
+	ctx context.Context,
+	tx pgx.Tx,
+	scheduleID uuid.UUID,
+	chosen []Choice,
+) error {
+	for _, one := range chosen {
+		_, err := tx.Exec(ctx, `
+			insert into post_schedule_destinations (schedule_id, destination_id)
+			values ($1, $2) on conflict do nothing
+		`, scheduleID, one.ID)
+		if err != nil {
+			return fmt.Errorf("keep the scheduled delivery choice: %w", err)
+		}
+	}
+	return nil
+}
+
+// scheduledChoice reads the destinations a due edition still has, dropping one
+// the authority has since disabled or removed.
+func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]Choice, error) {
+	rows, err := tx.Query(ctx, `
+		select destination.id, destination.name, destination.kind, destination.state, false
+		  from post_schedule_destinations chosen
+		  join publication_destinations destination on destination.id = chosen.destination_id
+		 where chosen.schedule_id = $1 and destination.state = $2
+		 order by destination.name, destination.created_at
+	`, scheduleID, DestinationActive)
+	if err != nil {
+		return nil, fmt.Errorf("read the scheduled delivery choice: %w", err)
+	}
+	return collectChoices(rows)
 }
 
 func settleSchedule(ctx context.Context, tx pgx.Tx, id uuid.UUID, state, because string) error {

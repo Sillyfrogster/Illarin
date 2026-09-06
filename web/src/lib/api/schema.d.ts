@@ -966,6 +966,128 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every configured destination, masked. Only the publication authority may read it, and even it cannot read back an endpoint address or a signing secret. */
+    get: operations["listPublicationDestinations"];
+    put?: never;
+    /** @description Configure one endpoint. The response is the only time Illarin can show its signing secret, and the endpoint receives nothing until it has answered a verification challenge. */
+    post: operations["addPublicationDestination"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/destinations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Take a destination out of the configuration. Every delivery it already holds keeps the name it was sent under. */
+    delete: operations["removePublicationDestination"];
+    options?: never;
+    head?: never;
+    /** @description Rename a destination or point it somewhere else. A new address takes it back to unverified, because control of the old one proves nothing about the new one. */
+    patch: operations["updatePublicationDestination"];
+    trace?: never;
+  };
+  "/v1/publication/destinations/{id}/verification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Send one signed challenge and activate the destination only when the exact value comes back. */
+    post: operations["verifyPublicationDestination"];
+    /** @description Stop a destination receiving anything further. What it has already received stays where it is. */
+    delete: operations["disablePublicationDestination"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/apps/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Record the destinations every grant on one app may send to, and which of them a publication starts with. */
+    put: operations["setPublicationAppDestinations"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/grants/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Narrow one contributor to its own destinations, or send an absent set to put the grant back on its app's baseline. */
+    put: operations["setPublicationGrantDestinations"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The destinations this post may send to, and which of them a publication starts with. A contributor sees safe identities only. */
+    get: operations["listPostDestinations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What this post's public transitions have sent, and how each attempt ended. It carries no endpoint address, secret or response body. */
+    get: operations["listPostDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/posts/{id}/history": {
     parameters: {
       query?: never;
@@ -3201,6 +3323,118 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
     };
+    /**
+     * @description Whether a destination is ready to receive anything.
+     * @enum {string}
+     */
+    PublicationDestinationState: "unverified" | "active" | "disabled";
+    /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
+    PublicationDestination: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      kind: "webhook";
+      /** @description What the authority calls this endpoint, and all a contributor sees. */
+      name: string;
+      /** @description The host the endpoint answers on. */
+      host: string;
+      /** @description The masked address, which names the host and hides the rest. */
+      address: string;
+      state: components["schemas"]["PublicationDestinationState"];
+      /** Format: date-time */
+      verifiedAt?: string | null;
+      /** Format: date-time */
+      disabledAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    PublicationDestinationList: {
+      destinations: components["schemas"]["PublicationDestination"][];
+    };
+    AddPublicationDestinationRequest: {
+      name: string;
+      /** @description An https address on port 443 with no username, password or fragment, whose host resolves into public address space. */
+      address: string;
+    };
+    /** @description A new destination and the one showing its signing secret ever gets. */
+    AddedPublicationDestination: {
+      destination: components["schemas"]["PublicationDestination"];
+      /** @description The signing secret this endpoint's requests carry. Illarin cannot show it again. */
+      secret: string;
+    };
+    UpdatePublicationDestinationRequest: {
+      name?: string;
+      address?: string;
+    };
+    DestinationPolicyRequest: {
+      /** @description The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing. */
+      destinationIds?: string[] | null;
+      /** @description Which of the allowed destinations a publication starts with. */
+      defaultDestinationIds?: string[];
+    };
+    /** @description One destination a post may send to. It carries no address and no secret, which is the whole point of it. */
+    PublicationDestinationChoice: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** @enum {string} */
+      kind: "webhook";
+      state: components["schemas"]["PublicationDestinationState"];
+      /** @description Whether a publication starts with this one selected. */
+      byDefault: boolean;
+    };
+    PublicationDestinationChoiceList: {
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+      /** @description Whether this set comes from the app rather than being its own. */
+      inherited: boolean;
+    };
+    /**
+     * @description Where one delivery stands. Neither settled state changes whether the post is public.
+     * @enum {string}
+     */
+    PostDeliveryState: "pending" | "sending" | "delivered" | "failed";
+    /**
+     * @description What one attempt found at the far end.
+     * @enum {string}
+     */
+    PostDeliveryOutcome: "delivered" | "refused" | "unreachable";
+    /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
+    PostDeliveryAttempt: {
+      number: number;
+      outcome: components["schemas"]["PostDeliveryOutcome"];
+      /** @description What the endpoint answered, absent when nothing was reached. */
+      status?: number | null;
+      /** @description A safe sentence about the attempt, never a response body. */
+      detail: string;
+      tookMs: number;
+      /** Format: date-time */
+      attemptedAt: string;
+    };
+    /** @description One publication event on its way to one destination. */
+    PostDelivery: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      eventId: string;
+      eventType: string;
+      /** Format: uuid */
+      postId: string;
+      /** Format: uuid */
+      revisionId: string;
+      /** @description The name the destination carried when this event was captured. */
+      destination: string;
+      state: components["schemas"]["PostDeliveryState"];
+      attempts: number;
+      /** Format: date-time */
+      occurredAt: string;
+      /** Format: date-time */
+      settledAt?: string | null;
+      /** @description The most recent attempt, absent until one has been made. */
+      last?: components["schemas"]["PostDeliveryAttempt"];
+    };
+    PostDeliveryList: {
+      deliveries: components["schemas"]["PostDelivery"][];
+    };
     /** @description One thing that was done to a post, named by who did it, what it was and which edition it touched. */
     PostAction: {
       /** Format: uuid */
@@ -3217,7 +3451,15 @@ export interface components {
     PostActionList: {
       actions: components["schemas"]["PostAction"][];
     };
+    PublishPostRequest: {
+      /** @description The working-copy version the action means to act on. */
+      version: number;
+      destinationIds?: string[] | null;
+      note?: string;
+    };
     ReplacePostScheduleRequest: {
+      destinationIds?: string[] | null;
+      note?: string;
       /**
        * Format: uuid
        * @description An edition the post has already kept.
@@ -3237,6 +3479,8 @@ export interface components {
        * @description When the edition goes live, with an explicit offset.
        */
       at: string;
+      destinationIds?: string[] | null;
+      note?: string;
     };
     /** @description One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile. */
     PostSummary: {
@@ -6611,6 +6855,401 @@ export interface operations {
       429: components["responses"]["PublicationTooManyRequests"];
     };
   };
+  listPublicationDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The configured destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addPublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddPublicationDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination and its signing secret, shown once */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedPublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination is gone */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePublicationDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  verifyPublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination, now active */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  disablePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination, now disabled */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setPublicationAppDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DestinationPolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description The destinations the app now allows */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such app or destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setPublicationGrantDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DestinationPolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description The destinations the grant now allows */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant or destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPostDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destinations this post may send to */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+    };
+  };
+  listPostDeliveries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description What the post has sent */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+    };
+  };
   readPostHistory: {
     parameters: {
       query?: never;
@@ -6702,7 +7341,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["PostVersionRequest"];
+        "application/json": components["schemas"]["PublishPostRequest"];
       };
     };
     responses: {

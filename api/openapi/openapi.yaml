@@ -122,6 +122,20 @@ paths:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1revisions
   /v1/publication/posts/{id}/revisions/{revisionId}/restore:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1revisions~1{revisionId}~1restore
+  /v1/publication/destinations:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations
+  /v1/publication/destinations/{id}:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}
+  /v1/publication/destinations/{id}/verification:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}~1verification
+  /v1/publication/apps/{id}/destinations:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1apps~1{id}~1destinations
+  /v1/publication/grants/{id}/destinations:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1grants~1{id}~1destinations
+  /v1/publication/posts/{id}/destinations:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1destinations
+  /v1/publication/posts/{id}/deliveries:
+    $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1deliveries
   /v1/publication/posts/{id}/history:
     $ref: ./posts.yaml#/paths/~1v1~1publication~1posts~1{id}~1history
   /v1/publication/posts/{id}/import:

@@ -62,7 +62,8 @@ fork owned by `example`, use `ghcr.io/example`; the workflows publish
 `ghcr.io/example/illarin-api:<commit>` and
 `ghcr.io/example/illarin-web:<commit>`.
 
-Generate `LINKING_HMAC_KEY` as 32 random bytes encoded as unpadded base64url.
+Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
+encoded as unpadded base64url. They are separate keys and never share a value.
 Use a separate, randomly generated PostgreSQL password and update both
 `POSTGRES_PASSWORD` and `DATABASE_URL` with the same value.
 

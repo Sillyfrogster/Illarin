@@ -49,8 +49,11 @@ type change struct {
 	RevisionID *uuid.UUID
 	ScheduleID *uuid.UUID
 	SubjectID  *uuid.UUID
-	Before     string
-	After      string
+
+	DestinationID *uuid.UUID
+	DeliveryID    *uuid.UUID
+	Before        string
+	After         string
 }
 
 // recordPublicationAudit keeps who changed what, as identifiers and never as a
@@ -63,11 +66,12 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 		insert into publication_audits
 		       (id, actor_id, credential, action, app_id, category_id, grant_id,
 		        token_id, post_id, revision_id, schedule_id, subject_id,
-		        before_state, after_state)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		        destination_id, delivery_id, before_state, after_state)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, uuid.New(), made.Actor, made.Credential, made.Action, made.AppID, made.CategoryID,
 		made.GrantID, made.TokenID, made.PostID, made.RevisionID, made.ScheduleID,
-		made.SubjectID, nullable(made.Before), nullable(made.After))
+		made.SubjectID, made.DestinationID, made.DeliveryID,
+		nullable(made.Before), nullable(made.After))
 	if err != nil {
 		return fmt.Errorf("record publication audit: %w", err)
 	}

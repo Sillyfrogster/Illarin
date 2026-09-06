@@ -7,6 +7,8 @@ import (
 	"time"
 
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -51,18 +53,50 @@ func (e FieldError) Error() string { return e.Message }
 
 func (e FieldError) Unwrap() error { return e.cause }
 
-// Service owns publication authority and the profile distinctions it manages.
-type Service struct {
-	pool   *pgxpool.Pool
-	media  *mediaproc.Library
-	signer signing.Key
-	rates  Rates
-	now    func() time.Time
+// Publishing is what the service needs beyond the database to publish: the key
+// that seals endpoint configuration, the way out to the world, and the two
+// origins every address in a publication event is built from.
+type Publishing struct {
+	Sealing secrets.Key
+	Sender  Sender
+	Site    string
+	Blog    string
 }
 
-func NewService(pool *pgxpool.Pool, media *mediaproc.Library, rates Rates) *Service {
+// DefaultPublishing sends through one bounded outbound caller.
+func DefaultPublishing(sealing secrets.Key, site, blog string) Publishing {
+	return Publishing{
+		Sealing: sealing,
+		Sender:  outbound.NewCaller(outbound.DefaultLimits()),
+		Site:    site,
+		Blog:    blog,
+	}
+}
+
+// Service owns publication authority and the profile distinctions it manages.
+type Service struct {
+	pool    *pgxpool.Pool
+	media   *mediaproc.Library
+	signer  signing.Key
+	sealing secrets.Key
+	sender  Sender
+	site    string
+	blog    string
+	rates   Rates
+	now     func() time.Time
+}
+
+func NewService(
+	pool *pgxpool.Pool,
+	media *mediaproc.Library,
+	rates Rates,
+	sending Publishing,
+) *Service {
 	return &Service{
-		pool: pool, media: media, signer: signing.NewKey(), rates: rates, now: time.Now,
+		pool: pool, media: media, signer: signing.NewKey(),
+		sealing: sending.Sealing, sender: sending.Sender,
+		site: sending.Site, blog: sending.Blog,
+		rates: rates, now: time.Now,
 	}
 }
 
