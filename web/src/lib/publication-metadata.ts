@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
-import { pageMetadata } from "@/lib/site-metadata";
+import type { PublicPost } from "@/lib/api/query";
+import { bylineName, bylineProfile } from "@/lib/byline";
+import { blogAddress, postPermalink } from "@/lib/post-link";
+import { pageMetadata, SITE_NAME, siteUrl } from "@/lib/site-metadata";
 
 /** Where the publication answers, and what every archive address is built beneath */
 export const BLOG_HOME = "/blog";
+
+/** The size every link preview expects a social image to be. */
+export const CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/** The publication app Illarin publishes as, which its own posts need not name twice */
+export const ILLARIN_APP = "illarin";
 
 export const BLOG_TITLE = "Illarin Blog";
 
@@ -57,7 +66,76 @@ export function blogMetadata(
 export function feedTypes(archive: string): Record<string, string> {
   const feeds = feedAddresses(archive);
   return {
-    "application/rss+xml": feeds.rss,
-    "application/feed+json": feeds.json,
+    "application/rss+xml": blogAddress(feeds.rss),
+    "application/feed+json": blogAddress(feeds.json),
+  };
+}
+
+/** The tags a link preview, a search engine and a reader's browser read off one post. */
+export function postMetadata(post: PublicPost): Metadata {
+  const canonical = postPermalink(post.slug);
+  const card = socialCard(post);
+  return {
+    title: post.title,
+    description: post.summary,
+    alternates: { canonical, types: feedTypes(BLOG_HOME) },
+    openGraph: {
+      type: "article",
+      siteName: BLOG_TITLE,
+      locale: "en_GB",
+      title: post.title,
+      description: post.summary,
+      url: canonical,
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt,
+      authors: [bylineProfile(post.byline) ?? bylineName(post.byline)],
+      images: [card],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.summary,
+      images: [card.url],
+    },
+  };
+}
+
+/** The same published facts as the page's own tags, in the form a search engine indexes. */
+export function postStructuredData(post: PublicPost): string {
+  const profile = bylineProfile(post.byline);
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.summary,
+    url: postPermalink(post.slug),
+    mainEntityOfPage: postPermalink(post.slug),
+    image: socialCard(post).url,
+    datePublished: post.publishedAt,
+    ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
+    author: {
+      "@type": "Person",
+      name: bylineName(post.byline),
+      ...(profile ? { url: profile } : {}),
+    },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: siteUrl },
+  });
+}
+
+/** The picture a shared link shows: the author's own upload, or the card Illarin composes. */
+export function socialCard(post: PublicPost): {
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+} {
+  const override = post.socialImage;
+  return {
+    url: override
+      ? blogAddress(override.url)
+      : blogAddress(`${BLOG_HOME}/${encodeURI(post.slug)}/card.png`),
+    width: override?.width ?? CARD_SIZE.width,
+    height: override?.height ?? CARD_SIZE.height,
+    alt: post.title,
   };
 }

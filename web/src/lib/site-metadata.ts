@@ -6,6 +6,9 @@ export const siteUrl = process.env.SITE_URL ?? "http://localhost:8000";
 /** The blog's own public origin, which every publication address is built from */
 export const blogUrl = process.env.BLOG_URL ?? siteUrl;
 
+/** Where the server reads uploaded bytes, which is the gateway rather than the API */
+export const mediaUrl = process.env.MEDIA_URL ?? siteUrl;
+
 export const SITE_NAME = "Illarin";
 
 export const SITE_DESCRIPTION =
