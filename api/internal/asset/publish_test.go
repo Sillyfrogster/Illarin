@@ -16,7 +16,7 @@ func TestOnlyTheOwnerPublishesADraft(t *testing.T) {
 		t.Fatalf("start a draft: %v", err)
 	}
 
-	if _, err := svc.Publish(context.Background(), somebodyElse, draft); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.Publish(context.Background(), somebodyElse, draft, currentCandidate(t, svc, draft)); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("another account publishing the draft = %v, want ErrNotFound", err)
 	}
 
@@ -48,7 +48,7 @@ func TestAWithheldAssetIsNotPublished(t *testing.T) {
 		t.Fatalf("withhold the draft: %v", err)
 	}
 
-	if _, err := svc.Publish(context.Background(), owner, draft); !errors.Is(err, ErrAssetFrozen) {
+	if _, err := svc.Publish(context.Background(), owner, draft, currentCandidate(t, svc, draft)); !errors.Is(err, ErrAssetFrozen) {
 		t.Fatalf("publishing a withheld draft = %v, want ErrAssetFrozen", err)
 	}
 }

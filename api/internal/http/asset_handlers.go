@@ -250,7 +250,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAssetRevisionParams) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -272,18 +272,19 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	operation, err := h.assets.AcceptRevision(c.Request.Context(), asset.RevisionInput{
 		OwnerID:  owner.ID,
 		AssetID:  uuid.UUID(id),
 		Filename: file.FileName(),
 		File:     limitedFile,
-	})
+	}, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
-		return
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 		return
 	case errors.Is(err, storage.ErrTombstoned):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "This file cannot be accepted."})
@@ -356,7 +357,7 @@ func (h *Handlers) ListDeletedAssets(c *gin.Context, handle string) {
 	c.JSON(http.StatusOK, DeletedAssetList{Items: items})
 }
 
-func (h *Handlers) AddMedia(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddMedia(c *gin.Context, id types.UUID, params AddMediaParams) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -381,18 +382,18 @@ func (h *Handlers) AddMedia(c *gin.Context, id types.UUID) {
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	added, err := h.assets.AddMedia(c.Request.Context(), asset.AddMediaInput{
 		OwnerID: owner.ID,
 		AssetID: uuid.UUID(id),
 		Role:    asset.MediaRole(metadata.Role),
 		File:    limitedFile,
-	})
-	if errors.Is(err, asset.ErrMediaNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+	}, candidate)
+	if candidateResult(c, candidate, err) {
 		return
 	}
-	if errors.Is(err, asset.ErrAssetFrozen) {
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
+	if errors.Is(err, asset.ErrMediaNotFound) || errors.Is(err, asset.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return
 	}
 	if err != nil {
@@ -511,30 +512,31 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	}
 	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
 	return AssetDetail{
-		Id:                types.UUID(found.ID),
-		Kind:              AssetDetailKind(found.Kind),
-		Name:              found.Name,
-		Blurb:             found.Blurb,
-		Tags:              tags,
-		Creator:           found.Creator,
-		IsNsfw:            found.IsNSFW,
-		Discovery:         AssetDetailDiscovery(found.Discovery),
-		Lifecycle:         AssetDetailLifecycle(found.Lifecycle),
-		IsOwner:           found.IsOwner,
-		LinkedInstallOnly: found.LinkedInstallOnly,
-		AllowedApps:       apiAllowedApps(found.AllowedApps),
-		EligibleApps:      apiEligibleApps(found.EligibleApps),
-		Downloads:         toAPIDownloads(found.Downloads),
-		Original:          toAPIOriginalUpload(found.Original),
-		CreatedAt:         found.CreatedAt,
-		Blocks:            blocks,
-		Media:             media,
-		Preview:           found.Preview,
-		Readiness:         toAPIReadiness(found.Readiness),
-		SealedBlocks:      countOrAbsent(found.SealedBlocks),
-		AddableBlocks:     addable,
-		Visibility:        AssetDetailVisibility(visibility),
-		Withhold:          toAPIWithhold(found.Withhold),
+		WorkingCopyVersion: found.WorkingCopyVersion,
+		Id:                 types.UUID(found.ID),
+		Kind:               AssetDetailKind(found.Kind),
+		Name:               found.Name,
+		Blurb:              found.Blurb,
+		Tags:               tags,
+		Creator:            found.Creator,
+		IsNsfw:             found.IsNSFW,
+		Discovery:          AssetDetailDiscovery(found.Discovery),
+		Lifecycle:          AssetDetailLifecycle(found.Lifecycle),
+		IsOwner:            found.IsOwner,
+		LinkedInstallOnly:  found.LinkedInstallOnly,
+		AllowedApps:        apiAllowedApps(found.AllowedApps),
+		EligibleApps:       apiEligibleApps(found.EligibleApps),
+		Downloads:          toAPIDownloads(found.Downloads),
+		Original:           toAPIOriginalUpload(found.Original),
+		CreatedAt:          found.CreatedAt,
+		Blocks:             blocks,
+		Media:              media,
+		Preview:            found.Preview,
+		Readiness:          toAPIReadiness(found.Readiness),
+		SealedBlocks:       countOrAbsent(found.SealedBlocks),
+		AddableBlocks:      addable,
+		Visibility:         AssetDetailVisibility(visibility),
+		Withhold:           toAPIWithhold(found.Withhold),
 	}, nil
 }
 

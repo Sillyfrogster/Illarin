@@ -8,6 +8,7 @@ import {
   type PreservedNamespace,
 } from "@/lib/api/query";
 import { describePreservedNamespace } from "@/lib/preserved";
+import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./PreservedPanel.module.css";
 
 /**
@@ -15,6 +16,7 @@ import styles from "./PreservedPanel.module.css";
  * stays closed until a creator asks for it.
  */
 export function PreservedPanel({ assetId }: { assetId: string }) {
+  const candidate = useWorkingCopy();
   const [open, setOpen] = useState(false);
   const [namespaces, setNamespaces] = useState<PreservedNamespace[] | null>(
     null,
@@ -36,7 +38,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
     setPending(true);
     setMessage("");
     try {
-      await deletePreservedNamespace(assetId, namespace);
+      await deletePreservedNamespace(candidate, assetId, namespace);
       setNamespaces(
         (current) =>
           current?.filter((held) => held.name !== namespace) ?? current,

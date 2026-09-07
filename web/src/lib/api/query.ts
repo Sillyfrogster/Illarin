@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { acceptCandidateVersion, type Candidate } from "@/lib/working-copy";
 import { browserFetch } from "./browser-mutation";
 import { api } from "./client";
 import type { components, paths } from "./schema";
@@ -228,14 +229,22 @@ export async function saveAssetDiscovery(
 
 /** Saves one builder block without changing any other block on the page. */
 export async function saveAssetBlock(
+  candidate: Candidate,
   assetId: string,
   blockId: string,
   block: SaveAssetBlockRequest,
 ): Promise<AssetBlock> {
-  const { data, error } = await api.PUT("/v1/assets/{id}/blocks/{blockId}", {
-    params: { path: { id: assetId, blockId } },
-    body: block,
-  });
+  const { data, error, response } = await api.PUT(
+    "/v1/assets/{id}/blocks/{blockId}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
+      body: block,
+    },
+  );
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     const detail = error as { error?: unknown } | undefined;
     const message =
@@ -249,14 +258,19 @@ export async function saveAssetBlock(
 
 /** Adds one block to the foot of the page, holding the element chosen for it. */
 export async function addAssetBlock(
+  candidate: Candidate,
   assetId: string,
   definition: string,
   elementType: ElementType,
 ): Promise<AssetBlock> {
-  const { data, error } = await api.POST("/v1/assets/{id}/blocks", {
-    params: { path: { id: assetId } },
+  const { data, error, response } = await api.POST("/v1/assets/{id}/blocks", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id: assetId },
+    },
     body: { definition, elementType },
   });
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(
@@ -270,6 +284,7 @@ export async function addAssetBlock(
 
 /** Media is stored first, then linked when its block is saved. */
 export async function addAssetImage(
+  candidate: Candidate,
   assetId: string,
   file: File,
   role: components["schemas"]["AddMediaRequest"]["role"],
@@ -279,6 +294,7 @@ export async function addAssetImage(
   body.append("file", file, file.name);
   const response = await browserFetch(`/api/v1/assets/${assetId}/media`, {
     method: "POST",
+    headers: { "X-Working-Copy-Version": String(candidate.version) },
     credentials: "same-origin",
     body,
   });
@@ -289,6 +305,7 @@ export async function addAssetImage(
         : "The image could not be added. Try again.",
     );
   }
+  acceptCandidateVersion(candidate, response);
   const added = (await response.json()) as { id?: unknown };
   if (typeof added.id !== "string") {
     throw new Error("The image could not be added. Try again.");
@@ -298,13 +315,18 @@ export async function addAssetImage(
 
 /** Saves the full page outline as one arrangement. */
 export async function arrangeAssetBlocks(
+  candidate: Candidate,
   assetId: string,
   arrangement: ArrangeAssetBlocksRequest,
 ): Promise<AssetBlock[]> {
-  const { data, error } = await api.PUT("/v1/assets/{id}/blocks", {
-    params: { path: { id: assetId } },
+  const { data, error, response } = await api.PUT("/v1/assets/{id}/blocks", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id: assetId },
+    },
     body: arrangement,
   });
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(
@@ -317,10 +339,21 @@ export async function arrangeAssetBlocks(
 }
 
 /** Removes one optional block and all of the elements it holds. */
-export async function removeAssetBlock(assetId: string, blockId: string) {
-  const { error } = await api.DELETE("/v1/assets/{id}/blocks/{blockId}", {
-    params: { path: { id: assetId, blockId } },
-  });
+export async function removeAssetBlock(
+  candidate: Candidate,
+  assetId: string,
+  blockId: string,
+) {
+  const { error, response } = await api.DELETE(
+    "/v1/assets/{id}/blocks/{blockId}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
   if (error) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(
@@ -333,17 +366,22 @@ export async function removeAssetBlock(assetId: string, blockId: string) {
 
 /** Moves a block's unpinned content, then removes the emptied block. */
 export async function moveAssetBlockContent(
+  candidate: Candidate,
   assetId: string,
   blockId: string,
   destinationBlockId: string,
 ): Promise<AssetBlock[]> {
-  const { data, error } = await api.POST(
+  const { data, error, response } = await api.POST(
     "/v1/assets/{id}/blocks/{blockId}/move-and-remove",
     {
-      params: { path: { id: assetId, blockId } },
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
       body: { destinationBlockId },
     },
   );
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(
@@ -357,13 +395,18 @@ export async function moveAssetBlockContent(
 
 /** A null adult-content answer is allowed only while the asset is a draft. */
 export async function saveAssetIdentity(
+  candidate: Candidate,
   id: string,
   identity: { name: string; isNsfw: boolean | null },
 ) {
-  const { error } = await api.PUT("/v1/assets/{id}/identity", {
-    params: { path: { id } },
+  const { error, response } = await api.PUT("/v1/assets/{id}/identity", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
     body: identity,
   });
+  acceptCandidateVersion(candidate, response);
   if (error) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(
@@ -378,14 +421,19 @@ export async function saveAssetIdentity(
  * Publishes a draft, or comes back with what publication is still waiting on.
  */
 export async function publishAsset(
+  candidate: Candidate,
   id: string,
 ): Promise<
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
 > {
-  const { data, error } = await api.POST("/v1/assets/{id}/publish", {
-    params: { path: { id } },
+  const { data, error, response } = await api.POST("/v1/assets/{id}/publish", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
   });
+  acceptCandidateVersion(candidate, response);
   if (data) return { published: true };
   const refusal = error as
     | { error?: unknown; readiness?: ReadinessItem[] }
@@ -411,10 +459,21 @@ export async function fetchPreservedNamespaces(
 }
 
 /** Deletes one namespace and everything under it, for good. */
-export async function deletePreservedNamespace(id: string, namespace: string) {
-  const { error } = await api.DELETE("/v1/assets/{id}/preserved/{namespace}", {
-    params: { path: { id, namespace } },
-  });
+export async function deletePreservedNamespace(
+  candidate: Candidate,
+  id: string,
+  namespace: string,
+) {
+  const { error, response } = await api.DELETE(
+    "/v1/assets/{id}/preserved/{namespace}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, namespace },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
   if (error) {
     const detail = error as { error?: unknown } | undefined;
     throw new Error(

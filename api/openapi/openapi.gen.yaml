@@ -3676,6 +3676,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3712,7 +3713,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
         '413':
           description: The file exceeds an upload limit or the account storage cap
         '503':
@@ -3728,6 +3733,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3749,6 +3755,12 @@ paths:
       responses:
         '200':
           description: The saved block as it now appears on the page
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -3762,7 +3774,11 @@ paths:
         '404':
           description: The asset or block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
         '422':
           description: The uploaded bytes have been purged and cannot return
     delete:
@@ -3774,6 +3790,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3789,6 +3806,12 @@ paths:
       responses:
         '204':
           description: The block and everything in it were removed
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '401':
           description: No account is signed in
         '403':
@@ -3796,7 +3819,11 @@ paths:
         '404':
           description: The asset or block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/blocks:
     post:
       operationId: addAssetBlock
@@ -3808,6 +3835,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3823,6 +3851,12 @@ paths:
       responses:
         '201':
           description: The new block as it now appears at the foot of the page
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -3836,7 +3870,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
     put:
       operationId: arrangeAssetBlocks
       description: >-
@@ -3846,6 +3884,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3861,6 +3900,12 @@ paths:
       responses:
         '200':
           description: Every block in its saved page order
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -3877,7 +3922,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/blocks/{blockId}/move-and-remove:
     post:
       operationId: moveAssetBlockContent
@@ -3888,6 +3937,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3909,6 +3959,12 @@ paths:
       responses:
         '200':
           description: Every remaining block in its saved page order
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -3924,7 +3980,11 @@ paths:
         '404':
           description: The asset or either block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/preserved:
     get:
       operationId: listPreservedNamespaces
@@ -3967,6 +4027,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -3981,6 +4042,12 @@ paths:
       responses:
         '204':
           description: The namespace is gone
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '401':
           description: No account is signed in
         '403':
@@ -3988,7 +4055,11 @@ paths:
         '404':
           description: The asset or the namespace does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/sealed:
     get:
       operationId: exportSealedContent
@@ -4054,6 +4125,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -4069,6 +4141,12 @@ paths:
       responses:
         '204':
           description: The header is saved
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '400':
           description: The name is too long
           or a published asset was sent no adult content answer: null
@@ -4079,7 +4157,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/publish:
     post:
       operationId: publishAsset
@@ -4092,6 +4174,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -4101,6 +4184,12 @@ paths:
       responses:
         '200':
           description: The asset as its page now reads, published
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -4112,13 +4201,11 @@ paths:
         '404':
           description: The draft does not belong to the creator
         '409':
-          description: >-
-            The draft is not ready, the asset is already published, or it is
-            withheld
+          description: The working copy changed or the asset is frozen
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublishRefusal'
+                $ref: '#/components/schemas/PublishConflict'
   /v1/assets/{id}/discovery:
     put:
       operationId: setAssetDiscovery
@@ -4358,6 +4445,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
         - name: id
           in: path
           required: true
@@ -4383,6 +4471,12 @@ paths:
       responses:
         '201':
           description: A new immutable media record
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -4396,7 +4490,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
         '413':
           description: The image exceeds an upload limit or the account storage cap
         '503':
@@ -4542,6 +4640,15 @@ components:
         type: string
         enum:
           - '1'
+    WorkingCopyVersion:
+      name: X-Working-Copy-Version
+      in: header
+      required: true
+      description: The workingCopyVersion returned with the candidate the creator reviewed
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
     WebhookId:
       name: webhook-id
       in: header
@@ -7427,6 +7534,12 @@ components:
         - preview
         - visibility
       properties:
+        workingCopyVersion:
+          type: integer
+          format: int64
+          description: >-
+            Only returned with the owner's working copy or draft, from the same
+            read snapshot
         id:
           type: string
           format: uuid
@@ -8098,6 +8211,9 @@ components:
             - unsupported_version
             - safety_violation
             - wrong_kind
+            - working_copy_conflict
+            - asset_unavailable
+            - limit_exceeded
             - internal_failure
         message:
           type: string
@@ -9239,6 +9355,29 @@ components:
           format: uuid
         name:
           type: string
+    CandidateConflict:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - working_copy_conflict
+            - asset_frozen
+        currentVersion:
+          type: integer
+          format: int64
+          description: >-
+            Present only for an authorized stale request; reload the working
+            copy before retrying
+    PublishConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/PublishRefusal'
     PublicationEventApp:
       type: object
       required:

@@ -10,6 +10,7 @@ import {
   saveAssetBlock,
 } from "@/lib/api/query";
 import { LAYOUTS } from "@/lib/page-arrangement";
+import { useWorkingCopy } from "@/lib/working-copy";
 import { LayoutPicker, WidthPicker } from "./ArrangementPickers";
 import styles from "./BlockSheet.module.css";
 import { ElementEditor } from "./ElementEditors";
@@ -46,6 +47,7 @@ export function BlockSheet({
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
 }) {
+  const candidate = useWorkingCopy();
   const dialog = useRef<HTMLDialogElement>(null);
   const policyFields = useRef<HTMLFieldSetElement>(null);
   const [title, setTitle] = useState(block.titleIsDefault ? "" : block.title);
@@ -108,7 +110,7 @@ export function BlockSheet({
     }
     setPending(true);
     try {
-      const saved = await saveAssetBlock(assetId, block.id, {
+      const saved = await saveAssetBlock(candidate, assetId, block.id, {
         title: useDefaultTitle ? null : title,
         layout,
         width,

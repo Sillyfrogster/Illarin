@@ -49,6 +49,7 @@ func (s *Service) SaveBlock(
 	assetID uuid.UUID,
 	blockID uuid.UUID,
 	update BlockUpdate,
+	candidate *Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -56,7 +57,7 @@ func (s *Service) SaveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -130,10 +131,7 @@ func (s *Service) SaveBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return SavedBlock{}, err
-	}
-	if err := protected.RestorePromptFragments(ctx, s.pool, assetID, blocks); err != nil {
+	if err := protected.RestorePromptFragments(ctx, tx, assetID, blocks); err != nil {
 		return SavedBlock{}, err
 	}
 	for i := range blocks {
@@ -141,6 +139,9 @@ func (s *Service) SaveBlock(
 			saved = &blocks[i]
 			break
 		}
+	}
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
+		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: *saved}, nil
 }
@@ -190,6 +191,7 @@ func (s *Service) AddBlock(
 	assetID uuid.UUID,
 	definition block.DefinitionID,
 	elementType block.Type,
+	candidate *Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -197,7 +199,7 @@ func (s *Service) AddBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -231,7 +233,7 @@ func (s *Service) AddBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: added}, nil
@@ -243,6 +245,7 @@ func (s *Service) ArrangeBlocks(
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	arrangement []BlockArrangement,
+	candidate *Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -250,7 +253,7 @@ func (s *Service) ArrangeBlocks(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -300,7 +303,7 @@ func (s *Service) ArrangeBlocks(
 	if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
@@ -312,6 +315,7 @@ func (s *Service) RemoveBlock(
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	blockID uuid.UUID,
+	candidate *Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -319,7 +323,7 @@ func (s *Service) RemoveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return err
 	}
@@ -368,7 +372,7 @@ func (s *Service) RemoveBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return candidate.commit(ctx, tx, assetID)
 }
 
 // MoveBlockContent moves unpinned elements, then removes their old block.
@@ -378,6 +382,7 @@ func (s *Service) MoveBlockContent(
 	assetID uuid.UUID,
 	blockID uuid.UUID,
 	destinationID uuid.UUID,
+	candidate *Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -385,7 +390,7 @@ func (s *Service) MoveBlockContent(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -480,7 +485,7 @@ func (s *Service) MoveBlockContent(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil

@@ -38,19 +38,21 @@ func (h *Handlers) DeletePreservedNamespace(
 	c *gin.Context,
 	id openapi_types.UUID,
 	namespace string,
+	params DeletePreservedNamespaceParams,
 ) {
 	owner, ok := h.verifiedAccount(c, "deleting preserved data")
 	if !ok {
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	err := h.assets.DeletePreservedNamespace(
-		c.Request.Context(), owner.ID, uuid.UUID(id), namespace,
-	)
+		c.Request.Context(), owner.ID, uuid.UUID(id), namespace, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "This asset preserves no such data."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case err != nil:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete the preserved data."})
 	default:

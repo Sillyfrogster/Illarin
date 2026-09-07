@@ -93,7 +93,7 @@ func (r *sourceErrorReader) Read(payload []byte) (int, error) {
 }
 
 // AddMedia stores one creator-managed image under a new media ID.
-func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error) {
+func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Candidate) (Media, error) {
 	if !in.Role.Valid() {
 		return Media{}, ErrInvalidMediaRole
 	}
@@ -123,24 +123,12 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 		return Media{}, fmt.Errorf("begin media addition: %w", err)
 	}
 	defer tx.Rollback(ctx)
+
 	if err := s.ensureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return Media{}, err
 	}
-	withheldAt = pgtype.Timestamptz{}
-	err = tx.QueryRow(ctx, `
-		select withheld_at
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Media{}, ErrMediaNotFound
-	}
-	if err != nil {
-		return Media{}, fmt.Errorf("lock media owner: %w", err)
-	}
-	if withheldAt.Valid {
-		return Media{}, ErrAssetFrozen
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+		return Media{}, err
 	}
 	fingerprint, err := s.contentFingerprint(ctx, tx, in.AssetID)
 	if err != nil {
@@ -170,7 +158,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return Media{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, in.AssetID); err != nil {
 		return Media{}, fmt.Errorf("commit media addition: %w", err)
 	}
 	return Media{

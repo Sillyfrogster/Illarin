@@ -73,6 +73,7 @@ func exampleMetadata(name string) map[string]any {
 
 func send(t *testing.T, r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	t.Helper()
+	withReviewedVersion(t, r, req)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return rec

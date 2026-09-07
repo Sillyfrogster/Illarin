@@ -54,10 +54,10 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created Asse
 	nsfw := false
 	if err := svc.SetIdentity(context.Background(), Identity{
 		OwnerID: ownerID, AssetID: created.ID, Name: name, IsNSFW: &nsfw,
-	}); err != nil {
+	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetIdentity imported asset: %v", err)
 	}
-	if _, err := svc.Publish(context.Background(), ownerID, created.ID); err != nil {
+	if _, err := svc.Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("Publish imported asset: %v", err)
 	}
 }
@@ -72,7 +72,7 @@ func addRevision(
 	t.Helper()
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: ownerID, AssetID: assetID, Filename: filename, File: bytes.NewReader(file),
-	})
+	}, currentCandidate(t, svc, assetID))
 	if err != nil {
 		t.Fatalf("AcceptRevision: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 	_, err := svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: uuid.New(), AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("stranger revision error = %v, want ErrNotFound", err)
 	}
@@ -257,7 +257,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: ownerID, AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, ErrAssetFrozen) {
 		t.Fatalf("withheld revision error = %v, want ErrAssetFrozen", err)
 	}
@@ -275,7 +275,7 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 	added, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.Gray{Y: 128})),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("add creator media: %v", err)
 	}

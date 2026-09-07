@@ -7,7 +7,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 // ErrPublishFloor is a draft that does not yet carry what its kind asks for.
@@ -78,6 +77,7 @@ func (s *Service) Publish(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
+	candidate *Candidate,
 ) ([]ReadinessItem, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -85,24 +85,17 @@ func (s *Service) Publish(
 	}
 	defer tx.Rollback(ctx)
 
+	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
+		return nil, err
+	}
+
 	var kind, name, lifecycle string
 	var isNSFW *bool
-	var withheld bool
-	err = tx.QueryRow(ctx, `
-		select kind, name, is_nsfw, lifecycle, withheld_at is not null
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, assetID, ownerID).Scan(&kind, &name, &isNSFW, &lifecycle, &withheld)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	err = tx.QueryRow(ctx, `select kind, name, is_nsfw, lifecycle from assets where id = $1`, assetID).Scan(&kind, &name, &isNSFW, &lifecycle)
 	if err != nil {
 		return nil, fmt.Errorf("read asset to publish: %w", err)
 	}
-	if withheld {
-		return nil, ErrAssetFrozen
-	}
+
 	if Lifecycle(lifecycle) != LifecycleDraft {
 		return nil, ErrAlreadyPublished
 	}
@@ -125,7 +118,7 @@ func (s *Service) Publish(
 	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, assetID); err != nil {
 		return nil, fmt.Errorf("record initial publication: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return nil, err
 	}
 	return items, nil

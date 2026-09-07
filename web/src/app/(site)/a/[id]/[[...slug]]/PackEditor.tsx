@@ -9,6 +9,7 @@ import {
   type LumiaRecord,
   type RecordListContent,
 } from "@/lib/api/query";
+import { useWorkingCopy } from "@/lib/working-copy";
 import {
   CollectionEditor,
   Field,
@@ -248,6 +249,7 @@ function AvatarField({
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
 }) {
+  const candidate = useWorkingCopy();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState("");
@@ -266,7 +268,12 @@ function AvatarField({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(assetId, chosen, "pack_item");
+      const mediaId = await addAssetImage(
+        candidate,
+        assetId,
+        chosen,
+        "pack_item",
+      );
       setPreview(URL.createObjectURL(chosen));
       onChange({ avatarUrl: mediaId });
       onImageAdded();

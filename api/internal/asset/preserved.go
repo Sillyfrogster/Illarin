@@ -65,6 +65,7 @@ func (s *Service) DeletePreservedNamespace(
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	namespace string,
+	candidate *Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -72,7 +73,7 @@ func (s *Service) DeletePreservedNamespace(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := lockEditableAsset(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	fingerprint, err := s.contentFingerprint(ctx, tx, assetID)
@@ -91,7 +92,7 @@ func (s *Service) DeletePreservedNamespace(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return candidate.commit(ctx, tx, assetID)
 }
 
 // preservedAssetOrigin returns the format an asset arrived in, which is the

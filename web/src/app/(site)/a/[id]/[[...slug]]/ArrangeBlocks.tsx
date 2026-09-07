@@ -30,6 +30,7 @@ import {
   WIDTH_LABELS,
 } from "@/lib/page-arrangement";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
+import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./ArrangeBlocks.module.css";
 import { WidthPicker } from "./ArrangementPickers";
 
@@ -46,6 +47,7 @@ export function ArrangeBlocks({
   onChange: (blocks: AssetBlock[]) => void;
   onClose: () => void;
 }) {
+  const candidate = useWorkingCopy();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [dragged, setDragged] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export function ArrangeBlocks({
     setSaving(true);
     setMessage("");
     try {
-      const saved = await arrangeAssetBlocks(assetId, {
+      const saved = await arrangeAssetBlocks(candidate, assetId, {
         blocks: next.map((block) => ({
           id: block.id,
           hidden: block.hidden,
@@ -329,7 +331,7 @@ export function ArrangeBlocks({
             setSaving(true);
             setMessage("");
             try {
-              await removeAssetBlock(assetId, removing.id);
+              await removeAssetBlock(candidate, assetId, removing.id);
               onChange(
                 blocks
                   .filter((block) => block.id !== removing.id)
@@ -352,6 +354,7 @@ export function ArrangeBlocks({
             setMessage("");
             try {
               const saved = await moveAssetBlockContent(
+                candidate,
                 assetId,
                 removing.id,
                 destinationBlockId,

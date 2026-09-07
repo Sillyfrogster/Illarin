@@ -489,6 +489,24 @@ func (e BrowseAssetOwnerState) Valid() bool {
 	}
 }
 
+// Defines values for CandidateConflictCode.
+const (
+	CandidateConflictCodeAssetFrozen         CandidateConflictCode = "asset_frozen"
+	CandidateConflictCodeWorkingCopyConflict CandidateConflictCode = "working_copy_conflict"
+)
+
+// Valid indicates whether the value is a known member of the CandidateConflictCode enum.
+func (e CandidateConflictCode) Valid() bool {
+	switch e {
+	case CandidateConflictCodeAssetFrozen:
+		return true
+	case CandidateConflictCodeWorkingCopyConflict:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateAssetRequestDiscovery.
 const (
 	CreateAssetRequestDiscoveryListed   CreateAssetRequestDiscovery = "listed"
@@ -668,28 +686,37 @@ func (e EntryTableContentEntriesPosition) Valid() bool {
 
 // Defines values for IngestFailureReason.
 const (
-	InternalFailure    IngestFailureReason = "internal_failure"
-	MalformedInput     IngestFailureReason = "malformed_input"
-	SafetyViolation    IngestFailureReason = "safety_violation"
-	UnsupportedFormat  IngestFailureReason = "unsupported_format"
-	UnsupportedVersion IngestFailureReason = "unsupported_version"
-	WrongKind          IngestFailureReason = "wrong_kind"
+	IngestFailureReasonAssetUnavailable    IngestFailureReason = "asset_unavailable"
+	IngestFailureReasonInternalFailure     IngestFailureReason = "internal_failure"
+	IngestFailureReasonLimitExceeded       IngestFailureReason = "limit_exceeded"
+	IngestFailureReasonMalformedInput      IngestFailureReason = "malformed_input"
+	IngestFailureReasonSafetyViolation     IngestFailureReason = "safety_violation"
+	IngestFailureReasonUnsupportedFormat   IngestFailureReason = "unsupported_format"
+	IngestFailureReasonUnsupportedVersion  IngestFailureReason = "unsupported_version"
+	IngestFailureReasonWorkingCopyConflict IngestFailureReason = "working_copy_conflict"
+	IngestFailureReasonWrongKind           IngestFailureReason = "wrong_kind"
 )
 
 // Valid indicates whether the value is a known member of the IngestFailureReason enum.
 func (e IngestFailureReason) Valid() bool {
 	switch e {
-	case InternalFailure:
+	case IngestFailureReasonAssetUnavailable:
 		return true
-	case MalformedInput:
+	case IngestFailureReasonInternalFailure:
 		return true
-	case SafetyViolation:
+	case IngestFailureReasonLimitExceeded:
 		return true
-	case UnsupportedFormat:
+	case IngestFailureReasonMalformedInput:
 		return true
-	case UnsupportedVersion:
+	case IngestFailureReasonSafetyViolation:
 		return true
-	case WrongKind:
+	case IngestFailureReasonUnsupportedFormat:
+		return true
+	case IngestFailureReasonUnsupportedVersion:
+		return true
+	case IngestFailureReasonWorkingCopyConflict:
+		return true
+	case IngestFailureReasonWrongKind:
 		return true
 	default:
 		return false
@@ -1967,6 +1994,9 @@ type AssetDetail struct {
 	Tags         []AssetTag            `json:"tags"`
 	Visibility   AssetDetailVisibility `json:"visibility"`
 	Withhold     *AssetWithhold        `json:"withhold,omitempty"`
+
+	// WorkingCopyVersion Only returned with the owner's working copy or draft, from the same read snapshot
+	WorkingCopyVersion *int64 `json:"workingCopyVersion,omitempty"`
 }
 
 // AssetDetailAllowedApps defines model for AssetDetail.AllowedApps.
@@ -2155,6 +2185,18 @@ type BrowseOption struct {
 	Selected bool   `json:"selected"`
 	Value    string `json:"value"`
 }
+
+// CandidateConflict defines model for CandidateConflict.
+type CandidateConflict struct {
+	Code CandidateConflictCode `json:"code"`
+
+	// CurrentVersion Present only for an authorized stale request; reload the working copy before retrying
+	CurrentVersion *int64 `json:"currentVersion,omitempty"`
+	Error          string `json:"error"`
+}
+
+// CandidateConflictCode defines model for CandidateConflict.Code.
+type CandidateConflictCode string
 
 // CapabilityId A namespaced interoperability claim. It never grants permission and unknown values have no effect.
 type CapabilityId = string
@@ -3543,6 +3585,11 @@ type PublicationWorkspace struct {
 	Handle     string                `json:"handle"`
 }
 
+// PublishConflict defines model for PublishConflict.
+type PublishConflict struct {
+	union json.RawMessage
+}
+
 // PublishPostRequest defines model for PublishPostRequest.
 type PublishPostRequest struct {
 	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
@@ -4061,6 +4108,9 @@ type WebhookSignature = string
 // WebhookTimestamp defines model for WebhookTimestamp.
 type WebhookTimestamp = int
 
+// WorkingCopyVersion defines model for WorkingCopyVersion.
+type WorkingCopyVersion = int64
+
 // PublicationForbidden How every publication route refuses. It never names another account, grant or token.
 type PublicationForbidden = PublicationError
 
@@ -4151,6 +4201,36 @@ type GetAssetParams struct {
 // GetAssetParamsNsfw defines parameters for GetAsset.
 type GetAssetParamsNsfw string
 
+// AddAssetBlockParams defines parameters for AddAssetBlock.
+type AddAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// ArrangeAssetBlocksParams defines parameters for ArrangeAssetBlocks.
+type ArrangeAssetBlocksParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// RemoveAssetBlockParams defines parameters for RemoveAssetBlock.
+type RemoveAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// SaveAssetBlockParams defines parameters for SaveAssetBlock.
+type SaveAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// MoveAssetBlockContentParams defines parameters for MoveAssetBlockContent.
+type MoveAssetBlockContentParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // SendAssetToInstanceParams defines parameters for SendAssetToInstance.
 type SendAssetToInstanceParams struct {
 	// XIllarinRequest Illarin's browser request proof. The value must be 1.
@@ -4160,15 +4240,45 @@ type SendAssetToInstanceParams struct {
 // SendAssetToInstanceParamsXIllarinRequest defines parameters for SendAssetToInstance.
 type SendAssetToInstanceParamsXIllarinRequest string
 
+// SetAssetIdentityParams defines parameters for SetAssetIdentity.
+type SetAssetIdentityParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // AddMediaMultipartBody defines parameters for AddMedia.
 type AddMediaMultipartBody struct {
 	File     openapi_types.File `json:"file"`
 	Metadata AddMediaRequest    `json:"metadata"`
 }
 
+// AddMediaParams defines parameters for AddMedia.
+type AddMediaParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// DeletePreservedNamespaceParams defines parameters for DeletePreservedNamespace.
+type DeletePreservedNamespaceParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// PublishAssetParams defines parameters for PublishAsset.
+type PublishAssetParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // AddAssetRevisionMultipartBody defines parameters for AddAssetRevision.
 type AddAssetRevisionMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// AddAssetRevisionParams defines parameters for AddAssetRevision.
+type AddAssetRevisionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
 
 // BeginDiscordParams defines parameters for BeginDiscord.
@@ -4724,6 +4834,68 @@ func (t *LinkPollResult) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsCandidateConflict returns the union data inside the PublishConflict as a CandidateConflict
+func (t PublishConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the PublishConflict as the provided CandidateConflict
+func (t *PublishConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the PublishConflict, using the provided CandidateConflict
+func (t *PublishConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublishRefusal returns the union data inside the PublishConflict as a PublishRefusal
+func (t PublishConflict) AsPublishRefusal() (PublishRefusal, error) {
+	var body PublishRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishRefusal overwrites any union data inside the PublishConflict as the provided PublishRefusal
+func (t *PublishConflict) FromPublishRefusal(v PublishRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishRefusal performs a merge with any union data inside the PublishConflict, using the provided PublishRefusal
+func (t *PublishConflict) MergePublishRefusal(v PublishRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PublishConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PublishConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -4788,19 +4960,19 @@ type ServerInterface interface {
 	GetAsset(c *gin.Context, id openapi_types.UUID, params GetAssetParams)
 
 	// (POST /v1/assets/{id}/blocks)
-	AddAssetBlock(c *gin.Context, id openapi_types.UUID)
+	AddAssetBlock(c *gin.Context, id openapi_types.UUID, params AddAssetBlockParams)
 
 	// (PUT /v1/assets/{id}/blocks)
-	ArrangeAssetBlocks(c *gin.Context, id openapi_types.UUID)
+	ArrangeAssetBlocks(c *gin.Context, id openapi_types.UUID, params ArrangeAssetBlocksParams)
 
 	// (DELETE /v1/assets/{id}/blocks/{blockId})
-	RemoveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	RemoveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params RemoveAssetBlockParams)
 
 	// (PUT /v1/assets/{id}/blocks/{blockId})
-	SaveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	SaveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params SaveAssetBlockParams)
 
 	// (POST /v1/assets/{id}/blocks/{blockId}/move-and-remove)
-	MoveAssetBlockContent(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	MoveAssetBlockContent(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params MoveAssetBlockContentParams)
 
 	// (POST /v1/assets/{id}/deliveries)
 	SendAssetToInstance(c *gin.Context, id openapi_types.UUID, params SendAssetToInstanceParams)
@@ -4809,7 +4981,7 @@ type ServerInterface interface {
 	SetAssetDiscovery(c *gin.Context, id openapi_types.UUID)
 
 	// (PUT /v1/assets/{id}/identity)
-	SetAssetIdentity(c *gin.Context, id openapi_types.UUID)
+	SetAssetIdentity(c *gin.Context, id openapi_types.UUID, params SetAssetIdentityParams)
 
 	// (GET /v1/assets/{id}/instances)
 	GetAssetInstances(c *gin.Context, id openapi_types.UUID)
@@ -4818,22 +4990,22 @@ type ServerInterface interface {
 	ListMedia(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/assets/{id}/media)
-	AddMedia(c *gin.Context, id openapi_types.UUID)
+	AddMedia(c *gin.Context, id openapi_types.UUID, params AddMediaParams)
 
 	// (GET /v1/assets/{id}/preserved)
 	ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID)
 
 	// (DELETE /v1/assets/{id}/preserved/{namespace})
-	DeletePreservedNamespace(c *gin.Context, id openapi_types.UUID, namespace string)
+	DeletePreservedNamespace(c *gin.Context, id openapi_types.UUID, namespace string, params DeletePreservedNamespaceParams)
 
 	// (POST /v1/assets/{id}/publish)
-	PublishAsset(c *gin.Context, id openapi_types.UUID)
+	PublishAsset(c *gin.Context, id openapi_types.UUID, params PublishAssetParams)
 
 	// (POST /v1/assets/{id}/restore)
 	RestoreAsset(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/assets/{id}/revisions)
-	AddAssetRevision(c *gin.Context, id openapi_types.UUID)
+	AddAssetRevision(c *gin.Context, id openapi_types.UUID, params AddAssetRevisionParams)
 
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
@@ -5714,6 +5886,33 @@ func (siw *ServerInterfaceWrapper) AddAssetBlock(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5721,7 +5920,7 @@ func (siw *ServerInterfaceWrapper) AddAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddAssetBlock(c, id)
+	siw.Handler.AddAssetBlock(c, id, params)
 }
 
 // ArrangeAssetBlocks operation middleware
@@ -5739,6 +5938,33 @@ func (siw *ServerInterfaceWrapper) ArrangeAssetBlocks(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArrangeAssetBlocksParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5746,7 +5972,7 @@ func (siw *ServerInterfaceWrapper) ArrangeAssetBlocks(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ArrangeAssetBlocks(c, id)
+	siw.Handler.ArrangeAssetBlocks(c, id, params)
 }
 
 // RemoveAssetBlock operation middleware
@@ -5773,6 +5999,33 @@ func (siw *ServerInterfaceWrapper) RemoveAssetBlock(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5780,7 +6033,7 @@ func (siw *ServerInterfaceWrapper) RemoveAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.RemoveAssetBlock(c, id, blockId)
+	siw.Handler.RemoveAssetBlock(c, id, blockId, params)
 }
 
 // SaveAssetBlock operation middleware
@@ -5807,6 +6060,33 @@ func (siw *ServerInterfaceWrapper) SaveAssetBlock(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5814,7 +6094,7 @@ func (siw *ServerInterfaceWrapper) SaveAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.SaveAssetBlock(c, id, blockId)
+	siw.Handler.SaveAssetBlock(c, id, blockId, params)
 }
 
 // MoveAssetBlockContent operation middleware
@@ -5841,6 +6121,33 @@ func (siw *ServerInterfaceWrapper) MoveAssetBlockContent(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveAssetBlockContentParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5848,7 +6155,7 @@ func (siw *ServerInterfaceWrapper) MoveAssetBlockContent(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.MoveAssetBlockContent(c, id, blockId)
+	siw.Handler.MoveAssetBlockContent(c, id, blockId, params)
 }
 
 // SendAssetToInstance operation middleware
@@ -5943,6 +6250,33 @@ func (siw *ServerInterfaceWrapper) SetAssetIdentity(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetAssetIdentityParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5950,7 +6284,7 @@ func (siw *ServerInterfaceWrapper) SetAssetIdentity(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.SetAssetIdentity(c, id)
+	siw.Handler.SetAssetIdentity(c, id, params)
 }
 
 // GetAssetInstances operation middleware
@@ -6018,6 +6352,33 @@ func (siw *ServerInterfaceWrapper) AddMedia(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddMediaParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6025,7 +6386,7 @@ func (siw *ServerInterfaceWrapper) AddMedia(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddMedia(c, id)
+	siw.Handler.AddMedia(c, id, params)
 }
 
 // ListPreservedNamespaces operation middleware
@@ -6077,6 +6438,33 @@ func (siw *ServerInterfaceWrapper) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeletePreservedNamespaceParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6084,7 +6472,7 @@ func (siw *ServerInterfaceWrapper) DeletePreservedNamespace(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.DeletePreservedNamespace(c, id, namespace)
+	siw.Handler.DeletePreservedNamespace(c, id, namespace, params)
 }
 
 // PublishAsset operation middleware
@@ -6102,6 +6490,33 @@ func (siw *ServerInterfaceWrapper) PublishAsset(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishAssetParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6109,7 +6524,7 @@ func (siw *ServerInterfaceWrapper) PublishAsset(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PublishAsset(c, id)
+	siw.Handler.PublishAsset(c, id, params)
 }
 
 // RestoreAsset operation middleware
@@ -6152,6 +6567,33 @@ func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddAssetRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -6159,7 +6601,7 @@ func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddAssetRevision(c, id)
+	siw.Handler.AddAssetRevision(c, id, params)
 }
 
 // ExportSealedContent operation middleware

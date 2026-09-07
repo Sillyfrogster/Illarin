@@ -83,6 +83,7 @@ type ingestJob struct {
 }
 
 type revisionTarget struct {
+	Version int64
 	AssetID uuid.UUID
 	Kind    string
 }
@@ -274,6 +275,13 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if errors.Is(err, errIngestLeaseLost) {
 			return true, nil
 		}
+		var conflict *VersionConflict
+		if errors.As(err, &conflict) || errors.Is(err, ErrVersionRequired) {
+			return true, s.failIngest(ctx, job, "working_copy_conflict", "The working copy changed. Review it before accepting the upload again.")
+		}
+		if errors.Is(err, ErrAssetFrozen) || errors.Is(err, ErrNotFound) {
+			return true, s.failIngest(ctx, job, "asset_unavailable", "This asset is no longer available for changes.")
+		}
 		if errors.Is(err, ErrStorageCap) {
 			return true, s.finishIngestFailure(
 				ctx, job, format.FailureLimitExceeded,
@@ -317,17 +325,18 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		          operation.attempts,
 		          (select byte_size from blobs where id = operation.blob_id),
 		          operation.target_asset_id,
-		          (select kind from assets where id = operation.target_asset_id)
+		          (select kind from assets where id = operation.target_asset_id), coalesce(operation.candidate_version, 0)
 	`, now, leaseToken, leaseExpires)
 
 	var job ingestJob
 	var name, blurb, targetKind pgtype.Text
 	var isNSFW pgtype.Bool
 	var targetAssetID pgtype.UUID
+	var candidateVersion int64
 	err := row.Scan(
 		&job.ID, &job.OwnerID, &job.BlobID, &job.Filename, &name, &blurb,
 		&job.Tags, &isNSFW, &job.Discovery, &job.Attempts, &job.ByteSize,
-		&targetAssetID, &targetKind,
+		&targetAssetID, &targetKind, &candidateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ingestJob{}, false, nil
@@ -341,7 +350,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 			return ingestJob{}, false, fmt.Errorf("ingest %s targets a missing asset", job.ID)
 		}
 		job.Target = &revisionTarget{
-			AssetID: uuidFromPgtype(targetAssetID), Kind: targetKind.String,
+			AssetID: uuidFromPgtype(targetAssetID), Kind: targetKind.String, Version: candidateVersion,
 		}
 	}
 	job.Name = textToPointer(name)
@@ -498,7 +507,12 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	if result.RowsAffected() == 0 {
 		return errIngestLeaseLost
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if job.Target != nil {
+		candidate := &Candidate{Version: job.Target.Version}
+		if err := candidate.commit(ctx, tx, job.Target.AssetID); err != nil {
+			return err
+		}
+	} else if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit ingest finalization: %w", err)
 	}
 	return nil
@@ -533,7 +547,8 @@ func (s *Service) writeIngestResult(
 ) (uuid.UUID, error) {
 	blocks := prepared.Blocks
 	if job.Target != nil {
-		if err := lockRevisionTarget(ctx, tx, job.Target.AssetID, job.OwnerID); err != nil {
+		candidate := &Candidate{Version: job.Target.Version}
+		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
 			return uuid.Nil, err
 		}
 		fingerprint, err := s.contentFingerprint(ctx, tx, job.Target.AssetID)
@@ -644,25 +659,6 @@ func replacePreservedData(
 		`, uuid.New(), assetID, string(item.Owner), owner, item.Namespace, item.Payload); err != nil {
 			return fmt.Errorf("preserve %s: %w", item.Namespace, err)
 		}
-	}
-	return nil
-}
-
-// lockRevisionTarget takes the row lock every later step in a replacement runs
-// under, and refuses a frozen asset.
-func lockRevisionTarget(ctx context.Context, tx pgx.Tx, assetID, ownerID uuid.UUID) error {
-	var withheldAt pgtype.Timestamptz
-	err := tx.QueryRow(ctx, `
-		select withheld_at
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, assetID, ownerID).Scan(&withheldAt)
-	if err != nil {
-		return fmt.Errorf("lock revision target: %w", err)
-	}
-	if withheldAt.Valid {
-		return fmt.Errorf("asset %s is frozen", assetID)
 	}
 	return nil
 }

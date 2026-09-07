@@ -15,6 +15,7 @@ import { assetRedirect, isAssetId } from "@/lib/asset-url";
 import { KIND_LABELS } from "@/lib/kinds";
 import { protectedAppLabel } from "@/lib/protected-apps";
 import { formattingWasRemoved } from "@/lib/rich-text";
+import { WorkingCopyProvider } from "@/lib/working-copy";
 import { AssetBlocks } from "./AssetBlocks";
 import { AssetMedia } from "./AssetMedia";
 import { DownloadPanel } from "./DownloadPanel";
@@ -96,139 +97,146 @@ export default async function AssetPage({
   );
 
   return (
-    <div className={styles.page}>
-      <article>
-        <section className={styles.hero}>
-          <Shell className={styles.heroShell}>
-            <Link href="/browse" className={styles.back}>
-              <ArrowLeft size={15} aria-hidden="true" />
-              Back to the collection
-            </Link>
+    <WorkingCopyProvider key={asset.id} version={asset.workingCopyVersion}>
+      <div className={styles.page}>
+        <article>
+          <section className={styles.hero}>
+            <Shell className={styles.heroShell}>
+              <Link href="/browse" className={styles.back}>
+                <ArrowLeft size={15} aria-hidden="true" />
+                Back to the collection
+              </Link>
 
-            <div
-              className={`${styles.heroLayout} ${
-                hasHeaderActions ? "" : styles.heroLayoutWithoutActions
-              }`}
-            >
-              <div className={styles.identityLead}>
-                <div className={styles.classification}>
-                  <span className={styles.kind}>{kind}</span>
-                  <span className={styles.rating}>
-                    {ratingLabel(asset.isNsfw)}
-                  </span>
-                  {asset.linkedInstallOnly ? (
-                    <span className={styles.rating}>Linked install only</span>
-                  ) : null}
-                </div>
-                <h1 className={asset.name ? undefined : styles.unnamed}>
-                  {assetDisplayName(asset.name)}
-                </h1>
-                <p className={styles.byline}>
-                  <span>Created by</span>
-                  <Link className={styles.creator} href={`/@${asset.creator}`}>
-                    {asset.creator}
-                  </Link>
-                  <span className={styles.sharedDate}>
-                    {isDraft
-                      ? `Started ${formattedCreatedDate}`
-                      : `Shared ${formattedCreatedDate}`}
-                  </span>
-                </p>
-              </div>
-
-              {hasHeaderActions ? (
-                <div className={styles.headerActions}>
-                  {isDraft && asset.isOwner && asset.readiness ? (
-                    <DraftHeaderActions />
-                  ) : null}
-
-                  {!asset.linkedInstallOnly ? (
-                    <DownloadPanel
-                      assetId={asset.id}
-                      downloads={asset.downloads}
-                      original={asset.original}
-                      images={asset.media}
-                      holdsNothing={holdsNothing}
-                      isOwner={asset.isOwner}
-                    />
-                  ) : null}
-
-                  {isDraft ? null : <SendToInstance assetId={asset.id} />}
-                </div>
-              ) : null}
-
-              <div className={styles.assetMediaSlot}>
-                <AssetMedia
-                  id={asset.id}
-                  media={asset.media}
-                  kind={asset.kind}
-                  name={asset.name}
-                  isNsfw={asset.isNsfw}
-                  visibility={asset.visibility}
-                />
-              </div>
-
-              <div className={styles.identityDetails}>
-                {asset.blurb ? (
-                  <div className={styles.blurb}>
-                    <RichText text={asset.blurb} />
-                    {formattingWasRemoved([asset.blurb]) ? (
-                      <FormattingNotice />
+              <div
+                className={`${styles.heroLayout} ${
+                  hasHeaderActions ? "" : styles.heroLayoutWithoutActions
+                }`}
+              >
+                <div className={styles.identityLead}>
+                  <div className={styles.classification}>
+                    <span className={styles.kind}>{kind}</span>
+                    <span className={styles.rating}>
+                      {ratingLabel(asset.isNsfw)}
+                    </span>
+                    {asset.linkedInstallOnly ? (
+                      <span className={styles.rating}>Linked install only</span>
                     ) : null}
                   </div>
-                ) : (
-                  <p className={styles.noBlurb}>
-                    The creator has not written a blurb for this{" "}
-                    {kind.toLowerCase()} yet.
+                  <h1 className={asset.name ? undefined : styles.unnamed}>
+                    {assetDisplayName(asset.name)}
+                  </h1>
+                  <p className={styles.byline}>
+                    <span>Created by</span>
+                    <Link
+                      className={styles.creator}
+                      href={`/@${asset.creator}`}
+                    >
+                      {asset.creator}
+                    </Link>
+                    <span className={styles.sharedDate}>
+                      {isDraft
+                        ? `Started ${formattedCreatedDate}`
+                        : `Shared ${formattedCreatedDate}`}
+                    </span>
                   </p>
-                )}
+                </div>
 
-                {asset.tags.length > 0 ? <TagShelf tags={asset.tags} /> : null}
+                {hasHeaderActions ? (
+                  <div className={styles.headerActions}>
+                    {isDraft && asset.isOwner && asset.readiness ? (
+                      <DraftHeaderActions />
+                    ) : null}
 
-                {asset.linkedInstallOnly ? (
-                  <p className={styles.noBlurb}>
-                    Linked install only. Allowed apps:{" "}
-                    {asset.allowedApps.map(protectedAppLabel).join(", ")}.
-                  </p>
+                    {!asset.linkedInstallOnly ? (
+                      <DownloadPanel
+                        assetId={asset.id}
+                        downloads={asset.downloads}
+                        original={asset.original}
+                        images={asset.media}
+                        holdsNothing={holdsNothing}
+                        isOwner={asset.isOwner}
+                      />
+                    ) : null}
+
+                    {isDraft ? null : <SendToInstance assetId={asset.id} />}
+                  </div>
                 ) : null}
 
-                {asset.withhold ? (
-                  <WithholdNotice withhold={asset.withhold} />
-                ) : null}
+                <div className={styles.assetMediaSlot}>
+                  <AssetMedia
+                    id={asset.id}
+                    media={asset.media}
+                    kind={asset.kind}
+                    name={asset.name}
+                    isNsfw={asset.isNsfw}
+                    visibility={asset.visibility}
+                  />
+                </div>
+
+                <div className={styles.identityDetails}>
+                  {asset.blurb ? (
+                    <div className={styles.blurb}>
+                      <RichText text={asset.blurb} />
+                      {formattingWasRemoved([asset.blurb]) ? (
+                        <FormattingNotice />
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className={styles.noBlurb}>
+                      The creator has not written a blurb for this{" "}
+                      {kind.toLowerCase()} yet.
+                    </p>
+                  )}
+
+                  {asset.tags.length > 0 ? (
+                    <TagShelf tags={asset.tags} />
+                  ) : null}
+
+                  {asset.linkedInstallOnly ? (
+                    <p className={styles.noBlurb}>
+                      Linked install only. Allowed apps:{" "}
+                      {asset.allowedApps.map(protectedAppLabel).join(", ")}.
+                    </p>
+                  ) : null}
+
+                  {asset.withhold ? (
+                    <WithholdNotice withhold={asset.withhold} />
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </Shell>
-        </section>
-
-        <Shell className={styles.contentShell}>
-          <section className={styles.blocks} aria-label="Asset content">
-            <AssetBlocks
-              assetId={asset.id}
-              kind={asset.kind}
-              blocks={asset.blocks}
-              images={asset.media}
-              addableBlocks={asset.addableBlocks ?? []}
-              isOwner={asset.isOwner}
-              allowedApps={asset.allowedApps}
-              eligibleApps={asset.eligibleApps}
-              creatorMenu={{
-                assetId: asset.id,
-                creator: asset.creator,
-                kind: kind.toLowerCase(),
-                name: asset.name,
-                isNsfw: asset.isNsfw,
-                isDraft,
-                isOwner: asset.isOwner,
-                discovery: asset.discovery,
-                withheld: Boolean(asset.withhold),
-                hasOriginal: Boolean(asset.original),
-                readiness: asset.readiness,
-                sealedBlocks: asset.sealedBlocks,
-              }}
-            />
+            </Shell>
           </section>
-        </Shell>
-      </article>
-    </div>
+
+          <Shell className={styles.contentShell}>
+            <section className={styles.blocks} aria-label="Asset content">
+              <AssetBlocks
+                assetId={asset.id}
+                kind={asset.kind}
+                blocks={asset.blocks}
+                images={asset.media}
+                addableBlocks={asset.addableBlocks ?? []}
+                isOwner={asset.isOwner}
+                allowedApps={asset.allowedApps}
+                eligibleApps={asset.eligibleApps}
+                creatorMenu={{
+                  assetId: asset.id,
+                  creator: asset.creator,
+                  kind: kind.toLowerCase(),
+                  name: asset.name,
+                  isNsfw: asset.isNsfw,
+                  isDraft,
+                  isOwner: asset.isOwner,
+                  discovery: asset.discovery,
+                  withheld: Boolean(asset.withhold),
+                  hasOriginal: Boolean(asset.original),
+                  readiness: asset.readiness,
+                  sealedBlocks: asset.sealedBlocks,
+                }}
+              />
+            </section>
+          </Shell>
+        </article>
+      </div>
+    </WorkingCopyProvider>
   );
 }

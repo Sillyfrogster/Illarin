@@ -12,7 +12,7 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID) {
+func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID, params SaveAssetBlockParams) {
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
 		return
@@ -29,14 +29,15 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.U
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	saved, err := h.assets.SaveBlock(
-		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), update,
-	)
+		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), update, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrInvalidBlock):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case err != nil:

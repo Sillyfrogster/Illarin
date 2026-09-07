@@ -35,12 +35,13 @@ type DetailImage struct {
 // Detail is everything an asset's own page shows. It holds no total of any
 // kind, because nothing on that page displays one.
 type Detail struct {
-	ID      uuid.UUID
-	Kind    string
-	Name    string
-	Blurb   string
-	Tags    []DetailTag
-	Creator string
+	WorkingCopyVersion *int64
+	ID                 uuid.UUID
+	Kind               string
+	Name               string
+	Blurb              string
+	Tags               []DetailTag
+	Creator            string
 	// IsNSFW is nil while a draft has not been asked the question.
 	IsNSFW    *bool
 	Discovery Discovery
@@ -137,6 +138,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		Original:  originalUpload(s.reg, row),
 		CreatedAt: timeFromPgtype(row.CreatedAt),
 		Media:     []DetailImage{},
+	}
+	if working || (found.IsOwner && found.Lifecycle == LifecycleDraft) {
+		var version int64
+		if err := tx.QueryRow(ctx, `select working_copy_version from public.assets where id = $1`, id).Scan(&version); err != nil {
+			return Detail{}, err
+		}
+		found.WorkingCopyVersion = &version
 	}
 	found.Downloads, err = s.exportProjection(ctx, tx, id)
 	if err != nil {

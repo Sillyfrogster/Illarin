@@ -8,7 +8,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 // MaxNameRunes is as long as a name may be. It is a boundary on stored text
@@ -35,7 +34,7 @@ type Identity struct {
 }
 
 // SetIdentity saves the working copy's name and adult content answer.
-func (s *Service) SetIdentity(ctx context.Context, in Identity) error {
+func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candidate) error {
 	name := strings.TrimSpace(in.Name)
 	if utf8.RuneCountInString(name) > MaxNameRunes {
 		return fmt.Errorf("%w: %d characters is past %d", ErrNameTooLong,
@@ -47,24 +46,15 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+		return err
+	}
 
 	var lifecycle string
-	var withheld bool
-	err = tx.QueryRow(ctx, `
-		select lifecycle, withheld_at is not null
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, in.AssetID, in.OwnerID).Scan(&lifecycle, &withheld)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+	if err := tx.QueryRow(ctx, `select lifecycle from assets where id = $1`, in.AssetID).Scan(&lifecycle); err != nil {
+		return err
 	}
-	if err != nil {
-		return fmt.Errorf("read asset header: %w", err)
-	}
-	if withheld {
-		return ErrAssetFrozen
-	}
+
 	if in.IsNSFW == nil && Lifecycle(lifecycle) != LifecycleDraft {
 		return ErrRatingUnanswerable
 	}
@@ -84,5 +74,5 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity) error {
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return candidate.commit(ctx, tx, in.AssetID)
 }

@@ -3034,6 +3034,11 @@ export interface components {
       createdAt: string;
     };
     AssetDetail: {
+      /**
+       * Format: int64
+       * @description Only returned with the owner's working copy or draft, from the same read snapshot
+       */
+      workingCopyVersion?: number;
       /** Format: uuid */
       id: string;
       /** @enum {string} */
@@ -3301,6 +3306,9 @@ export interface components {
         | "unsupported_version"
         | "safety_violation"
         | "wrong_kind"
+        | "working_copy_conflict"
+        | "asset_unavailable"
+        | "limit_exceeded"
         | "internal_failure";
       message: string;
     };
@@ -3799,6 +3807,19 @@ export interface components {
       id: string;
       name: string;
     };
+    CandidateConflict: {
+      error: string;
+      /** @enum {string} */
+      code: "working_copy_conflict" | "asset_frozen";
+      /**
+       * Format: int64
+       * @description Present only for an authorized stale request; reload the working copy before retrying
+       */
+      currentVersion?: number;
+    };
+    PublishConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["PublishRefusal"];
     PublicationEventApp: {
       slug: string;
       name: string;
@@ -3918,6 +3939,8 @@ export interface components {
     IdempotencyKey: string;
     /** @description Illarin's browser request proof. The value must be 1. */
     IllarinRequest: "1";
+    /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+    WorkingCopyVersion: number;
     /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
     WebhookId: string;
     /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
@@ -8920,7 +8943,10 @@ export interface operations {
   addAssetRevision: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -8966,12 +8992,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
       /** @description The file exceeds an upload limit or the account storage cap */
       413: {
@@ -8992,7 +9020,10 @@ export interface operations {
   saveAssetBlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -9008,6 +9039,8 @@ export interface operations {
       /** @description The saved block as it now appears on the page */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9042,12 +9075,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
       /** @description The uploaded bytes have been purged and cannot return */
       422: {
@@ -9061,7 +9096,10 @@ export interface operations {
   removeAssetBlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -9073,6 +9111,8 @@ export interface operations {
       /** @description The block and everything in it were removed */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
@@ -9098,19 +9138,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   arrangeAssetBlocks: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -9125,6 +9170,8 @@ export interface operations {
       /** @description Every block in its saved page order */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9159,19 +9206,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   addAssetBlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -9186,6 +9238,8 @@ export interface operations {
       /** @description The new block as it now appears at the foot of the page */
       201: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9220,19 +9274,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   moveAssetBlockContent: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -9248,6 +9307,8 @@ export interface operations {
       /** @description Every remaining block in its saved page order */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9282,12 +9343,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
@@ -9337,7 +9400,10 @@ export interface operations {
   deletePreservedNamespace: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         namespace: string;
@@ -9349,6 +9415,8 @@ export interface operations {
       /** @description The namespace is gone */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
@@ -9374,12 +9442,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
@@ -9470,7 +9540,10 @@ export interface operations {
   setAssetIdentity: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -9485,6 +9558,8 @@ export interface operations {
       /** @description The header is saved */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
@@ -9517,19 +9592,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   publishAsset: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -9540,6 +9620,8 @@ export interface operations {
       /** @description The asset as its page now reads, published */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9567,13 +9649,13 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The draft is not ready, the asset is already published, or it is withheld */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["PublishRefusal"];
+          "application/json": components["schemas"]["PublishConflict"];
         };
       };
     };
@@ -9870,7 +9952,10 @@ export interface operations {
   addMedia: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -9890,6 +9975,8 @@ export interface operations {
       /** @description A new immutable media record */
       201: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -9924,12 +10011,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
       /** @description The image exceeds an upload limit or the account storage cap */
       413: {

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { saveAssetIdentity } from "@/lib/api/query";
+import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./IdentityPanel.module.css";
 
 /** The three states the adult content question has while an asset is a draft. */
@@ -23,6 +24,7 @@ export function IdentityPanel({
   initialIsNsfw: boolean | null;
   isDraft: boolean;
 }) {
+  const candidate = useWorkingCopy();
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [isNsfw, setIsNsfw] = useState(initialIsNsfw);
@@ -39,7 +41,7 @@ export function IdentityPanel({
     setMessage("");
     setSaved(false);
     try {
-      await saveAssetIdentity(assetId, { name, isNsfw });
+      await saveAssetIdentity(candidate, assetId, { name, isNsfw });
       setSaved(true);
       router.refresh();
     } catch (error) {

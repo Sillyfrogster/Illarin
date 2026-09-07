@@ -11,7 +11,7 @@ import (
 )
 
 // SetAssetIdentity saves the header fields that sit above an asset's blocks.
-func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID) {
+func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAssetIdentityParams) {
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
 		return
@@ -23,15 +23,17 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID) {
 		})
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	err := h.assets.SetIdentity(c.Request.Context(), asset.Identity{
 		OwnerID: owner.ID, AssetID: uuid.UUID(id),
 		Name: request.Name, IsNSFW: request.IsNsfw,
-	})
+	}, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrNameTooLong):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "The name is too long."})
 	case errors.Is(err, asset.ErrRatingUnanswerable):
@@ -48,12 +50,16 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID) {
 // PublishAsset makes a draft public. It happens once and nothing returns an
 // asset to draft, so a draft short of the floor is refused with the whole list
 // rather than published in part.
-func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID, params PublishAssetParams) {
 	owner, ok := h.verifiedAccount(c, "publishing an asset")
 	if !ok {
 		return
 	}
-	items, err := h.assets.Publish(c.Request.Context(), owner.ID, uuid.UUID(id))
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	items, err := h.assets.Publish(c.Request.Context(), owner.ID, uuid.UUID(id), candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrPublishFloor):
 		c.JSON(http.StatusConflict, PublishRefusal{
@@ -63,9 +69,6 @@ func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID) {
 		return
 	case errors.Is(err, asset.ErrAlreadyPublished):
 		c.JSON(http.StatusConflict, PublishRefusal{Error: "This asset is already published."})
-		return
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, PublishRefusal{Error: "A withheld asset cannot be published."})
 		return
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such draft."})

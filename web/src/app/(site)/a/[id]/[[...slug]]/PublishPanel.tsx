@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReadinessItem } from "@/lib/api/query";
 import { publishAsset } from "@/lib/api/query";
+import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./PublishPanel.module.css";
 
 /** Where a creator goes to meet one requirement. */
@@ -24,6 +25,7 @@ export function PublishPanel({
   readiness: ReadinessItem[];
   onNavigateToBlock: (blockId: string) => void;
 }) {
+  const candidate = useWorkingCopy();
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const [items, setItems] = useState(readiness);
@@ -38,7 +40,7 @@ export function PublishPanel({
     if (pending) return;
     setPending(true);
     setMessage("");
-    const answer = await publishAsset(assetId);
+    const answer = await publishAsset(candidate, assetId);
     setPending(false);
     if (answer.published) {
       dialog.current?.close();

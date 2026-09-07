@@ -9,6 +9,7 @@ import {
   addAssetImage,
 } from "@/lib/api/query";
 import { fitsInTheSheet, opensFullScreen } from "@/lib/page-arrangement";
+import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./BlockSheet.module.css";
 import { replaceAt, without } from "./CollectionEditor";
 import { EntryTableEditor } from "./EntryTableEditor";
@@ -528,6 +529,7 @@ function ImageEditor({
   onChange: (items: ImageItem[]) => void;
   onAdded: () => void;
 }) {
+  const candidate = useWorkingCopy();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -542,7 +544,12 @@ function ImageEditor({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(assetId, chosen, mediaRole);
+      const mediaId = await addAssetImage(
+        candidate,
+        assetId,
+        chosen,
+        mediaRole,
+      );
       setPreviews((current) => ({
         ...current,
         [mediaId]: URL.createObjectURL(chosen),

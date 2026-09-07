@@ -26,15 +26,15 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	saveDescription(t, svc, owner, id, pool, "Published description")
 	saveGreeting(t, svc, owner, id, pool, "Published greeting")
 	adult := false
-	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Published name", IsNSFW: &adult}); err != nil {
+	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Published name", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Publish(ctx, owner, id); err != nil {
+	if _, err := svc.Publish(ctx, owner, id, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	generation := contentGeneration(t, pool, id)
 	saveDescription(t, svc, owner, id, pool, "Private description")
-	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Private name", IsNSFW: &adult}); err != nil {
+	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Private name", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	page, err := svc.Detail(ctx, id, nil, ContentShown)
@@ -85,14 +85,14 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 			t.Fatalf("private block operation changed the published page: %v", err)
 		}
 	}
-	added, err := svc.AddBlock(ctx, owner, id, block.AuthorNotes, block.TypeProse)
+	added, err := svc.AddBlock(ctx, owner, id, block.AuthorNotes, block.TypeProse, currentCandidate(t, svc, id))
 	if err != nil {
 		t.Fatal(err)
 	}
 	checkPublished()
 	update := updateOf(added.Block)
 	update.Elements[0].Content = block.Prose{Text: "Private author notes"}
-	if _, err := svc.SaveBlock(ctx, owner, id, added.Block.ID, update); err != nil {
+	if _, err := svc.SaveBlock(ctx, owner, id, added.Block.ID, update, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	checkPublished()
@@ -101,25 +101,25 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	for i, holder := range blocks {
 		arrangement[len(blocks)-1-i] = BlockArrangement{ID: holder.ID, Width: block.Full, Hidden: holder.ID == added.Block.ID}
 	}
-	if _, err := svc.ArrangeBlocks(ctx, owner, id, arrangement); err != nil {
+	if _, err := svc.ArrangeBlocks(ctx, owner, id, arrangement, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	checkPublished()
 	messages := blockFor(t, draftBlocks(t, pool, id), "messages")
 	update = updateOf(messages)
 	update.Layout = block.Stack3
-	if _, err := svc.SaveBlock(ctx, owner, id, messages.ID, update); err != nil {
+	if _, err := svc.SaveBlock(ctx, owner, id, messages.ID, update, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.MoveBlockContent(ctx, owner, id, added.Block.ID, messages.ID); err != nil {
+	if _, err := svc.MoveBlockContent(ctx, owner, id, added.Block.ID, messages.ID, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	checkPublished()
-	added, err = svc.AddBlock(ctx, owner, id, block.CustomBlock, block.TypeProse)
+	added, err = svc.AddBlock(ctx, owner, id, block.CustomBlock, block.TypeProse, currentCandidate(t, svc, id))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.RemoveBlock(ctx, owner, id, added.Block.ID); err != nil {
+	if err := svc.RemoveBlock(ctx, owner, id, added.Block.ID, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	checkPublished()
@@ -145,14 +145,14 @@ func TestPublishedSnapshotIsolatesEveryStoredHeaderAndPreservedValue(t *testing.
 	const preserved = `{ "extension": 1, "extension": 2 }`
 	snapshotExec(t, pool, `insert into asset_preserved_data (id, asset_id, owner_kind, owner_id, namespace, payload)
 		values (gen_random_uuid(), $1, 'asset', $1, 'synthetic', $2::json)`, id, preserved)
-	if _, err := svc.Publish(ctx, owner, id); err != nil {
+	if _, err := svc.Publish(ctx, owner, id, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	snapshotExec(t, pool, `update assets set name = 'Private', blurb = 'Private blurb',
 		tags = array['private'], is_nsfw = true, asset_version = '2',
 		credited_author = 'Private credit', nickname = 'Private nickname', origin_format = 'private'
 		where id = $1`, id)
-	if err := svc.DeletePreservedNamespace(ctx, owner, id, "synthetic"); err != nil {
+	if err := svc.DeletePreservedNamespace(ctx, owner, id, "synthetic", currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	var intact bool

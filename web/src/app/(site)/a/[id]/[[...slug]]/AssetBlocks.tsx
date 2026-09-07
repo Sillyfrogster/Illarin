@@ -42,6 +42,7 @@ import {
   suggestionCandidateWidths,
 } from "@/lib/page-arrangement";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
+import { useWorkingCopy } from "@/lib/working-copy";
 import { AddBlockTray } from "./AddBlockTray";
 import {
   ArrangeBlocks,
@@ -155,6 +156,7 @@ export function AssetBlocks({
   allowedApps: "lumiverse"[];
   eligibleApps: "lumiverse"[];
 }) {
+  const candidate = useWorkingCopy();
   const router = useRouter();
   const [currentBlocks, setCurrentBlocks] = useState(blocks);
   const [editing, setEditing] = useState<string | null>(null);
@@ -310,6 +312,7 @@ export function AssetBlocks({
     setExpandMessage("");
     try {
       const saved = await saveAssetBlock(
+        candidate,
         assetId,
         expandedBlock.id,
         blockSaveRequest(expandedBlock, {
@@ -347,7 +350,12 @@ export function AssetBlocks({
 
   function addBlock(definition: string, elementType: ElementType) {
     void runBlockAction(async () => {
-      const added = await addAssetBlock(assetId, definition, elementType);
+      const added = await addAssetBlock(
+        candidate,
+        assetId,
+        definition,
+        elementType,
+      );
       setCurrentBlocks((current) => [...current, added]);
       setArranging(false);
       setAdding(false);
@@ -487,6 +495,7 @@ export function AssetBlocks({
                                 setArrangementMessage("");
                                 try {
                                   const saved = await saveAssetBlock(
+                                    candidate,
                                     assetId,
                                     block.id,
                                     blockSaveRequest(block, { width }),
@@ -531,6 +540,7 @@ export function AssetBlocks({
                               void (async () => {
                                 try {
                                   const saved = await arrangeAssetBlocks(
+                                    candidate,
                                     assetId,
                                     {
                                       blocks: currentBlocks.map((item) => ({
@@ -699,7 +709,7 @@ export function AssetBlocks({
             router.refresh();
           }}
           onHide={async () => {
-            const saved = await arrangeAssetBlocks(assetId, {
+            const saved = await arrangeAssetBlocks(candidate, assetId, {
               blocks: currentBlocks.map((block) => ({
                 id: block.id,
                 hidden: block.id === editedBlock.id ? true : block.hidden,
@@ -742,7 +752,7 @@ export function AssetBlocks({
           onCancel={() => setRemoving(null)}
           onHide={() =>
             runBlockAction(async () => {
-              const saved = await arrangeAssetBlocks(assetId, {
+              const saved = await arrangeAssetBlocks(candidate, assetId, {
                 blocks: currentBlocks.map((block) => ({
                   id: block.id,
                   hidden: block.id === removing.id ? true : block.hidden,
@@ -755,7 +765,7 @@ export function AssetBlocks({
           }
           onRemove={() =>
             runBlockAction(async () => {
-              await removeAssetBlock(assetId, removing.id);
+              await removeAssetBlock(candidate, assetId, removing.id);
               setCurrentBlocks((current) =>
                 current
                   .filter((block) => block.id !== removing.id)
@@ -767,6 +777,7 @@ export function AssetBlocks({
           onMove={(destinationBlockId) =>
             runBlockAction(async () => {
               const saved = await moveAssetBlockContent(
+                candidate,
                 assetId,
                 removing.id,
                 destinationBlockId,

@@ -75,10 +75,10 @@ func TestFirstPublicationRecordsTheDraftInTheSameTransaction(t *testing.T) {
 	adult := false
 	if err := svc.SetIdentity(context.Background(), Identity{
 		OwnerID: owner, AssetID: draft, Name: "First publication", IsNSFW: &adult,
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Publish(context.Background(), owner, draft); err != nil {
+	if _, err := svc.Publish(context.Background(), owner, draft, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
 	}
 	var captured bool
@@ -98,14 +98,14 @@ func TestSnapshotRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
 	saveDescription(t, svc, owner, draft, pool, "Description")
 	saveGreeting(t, svc, owner, draft, pool, "Greeting")
 	adult := false
-	if err := svc.SetIdentity(context.Background(), Identity{OwnerID: owner, AssetID: draft, Name: "Candidate", IsNSFW: &adult}); err != nil {
+	if err := svc.SetIdentity(context.Background(), Identity{OwnerID: owner, AssetID: draft, Name: "Candidate", IsNSFW: &adult}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
 	}
 	other, media := uuid.New(), uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle) values ($1, 'character', 'Private', 'draft')`, other)
 	snapshotExec(t, pool, `insert into asset_media (id, asset_id, role, width, height) values ($1, $2, 'avatar', 1, 1)`, media, other)
 	snapshotExec(t, pool, `update assets set cover_media_id = $2 where id = $1`, draft, media)
-	if _, err := svc.Publish(context.Background(), owner, draft); err == nil {
+	if _, err := svc.Publish(context.Background(), owner, draft, currentCandidate(t, svc, draft)); err == nil {
 		t.Fatal("publication accepted another asset's private media")
 	}
 	var private bool

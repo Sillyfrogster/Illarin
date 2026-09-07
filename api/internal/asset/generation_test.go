@@ -69,7 +69,7 @@ func saveDescription(t *testing.T, svc *Service, owner, draft uuid.UUID, pool *p
 	core := blockFor(t, draftBlocks(t, pool, draft), "character_core")
 	update := updateOf(core)
 	update.Elements[0].Content = block.Prose{Text: text}
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, core.ID, update); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, core.ID, update, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("save the description: %v", err)
 	}
 }
@@ -81,7 +81,7 @@ func saveGreeting(t *testing.T, svc *Service, owner, draft uuid.UUID, pool *pgxp
 	update.Elements[0].Content = block.TextSet{
 		Texts: []block.TextItem{{ID: block.NewItemID(), Text: text}},
 	}
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, messages.ID, update); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, messages.ID, update, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("save the greeting: %v", err)
 	}
 }
@@ -130,7 +130,7 @@ func TestArrangingThePageLeavesTheContentGenerationAlone(t *testing.T) {
 		{ID: blocks[1].ID, Hidden: false, Width: block.Half},
 		{ID: blocks[0].ID, Hidden: false, Width: blocks[0].Width},
 	}
-	if _, err := svc.ArrangeBlocks(context.Background(), owner, draft, arrangement); err != nil {
+	if _, err := svc.ArrangeBlocks(context.Background(), owner, draft, arrangement, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("arrange the page: %v", err)
 	}
 
@@ -150,7 +150,7 @@ func TestChangingOnlyABlocksTitleAndLayoutLeavesTheContentGenerationAlone(t *tes
 	chosen := "Who she is"
 	update.Title = &chosen
 	update.Width = block.Half
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, core.ID, update); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, core.ID, update, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("save the block: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestRenamingAnAssetMovesTheContentGenerationAndTheAdultAnswerDoesNot(t *tes
 
 	if err := svc.SetIdentity(context.Background(), Identity{
 		OwnerID: owner, AssetID: draft, Name: "Ana",
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("name the draft: %v", err)
 	}
 	named := contentGeneration(t, pool, draft)
@@ -176,7 +176,7 @@ func TestRenamingAnAssetMovesTheContentGenerationAndTheAdultAnswerDoesNot(t *tes
 	adult := true
 	if err := svc.SetIdentity(context.Background(), Identity{
 		OwnerID: owner, AssetID: draft, Name: "Ana", IsNSFW: &adult,
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("answer the adult content question: %v", err)
 	}
 
@@ -193,12 +193,12 @@ func TestPublishingAndUnlistingLeaveTheContentGenerationAlone(t *testing.T) {
 	adult := false
 	if err := svc.SetIdentity(context.Background(), Identity{
 		OwnerID: owner, AssetID: draft, Name: "Ana", IsNSFW: &adult,
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("fill in the header: %v", err)
 	}
 	before := contentGeneration(t, pool, draft)
 
-	if _, err := svc.Publish(context.Background(), owner, draft); err != nil {
+	if _, err := svc.Publish(context.Background(), owner, draft, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("publish: %v", err)
 	}
 	if err := svc.SetDiscovery(context.Background(), owner, draft, DiscoveryUnlisted); err != nil {
@@ -221,9 +221,7 @@ func TestDeletingAPreservedNamespaceMovesTheContentGeneration(t *testing.T) {
 	}
 	before := contentGeneration(t, pool, draft)
 
-	if err := svc.DeletePreservedNamespace(
-		context.Background(), owner, draft, "depth_prompt",
-	); err != nil {
+	if err := svc.DeletePreservedNamespace(context.Background(), owner, draft, "depth_prompt", currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("delete the namespace: %v", err)
 	}
 
@@ -240,7 +238,7 @@ func TestANewCoverMovesTheContentGenerationAndAnUnusedPictureDoesNot(t *testing.
 	if _, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: owner, AssetID: draft, Role: MediaGallery,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("add a gallery picture: %v", err)
 	}
 	if got := contentGeneration(t, pool, draft); got != before {
@@ -250,7 +248,7 @@ func TestANewCoverMovesTheContentGenerationAndAnUnusedPictureDoesNot(t *testing.
 	if _, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: owner, AssetID: draft, Role: MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 30, 15, color.White)),
-	}); err != nil {
+	}, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("add a cover: %v", err)
 	}
 	if got := contentGeneration(t, pool, draft); got != before+1 {
@@ -263,9 +261,7 @@ func TestAddingAnEmptyBlockLeavesTheContentGenerationAlone(t *testing.T) {
 	owner, draft := startedDraft(t, svc)
 	before := contentGeneration(t, pool, draft)
 
-	if _, err := svc.AddBlock(
-		context.Background(), owner, draft, block.AuthorNotes, block.TypeProse,
-	); err != nil {
+	if _, err := svc.AddBlock(context.Background(), owner, draft, block.AuthorNotes, block.TypeProse, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("add a block: %v", err)
 	}
 
@@ -277,18 +273,18 @@ func TestAddingAnEmptyBlockLeavesTheContentGenerationAlone(t *testing.T) {
 func TestRemovingABlockThatHeldContentMovesTheContentGeneration(t *testing.T) {
 	svc, pool := newTestService(t)
 	owner, draft := startedDraft(t, svc)
-	added, err := svc.AddBlock(context.Background(), owner, draft, block.AuthorNotes, block.TypeProse)
+	added, err := svc.AddBlock(context.Background(), owner, draft, block.AuthorNotes, block.TypeProse, currentCandidate(t, svc, draft))
 	if err != nil {
 		t.Fatalf("add a block: %v", err)
 	}
 	update := updateOf(added.Block)
 	update.Elements[0].Content = block.Prose{Text: "Run her at a low temperature."}
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, added.Block.ID, update); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, added.Block.ID, update, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("fill the block in: %v", err)
 	}
 	before := contentGeneration(t, pool, draft)
 
-	if err := svc.RemoveBlock(context.Background(), owner, draft, added.Block.ID); err != nil {
+	if err := svc.RemoveBlock(context.Background(), owner, draft, added.Block.ID, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("remove the block: %v", err)
 	}
 
@@ -334,13 +330,13 @@ func TestTheAssetVersionIsPartOfTheFingerprintAndTheDiscoveryStateIsNot(t *testi
 func TestHidingABlockAndMovingItsContentLeaveTheContentGenerationAlone(t *testing.T) {
 	svc, pool := newTestService(t)
 	owner, draft := startedDraft(t, svc)
-	added, err := svc.AddBlock(context.Background(), owner, draft, block.AuthorNotes, block.TypeProse)
+	added, err := svc.AddBlock(context.Background(), owner, draft, block.AuthorNotes, block.TypeProse, currentCandidate(t, svc, draft))
 	if err != nil {
 		t.Fatalf("add a block: %v", err)
 	}
 	update := updateOf(added.Block)
 	update.Elements[0].Content = block.Prose{Text: "Run her at a low temperature."}
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, added.Block.ID, update); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, added.Block.ID, update, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("fill the block in: %v", err)
 	}
 	before := contentGeneration(t, pool, draft)
@@ -352,7 +348,7 @@ func TestHidingABlockAndMovingItsContentLeaveTheContentGenerationAlone(t *testin
 			ID: holder.ID, Hidden: holder.ID == added.Block.ID, Width: holder.Width,
 		}
 	}
-	if _, err := svc.ArrangeBlocks(context.Background(), owner, draft, arrangement); err != nil {
+	if _, err := svc.ArrangeBlocks(context.Background(), owner, draft, arrangement, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("hide the block: %v", err)
 	}
 	if got := contentGeneration(t, pool, draft); got != before {
@@ -365,12 +361,10 @@ func TestHidingABlockAndMovingItsContentLeaveTheContentGenerationAlone(t *testin
 	messages := blockFor(t, draftBlocks(t, pool, draft), "messages")
 	widened := updateOf(messages)
 	widened.Layout = block.Stack3
-	if _, err := svc.SaveBlock(context.Background(), owner, draft, messages.ID, widened); err != nil {
+	if _, err := svc.SaveBlock(context.Background(), owner, draft, messages.ID, widened, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("widen the messages block: %v", err)
 	}
-	if _, err := svc.MoveBlockContent(
-		context.Background(), owner, draft, added.Block.ID, messages.ID,
-	); err != nil {
+	if _, err := svc.MoveBlockContent(context.Background(), owner, draft, added.Block.ID, messages.ID, currentCandidate(t, svc, draft)); err != nil {
 		t.Fatalf("move the content: %v", err)
 	}
 	if got := contentGeneration(t, pool, draft); got != before {
