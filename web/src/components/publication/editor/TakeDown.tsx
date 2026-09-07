@@ -101,10 +101,13 @@ export function TakeDown({
           />
         </Field>
         <AnnouncementChoice
+          announced
           chosen={sending}
           note={note}
           onChosen={setSending}
           onNote={setNote}
+          onPinging={() => undefined}
+          pinging={[]}
           postId={post.id}
           transition="withdraw"
         />

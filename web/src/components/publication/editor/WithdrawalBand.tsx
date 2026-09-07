@@ -119,10 +119,13 @@ export function WithdrawalBand({
           ))}
         </fieldset>
         <AnnouncementChoice
+          announced
           chosen={sending}
           note={note}
           onChosen={setSending}
           onNote={setNote}
+          onPinging={() => undefined}
+          pinging={[]}
           postId={post.id}
           transition="republish"
         />

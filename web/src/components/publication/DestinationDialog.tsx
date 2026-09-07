@@ -5,16 +5,21 @@ import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
 import { RevealOnce } from "@/components/console/RevealOnce";
 import {
+  addChannel,
   addDestination,
   removeDestination,
+  updateChannel,
   updateDestination,
 } from "@/lib/api/publication";
 import type {
   AddedPublicationDestination,
   PublicationDestination,
+  PublicationDestinationKind,
   PublicationEvent,
 } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
+import own from "./DestinationDialog.module.css";
+import { DestinationKind } from "./DestinationKind";
 import { EventChoice } from "./EventChoice";
 
 export function DestinationDialog({
@@ -30,8 +35,13 @@ export function DestinationDialog({
   onRemoved: () => void;
   onFailure: (message: string) => void;
 }) {
+  const [kind, setKind] = useState<PublicationDestinationKind>(
+    existing?.kind ?? "discord",
+  );
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
+  const [roleId, setRoleId] = useState(existing?.channel?.roleId ?? "");
+  const [roleName, setRoleName] = useState(existing?.channel?.roleName ?? "");
   const [events, setEvents] = useState<PublicationEvent[]>(
     existing?.events ?? ["publication.post.published.v1"],
   );
@@ -46,33 +56,42 @@ export function DestinationDialog({
 
   async function save() {
     setBusy(true);
-    if (!existing) {
-      const written = await addDestination({
-        name: name.trim(),
-        address: address.trim(),
-        events,
-      });
-      setBusy(false);
-      if (written.error || !written.value) {
-        onFailure(written.error ?? "");
-        return;
-      }
-      onSaved(written.value.destination, true);
-      setMade(written.value);
-      return;
-    }
-    const written = await updateDestination(existing.id, {
-      name: name.trim(),
-      address: address.trim() || undefined,
-      events,
-    });
+    const written = await write();
     setBusy(false);
     if (written.error || !written.value) {
       onFailure(written.error ?? "");
       return;
     }
-    onSaved(written.value, false);
+    if ("secret" in written.value) {
+      onSaved(written.value.destination, true);
+      setMade(written.value);
+      return;
+    }
+    onSaved(written.value, !existing);
     onClose();
+  }
+
+  function write() {
+    if (kind === "discord") {
+      const channel = {
+        name: name.trim(),
+        roleId: roleId.trim(),
+        roleName: roleName.trim(),
+      };
+      return existing
+        ? updateChannel(existing.id, {
+            ...channel,
+            address: address.trim() || undefined,
+          })
+        : addChannel({ ...channel, address: address.trim() });
+    }
+    return existing
+      ? updateDestination(existing.id, {
+          name: name.trim(),
+          address: address.trim() || undefined,
+          events,
+        })
+      : addDestination({ name: name.trim(), address: address.trim(), events });
   }
 
   async function remove() {
@@ -113,11 +132,7 @@ export function DestinationDialog({
     <FormDialog
       open
       title={existing ? "Edit this destination" : "Add a destination"}
-      hint={
-        existing
-          ? "Illarin masks the address after you save it. Changing it needs the new endpoint to prove it is listening before anything is sent there."
-          : "One endpoint Illarin sends published posts to. It receives nothing until it proves it is listening."
-      }
+      hint={hint(kind, Boolean(existing))}
       commit={existing ? "Save" : "Add"}
       busy={busy}
       ready={ready}
@@ -135,6 +150,17 @@ export function DestinationDialog({
         ) : null
       }
     >
+      {existing ? null : <DestinationKind chosen={kind} onChosen={setKind} />}
+
+      {existing?.channel ? (
+        <dl className={own.channel}>
+          <dt>Server</dt>
+          <dd>{existing.channel.guildId}</dd>
+          <dt>Channel</dt>
+          <dd>{existing.channel.channelId}</dd>
+        </dl>
+      ) : null}
+
       <Field
         label="Name"
         htmlFor="destination-name"
@@ -144,7 +170,7 @@ export function DestinationDialog({
           id="destination-name"
           value={name}
           maxLength={48}
-          placeholder="Release feed"
+          placeholder={kind === "discord" ? "Announcements" : "Release feed"}
           autoComplete="off"
           onChange={(event) => setName(event.target.value)}
         />
@@ -153,24 +179,59 @@ export function DestinationDialog({
       <Field
         label="Address"
         htmlFor="destination-address"
-        hint={
-          existing
-            ? `Now ${existing.address}. Leave this empty to keep it.`
-            : "https on port 443, no username, password or fragment, and a host on the public internet."
-        }
+        hint={addressHint(kind, existing)}
       >
         <input
           id="destination-address"
           type="url"
           value={address}
           maxLength={300}
-          placeholder="https://hooks.example.com/illarin"
+          placeholder={
+            kind === "discord"
+              ? "https://discord.com/api/webhooks/…"
+              : "https://hooks.example.com/illarin"
+          }
           autoComplete="off"
           onChange={(event) => setAddress(event.target.value)}
         />
       </Field>
 
-      <EventChoice chosen={events} onChosen={setEvents} />
+      {kind === "discord" ? (
+        <div className={own.role}>
+          <Field
+            label="Role id"
+            htmlFor="destination-role-id"
+            hint="The one role a writer may ask an announcement to mention. Leave both role fields empty to approve none."
+          >
+            <input
+              id="destination-role-id"
+              value={roleId}
+              maxLength={20}
+              inputMode="numeric"
+              placeholder="000000000000000000"
+              autoComplete="off"
+              onChange={(event) => setRoleId(event.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="Role name"
+            htmlFor="destination-role-name"
+            hint="What a writer sees instead of the id."
+          >
+            <input
+              id="destination-role-name"
+              value={roleName}
+              maxLength={48}
+              placeholder="Blog readers"
+              autoComplete="off"
+              onChange={(event) => setRoleName(event.target.value)}
+            />
+          </Field>
+        </div>
+      ) : (
+        <EventChoice chosen={events} onChosen={setEvents} />
+      )}
 
       {confirming && existing ? (
         <p className={styles.warning} role="alert">
@@ -180,4 +241,26 @@ export function DestinationDialog({
       ) : null}
     </FormDialog>
   );
+}
+
+function hint(kind: PublicationDestinationKind, editing: boolean): string {
+  if (kind === "discord") {
+    return editing
+      ? "Illarin masks the address after you save it. Leave it empty to keep the channel this destination already announces in."
+      : "One Discord channel Illarin announces a post's first publication in. Illarin asks Discord what the address points at before saving it.";
+  }
+  return editing
+    ? "Illarin masks the address after you save it. Changing it needs the new endpoint to prove it is listening before anything is sent there."
+    : "One endpoint Illarin sends published posts to. It receives nothing until it proves it is listening.";
+}
+
+function addressHint(
+  kind: PublicationDestinationKind,
+  existing: PublicationDestination | null,
+): string {
+  if (existing) return `Now ${existing.address}. Leave this empty to keep it.`;
+  if (kind === "discord") {
+    return "The incoming webhook address Discord gives you for the channel. Illarin seals it and never shows it again.";
+  }
+  return "https on port 443, no username, password or fragment, and a host on the public internet.";
 }

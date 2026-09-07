@@ -134,6 +134,26 @@ export function updateDestination(
   );
 }
 
+export function addChannel(channel: {
+  name: string;
+  address: string;
+  roleId: string;
+  roleName: string;
+}) {
+  return json<PublicationDestination>("/publication/channels", "POST", channel);
+}
+
+export function updateChannel(
+  id: string,
+  change: { name: string; address?: string; roleId: string; roleName: string },
+) {
+  return json<PublicationDestination>(
+    `/publication/channels/${id}`,
+    "PATCH",
+    change,
+  );
+}
+
 export function verifyDestination(id: string) {
   return json<PublicationDestination>(
     `/publication/destinations/${id}/verification`,

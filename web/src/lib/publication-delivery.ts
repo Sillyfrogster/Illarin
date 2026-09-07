@@ -42,13 +42,19 @@ export function transitionEvent(transition: Transition): PublicationEvent {
   return "publication.post.published.v1";
 }
 
-/** How a delivery reads: still going, arrived, gave up, or stopped by us. */
-export type DeliveryState = "waiting" | "arrived" | "gaveUp" | "stopped";
+/** How a delivery reads once it has settled, or while it is still going. */
+export type DeliveryState =
+  | "waiting"
+  | "arrived"
+  | "unconfirmed"
+  | "gaveUp"
+  | "stopped";
 
 const OUR_DOING = new Set(["gone", "removed", "disabled", "moved"]);
 
 export function deliveryState(one: PostDelivery): DeliveryState {
   if (one.state === "delivered") return "arrived";
+  if (one.state === "unconfirmed") return "unconfirmed";
   if (one.state !== "failed") return "waiting";
   return OUR_DOING.has(one.settledReason ?? "") ? "stopped" : "gaveUp";
 }
@@ -64,6 +70,9 @@ const STOPPED_WORDS: Record<string, string> = {
 export function deliveryStanding(one: PostDelivery, now = new Date()): string {
   if (one.state === "delivered") {
     return `Arrived ${shortMoment(one.settledAt ?? one.occurredAt)}`;
+  }
+  if (one.state === "unconfirmed") {
+    return "Discord took it but never said which message it made. It may or may not be there.";
   }
   if (one.state === "failed") {
     const stopped = STOPPED_WORDS[one.settledReason ?? ""];

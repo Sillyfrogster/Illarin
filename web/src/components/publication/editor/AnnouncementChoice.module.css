@@ -94,3 +94,31 @@
   font-size: var(--type-label-size);
   line-height: var(--type-secondary-leading);
 }
+
+.ping {
+  margin-left: 28px;
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 8px;
+  font-size: var(--type-secondary-size);
+  font-weight: 700;
+}
+
+.ping input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.ping > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ping > span > span {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 400;
+  line-height: var(--type-secondary-leading);
+}

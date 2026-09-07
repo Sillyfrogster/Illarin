@@ -87,6 +87,7 @@ export function PostWriter({ id }: { id: string }) {
   const [when, setWhen] = useState<LocalParts>({ date: "", time: "" });
   const [sending, setSending] = useState<string[] | null>(null);
   const [note, setNote] = useState("");
+  const [pinging, setPinging] = useState<string[]>([]);
   const [keeping, setKeeping] = useState(false);
   const [kept, setKept] = useState("");
   const [edition, setEdition] = useState(0);
@@ -201,6 +202,7 @@ export function PostWriter({ id }: { id: string }) {
     setDoor(door);
     setWhen(atLeastAnHourAhead());
     setSending(null);
+    setPinging([]);
     setNote("");
     setAsking(true);
   }
@@ -210,6 +212,7 @@ export function PostWriter({ id }: { id: string }) {
     if (state === "dirty" || state === "refused") await save();
     const announcement = {
       destinationIds: sending ?? undefined,
+      roleDestinationIds: pinging.length > 0 ? pinging : undefined,
       note: note.trim() || undefined,
     };
     const answer =
@@ -449,10 +452,13 @@ export function PostWriter({ id }: { id: string }) {
           />
         ) : null}
         <AnnouncementChoice
+          announced={Boolean(post.publishedAt)}
           chosen={sending}
           note={note}
           onChosen={setSending}
           onNote={setNote}
+          onPinging={setPinging}
+          pinging={pinging}
           postId={post.id}
           transition={post.status === "published" ? "changes" : "publish"}
         />

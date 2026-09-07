@@ -31,16 +31,22 @@ const SENT: Record<Transition, string> = {
 export function AnnouncementChoice({
   postId,
   transition,
+  announced,
   chosen,
+  pinging,
   note,
   onChosen,
+  onPinging,
   onNote,
 }: {
   postId: string;
   transition: Transition;
+  announced: boolean;
   chosen: string[] | null;
+  pinging: string[];
   note: string;
   onChosen: (chosen: string[]) => void;
+  onPinging: (pinging: string[]) => void;
   onNote: (note: string) => void;
 }) {
   const [offered, setOffered] = useState<PublicationDestinationChoice[]>([]);
@@ -56,7 +62,10 @@ export function AnnouncementChoice({
   }, [postId]);
 
   const event = transitionEvent(transition);
-  const takers = offered.filter((one) => one.events.includes(event));
+  const takers = offered.filter(
+    (one) =>
+      one.events.includes(event) && (one.kind !== "discord" || !announced),
+  );
 
   if (takers.length === 0) {
     if (offered.length === 0) return null;
@@ -72,6 +81,11 @@ export function AnnouncementChoice({
 
   function toggle(id: string, on: boolean) {
     onChosen(on ? [...picked, id] : picked.filter((held) => held !== id));
+    if (!on) onPinging(pinging.filter((held) => held !== id));
+  }
+
+  function togglePing(id: string, on: boolean) {
+    onPinging(on ? [...pinging, id] : pinging.filter((held) => held !== id));
   }
 
   return (
@@ -89,6 +103,21 @@ export function AnnouncementChoice({
                 />
                 <span>{one.name}</span>
               </label>
+              {one.role && picked.includes(one.id) ? (
+                <label className={`${styles.line} ${styles.ping}`}>
+                  <input
+                    checked={pinging.includes(one.id)}
+                    onChange={(event) =>
+                      togglePing(one.id, event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>
+                    Ping @{one.role}
+                    <span>Everyone with the role is notified.</span>
+                  </span>
+                </label>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -71,6 +71,7 @@ export function correctPostByline(id: string, handle: string) {
 
 export type Announcement = {
   destinationIds?: string[] | null;
+  roleDestinationIds?: string[];
   note?: string;
 };
 

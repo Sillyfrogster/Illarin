@@ -56,6 +56,9 @@ export type PublicationDestination =
   components["schemas"]["PublicationDestination"];
 export type AddedPublicationDestination =
   components["schemas"]["AddedPublicationDestination"];
+export type PublicationDestinationKind =
+  components["schemas"]["PublicationDestinationKind"];
+export type PublicationChannel = components["schemas"]["PublicationChannel"];
 export type PublicationDestinationChoice =
   components["schemas"]["PublicationDestinationChoice"];
 export type PublicationDestinationChoiceList =

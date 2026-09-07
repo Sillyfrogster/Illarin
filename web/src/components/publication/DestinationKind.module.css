@@ -1,0 +1,97 @@
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border: 0;
+}
+
+.choice legend {
+  padding: 0 0 3px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pair {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tile {
+  display: grid;
+  align-content: start;
+  padding: 13px 15px 15px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  gap: 3px 10px;
+  grid-template-areas:
+    "mark word"
+    "what what";
+  grid-template-columns: auto minmax(0, 1fr);
+  transition:
+    border-color 140ms var(--ease),
+    background 140ms var(--ease);
+}
+
+.tile:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.tile[data-on] {
+  border-color: var(--color-emphasis);
+  background: var(--color-muted);
+}
+
+.tile:has(input:focus-visible) {
+  outline: 2px solid var(--color-emphasis);
+  outline-offset: 2px;
+}
+
+.tile input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.mark {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  grid-area: mark;
+}
+
+.tile[data-on] .mark {
+  color: var(--color-text-primary);
+}
+
+.word {
+  align-self: center;
+  color: var(--color-text-primary);
+  font-size: var(--type-body-size);
+  font-weight: 700;
+  grid-area: word;
+}
+
+.what {
+  padding-top: 3px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  grid-area: what;
+  line-height: var(--type-secondary-leading);
+}
+
+@media (max-width: 560px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

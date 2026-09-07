@@ -114,13 +114,15 @@ export function DestinationList({
                     {working === one.id ? "Asking…" : "Verify"}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className={rows.textButton}
-                  onClick={() => setRotating(one)}
-                >
-                  New secret
-                </button>
+                {one.channel ? null : (
+                  <button
+                    type="button"
+                    className={rows.textButton}
+                    onClick={() => setRotating(one)}
+                  >
+                    New secret
+                  </button>
+                )}
                 <button
                   type="button"
                   className={rows.textButton}
@@ -179,7 +181,7 @@ function StateMark({ state }: { state: PublicationDestination["state"] }) {
   return <CircleDashed size={18} strokeWidth={1.8} aria-hidden="true" />;
 }
 
-// standing says in one line what this endpoint is doing and since when.
+// standing says in one line what this destination is doing and since when.
 function standing(one: PublicationDestination): string {
   if (
     one.previousSecretUntil &&
@@ -187,17 +189,24 @@ function standing(one: PublicationDestination): string {
   ) {
     return `Both signing secrets are accepted until ${readableDate(one.previousSecretUntil)}.`;
   }
-  if (one.state === "active" && one.verifiedAt) {
-    return `Receiving. Proved it was listening on ${readableDate(one.verifiedAt)}.`;
-  }
   if (one.state === "disabled") {
     return "Switched off. Verify it again to start sending here.";
   }
-  return "Waiting to prove it is listening. Nothing is sent until it does.";
+  if (one.state !== "active" || !one.verifiedAt) {
+    return "Waiting to prove it is listening. Nothing is sent until it does.";
+  }
+  if (one.channel) {
+    return `Announcing as ${one.channel.webhookName || "the name Discord gives it"}. Discord confirmed the channel on ${readableDate(one.verifiedAt)}.`;
+  }
+  return `Receiving. Proved it was listening on ${readableDate(one.verifiedAt)}.`;
 }
 
-// takes names the public transitions this endpoint asked for.
+// takes names what this destination receives, and the role it may mention.
 function takes(one: PublicationDestination): string {
+  if (one.channel) {
+    const role = one.channel.roleName;
+    return role ? `First publication · @${role}` : "First publication";
+  }
   if (one.events.length === 0) return "Takes nothing.";
   return one.events.map((event) => EVENT_WORDS[event].word).join(" · ");
 }

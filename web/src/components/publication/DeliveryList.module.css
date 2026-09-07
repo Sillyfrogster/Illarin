@@ -77,6 +77,10 @@
   color: var(--color-critical-strong);
 }
 
+.row[data-state="unconfirmed"] .state {
+  color: var(--color-text-primary);
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -150,7 +154,8 @@
 }
 
 .outcome[data-outcome="unreachable"],
-.outcome[data-outcome="refused"] {
+.outcome[data-outcome="refused"],
+.outcome[data-outcome="unconfirmed"] {
   color: var(--color-text-secondary);
 }
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { CircleAlert, CircleCheck, CircleSlash, Clock } from "lucide-react";
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleHelp,
+  CircleSlash,
+  Clock,
+} from "lucide-react";
 import { useState } from "react";
 import rows from "@/components/console/Console.module.css";
 import { Section } from "@/components/console/Section";
@@ -25,6 +31,7 @@ const VIEWS: { key: string; word: string; state?: PostDeliveryState }[] = [
   { key: "failed", word: "Stopped", state: "failed" },
   { key: "pending", word: "Waiting", state: "pending" },
   { key: "delivered", word: "Arrived", state: "delivered" },
+  { key: "unconfirmed", word: "Unconfirmed", state: "unconfirmed" },
 ];
 
 export function DeliveryList({
@@ -166,6 +173,9 @@ function StateMark({ state }: { state: DeliveryState }) {
   if (state === "stopped") {
     return <CircleSlash size={18} strokeWidth={1.8} aria-hidden="true" />;
   }
+  if (state === "unconfirmed") {
+    return <CircleHelp size={18} strokeWidth={1.8} aria-hidden="true" />;
+  }
   return <Clock size={18} strokeWidth={1.8} aria-hidden="true" />;
 }
 
@@ -173,5 +183,8 @@ function nothingHere(view: string): string {
   if (view === "failed") return "Nothing has stopped short.";
   if (view === "pending") return "Nothing is on its way.";
   if (view === "delivered") return "Nothing has arrived yet.";
+  if (view === "unconfirmed") {
+    return "Every announcement Discord took, it confirmed.";
+  }
   return "No post has announced anywhere yet.";
 }

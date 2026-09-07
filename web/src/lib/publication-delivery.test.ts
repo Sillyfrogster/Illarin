@@ -19,6 +19,8 @@ function delivery(over: Partial<PostDelivery>): PostDelivery {
     postTitle: "Illarin keeps its own writing now",
     revisionId: "r",
     destination: "Release feed",
+    kind: "webhook",
+    messageId: "",
     removed: false,
     state: "pending",
     run: 1,
