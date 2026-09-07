@@ -26,7 +26,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID, _ WithdrawPostPar
 	}
 	withdrawn, err := h.publications.WithdrawPost(
 		c.Request.Context(), editor, uuid.UUID(id), request.Version, request.Reason, explanation,
-		announcementOf(request.DestinationIds, request.Note),
+		announcementOf(request.DestinationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -47,7 +47,7 @@ func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID, _ RepublishPostP
 	}
 	back, err := h.publications.RepublishPost(
 		c.Request.Context(), editor, uuid.UUID(id), uuid.UUID(request.RevisionId), request.Version,
-		announcementOf(request.DestinationIds, request.Note),
+		announcementOf(request.DestinationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)

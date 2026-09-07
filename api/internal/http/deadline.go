@@ -21,8 +21,8 @@ type Deadlines struct {
 	// longest hold the delivery queue takes, or the wait would end in a cut
 	// connection instead of an empty answer.
 	Deliver time.Duration
-	// Verify is the one route that makes a request of its own while the caller
-	// waits, so it outlasts the limits that request runs under.
+	// Verify is for the routes that make a request of their own while the
+	// caller waits, so it outlasts the limits those requests run under.
 	Verify time.Duration
 }
 
@@ -124,6 +124,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPost, "/v1/publication/destinations/:id/verification"):           d.Verify,
 		routeKey(http.MethodDelete, "/v1/publication/destinations/:id/verification"):         d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/destinations/:id/secret"):                 d.JSON,
+		routeKey(http.MethodPost, "/v1/publication/channels"):                                d.Verify,
+		routeKey(http.MethodPatch, "/v1/publication/channels/:id"):                           d.Verify,
 		routeKey(http.MethodGet, "/v1/publication/deliveries"):                               d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/deliveries/:id/attempts"):                  d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/deliveries/:id/replay"):                   d.JSON,

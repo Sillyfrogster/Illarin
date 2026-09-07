@@ -109,7 +109,7 @@ func (s *Service) WithdrawPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("record the withdrawal event: %w", err)
 	}
-	if err := queueDeliveries(ctx, tx, eventID, EventWithdrawn, chosen); err != nil {
+	if err := queueDeliveries(ctx, tx, id, eventID, EventWithdrawn, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -187,7 +187,7 @@ func (s *Service) RepublishPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("record the republication event: %w", err)
 	}
-	if err := queueDeliveries(ctx, tx, eventID, EventPublished, chosen); err != nil {
+	if err := queueDeliveries(ctx, tx, id, eventID, EventPublished, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{

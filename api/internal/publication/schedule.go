@@ -474,13 +474,13 @@ func keepScheduleChoice(
 	ctx context.Context,
 	tx pgx.Tx,
 	scheduleID uuid.UUID,
-	chosen []Choice,
+	chosen []sending,
 ) error {
 	for _, one := range chosen {
 		_, err := tx.Exec(ctx, `
-			insert into post_schedule_destinations (schedule_id, destination_id)
-			values ($1, $2) on conflict do nothing
-		`, scheduleID, one.ID)
+			insert into post_schedule_destinations (schedule_id, destination_id, mention_role)
+			values ($1, $2, $3) on conflict do nothing
+		`, scheduleID, one.ID, one.Ping)
 		if err != nil {
 			return fmt.Errorf("keep the scheduled delivery choice: %w", err)
 		}
@@ -490,10 +490,10 @@ func keepScheduleChoice(
 
 // scheduledChoice reads the destinations a due edition still has, dropping one
 // the authority has since disabled or removed.
-func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]Choice, error) {
+func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]sending, error) {
 	rows, err := tx.Query(ctx, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       destination.events, false
+		       destination.events, destination.role_name, chosen.mention_role
 		  from post_schedule_destinations chosen
 		  join publication_destinations destination on destination.id = chosen.destination_id
 		 where chosen.schedule_id = $1 and destination.state = $2
@@ -502,7 +502,7 @@ func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]Ch
 	if err != nil {
 		return nil, fmt.Errorf("read the scheduled delivery choice: %w", err)
 	}
-	return collectChoices(rows)
+	return collectSending(rows)
 }
 
 func settleSchedule(ctx context.Context, tx pgx.Tx, id uuid.UUID, state, because string) error {

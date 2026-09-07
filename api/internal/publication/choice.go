@@ -2,6 +2,7 @@ package publication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -17,8 +18,13 @@ const noteLimit = 500
 // is a deliberately quiet publication.
 type Announcement struct {
 	Destinations *[]uuid.UUID
+	Ping         []uuid.UUID
 	Note         string
 }
+
+// ErrRoleRefused says a transition asked to ping a destination that has no
+// approved role, or one it is not sending to at all.
+var ErrRoleRefused = errors.New("the destination has no role this post may ping")
 
 // DestinationPolicy is the allowed and default set an app or a grant carries.
 // A nil Allowed on a grant means the grant follows its app.
@@ -31,7 +37,7 @@ type DestinationPolicy struct {
 func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       destination.events, allowed.by_default
+		       destination.events, destination.role_name, allowed.by_default
 		  from publication_app_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
 		 where allowed.app_id = $1
@@ -55,7 +61,7 @@ func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice
 	}
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       destination.events, allowed.by_default
+		       destination.events, destination.role_name, allowed.by_default
 		  from publication_grant_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
 		 where allowed.grant_id = $1
@@ -72,7 +78,7 @@ func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice
 	}
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       destination.events, false
+		       destination.events, destination.role_name, false
 		  from publication_destinations destination
 		 order by destination.name, destination.created_at
 	`)
@@ -232,13 +238,21 @@ func (s *Service) checkPolicy(
 	return allowed, nil
 }
 
+// sending is one destination a transition picked, and whether the author asked
+// for the notification role the authority approved on it.
+type sending struct {
+	Choice
+	Ping bool
+}
+
 // chosen answers the destinations one transition will send to, having refused
-// every identity the post is not allowed to reach.
+// every identity the post is not allowed to reach and every role it may not
+// ping.
 func (s *Service) chosen(
 	ctx context.Context,
 	grantID *uuid.UUID,
 	in Announcement,
-) ([]Choice, string, error) {
+) ([]sending, string, error) {
 	note := oneParagraph(in.Note)
 	if len(note) > noteLimit {
 		return nil, "", FieldError{
@@ -250,19 +264,31 @@ func (s *Service) chosen(
 	if err != nil {
 		return nil, "", err
 	}
-	if in.Destinations == nil {
-		return activeAmong(defaultsAmong(allowed)), note, nil
+	picked := defaultsAmong(allowed)
+	if in.Destinations != nil {
+		if picked, err = named(allowed, *in.Destinations); err != nil {
+			return nil, "", err
+		}
 	}
+	going, err := pinged(activeAmong(picked), in.Ping)
+	if err != nil {
+		return nil, "", err
+	}
+	return going, note, nil
+}
+
+// named answers the destinations a request picked out of the ones it may reach.
+func named(allowed []Choice, wanted []uuid.UUID) ([]Choice, error) {
 	byID := make(map[uuid.UUID]Choice, len(allowed))
 	for _, one := range allowed {
 		byID[one.ID] = one
 	}
-	picked := make([]Choice, 0, len(*in.Destinations))
-	seen := make(map[uuid.UUID]bool, len(*in.Destinations))
-	for _, id := range *in.Destinations {
+	picked := make([]Choice, 0, len(wanted))
+	seen := make(map[uuid.UUID]bool, len(wanted))
+	for _, id := range wanted {
 		one, held := byID[id]
 		if !held {
-			return nil, "", ErrDestinationRefused
+			return nil, ErrDestinationRefused
 		}
 		if seen[id] {
 			continue
@@ -270,7 +296,29 @@ func (s *Service) chosen(
 		seen[id] = true
 		picked = append(picked, one)
 	}
-	return activeAmong(picked), note, nil
+	return picked, nil
+}
+
+// pinged marks the destinations whose approved role this transition asked for,
+// and refuses a role on anything that is not offering one.
+func pinged(picked []Choice, wanted []uuid.UUID) ([]sending, error) {
+	asked := make(map[uuid.UUID]bool, len(wanted))
+	for _, id := range wanted {
+		asked[id] = true
+	}
+	going := make([]sending, 0, len(picked))
+	for _, one := range picked {
+		ping := asked[one.ID]
+		if ping && one.Role == "" {
+			return nil, ErrRoleRefused
+		}
+		delete(asked, one.ID)
+		going = append(going, sending{Choice: one, Ping: ping})
+	}
+	if len(asked) > 0 {
+		return nil, ErrRoleRefused
+	}
+	return going, nil
 }
 
 // activeAmong drops a destination that is not ready to receive anything, so a
@@ -308,16 +356,45 @@ func choicesFrom(
 	return collectChoices(rows)
 }
 
+// collectSending reads a captured choice, whose last column is the role this
+// transition asked for rather than a policy default.
+func collectSending(rows pgx.Rows) ([]sending, error) {
+	defer rows.Close()
+	found := make([]sending, 0, 4)
+	for rows.Next() {
+		var one sending
+		var role *string
+		err := rows.Scan(
+			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &role, &one.Ping,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("read a destination a post captured: %w", err)
+		}
+		if role != nil {
+			one.Role = *role
+		}
+		found = append(found, one)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the destinations a post captured: %w", err)
+	}
+	return found, nil
+}
+
 func collectChoices(rows pgx.Rows) ([]Choice, error) {
 	defer rows.Close()
 	found := make([]Choice, 0, 4)
 	for rows.Next() {
 		var one Choice
+		var role *string
 		err := rows.Scan(
-			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &one.ByDefault,
+			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &role, &one.ByDefault,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("read a destination a post may send to: %w", err)
+		}
+		if role != nil {
+			one.Role = *role
 		}
 		found = append(found, one)
 	}

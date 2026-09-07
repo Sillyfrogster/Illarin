@@ -47,6 +47,72 @@ paths:
           description: No account is signed in
         '403':
           description: The signed-in account is not the publication authority
+  /v1/publication/channels:
+    post:
+      operationId: addPublicationChannel
+      description: >-
+        Configure one Discord channel. Illarin asks Discord what the capability
+        address is for and keeps only the guild and channel it names, so the
+        address itself is never shown again.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationChannelRequest'
+      responses:
+        '201':
+          description: The destination, already proved by Discord
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestination'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+  /v1/publication/channels/{id}:
+    patch:
+      operationId: updatePublicationChannel
+      description: >-
+        Rename a Discord destination, change the role an author may ask for, or
+        point it at another capability, which Discord is asked about again.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationChannelRequest'
+      responses:
+        '200':
+          description: The destination as it now stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationDestination'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not the publication authority
+        '404':
+          description: No such destination
   /v1/publication/destinations/{id}:
     patch:
       operationId: updatePublicationDestination
@@ -367,6 +433,14 @@ paths:
           description: No such grant or destination
 components:
   schemas:
+    PublicationDestinationKind:
+      type: string
+      description: >-
+        What a destination is. A webhook receives the signed event; a Discord
+        channel receives an announcement Illarin composed.
+      enum:
+        - webhook
+        - discord
     PublicationDestinationState:
       type: string
       description: Whether a destination is ready to receive anything.
@@ -402,9 +476,7 @@ components:
           type: string
           format: uuid
         kind:
-          type: string
-          enum:
-            - webhook
+          $ref: '#/components/schemas/PublicationDestinationKind'
         name:
           type: string
           description: What the authority calls this endpoint, and all a contributor sees.
@@ -421,6 +493,11 @@ components:
           description: Which Publication events this endpoint asked for.
           items:
             $ref: '#/components/schemas/PublicationEvent'
+        channel:
+          allOf:
+            - $ref: '#/components/schemas/PublicationChannel'
+          description: >-
+            Where a Discord destination announces, absent on a generic webhook.
         secretSetAt:
           type: string
           format: date-time
@@ -542,6 +619,7 @@ components:
         - kind
         - state
         - events
+        - role
         - byDefault
       properties:
         id:
@@ -550,9 +628,7 @@ components:
         name:
           type: string
         kind:
-          type: string
-          enum:
-            - webhook
+          $ref: '#/components/schemas/PublicationDestinationKind'
         state:
           $ref: '#/components/schemas/PublicationDestinationState'
         events:
@@ -562,6 +638,11 @@ components:
             is only offered the ones this transition would reach.
           items:
             $ref: '#/components/schemas/PublicationEvent'
+        role:
+          type: string
+          description: >-
+            The notification role an author may ask this destination to
+            mention, empty when the authority approved none.
         byDefault:
           type: boolean
           description: Whether a publication starts with this one selected.
@@ -579,6 +660,60 @@ components:
         inherited:
           type: boolean
           description: Whether this set comes from the app rather than being its own.
+    PublicationChannel:
+      type: object
+      description: >-
+        The safe identity behind a Discord destination. It names where
+        announcements land and nothing that would let a reader send one.
+      additionalProperties: false
+      required:
+        - guildId
+        - channelId
+        - webhookName
+        - roleId
+        - roleName
+      properties:
+        guildId:
+          type: string
+          description: The Discord server the channel belongs to.
+        channelId:
+          type: string
+          description: The channel announcements land in.
+        webhookName:
+          type: string
+          description: The name Discord shows the announcement under.
+        roleId:
+          type: string
+          description: The one role an author may ask for, empty when there is none.
+        roleName:
+          type: string
+          description: What that role is called, and all a contributor is shown.
+    PublicationChannelRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 48
+        address:
+          type: string
+          maxLength: 300
+          description: >-
+            The Discord incoming webhook address. Illarin masks it after
+            saving; leave it out when changing a destination to keep the one it
+            has.
+        roleId:
+          type: string
+          maxLength: 20
+          description: >-
+            The one role an author may ask this destination to mention. Send it
+            empty to approve no role.
+        roleName:
+          type: string
+          maxLength: 48
+          description: What that role is called, and all a contributor is shown.
     DestinationPolicyRequest:
       type: object
       additionalProperties: false

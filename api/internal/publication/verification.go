@@ -45,8 +45,12 @@ func (s *Service) VerifyDestination(
 	actor uuid.UUID,
 	id uuid.UUID,
 ) (Destination, error) {
-	if _, err := s.Destination(ctx, id); err != nil {
+	current, err := s.Destination(ctx, id)
+	if err != nil {
 		return Destination{}, err
+	}
+	if current.Kind == KindDiscord {
+		return s.provenByDiscord(ctx, actor, id)
 	}
 	address, secrets, err := s.endpointOf(ctx, id)
 	if err != nil {

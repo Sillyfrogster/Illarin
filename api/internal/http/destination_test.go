@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -27,10 +28,19 @@ type destination struct {
 	Address     string     `json:"address"`
 	State       string     `json:"state"`
 	Events      []string   `json:"events"`
+	Channel     *channel   `json:"channel"`
 	SecretSetAt time.Time  `json:"secretSetAt"`
 	OldUntil    *time.Time `json:"previousSecretUntil"`
 	VerifiedAt  *string    `json:"verifiedAt"`
 	DisabledAt  *string    `json:"disabledAt"`
+}
+
+type channel struct {
+	GuildID   string `json:"guildId"`
+	ChannelID string `json:"channelId"`
+	Webhook   string `json:"webhookName"`
+	RoleID    string `json:"roleId"`
+	RoleName  string `json:"roleName"`
 }
 
 type addedDestination struct {
@@ -43,11 +53,13 @@ type destinationList struct {
 }
 
 type destinationChoice struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Kind      string `json:"kind"`
-	State     string `json:"state"`
-	ByDefault bool   `json:"byDefault"`
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Kind      string   `json:"kind"`
+	State     string   `json:"state"`
+	Events    []string `json:"events"`
+	Role      string   `json:"role"`
+	ByDefault bool     `json:"byDefault"`
 }
 
 type destinationChoiceList struct {
@@ -73,6 +85,8 @@ type postDelivery struct {
 	PostTitle     string           `json:"postTitle"`
 	RevisionID    string           `json:"revisionId"`
 	Destination   string           `json:"destination"`
+	Kind          string           `json:"kind"`
+	MessageID     string           `json:"messageId"`
 	Removed       bool             `json:"removed"`
 	State         string           `json:"state"`
 	SettledReason string           `json:"settledReason"`
@@ -180,12 +194,14 @@ func echoesTheChallenge(one arrived) (int, string) {
 	return http.StatusOK, sent.Challenge
 }
 
-// throughLoopback widens the outbound address policy by one thing, the
-// receiver this test runs, and holds every other address to the real rule. It
-// resolves the host on every request the way the real caller does, so a test
-// can move a host out of public space between attempts.
+// throughLoopback widens the outbound address policy by the two servers this
+// test runs, the receiver and the stand-in for Discord, and holds every other
+// address to the real rule. It resolves the host on every request the way the
+// real caller does, so a test can move a host out of public space between
+// attempts.
 type throughLoopback struct {
 	receiver string
+	discord  string
 	resolves func(host string) ([]netip.Addr, error)
 }
 
@@ -199,9 +215,35 @@ func (t throughLoopback) Check(address string) (string, error) {
 	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
 }
 
+func (t throughLoopback) Get(ctx context.Context, address string) (outbound.Answer, error) {
+	return t.send(ctx, http.MethodGet, address, nil, nil)
+}
+
 func (t throughLoopback) Post(
 	ctx context.Context,
 	address string,
+	headers map[string]string,
+	body []byte,
+) (outbound.Answer, error) {
+	return t.send(ctx, http.MethodPost, address, headers, body)
+}
+
+// dialed answers where this test actually sends, which is the real address for
+// everything but the Discord stand-in the test runs itself.
+func (t throughLoopback) dialed(address string) string {
+	if t.discord == "" {
+		return address
+	}
+	rest, held := strings.CutPrefix(address, "https://discord.com")
+	if !held {
+		return address
+	}
+	return t.discord + rest
+}
+
+func (t throughLoopback) send(
+	ctx context.Context,
+	method, address string,
 	headers map[string]string,
 	body []byte,
 ) (outbound.Answer, error) {
@@ -219,13 +261,17 @@ func (t throughLoopback) Post(
 			return outbound.Answer{}, err
 		}
 	}
-	request, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, address, strings.NewReader(string(body)),
-	)
+	var carried io.Reader
+	if body != nil {
+		carried = strings.NewReader(string(body))
+	}
+	request, err := http.NewRequestWithContext(ctx, method, t.dialed(address), carried)
 	if err != nil {
 		return outbound.Answer{}, err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	for name, value := range headers {
 		request.Header.Set(name, value)
 	}
@@ -234,9 +280,9 @@ func (t throughLoopback) Post(
 		return outbound.Answer{}, err
 	}
 	defer response.Body.Close()
-	said := make([]byte, response.ContentLength)
-	if response.ContentLength > 0 {
-		response.Body.Read(said)
+	said, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return outbound.Answer{}, err
 	}
 	return outbound.Answer{
 		Status: response.StatusCode, Body: said,
@@ -246,8 +292,9 @@ func (t throughLoopback) Post(
 
 type destinationStack struct {
 	distinctionStack
-	to     *receiver
-	editor *http.Cookie
+	to      *receiver
+	discord *discordServer
+	editor  *http.Cookie
 }
 
 func newDestinationStack(t *testing.T) destinationStack {
@@ -265,9 +312,10 @@ func newDestinationStackThrough(
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	to := newReceiver(t)
+	discord := newDiscordServer(t)
 	handlers := newTestHandlersWithDelivery(
 		t, pool, 1<<20, outbox, testDeliverySettings(), publication.DefaultRates(),
-		throughLoopback{receiver: to.server.URL, resolves: resolves},
+		throughLoopback{receiver: to.server.URL, discord: discord.server.URL, resolves: resolves},
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
@@ -276,7 +324,8 @@ func newDestinationStackThrough(
 		distinctionStack: distinctionStack{
 			router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
 		},
-		to: to,
+		to:      to,
+		discord: discord,
 	}
 	stack.editor = stack.admin(t, "editor@example.com", "illarin.editor")
 	return stack

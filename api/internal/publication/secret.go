@@ -30,8 +30,12 @@ func (s *Service) RotateSecret(
 	actor uuid.UUID,
 	id uuid.UUID,
 ) (RotatedSecret, error) {
-	if _, err := s.Destination(ctx, id); err != nil {
+	current, err := s.Destination(ctx, id)
+	if err != nil {
 		return RotatedSecret{}, err
+	}
+	if current.Kind == KindDiscord {
+		return RotatedSecret{}, ErrNotWebhook
 	}
 	secret, err := webhook.MintSecret()
 	if err != nil {

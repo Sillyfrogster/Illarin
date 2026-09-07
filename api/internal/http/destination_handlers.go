@@ -54,6 +54,62 @@ func (h *Handlers) AddPublicationDestination(c *gin.Context) {
 	})
 }
 
+func (h *Handlers) AddPublicationChannel(c *gin.Context) {
+	authority, ok := h.publicationAuthority(c, "configuring a Discord destination")
+	if !ok {
+		return
+	}
+	edit, ok := readChannel(c)
+	if !ok {
+		return
+	}
+	added, err := h.publications.AddChannel(c.Request.Context(), authority.ID, edit)
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, toAPIDestination(added))
+}
+
+func (h *Handlers) UpdatePublicationChannel(c *gin.Context, id types.UUID) {
+	authority, ok := h.publicationAuthority(c, "changing a Discord destination")
+	if !ok {
+		return
+	}
+	edit, ok := readChannel(c)
+	if !ok {
+		return
+	}
+	updated, err := h.publications.UpdateChannel(
+		c.Request.Context(), authority.ID, uuid.UUID(id), edit,
+	)
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toAPIDestination(updated))
+}
+
+func readChannel(c *gin.Context) (publication.ChannelEdit, bool) {
+	var request PublicationChannelRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"Send the channel's name and address.", "address")
+		return publication.ChannelEdit{}, false
+	}
+	edit := publication.ChannelEdit{Name: request.Name}
+	if request.Address != nil {
+		edit.Address = *request.Address
+	}
+	if request.RoleId != nil {
+		edit.RoleID = *request.RoleId
+	}
+	if request.RoleName != nil {
+		edit.RoleName = *request.RoleName
+	}
+	return edit, true
+}
+
 func (h *Handlers) UpdatePublicationDestination(c *gin.Context, id types.UUID) {
 	authority, ok := h.publicationAuthority(c, "changing a publication destination")
 	if !ok {
@@ -266,8 +322,12 @@ func (h *Handlers) ListPostDeliveries(c *gin.Context, id types.UUID) {
 
 // announcementOf reads a transition's delivery choice, keeping an absent list
 // apart from an empty one because they mean opposite things.
-func announcementOf(destinations *[]types.UUID, note *string) publication.Announcement {
-	made := publication.Announcement{}
+func announcementOf(
+	destinations *[]types.UUID,
+	roles *[]types.UUID,
+	note *string,
+) publication.Announcement {
+	made := publication.Announcement{Ping: readIDs(roles)}
 	if destinations != nil {
 		chosen := readIDs(destinations)
 		made.Destinations = &chosen
@@ -326,6 +386,15 @@ func (h *Handlers) destinationError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrDestinationRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"This post may not send to that destination.")
+	case errors.Is(err, publication.ErrRoleRefused):
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"This post may not ping that destination's role.")
+	case errors.Is(err, publication.ErrNotDiscord):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"That destination is a generic webhook.")
+	case errors.Is(err, publication.ErrNotWebhook):
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"That destination is a Discord channel.")
 	case errors.Is(err, publication.ErrDeliveryNotFound):
 		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such delivery.")
 	case errors.Is(err, publication.ErrDeliveryUnsettled):
@@ -352,7 +421,7 @@ func toAPIDestination(found publication.Destination) PublicationDestination {
 	for _, one := range found.Events {
 		events = append(events, PublicationEvent(one))
 	}
-	return PublicationDestination{
+	shown := PublicationDestination{
 		Id:                  types.UUID(found.ID),
 		Kind:                PublicationDestinationKind(found.Kind),
 		Name:                found.Name,
@@ -366,6 +435,16 @@ func toAPIDestination(found publication.Destination) PublicationDestination {
 		DisabledAt:          found.DisabledAt,
 		CreatedAt:           found.CreatedAt,
 	}
+	if found.Channel != nil {
+		shown.Channel = &PublicationChannel{
+			GuildId:     found.Channel.GuildID,
+			ChannelId:   found.Channel.ChannelID,
+			WebhookName: found.Channel.Webhook,
+			RoleId:      found.Channel.RoleID,
+			RoleName:    found.Channel.RoleName,
+		}
+	}
+	return shown
 }
 
 func toAPIChoices(held []publication.Choice, inherited bool) PublicationDestinationChoiceList {
@@ -385,9 +464,10 @@ func toAPIChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
 		listed = append(listed, PublicationDestinationChoice{
 			Id:        types.UUID(one.ID),
 			Name:      one.Name,
-			Kind:      PublicationDestinationChoiceKind(one.Kind),
+			Kind:      PublicationDestinationKind(one.Kind),
 			State:     PublicationDestinationState(one.State),
 			Events:    events,
+			Role:      one.Role,
 			ByDefault: one.ByDefault,
 		})
 	}
@@ -411,6 +491,8 @@ func toAPIDelivery(one publication.Delivery) PostDelivery {
 		PostTitle:   one.PostTitle,
 		RevisionId:  types.UUID(one.RevisionID),
 		Destination: one.Destination,
+		Kind:        PostDeliveryKind(one.Kind),
+		MessageId:   one.MessageID,
 		Removed:     one.Removed,
 		State:       PostDeliveryState(one.State),
 		Run:         one.Run,

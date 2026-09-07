@@ -237,6 +237,10 @@ func (closedSender) Check(address string) (string, error) {
 	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
 }
 
+func (closedSender) Get(context.Context, string) (outbound.Answer, error) {
+	return outbound.Answer{}, errors.New("this test stack sends nowhere")
+}
+
 func (closedSender) Post(
 	context.Context, string, map[string]string, []byte,
 ) (outbound.Answer, error) {

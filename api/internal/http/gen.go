@@ -837,10 +837,32 @@ func (e PendingLinkPollResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for PostDeliveryKind.
+const (
+	PostDeliveryKindDiscord PostDeliveryKind = "discord"
+	PostDeliveryKindEmpty   PostDeliveryKind = ""
+	PostDeliveryKindWebhook PostDeliveryKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryKind enum.
+func (e PostDeliveryKind) Valid() bool {
+	switch e {
+	case PostDeliveryKindDiscord:
+		return true
+	case PostDeliveryKindEmpty:
+		return true
+	case PostDeliveryKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostDeliveryOutcome.
 const (
 	PostDeliveryOutcomeDelivered   PostDeliveryOutcome = "delivered"
 	PostDeliveryOutcomeRefused     PostDeliveryOutcome = "refused"
+	PostDeliveryOutcomeUnconfirmed PostDeliveryOutcome = "unconfirmed"
 	PostDeliveryOutcomeUnreachable PostDeliveryOutcome = "unreachable"
 )
 
@@ -851,6 +873,8 @@ func (e PostDeliveryOutcome) Valid() bool {
 		return true
 	case PostDeliveryOutcomeRefused:
 		return true
+	case PostDeliveryOutcomeUnconfirmed:
+		return true
 	case PostDeliveryOutcomeUnreachable:
 		return true
 	default:
@@ -860,13 +884,14 @@ func (e PostDeliveryOutcome) Valid() bool {
 
 // Defines values for PostDeliverySettledReason.
 const (
-	PostDeliverySettledReasonArrived   PostDeliverySettledReason = "arrived"
-	PostDeliverySettledReasonDisabled  PostDeliverySettledReason = "disabled"
-	PostDeliverySettledReasonExhausted PostDeliverySettledReason = "exhausted"
-	PostDeliverySettledReasonGone      PostDeliverySettledReason = "gone"
-	PostDeliverySettledReasonMoved     PostDeliverySettledReason = "moved"
-	PostDeliverySettledReasonRefused   PostDeliverySettledReason = "refused"
-	PostDeliverySettledReasonRemoved   PostDeliverySettledReason = "removed"
+	PostDeliverySettledReasonArrived     PostDeliverySettledReason = "arrived"
+	PostDeliverySettledReasonDisabled    PostDeliverySettledReason = "disabled"
+	PostDeliverySettledReasonExhausted   PostDeliverySettledReason = "exhausted"
+	PostDeliverySettledReasonGone        PostDeliverySettledReason = "gone"
+	PostDeliverySettledReasonMoved       PostDeliverySettledReason = "moved"
+	PostDeliverySettledReasonRefused     PostDeliverySettledReason = "refused"
+	PostDeliverySettledReasonRemoved     PostDeliverySettledReason = "removed"
+	PostDeliverySettledReasonUnconfirmed PostDeliverySettledReason = "unconfirmed"
 )
 
 // Valid indicates whether the value is a known member of the PostDeliverySettledReason enum.
@@ -886,6 +911,8 @@ func (e PostDeliverySettledReason) Valid() bool {
 		return true
 	case PostDeliverySettledReasonRemoved:
 		return true
+	case PostDeliverySettledReasonUnconfirmed:
+		return true
 	default:
 		return false
 	}
@@ -893,10 +920,11 @@ func (e PostDeliverySettledReason) Valid() bool {
 
 // Defines values for PostDeliveryState.
 const (
-	PostDeliveryStateDelivered PostDeliveryState = "delivered"
-	PostDeliveryStateFailed    PostDeliveryState = "failed"
-	PostDeliveryStatePending   PostDeliveryState = "pending"
-	PostDeliveryStateSending   PostDeliveryState = "sending"
+	PostDeliveryStateDelivered   PostDeliveryState = "delivered"
+	PostDeliveryStateFailed      PostDeliveryState = "failed"
+	PostDeliveryStatePending     PostDeliveryState = "pending"
+	PostDeliveryStateSending     PostDeliveryState = "sending"
+	PostDeliveryStateUnconfirmed PostDeliveryState = "unconfirmed"
 )
 
 // Valid indicates whether the value is a known member of the PostDeliveryState enum.
@@ -909,6 +937,8 @@ func (e PostDeliveryState) Valid() bool {
 	case PostDeliveryStatePending:
 		return true
 	case PostDeliveryStateSending:
+		return true
+	case PostDeliveryStateUnconfirmed:
 		return true
 	default:
 		return false
@@ -1055,28 +1085,16 @@ func (e PromptListContentFragmentsRole) Valid() bool {
 
 // Defines values for PublicationDestinationKind.
 const (
+	PublicationDestinationKindDiscord PublicationDestinationKind = "discord"
 	PublicationDestinationKindWebhook PublicationDestinationKind = "webhook"
 )
 
 // Valid indicates whether the value is a known member of the PublicationDestinationKind enum.
 func (e PublicationDestinationKind) Valid() bool {
 	switch e {
-	case PublicationDestinationKindWebhook:
+	case PublicationDestinationKindDiscord:
 		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PublicationDestinationChoiceKind.
-const (
-	PublicationDestinationChoiceKindWebhook PublicationDestinationChoiceKind = "webhook"
-)
-
-// Valid indicates whether the value is a known member of the PublicationDestinationChoiceKind enum.
-func (e PublicationDestinationChoiceKind) Valid() bool {
-	switch e {
-	case PublicationDestinationChoiceKindWebhook:
+	case PublicationDestinationKindWebhook:
 		return true
 	default:
 		return false
@@ -2888,10 +2906,16 @@ type PostDelivery struct {
 	EventType string             `json:"eventType"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// Kind What the destination behind this delivery is, empty once it has been removed.
+	Kind PostDeliveryKind `json:"kind"`
+
 	// Last The most recent attempt, absent until one has been made.
-	Last       *PostDeliveryAttempt `json:"last,omitempty"`
-	OccurredAt time.Time            `json:"occurredAt"`
-	PostId     openapi_types.UUID   `json:"postId"`
+	Last *PostDeliveryAttempt `json:"last,omitempty"`
+
+	// MessageId The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed.
+	MessageId  string             `json:"messageId"`
+	OccurredAt time.Time          `json:"occurredAt"`
+	PostId     openapi_types.UUID `json:"postId"`
 
 	// PostTitle The title the edition behind this event carries.
 	PostTitle string `json:"postTitle"`
@@ -2907,9 +2931,12 @@ type PostDelivery struct {
 	// SettledReason Why a delivery stopped, absent while it is still going.
 	SettledReason *PostDeliverySettledReason `json:"settledReason,omitempty"`
 
-	// State Where one delivery stands. Neither settled state changes whether the post is public.
+	// State Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
 	State PostDeliveryState `json:"state"`
 }
+
+// PostDeliveryKind What the destination behind this delivery is, empty once it has been removed.
+type PostDeliveryKind string
 
 // PostDeliveryAttempt The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with.
 type PostDeliveryAttempt struct {
@@ -2946,7 +2973,7 @@ type PostDeliveryOutcome string
 // PostDeliverySettledReason Why a delivery stopped, absent while it is still going.
 type PostDeliverySettledReason string
 
-// PostDeliveryState Where one delivery stands. Neither settled state changes whether the post is public.
+// PostDeliveryState Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
 type PostDeliveryState string
 
 // PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
@@ -3262,6 +3289,37 @@ type PublicationCategoryList struct {
 	Categories []PublicationCategory `json:"categories"`
 }
 
+// PublicationChannel The safe identity behind a Discord destination. It names where announcements land and nothing that would let a reader send one.
+type PublicationChannel struct {
+	// ChannelId The channel announcements land in.
+	ChannelId string `json:"channelId"`
+
+	// GuildId The Discord server the channel belongs to.
+	GuildId string `json:"guildId"`
+
+	// RoleId The one role an author may ask for, empty when there is none.
+	RoleId string `json:"roleId"`
+
+	// RoleName What that role is called, and all a contributor is shown.
+	RoleName string `json:"roleName"`
+
+	// WebhookName The name Discord shows the announcement under.
+	WebhookName string `json:"webhookName"`
+}
+
+// PublicationChannelRequest defines model for PublicationChannelRequest.
+type PublicationChannelRequest struct {
+	// Address The Discord incoming webhook address. Illarin masks it after saving; leave it out when changing a destination to keep the one it has.
+	Address *string `json:"address,omitempty"`
+	Name    string  `json:"name"`
+
+	// RoleId The one role an author may ask this destination to mention. Send it empty to approve no role.
+	RoleId *string `json:"roleId,omitempty"`
+
+	// RoleName What that role is called, and all a contributor is shown.
+	RoleName *string `json:"roleName,omitempty"`
+}
+
 // PublicationCredential defines model for PublicationCredential.
 type PublicationCredential struct {
 	Grant PublicationGrant `json:"grant"`
@@ -3271,16 +3329,21 @@ type PublicationCredential struct {
 // PublicationDestination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
 type PublicationDestination struct {
 	// Address The masked address, which names the host and hides the rest.
-	Address    string     `json:"address"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	DisabledAt *time.Time `json:"disabledAt,omitempty"`
+	Address string `json:"address"`
+
+	// Channel Where a Discord destination announces, absent on a generic webhook.
+	Channel    *PublicationChannel `json:"channel,omitempty"`
+	CreatedAt  time.Time           `json:"createdAt"`
+	DisabledAt *time.Time          `json:"disabledAt,omitempty"`
 
 	// Events Which Publication events this endpoint asked for.
 	Events []PublicationEvent `json:"events"`
 
 	// Host The host the endpoint answers on.
-	Host string                     `json:"host"`
-	Id   openapi_types.UUID         `json:"id"`
+	Host string             `json:"host"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Kind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
 	Kind PublicationDestinationKind `json:"kind"`
 
 	// Name What the authority calls this endpoint, and all a contributor sees.
@@ -3297,26 +3360,25 @@ type PublicationDestination struct {
 	VerifiedAt *time.Time                  `json:"verifiedAt,omitempty"`
 }
 
-// PublicationDestinationKind defines model for PublicationDestination.Kind.
-type PublicationDestinationKind string
-
 // PublicationDestinationChoice One destination a post may send to. It carries no address and no secret, which is the whole point of it.
 type PublicationDestinationChoice struct {
 	// ByDefault Whether a publication starts with this one selected.
 	ByDefault bool `json:"byDefault"`
 
 	// Events Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach.
-	Events []PublicationEvent               `json:"events"`
-	Id     openapi_types.UUID               `json:"id"`
-	Kind   PublicationDestinationChoiceKind `json:"kind"`
-	Name   string                           `json:"name"`
+	Events []PublicationEvent `json:"events"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Kind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+	Kind PublicationDestinationKind `json:"kind"`
+	Name string                     `json:"name"`
+
+	// Role The notification role an author may ask this destination to mention, empty when the authority approved none.
+	Role string `json:"role"`
 
 	// State Whether a destination is ready to receive anything.
 	State PublicationDestinationState `json:"state"`
 }
-
-// PublicationDestinationChoiceKind defines model for PublicationDestinationChoice.Kind.
-type PublicationDestinationChoiceKind string
 
 // PublicationDestinationChoiceList defines model for PublicationDestinationChoiceList.
 type PublicationDestinationChoiceList struct {
@@ -3325,6 +3387,9 @@ type PublicationDestinationChoiceList struct {
 	// Inherited Whether this set comes from the app rather than being its own.
 	Inherited bool `json:"inherited"`
 }
+
+// PublicationDestinationKind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+type PublicationDestinationKind string
 
 // PublicationDestinationList defines model for PublicationDestinationList.
 type PublicationDestinationList struct {
@@ -3483,6 +3548,9 @@ type PublishPostRequest struct {
 	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
 	Note           *string               `json:"note,omitempty"`
 
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
+
 	// Version The working-copy version the action means to act on.
 	Version int `json:"version"`
 }
@@ -3570,6 +3638,9 @@ type ReplacePostScheduleRequest struct {
 
 	// RevisionId An edition the post has already kept.
 	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
 }
 
 // RepublishPostRequest defines model for RepublishPostRequest.
@@ -3676,6 +3747,9 @@ type SchedulePostRequest struct {
 	At             time.Time             `json:"at"`
 	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
 	Note           *string               `json:"note,omitempty"`
+
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
 
 	// Version The working-copy version the edition is captured from.
 	Version int `json:"version"`
@@ -4468,6 +4542,12 @@ type OrderPublicationCategoriesJSONRequestBody = OrderPublicationCategoriesReque
 // UpdatePublicationCategoryJSONRequestBody defines body for UpdatePublicationCategory for application/json ContentType.
 type UpdatePublicationCategoryJSONRequestBody = UpdatePublicationCategoryRequest
 
+// AddPublicationChannelJSONRequestBody defines body for AddPublicationChannel for application/json ContentType.
+type AddPublicationChannelJSONRequestBody = PublicationChannelRequest
+
+// UpdatePublicationChannelJSONRequestBody defines body for UpdatePublicationChannel for application/json ContentType.
+type UpdatePublicationChannelJSONRequestBody = PublicationChannelRequest
+
 // AddPublicationDestinationJSONRequestBody defines body for AddPublicationDestination for application/json ContentType.
 type AddPublicationDestinationJSONRequestBody = AddPublicationDestinationRequest
 
@@ -4922,6 +5002,12 @@ type ServerInterface interface {
 
 	// (PATCH /v1/publication/categories/{id})
 	UpdatePublicationCategory(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/channels)
+	AddPublicationChannel(c *gin.Context)
+
+	// (PATCH /v1/publication/channels/{id})
+	UpdatePublicationChannel(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/publication/deliveries)
 	ListPublicationDeliveries(c *gin.Context, params ListPublicationDeliveriesParams)
@@ -7383,6 +7469,44 @@ func (siw *ServerInterfaceWrapper) UpdatePublicationCategory(c *gin.Context) {
 	siw.Handler.UpdatePublicationCategory(c, id)
 }
 
+// AddPublicationChannel operation middleware
+func (siw *ServerInterfaceWrapper) AddPublicationChannel(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPublicationChannel(c)
+}
+
+// UpdatePublicationChannel operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationChannel(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationChannel(c, id)
+}
+
 // ListPublicationDeliveries operation middleware
 func (siw *ServerInterfaceWrapper) ListPublicationDeliveries(c *gin.Context) {
 
@@ -8816,6 +8940,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.DisablePublicationDestination)
 	router.POST(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.VerifyPublicationDestination)
 	router.POST(options.BaseURL+"/v1/publication/destinations/:id/secret", wrapper.RotatePublicationDestinationSecret)
+	router.POST(options.BaseURL+"/v1/publication/channels", wrapper.AddPublicationChannel)
+	router.PATCH(options.BaseURL+"/v1/publication/channels/:id", wrapper.UpdatePublicationChannel)
 	router.GET(options.BaseURL+"/v1/publication/deliveries", wrapper.ListPublicationDeliveries)
 	router.GET(options.BaseURL+"/v1/publication/deliveries/:id/attempts", wrapper.ListPublicationDeliveryAttempts)
 	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/replay", wrapper.ReplayPublicationDelivery)

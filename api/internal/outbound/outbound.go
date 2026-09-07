@@ -220,19 +220,38 @@ func (c *Caller) Post(
 	headers map[string]string,
 	body []byte,
 ) (Answer, error) {
+	return c.send(ctx, http.MethodPost, address, headers, body)
+}
+
+// Get asks one checked address what it is, under the same bounds and the same
+// refusal to follow a redirect.
+func (c *Caller) Get(ctx context.Context, address string) (Answer, error) {
+	return c.send(ctx, http.MethodGet, address, nil, nil)
+}
+
+func (c *Caller) send(
+	ctx context.Context,
+	method, address string,
+	headers map[string]string,
+	body []byte,
+) (Answer, error) {
 	checked, err := Check(address)
 	if err != nil {
 		return Answer{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.Limits.Request)
 	defer cancel()
-	request, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, checked.String(), bytes.NewReader(body),
-	)
+	var carried io.Reader
+	if body != nil {
+		carried = bytes.NewReader(body)
+	}
+	request, err := http.NewRequestWithContext(ctx, method, checked.String(), carried)
 	if err != nil {
 		return Answer{}, fmt.Errorf("build the request: %w", err)
 	}
-	request.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	request.Header.Set("User-Agent", "Illarin-Publication/1")
 	for name, value := range headers {
 		request.Header.Set(name, value)

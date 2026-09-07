@@ -12,13 +12,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The states a delivery passes through. Neither settled state changes whether
-// the post is public.
+// The states a delivery passes through. No settled state changes whether the
+// post is public.
 const (
-	DeliveryPending   = "pending"
-	DeliverySending   = "sending"
-	DeliveryDelivered = "delivered"
-	DeliveryFailed    = "failed"
+	DeliveryPending     = "pending"
+	DeliverySending     = "sending"
+	DeliveryDelivered   = "delivered"
+	DeliveryFailed      = "failed"
+	DeliveryUnconfirmed = "unconfirmed"
 )
 
 // What one attempt found at the far end.
@@ -26,6 +27,7 @@ const (
 	AttemptDelivered   = "delivered"
 	AttemptRefused     = "refused"
 	AttemptUnreachable = "unreachable"
+	AttemptUnconfirmed = "unconfirmed"
 )
 
 // DeliveryPoll is how often the worker looks for delivery work.
@@ -48,6 +50,7 @@ var ErrDeliveryUnsendable = errors.New("the destination no longer receives")
 // Illarin's outbound address policy.
 type Sender interface {
 	Check(address string) (string, error)
+	Get(ctx context.Context, address string) (outbound.Answer, error)
 	Post(
 		ctx context.Context,
 		address string,
@@ -66,9 +69,11 @@ type Delivery struct {
 	PostTitle     string
 	RevisionID    uuid.UUID
 	Destination   string
+	Kind          string
 	Removed       bool
 	State         string
 	SettledReason string
+	MessageID     string
 	Run           int
 	Attempts      int
 	OccurredAt    time.Time
@@ -240,24 +245,30 @@ func (s *Service) ReplayDelivery(
 }
 
 // queueDeliveries turns one transition's captured choice into durable work,
-// skipping a destination that did not subscribe to this event. It runs inside
-// the transaction that changes the post and makes no request.
+// skipping a destination that did not subscribe to this event and a Discord
+// channel this post has already announced in. It runs inside the transaction
+// that changes the post and makes no request.
 func queueDeliveries(
 	ctx context.Context,
 	tx pgx.Tx,
+	postID uuid.UUID,
 	eventID uuid.UUID,
 	event string,
-	chosen []Choice,
+	chosen []sending,
 ) error {
 	for _, one := range chosen {
 		_, err := tx.Exec(ctx, `
 			insert into publication_deliveries
-			       (id, event_id, destination_id, destination_name)
-			select $1, $2, destination.id, $4
+			       (id, event_id, destination_id, destination_name, mention_role)
+			select $1, $2, destination.id, $4, $6
 			  from publication_destinations destination
 			 where destination.id = $3 and $5 = any (destination.events)
+			   and (destination.kind <> $7 or not exists (
+			         select 1 from publication_deliveries already
+			           join publication_events sent on sent.id = already.event_id
+			          where sent.post_id = $8 and already.destination_id = destination.id))
 			on conflict do nothing
-		`, uuid.New(), eventID, one.ID, one.Name, event)
+		`, uuid.New(), eventID, one.ID, one.Name, event, one.Ping, KindDiscord, postID)
 		if err != nil {
 			return fmt.Errorf("keep the delivery work: %w", err)
 		}
@@ -345,6 +356,7 @@ type waiting struct {
 	EventID       uuid.UUID
 	EventType     string
 	DestinationID *uuid.UUID
+	Ping          bool
 	Token         uuid.UUID
 	Run           int
 	Attempts      int
@@ -373,12 +385,12 @@ func (s *Service) leaseDueDelivery(ctx context.Context, now time.Time) (waiting,
 		       lease_token = $2, lease_expires_at = $3, updated_at = $1
 		  from candidate, publication_events event
 		 where work.id = candidate.id and event.id = work.event_id
-		returning work.id, work.event_id, event.type, work.destination_id, work.run,
-		          work.attempts,
+		returning work.id, work.event_id, event.type, work.destination_id,
+		          work.mention_role, work.run, work.attempts,
 		          (select count(*) from publication_delivery_attempts made
 		            where made.delivery_id = work.id and made.run = work.run)
 	`, now, held.Token, now.Add(DeliveryLease), DeliveryPending, DeliverySending).Scan(
-		&held.ID, &held.EventID, &held.EventType, &held.DestinationID,
+		&held.ID, &held.EventID, &held.EventType, &held.DestinationID, &held.Ping,
 		&held.Run, &held.Attempts, &held.Made,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -396,12 +408,15 @@ func (s *Service) sendLeased(ctx context.Context, held waiting, now time.Time) e
 	if held.DestinationID == nil {
 		return s.record(ctx, held, stopped(SettledRemoved), now)
 	}
-	state, err := s.destinationState(ctx, *held.DestinationID)
+	kind, state, err := s.destinationStanding(ctx, *held.DestinationID)
 	if err != nil {
 		return err
 	}
 	if state != DestinationActive {
 		return s.record(ctx, held, stopped(SettledDisabled), now)
+	}
+	if kind == KindDiscord {
+		return s.announceOnDiscord(ctx, held, *held.DestinationID, now)
 	}
 	body, err := s.eventBody(ctx, held.EventID)
 	if err != nil {
@@ -451,6 +466,8 @@ func (s *Service) record(
 	switch {
 	case said.Outcome == AttemptDelivered:
 		state = DeliveryDelivered
+	case said.Outcome == AttemptUnconfirmed:
+		state = DeliveryUnconfirmed
 	case reason == "":
 		reason = SettledExhausted
 	}
@@ -560,30 +577,35 @@ func deliveryHeldByThisAttempt(ctx context.Context, tx pgx.Tx, held waiting) (bo
 	return found, nil
 }
 
-func (s *Service) destinationState(ctx context.Context, id uuid.UUID) (string, error) {
-	var state string
+// destinationStanding answers what a destination is and whether it still
+// receives, which together decide how one leased delivery is sent.
+func (s *Service) destinationStanding(ctx context.Context, id uuid.UUID) (string, string, error) {
+	var kind, state string
 	err := s.pool.QueryRow(ctx, `
-		select state from publication_destinations where id = $1
-	`, id).Scan(&state)
+		select kind, state from publication_destinations where id = $1
+	`, id).Scan(&kind, &state)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return "", "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("read whether a destination still receives: %w", err)
+		return "", "", fmt.Errorf("read whether a destination still receives: %w", err)
 	}
-	return state, nil
+	return kind, state, nil
 }
 
 const selectDeliveries = `
 	select work.id, event.id, event.type, event.post_id, revision.title, event.revision_id,
-	       work.destination_name, work.destination_id is null, work.state,
-	       coalesce(work.settled_reason, ''), work.run, work.attempts,
+	       work.destination_name, coalesce(destination.kind, ''),
+	       work.destination_id is null, work.state,
+	       coalesce(work.settled_reason, ''), coalesce(work.message_id, ''),
+	       work.run, work.attempts,
 	       event.occurred_at, work.due_at, work.settled_at,
 	       last.run, last.number, last.outcome, last.status, last.detail,
 	       last.took_ms, last.attempted_at
 	  from publication_deliveries work
 	  join publication_events event on event.id = work.event_id
 	  join post_revisions revision on revision.id = event.revision_id
+	  left join publication_destinations destination on destination.id = work.destination_id
 	  left join lateral (
 		select run, number, outcome, status, detail, took_ms, attempted_at
 		  from publication_delivery_attempts
@@ -604,8 +626,8 @@ func collectDeliveries(rows pgx.Rows) ([]Delivery, error) {
 		var attempted *time.Time
 		err := rows.Scan(
 			&one.ID, &one.EventID, &one.EventType, &one.PostID, &one.PostTitle, &one.RevisionID,
-			&one.Destination, &one.Removed, &one.State,
-			&one.SettledReason, &one.Run, &one.Attempts,
+			&one.Destination, &one.Kind, &one.Removed, &one.State,
+			&one.SettledReason, &one.MessageID, &one.Run, &one.Attempts,
 			&one.OccurredAt, &one.DueAt, &one.SettledAt,
 			&run, &number, &outcome, &status, &detail, &took, &attempted,
 		)

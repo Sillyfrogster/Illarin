@@ -165,7 +165,7 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParam
 	}
 	published, err := h.publications.PublishPost(
 		c.Request.Context(), editor, uuid.UUID(id), request.Version,
-		announcementOf(request.DestinationIds, request.Note),
+		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -325,6 +325,9 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrDestinationRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"This post may not send to that destination.")
+	case errors.Is(err, publication.ErrRoleRefused):
+		refusePublication(c, http.StatusForbidden, CodeForbidden,
+			"This post may not ping that destination's role.")
 	case errors.Is(err, publication.ErrNotPostEditor):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")

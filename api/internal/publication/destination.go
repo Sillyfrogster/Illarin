@@ -14,8 +14,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// KindWebhook is the one destination kind Illarin sends to so far.
-const KindWebhook = "webhook"
+// The kinds of destination Illarin sends to. A webhook receives the signed
+// event; Discord receives an announcement Illarin composed.
+const (
+	KindWebhook = "webhook"
+	KindDiscord = "discord"
+)
 
 // The states a destination passes through. Only an active one receives an event.
 const (
@@ -31,6 +35,10 @@ var PostEvents = []string{EventPublished, EventUpdated, EventWithdrawn}
 
 // ErrEventUnknown says a subscription named something Illarin does not send.
 var ErrEventUnknown = errors.New("no such publication event")
+
+// ErrNotWebhook says an operation meant for a generic endpoint was aimed at a
+// Discord channel, which Illarin configures and signs differently.
+var ErrNotWebhook = errors.New("the destination is a Discord channel")
 
 var (
 	ErrDestinationNotFound = errors.New("no such publication destination")
@@ -48,11 +56,22 @@ type Destination struct {
 	Address     string
 	State       string
 	Events      []string
+	Channel     *Channel
 	SecretSetAt time.Time
 	OldUntil    *time.Time
 	VerifiedAt  *time.Time
 	DisabledAt  *time.Time
 	CreatedAt   time.Time
+}
+
+// Channel is the safe identity behind a Discord destination: where Discord
+// says the announcements land, and the one role an author may ask for.
+type Channel struct {
+	GuildID   string
+	ChannelID string
+	Webhook   string
+	RoleID    string
+	RoleName  string
 }
 
 // DestinationEdit is what the authority supplies to add one endpoint. An
@@ -84,6 +103,7 @@ type Choice struct {
 	Kind      string
 	State     string
 	Events    []string
+	Role      string
 	ByDefault bool
 }
 
@@ -165,6 +185,9 @@ func (s *Service) UpdateDestination(
 	current, err := s.Destination(ctx, id)
 	if err != nil {
 		return Destination{}, err
+	}
+	if current.Kind == KindDiscord {
+		return Destination{}, ErrNotWebhook
 	}
 	name := current.Name
 	if in.Name != nil {
@@ -378,8 +401,23 @@ func maskAddress(host string) string {
 	return outbound.Scheme + "://" + host + "/…"
 }
 
+func scanChannel(guildID, channelID, webhookName, roleID, roleName *string) *Channel {
+	if guildID == nil || channelID == nil {
+		return nil
+	}
+	held := &Channel{GuildID: *guildID, ChannelID: *channelID}
+	if webhookName != nil {
+		held.Webhook = *webhookName
+	}
+	if roleID != nil && roleName != nil {
+		held.RoleID, held.RoleName = *roleID, *roleName
+	}
+	return held
+}
+
 const selectDestinations = `
 	select held.id, held.kind, held.name, held.host, held.state, held.events,
+	       held.guild_id, held.channel_id, held.webhook_name, held.role_id, held.role_name,
 	       held.signing_secret_set_at, held.previous_secret_until,
 	       held.verified_at, held.disabled_at, held.created_at
 	  from publication_destinations held
@@ -390,8 +428,10 @@ func collectDestinations(rows pgx.Rows) ([]Destination, error) {
 	found := make([]Destination, 0, 8)
 	for rows.Next() {
 		var one Destination
+		var guildID, channelID, webhookName, roleID, roleName *string
 		err := rows.Scan(
 			&one.ID, &one.Kind, &one.Name, &one.Host, &one.State, &one.Events,
+			&guildID, &channelID, &webhookName, &roleID, &roleName,
 			&one.SecretSetAt, &one.OldUntil,
 			&one.VerifiedAt, &one.DisabledAt, &one.CreatedAt,
 		)
@@ -399,6 +439,7 @@ func collectDestinations(rows pgx.Rows) ([]Destination, error) {
 			return nil, fmt.Errorf("read a publication destination: %w", err)
 		}
 		one.Address = maskAddress(one.Host)
+		one.Channel = scanChannel(guildID, channelID, webhookName, roleID, roleName)
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {

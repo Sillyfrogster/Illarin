@@ -1496,6 +1496,15 @@ components:
           items:
             type: string
             format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
+          items:
+            type: string
+            format: uuid
         note:
           type: string
           maxLength: 500
@@ -1509,6 +1518,15 @@ components:
         destinationIds:
           type: array
           nullable: true
+          items:
+            type: string
+            format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
           items:
             type: string
             format: uuid
@@ -1653,6 +1671,15 @@ components:
           items:
             type: string
             format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
+          items:
+            type: string
+            format: uuid
         note:
           type: string
           maxLength: 500
@@ -1663,16 +1690,19 @@ components:
         - delivered
         - refused
         - unreachable
+        - unconfirmed
     PostDeliveryState:
       type: string
       description: >-
-        Where one delivery stands. Neither settled state changes whether the
-        post is public.
+        Where one delivery stands. No settled state changes whether the post is
+        public. An unconfirmed announcement was accepted without Discord saying
+        which message it made, so it is neither delivered nor safe to send again.
       enum:
         - pending
         - sending
         - delivered
         - failed
+        - unconfirmed
     PostDeliverySettledReason:
       type: string
       description: Why a delivery stopped, absent while it is still going.
@@ -1684,6 +1714,7 @@ components:
         - removed
         - disabled
         - moved
+        - unconfirmed
     PostDeliveryAttempt:
       type: object
       description: >-
@@ -1729,6 +1760,8 @@ components:
         - postTitle
         - revisionId
         - destination
+        - kind
+        - messageId
         - removed
         - state
         - run
@@ -1756,6 +1789,20 @@ components:
         destination:
           type: string
           description: The name the destination carried when this event was captured.
+        kind:
+          type: string
+          description: >-
+            What the destination behind this delivery is, empty once it has
+            been removed.
+          enum:
+            - ''
+            - webhook
+            - discord
+        messageId:
+          type: string
+          description: >-
+            The Discord message this announcement made, empty for a generic
+            webhook and for an announcement Discord never confirmed.
         removed:
           type: boolean
           description: Whether the destination behind this delivery is gone.

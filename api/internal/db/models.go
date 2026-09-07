@@ -423,6 +423,7 @@ type PostSchedule struct {
 type PostScheduleDestination struct {
 	ScheduleID    pgtype.UUID
 	DestinationID pgtype.UUID
+	MentionRole   bool
 }
 
 type PostSlug struct {
@@ -601,6 +602,8 @@ type PublicationDelivery struct {
 	UpdatedAt       pgtype.Timestamptz
 	Run             int32
 	SettledReason   pgtype.Text
+	MentionRole     bool
+	MessageID       pgtype.Text
 }
 
 type PublicationDeliveryAttempt struct {
@@ -632,6 +635,11 @@ type PublicationDestination struct {
 	PreviousSecret      []byte
 	PreviousSecretUntil pgtype.Timestamptz
 	SigningSecretSetAt  pgtype.Timestamptz
+	GuildID             pgtype.Text
+	ChannelID           pgtype.Text
+	WebhookName         pgtype.Text
+	RoleID              pgtype.Text
+	RoleName            pgtype.Text
 }
 
 type PublicationEvent struct {

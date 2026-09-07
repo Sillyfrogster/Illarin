@@ -110,7 +110,7 @@ func (s *Service) PublishPost(
 // captured is the delivery choice one public transition is making. It belongs
 // to that transition, so nothing edited afterwards can rewrite it.
 type captured struct {
-	Chosen []Choice
+	Chosen []sending
 	Note   string
 }
 
@@ -160,7 +160,7 @@ func makePublic(
 	if err != nil {
 		return fmt.Errorf("record the publication event: %w", err)
 	}
-	return queueDeliveries(ctx, tx, eventID, event, choice.Chosen)
+	return queueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
 }
 
 // PublishedPost answers the public edition behind one address, current or former, and always names the address it lives at now.

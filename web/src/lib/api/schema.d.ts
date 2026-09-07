@@ -1037,6 +1037,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/channels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Configure one Discord channel. Illarin asks Discord what the capability address is for and keeps only the guild and channel it names, so the address itself is never shown again. */
+    post: operations["addPublicationChannel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/channels/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Rename a Discord destination, change the role an author may ask for, or point it at another capability, which Discord is asked about again. */
+    patch: operations["updatePublicationChannel"];
+    trace?: never;
+  };
   "/v1/publication/deliveries": {
     parameters: {
       query?: never;
@@ -3391,6 +3425,11 @@ export interface components {
       instanceId: string;
     };
     /**
+     * @description What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+     * @enum {string}
+     */
+    PublicationDestinationKind: "webhook" | "discord";
+    /**
      * @description Whether a destination is ready to receive anything.
      * @enum {string}
      */
@@ -3408,11 +3447,12 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
-      /** @enum {string} */
-      kind: "webhook";
+      kind: components["schemas"]["PublicationDestinationKind"];
       state: components["schemas"]["PublicationDestinationState"];
       /** @description Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach. */
       events: components["schemas"]["PublicationEvent"][];
+      /** @description The notification role an author may ask this destination to mention, empty when the authority approved none. */
+      role: string;
       /** @description Whether a publication starts with this one selected. */
       byDefault: boolean;
     };
@@ -3481,12 +3521,24 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
     };
+    /** @description The safe identity behind a Discord destination. It names where announcements land and nothing that would let a reader send one. */
+    PublicationChannel: {
+      /** @description The Discord server the channel belongs to. */
+      guildId: string;
+      /** @description The channel announcements land in. */
+      channelId: string;
+      /** @description The name Discord shows the announcement under. */
+      webhookName: string;
+      /** @description The one role an author may ask for, empty when there is none. */
+      roleId: string;
+      /** @description What that role is called, and all a contributor is shown. */
+      roleName: string;
+    };
     /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
     PublicationDestination: {
       /** Format: uuid */
       id: string;
-      /** @enum {string} */
-      kind: "webhook";
+      kind: components["schemas"]["PublicationDestinationKind"];
       /** @description What the authority calls this endpoint, and all a contributor sees. */
       name: string;
       /** @description The host the endpoint answers on. */
@@ -3496,6 +3548,8 @@ export interface components {
       state: components["schemas"]["PublicationDestinationState"];
       /** @description Which Publication events this endpoint asked for. */
       events: components["schemas"]["PublicationEvent"][];
+      /** @description Where a Discord destination announces, absent on a generic webhook. */
+      channel?: components["schemas"]["PublicationChannel"];
       /**
        * Format: date-time
        * @description When the current signing secret was drawn.
@@ -3546,11 +3600,25 @@ export interface components {
        */
       previousSecretUntil: string;
     };
+    PublicationChannelRequest: {
+      name: string;
+      /** @description The Discord incoming webhook address. Illarin masks it after saving; leave it out when changing a destination to keep the one it has. */
+      address?: string;
+      /** @description The one role an author may ask this destination to mention. Send it empty to approve no role. */
+      roleId?: string;
+      /** @description What that role is called, and all a contributor is shown. */
+      roleName?: string;
+    };
     /**
-     * @description Where one delivery stands. Neither settled state changes whether the post is public.
+     * @description Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
      * @enum {string}
      */
-    PostDeliveryState: "pending" | "sending" | "delivered" | "failed";
+    PostDeliveryState:
+      | "pending"
+      | "sending"
+      | "delivered"
+      | "failed"
+      | "unconfirmed";
     /**
      * @description Why a delivery stopped, absent while it is still going.
      * @enum {string}
@@ -3562,12 +3630,17 @@ export interface components {
       | "gone"
       | "removed"
       | "disabled"
-      | "moved";
+      | "moved"
+      | "unconfirmed";
     /**
      * @description What one attempt found at the far end.
      * @enum {string}
      */
-    PostDeliveryOutcome: "delivered" | "refused" | "unreachable";
+    PostDeliveryOutcome:
+      | "delivered"
+      | "refused"
+      | "unreachable"
+      | "unconfirmed";
     /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
     PostDeliveryAttempt: {
       /** @description Which attempt sequence this belongs to; a replay opens the next. */
@@ -3597,6 +3670,13 @@ export interface components {
       revisionId: string;
       /** @description The name the destination carried when this event was captured. */
       destination: string;
+      /**
+       * @description What the destination behind this delivery is, empty once it has been removed.
+       * @enum {string}
+       */
+      kind: "" | "webhook" | "discord";
+      /** @description The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed. */
+      messageId: string;
       /** @description Whether the destination behind this delivery is gone. */
       removed: boolean;
       state: components["schemas"]["PostDeliveryState"];
@@ -3654,10 +3734,14 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
       destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
       note?: string;
     };
     ReplacePostScheduleRequest: {
       destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
       note?: string;
       /**
        * Format: uuid
@@ -3679,6 +3763,8 @@ export interface components {
        */
       at: string;
       destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
       note?: string;
     };
     /** @description One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile. */
@@ -7393,6 +7479,93 @@ export interface operations {
           "application/json": components["schemas"]["RotatedPublicationSecret"];
         };
       };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addPublicationChannel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationChannelRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination, already proved by Discord */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationChannel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationChannelRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
       /** @description No account is signed in */
       401: {
         headers: {

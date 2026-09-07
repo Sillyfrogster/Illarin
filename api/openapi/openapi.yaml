@@ -137,6 +137,10 @@ paths:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}~1verification
   /v1/publication/destinations/{id}/secret:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1destinations~1{id}~1secret
+  /v1/publication/channels:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1channels
+  /v1/publication/channels/{id}:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1channels~1{id}
   /v1/publication/deliveries:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries
   /v1/publication/deliveries/{id}/attempts:

@@ -66,6 +66,20 @@ type sentByline struct {
 // attempt on one event produces the same body, so a receiver that saw a retry
 // sees the same summary it saw before.
 func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, error) {
+	held, err := s.summary(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	body, err := json.Marshal(held)
+	if err != nil {
+		return nil, fmt.Errorf("write the publication event: %w", err)
+	}
+	return body, nil
+}
+
+// summary reads what one event says about its post, which is what a webhook is
+// sent and what a Discord announcement is composed from.
+func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
 	var held sent
 	var post sentPost
 	var slug, categorySlug, categoryLabel string
@@ -87,10 +101,10 @@ func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, err
 		&socialID, &post.PublishedAt, &post.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("no such publication event")
+		return sent{}, fmt.Errorf("no such publication event")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the publication event: %w", err)
+		return sent{}, fmt.Errorf("read the publication event: %w", err)
 	}
 	post.Category = sentCategory{Slug: categorySlug, Label: categoryLabel}
 	post.URL = s.postAddress(slug)
@@ -98,17 +112,13 @@ func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, err
 		post.SocialImage = s.postAddress(slug) + "/card.png"
 	}
 	if post.Release, err = s.sentRelease(ctx, post.RevisionID); err != nil {
-		return nil, err
+		return sent{}, err
 	}
 	if post.Byline, err = s.sentByline(ctx, post.ID); err != nil {
-		return nil, err
+		return sent{}, err
 	}
 	held.Post = post
-	body, err := json.Marshal(held)
-	if err != nil {
-		return nil, fmt.Errorf("write the publication event: %w", err)
-	}
-	return body, nil
+	return held, nil
 }
 
 func (s *Service) sentRelease(ctx context.Context, revisionID uuid.UUID) (*sentRelease, error) {
