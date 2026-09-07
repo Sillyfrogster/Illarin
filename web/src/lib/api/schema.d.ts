@@ -1738,6 +1738,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/updates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Publish the reviewed working copy as the asset's next public version. The summary says what changed, and an update that changes nothing is refused rather than recorded. */
+    post: operations["publishAssetUpdate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/assets/{id}/discovery": {
     parameters: {
       query?: never;
@@ -3184,6 +3201,8 @@ export interface components {
     };
     PublishRefusal: {
       error: string;
+      /** @enum {string} */
+      code?: "not_ready" | "already_published" | "no_changes";
       /** @description The whole floor, so a refusal names every missing item at once. */
       readiness?: components["schemas"]["ReadinessItem"][];
     };
@@ -3876,6 +3895,27 @@ export interface components {
     PublishConflict:
       | components["schemas"]["CandidateConflict"]
       | components["schemas"]["PublishRefusal"];
+    AssetUpdateRequest: {
+      /** @description A short line saying what changed, which every update needs */
+      summary: string;
+      /** @description The longer explanation, where the creator writes one */
+      notes?: string;
+      /** @description Free text a creator may repeat, keeping the asset's own version where it is empty */
+      versionLabel?: string;
+    };
+    AssetUpdate: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: date-time */
+      recordedAt: string;
+      versionLabel: string;
+      summary: string;
+      notes: string;
+      contentGeneration: number;
+      /** @description Whether this update changed the file linked apps download */
+      contentChanged: boolean;
+    };
     PublicationEventApp: {
       slug: string;
       name: string;
@@ -9808,6 +9848,74 @@ export interface operations {
         content?: never;
       };
       /** @description The working copy changed or the asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublishConflict"];
+        };
+      };
+    };
+  };
+  publishAssetUpdate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description The recorded update */
+      200: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdate"];
+        };
+      };
+      /** @description The summary is missing or the update text is too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed, the asset is frozen or a draft, the candidate falls short of the floor, or nothing has changed */
       409: {
         headers: {
           [name: string]: unknown;

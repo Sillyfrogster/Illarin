@@ -1233,6 +1233,27 @@ func (e PublicationEvent) Valid() bool {
 	}
 }
 
+// Defines values for PublishRefusalCode.
+const (
+	AlreadyPublished PublishRefusalCode = "already_published"
+	NoChanges        PublishRefusalCode = "no_changes"
+	NotReady         PublishRefusalCode = "not_ready"
+)
+
+// Valid indicates whether the value is a known member of the PublishRefusalCode enum.
+func (e PublishRefusalCode) Valid() bool {
+	switch e {
+	case AlreadyPublished:
+		return true
+	case NoChanges:
+		return true
+	case NotReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QueuedDeliveryReason.
 const (
 	QueuedDeliveryReasonAbandoned   QueuedDeliveryReason = "abandoned"
@@ -2167,6 +2188,31 @@ type AssetTag struct {
 
 	// Value The normalized form browse matches on.
 	Value string `json:"value"`
+}
+
+// AssetUpdate defines model for AssetUpdate.
+type AssetUpdate struct {
+	// ContentChanged Whether this update changed the file linked apps download
+	ContentChanged    bool               `json:"contentChanged"`
+	ContentGeneration int                `json:"contentGeneration"`
+	Id                openapi_types.UUID `json:"id"`
+	Notes             string             `json:"notes"`
+	Number            int                `json:"number"`
+	RecordedAt        time.Time          `json:"recordedAt"`
+	Summary           string             `json:"summary"`
+	VersionLabel      string             `json:"versionLabel"`
+}
+
+// AssetUpdateRequest defines model for AssetUpdateRequest.
+type AssetUpdateRequest struct {
+	// Notes The longer explanation, where the creator writes one
+	Notes *string `json:"notes,omitempty"`
+
+	// Summary A short line saying what changed, which every update needs
+	Summary string `json:"summary"`
+
+	// VersionLabel Free text a creator may repeat, keeping the asset's own version where it is empty
+	VersionLabel *string `json:"versionLabel,omitempty"`
 }
 
 // AssetWithhold defines model for AssetWithhold.
@@ -3653,11 +3699,15 @@ type PublishPostRequest struct {
 
 // PublishRefusal defines model for PublishRefusal.
 type PublishRefusal struct {
-	Error string `json:"error"`
+	Code  *PublishRefusalCode `json:"code,omitempty"`
+	Error string              `json:"error"`
 
 	// Readiness The whole floor, so a refusal names every missing item at once.
 	Readiness *[]ReadinessItem `json:"readiness,omitempty"`
 }
+
+// PublishRefusalCode defines model for PublishRefusal.Code.
+type PublishRefusalCode string
 
 // QueuedDelivery defines model for QueuedDelivery.
 type QueuedDelivery struct {
@@ -4360,6 +4410,12 @@ type AcceptAssetRevisionParams struct {
 	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
 
+// PublishAssetUpdateParams defines parameters for PublishAssetUpdate.
+type PublishAssetUpdateParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // BeginDiscordParams defines parameters for BeginDiscord.
 type BeginDiscordParams struct {
 	Intent *BeginDiscordParamsIntent `form:"intent,omitempty" json:"intent,omitempty"`
@@ -4652,6 +4708,9 @@ type AddAssetRevisionMultipartRequestBody AddAssetRevisionMultipartBody
 
 // AcceptAssetRevisionJSONRequestBody defines body for AcceptAssetRevision for application/json ContentType.
 type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
+
+// PublishAssetUpdateJSONRequestBody defines body for PublishAssetUpdate for application/json ContentType.
+type PublishAssetUpdateJSONRequestBody = AssetUpdateRequest
 
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
@@ -5097,6 +5156,9 @@ type ServerInterface interface {
 
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/assets/{id}/updates)
+	PublishAssetUpdate(c *gin.Context, id openapi_types.UUID, params PublishAssetUpdateParams)
 
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
@@ -6810,6 +6872,58 @@ func (siw *ServerInterfaceWrapper) ExportSealedContent(c *gin.Context) {
 	}
 
 	siw.Handler.ExportSealedContent(c, id)
+}
+
+// PublishAssetUpdate operation middleware
+func (siw *ServerInterfaceWrapper) PublishAssetUpdate(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishAssetUpdateParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PublishAssetUpdate(c, id, params)
 }
 
 // ClearAssetWithhold operation middleware
@@ -9625,6 +9739,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/restore", wrapper.RestoreAsset)
 	router.PUT(options.BaseURL+"/v1/assets/:id/identity", wrapper.SetAssetIdentity)
 	router.POST(options.BaseURL+"/v1/assets/:id/publish", wrapper.PublishAsset)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates", wrapper.PublishAssetUpdate)
 	router.PUT(options.BaseURL+"/v1/assets/:id/discovery", wrapper.SetAssetDiscovery)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/deleted", wrapper.ListDeletedAssets)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/withhold", wrapper.ClearAssetWithhold)

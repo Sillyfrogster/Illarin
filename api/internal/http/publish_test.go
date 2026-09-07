@@ -464,3 +464,67 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 		t.Errorf("a visitor reads %d readiness items, want none", len(visitor.Readiness))
 	}
 }
+
+func publishAssetUpdate(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+	body string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost,
+		"/v1/assets/"+assetID+"/updates", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	return send(t, r, authorized(request, session))
+}
+
+func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
+	r, session := newVerifiedTestRouter(t)
+	started := startCharacter(t, r, session)
+	writeCharacterFloor(t, r, session, started)
+	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	coreBlock := blockNamed(t, started.Blocks, "character_core")
+	core := editableBlock(coreBlock)
+	core.Elements[0].Content = json.RawMessage(`{"text":"She has moved to the east shelf."}`)
+	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+
+	response := publishAssetUpdate(t, r, session, started.ID,
+		`{"summary":"Moved her to the east shelf","versionLabel":"v2"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("publish an update status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	var recorded struct {
+		Number         int    `json:"number"`
+		Summary        string `json:"summary"`
+		VersionLabel   string `json:"versionLabel"`
+		ContentChanged bool   `json:"contentChanged"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &recorded); err != nil {
+		t.Fatalf("decode the recorded update: %v", err)
+	}
+	if recorded.Number != 2 || recorded.VersionLabel != "v2" || !recorded.ContentChanged {
+		t.Fatalf("recorded update = %+v", recorded)
+	}
+	if response.Header().Get("X-Working-Copy-Version") == "" {
+		t.Error("the update named no committed working-copy version")
+	}
+
+	again := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
+	if again.Code != http.StatusConflict {
+		t.Fatalf("republishing status = %d, want 409: %s", again.Code, again.Body.String())
+	}
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(again.Body.Bytes(), &refusal); err != nil {
+		t.Fatalf("decode the refusal: %v", err)
+	}
+	if refusal.Code != "no_changes" {
+		t.Fatalf("refusal code = %q, want no_changes: %s", refusal.Code, again.Body.String())
+	}
+}

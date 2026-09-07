@@ -4281,6 +4281,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublishConflict'
+  /v1/assets/{id}/updates:
+    post:
+      operationId: publishAssetUpdate
+      description: >-
+        Publish the reviewed working copy as the asset's next public version.
+        The summary says what changed, and an update that changes nothing is
+        refused rather than recorded.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateRequest'
+      responses:
+        '200':
+          description: The recorded update
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdate'
+        '400':
+          description: The summary is missing or the update text is too long
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset does not belong to the creator
+        '409':
+          description: >-
+            The working copy changed, the asset is frozen or a draft, the
+            candidate falls short of the floor, or nothing has changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishConflict'
   /v1/assets/{id}/discovery:
     put:
       operationId: setAssetDiscovery
@@ -7902,6 +7955,12 @@ components:
       properties:
         error:
           type: string
+        code:
+          type: string
+          enum:
+            - not_ready
+            - already_published
+            - no_changes
         readiness:
           description: The whole floor, so a refusal names every missing item at once.
           type: array
@@ -9501,6 +9560,56 @@ components:
       anyOf:
         - $ref: '#/components/schemas/CandidateConflict'
         - $ref: '#/components/schemas/PublishRefusal'
+    AssetUpdateRequest:
+      type: object
+      required:
+        - summary
+      properties:
+        summary:
+          description: A short line saying what changed, which every update needs
+          type: string
+          maxLength: 200
+        notes:
+          description: The longer explanation, where the creator writes one
+          type: string
+          maxLength: 4000
+        versionLabel:
+          description: >-
+            Free text a creator may repeat, keeping the asset's own version
+            where it is empty
+          type: string
+          maxLength: 60
+    AssetUpdate:
+      type: object
+      required:
+        - id
+        - number
+        - recordedAt
+        - versionLabel
+        - summary
+        - notes
+        - contentGeneration
+        - contentChanged
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        versionLabel:
+          type: string
+        summary:
+          type: string
+        notes:
+          type: string
+        contentGeneration:
+          type: integer
+        contentChanged:
+          description: Whether this update changed the file linked apps download
+          type: boolean
     PublicationEventApp:
       type: object
       required:

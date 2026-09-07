@@ -220,6 +220,8 @@ paths:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1identity
   /v1/assets/{id}/publish:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1publish
+  /v1/assets/{id}/updates:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates
   /v1/assets/{id}/discovery:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1discovery
   /v1/profiles/{handle}/deleted:

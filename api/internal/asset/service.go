@@ -43,14 +43,15 @@ var (
 // Service runs the catalog. It knows the module interfaces, never a concrete
 // format.
 type Service struct {
-	pool    *pgxpool.Pool
-	reg     *format.Registry
-	store   storage.Store
-	media   *mediaproc.Library
-	ingest  IngestSettings
-	signer  signing.Key
-	now     func() time.Time
-	siteURL string
+	pool     *pgxpool.Pool
+	reg      *format.Registry
+	store    storage.Store
+	media    *mediaproc.Library
+	ingest   IngestSettings
+	signer   signing.Key
+	now      func() time.Time
+	siteURL  string
+	announce AnnounceUpdate
 }
 
 // beginReadSnapshot selects recorded content while retaining live access controls.

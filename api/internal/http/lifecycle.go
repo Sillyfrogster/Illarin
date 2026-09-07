@@ -62,13 +62,18 @@ func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID, params PublishAss
 	}
 	switch {
 	case errors.Is(err, asset.ErrPublishFloor):
+		notReady := NotReady
 		c.JSON(http.StatusConflict, PublishRefusal{
 			Error:     "This draft is not ready to publish yet.",
+			Code:      &notReady,
 			Readiness: toAPIReadiness(items),
 		})
 		return
 	case errors.Is(err, asset.ErrAlreadyPublished):
-		c.JSON(http.StatusConflict, PublishRefusal{Error: "This asset is already published."})
+		published := AlreadyPublished
+		c.JSON(http.StatusConflict, PublishRefusal{
+			Error: "This asset is already published.", Code: &published,
+		})
 		return
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such draft."})
@@ -111,4 +116,59 @@ func toAPIReadiness(items []asset.ReadinessItem) *[]ReadinessItem {
 		out = append(out, served)
 	}
 	return &out
+}
+
+// PublishAssetUpdate records the reviewed working copy as the asset's next public version.
+func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params PublishAssetUpdateParams) {
+	owner, ok := h.verifiedAccount(c, "publishing an asset update")
+	if !ok {
+		return
+	}
+	var request AssetUpdateRequest
+	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Send a summary of what changed, and any notes with it.",
+		})
+		return
+	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	recorded, items, err := h.assets.PublishUpdate(c.Request.Context(), asset.UpdateRequest{
+		OwnerID: owner.ID, AssetID: uuid.UUID(id), Summary: request.Summary,
+		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
+	}, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, asset.ErrSummaryRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Say what changed in this update."})
+	case errors.Is(err, asset.ErrSummaryTooLong):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "The summary, notes or version label is too long."})
+	case errors.Is(err, asset.ErrPublishFloor):
+		notReady := NotReady
+		c.JSON(http.StatusConflict, PublishRefusal{
+			Error:     "This asset is not ready to publish yet.",
+			Code:      &notReady,
+			Readiness: toAPIReadiness(items),
+		})
+	case errors.Is(err, asset.ErrNothingToPublish):
+		unchanged := NoChanges
+		c.JSON(http.StatusConflict, PublishRefusal{
+			Error: "Nothing has changed since the last update.", Code: &unchanged,
+		})
+	case errors.Is(err, asset.ErrAssetIsDraft):
+		c.JSON(http.StatusConflict, PublishRefusal{Error: "Publish this draft before updating it."})
+	case errors.Is(err, asset.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not publish the update."})
+	default:
+		c.JSON(http.StatusOK, AssetUpdate{
+			Id: types.UUID(recorded.ID), Number: recorded.Number,
+			RecordedAt: recorded.RecordedAt, VersionLabel: recorded.VersionLabel,
+			Summary: recorded.Summary, Notes: recorded.Notes,
+			ContentGeneration: recorded.ContentGeneration,
+			ContentChanged:    recorded.ContentChanged,
+		})
+	}
 }

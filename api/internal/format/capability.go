@@ -106,6 +106,17 @@ func (s CapabilitySubject) origin() string {
 	return s.Origin
 }
 
+// WritesKind reports whether any module writes this kind at all, which tells an empty target list apart from a kind Illarin only reads.
+func (r *Registry) WritesKind(kind string) bool {
+	for _, module := range r.modules {
+		declaration := module.Declaration()
+		if declaration.Direction.Write && declaration.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // OfferedTargets returns tested, permitted formats and their content costs.
 func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 	ids := make([]string, 0, len(r.modules))

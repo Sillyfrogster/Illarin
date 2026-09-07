@@ -188,6 +188,8 @@ type AssetSnapshot struct {
 	SourceRevisionID  pgtype.UUID
 	Payload           []byte
 	ProtectedPayloads []byte
+	Summary           string
+	Notes             string
 }
 
 type AssetSnapshotMedium struct {
