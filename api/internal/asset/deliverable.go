@@ -76,6 +76,18 @@ func (s *Service) DeliverableAsset(
 	if err != nil {
 		return Deliverable{}, err
 	}
+	if len(apps) == 0 {
+		blocks, err := readPublishedBlocks(ctx, q, assetID)
+		if err != nil {
+			return Deliverable{}, err
+		}
+		if err := protected.ApplyPublishedPolicy(ctx, q, assetID, blocks); err != nil {
+			return Deliverable{}, err
+		}
+		if protected.HasPromptFragments(blocks) {
+			return Deliverable{}, ErrNotDeliverable
+		}
+	}
 	if len(apps) > 0 {
 		found.HasOriginal = false
 		filtered := make([]DeliveryTarget, 0, len(found.Targets))

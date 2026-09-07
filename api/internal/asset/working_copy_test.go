@@ -3,6 +3,7 @@ package asset
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -77,6 +78,51 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	if err != nil || working.Name != "Private name" {
 		t.Fatalf("working copy after service restart = %q, error = %v", working.Name, err)
 	}
+	checkPublished := func() {
+		t.Helper()
+		current, err := svc.Detail(ctx, id, nil, ContentShown)
+		if err != nil || !reflect.DeepEqual(current.Blocks, page.Blocks) || !reflect.DeepEqual(current.Downloads, page.Downloads) {
+			t.Fatalf("private block operation changed the published page: %v", err)
+		}
+	}
+	added, err := svc.AddBlock(ctx, owner, id, block.AuthorNotes, block.TypeProse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPublished()
+	update := updateOf(added.Block)
+	update.Elements[0].Content = block.Prose{Text: "Private author notes"}
+	if _, err := svc.SaveBlock(ctx, owner, id, added.Block.ID, update); err != nil {
+		t.Fatal(err)
+	}
+	checkPublished()
+	blocks := draftBlocks(t, pool, id)
+	arrangement := make([]BlockArrangement, len(blocks))
+	for i, holder := range blocks {
+		arrangement[len(blocks)-1-i] = BlockArrangement{ID: holder.ID, Width: block.Full, Hidden: holder.ID == added.Block.ID}
+	}
+	if _, err := svc.ArrangeBlocks(ctx, owner, id, arrangement); err != nil {
+		t.Fatal(err)
+	}
+	checkPublished()
+	messages := blockFor(t, draftBlocks(t, pool, id), "messages")
+	update = updateOf(messages)
+	update.Layout = block.Stack3
+	if _, err := svc.SaveBlock(ctx, owner, id, messages.ID, update); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.MoveBlockContent(ctx, owner, id, added.Block.ID, messages.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkPublished()
+	added, err = svc.AddBlock(ctx, owner, id, block.CustomBlock, block.TypeProse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RemoveBlock(ctx, owner, id, added.Block.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkPublished()
 	if err := svc.SetDiscovery(ctx, owner, id, DiscoveryUnlisted); err != nil {
 		t.Fatal(err)
 	}

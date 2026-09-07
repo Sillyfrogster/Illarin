@@ -123,7 +123,12 @@ type LegacyAsset struct {
 
 // ResolveLegacyAddress runs the real lookup rather than rewriting the path, so a withheld, deleted or never-existed address is a plain miss.
 func (s *Service) ResolveLegacyAddress(ctx context.Context, address string) (LegacyAsset, error) {
-	row, err := db.New(s.pool).LegacyPathTarget(ctx, address)
+	tx, err := s.beginReadSnapshot(ctx)
+	if err != nil {
+		return LegacyAsset{}, err
+	}
+	defer tx.Rollback(ctx)
+	row, err := db.New(tx).LegacyPathTarget(ctx, address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LegacyAsset{}, ErrNotFound
 	}

@@ -14,7 +14,7 @@ import (
 func ApplyPublishedPolicy(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID, blocks []block.Block) error {
-	if err := RestorePromptFragments(ctx, q, assetID, blocks); err != nil {
+	if err := restorePromptFragments(ctx, q, assetID, blocks, "asset_public.protected_content"); err != nil {
 		return err
 	}
 	rows, err := q.Query(ctx, `select elements from public.asset_blocks where asset_id = $1`, assetID)

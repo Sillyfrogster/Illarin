@@ -2,11 +2,13 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/google/uuid"
 )
 
@@ -85,7 +87,7 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 }
 
 func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
-	router, session, assets, _ := newVerifiedIngestRouterWithPool(t, testRegistry(t))
+	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 	id := publishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
 	owner := fetchStartedAsset(t, router, session, id)
 	core := editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
@@ -99,5 +101,17 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	}
 	if strings.Contains(string(exported.Body), "Unpublished secret") || !strings.Contains(string(exported.Body), "Recorded secret") {
 		t.Fatal("linked delivery did not use the recorded protected payload")
+	}
+	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Replacement","role":"system","text":"New private prompt","enabled":true}]}`)
+	if got := saveBlock(t, router, session, id, blockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
+		t.Fatalf("replace protected working-copy prompt: %d %s", got.Code, got.Body.String())
+	}
+	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
+		if _, err := assets.OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, asset.ErrLinkedInstallOnly) {
+			t.Fatalf("delivery without a policy for %s: %v", target, err)
+		}
+	}
+	if _, err := assets.DeliverableAsset(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, asset.ErrNotDeliverable) {
+		t.Fatalf("advertised delivery without a policy: %v", err)
 	}
 }

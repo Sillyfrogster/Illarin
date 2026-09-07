@@ -132,6 +132,14 @@ func (s *Service) OpenExportForLinkedInstance(
 	if len(apps) > 0 && !targetAllowed(apps, subject.kind, target) {
 		return Export{}, ErrTargetNotOffered
 	}
+	if len(apps) == 0 {
+		if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+			return Export{}, err
+		}
+		if protected.HasPromptFragments(subject.blocks) {
+			return Export{}, ErrLinkedInstallOnly
+		}
+	}
 	if err := protected.RestorePromptFragments(ctx, tx, assetID, subject.blocks); err != nil {
 		return Export{}, err
 	}

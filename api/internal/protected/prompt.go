@@ -330,8 +330,14 @@ func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]strin
 func RestorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID, blocks []block.Block) error {
+	return restorePromptFragments(ctx, q, assetID, blocks, "protected_content")
+}
+
+func restorePromptFragments(ctx context.Context, q interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}, assetID uuid.UUID, blocks []block.Block, table string) error {
 	rows, err := q.Query(ctx, `
-		select owner_id, payload from protected_content
+		select owner_id, payload from `+table+`
 		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
 	`, assetID, promptOwnerKind, promptPayload)
 	if err != nil {

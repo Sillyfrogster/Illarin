@@ -586,3 +586,17 @@ func readBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Bloc
 	}
 	return blocks, nil
 }
+
+func readPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
+	var stored []byte
+	err := q.QueryRow(ctx, `select coalesce(jsonb_agg(to_jsonb(b) order by position), '[]'::jsonb)
+		from asset_public.asset_blocks b where asset_id = $1`, assetID).Scan(&stored)
+	if err != nil {
+		return nil, err
+	}
+	var blocks []block.Block
+	if err := json.Unmarshal(stored, &blocks); err != nil {
+		return nil, err
+	}
+	return blocks, nil
+}
