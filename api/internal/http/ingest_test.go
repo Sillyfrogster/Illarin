@@ -1320,6 +1320,7 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process revision: %v", err)
 	}
+	acceptReplacementPreview(t, r, session, created.ID, revision.Header().Get("Location"))
 	updated := pollIngestAsset(t, r, session, revision.Header().Get("Location"))
 	if updated.ID != created.ID {
 		t.Fatalf("revision made asset %s, want %s", updated.ID, created.ID)
@@ -1387,4 +1388,39 @@ func pollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 		t.Fatalf("operation = %#v, want a successful asset", operation)
 	}
 	return *operation.Asset
+}
+
+func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string) {
+	t.Helper()
+	preview := send(t, r, authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	if preview.Code != http.StatusOK {
+		t.Fatalf("read replacement preview = %d: %s", preview.Code, preview.Body.String())
+	}
+	var operation struct {
+		Status  string `json:"status"`
+		Preview *struct {
+			Unrepresentable []string `json:"unrepresentable"`
+		} `json:"preview"`
+	}
+	if err := json.Unmarshal(preview.Body.Bytes(), &operation); err != nil {
+		t.Fatal(err)
+	}
+	if operation.Status != "preview" || operation.Preview == nil {
+		t.Fatalf("replacement preview = %+v", operation)
+	}
+	decisions := make(map[string]string, len(operation.Preview.Unrepresentable))
+	for _, role := range operation.Preview.Unrepresentable {
+		decisions[role] = "remove"
+	}
+	body, err := json.Marshal(map[string]any{"unrepresentable": decisions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID := strings.TrimPrefix(location, "/v1/ingests/")
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	accepted := send(t, r, authorized(request, session))
+	if accepted.Code != http.StatusOK {
+		t.Fatalf("accept replacement preview = %d: %s", accepted.Code, accepted.Body.String())
+	}
 }

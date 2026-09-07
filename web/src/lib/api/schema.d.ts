@@ -1550,6 +1550,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/revisions/{operationId}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Apply a reviewed replacement preview to the private working copy. */
+    post: operations["acceptAssetRevision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/revisions/{operationId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Discard a reviewed replacement preview without changing the asset. */
+    delete: operations["cancelAssetRevision"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/assets/{id}/blocks/{blockId}": {
     parameters: {
       query?: never;
@@ -3293,10 +3327,17 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** @enum {string} */
-      status: "pending" | "processing" | "failed" | "success";
+      status:
+        | "pending"
+        | "processing"
+        | "preview"
+        | "cancelled"
+        | "failed"
+        | "success";
       url: string;
       asset?: components["schemas"]["Asset"] | null;
       failure?: components["schemas"]["IngestFailure"];
+      preview?: components["schemas"]["ReplacementPreview"];
     };
     IngestFailure: {
       /** @enum {string} */
@@ -3311,6 +3352,21 @@ export interface components {
         | "limit_exceeded"
         | "internal_failure";
       message: string;
+    };
+    ReplacementPreview: {
+      format: string;
+      changes: components["schemas"]["ReplacementChange"][];
+      unrepresentable: string[];
+    };
+    ReplacementChange: {
+      /** @enum {string} */
+      kind: "addition" | "change" | "removal" | "conflict";
+      subject: string;
+    };
+    ReplacementAcceptance: {
+      unrepresentable: {
+        [key: string]: "keep" | "remove";
+      };
     };
     ProfileLink: {
       label: string;
@@ -9010,6 +9066,108 @@ export interface operations {
       };
       /** @description The storage reserve cannot accept the revision */
       503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  acceptAssetRevision: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        operationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplacementAcceptance"];
+      };
+    };
+    responses: {
+      /** @description The accepted replacement operation */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IngestOperation"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No reviewed replacement belongs to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed or the asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
+      };
+    };
+  };
+  cancelAssetRevision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        operationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The replacement preview was discarded */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No reviewed replacement belongs to the creator */
+      404: {
         headers: {
           [name: string]: unknown;
         };

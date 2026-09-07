@@ -299,6 +299,57 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAss
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
+func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID, params AcceptAssetRevisionParams) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	var body ReplacementAcceptance
+	if err := c.ShouldBindJSON(&body); err != nil {
+		h.refuse(c, refusal{reason: "send the replacement decisions as JSON", cause: err})
+		return
+	}
+	decisions := make(map[string]string, len(body.Unrepresentable))
+	for role, decision := range body.Unrepresentable {
+		decisions[role] = string(decision)
+	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID), candidate, decisions)
+	if candidateResult(c, candidate, err) {
+		return
+	}
+	if errors.Is(err, asset.ErrIngestNotFound) || errors.Is(err, asset.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		return
+	}
+	if errors.Is(err, asset.ErrReplacementDecision) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not accept the replacement"})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIIngest(operation))
+}
+
+func (h *Handlers) CancelAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	err := h.assets.CancelReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID))
+	if errors.Is(err, asset.ErrIngestNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not cancel the replacement"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func (h *Handlers) DeleteAsset(c *gin.Context, id types.UUID) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
@@ -697,6 +748,16 @@ func toAPIIngest(operation asset.IngestOperation) gin.H {
 		response["failure"] = gin.H{
 			"reason":  operation.Failure.Reason,
 			"message": operation.Failure.Message,
+		}
+	}
+	if operation.Preview != nil {
+		changes := make([]gin.H, len(operation.Preview.Changes))
+		for index, change := range operation.Preview.Changes {
+			changes[index] = gin.H{"kind": change.Kind, "subject": change.Subject}
+		}
+		response["preview"] = gin.H{
+			"format": operation.Preview.Format, "changes": changes,
+			"unrepresentable": operation.Preview.Unrepresentable,
 		}
 	}
 	return response

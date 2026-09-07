@@ -113,6 +113,7 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	if processed, err := assets.ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process revision = %t, %v; want true, nil", processed, err)
 	}
+	acceptReplacementPreview(t, router, session, assetID, accepted.Header().Get("Location"))
 	pollIngestAsset(t, router, session, accepted.Header().Get("Location"))
 
 	owner := fetchStartedAsset(t, router, session, assetID)

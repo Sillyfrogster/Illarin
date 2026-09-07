@@ -89,25 +89,27 @@ type revisionTarget struct {
 }
 
 type preparedIngest struct {
-	Kind      string
-	Format    string
-	Name      string
-	Blurb     string
-	Tags      []string
-	IsNSFW    bool
-	Discovery Discovery
-	Blocks    []block.Block
-	Header    format.Header
-	Remainder []format.Remainder
-	Protected format.ProtectedImport
-	Media     []preparedMedia
-	CreatedAt *time.Time
-	MediaType string
+	Kind          string
+	Format        string
+	Name          string
+	Blurb         string
+	Tags          []string
+	IsNSFW        bool
+	Discovery     Discovery
+	Blocks        []block.Block
+	SuppliedRoles []block.Role
+	Header        format.Header
+	Remainder     []format.Remainder
+	Protected     format.ProtectedImport
+	Media         []preparedMedia
+	CreatedAt     *time.Time
+	MediaType     string
 }
 
 type preparedImport struct {
 	Parsed    format.Parsed
 	Blocks    []block.Block
+	Elements  []block.Element
 	Media     []preparedMedia
 	MediaType string
 }
@@ -189,7 +191,7 @@ func (s *Service) readImport(
 		mediaType = "application/octet-stream"
 	}
 	return preparedImport{
-		Parsed: parsed, Blocks: blocks, Media: preparedMedia, MediaType: mediaType,
+		Parsed: parsed, Blocks: blocks, Elements: elements, Media: preparedMedia, MediaType: mediaType,
 	}, nil
 }
 
@@ -269,9 +271,14 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
 	}
 	prepared.Blocks = read.Blocks
+	prepared.SuppliedRoles = suppliedRoles(read.Elements)
 	prepared.Media = read.Media
 	prepared.MediaType = read.MediaType
-	if err := s.finalizeIngest(ctx, job, prepared); err != nil {
+	finish := s.finalizeIngest
+	if job.Target != nil {
+		finish = s.stageReplacement
+	}
+	if err := finish(ctx, job, prepared); err != nil {
 		if errors.Is(err, errIngestLeaseLost) {
 			return true, nil
 		}
@@ -294,6 +301,16 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
 	}
 	return true, nil
+}
+
+func suppliedRoles(elements []block.Element) []block.Role {
+	roles := make([]block.Role, 0, len(elements))
+	for _, element := range elements {
+		if element.Role != "" {
+			roles = append(roles, element.Role)
+		}
+	}
+	return roles
 }
 
 func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) {
@@ -545,12 +562,27 @@ func (s *Service) writeIngestResult(
 	job ingestJob,
 	prepared preparedIngest,
 ) (uuid.UUID, error) {
+	return s.writeIngestResultWithDecisions(ctx, tx, job, prepared, nil)
+}
+
+func (s *Service) writeIngestResultWithDecisions(
+	ctx context.Context,
+	tx pgx.Tx,
+	job ingestJob,
+	prepared preparedIngest,
+	decisions map[string]string,
+) (uuid.UUID, error) {
 	blocks := prepared.Blocks
 	if job.Target != nil {
 		candidate := &Candidate{Version: job.Target.Version}
 		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
 			return uuid.Nil, err
 		}
+		existing, err := readBlocks(ctx, tx, job.Target.AssetID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		blocks = mergeReplacementBlocks(existing, blocks, prepared.SuppliedRoles, decisions)
 		fingerprint, err := s.contentFingerprint(ctx, tx, job.Target.AssetID)
 		if err != nil {
 			return uuid.Nil, err
@@ -564,7 +596,11 @@ func (s *Service) writeIngestResult(
 		if err := insertBlocks(ctx, tx, job.Target.AssetID, blocks); err != nil {
 			return uuid.Nil, err
 		}
-		if err := replacePreservedData(ctx, tx, job.Target.AssetID, prepared.Remainder); err != nil {
+		remainder, err := retainUnrepresentableRemainder(ctx, tx, job.Target.AssetID, existing, prepared.Remainder, decisions)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		if err := replacePreservedData(ctx, tx, job.Target.AssetID, remainder); err != nil {
 			return uuid.Nil, err
 		}
 		if len(prepared.Protected.Prompts) > 0 {

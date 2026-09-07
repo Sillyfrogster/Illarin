@@ -172,6 +172,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodDelete, "/v1/assets/:id/blocks/:blockId"):                        d.JSON,
 		routeKey(http.MethodPost, "/v1/assets/:id/blocks/:blockId/move-and-remove"):          d.JSON,
 		routeKey(http.MethodPost, "/v1/assets/:id/revisions"):                                d.Upload,
+		routeKey(http.MethodPost, "/v1/assets/:id/revisions/:operationId/accept"):            d.JSON,
+		routeKey(http.MethodDelete, "/v1/assets/:id/revisions/:operationId"):                 d.JSON,
 		routeKey(http.MethodPost, "/v1/assets/:id/restore"):                                  d.JSON,
 		routeKey(http.MethodPut, "/v1/assets/:id/discovery"):                                 d.JSON,
 		routeKey(http.MethodPut, "/v1/assets/:id/identity"):                                  d.JSON,

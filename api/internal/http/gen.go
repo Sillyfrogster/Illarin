@@ -725,8 +725,10 @@ func (e IngestFailureReason) Valid() bool {
 
 // Defines values for IngestOperationStatus.
 const (
+	IngestOperationStatusCancelled  IngestOperationStatus = "cancelled"
 	IngestOperationStatusFailed     IngestOperationStatus = "failed"
 	IngestOperationStatusPending    IngestOperationStatus = "pending"
+	IngestOperationStatusPreview    IngestOperationStatus = "preview"
 	IngestOperationStatusProcessing IngestOperationStatus = "processing"
 	IngestOperationStatusSuccess    IngestOperationStatus = "success"
 )
@@ -734,9 +736,13 @@ const (
 // Valid indicates whether the value is a known member of the IngestOperationStatus enum.
 func (e IngestOperationStatus) Valid() bool {
 	switch e {
+	case IngestOperationStatusCancelled:
+		return true
 	case IngestOperationStatusFailed:
 		return true
 	case IngestOperationStatusPending:
+		return true
+	case IngestOperationStatusPreview:
 		return true
 	case IngestOperationStatusProcessing:
 		return true
@@ -1302,6 +1308,48 @@ const (
 func (e RecordListContentSchema) Valid() bool {
 	switch e {
 	case Lumia:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplacementAcceptanceUnrepresentable.
+const (
+	Keep   ReplacementAcceptanceUnrepresentable = "keep"
+	Remove ReplacementAcceptanceUnrepresentable = "remove"
+)
+
+// Valid indicates whether the value is a known member of the ReplacementAcceptanceUnrepresentable enum.
+func (e ReplacementAcceptanceUnrepresentable) Valid() bool {
+	switch e {
+	case Keep:
+		return true
+	case Remove:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplacementChangeKind.
+const (
+	Addition ReplacementChangeKind = "addition"
+	Change   ReplacementChangeKind = "change"
+	Conflict ReplacementChangeKind = "conflict"
+	Removal  ReplacementChangeKind = "removal"
+)
+
+// Valid indicates whether the value is a known member of the ReplacementChangeKind enum.
+func (e ReplacementChangeKind) Valid() bool {
+	switch e {
+	case Addition:
+		return true
+	case Change:
+		return true
+	case Conflict:
+		return true
+	case Removal:
 		return true
 	default:
 		return false
@@ -2536,6 +2584,7 @@ type IngestOperation struct {
 	Asset   *Asset                `json:"asset,omitempty"`
 	Failure *IngestFailure        `json:"failure,omitempty"`
 	Id      openapi_types.UUID    `json:"id"`
+	Preview *ReplacementPreview   `json:"preview,omitempty"`
 	Status  IngestOperationStatus `json:"status"`
 	Url     string                `json:"url"`
 }
@@ -3690,6 +3739,30 @@ type ReplacePostScheduleRequest struct {
 	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
 }
 
+// ReplacementAcceptance defines model for ReplacementAcceptance.
+type ReplacementAcceptance struct {
+	Unrepresentable map[string]ReplacementAcceptanceUnrepresentable `json:"unrepresentable"`
+}
+
+// ReplacementAcceptanceUnrepresentable defines model for ReplacementAcceptance.Unrepresentable.
+type ReplacementAcceptanceUnrepresentable string
+
+// ReplacementChange defines model for ReplacementChange.
+type ReplacementChange struct {
+	Kind    ReplacementChangeKind `json:"kind"`
+	Subject string                `json:"subject"`
+}
+
+// ReplacementChangeKind defines model for ReplacementChange.Kind.
+type ReplacementChangeKind string
+
+// ReplacementPreview defines model for ReplacementPreview.
+type ReplacementPreview struct {
+	Changes         []ReplacementChange `json:"changes"`
+	Format          string              `json:"format"`
+	Unrepresentable []string            `json:"unrepresentable"`
+}
+
 // RepublishPostRequest defines model for RepublishPostRequest.
 type RepublishPostRequest struct {
 	// DestinationIds Where this republication announces. An absent list takes the policy defaults; an empty one puts the post back quietly.
@@ -4281,6 +4354,12 @@ type AddAssetRevisionParams struct {
 	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
 
+// AcceptAssetRevisionParams defines parameters for AcceptAssetRevision.
+type AcceptAssetRevisionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // BeginDiscordParams defines parameters for BeginDiscord.
 type BeginDiscordParams struct {
 	Intent *BeginDiscordParamsIntent `form:"intent,omitempty" json:"intent,omitempty"`
@@ -4570,6 +4649,9 @@ type AddMediaMultipartRequestBody AddMediaMultipartBody
 
 // AddAssetRevisionMultipartRequestBody defines body for AddAssetRevision for multipart/form-data ContentType.
 type AddAssetRevisionMultipartRequestBody AddAssetRevisionMultipartBody
+
+// AcceptAssetRevisionJSONRequestBody defines body for AcceptAssetRevision for application/json ContentType.
+type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
 
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
@@ -5006,6 +5088,12 @@ type ServerInterface interface {
 
 	// (POST /v1/assets/{id}/revisions)
 	AddAssetRevision(c *gin.Context, id openapi_types.UUID, params AddAssetRevisionParams)
+
+	// (DELETE /v1/assets/{id}/revisions/{operationId})
+	CancelAssetRevision(c *gin.Context, id openapi_types.UUID, operationId openapi_types.UUID)
+
+	// (POST /v1/assets/{id}/revisions/{operationId}/accept)
+	AcceptAssetRevision(c *gin.Context, id openapi_types.UUID, operationId openapi_types.UUID, params AcceptAssetRevisionParams)
 
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
@@ -6602,6 +6690,101 @@ func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
 	}
 
 	siw.Handler.AddAssetRevision(c, id, params)
+}
+
+// CancelAssetRevision operation middleware
+func (siw *ServerInterfaceWrapper) CancelAssetRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "operationId" -------------
+	var operationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "operationId", c.Param("operationId"), &operationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operationId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelAssetRevision(c, id, operationId)
+}
+
+// AcceptAssetRevision operation middleware
+func (siw *ServerInterfaceWrapper) AcceptAssetRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "operationId" -------------
+	var operationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "operationId", c.Param("operationId"), &operationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operationId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptAssetRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptAssetRevision(c, id, operationId, params)
 }
 
 // ExportSealedContent operation middleware
@@ -9429,6 +9612,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/assets/:id", wrapper.GetAsset)
 	router.GET(options.BaseURL+"/v1/legacy-assets/:author/:name", wrapper.ResolveLegacyAsset)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions", wrapper.AddAssetRevision)
+	router.POST(options.BaseURL+"/v1/assets/:id/revisions/:operationId/accept", wrapper.AcceptAssetRevision)
+	router.DELETE(options.BaseURL+"/v1/assets/:id/revisions/:operationId", wrapper.CancelAssetRevision)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/blocks/:blockId", wrapper.RemoveAssetBlock)
 	router.PUT(options.BaseURL+"/v1/assets/:id/blocks/:blockId", wrapper.SaveAssetBlock)
 	router.POST(options.BaseURL+"/v1/assets/:id/blocks", wrapper.AddAssetBlock)

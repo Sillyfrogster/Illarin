@@ -197,6 +197,10 @@ paths:
     $ref: ./assets.yaml#/paths/~1v1~1legacy-assets~1{author}~1{name}
   /v1/assets/{id}/revisions:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1revisions
+  /v1/assets/{id}/revisions/{operationId}/accept:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1revisions~1{operationId}~1accept
+  /v1/assets/{id}/revisions/{operationId}:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1revisions~1{operationId}
   /v1/assets/{id}/blocks/{blockId}:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1blocks~1{blockId}
   /v1/assets/{id}/blocks:
@@ -580,3 +584,9 @@ components:
       $ref: ./assets.yaml#/components/schemas/IngestOperation
     IngestFailure:
       $ref: ./assets.yaml#/components/schemas/IngestFailure
+    ReplacementPreview:
+      $ref: ./assets.yaml#/components/schemas/ReplacementPreview
+    ReplacementChange:
+      $ref: ./assets.yaml#/components/schemas/ReplacementChange
+    ReplacementAcceptance:
+      $ref: ./assets.yaml#/components/schemas/ReplacementAcceptance

@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -257,10 +258,11 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (IngestO
 	var assetID pgtype.UUID
 	var failureReason pgtype.Text
 	var failureMessage pgtype.Text
+	var replacementPreview []byte
 	err := s.pool.QueryRow(ctx, `
-		select status, asset_id, failure_reason, failure_message
+		select status, asset_id, failure_reason, failure_message, replacement_preview
 		  from ingest_operations where id = $1 and owner_id = $2
-	`, id, ownerID).Scan(&status, &assetID, &failureReason, &failureMessage)
+	`, id, ownerID).Scan(&status, &assetID, &failureReason, &failureMessage, &replacementPreview)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return IngestOperation{}, ErrIngestNotFound
 	}
@@ -277,6 +279,13 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (IngestO
 			Reason:  failureReason.String,
 			Message: message,
 		}
+	}
+	if status == IngestPreview {
+		var staged stagedReplacement
+		if err := json.Unmarshal(replacementPreview, &staged); err != nil {
+			return IngestOperation{}, fmt.Errorf("read replacement preview: %w", err)
+		}
+		operation.Preview = &staged.Preview
 	}
 	if assetID.Valid {
 		created, err := assetByID(ctx, s.pool, uuidFromPgtype(assetID))

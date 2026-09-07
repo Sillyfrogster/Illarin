@@ -94,6 +94,8 @@ type IngestStatus string
 const (
 	IngestPending    IngestStatus = "pending"
 	IngestProcessing IngestStatus = "processing"
+	IngestPreview    IngestStatus = "preview"
+	IngestCancelled  IngestStatus = "cancelled"
 	IngestFailed     IngestStatus = "failed"
 	IngestSuccess    IngestStatus = "success"
 )
@@ -104,9 +106,22 @@ type IngestOperation struct {
 	Status  IngestStatus
 	Failure *IngestFailure
 	Asset   *Asset
+	Preview *ReplacementPreview
 }
 
 type IngestFailure struct {
 	Reason  string
 	Message string
+}
+
+// ReplacementPreview names the changes a source file would make to its target.
+type ReplacementPreview struct {
+	Format          string
+	Changes         []ReplacementChange
+	Unrepresentable []string
+}
+
+type ReplacementChange struct {
+	Kind    string
+	Subject string
 }

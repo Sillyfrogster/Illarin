@@ -238,27 +238,28 @@ type EmailVerificationToken struct {
 }
 
 type IngestOperation struct {
-	ID               pgtype.UUID
-	OwnerID          pgtype.UUID
-	BlobID           pgtype.UUID
-	Filename         string
-	Status           string
-	Name             pgtype.Text
-	Blurb            pgtype.Text
-	Tags             []string
-	IsNsfw           pgtype.Bool
-	Discovery        string
-	AssetID          pgtype.UUID
-	FailureReason    pgtype.Text
-	Attempts         int32
-	AvailableAt      pgtype.Timestamptz
-	LeaseToken       pgtype.UUID
-	LeaseExpiresAt   pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	TargetAssetID    pgtype.UUID
-	FailureMessage   pgtype.Text
-	CandidateVersion pgtype.Int8
+	ID                 pgtype.UUID
+	OwnerID            pgtype.UUID
+	BlobID             pgtype.UUID
+	Filename           string
+	Status             string
+	Name               pgtype.Text
+	Blurb              pgtype.Text
+	Tags               []string
+	IsNsfw             pgtype.Bool
+	Discovery          string
+	AssetID            pgtype.UUID
+	FailureReason      pgtype.Text
+	Attempts           int32
+	AvailableAt        pgtype.Timestamptz
+	LeaseToken         pgtype.UUID
+	LeaseExpiresAt     pgtype.Timestamptz
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	TargetAssetID      pgtype.UUID
+	FailureMessage     pgtype.Text
+	CandidateVersion   pgtype.Int8
+	ReplacementPreview []byte
 }
 
 type InstanceAccessToken struct {

@@ -83,6 +83,12 @@ func addRevision(
 	if err != nil {
 		t.Fatalf("GetIngest: %v", err)
 	}
+	if got.Status == IngestPreview {
+		got, err = svc.AcceptReplacement(context.Background(), ownerID, assetID, operation.ID, currentCandidate(t, svc, assetID), nil)
+		if err != nil {
+			t.Fatalf("AcceptReplacement: %v", err)
+		}
+	}
 	return got
 }
 
