@@ -301,6 +301,39 @@
   }
 }
 
+@media (max-width: 560px) {
+  .actions {
+    display: grid;
+    gap: 8px;
+    grid-template-areas:
+      "keep"
+      "publish";
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .keep {
+    grid-area: keep;
+  }
+
+  .publish {
+    grid-area: publish;
+  }
+
+  .keep,
+  .publish {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .actions > button:not(.keep, .publish) {
+    min-height: 44px;
+    margin-top: 2px;
+    padding-left: 0;
+  }
+}
+
 .heading {
   position: absolute;
   width: 1px;

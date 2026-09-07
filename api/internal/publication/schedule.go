@@ -492,7 +492,8 @@ func keepScheduleChoice(
 // the authority has since disabled or removed.
 func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]Choice, error) {
 	rows, err := tx.Query(ctx, `
-		select destination.id, destination.name, destination.kind, destination.state, false
+		select destination.id, destination.name, destination.kind, destination.state,
+		       destination.events, false
 		  from post_schedule_destinations chosen
 		  join publication_destinations destination on destination.id = chosen.destination_id
 		 where chosen.schedule_id = $1 and destination.state = $2

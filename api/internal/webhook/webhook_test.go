@@ -68,7 +68,7 @@ func TestHeadersCarryTheIdTimestampAndSignature(t *testing.T) {
 	secret, _ := MintSecret()
 	at := time.Unix(1700000000, 0)
 
-	headers, err := Headers(secret, "msg_1", at, []byte(`{}`))
+	headers, err := Headers([]string{secret}, "msg_1", at, []byte(`{}`))
 
 	if err != nil {
 		t.Fatalf("headers: %v", err)

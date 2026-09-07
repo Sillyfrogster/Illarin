@@ -29,7 +29,7 @@
 
 .line {
   display: flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
   padding: 4px 10px;

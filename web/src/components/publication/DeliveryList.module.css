@@ -167,6 +167,14 @@
 }
 
 @media (max-width: 720px) {
+  .view {
+    min-height: 44px;
+  }
+
+  .history summary {
+    min-height: 44px;
+  }
+
   .row {
     gap: 2px 12px;
     grid-template-areas:
@@ -180,6 +188,10 @@
   .actions {
     margin-top: 4px;
     justify-self: start;
+  }
+
+  .actions button {
+    min-height: 44px;
   }
 
   .attempts li {

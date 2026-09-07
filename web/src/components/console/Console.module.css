@@ -198,6 +198,7 @@
   }
 
   .actions .textButton {
+    min-height: 44px;
     margin-left: 0;
   }
 }

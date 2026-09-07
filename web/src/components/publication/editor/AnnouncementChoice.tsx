@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { readPostDestinations } from "@/lib/api/posts";
 import type { PublicationDestinationChoice } from "@/lib/api/query";
-import { type Transition, transitionEvent } from "@/lib/publication-delivery";
+import {
+  eventWord,
+  type Transition,
+  transitionEvent,
+} from "@/lib/publication-delivery";
 import styles from "./AnnouncementChoice.module.css";
 
 const QUIET: Record<Transition, string> = {
@@ -54,7 +58,14 @@ export function AnnouncementChoice({
   const event = transitionEvent(transition);
   const takers = offered.filter((one) => one.events.includes(event));
 
-  if (takers.length === 0) return null;
+  if (takers.length === 0) {
+    if (offered.length === 0) return null;
+    return (
+      <p className={styles.quiet}>
+        No destination receives {eventWord(event)} announcements.
+      </p>
+    );
+  }
 
   const picked =
     chosen ?? takers.filter((one) => one.byDefault).map((one) => one.id);
