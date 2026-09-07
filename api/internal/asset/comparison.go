@@ -1,0 +1,760 @@
+package asset
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+)
+
+var (
+	// ErrNoEarlierVersion is a default comparison for the first version an asset recorded.
+	ErrNoEarlierVersion = errors.New("nothing was recorded before that version")
+	// ErrAccessRequired is a comparison asked for without the rules its reader is under.
+	ErrAccessRequired = errors.New("a comparison needs the reader's access rules")
+)
+
+// Version names one recorded version of an asset.
+type Version struct {
+	ID           uuid.UUID
+	Number       int
+	RecordedAt   time.Time
+	VersionLabel string
+	Summary      string
+	Notes        string
+}
+
+// ChangeKind is what happened to one item between two versions.
+type ChangeKind string
+
+const (
+	ChangeAdded   ChangeKind = "addition"
+	ChangeRemoved ChangeKind = "removal"
+	ChangeEdited  ChangeKind = "change"
+)
+
+// Change is one addition, removal or edit, carrying the text on each side where the change is textual and the media on each side where it swapped a picture.
+type Change struct {
+	Kind         ChangeKind
+	Name         string
+	PreviousName string
+	Before       string
+	After        string
+	BeforeMedia  *uuid.UUID
+	AfterMedia   *uuid.UUID
+}
+
+// ChangeGroup collects the changes to one part of an asset.
+type ChangeGroup struct {
+	Subject string
+	Label   string
+	Changes []Change
+}
+
+// Comparison is what changed between two recorded versions of one asset.
+type Comparison struct {
+	From   Version
+	To     Version
+	Groups []ChangeGroup
+	// Unavailable is why a reader may not open one of the versions, and it leaves the groups empty rather than comparing something else.
+	Unavailable string
+}
+
+// VersionAccess returns why a reader may not open a recorded version, and the empty string where they may. A comparison never decides access for itself.
+type VersionAccess func(Version) string
+
+// The subjects a comparison reports outside the semantic roles.
+const (
+	metadataSubject     = "metadata"
+	presentationSubject = "presentation"
+	preservedSubject    = "preserved_data"
+)
+
+// Compare reports what changed between two recorded versions of one asset. A zero to is the published version and a zero from is the version recorded before it.
+func (s *Service) Compare(ctx context.Context, assetID uuid.UUID, from, to int, access VersionAccess) (Comparison, error) {
+	if access == nil {
+		return Comparison{}, ErrAccessRequired
+	}
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return Comparison{}, err
+	}
+	defer tx.Rollback(ctx)
+	from, to, err = resolveVersions(ctx, tx, assetID, from, to)
+	if err != nil {
+		return Comparison{}, err
+	}
+	earlier, err := readVersion(ctx, tx, assetID, from)
+	if err != nil {
+		return Comparison{}, err
+	}
+	later, err := readVersion(ctx, tx, assetID, to)
+	if err != nil {
+		return Comparison{}, err
+	}
+	compared := Comparison{From: earlier.Version, To: later.Version}
+	for _, version := range []recordedVersion{earlier, later} {
+		if refusal := access(version.Version); refusal != "" {
+			compared.Unavailable = refusal
+			return compared, nil
+		}
+	}
+	compared.Groups = compareVersions(earlier, later)
+	return compared, nil
+}
+
+// resolveVersions fills in the published version and the one recorded before it.
+func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to int) (int, int, error) {
+	if to == 0 {
+		err := tx.QueryRow(ctx, `
+			select s.number from asset_snapshots s
+			  join assets a on a.published_snapshot_id = s.id and a.id = s.asset_id
+			 where a.id = $1
+		`, assetID).Scan(&to)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, 0, ErrNotFound
+		}
+		if err != nil {
+			return 0, 0, fmt.Errorf("read the published version: %w", err)
+		}
+	}
+	if from == 0 {
+		var earlier *int
+		err := tx.QueryRow(ctx, `
+			select max(number) from asset_snapshots where asset_id = $1 and number < $2
+		`, assetID, to).Scan(&earlier)
+		if err != nil {
+			return 0, 0, fmt.Errorf("read the version before %d: %w", to, err)
+		}
+		if earlier == nil {
+			return 0, 0, ErrNoEarlierVersion
+		}
+		from = *earlier
+	}
+	return from, to, nil
+}
+
+// recordedVersion is one snapshot read back into the shapes a comparison reads.
+type recordedVersion struct {
+	Version
+	kind      string
+	metadata  versionMetadata
+	blocks    []block.Block
+	preserved []versionPreserved
+}
+
+// versionMetadata is what a recorded version says about the asset outside its page.
+type versionMetadata struct {
+	Name           string     `json:"name"`
+	Blurb          string     `json:"blurb"`
+	Tags           []string   `json:"tags"`
+	IsNSFW         *bool      `json:"is_nsfw"`
+	CreditedAuthor string     `json:"credited_author"`
+	Nickname       string     `json:"nickname"`
+	AssetVersion   string     `json:"asset_version"`
+	Cover          *uuid.UUID `json:"cover_media_id"`
+}
+
+// versionPreserved is one piece of data a format module kept that Illarin does not read.
+type versionPreserved struct {
+	Owner     string    `json:"owner_kind"`
+	OwnerID   uuid.UUID `json:"owner_id"`
+	Namespace string    `json:"namespace"`
+	Payload   string    `json:"payload"`
+}
+
+// versionPayload is the stored snapshot body.
+type versionPayload struct {
+	versionMetadata
+	Kind      string             `json:"kind"`
+	Blocks    []block.Block      `json:"blocks"`
+	Preserved []versionPreserved `json:"preserved_data"`
+}
+
+// readVersion loads one recorded version by its update number.
+func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (recordedVersion, error) {
+	var recorded recordedVersion
+	var stored []byte
+	err := tx.QueryRow(ctx, `
+		select id, number, recorded_at, version_label, summary, notes, payload
+		  from asset_snapshots where asset_id = $1 and number = $2
+	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
+		&recorded.VersionLabel, &recorded.Summary, &recorded.Notes, &stored)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return recordedVersion{}, ErrNotFound
+	}
+	if err != nil {
+		return recordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
+	}
+	var payload versionPayload
+	if err := json.Unmarshal(stored, &payload); err != nil {
+		return recordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
+	}
+	recorded.kind = payload.Kind
+	recorded.metadata = payload.versionMetadata
+	recorded.blocks = payload.Blocks
+	recorded.preserved = payload.Preserved
+	return recorded, nil
+}
+
+// compareVersions groups what changed between two recorded versions.
+func compareVersions(earlier, later recordedVersion) []ChangeGroup {
+	groups := make([]ChangeGroup, 0, 8)
+	groups = addGroup(groups, metadataSubject, "Details", compareMetadata(earlier.metadata, later.metadata))
+	groups = append(groups, compareContent(earlier.blocks, later.blocks)...)
+	groups = addGroup(groups, presentationSubject, "Page",
+		comparePresentation(later.kind, earlier.blocks, later.blocks))
+	groups = addGroup(groups, preservedSubject, "Preserved data",
+		comparePreserved(earlier.preserved, later.preserved))
+	return groups
+}
+
+func addGroup(groups []ChangeGroup, subject, label string, changes []Change) []ChangeGroup {
+	if len(changes) == 0 {
+		return groups
+	}
+	return append(groups, ChangeGroup{Subject: subject, Label: label, Changes: changes})
+}
+
+// compareMetadata reports the catalog fields an update changed.
+func compareMetadata(earlier, later versionMetadata) []Change {
+	changes := make([]Change, 0, 8)
+	for _, field := range []struct{ name, before, after string }{
+		{"Name", earlier.Name, later.Name},
+		{"Blurb", earlier.Blurb, later.Blurb},
+		{"Tags", strings.Join(earlier.Tags, ", "), strings.Join(later.Tags, ", ")},
+		{"Adult content", adultAnswer(earlier.IsNSFW), adultAnswer(later.IsNSFW)},
+		{"Credited author", earlier.CreditedAuthor, later.CreditedAuthor},
+		{"Nickname", earlier.Nickname, later.Nickname},
+		{"Version", earlier.AssetVersion, later.AssetVersion},
+	} {
+		if change, changed := textChange(field.name, field.before, field.after); changed {
+			changes = append(changes, change)
+		}
+	}
+	if !sameMedia(earlier.Cover, later.Cover) {
+		changes = append(changes, Change{
+			Kind: mediaChangeKind(earlier.Cover, later.Cover), Name: "Cover picture",
+			BeforeMedia: earlier.Cover, AfterMedia: later.Cover,
+		})
+	}
+	return changes
+}
+
+func adultAnswer(answered *bool) string {
+	if answered == nil {
+		return ""
+	}
+	return strconv.FormatBool(*answered)
+}
+
+func sameMedia(earlier, later *uuid.UUID) bool {
+	if earlier == nil || later == nil {
+		return earlier == later
+	}
+	return *earlier == *later
+}
+
+func mediaChangeKind(earlier, later *uuid.UUID) ChangeKind {
+	switch {
+	case earlier == nil:
+		return ChangeAdded
+	case later == nil:
+		return ChangeRemoved
+	default:
+		return ChangeEdited
+	}
+}
+
+// textChange reads an empty side as the field arriving or leaving rather than as an edit.
+func textChange(name, before, after string) (Change, bool) {
+	switch {
+	case before == after:
+		return Change{}, false
+	case before == "":
+		return Change{Kind: ChangeAdded, Name: name, After: after}, true
+	case after == "":
+		return Change{Kind: ChangeRemoved, Name: name, Before: before}, true
+	default:
+		return Change{Kind: ChangeEdited, Name: name, Before: before, After: after}, true
+	}
+}
+
+// subjectItems is everything one version holds under one semantic subject.
+type subjectItems struct {
+	label string
+	items []versionItem
+}
+
+// versionItem is one comparable piece of content. The body carries the whole item without its id, so a regenerated id is not read as an edit.
+type versionItem struct {
+	key   string
+	name  string
+	text  string
+	media uuid.UUID
+	body  string
+}
+
+func (i versionItem) mediaRef() *uuid.UUID {
+	if i.media == uuid.Nil {
+		return nil
+	}
+	return &i.media
+}
+
+// compareContent reports the additions, removals and edits under each semantic subject.
+func compareContent(earlier, later []block.Block) []ChangeGroup {
+	before := contentSubjects(earlier)
+	after := contentSubjects(later)
+	groups := make([]ChangeGroup, 0, len(before)+len(after))
+	for _, subject := range subjectOrder(before, after) {
+		label := after[subject].label
+		if label == "" {
+			label = before[subject].label
+		}
+		groups = addGroup(groups, subject, label, compareItems(before[subject].items, after[subject].items))
+	}
+	return groups
+}
+
+// contentSubjects collects a version's items under the role each carries, or under its element type where it carries none.
+func contentSubjects(blocks []block.Block) map[string]subjectItems {
+	subjects := make(map[string]subjectItems)
+	for _, holder := range blocks {
+		for _, element := range holder.Elements {
+			if element.Content == nil {
+				continue
+			}
+			subject := string(element.Type)
+			if element.Role != "" {
+				subject = string(element.Role)
+			}
+			held := subjects[subject]
+			held.label = element.Label()
+			held.items = append(held.items, elementItems(element)...)
+			subjects[subject] = held
+		}
+	}
+	return subjects
+}
+
+// subjectOrder reads the semantic roles in their declared order and the remaining subjects by name.
+func subjectOrder(before, after map[string]subjectItems) []string {
+	present := make(map[string]bool, len(before)+len(after))
+	for subject := range before {
+		present[subject] = true
+	}
+	for subject := range after {
+		present[subject] = true
+	}
+	ordered := make([]string, 0, len(present))
+	for _, role := range block.Roles() {
+		if present[string(role)] {
+			ordered = append(ordered, string(role))
+			delete(present, string(role))
+		}
+	}
+	rest := make([]string, 0, len(present))
+	for subject := range present {
+		rest = append(rest, subject)
+	}
+	sort.Strings(rest)
+	return append(ordered, rest...)
+}
+
+// elementItems reduces one element to the items a comparison matches and reports.
+func elementItems(element block.Element) []versionItem {
+	switch held := element.Content.(type) {
+	case block.Prose:
+		return []versionItem{{key: proseKey(element), text: held.Text, body: held.Text}}
+	case block.TextSet:
+		return listItems(held.Texts, func(text block.TextItem) versionItem {
+			return versionItem{key: text.ID.String(), name: text.Name, text: text.Text}
+		})
+	case block.DialogueSample:
+		return listItems(held.Turns, func(turn block.DialogueTurn) versionItem {
+			return versionItem{key: turn.ID.String(), name: turn.Speaker, text: turn.Text}
+		})
+	case block.ImageSet:
+		return listItems(held.Images, func(image block.ImageItem) versionItem {
+			return versionItem{key: image.ID.String(), name: image.Name, media: image.MediaID}
+		})
+	case block.FieldList:
+		return listItems(held.Fields, func(field block.FieldItem) versionItem {
+			return versionItem{key: field.ID.String(), name: field.Name, text: field.Value}
+		})
+	case block.LinkList:
+		return listItems(held.Links, func(link block.LinkItem) versionItem {
+			return versionItem{key: link.ID.String(), name: link.Label, text: link.URL}
+		})
+	case block.EntryTable:
+		return listItems(held.Entries, func(entry block.Entry) versionItem {
+			return versionItem{key: entry.ID.String(), name: entry.Name, text: entry.Text}
+		})
+	case block.PromptList:
+		return append(
+			listItems(held.Groups, func(group block.PromptGroup) versionItem {
+				return versionItem{key: group.ID.String(), name: group.Name}
+			}),
+			listItems(held.Fragments, func(fragment block.PromptFragment) versionItem {
+				return versionItem{key: fragment.ID.String(), name: fragment.Name, text: fragment.Text}
+			})...)
+	case block.VariableSchema:
+		return listItems(held.Variables, func(variable block.Variable) versionItem {
+			return versionItem{
+				key: variable.ID.String(), name: preferredName(variable.Label, variable.Name),
+				text: settingValue(variable.Value),
+			}
+		})
+	case block.SettingGroup:
+		return listItems(held.Settings, func(setting block.Setting) versionItem {
+			return versionItem{
+				key: setting.ID.String(), name: preferredName(setting.Label, setting.Name),
+				text: settingValue(setting.Value),
+			}
+		})
+	case block.ScriptList:
+		return listItems(held.Scripts, func(script block.Script) versionItem {
+			return versionItem{key: script.ID.String(), name: script.Name, text: script.Find}
+		})
+	case block.ColorSet:
+		items := make([]versionItem, 0, len(held.Modes))
+		for _, mode := range held.Modes {
+			items = append(items, listItems(mode.Colors, func(color block.Color) versionItem {
+				return versionItem{
+					key: color.ID.String(), name: preferredName(mode.Name+" "+color.Name, color.Name),
+					text: color.Value,
+				}
+			})...)
+		}
+		return items
+	case block.StylesheetSet:
+		items := listItems(held.Stylesheets, func(sheet block.Stylesheet) versionItem {
+			return versionItem{key: sheet.ID.String(), name: sheet.Name, text: sheet.CSS}
+		})
+		items = append(items, listItems(held.Assets, func(file block.StylesheetAsset) versionItem {
+			return versionItem{key: file.ID.String(), name: file.Path}
+		})...)
+		if held.Global != "" {
+			items = append(items, versionItem{
+				key:  element.ID.String() + " global",
+				name: "Global stylesheet", text: held.Global, body: held.Global,
+			})
+		}
+		return items
+	case block.RecordList:
+		return listItems(held.Records, func(record block.LumiaRecord) versionItem {
+			return versionItem{
+				key: record.ID.String(), name: record.LumiaName, text: record.LumiaDefinition,
+			}
+		})
+	default:
+		return nil
+	}
+}
+
+// proseKey identifies one text body by its role, because a role holds one body and an import mints a new element id for it.
+func proseKey(element block.Element) string {
+	if element.Role != "" {
+		return string(element.Role)
+	}
+	return element.ID.String()
+}
+
+func listItems[T any](list []T, describe func(T) versionItem) []versionItem {
+	items := make([]versionItem, 0, len(list))
+	for _, entry := range list {
+		item := describe(entry)
+		item.body = itemBody(entry)
+		items = append(items, item)
+	}
+	return items
+}
+
+// itemBody encodes one item without its id, so reordering and reimporting leave identical content identical.
+func itemBody(item any) string {
+	encoded, err := json.Marshal(item)
+	if err != nil {
+		return ""
+	}
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(encoded, &fields) != nil {
+		return string(encoded)
+	}
+	delete(fields, "id")
+	canonical, err := json.Marshal(fields)
+	if err != nil {
+		return string(encoded)
+	}
+	return string(canonical)
+}
+
+func preferredName(preferred, fallback string) string {
+	if trimmed := strings.TrimSpace(preferred); trimmed != "" {
+		return trimmed
+	}
+	return fallback
+}
+
+// settingValue reads a filled-in slot as the words a creator would recognise.
+func settingValue(value *block.Value) string {
+	switch {
+	case value == nil:
+		return ""
+	case value.Text != nil:
+		return *value.Text
+	case value.Number != nil:
+		return strconv.FormatFloat(*value.Number, 'g', -1, 64)
+	case value.Boolean != nil:
+		return strconv.FormatBool(*value.Boolean)
+	default:
+		return strings.Join(value.Strings, ", ")
+	}
+}
+
+// compareItems pairs items by their own identity first and by identical content second, so what is left over is an addition or a removal rather than a guess.
+func compareItems(earlier, later []versionItem) []Change {
+	partner := make([]int, len(later))
+	for index := range partner {
+		partner[index] = -1
+	}
+	taken := make([]bool, len(earlier))
+	matchItems(earlier, later, taken, partner, func(item versionItem) string { return item.key })
+	matchItems(earlier, later, taken, partner, func(item versionItem) string { return item.body })
+	changes := make([]Change, 0, len(later))
+	for index, item := range later {
+		if partner[index] < 0 {
+			changes = append(changes, Change{
+				Kind: ChangeAdded, Name: item.name, After: item.text, AfterMedia: item.mediaRef(),
+			})
+			continue
+		}
+		was := earlier[partner[index]]
+		if was.body == item.body {
+			continue
+		}
+		changes = append(changes, editedItem(was, item))
+	}
+	for index, item := range earlier {
+		if !taken[index] {
+			changes = append(changes, Change{
+				Kind: ChangeRemoved, Name: item.name, Before: item.text, BeforeMedia: item.mediaRef(),
+			})
+		}
+	}
+	return changes
+}
+
+// matchItems pairs the items still unmatched whose keys agree, in the order each version holds them.
+func matchItems(earlier, later []versionItem, taken []bool, partner []int, key func(versionItem) string) {
+	available := make(map[string][]int, len(earlier))
+	for index, item := range earlier {
+		if !taken[index] && key(item) != "" {
+			available[key(item)] = append(available[key(item)], index)
+		}
+	}
+	for index, item := range later {
+		if partner[index] >= 0 || key(item) == "" {
+			continue
+		}
+		waiting := available[key(item)]
+		if len(waiting) == 0 {
+			continue
+		}
+		partner[index] = waiting[0]
+		taken[waiting[0]] = true
+		available[key(item)] = waiting[1:]
+	}
+}
+
+// editedItem reports only the sides that differ, and reads an emptied bare text body as words taken away rather than as an edit.
+func editedItem(was, now versionItem) Change {
+	if was.name == "" && now.name == "" && was.media == uuid.Nil && now.media == uuid.Nil {
+		if change, changed := textChange("", was.text, now.text); changed {
+			return change
+		}
+	}
+	edited := Change{Kind: ChangeEdited, Name: now.name}
+	if was.name != now.name {
+		edited.PreviousName = was.name
+	}
+	if was.text != now.text {
+		edited.Before, edited.After = was.text, now.text
+	}
+	if was.media != now.media {
+		edited.BeforeMedia, edited.AfterMedia = was.mediaRef(), now.mediaRef()
+	}
+	return edited
+}
+
+// comparePresentation reports the page changes an update made without touching what the asset says.
+func comparePresentation(kind string, earlier, later []block.Block) []Change {
+	before := blocksByID(earlier)
+	after := blocksByID(later)
+	changes := make([]Change, 0, len(later))
+	for _, holder := range later {
+		was, kept := before[holder.ID]
+		if !kept {
+			changes = append(changes, Change{Kind: ChangeAdded, Name: blockName(kind, holder)})
+			continue
+		}
+		changes = append(changes, blockChanges(kind, was, holder)...)
+	}
+	for _, holder := range earlier {
+		if _, kept := after[holder.ID]; !kept {
+			changes = append(changes, Change{Kind: ChangeRemoved, Name: blockName(kind, holder)})
+		}
+	}
+	if !slices.Equal(sharedOrder(earlier, after), sharedOrder(later, before)) {
+		changes = append(changes, Change{Kind: ChangeEdited, Name: "Page order"})
+	}
+	return changes
+}
+
+func blocksByID(blocks []block.Block) map[uuid.UUID]block.Block {
+	held := make(map[uuid.UUID]block.Block, len(blocks))
+	for _, holder := range blocks {
+		held[holder.ID] = holder
+	}
+	return held
+}
+
+// sharedOrder is the order of the blocks both versions carry, so adding a block does not report every other block as moved.
+func sharedOrder(blocks []block.Block, other map[uuid.UUID]block.Block) []uuid.UUID {
+	shared := make([]uuid.UUID, 0, len(blocks))
+	for _, holder := range blocks {
+		if _, kept := other[holder.ID]; kept {
+			shared = append(shared, holder.ID)
+		}
+	}
+	return shared
+}
+
+func blockChanges(kind string, was, now block.Block) []Change {
+	name := blockName(kind, now)
+	changes := make([]Change, 0, 5)
+	for _, facet := range []struct{ label, before, after string }{
+		{"title", blockTitle(was), blockTitle(now)},
+		{"layout", string(was.Layout), string(now.Layout)},
+		{"width", string(was.Width), string(now.Width)},
+		{"visibility", shownWord(was.Hidden), shownWord(now.Hidden)},
+	} {
+		if change, changed := textChange(name+" "+facet.label, facet.before, facet.after); changed {
+			changes = append(changes, change)
+		}
+	}
+	priorElements := make(map[uuid.UUID]block.Element, len(was.Elements))
+	for _, element := range was.Elements {
+		priorElements[element.ID] = element
+	}
+	for _, element := range now.Elements {
+		prior, kept := priorElements[element.ID]
+		if !kept || prior.Options == element.Options {
+			continue
+		}
+		changes = append(changes, Change{
+			Kind: ChangeEdited, Name: element.Label() + " display",
+			Before: optionWords(prior.Options), After: optionWords(element.Options),
+		})
+	}
+	return changes
+}
+
+func blockTitle(holder block.Block) string {
+	if holder.Title == nil {
+		return ""
+	}
+	return *holder.Title
+}
+
+// blockName is the creator's own title where they wrote one and the catalog's wording where they did not.
+func blockName(kind string, holder block.Block) string {
+	if title := blockTitle(holder); title != "" {
+		return title
+	}
+	definitions, known := block.Catalog(kind)
+	if !known {
+		return string(holder.Definition)
+	}
+	for _, definition := range definitions {
+		if definition.ID == holder.Definition {
+			return definition.Title
+		}
+	}
+	return string(holder.Definition)
+}
+
+func shownWord(hidden bool) string {
+	if hidden {
+		return "hidden"
+	}
+	return "shown"
+}
+
+func optionWords(options block.Options) string {
+	words := make([]string, 0, 2)
+	if options.Display != "" {
+		words = append(words, string(options.Display))
+	}
+	if options.ItemSize != "" {
+		words = append(words, string(options.ItemSize))
+	}
+	return strings.Join(words, " ")
+}
+
+// comparePreserved reports that data Illarin does not read changed, and never what it holds.
+func comparePreserved(earlier, later []versionPreserved) []Change {
+	before := preservedDigests(earlier)
+	after := preservedDigests(later)
+	namespaces := make([]string, 0, len(before)+len(after))
+	for namespace := range before {
+		namespaces = append(namespaces, namespace)
+	}
+	for namespace := range after {
+		if _, shared := before[namespace]; !shared {
+			namespaces = append(namespaces, namespace)
+		}
+	}
+	sort.Strings(namespaces)
+	changes := make([]Change, 0, len(namespaces))
+	for _, namespace := range namespaces {
+		was, held := before[namespace]
+		now, holds := after[namespace]
+		switch {
+		case !held:
+			changes = append(changes, Change{Kind: ChangeAdded, Name: namespace})
+		case !holds:
+			changes = append(changes, Change{Kind: ChangeRemoved, Name: namespace})
+		case was != now:
+			changes = append(changes, Change{Kind: ChangeEdited, Name: namespace})
+		}
+	}
+	return changes
+}
+
+// preservedDigests reduces each namespace to one fingerprint of everything kept under it.
+func preservedDigests(preserved []versionPreserved) map[string]string {
+	keyed := make(map[string][]string)
+	for _, item := range preserved {
+		keyed[item.Namespace] = append(keyed[item.Namespace],
+			item.Owner+"\x00"+item.OwnerID.String()+"\x00"+item.Payload)
+	}
+	digests := make(map[string]string, len(keyed))
+	for namespace, entries := range keyed {
+		sort.Strings(entries)
+		sum := sha256.Sum256([]byte(strings.Join(entries, "\x00")))
+		digests[namespace] = hex.EncodeToString(sum[:])
+	}
+	return digests
+}
