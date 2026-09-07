@@ -198,7 +198,7 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 	}
 	rows, err := s.pool.Query(ctx, `
 		select id, asset_id, role, width, height
-		  from asset_media
+		  from asset_public.asset_media
 		 where asset_id = $1 and is_current
 		 order by created_at, id
 	`, foundAssetID)
@@ -359,26 +359,29 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	variant, version := in.Variant, in.Version
 	var blobID uuid.UUID
 	var digestBytes []byte
-	var lifecycle string
+	var private, owner, draft bool
 	err := s.pool.QueryRow(ctx, `
-		select media.blob_id, blob.sha256, asset.lifecycle
+		select media.blob_id, blob.sha256,
+		       asset.lifecycle = 'draft' or not exists (
+		           select 1 from asset_snapshot_media r
+		           where r.snapshot_id = asset.published_snapshot_id and r.media_id = media.id
+		       ), coalesce(asset.owner_id = $2, false), asset.lifecycle = 'draft'
 		  from asset_media media
 		  join assets asset on asset.id = media.asset_id
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
 		   and asset.deleted_at is null
 		   and (asset.withheld_at is null or asset.owner_id = $2)
-	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &lifecycle)
+	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &private, &owner, &draft)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MediaDownload{}, ErrMediaNotFound
 	}
 	if err != nil {
 		return MediaDownload{}, fmt.Errorf("find media: %w", err)
 	}
-	private := Lifecycle(lifecycle) == LifecycleDraft
 	if private {
 		path := fmt.Sprintf("/media/%s/%s/%d", in.MediaID, variant, version)
-		if !s.signer.Valid(path, in.Expires, in.Signature, s.now()) {
+		if (!draft && !owner) || !s.signer.Valid(path, in.Expires, in.Signature, s.now()) {
 			return MediaDownload{}, ErrMediaNotFound
 		}
 	}

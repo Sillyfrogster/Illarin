@@ -52,7 +52,7 @@ func (s *Service) DeliverableAsset(
 	var revisionID, coverID pgtype.UUID
 	err := q.QueryRow(ctx, `
 		select kind, name, content_generation, current_revision_id, cover_media_id
-		  from assets
+		  from asset_public.assets
 		 where id = $1
 		   and deleted_at is null
 		   and withheld_at is null
@@ -101,7 +101,7 @@ func deliveryTargets(
 ) ([]DeliveryTarget, error) {
 	var stored []byte
 	err := q.QueryRow(ctx,
-		`select export from asset_projections where asset_id = $1`, assetID,
+		`select export from asset_public.asset_projections where asset_id = $1`, assetID,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []DeliveryTarget{}, nil
@@ -129,7 +129,7 @@ func (s *Service) deliveryPictures(
 ) ([]DeliveryPicture, error) {
 	rows, err := q.Query(ctx, `
 		select id, role
-		  from asset_media
+		  from asset_public.asset_media
 		 where asset_id = $1
 		   and is_current
 		   and blob_id is not null

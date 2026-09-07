@@ -156,6 +156,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: workingCopy
+          in: query
+          description: Read the private working copy. Only the owner may request it.
+          schema:
+            type: boolean
+            default: false
         - name: nsfw
           in: query
           description: >-

@@ -438,7 +438,11 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 	if !ok {
 		return
 	}
-	found, err := h.assets.Detail(c.Request.Context(), uuid.UUID(id), viewerID, visibility)
+	read := h.assets.Detail
+	if params.WorkingCopy != nil && *params.WorkingCopy {
+		read = h.assets.WorkingCopy
+	}
+	found, err := read(c.Request.Context(), uuid.UUID(id), viewerID, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return

@@ -953,7 +953,9 @@ func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSupp
 const currentRevisionLocation = `-- name: CurrentRevisionLocation :one
 select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
   from assets a
-  join asset_revisions r on r.id = a.current_revision_id
+  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
+  join asset_revisions r on r.id = case when snapshot.id is null
+      then a.current_revision_id else snapshot.source_revision_id end
  where a.id = $1
    and r.blob_id is not null
    and a.lifecycle = 'published'

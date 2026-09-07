@@ -34,8 +34,7 @@ type Identity struct {
 	IsNSFW *bool
 }
 
-// SetIdentity saves the header fields the publish floor reads. An edit is live
-// when it saves and there is no republish step.
+// SetIdentity saves the working copy's name and adult content answer.
 func (s *Service) SetIdentity(ctx context.Context, in Identity) error {
 	name := strings.TrimSpace(in.Name)
 	if utf8.RuneCountInString(name) > MaxNameRunes {

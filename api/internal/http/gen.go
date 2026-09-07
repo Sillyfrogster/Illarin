@@ -4141,6 +4141,9 @@ type CreateAssetMultipartBody struct {
 
 // GetAssetParams defines parameters for GetAsset.
 type GetAssetParams struct {
+	// WorkingCopy Read the private working copy. Only the owner may request it.
+	WorkingCopy *bool `form:"workingCopy,omitempty" json:"workingCopy,omitempty"`
+
 	// Nsfw The reader's presentation preference. Asset page URLs keep this preference out of their own query string.
 	Nsfw *GetAssetParamsNsfw `form:"nsfw,omitempty" json:"nsfw,omitempty"`
 }
@@ -5669,6 +5672,14 @@ func (siw *ServerInterfaceWrapper) GetAsset(c *gin.Context) {
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetAssetParams
+
+	// ------------- Optional query parameter "workingCopy" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "workingCopy", c.Request.URL.Query(), &params.WorkingCopy, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter workingCopy: %w", err), http.StatusBadRequest)
+		return
+	}
 
 	// ------------- Optional query parameter "nsfw" -------------
 

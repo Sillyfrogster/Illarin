@@ -144,7 +144,12 @@ func (s *Service) browseAssets(
 	f ListFilter,
 	visibility ContentVisibility,
 ) (BrowsePage, error) {
-	queries := db.New(s.pool)
+	tx, err := s.beginReadSnapshot(ctx)
+	if err != nil {
+		return BrowsePage{}, err
+	}
+	defer tx.Rollback(ctx)
+	queries := db.New(tx)
 	search := parseBrowseQuery(f.Query)
 	facetDefinitions := block.Facets(f.Kind)
 	chosen := declaredFacetSelections(f.Kind, f.Facets)

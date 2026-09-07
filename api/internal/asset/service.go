@@ -52,10 +52,19 @@ type Service struct {
 	siteURL string
 }
 
+// beginReadSnapshot selects recorded content while retaining live access controls.
 func (s *Service) beginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
-	return s.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+	return tx, nil
 }
 
 type IngestSettings struct {
@@ -463,7 +472,12 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]Asset, error) {
 		f.Limit = 24
 	}
 
-	return listAssets(ctx, s.pool, f)
+	tx, err := s.beginReadSnapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	return listAssets(ctx, tx, f)
 }
 
 // Browse returns card-safe catalog results and the reader's effective count.
@@ -511,18 +525,30 @@ func (s *Service) DownloadSource(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 ) (SourceDownload, error) {
-	location, err := currentRevisionLocation(ctx, s.pool, assetID, viewerID)
+	tx, err := s.beginReadSnapshot(ctx)
+	if err != nil {
+		return SourceDownload{}, err
+	}
+	defer tx.Rollback(ctx)
+	location, err := currentRevisionLocation(ctx, tx, assetID, viewerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return SourceDownload{}, ErrNotFound
 		}
 		return SourceDownload{}, fmt.Errorf("find current revision: %w", err)
 	}
-	apps, err := protected.Apps(ctx, s.pool, assetID)
+	apps, err := protected.Apps(ctx, tx, assetID)
 	if err != nil {
 		return SourceDownload{}, err
 	}
-	if len(apps) > 0 && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
+	blocks, err := readBlocks(ctx, tx, assetID)
+	if err != nil {
+		return SourceDownload{}, err
+	}
+	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, blocks); err != nil {
+		return SourceDownload{}, err
+	}
+	if (len(apps) > 0 || protected.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
 		return SourceDownload{}, ErrLinkedInstallOnly
 	}
 	redirect, err := s.store.InternalRedirect(ctx, location.BlobID)

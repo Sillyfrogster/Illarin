@@ -192,7 +192,7 @@ func fetchStartedAsset(
 ) startedAsset {
 	t.Helper()
 	response := send(t, r, authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())

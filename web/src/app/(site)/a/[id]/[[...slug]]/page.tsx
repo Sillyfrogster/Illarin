@@ -66,11 +66,16 @@ export default async function AssetPage({
   params,
 }: PageProps<"/a/[id]/[[...slug]]">) {
   const { id, slug } = await params;
-  const asset = await loadAsset(id);
-  if (!asset) notFound();
+  const published = await loadAsset(id);
+  if (!published) notFound();
 
-  const canonical = assetRedirect({ id, slug }, asset);
+  const canonical = assetRedirect({ id, slug }, published);
   if (canonical) redirect(canonical);
+
+  const asset = published.isOwner
+    ? await fetchAsset(id, (await cookies()).toString(), true)
+    : published;
+  if (!asset) notFound();
 
   const kind = KIND_LABELS[asset.kind];
   const isDraft = asset.lifecycle === "draft";

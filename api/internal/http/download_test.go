@@ -389,7 +389,7 @@ func TestDownloadUnknownAssetIs404(t *testing.T) {
 // A creator edits a block, downloads the same format, and gets a file carrying
 // the edit and every namespace the upload arrived with. The upload itself is
 // still exactly what they handed over.
-func TestEditingABlockChangesTheDownloadAndNotTheUpload(t *testing.T) {
+func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -423,8 +423,8 @@ func TestEditingABlockChangesTheDownloadAndNotTheUpload(t *testing.T) {
 	if err := json.Unmarshal(download.Body.Bytes(), &card); err != nil {
 		t.Fatalf("read the downloaded card: %v", err)
 	}
-	if card.Data.Description != "After" {
-		t.Fatalf("downloaded description = %q, want the edit", card.Data.Description)
+	if card.Data.Description != "Before" {
+		t.Fatalf("downloaded description = %q, want the published text", card.Data.Description)
 	}
 	var sourceCard struct {
 		Data struct {

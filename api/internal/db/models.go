@@ -85,6 +85,87 @@ type AssetProjection struct {
 	FacetComputedAt  pgtype.Timestamptz
 }
 
+type AssetPublicAsset struct {
+	ID                  pgtype.UUID
+	Kind                string
+	CurrentRevisionID   interface{}
+	OwnerID             pgtype.UUID
+	Name                interface{}
+	Blurb               interface{}
+	Tags                interface{}
+	CoverMediaID        pgtype.UUID
+	IsNsfw              bool
+	Discovery           string
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	IndexedAt           pgtype.Timestamptz
+	WithheldAt          pgtype.Timestamptz
+	WithheldBy          pgtype.UUID
+	WithheldReason      pgtype.Text
+	DeletedAt           pgtype.Timestamptz
+	RecoverableUntil    pgtype.Timestamptz
+	Lifecycle           string
+	AssetVersion        interface{}
+	CreditedAuthor      interface{}
+	Nickname            interface{}
+	OriginFormat        interface{}
+	ContentGeneration   int32
+	PublishedSnapshotID pgtype.UUID
+}
+
+type AssetPublicAssetBlock struct {
+	ID         pgtype.UUID
+	AssetID    pgtype.UUID
+	Definition string
+	Title      pgtype.Text
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+}
+
+type AssetPublicAssetMedium struct {
+	ID          pgtype.UUID
+	AssetID     pgtype.UUID
+	Role        string
+	Width       pgtype.Int4
+	Height      pgtype.Int4
+	CreatedAt   pgtype.Timestamptz
+	BlobID      pgtype.UUID
+	IsExtracted bool
+	IsCurrent   bool
+}
+
+type AssetPublicAssetPreservedDatum struct {
+	ID        pgtype.UUID
+	AssetID   pgtype.UUID
+	OwnerKind string
+	OwnerID   pgtype.UUID
+	Namespace string
+	Payload   []byte
+}
+
+type AssetPublicAssetProjection struct {
+	AssetID          pgtype.UUID
+	Export           []byte
+	ExportStamp      string
+	ExportComputedAt pgtype.Timestamptz
+	Facets           []byte
+	FacetStamp       string
+	FacetComputedAt  pgtype.Timestamptz
+}
+
+type AssetPublicProtectedContent struct {
+	AssetID     pgtype.UUID
+	OwnerKind   string
+	OwnerID     pgtype.UUID
+	PayloadType string
+	Payload     []byte
+	SourceKey   pgtype.Text
+	Digest      []byte
+}
+
 type AssetRevision struct {
 	ID        pgtype.UUID
 	AssetID   pgtype.UUID
@@ -112,6 +193,11 @@ type AssetSnapshotMedium struct {
 	SnapshotID pgtype.UUID
 	AssetID    pgtype.UUID
 	MediaID    pgtype.UUID
+}
+
+type AssetSnapshotProjection struct {
+	SnapshotID pgtype.UUID
+	Projection []byte
 }
 
 type Blob struct {

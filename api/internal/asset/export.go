@@ -68,11 +68,14 @@ func (s *Service) OpenExport(
 	if err != nil {
 		return Export{}, err
 	}
+	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+		return Export{}, err
+	}
 	apps, err := protected.Apps(ctx, tx, assetID)
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 {
+	if len(apps) > 0 || protected.HasPromptFragments(subject.blocks) {
 		return Export{}, ErrLinkedInstallOnly
 	}
 	offered := s.reg.OfferedTargets(subject.capability())
@@ -88,12 +91,12 @@ func (s *Service) OpenExport(
 	if !writes {
 		return Export{}, ErrTargetNotOffered
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
-	}
-	written, err := s.writeExport(ctx, subject, writer)
+	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
 		return Export{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
 	}
 	export := Export{
 		Body: written.Body, MediaType: written.MediaType, Target: target,
@@ -143,12 +146,12 @@ func (s *Service) OpenExportForLinkedInstance(
 	if !writes {
 		return Export{}, ErrTargetNotOffered
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
-	}
-	written, err := s.writeExport(ctx, subject, writer)
+	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
 		return Export{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
 	}
 	export := Export{
 		Body: written.Body, MediaType: written.MediaType, Target: target,
@@ -175,18 +178,19 @@ func targetAllowed(apps []string, kind, target string) bool {
 
 func (s *Service) writeExport(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
 	writer format.Writer,
 ) (format.Artifact, error) {
 	asset := format.ExportAsset{
 		Kind: subject.kind, Header: subject.header, Elements: subject.elements(),
 	}
-	cover, images, err := s.exportImages(ctx, subject)
+	cover, images, err := s.exportImages(ctx, q, subject)
 	if err != nil {
 		return format.Artifact{}, err
 	}
 	asset.Cover, asset.Images = cover, images
-	asset.Preserved, err = s.travellingPreservedData(ctx, subject, writer.ID())
+	asset.Preserved, err = s.travellingPreservedData(ctx, q, subject, writer.ID())
 	if err != nil {
 		return format.Artifact{}, err
 	}
@@ -268,6 +272,7 @@ func (s *Service) exportSubject(
 // to put a namespace never makes a target eligible for it.
 func (s *Service) travellingPreservedData(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
 	target string,
 ) ([]format.Remainder, error) {
@@ -279,7 +284,7 @@ func (s *Service) travellingPreservedData(
 	if !known || !writes || !format.TravelsWithOrigin(origin, written) {
 		return nil, nil
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := q.Query(ctx, `
 		select owner_kind, owner_id, namespace, payload
 		  from asset_preserved_data
 		 where asset_id = $1
@@ -304,6 +309,7 @@ func (s *Service) travellingPreservedData(
 // asset's own picture and every one an image element points at.
 func (s *Service) exportImages(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
 ) (*format.ExportMedia, map[uuid.UUID]format.ExportMedia, error) {
 	wanted := make([]uuid.UUID, 0)
@@ -322,7 +328,7 @@ func (s *Service) exportImages(
 		}
 	}
 	var held pgtype.UUID
-	if err := s.pool.QueryRow(ctx,
+	if err := q.QueryRow(ctx,
 		`select cover_media_id from assets where id = $1`, subject.assetID,
 	).Scan(&held); err != nil {
 		return nil, nil, fmt.Errorf("read the cover: %w", err)
@@ -335,7 +341,7 @@ func (s *Service) exportImages(
 		return nil, map[uuid.UUID]format.ExportMedia{}, nil
 	}
 
-	rows, err := s.pool.Query(ctx, `
+	rows, err := q.Query(ctx, `
 		select id, blob_id from asset_media
 		 where asset_id = $1 and is_current and id = any($2)
 	`, subject.assetID, wanted)

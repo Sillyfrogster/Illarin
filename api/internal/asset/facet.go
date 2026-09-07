@@ -85,7 +85,10 @@ func (s *Service) RecomputeStaleFacetProjections(ctx context.Context) (int, erro
 	}
 	for _, assetID := range stale {
 		if err := s.inTransaction(ctx, func(tx pgx.Tx) error {
-			return s.writeFacetProjection(ctx, tx, assetID)
+			if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
+				return err
+			}
+			return s.writePublishedProjections(ctx, tx, assetID)
 		}); err != nil {
 			return 0, fmt.Errorf("recompute the facet projection for %s: %w", assetID, err)
 		}

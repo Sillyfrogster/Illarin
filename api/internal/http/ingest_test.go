@@ -1294,7 +1294,7 @@ func revisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 	return req
 }
 
-func TestARevisionUploadReplacesTheBytesAndKeepsTheCatalogEntry(t *testing.T) {
+func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
@@ -1328,8 +1328,8 @@ func TestARevisionUploadReplacesTheBytesAndKeepsTheCatalogEntry(t *testing.T) {
 		t.Fatalf("name = %q, want the creator's own %q", updated.Name, created.Name)
 	}
 
-	if servedSourcePath(t, r, created.ID) == firstFile {
-		t.Fatal("the download still points at the first revision's file")
+	if servedSourcePath(t, r, created.ID) != firstFile {
+		t.Fatal("the private replacement changed the published source")
 	}
 }
 

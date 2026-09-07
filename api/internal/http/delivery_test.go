@@ -451,7 +451,7 @@ func syncLibrary(
 	return decodeResponse[libraryResult](t, rec)
 }
 
-func TestAnInstallWithNoGenerationCountsAsCurrentAndAnEditMakesItStale(t *testing.T) {
+func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk",
 		[]string{receiveScope, "library:sync"})
@@ -471,9 +471,9 @@ func TestAnInstallWithNoGenerationCountsAsCurrentAndAnEditMakesItStale(t *testin
 	changeTheAsset(t, router, session, assetID)
 
 	stale := assetInstances(t, router, session, assetID)
-	if !stale.Items[0].UpdateAvailable ||
-		*stale.Items[0].InstalledGeneration >= stale.ContentGeneration {
-		t.Fatalf("state = %+v at generation %d, want an update available",
+	if stale.Items[0].UpdateAvailable ||
+		*stale.Items[0].InstalledGeneration != stale.ContentGeneration {
+		t.Fatalf("state = %+v at generation %d, want the published generation unchanged",
 			stale.Items[0], stale.ContentGeneration)
 	}
 }

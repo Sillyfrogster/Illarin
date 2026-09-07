@@ -11,6 +11,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -22,6 +23,11 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
 )
+
+func privateMediaQuery(svc *Service, id uuid.UUID, key string) string {
+	signed, _ := url.Parse(svc.variantURL(id, "grid", false, true))
+	return signed.Query().Get(key)
+}
 
 func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
 	if !localImageReadFailure(zip.ErrChecksum) {
@@ -228,6 +234,8 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 
 	download, err := svc.MediaVariant(context.Background(), MediaRequest{
 		MediaID: added.ID, Variant: "grid", Version: mediaproc.DerivativeVersion,
+		ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
+		Signature: privateMediaQuery(svc, added.ID, "signature"),
 	})
 	if err != nil {
 		t.Fatalf("MediaVariant cache miss: %v", err)
@@ -362,6 +370,8 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 			<-start
 			_, err := svc.MediaVariant(context.Background(), MediaRequest{
 				MediaID: added.ID, Variant: "grid", Version: 1,
+				ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
+				Signature: privateMediaQuery(svc, added.ID, "signature"),
 			})
 			errors <- err
 		}()

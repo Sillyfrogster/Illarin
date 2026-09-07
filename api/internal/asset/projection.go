@@ -22,7 +22,10 @@ func (s *Service) writeProjections(
 	if err := s.writeExportProjection(ctx, tx, assetID); err != nil {
 		return err
 	}
-	return s.writeFacetProjection(ctx, tx, assetID)
+	if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
+		return err
+	}
+	return s.writePublishedProjections(ctx, tx, assetID)
 }
 
 // writeExportProjection recomputes an asset's offered targets and what each one
@@ -131,7 +134,10 @@ func (s *Service) RecomputeStaleExportProjections(ctx context.Context) (int, err
 	}
 	for _, assetID := range stale {
 		if err := s.inTransaction(ctx, func(tx pgx.Tx) error {
-			return s.writeExportProjection(ctx, tx, assetID)
+			if err := s.writeExportProjection(ctx, tx, assetID); err != nil {
+				return err
+			}
+			return s.writePublishedProjections(ctx, tx, assetID)
 		}); err != nil {
 			return 0, fmt.Errorf("recompute the export projection for %s: %w", assetID, err)
 		}

@@ -8808,6 +8808,8 @@ export interface operations {
   getAsset: {
     parameters: {
       query?: {
+        /** @description Read the private working copy. Only the owner may request it. */
+        workingCopy?: boolean;
         /** @description The reader's presentation preference. Asset page URLs keep this preference out of their own query string. */
         nsfw?: "hidden" | "blurred" | "shown";
       };

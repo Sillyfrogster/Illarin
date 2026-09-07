@@ -202,7 +202,8 @@ func (s *Service) moveContentGeneration(
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		update assets set content_generation = content_generation + 1 where id = $1
+		update assets set content_generation = content_generation + 1
+		 where id = $1 and published_snapshot_id is null
 	`, assetID); err != nil {
 		return fmt.Errorf("move the content generation: %w", err)
 	}

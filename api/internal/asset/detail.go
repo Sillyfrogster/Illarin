@@ -87,11 +87,28 @@ func (s *Service) Detail(
 	viewerID *uuid.UUID,
 	visibility ContentVisibility,
 ) (Detail, error) {
+	return s.detail(ctx, id, viewerID, visibility, false)
+}
+
+// WorkingCopy returns the private candidate to its owner.
+func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility) (Detail, error) {
+	if viewerID == nil {
+		return Detail{}, ErrNotFound
+	}
+	return s.detail(ctx, id, viewerID, visibility, true)
+}
+
+func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility, working bool) (Detail, error) {
 	tx, err := s.beginReadSnapshot(ctx)
 	if err != nil {
 		return Detail{}, fmt.Errorf("begin asset page snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if working {
+		if _, err := tx.Exec(ctx, `set local search_path = public`); err != nil {
+			return Detail{}, err
+		}
+	}
 
 	queries := db.New(tx)
 	row, err := queries.AssetPage(ctx, db.AssetPageParams{
@@ -102,6 +119,9 @@ func (s *Service) Detail(
 	}
 	if err != nil {
 		return Detail{}, fmt.Errorf("read asset page: %w", err)
+	}
+	if working && !row.IsOwner {
+		return Detail{}, ErrNotFound
 	}
 	found := Detail{
 		ID:        uuidFromPgtype(row.ID),
@@ -126,6 +146,11 @@ func (s *Service) Detail(
 	if err != nil {
 		return Detail{}, err
 	}
+	if !working && !found.IsOwner {
+		if err := protected.ApplyPublishedPolicy(ctx, tx, id, found.Blocks); err != nil {
+			return Detail{}, err
+		}
+	}
 	if row.WithheldAt.Valid {
 		found.Withhold = &Withhold{
 			Reason: row.WithheldReason.String,
@@ -148,8 +173,8 @@ func (s *Service) Detail(
 			ID:        mediaID,
 			Role:      MediaRole(image.Role),
 			IsCover:   image.IsCover,
-			DetailURL: s.variantURL(mediaID, "detail", blurred, draft),
-			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft),
+			DetailURL: s.variantURL(mediaID, "detail", blurred, draft || working),
+			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft || working),
 			Width:     int(image.Width.Int32),
 			Height:    int(image.Height.Int32),
 		})
@@ -175,7 +200,7 @@ func (s *Service) Detail(
 	if err != nil {
 		return Detail{}, err
 	}
-	found.LinkedInstallOnly = len(found.AllowedApps) > 0
+	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || protected.HasPromptFragments(found.Blocks)
 	offered := make([]string, len(found.Downloads))
 	for i, target := range found.Downloads {
 		offered[i] = target.Format
@@ -184,7 +209,7 @@ func (s *Service) Detail(
 	if found.LinkedInstallOnly {
 		found.Downloads = []format.Target{}
 	}
-	if draft {
+	if draft || working {
 		return found, nil
 	}
 	for _, image := range found.Media {

@@ -86,7 +86,7 @@ func addRevision(
 	return got
 }
 
-func TestANewRevisionReplacesTheCurrentBytesAndKeepsTheCatalogEntry(t *testing.T) {
+func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.T) {
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
 		Elements: []block.Element{
@@ -131,8 +131,8 @@ func TestANewRevisionReplacesTheCurrentBytesAndKeepsTheCatalogEntry(t *testing.T
 	if _, err := served.ReadFrom(source); err != nil {
 		t.Fatalf("read source: %v", err)
 	}
-	if served.String() != `{"spec":"x","take":2}` {
-		t.Fatalf("source = %s, want the new revision's bytes", served.String())
+	if served.String() != `{"spec":"x","take":1}` {
+		t.Fatalf("source = %s, want the published revision's bytes", served.String())
 	}
 }
 

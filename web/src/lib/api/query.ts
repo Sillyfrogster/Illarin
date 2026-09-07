@@ -180,9 +180,10 @@ export async function fetchDeletedAssets(
 export async function fetchAsset(
   id: string,
   cookie?: string,
+  workingCopy = false,
 ): Promise<AssetDetail | null> {
   const { data, error } = await api.GET("/v1/assets/{id}", {
-    params: { path: { id } },
+    params: { path: { id }, query: { workingCopy } },
     headers: cookie ? { cookie } : undefined,
   });
   if (error || !data) return null;
