@@ -1,4 +1,8 @@
-import type { PostDelivery, PublicationEvent } from "@/lib/api/query";
+import type {
+  PostDelivery,
+  PublicationDestinationChoice,
+  PublicationEvent,
+} from "@/lib/api/query";
 import { shortMoment } from "@/lib/dates";
 
 /** What one public transition is called, and what it is. */
@@ -42,6 +46,16 @@ export function transitionEvent(transition: Transition): PublicationEvent {
   return "publication.post.published.v1";
 }
 
+/** Whether one destination is offered for a transition a post is making. */
+export function offeredFor(
+  destination: PublicationDestinationChoice,
+  event: PublicationEvent,
+  announced: boolean,
+): boolean {
+  if (!destination.events.includes(event)) return false;
+  return destination.kind !== "discord" || !announced;
+}
+
 /** How a delivery reads once it has settled, or while it is still going. */
 export type DeliveryState =
   | "waiting"
@@ -72,7 +86,7 @@ export function deliveryStanding(one: PostDelivery, now = new Date()): string {
     return `Arrived ${shortMoment(one.settledAt ?? one.occurredAt)}`;
   }
   if (one.state === "unconfirmed") {
-    return "Discord took it but never said which message it made. It may or may not be there.";
+    return "Discord took it but never said which message it made. Look in the channel to see whether it arrived.";
   }
   if (one.state === "failed") {
     const stopped = STOPPED_WORDS[one.settledReason ?? ""];

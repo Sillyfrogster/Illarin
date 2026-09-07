@@ -153,12 +153,18 @@ export function DestinationDialog({
       {existing ? null : <DestinationKind chosen={kind} onChosen={setKind} />}
 
       {existing?.channel ? (
-        <dl className={own.channel}>
-          <dt>Server</dt>
-          <dd>{existing.channel.guildId}</dd>
-          <dt>Channel</dt>
-          <dd>{existing.channel.channelId}</dd>
-        </dl>
+        <div className={own.confirmed}>
+          <dl className={own.channel}>
+            <dt>Server id</dt>
+            <dd>{existing.channel.guildId}</dd>
+            <dt>Channel id</dt>
+            <dd>{existing.channel.channelId}</dd>
+          </dl>
+          <p className={own.compare}>
+            What Discord answered with. Compare them against the channel in
+            Discord to be sure this is the right one.
+          </p>
+        </div>
       ) : null}
 
       <Field

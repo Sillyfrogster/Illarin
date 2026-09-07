@@ -5,6 +5,7 @@ import { readPostDestinations } from "@/lib/api/posts";
 import type { PublicationDestinationChoice } from "@/lib/api/query";
 import {
   eventWord,
+  offeredFor,
   type Transition,
   transitionEvent,
 } from "@/lib/publication-delivery";
@@ -62,10 +63,7 @@ export function AnnouncementChoice({
   }, [postId]);
 
   const event = transitionEvent(transition);
-  const takers = offered.filter(
-    (one) =>
-      one.events.includes(event) && (one.kind !== "discord" || !announced),
-  );
+  const takers = offered.filter((one) => offeredFor(one, event, announced));
 
   if (takers.length === 0) {
     if (offered.length === 0) return null;
@@ -114,7 +112,10 @@ export function AnnouncementChoice({
                   />
                   <span>
                     Ping @{one.role}
-                    <span>Everyone with the role is notified.</span>
+                    <span>
+                      Everyone with that role gets a notification. It cannot be
+                      taken back.
+                    </span>
                   </span>
                 </label>
               ) : null}

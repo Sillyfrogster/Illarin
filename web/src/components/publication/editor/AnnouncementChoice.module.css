@@ -117,8 +117,8 @@
 }
 
 .ping > span > span {
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  color: var(--color-text-primary);
+  font-size: var(--type-secondary-size);
   font-weight: 400;
   line-height: var(--type-secondary-leading);
 }

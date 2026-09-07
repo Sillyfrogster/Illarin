@@ -236,6 +236,22 @@ func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
 	}
 }
 
+func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
+	stack := newDestinationStack(t)
+	stack.discord.answersReadWith(func() (int, string) { return http.StatusNotFound, `{}` })
+
+	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
+		`{"name":"Announcements","address":%q}`, discordCapability(),
+	))
+
+	if refused.Code != http.StatusBadRequest {
+		t.Fatalf("add channel status = %d, want 400: %s", refused.Code, refused.Body.String())
+	}
+	if !strings.Contains(refused.Body.String(), "does not recognize that webhook") {
+		t.Errorf("refusal = %s, want it to name the fix", refused.Body.String())
+	}
+}
+
 func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
 	stack := newDestinationStack(t)
 	stack.discord.answersReadWith(func() (int, string) {

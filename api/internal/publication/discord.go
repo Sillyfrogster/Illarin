@@ -218,9 +218,8 @@ func (s *Service) askDiscord(
 	}
 	if answer.Status != http.StatusOK {
 		return discord.Capability{}, discord.Webhook{}, FieldError{
-			Field:   "address",
-			Message: fmt.Sprintf("Discord answered %d for that webhook.", answer.Status),
-			cause:   discord.ErrNotAWebhook,
+			Field: "address", Message: whyDiscordRefused(answer.Status),
+			cause: discord.ErrNotAWebhook,
 		}
 	}
 	found, err := discord.ReadWebhook(answer.Body)
@@ -232,6 +231,20 @@ func (s *Service) askDiscord(
 		}
 	}
 	return capability, found, nil
+}
+
+// whyDiscordRefused says what to do about the answer Discord gave, because the
+// common refusals each have a different fix.
+func whyDiscordRefused(status int) string {
+	switch status {
+	case http.StatusNotFound:
+		return "Discord does not recognize that webhook. " +
+			"Check it still exists and that the whole address was copied."
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return "Discord turned that address away. Its token is no longer good."
+	default:
+		return fmt.Sprintf("Discord answered %d for that webhook.", status)
+	}
 }
 
 // approved is the one role a Discord destination may name, held as the pair of

@@ -1,8 +1,14 @@
-.channel {
-  display: grid;
+.confirmed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   background: var(--color-muted);
+}
+
+.channel {
+  display: grid;
   gap: 3px 16px;
   grid-template-columns: auto minmax(0, 1fr);
 }
@@ -35,4 +41,10 @@
   .role {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.compare {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-secondary-leading);
 }
