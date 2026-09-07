@@ -427,6 +427,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 	if err := s.writeProjections(ctx, tx, a.ID); err != nil {
 		return Asset{}, err
 	}
+	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, a.ID); err != nil {
+		return Asset{}, fmt.Errorf("record initial publication: %w", err)
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return Asset{}, err

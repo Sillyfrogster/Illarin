@@ -122,6 +122,9 @@ func (s *Service) Publish(
 	`, assetID); err != nil {
 		return nil, fmt.Errorf("publish asset: %w", err)
 	}
+	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, assetID); err != nil {
+		return nil, fmt.Errorf("record initial publication: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}

@@ -23,6 +23,9 @@ type SweepResult struct {
 
 func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 	now := s.now()
+	if err := s.deleteExpiredSnapshots(ctx); err != nil {
+		return SweepResult{}, err
+	}
 	if err := s.deleteExpiredProtectedContent(ctx, now); err != nil {
 		return SweepResult{}, err
 	}
@@ -74,6 +77,26 @@ func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func (s *Service) deleteExpiredSnapshots(ctx context.Context) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin expired history cleanup: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `
+		update assets set published_snapshot_id = null
+		 where deleted_at is not null and recoverable_until <= now()
+		   and published_snapshot_id is not null
+	`); err != nil {
+		return fmt.Errorf("release expired published snapshots: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `delete from asset_snapshots s using assets a
+		where s.asset_id = a.id and a.deleted_at is not null and a.recoverable_until <= now()`); err != nil {
+		return fmt.Errorf("remove expired history: %w", err)
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *Service) deleteExpiredProtectedContent(ctx context.Context, now time.Time) error {

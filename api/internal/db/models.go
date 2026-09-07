@@ -9,30 +9,31 @@ import (
 )
 
 type Asset struct {
-	ID                pgtype.UUID
-	Kind              string
-	CurrentRevisionID pgtype.UUID
-	OwnerID           pgtype.UUID
-	Name              string
-	Blurb             string
-	Tags              []string
-	CoverMediaID      pgtype.UUID
-	IsNsfw            pgtype.Bool
-	Discovery         string
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-	IndexedAt         pgtype.Timestamptz
-	WithheldAt        pgtype.Timestamptz
-	WithheldBy        pgtype.UUID
-	WithheldReason    pgtype.Text
-	DeletedAt         pgtype.Timestamptz
-	RecoverableUntil  pgtype.Timestamptz
-	Lifecycle         string
-	AssetVersion      string
-	CreditedAuthor    string
-	Nickname          string
-	OriginFormat      pgtype.Text
-	ContentGeneration int32
+	ID                  pgtype.UUID
+	Kind                string
+	CurrentRevisionID   pgtype.UUID
+	OwnerID             pgtype.UUID
+	Name                string
+	Blurb               string
+	Tags                []string
+	CoverMediaID        pgtype.UUID
+	IsNsfw              pgtype.Bool
+	Discovery           string
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	IndexedAt           pgtype.Timestamptz
+	WithheldAt          pgtype.Timestamptz
+	WithheldBy          pgtype.UUID
+	WithheldReason      pgtype.Text
+	DeletedAt           pgtype.Timestamptz
+	RecoverableUntil    pgtype.Timestamptz
+	Lifecycle           string
+	AssetVersion        string
+	CreditedAuthor      string
+	Nickname            string
+	OriginFormat        pgtype.Text
+	ContentGeneration   int32
+	PublishedSnapshotID pgtype.UUID
 }
 
 type AssetBlock struct {
@@ -92,6 +93,25 @@ type AssetRevision struct {
 	CreatedAt pgtype.Timestamptz
 	BlobID    pgtype.UUID
 	Format    string
+}
+
+type AssetSnapshot struct {
+	ID                pgtype.UUID
+	AssetID           pgtype.UUID
+	Number            int32
+	RecordedAt        pgtype.Timestamptz
+	InitialRecorded   bool
+	VersionLabel      string
+	ContentGeneration int32
+	SourceRevisionID  pgtype.UUID
+	Payload           []byte
+	ProtectedPayloads []byte
+}
+
+type AssetSnapshotMedium struct {
+	SnapshotID pgtype.UUID
+	AssetID    pgtype.UUID
+	MediaID    pgtype.UUID
 }
 
 type Blob struct {

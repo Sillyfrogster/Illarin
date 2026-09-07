@@ -97,7 +97,13 @@ func (s *Service) WriteMigratedAsset(ctx context.Context, tx pgx.Tx, one Migrate
 			return err
 		}
 	}
-	return s.writeProjections(ctx, tx, one.ID)
+	if err := s.writeProjections(ctx, tx, one.ID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, true)`, one.ID); err != nil {
+		return fmt.Errorf("record migrated asset baseline: %w", err)
+	}
+	return nil
 }
 
 // MigratedShortfall reports what an asset still needs to clear today's publish floor, and nothing where it clears it.
