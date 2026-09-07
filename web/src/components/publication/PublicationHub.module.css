@@ -50,3 +50,37 @@
     margin-top: 4px;
   }
 }
+
+.attention {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px clamp(20px, 2vw, 30px);
+  border-radius: var(--radius-lg);
+  background: var(--color-critical-soft);
+  color: var(--color-critical-strong);
+  font-size: var(--type-secondary-size);
+  font-weight: 600;
+}
+
+.attention svg {
+  flex: none;
+}
+
+.attention a {
+  margin-left: auto;
+  color: var(--color-critical-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .attention {
+    flex-wrap: wrap;
+  }
+
+  .attention a {
+    margin-left: 26px;
+  }
+}

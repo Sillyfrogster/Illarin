@@ -378,11 +378,16 @@ func toAPIChoices(held []publication.Choice, inherited bool) PublicationDestinat
 func toAPIChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
 	listed := make([]PublicationDestinationChoice, 0, len(held))
 	for _, one := range held {
+		events := make([]PublicationEvent, 0, len(one.Events))
+		for _, name := range one.Events {
+			events = append(events, PublicationEvent(name))
+		}
 		listed = append(listed, PublicationDestinationChoice{
 			Id:        types.UUID(one.ID),
 			Name:      one.Name,
 			Kind:      PublicationDestinationChoiceKind(one.Kind),
 			State:     PublicationDestinationState(one.State),
+			Events:    events,
 			ByDefault: one.ByDefault,
 		})
 	}

@@ -3303,10 +3303,13 @@ type PublicationDestinationKind string
 // PublicationDestinationChoice One destination a post may send to. It carries no address and no secret, which is the whole point of it.
 type PublicationDestinationChoice struct {
 	// ByDefault Whether a publication starts with this one selected.
-	ByDefault bool                             `json:"byDefault"`
-	Id        openapi_types.UUID               `json:"id"`
-	Kind      PublicationDestinationChoiceKind `json:"kind"`
-	Name      string                           `json:"name"`
+	ByDefault bool `json:"byDefault"`
+
+	// Events Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach.
+	Events []PublicationEvent               `json:"events"`
+	Id     openapi_types.UUID               `json:"id"`
+	Kind   PublicationDestinationChoiceKind `json:"kind"`
+	Name   string                           `json:"name"`
 
 	// State Whether a destination is ready to receive anything.
 	State PublicationDestinationState `json:"state"`

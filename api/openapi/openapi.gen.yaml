@@ -8361,6 +8361,13 @@ components:
         - unverified
         - active
         - disabled
+    PublicationEvent:
+      type: string
+      description: One Publication event a destination may subscribe to.
+      enum:
+        - publication.post.published.v1
+        - publication.post.updated.v1
+        - publication.post.withdrawn.v1
     PublicationDestinationChoice:
       type: object
       description: >-
@@ -8372,6 +8379,7 @@ components:
         - name
         - kind
         - state
+        - events
         - byDefault
       properties:
         id:
@@ -8385,6 +8393,13 @@ components:
             - webhook
         state:
           $ref: '#/components/schemas/PublicationDestinationState'
+        events:
+          type: array
+          description: >-
+            Which public transitions this destination receives, so a publisher
+            is only offered the ones this transition would reach.
+          items:
+            $ref: '#/components/schemas/PublicationEvent'
         byDefault:
           type: boolean
           description: Whether a publication starts with this one selected.
@@ -8516,13 +8531,6 @@ components:
         version:
           type: integer
           description: The working-copy version the action means to act on.
-    PublicationEvent:
-      type: string
-      description: One Publication event a destination may subscribe to.
-      enum:
-        - publication.post.published.v1
-        - publication.post.updated.v1
-        - publication.post.withdrawn.v1
     PublicationDestination:
       type: object
       description: >-

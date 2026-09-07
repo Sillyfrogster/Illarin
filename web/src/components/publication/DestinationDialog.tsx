@@ -12,8 +12,10 @@ import {
 import type {
   AddedPublicationDestination,
   PublicationDestination,
+  PublicationEvent,
 } from "@/lib/api/query";
 import styles from "./AppDialog.module.css";
+import { EventChoice } from "./EventChoice";
 
 export function DestinationDialog({
   existing,
@@ -30,6 +32,9 @@ export function DestinationDialog({
 }) {
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
+  const [events, setEvents] = useState<PublicationEvent[]>(
+    existing?.events ?? ["publication.post.published.v1"],
+  );
   const [made, setMade] = useState<AddedPublicationDestination | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -45,6 +50,7 @@ export function DestinationDialog({
       const written = await addDestination({
         name: name.trim(),
         address: address.trim(),
+        events,
       });
       setBusy(false);
       if (written.error || !written.value) {
@@ -58,6 +64,7 @@ export function DestinationDialog({
     const written = await updateDestination(existing.id, {
       name: name.trim(),
       address: address.trim() || undefined,
+      events,
     });
     setBusy(false);
     if (written.error || !written.value) {
@@ -162,6 +169,8 @@ export function DestinationDialog({
           onChange={(event) => setAddress(event.target.value)}
         />
       </Field>
+
+      <EventChoice chosen={events} onChosen={setEvents} />
 
       {confirming && existing ? (
         <p className={styles.warning} role="alert">

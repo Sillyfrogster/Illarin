@@ -31,7 +31,7 @@ type DestinationPolicy struct {
 func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       allowed.by_default
+		       destination.events, allowed.by_default
 		  from publication_app_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
 		 where allowed.app_id = $1
@@ -55,7 +55,7 @@ func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice
 	}
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
-		       allowed.by_default
+		       destination.events, allowed.by_default
 		  from publication_grant_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
 		 where allowed.grant_id = $1
@@ -71,7 +71,8 @@ func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice
 		return s.GrantChoices(ctx, *grantID)
 	}
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.kind, destination.state, false
+		select destination.id, destination.name, destination.kind, destination.state,
+		       destination.events, false
 		  from publication_destinations destination
 		 order by destination.name, destination.created_at
 	`)
@@ -312,7 +313,9 @@ func collectChoices(rows pgx.Rows) ([]Choice, error) {
 	found := make([]Choice, 0, 4)
 	for rows.Next() {
 		var one Choice
-		err := rows.Scan(&one.ID, &one.Name, &one.Kind, &one.State, &one.ByDefault)
+		err := rows.Scan(
+			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &one.ByDefault,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("read a destination a post may send to: %w", err)
 		}

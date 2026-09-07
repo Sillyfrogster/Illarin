@@ -1,12 +1,17 @@
 import type {
   AddedPublicationDestination,
   IssuedPublicationToken,
+  PostDelivery,
+  PostDeliveryAttempt,
+  PostDeliveryState,
   PublicationApp,
   PublicationCategory,
   PublicationDestination,
+  PublicationEvent,
   PublicationGrant,
   PublicationToken,
   PublicationWorkspace,
+  RotatedPublicationSecret,
 } from "@/lib/api/query";
 import { ask, json } from "./distinctions";
 
@@ -106,7 +111,11 @@ export function readDestinations() {
   );
 }
 
-export function addDestination(endpoint: { name: string; address: string }) {
+export function addDestination(endpoint: {
+  name: string;
+  address: string;
+  events: PublicationEvent[];
+}) {
   return json<AddedPublicationDestination>(
     "/publication/destinations",
     "POST",
@@ -116,7 +125,7 @@ export function addDestination(endpoint: { name: string; address: string }) {
 
 export function updateDestination(
   id: string,
-  change: { name?: string; address?: string },
+  change: { name?: string; address?: string; events?: PublicationEvent[] },
 ) {
   return json<PublicationDestination>(
     `/publication/destinations/${id}`,
@@ -137,6 +146,32 @@ export function disableDestination(id: string) {
     `/publication/destinations/${id}/verification`,
     "DELETE",
   );
+}
+
+export function rotateDestinationSecret(id: string) {
+  return json<RotatedPublicationSecret>(
+    `/publication/destinations/${id}/secret`,
+    "POST",
+  );
+}
+
+export function readDeliveries(state?: PostDeliveryState) {
+  const narrowed = state ? `?state=${state}` : "";
+  return json<{ deliveries: PostDelivery[] }>(
+    `/publication/deliveries${narrowed}`,
+    "GET",
+  );
+}
+
+export function readDeliveryAttempts(id: string) {
+  return json<{ attempts: PostDeliveryAttempt[] }>(
+    `/publication/deliveries/${id}/attempts`,
+    "GET",
+  );
+}
+
+export function replayDelivery(id: string) {
+  return json<PostDelivery>(`/publication/deliveries/${id}/replay`, "POST");
 }
 
 export function removeDestination(id: string) {

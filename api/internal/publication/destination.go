@@ -83,6 +83,7 @@ type Choice struct {
 	Name      string
 	Kind      string
 	State     string
+	Events    []string
 	ByDefault bool
 }
 

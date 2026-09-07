@@ -7,9 +7,11 @@ import { Section } from "@/components/console/Section";
 import { disableDestination, verifyDestination } from "@/lib/api/publication";
 import type { PublicationDestination } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
+import { EVENT_WORDS } from "@/lib/publication-delivery";
 import { DestinationDialog } from "./DestinationDialog";
 import styles from "./DestinationList.module.css";
 import hub from "./PublicationHub.module.css";
+import { RotateSecret } from "./RotateSecret";
 
 export function DestinationList({
   destinations,
@@ -21,6 +23,7 @@ export function DestinationList({
   onFailure: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<PublicationDestination | null>(null);
+  const [rotating, setRotating] = useState<PublicationDestination | null>(null);
   const [adding, setAdding] = useState(false);
   const [working, setWorking] = useState("");
 
@@ -87,7 +90,10 @@ export function DestinationList({
               <span className={rows.name}>
                 {one.name} <span className={rows.slug}>{one.host}</span>
               </span>
-              <span className={rows.detail}>{standing(one)}</span>
+              <span className={rows.detail}>
+                {standing(one)}
+                <span className={styles.takes}>{takes(one)}</span>
+              </span>
               <span className={rows.actions}>
                 {one.state === "active" ? (
                   <button
@@ -111,6 +117,13 @@ export function DestinationList({
                 <button
                   type="button"
                   className={rows.textButton}
+                  onClick={() => setRotating(one)}
+                >
+                  New secret
+                </button>
+                <button
+                  type="button"
+                  className={rows.textButton}
                   onClick={() => setEditing(one)}
                 >
                   Edit
@@ -121,6 +134,15 @@ export function DestinationList({
         </ul>
       )}
 
+      {rotating ? (
+        <RotateSecret
+          destination={rotating}
+          key={rotating.id}
+          onClose={() => setRotating(null)}
+          onFailure={onFailure}
+          onRotated={(saved) => replace(saved, false)}
+        />
+      ) : null}
       {adding ? (
         <DestinationDialog
           key="adding"
@@ -159,6 +181,12 @@ function StateMark({ state }: { state: PublicationDestination["state"] }) {
 
 // standing says in one line what this endpoint is doing and since when.
 function standing(one: PublicationDestination): string {
+  if (
+    one.previousSecretUntil &&
+    new Date(one.previousSecretUntil) > new Date()
+  ) {
+    return `Both signing secrets are accepted until ${readableDate(one.previousSecretUntil)}.`;
+  }
   if (one.state === "active" && one.verifiedAt) {
     return `Receiving. Proved it was listening on ${readableDate(one.verifiedAt)}.`;
   }
@@ -166,4 +194,10 @@ function standing(one: PublicationDestination): string {
     return "Switched off. Verify it again to start sending here.";
   }
   return "Waiting to prove it is listening. Nothing is sent until it does.";
+}
+
+// takes names the public transitions this endpoint asked for.
+function takes(one: PublicationDestination): string {
+  if (one.events.length === 0) return "Takes nothing.";
+  return one.events.map((event) => EVENT_WORDS[event].word).join(" · ");
 }

@@ -2,12 +2,14 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/google/uuid"
 )
 
 // eventNames reads the Publication events one post has on record, oldest first.
@@ -255,6 +257,37 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 	}
 	if sent := stack.sentTo(t, ready.ID, made.Destination.Name); len(sent) != 0 {
 		t.Errorf("editorial work queued %v, want nothing", sent)
+	}
+}
+
+func TestWhatArrivesIsWhatTheContractDocuments(t *testing.T) {
+	stack := newDestinationStack(t)
+	made := stack.active(t, "Release feed")
+	ready := stack.readyPost(t)
+	stack.publishedTo(t, ready, made.Destination.ID, "Read it in ten minutes.")
+	stack.sendQueued(t)
+
+	arrivals := stack.to.arrivals()
+	if len(arrivals) != 1 {
+		t.Fatalf("the receiver was sent %d requests, want 1", len(arrivals))
+	}
+	reader := json.NewDecoder(strings.NewReader(string(arrivals[0].Body)))
+	reader.DisallowUnknownFields()
+	var held PublicationPostEvent
+	if err := reader.Decode(&held); err != nil {
+		t.Fatalf("the event does not fit the documented contract: %v", err)
+	}
+	if held.Type != PublicationEvent(publication.EventPublished) {
+		t.Errorf("type = %q, want the published event", held.Type)
+	}
+	if held.Id == uuid.Nil || held.Post.Id == uuid.Nil || held.Post.RevisionId == uuid.Nil {
+		t.Error("the event does not carry the ids a receiver deduplicates on")
+	}
+	if held.OccurredAt.IsZero() {
+		t.Error("the event does not carry the time a receiver orders by")
+	}
+	if held.Note == nil || *held.Note != "Read it in ten minutes." {
+		t.Errorf("note = %v, want the one the transition captured", held.Note)
 	}
 }
 

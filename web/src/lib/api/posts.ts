@@ -164,18 +164,26 @@ export function withdrawPost(
   version: number,
   reason: string,
   explanation: string,
+  announcement: Announcement,
 ) {
   return json<Post>(`/publication/posts/${id}/withdraw`, "POST", {
     version,
     reason,
     explanation,
+    ...announcement,
   });
 }
 
-export function republishPost(id: string, version: number, revisionId: string) {
+export function republishPost(
+  id: string,
+  version: number,
+  revisionId: string,
+  announcement: Announcement,
+) {
   return json<Post>(`/publication/posts/${id}/republish`, "POST", {
     version,
     revisionId,
+    ...announcement,
   });
 }
 

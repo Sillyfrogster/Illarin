@@ -61,6 +61,11 @@ export type PublicationDestinationChoice =
 export type PublicationDestinationChoiceList =
   components["schemas"]["PublicationDestinationChoiceList"];
 export type PostDelivery = components["schemas"]["PostDelivery"];
+export type PostDeliveryAttempt = components["schemas"]["PostDeliveryAttempt"];
+export type PostDeliveryState = components["schemas"]["PostDeliveryState"];
+export type PublicationEvent = components["schemas"]["PublicationEvent"];
+export type RotatedPublicationSecret =
+  components["schemas"]["RotatedPublicationSecret"];
 export type Post = components["schemas"]["Post"];
 export type PublicPost = components["schemas"]["PublicPost"];
 export type PostMedia = components["schemas"]["PostMedia"];

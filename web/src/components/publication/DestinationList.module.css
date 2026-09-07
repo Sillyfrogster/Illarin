@@ -15,3 +15,11 @@
 .state[data-state="disabled"] {
   color: var(--color-critical-strong);
 }
+
+.takes {
+  display: block;
+  padding-top: 2px;
+  font-size: var(--type-label-size);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}

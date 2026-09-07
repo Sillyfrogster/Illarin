@@ -541,6 +541,7 @@ components:
         - name
         - kind
         - state
+        - events
         - byDefault
       properties:
         id:
@@ -554,6 +555,13 @@ components:
             - webhook
         state:
           $ref: '#/components/schemas/PublicationDestinationState'
+        events:
+          type: array
+          description: >-
+            Which public transitions this destination receives, so a publisher
+            is only offered the ones this transition would reach.
+          items:
+            $ref: '#/components/schemas/PublicationEvent'
         byDefault:
           type: boolean
           description: Whether a publication starts with this one selected.

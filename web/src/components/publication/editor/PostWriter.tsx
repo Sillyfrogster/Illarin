@@ -448,15 +448,14 @@ export function PostWriter({ id }: { id: string }) {
             parts={when}
           />
         ) : null}
-        {post.status === "published" ? null : (
-          <AnnouncementChoice
-            chosen={sending}
-            note={note}
-            onChosen={setSending}
-            onNote={setNote}
-            postId={post.id}
-          />
-        )}
+        <AnnouncementChoice
+          chosen={sending}
+          note={note}
+          onChosen={setSending}
+          onNote={setNote}
+          postId={post.id}
+          transition={post.status === "published" ? "changes" : "publish"}
+        />
       </FormDialog>
 
       {view === "preview" ? (

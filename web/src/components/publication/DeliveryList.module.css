@@ -1,0 +1,206 @@
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-bottom: 8px;
+  border: 0;
+}
+
+.views legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.view {
+  min-height: 34px;
+  padding-inline: 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  font-weight: 700;
+  transition:
+    background 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.view:hover {
+  background: var(--color-muted);
+  color: var(--color-text-primary);
+}
+
+.view[aria-pressed="true"] {
+  background: var(--color-emphasis);
+  color: var(--color-on-emphasis);
+}
+
+.row {
+  display: grid;
+  min-height: 56px;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  grid-template-areas:
+    "mark name detail actions"
+    ". history history history";
+  grid-template-columns: auto minmax(0, 24rem) minmax(0, 1fr) auto;
+}
+
+.going {
+  display: block;
+  padding-top: 2px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-size);
+  font-weight: 500;
+}
+
+.state {
+  display: flex;
+  width: 34px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  color: var(--color-text-secondary);
+  grid-area: mark;
+}
+
+.row[data-state="arrived"] .state {
+  color: var(--color-text-primary);
+}
+
+.row[data-state="gaveUp"] .state {
+  color: var(--color-critical-strong);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  grid-area: actions;
+  justify-self: end;
+}
+
+.history {
+  grid-area: history;
+}
+
+.history summary {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  list-style: none;
+}
+
+.history summary::-webkit-details-marker {
+  display: none;
+}
+
+.history summary::before {
+  margin-right: 7px;
+  content: "▸";
+  font-size: 10px;
+  transition: transform 160ms var(--ease);
+}
+
+.history[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.history summary:hover {
+  color: var(--color-text-primary);
+}
+
+.attempts {
+  display: flex;
+  max-width: 44rem;
+  flex-direction: column;
+  padding: 2px 0 8px;
+  list-style: none;
+}
+
+.attempts li {
+  display: grid;
+  min-height: 30px;
+  align-items: baseline;
+  gap: 4px 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+}
+
+.number {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-size);
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+
+.outcome[data-outcome="delivered"] {
+  color: var(--color-text-primary);
+}
+
+.outcome[data-outcome="unreachable"],
+.outcome[data-outcome="refused"] {
+  color: var(--color-text-secondary);
+}
+
+.when {
+  font-size: var(--type-label-size);
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+
+.reading {
+  padding: 6px 0 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+}
+
+@media (max-width: 720px) {
+  .row {
+    gap: 2px 12px;
+    grid-template-areas:
+      "mark name"
+      "mark detail"
+      "actions actions"
+      "history history";
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .actions {
+    margin-top: 4px;
+    justify-self: start;
+  }
+
+  .attempts li {
+    gap: 2px 10px;
+    grid-template-areas:
+      "number outcome"
+      "number when";
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+  }
+
+  .number {
+    grid-area: number;
+    justify-self: end;
+  }
+
+  .outcome {
+    grid-area: outcome;
+  }
+
+  .when {
+    grid-area: when;
+    justify-self: start;
+  }
+}

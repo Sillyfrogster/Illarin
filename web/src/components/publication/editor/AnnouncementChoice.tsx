@@ -3,17 +3,37 @@
 import { useEffect, useState } from "react";
 import { readPostDestinations } from "@/lib/api/posts";
 import type { PublicationDestinationChoice } from "@/lib/api/query";
+import { type Transition, transitionEvent } from "@/lib/publication-delivery";
 import styles from "./AnnouncementChoice.module.css";
 
-/** Where a publication announces, and the one line it may say alongside it. */
+const QUIET: Record<Transition, string> = {
+  publish:
+    "Nothing is sent. The post still appears on the blog and in the feeds.",
+  changes: "Nothing is sent. The changes still go live.",
+  withdraw: "Nothing is sent. The post still comes down.",
+  republish: "Nothing is sent. The post still goes back up.",
+};
+
+const SENT: Record<Transition, string> = {
+  publish: "Each one receives a summary and a link, never the article itself.",
+  changes:
+    "Each one receives the same summary again, with the new edition's id.",
+  withdraw: "Each one is told the post came down, and nothing about why.",
+  republish:
+    "Each one receives the summary again for the edition going back up.",
+};
+
+/** Where one public transition announces, and the line it may say alongside. */
 export function AnnouncementChoice({
   postId,
+  transition,
   chosen,
   note,
   onChosen,
   onNote,
 }: {
   postId: string;
+  transition: Transition;
   chosen: string[] | null;
   note: string;
   onChosen: (chosen: string[]) => void;
@@ -31,10 +51,13 @@ export function AnnouncementChoice({
     };
   }, [postId]);
 
-  if (offered.length === 0) return null;
+  const event = transitionEvent(transition);
+  const takers = offered.filter((one) => one.events.includes(event));
+
+  if (takers.length === 0) return null;
 
   const picked =
-    chosen ?? offered.filter((one) => one.byDefault).map((one) => one.id);
+    chosen ?? takers.filter((one) => one.byDefault).map((one) => one.id);
 
   function toggle(id: string, on: boolean) {
     onChosen(on ? [...picked, id] : picked.filter((held) => held !== id));
@@ -45,7 +68,7 @@ export function AnnouncementChoice({
       <fieldset className={styles.choice}>
         <legend>Where</legend>
         <ul>
-          {offered.map((one) => (
+          {takers.map((one) => (
             <li key={one.id}>
               <label className={styles.line}>
                 <input
@@ -59,9 +82,7 @@ export function AnnouncementChoice({
           ))}
         </ul>
         <p className={styles.quiet}>
-          {picked.length === 0
-            ? "Nothing is sent. The post still appears on the blog and in the feeds."
-            : "Each one receives a summary and a link, never the article itself."}
+          {picked.length === 0 ? QUIET[transition] : SENT[transition]}
         </p>
       </fieldset>
 

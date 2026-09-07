@@ -3395,6 +3395,14 @@ export interface components {
      * @enum {string}
      */
     PublicationDestinationState: "unverified" | "active" | "disabled";
+    /**
+     * @description One Publication event a destination may subscribe to.
+     * @enum {string}
+     */
+    PublicationEvent:
+      | "publication.post.published.v1"
+      | "publication.post.updated.v1"
+      | "publication.post.withdrawn.v1";
     /** @description One destination a post may send to. It carries no address and no secret, which is the whole point of it. */
     PublicationDestinationChoice: {
       /** Format: uuid */
@@ -3403,6 +3411,8 @@ export interface components {
       /** @enum {string} */
       kind: "webhook";
       state: components["schemas"]["PublicationDestinationState"];
+      /** @description Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach. */
+      events: components["schemas"]["PublicationEvent"][];
       /** @description Whether a publication starts with this one selected. */
       byDefault: boolean;
     };
@@ -3471,14 +3481,6 @@ export interface components {
       /** @description The working-copy version the action means to act on. */
       version: number;
     };
-    /**
-     * @description One Publication event a destination may subscribe to.
-     * @enum {string}
-     */
-    PublicationEvent:
-      | "publication.post.published.v1"
-      | "publication.post.updated.v1"
-      | "publication.post.withdrawn.v1";
     /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
     PublicationDestination: {
       /** Format: uuid */

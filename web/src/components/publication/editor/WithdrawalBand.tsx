@@ -7,6 +7,7 @@ import { readPostRevisions, republishPost } from "@/lib/api/posts";
 import type { Post, PostRevision } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 import { revisionWords } from "@/lib/post-history";
+import { AnnouncementChoice } from "./AnnouncementChoice";
 import styles from "./WithdrawalBand.module.css";
 
 export function WithdrawalBand({
@@ -23,11 +24,15 @@ export function WithdrawalBand({
   const [putting, setPutting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [chosen, setChosen] = useState("");
+  const [sending, setSending] = useState<string[] | null>(null);
+  const [note, setNote] = useState("");
 
   if (post.status !== "withdrawn" || !withdrawal) return null;
 
   async function open() {
     setChosen(post.publicRevisionId ?? "");
+    setSending(null);
+    setNote("");
     setPutting(true);
     if (kept) return;
     const answer = await readPostRevisions(post.id);
@@ -37,7 +42,10 @@ export function WithdrawalBand({
   async function putBack() {
     if (!chosen) return;
     setBusy(true);
-    const answer = await republishPost(post.id, post.version, chosen);
+    const answer = await republishPost(post.id, post.version, chosen, {
+      destinationIds: sending,
+      note,
+    });
     setBusy(false);
     setPutting(false);
     if (answer.error || !answer.value) {
@@ -110,6 +118,14 @@ export function WithdrawalBand({
             </label>
           ))}
         </fieldset>
+        <AnnouncementChoice
+          chosen={sending}
+          note={note}
+          onChosen={setSending}
+          onNote={setNote}
+          postId={post.id}
+          transition="republish"
+        />
       </FormDialog>
     </section>
   );

@@ -50,7 +50,7 @@
   overflow-wrap: anywhere;
 }
 
-.row[data-state="failed"] .standing {
+.row[data-state="gaveUp"] .standing {
   color: var(--color-critical-strong);
 }
 

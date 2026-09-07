@@ -6,6 +6,7 @@ import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
 import { withdrawPost } from "@/lib/api/posts";
 import type { Post } from "@/lib/api/query";
+import { AnnouncementChoice } from "./AnnouncementChoice";
 import styles from "./TakeDown.module.css";
 
 const SAID_LIMIT = 500;
@@ -21,11 +22,15 @@ export function TakeDown({
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
   const [explanation, setExplanation] = useState("");
+  const [sending, setSending] = useState<string[] | null>(null);
+  const [note, setNote] = useState("");
   const [refusal, setRefusal] = useState("");
 
   function open() {
     setReason("");
     setExplanation("");
+    setSending(null);
+    setNote("");
     setRefusal("");
     setAsking(true);
   }
@@ -37,6 +42,7 @@ export function TakeDown({
       post.version,
       reason.trim(),
       explanation.trim(),
+      { destinationIds: sending, note },
     );
     setBusy(false);
     if (answer.error || !answer.value) {
@@ -94,6 +100,14 @@ export function TakeDown({
             value={explanation}
           />
         </Field>
+        <AnnouncementChoice
+          chosen={sending}
+          note={note}
+          onChosen={setSending}
+          onNote={setNote}
+          postId={post.id}
+          transition="withdraw"
+        />
         {refusal ? (
           <p className={styles.refusal} role="alert">
             {refusal}
