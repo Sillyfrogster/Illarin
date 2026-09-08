@@ -7,8 +7,8 @@ import { titleBand } from "./post-title";
 
 const TITLE = {
   short: "max-w-[18ch] text-hero",
-  medium: "max-w-[22ch] text-[clamp(2.1rem,4.3vw,3.4rem)]",
-  long: "max-w-[28ch] text-[clamp(1.9rem,3.2vw,2.6rem)]",
+  medium: "max-w-[22ch] text-[clamp(2.1rem,4.3vw,3.4rem)]/[1.08]",
+  long: "max-w-[28ch] text-[clamp(1.9rem,3.2vw,2.6rem)]/[1.14]",
 } as const;
 
 /** Everything a post is, said once, above the writing itself. */
