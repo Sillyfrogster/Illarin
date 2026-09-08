@@ -5,12 +5,7 @@ import {
   type Notes,
 } from "./data";
 
-export type Focus =
-  | { type: "details" }
-  | { type: "element"; blockId: string; elementId: string; itemId?: string }
-  | null;
-
-export type Pane = "arrange" | "update" | "replacement" | "access" | "actions";
+export type Pane = "update" | "replacement" | "access";
 
 export type Session = {
   draft: Asset;
@@ -25,9 +20,8 @@ export type Session = {
   newer?: Asset;
   conflict: boolean;
   editing: boolean;
-  focus: Focus;
+  cursor: string | null;
   pane?: Pane;
-  arrangeBlock: string;
   reviewed?: { asset: Asset; notes: Notes; revision: number };
   replacement?: { asset: Asset; revision: number };
   listed: boolean;
@@ -45,8 +39,7 @@ export function newSession(asset: Asset): Session {
     baseRevision: 1,
     serverRevision: 1,
     editing: false,
-    focus: null,
-    arrangeBlock: asset.blocks[0].id,
+    cursor: null,
     listed: true,
     conflict: false,
   };

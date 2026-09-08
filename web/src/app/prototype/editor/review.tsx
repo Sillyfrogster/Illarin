@@ -47,10 +47,10 @@ export function ChangeList({ changes }: { changes: Change[] }) {
                     {verb(change)}
                   </span>
                 </summary>
-                <div className="ws:grid ws:gap-3 ws:pb-4 ws:md:grid-cols-2">
+                <div className="ws:grid ws:gap-3 ws:pb-4">
                   <div className="ws:min-w-0 ws:rounded-xl ws:bg-ink/5 ws:p-4 ws:shadow-[inset_2px_0_0_var(--w-line)]">
                     <Eyebrow>Published now</Eyebrow>
-                    <p className="ws:mt-2 ws:max-h-72 ws:overflow-auto ws:text-sm ws:leading-7 ws:whitespace-pre-wrap ws:wrap-anywhere ws:text-mute">
+                    <p className="ws:mt-2 ws:max-h-56 ws:overflow-auto ws:text-sm ws:leading-7 ws:whitespace-pre-wrap ws:wrap-anywhere ws:text-mute">
                       {change.before || "Not present"}
                     </p>
                   </div>
@@ -62,7 +62,7 @@ export function ChangeList({ changes }: { changes: Change[] }) {
                     }}
                   >
                     <Eyebrow>After this update</Eyebrow>
-                    <p className="ws:mt-2 ws:max-h-72 ws:overflow-auto ws:text-sm ws:leading-7 ws:whitespace-pre-wrap ws:wrap-anywhere">
+                    <p className="ws:mt-2 ws:max-h-56 ws:overflow-auto ws:text-sm ws:leading-7 ws:whitespace-pre-wrap ws:wrap-anywhere">
                       {change.after || "Removed"}
                     </p>
                   </div>
@@ -168,7 +168,7 @@ export function UpdateReview({
         </div>
       )}
 
-      <div className="ws:grid ws:gap-10 ws:lg:grid-cols-2">
+      <div className="ws:space-y-8">
         <fieldset
           disabled={readOnly || reviewed}
           className="ws:min-w-0 ws:space-y-6"

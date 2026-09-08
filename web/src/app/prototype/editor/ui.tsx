@@ -1,13 +1,13 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { type ClassValue, clsx } from "clsx";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import {
   type ComponentProps,
+  type CSSProperties,
   createContext,
   type ReactNode,
   useContext,
@@ -199,81 +199,57 @@ export function Notice({
   );
 }
 
-/** A pane that rises over the page and leaves it in view behind */
-export function Sheet({
-  open,
-  onOpenChange,
+/** Work that needs its own space sits beside the page, so the page stays visible and writable */
+export function Rail({
+  tone = "neutral",
   title,
   description,
+  onClose,
   children,
-  wide = false,
 }: {
-  open: boolean;
-  onOpenChange: (next: boolean) => void;
+  tone?: "neutral" | "amber" | "critical";
   title: string;
   description?: string;
+  onClose?: () => void;
   children: ReactNode;
-  wide?: boolean;
 }) {
   const reduced = useReducedMotion();
-  const container = usePortalTarget();
+  const accent =
+    tone === "critical"
+      ? "var(--w-critical)"
+      : tone === "amber"
+        ? "var(--w-amber)"
+        : "var(--w-spectrum)";
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount container={container}>
-            <Dialog.Overlay asChild forceMount>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: reduced ? 0 : 0.24 }}
-                className="ws:fixed ws:inset-0 ws:z-60 ws:bg-black/35 ws:backdrop-blur-[3px]"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild forceMount>
-              <motion.div
-                initial={{ y: reduced ? 0 : 40, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: reduced ? 0 : 24, opacity: 0 }}
-                transition={{
-                  duration: reduced ? 0 : 0.34,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className={cn(
-                  "ws:fixed ws:inset-x-0 ws:bottom-0 ws:z-70 ws:mx-auto ws:flex ws:max-h-[92dvh] ws:w-full ws:flex-col ws:overflow-hidden ws:rounded-t-[28px] ws:bg-paper ws:text-ink ws:shadow-[var(--w-lift)]",
-                  wide ? "ws:max-w-6xl" : "ws:max-w-3xl",
-                )}
-              >
-                <div
-                  aria-hidden="true"
-                  className="w-spectral-rule ws:shrink-0"
-                />
-                <div className="ws:flex ws:shrink-0 ws:items-start ws:justify-between ws:gap-6 ws:px-6 ws:pt-6 ws:pb-4 ws:md:px-10 ws:md:pt-8">
-                  <div className="ws:min-w-0">
-                    <Dialog.Title className="ws:font-display ws:text-3xl ws:leading-tight ws:font-medium ws:wrap-anywhere ws:md:text-4xl">
-                      {title}
-                    </Dialog.Title>
-                    {description && (
-                      <Dialog.Description className="ws:mt-2 ws:max-w-2xl ws:text-sm ws:leading-6 ws:text-mute">
-                        {description}
-                      </Dialog.Description>
-                    )}
-                  </div>
-                  <Dialog.Close asChild>
-                    <Button size="icon" aria-label={`Close ${title}`}>
-                      <X />
-                    </Button>
-                  </Dialog.Close>
-                </div>
-                <div className="ws:min-h-0 ws:flex-1 ws:overflow-y-auto ws:overscroll-contain ws:px-6 ws:pb-10 ws:md:px-10">
-                  {children}
-                </div>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
+    <motion.aside
+      aria-label={title}
+      initial={reduced ? { opacity: 0 } : { x: "100%" }}
+      animate={reduced ? { opacity: 1 } : { x: 0 }}
+      exit={reduced ? { opacity: 0 } : { x: "100%" }}
+      transition={{ duration: reduced ? 0 : 0.44, ease: [0.22, 1, 0.36, 1] }}
+      style={{ "--w-rail-accent": accent } as CSSProperties}
+      className="w-rail ws:inset-x-0 ws:bottom-0 ws:z-40 ws:flex ws:max-h-[76dvh] ws:flex-col ws:rounded-t-[26px] ws:lg:inset-y-0 ws:lg:right-0 ws:lg:left-auto ws:lg:max-h-none ws:lg:w-[28rem] ws:lg:rounded-none"
+    >
+      <div className="ws:flex ws:items-start ws:justify-between ws:gap-4 ws:px-6 ws:pt-7 ws:pb-4 ws:md:px-8">
+        <div className="ws:min-w-0">
+          <h2 className="ws:font-display ws:text-[1.75rem] ws:leading-tight ws:font-medium ws:wrap-anywhere">
+            {title}
+          </h2>
+          {description && (
+            <p className="ws:mt-2 ws:text-[0.8125rem] ws:leading-6 ws:text-mute">
+              {description}
+            </p>
+          )}
+        </div>
+        {onClose && (
+          <Button size="icon" onClick={onClose} aria-label={`Close ${title}`}>
+            <X />
+          </Button>
         )}
-      </AnimatePresence>
-    </Dialog.Root>
+      </div>
+      <div className="ws:min-h-0 ws:flex-1 ws:overflow-y-auto ws:overscroll-contain ws:px-6 ws:pt-2 ws:pb-8 ws:md:px-8 ws:lg:pb-32">
+        {children}
+      </div>
+    </motion.aside>
   );
 }

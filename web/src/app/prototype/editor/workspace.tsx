@@ -9,17 +9,15 @@ import {
 import {
   BookOpen,
   Command,
+  FileUp,
   FlaskConical,
-  LayoutGrid,
   LockKeyhole,
   Moon,
-  MoreHorizontal,
   Pencil,
   Sun,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Arrangement } from "./arrangement";
-import { AssetPage } from "./asset-page";
+import { AssetPage, itemKey, proseKey } from "./asset-page";
 import {
   type Asset,
   changedElementIds,
@@ -30,7 +28,6 @@ import { Dock, type SaveState } from "./dock";
 import { destinationsFor, JumpPalette } from "./jump";
 import { ChangeList, ReplacementReview, UpdateReview } from "./review";
 import {
-  type Focus,
   initialSessions,
   type Pane,
   type Session,
@@ -41,11 +38,10 @@ import {
   Field,
   Notice,
   PortalTargetProvider,
+  Rail,
   Select,
-  Sheet,
   SpectralButton,
 } from "./ui";
-import { WritingLayer } from "./writing";
 
 const STATES: [string, string][] = [
   ["conflict", "Stale working copy"],
@@ -70,12 +66,13 @@ export function WorkspacePrototype() {
   const [jumpOpen, setJumpOpen] = useState(false);
   const [sweep, setSweep] = useState(0);
   const [blading, setBlading] = useState(false);
-  const editTrigger = useRef<HTMLButtonElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
+  const editTrigger = useRef<HTMLButtonElement>(null);
   const stateMenu = useRef<HTMLDetailsElement>(null);
+  const actionMenu = useRef<HTMLDetailsElement>(null);
 
   const session = sessions[kind];
-  const { draft, notes, focus, editing, pane } = session;
+  const { draft, notes, cursor, editing, pane } = session;
   const changes = changesBetween(session.published, draft);
   const changed = changedElementIds(session.published, draft);
   const dirty =
@@ -97,6 +94,11 @@ export function WorkspacePrototype() {
     setIssues([]);
   }
 
+  const setCursor = useCallback(
+    (key: string | null) => patch({ cursor: key }),
+    [patch],
+  );
+
   function startEditing() {
     patch({ editing: true });
     if (!reduced) {
@@ -105,21 +107,14 @@ export function WorkspacePrototype() {
     }
   }
   function stopEditing() {
-    patch({ editing: false, focus: null, pane: undefined });
+    patch({ editing: false, cursor: null, pane: undefined });
     requestAnimationFrame(() =>
       editTrigger.current?.focus({ preventScroll: true }),
     );
   }
-
-  const setFocus = useCallback(
-    (next: Focus) => {
-      patch({ focus: next });
-      setMessage("");
-    },
-    [patch],
-  );
   function openPane(next: Pane) {
-    patch({ pane: next, focus: null });
+    if (actionMenu.current) actionMenu.current.open = false;
+    patch({ pane: next, cursor: null });
     setMessage("");
   }
   function closePane() {
@@ -128,12 +123,7 @@ export function WorkspacePrototype() {
 
   function checkConflict(revision = session.baseRevision) {
     if (revision === session.serverRevision) return false;
-    patch({
-      conflict: true,
-      reviewed: undefined,
-      pane: undefined,
-      focus: null,
-    });
+    patch({ conflict: true, reviewed: undefined, cursor: null });
     return true;
   }
 
@@ -235,7 +225,7 @@ export function WorkspacePrototype() {
       setMessage("Media processing finished. Check the update again.");
     } else if (state === "permission") {
       setReadOnly((current) => !current);
-      patch({ reviewed: undefined });
+      patch({ reviewed: undefined, cursor: null });
       setMessage("");
     } else if (state === "wrong-kind") {
       setMessage(
@@ -253,9 +243,10 @@ export function WorkspacePrototype() {
         revision: session.baseRevision,
       },
       pane: "replacement",
-      focus: null,
+      cursor: null,
       reviewed: undefined,
     });
+    if (actionMenu.current) actionMenu.current.open = false;
     setMessage("");
   }
 
@@ -327,11 +318,22 @@ export function WorkspacePrototype() {
     ? `${changes.length} ${changes.length === 1 ? "change" : "changes"} since update ${session.number}`
     : `Update ${session.number} is live`;
 
+  const railKey = session.conflict
+    ? "conflict"
+    : pane === "replacement" && replacement
+      ? "replacement"
+      : (pane ?? null);
+  const shift = railKey
+    ? "ws:lg:pr-[28rem] ws:transition-[padding] ws:duration-500 ws:ease-[cubic-bezier(0.22,1,0.36,1)] ws:motion-reduce:transition-none"
+    : "ws:transition-[padding] ws:duration-500 ws:ease-[cubic-bezier(0.22,1,0.36,1)] ws:motion-reduce:transition-none";
+
   const destinations = destinationsFor(
     draft,
-    (blockId, elementId, itemId) =>
-      setFocus({ type: "element", blockId, elementId, itemId }),
-    () => setFocus({ type: "details" }),
+    (_blockId, elementId, itemId) =>
+      setCursor(
+        itemId ? itemKey(elementId, itemId, "text") : proseKey(elementId),
+      ),
+    () => setCursor("name"),
   );
 
   return (
@@ -344,125 +346,297 @@ export function WorkspacePrototype() {
         className="ws:min-h-dvh ws:bg-paper ws:text-ink ws:transition-colors ws:duration-700 ws:motion-reduce:transition-none"
       >
         <PortalTargetProvider value={root}>
-          <header className="ws:relative ws:z-30 ws:mx-auto ws:flex ws:max-w-[86rem] ws:items-center ws:justify-between ws:gap-4 ws:px-5 ws:pt-6 ws:md:px-10">
-            <div className="ws:flex ws:min-w-0 ws:items-baseline ws:gap-7">
-              <span className="ws:font-display ws:text-3xl ws:leading-none">
-                Illarin.
-              </span>
-              <nav className="ws:hidden ws:gap-6 ws:text-sm ws:text-mute ws:sm:flex">
-                <span>Browse</span>
-                <span>Publish</span>
-              </nav>
-            </div>
-            <div className="w-glass ws:flex ws:items-center ws:gap-1 ws:rounded-full ws:p-1 ws:pl-3.5">
-              <span className="ws:hidden ws:text-[0.6875rem] ws:font-bold ws:tracking-[0.16em] ws:text-mute ws:uppercase ws:md:inline">
-                Prototype
-              </span>
-              <Select
-                aria-label="Synthetic asset"
-                value={kind}
-                disabled={busy}
-                onChange={(event) => {
-                  setKind(event.target.value as Asset["kind"]);
-                  setMessage("");
-                  setIssues([]);
-                  setReplacementChoice("");
-                }}
-                className="ws:min-h-9 ws:w-auto ws:bg-transparent ws:py-0 ws:text-xs ws:shadow-none"
-              >
-                <option value="character">Character</option>
-                <option value="lorebook">Lorebook</option>
-              </Select>
-              <details ref={stateMenu} className="ws:relative">
-                <summary className="ws:flex ws:min-h-9 ws:cursor-pointer ws:list-none ws:items-center ws:gap-1.5 ws:rounded-full ws:px-3 ws:text-xs ws:font-semibold">
-                  <FlaskConical className="ws:size-3.5" />
-                  <span className="ws:hidden ws:sm:inline">Try a state</span>
-                </summary>
-                <div className="w-glass ws:absolute ws:top-full ws:right-0 ws:z-50 ws:mt-2 ws:w-64 ws:rounded-2xl ws:p-1.5">
-                  {[
-                    ...STATES,
-                    [
-                      "permission",
-                      readOnly
-                        ? "Restore owner access"
-                        : "Read-only permission",
-                    ] as [string, string],
-                  ].map(([value, label]) => (
-                    <Button
-                      key={value}
-                      size="small"
-                      disabled={busy}
-                      className="ws:w-full ws:justify-start ws:rounded-xl"
-                      onClick={() => tryState(value)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-              </details>
-              <Button
-                size="icon"
-                className="ws:size-9"
-                aria-label={`Use the ${theme === "light" ? "dark" : "light"} theme`}
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              >
-                {theme === "light" ? <Moon /> : <Sun />}
-              </Button>
-            </div>
-          </header>
+          <div className={shift}>
+            <header className="ws:relative ws:z-30 ws:mx-auto ws:flex ws:max-w-[86rem] ws:items-center ws:justify-between ws:gap-4 ws:px-5 ws:pt-6 ws:md:px-10">
+              <div className="ws:flex ws:min-w-0 ws:items-baseline ws:gap-7">
+                <span className="ws:font-display ws:text-3xl ws:leading-none">
+                  Illarin.
+                </span>
+                <nav className="ws:hidden ws:gap-6 ws:text-sm ws:text-mute ws:sm:flex">
+                  <span>Browse</span>
+                  <span>Publish</span>
+                </nav>
+              </div>
+              <div className="w-glass ws:flex ws:items-center ws:gap-1 ws:rounded-full ws:p-1 ws:pl-3.5">
+                <span className="ws:hidden ws:text-[0.6875rem] ws:font-bold ws:tracking-[0.16em] ws:text-mute ws:uppercase ws:md:inline">
+                  Prototype
+                </span>
+                <Select
+                  aria-label="Synthetic asset"
+                  value={kind}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setKind(event.target.value as Asset["kind"]);
+                    setMessage("");
+                    setIssues([]);
+                    setReplacementChoice("");
+                  }}
+                  className="ws:min-h-9 ws:w-auto ws:bg-transparent ws:py-0 ws:text-xs ws:shadow-none"
+                >
+                  <option value="character">Character</option>
+                  <option value="lorebook">Lorebook</option>
+                </Select>
+                <details ref={stateMenu} className="ws:relative">
+                  <summary className="ws:flex ws:min-h-9 ws:cursor-pointer ws:list-none ws:items-center ws:gap-1.5 ws:rounded-full ws:px-3 ws:text-xs ws:font-semibold">
+                    <FlaskConical className="ws:size-3.5" />
+                    <span className="ws:hidden ws:sm:inline">Try a state</span>
+                  </summary>
+                  <div className="w-glass ws:absolute ws:top-full ws:right-0 ws:z-50 ws:mt-2 ws:w-64 ws:rounded-2xl ws:p-1.5">
+                    {[
+                      ...STATES,
+                      [
+                        "permission",
+                        readOnly
+                          ? "Restore owner access"
+                          : "Read-only permission",
+                      ] as [string, string],
+                    ].map(([value, label]) => (
+                      <Button
+                        key={value}
+                        size="small"
+                        disabled={busy}
+                        className="ws:w-full ws:justify-start ws:rounded-xl"
+                        onClick={() => tryState(value)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </details>
+                <Button
+                  size="icon"
+                  className="ws:size-9"
+                  aria-label={`Use the ${theme === "light" ? "dark" : "light"} theme`}
+                  onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                >
+                  {theme === "light" ? <Moon /> : <Sun />}
+                </Button>
+              </div>
+            </header>
 
-          <AssetPage
-            asset={draft}
-            live={editing && !readOnly}
-            focus={focus}
-            theme={theme}
-            changed={changed}
-            open={(elementId, itemId) => {
-              const block = draft.blocks.find((b) =>
-                b.elements.some((e) => e.id === elementId),
-              );
-              if (block)
-                setFocus({
-                  type: "element",
-                  blockId: block.id,
-                  elementId,
-                  itemId,
-                });
-            }}
-            openDetails={() => setFocus({ type: "details" })}
-            arrange={() => openPane("arrange")}
-            action={
-              editing ? (
-                <p className="ws:text-sm ws:text-mute">
-                  {readOnly
-                    ? "Read-only. Restore owner access in Try a state to write."
-                    : "Click anything on the page to write it."}
-                </p>
-              ) : (
-                <>
-                  <Button
-                    ref={editTrigger}
-                    variant="primary"
-                    className="ws:min-h-12 ws:px-6"
-                    onClick={startEditing}
-                  >
-                    <Pencil />
-                    Edit this page
-                  </Button>
-                  <Button variant="outline" className="ws:min-h-12">
-                    Download
-                  </Button>
-                  {changes.length > 0 && (
-                    <span className="ws:inline-flex ws:items-center ws:gap-2.5 ws:rounded-full ws:bg-amber-field ws:px-4 ws:py-2.5 ws:text-sm">
-                      <span className="ws:size-2 ws:shrink-0 ws:rounded-full ws:bg-amber" />
-                      Your private working copy. Readers still have update{" "}
-                      {session.number}.
-                    </span>
+            <AssetPage
+              asset={draft}
+              live={editing && !readOnly}
+              cursor={cursor}
+              setCursor={setCursor}
+              theme={theme}
+              changed={changed}
+              update={updateDraft}
+              note={setMessage}
+              action={
+                editing ? (
+                  <p className="ws:text-sm ws:text-mute">
+                    {readOnly
+                      ? "Read-only. Restore owner access in Try a state to write."
+                      : "Click any writing on the page to edit it where it sits."}
+                  </p>
+                ) : (
+                  <>
+                    <Button
+                      ref={editTrigger}
+                      variant="primary"
+                      className="ws:min-h-12 ws:px-6"
+                      onClick={startEditing}
+                    >
+                      <Pencil />
+                      Edit this page
+                    </Button>
+                    <Button variant="outline" className="ws:min-h-12">
+                      Download
+                    </Button>
+                    {changes.length > 0 && (
+                      <span className="ws:inline-flex ws:items-center ws:gap-2.5 ws:rounded-full ws:bg-amber-field ws:px-4 ws:py-2.5 ws:text-sm">
+                        <span className="ws:size-2 ws:shrink-0 ws:rounded-full ws:bg-amber" />
+                        Your private working copy. Readers still have update{" "}
+                        {session.number}.
+                      </span>
+                    )}
+                  </>
+                )
+              }
+            />
+          </div>
+
+          <AnimatePresence>
+            {railKey === "conflict" && (
+              <Rail
+                key="conflict"
+                tone="critical"
+                title="A newer working copy is available"
+                description="Your writing is kept. Compare the newer private copy with your work, then choose which one continues."
+              >
+                <div className="ws:space-y-7">
+                  {session.newer && (
+                    <ChangeList
+                      changes={changesBetween(session.newer, draft)}
+                    />
                   )}
-                </>
-              )
-            }
-          />
+                  <div className="ws:flex ws:flex-wrap ws:gap-3">
+                    <SpectralButton
+                      disabled={readOnly || busy}
+                      onClick={() => {
+                        patch({
+                          baseRevision: session.serverRevision,
+                          conflict: false,
+                          newer: undefined,
+                          replacement: undefined,
+                          reviewed: undefined,
+                        });
+                        setMessage(
+                          "Your version is kept. Save it privately when you are ready.",
+                        );
+                      }}
+                    >
+                      Continue with my version
+                    </SpectralButton>
+                    <Button
+                      variant="outline"
+                      disabled={readOnly || busy}
+                      onClick={() => {
+                        if (session.newer)
+                          patch({
+                            draft: session.newer,
+                            saved: session.newer,
+                            baseRevision: session.serverRevision,
+                            conflict: false,
+                            newer: undefined,
+                            reviewed: undefined,
+                            replacement: undefined,
+                          });
+                        setMessage(
+                          "The newer copy is loaded. Your notes are kept.",
+                        );
+                      }}
+                    >
+                      Use the newer copy
+                    </Button>
+                  </div>
+                </div>
+              </Rail>
+            )}
+
+            {railKey === "replacement" && replacement && (
+              <Rail
+                key="replacement"
+                tone="amber"
+                title="Review the replacement file"
+                description="A replacement rewrites the matching content in your private working copy. Nothing reaches readers until you publish."
+                onClose={() =>
+                  patch({ pane: undefined, replacement: undefined })
+                }
+              >
+                <ReplacementReview
+                  changes={changesBetween(draft, replacement)}
+                  choice={replacementChoice}
+                  setChoice={setReplacementChoice}
+                  accept={acceptReplacement}
+                  cancel={() =>
+                    patch({ replacement: undefined, pane: undefined })
+                  }
+                  busy={busy || readOnly}
+                  kind={kind}
+                />
+              </Rail>
+            )}
+
+            {railKey === "update" && (
+              <Rail
+                key="update"
+                title="Review your update"
+                description="Tell readers what changed. Your page stays open and editable, with every change marked on it."
+                onClose={closePane}
+              >
+                <UpdateReview
+                  asset={draft}
+                  notes={notes}
+                  setNotes={(next) => {
+                    patch({ notes: next, reviewed: undefined });
+                    setIssues([]);
+                  }}
+                  setVersion={(version) => updateDraft({ ...draft, version })}
+                  changes={changes}
+                  reviewed={Boolean(session.reviewed)}
+                  issues={issues}
+                  readOnly={readOnly}
+                  busy={busy}
+                  listed={session.listed}
+                  check={checkUpdate}
+                  publish={publish}
+                  keepEditing={() => {
+                    patch({ reviewed: undefined, pane: undefined });
+                    setIssues([]);
+                  }}
+                />
+              </Rail>
+            )}
+
+            {railKey === "access" && (
+              <Rail
+                key="access"
+                title="Access and published state"
+                description="Access changes apply immediately to the asset and its history. They do not wait for a private save or a publication."
+                onClose={closePane}
+              >
+                <div className="ws:space-y-9">
+                  <Field label="Discovery">
+                    <Select
+                      disabled={readOnly || busy}
+                      className="ws:max-w-md"
+                      value={session.listed ? "listed" : "unlisted"}
+                      onChange={(event) => {
+                        patch({
+                          listed: event.target.value === "listed",
+                          reviewed: undefined,
+                        });
+                        setMessage(
+                          "Discovery changed immediately. Content and notes stay private.",
+                        );
+                      }}
+                    >
+                      <option value="listed">Listed in Browse</option>
+                      <option value="unlisted">
+                        Unlisted · direct links work
+                      </option>
+                    </Select>
+                  </Field>
+                  <section className="ws:min-w-0 ws:space-y-3">
+                    <p className="ws:text-sm ws:text-mute">
+                      Published update {session.number}
+                    </p>
+                    <h3 className="ws:font-display ws:text-3xl ws:font-medium ws:wrap-anywhere">
+                      {session.published.name}
+                    </h3>
+                    <p className="ws:wrap-anywhere">
+                      {session.published.blurb}
+                    </p>
+                    <p className="ws:text-sm ws:text-mute">
+                      {session.publishedSummary}
+                    </p>
+                    <details>
+                      <summary className="ws:min-h-11 ws:cursor-pointer ws:py-3 ws:text-sm ws:font-semibold">
+                        Read what readers have now
+                      </summary>
+                      {session.published.blocks
+                        .flatMap((block) => block.elements)
+                        .map((element) => (
+                          <div key={element.id} className="ws:mt-5">
+                            <h4 className="ws:font-semibold">
+                              {element.label}
+                            </h4>
+                            <p className="w-writing ws:max-w-[64ch] ws:whitespace-pre-wrap ws:wrap-anywhere">
+                              {element.text ||
+                                element.items
+                                  .map((item) => `${item.name}\n${item.text}`)
+                                  .join("\n\n")}
+                            </p>
+                          </div>
+                        ))}
+                    </details>
+                  </section>
+                </div>
+              </Rail>
+            )}
+          </AnimatePresence>
 
           {/* The beam that crosses the page when editing starts */}
           <div className="ws:pointer-events-none ws:fixed ws:inset-0 ws:z-20 ws:overflow-hidden">
@@ -481,17 +655,6 @@ export function WorkspacePrototype() {
             </AnimatePresence>
           </div>
 
-          <WritingLayer
-            asset={draft}
-            focus={focus}
-            update={updateDraft}
-            close={() => setFocus(null)}
-            selectItem={(itemId) =>
-              focus?.type === "element" && setFocus({ ...focus, itemId })
-            }
-            readOnly={readOnly || busy}
-          />
-
           <AnimatePresence>
             {editing && (
               <Dock
@@ -499,6 +662,7 @@ export function WorkspacePrototype() {
                 detail={detail}
                 busy={busy}
                 readOnly={readOnly}
+                shifted={Boolean(railKey)}
                 onSave={() => void save()}
                 onReview={openReview}
                 reviewLabel={
@@ -516,16 +680,16 @@ export function WorkspacePrototype() {
                     onClick: () => setJumpOpen(true),
                   },
                   {
-                    icon: LayoutGrid,
-                    label: "Arrange the page",
-                    active: pane === "arrange",
-                    onClick: () => openPane("arrange"),
+                    icon: FileUp,
+                    label: "Review a replacement file",
+                    active: pane === "replacement",
+                    onClick: openReplacement,
                   },
                   {
-                    icon: MoreHorizontal,
-                    label: "Asset actions",
-                    active: pane === "actions",
-                    onClick: () => openPane("actions"),
+                    icon: LockKeyhole,
+                    label: "Access and published state",
+                    active: pane === "access",
+                    onClick: () => openPane("access"),
                   },
                 ]}
               />
@@ -538,7 +702,7 @@ export function WorkspacePrototype() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                className="w-glass ws:fixed ws:inset-x-4 ws:bottom-24 ws:z-40 ws:mx-auto ws:block ws:max-w-lg ws:rounded-2xl ws:px-5 ws:py-3.5 ws:text-sm ws:leading-6 ws:md:bottom-28"
+                className="w-glass ws:fixed ws:inset-x-4 ws:bottom-28 ws:z-50 ws:mx-auto ws:block ws:max-w-lg ws:rounded-2xl ws:px-5 ws:py-3.5 ws:text-sm ws:leading-6 ws:md:bottom-32"
               >
                 {message}
               </motion.output>
@@ -551,229 +715,8 @@ export function WorkspacePrototype() {
             destinations={destinations}
           />
 
-          <Sheet
-            wide
-            open={pane === "arrange"}
-            onOpenChange={(next) => !next && closePane()}
-            title="Arrange the page"
-            description="Blocks in reading order. Hidden and empty blocks keep their place, and the blocks beside them keep their width."
-          >
-            <Arrangement
-              asset={draft}
-              update={updateDraft}
-              readOnly={readOnly || busy}
-              selected={session.arrangeBlock}
-              select={(id) => patch({ arrangeBlock: id })}
-            />
-          </Sheet>
-
-          <Sheet
-            wide
-            open={pane === "update"}
-            onOpenChange={(next) => !next && closePane()}
-            title="Review your update"
-            description="Tell readers what changed. Your published version stays exactly as it is until you publish this one."
-          >
-            <UpdateReview
-              asset={draft}
-              notes={notes}
-              setNotes={(next) => {
-                patch({ notes: next, reviewed: undefined });
-                setIssues([]);
-              }}
-              setVersion={(version) => updateDraft({ ...draft, version })}
-              changes={changes}
-              reviewed={Boolean(session.reviewed)}
-              issues={issues}
-              readOnly={readOnly}
-              busy={busy}
-              listed={session.listed}
-              check={checkUpdate}
-              publish={publish}
-              keepEditing={() => {
-                patch({ reviewed: undefined, pane: undefined });
-                setIssues([]);
-              }}
-            />
-          </Sheet>
-
-          <Sheet
-            wide
-            open={pane === "replacement" && Boolean(replacement)}
-            onOpenChange={(next) =>
-              !next && patch({ pane: undefined, replacement: undefined })
-            }
-            title="Review the replacement file"
-            description="A replacement rewrites the matching content in your private working copy. Nothing reaches readers until you publish."
-          >
-            {replacement && (
-              <ReplacementReview
-                changes={changesBetween(draft, replacement)}
-                choice={replacementChoice}
-                setChoice={setReplacementChoice}
-                accept={acceptReplacement}
-                cancel={() =>
-                  patch({ replacement: undefined, pane: undefined })
-                }
-                busy={busy || readOnly}
-                kind={kind}
-              />
-            )}
-          </Sheet>
-
-          <Sheet
-            open={pane === "actions"}
-            onOpenChange={(next) => !next && closePane()}
-            title="Asset actions"
-            description="Everything that acts on the asset itself rather than on one piece of its page."
-          >
-            <div className="ws:space-y-3">
-              <button
-                type="button"
-                disabled={readOnly || busy}
-                onClick={openReplacement}
-                className="ws:block ws:w-full ws:rounded-2xl ws:bg-card ws:p-5 ws:text-left ws:shadow-[inset_0_0_0_1px_var(--w-line)] ws:transition ws:hover:bg-raised ws:disabled:opacity-45 ws:motion-reduce:transition-none"
-              >
-                <span className="ws:block ws:font-semibold">
-                  Review a replacement file
-                </span>
-                <span className="ws:mt-1 ws:block ws:text-sm ws:text-mute">
-                  Bring an exported card or lorebook back in over your working
-                  copy.
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => openPane("access")}
-                className="ws:block ws:w-full ws:rounded-2xl ws:bg-card ws:p-5 ws:text-left ws:shadow-[inset_0_0_0_1px_var(--w-line)] ws:transition ws:hover:bg-raised ws:motion-reduce:transition-none"
-              >
-                <span className="ws:flex ws:items-center ws:gap-2 ws:font-semibold">
-                  <LockKeyhole className="ws:size-4" />
-                  Access and published state
-                </span>
-                <span className="ws:mt-1 ws:block ws:text-sm ws:text-mute">
-                  Discovery applies immediately. Read what is published right
-                  now.
-                </span>
-              </button>
-            </div>
-          </Sheet>
-
-          <Sheet
-            open={pane === "access"}
-            onOpenChange={(next) => !next && closePane()}
-            title="Access and published state"
-            description="Access changes apply immediately to the asset and its history. They do not wait for a private save or a publication."
-          >
-            <div className="ws:space-y-7">
-              <Field label="Discovery">
-                <Select
-                  disabled={readOnly || busy}
-                  className="ws:max-w-md"
-                  value={session.listed ? "listed" : "unlisted"}
-                  onChange={(event) => {
-                    patch({
-                      listed: event.target.value === "listed",
-                      reviewed: undefined,
-                    });
-                    setMessage(
-                      "Discovery changed immediately. Content and notes stay private.",
-                    );
-                  }}
-                >
-                  <option value="listed">Listed in Browse</option>
-                  <option value="unlisted">Unlisted · direct links work</option>
-                </Select>
-              </Field>
-              <section className="ws:space-y-3 ws:pt-2">
-                <p className="ws:text-sm ws:text-mute">
-                  Published update {session.number}
-                </p>
-                <h3 className="ws:font-display ws:text-3xl ws:font-medium ws:wrap-anywhere">
-                  {session.published.name}
-                </h3>
-                <p className="ws:wrap-anywhere">{session.published.blurb}</p>
-                <p className="ws:text-sm ws:text-mute">
-                  {session.publishedSummary}
-                </p>
-                <details>
-                  <summary className="ws:min-h-11 ws:cursor-pointer ws:py-3 ws:text-sm ws:font-semibold">
-                    Read what readers have now
-                  </summary>
-                  {session.published.blocks
-                    .flatMap((block) => block.elements)
-                    .map((element) => (
-                      <div key={element.id} className="ws:mt-5">
-                        <h4 className="ws:font-semibold">{element.label}</h4>
-                        <p className="w-writing ws:max-w-[64ch] ws:whitespace-pre-wrap ws:wrap-anywhere">
-                          {element.text ||
-                            element.items
-                              .map((item) => `${item.name}\n${item.text}`)
-                              .join("\n\n")}
-                        </p>
-                      </div>
-                    ))}
-                </details>
-              </section>
-            </div>
-          </Sheet>
-
-          <Sheet
-            wide
-            open={session.conflict}
-            onOpenChange={(next) => !next && patch({ conflict: false })}
-            title="A newer working copy is available"
-            description="Your writing is kept. Compare the newer private copy with your work, then choose which one continues."
-          >
-            <div className="ws:space-y-6">
-              {session.newer && (
-                <ChangeList changes={changesBetween(session.newer, draft)} />
-              )}
-              <div className="ws:flex ws:flex-wrap ws:gap-3">
-                <SpectralButton
-                  disabled={readOnly || busy}
-                  onClick={() => {
-                    patch({
-                      baseRevision: session.serverRevision,
-                      conflict: false,
-                      newer: undefined,
-                      replacement: undefined,
-                      reviewed: undefined,
-                    });
-                    setMessage(
-                      "Your version is kept. Save it privately when you are ready.",
-                    );
-                  }}
-                >
-                  Continue with my version
-                </SpectralButton>
-                <Button
-                  variant="outline"
-                  disabled={readOnly || busy}
-                  onClick={() => {
-                    if (session.newer)
-                      patch({
-                        draft: session.newer,
-                        saved: session.newer,
-                        baseRevision: session.serverRevision,
-                        conflict: false,
-                        newer: undefined,
-                        reviewed: undefined,
-                        replacement: undefined,
-                      });
-                    setMessage(
-                      "The newer copy is loaded. Your notes are kept.",
-                    );
-                  }}
-                >
-                  Use the newer copy
-                </Button>
-              </div>
-            </div>
-          </Sheet>
-
           {readOnly && (
-            <div className="ws:fixed ws:inset-x-4 ws:top-4 ws:z-40 ws:mx-auto ws:max-w-md">
+            <div className="ws:fixed ws:inset-x-4 ws:top-4 ws:z-50 ws:mx-auto ws:max-w-md">
               <Notice tone="amber">
                 Read-only permission. Restore owner access in Try a state to
                 continue writing.

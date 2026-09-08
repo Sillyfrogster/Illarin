@@ -23,21 +23,21 @@
 }
 
 [data-workspace] {
-  --w-paper: light-dark(#efede6, #0a0a0c);
-  --w-card: light-dark(#faf8f3, #131318);
+  --w-paper: light-dark(#eeeeec, #0a0a0c);
+  --w-card: light-dark(#fafaf9, #131318);
   --w-raised: light-dark(#ffffff, #1a1a20);
-  --w-ink: light-dark(#191813, #f1efe9);
-  --w-mute: light-dark(#6b685c, #97948b);
-  --w-line: light-dark(#ddd8cb, #292930);
-  --w-hairline: light-dark(#e8e3d8, #1f1f26);
-  --w-emphasis: light-dark(#191813, #f1efe9);
-  --w-on-emphasis: light-dark(#faf8f3, #0a0a0c);
+  --w-ink: light-dark(#17171a, #f0f0ee);
+  --w-mute: light-dark(#66666d, #94949b);
+  --w-line: light-dark(#d8d8d5, #292930);
+  --w-hairline: light-dark(#e5e5e2, #1f1f26);
+  --w-emphasis: light-dark(#17171a, #f0f0ee);
+  --w-on-emphasis: light-dark(#fafaf9, #0a0a0c);
   --w-amber: light-dark(#8f5f12, #f0be6a);
-  --w-amber-field: light-dark(#f2e5c9, #35280f);
+  --w-amber-field: light-dark(#f4e7cd, #35280f);
   --w-critical: light-dark(#96292f, #ff9aa0);
   --w-critical-field: light-dark(#f5ddd9, #3a1c1f);
-  --w-glass: light-dark(rgb(250 248 243 / 0.78), rgb(20 20 25 / 0.76));
-  --w-glass-line: light-dark(rgb(25 24 19 / 0.09), rgb(241 239 233 / 0.12));
+  --w-glass: light-dark(rgb(250 250 249 / 0.78), rgb(20 20 25 / 0.76));
+  --w-glass-line: light-dark(rgb(23 23 26 / 0.09), rgb(240 240 238 / 0.12));
   --w-spectrum: linear-gradient(
     100deg,
     #6e5bff 0%,
@@ -47,19 +47,18 @@
     #ee6a4b 100%
   );
   --w-sweep-blend: multiply;
-  --w-sweep-core: light-dark(rgb(25 24 19 / 0.22), rgb(255 255 255 / 0.5));
+  --w-sweep-core: light-dark(rgb(23 23 26 / 0.22), rgb(255 255 255 / 0.5));
   --w-lift: light-dark(
-    0 32px 80px -28px rgb(46 40 24 / 0.34),
+    0 32px 80px -28px rgb(30 30 36 / 0.28),
     0 32px 80px -24px rgb(0 0 0 / 0.75)
   );
-  --w-sheet: light-dark(
-    0 1px 1px rgb(46 40 24 / 0.04),
-    0 22px 44px -34px rgb(46 40 24 / 0.5)
-  );
   --w-dock: light-dark(
-    0 18px 46px -18px rgb(46 40 24 / 0.4),
-    0 18px 46px -14px rgb(0 0 0 / 0.8)
+    0 20px 44px -20px rgb(24 24 30 / 0.5),
+    0 20px 44px -16px rgb(0 0 0 / 0.85)
   );
+  --w-bar: light-dark(#1a1a1e, #f4f4f2);
+  --w-on-bar: light-dark(#f6f6f4, #16161a);
+  --w-bar-mute: light-dark(#a2a2a8, #5c5c62);
   --color-focus-inner: var(--w-ink);
   --color-focus-outer: var(--w-paper);
   color-scheme: light;
@@ -71,11 +70,11 @@
   color-scheme: dark;
 }
 
-/* Editing warms the page colours */
+/* Editing lifts the page a shade, without changing its colour */
 [data-workspace][data-mode="edit"] {
-  --w-paper: light-dark(#f1eade, #0c0b0a);
-  --w-card: light-dark(#fcf9f2, #16151a);
-  --w-hairline: light-dark(#e9e1d1, #221f26);
+  --w-paper: light-dark(#f4f4f2, #0d0d10);
+  --w-card: light-dark(#fdfdfc, #16161a);
+  --w-hairline: light-dark(#e9e9e6, #222229);
 }
 
 [data-workspace] :where(*, *::before, *::after) {
@@ -122,41 +121,13 @@
   filter: blur(14px);
 }
 
-/* The spectral edge every editable region wears while editing */
-.w-refract {
-  position: relative;
-  border-radius: 14px;
-  container-type: inline-size;
-}
-
-/* Collections use two columns when the block is wide enough */
-.w-items {
-  display: grid;
-  gap: 1.75rem 2.5rem;
-  align-content: start;
-}
-@container (min-width: 46rem) {
-  .w-items {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.w-refract::before {
+/* The block a piece of writing belongs to is what lights up, and only while it is under the pointer */
+.w-block::after {
   content: "";
   position: absolute;
+  inset: -22px -26px;
+  border-radius: 20px;
   pointer-events: none;
-  z-index: -1;
-  inset: -10px -14px;
-  border-radius: inherit;
-  background: var(--w-paper);
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-.w-refract::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  inset: -10px -14px;
-  border-radius: inherit;
   padding: 1px;
   background: var(--w-spectrum);
   -webkit-mask:
@@ -168,24 +139,106 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: opacity 240ms ease;
 }
-.w-refract[data-live="true"]::after {
-  opacity: 0.42;
-}
-.w-refract[data-live="true"]:hover::before,
-.w-refract[data-live="true"]:focus-visible::before {
-  opacity: 0.55;
-}
-.w-refract[data-live="true"]:hover::after,
-.w-refract[data-live="true"]:focus-visible::after {
+.w-block:hover::after,
+.w-block:focus-within::after {
   opacity: 1;
 }
-.w-refract[data-live="true"]:focus-visible {
-  outline: none;
+
+/* The block is what lights up, so writable text only shows a caret and a keyboard focus */
+.w-editable {
+  border-radius: 4px;
+  transition: box-shadow 140ms ease;
 }
-.w-refract[data-empty="true"]::after {
-  opacity: 0.7;
+.w-editable:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 7px color-mix(in srgb, var(--w-amber) 16%, transparent),
+    -14px 0 0 -12px var(--w-amber);
+  background: color-mix(in srgb, var(--w-amber) 16%, transparent);
+}
+
+.w-caret {
+  caret-color: var(--w-amber);
+}
+
+.w-element {
+  container-type: inline-size;
+}
+
+/* Collections use two columns when the block is wide enough */
+.w-items {
+  display: grid;
+  gap: 2.25rem 2.5rem;
+  align-content: start;
+}
+@container (min-width: 46rem) {
+  .w-items {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Work that needs its own space sits beside the page, never over it */
+.w-rail {
+  position: fixed;
+  background: var(--w-card);
+  box-shadow: var(--w-lift);
+}
+.w-rail::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--w-rail-accent);
+}
+@media (min-width: 64rem) {
+  .w-rail::before {
+    inset: 0 auto 0 0;
+    width: 2px;
+    height: auto;
+  }
+}
+
+/* A book is its index beside the one entry that is open */
+.w-book {
+  display: grid;
+  gap: 2rem 3rem;
+  align-items: start;
+}
+@container (min-width: 44rem) {
+  .w-book {
+    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+  }
+}
+
+.w-index {
+  display: flex;
+  flex-direction: column;
+  max-height: min(58dvh, 34rem);
+  margin-top: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.w-index button {
+  display: grid;
+  flex: none;
+  gap: 0.125rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  text-align: left;
+  transition: background 140ms ease;
+}
+.w-index button:hover {
+  background: color-mix(in srgb, var(--w-ink) 6%, transparent);
+}
+.w-index button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--w-ink) 9%, transparent);
+  box-shadow: inset 2px 0 0 var(--w-amber);
+}
+.w-index button[data-off] {
+  opacity: 0.55;
 }
 
 /* A one pixel spectral rule */
@@ -213,6 +266,22 @@
     var(--w-dock);
 }
 
+.w-bar {
+  position: relative;
+  background: var(--w-bar);
+  color: var(--w-on-bar);
+  box-shadow: var(--w-dock);
+}
+/* The controls a block carries, held together so they read as one instrument */
+.w-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--w-ink) 7%, transparent);
+}
+
 .w-writing {
   font-family: var(--font-newsreader), Georgia, serif;
   font-size: 1.1875rem;
@@ -228,8 +297,9 @@
   .w-blade {
     display: none;
   }
-  .w-refract::before,
-  .w-refract::after {
+  .w-block::before,
+  .w-block::after,
+  .w-editable {
     transition: none;
   }
 }
