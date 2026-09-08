@@ -1,0 +1,220 @@
+@layer theme;
+@import "tailwindcss/theme.css" layer(theme) prefix(ws);
+@import "tailwindcss/utilities.css" prefix(ws) important;
+@source "./";
+
+@theme inline {
+  --color-paper: var(--w-paper);
+  --color-card: var(--w-card);
+  --color-raised: var(--w-raised);
+  --color-ink: var(--w-ink);
+  --color-mute: var(--w-mute);
+  --color-line: var(--w-line);
+  --color-hairline: var(--w-hairline);
+  --color-emphasis: var(--w-emphasis);
+  --color-on-emphasis: var(--w-on-emphasis);
+  --color-amber: var(--w-amber);
+  --color-amber-field: var(--w-amber-field);
+  --color-critical: var(--w-critical);
+  --color-critical-field: var(--w-critical-field);
+  --font-display: var(--font-bodoni), Didot, Georgia, serif;
+  --font-ui: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-prose: var(--font-newsreader), Georgia, serif;
+}
+
+[data-workspace] {
+  --w-paper: light-dark(#efede6, #0a0a0c);
+  --w-card: light-dark(#faf8f3, #131318);
+  --w-raised: light-dark(#ffffff, #1a1a20);
+  --w-ink: light-dark(#191813, #f1efe9);
+  --w-mute: light-dark(#6b685c, #97948b);
+  --w-line: light-dark(#ddd8cb, #292930);
+  --w-hairline: light-dark(#e8e3d8, #1f1f26);
+  --w-emphasis: light-dark(#191813, #f1efe9);
+  --w-on-emphasis: light-dark(#faf8f3, #0a0a0c);
+  --w-amber: light-dark(#8f5f12, #f0be6a);
+  --w-amber-field: light-dark(#f2e5c9, #35280f);
+  --w-critical: light-dark(#96292f, #ff9aa0);
+  --w-critical-field: light-dark(#f5ddd9, #3a1c1f);
+  --w-glass: light-dark(rgb(250 248 243 / 0.78), rgb(20 20 25 / 0.76));
+  --w-glass-line: light-dark(rgb(25 24 19 / 0.09), rgb(241 239 233 / 0.12));
+  --w-spectrum: linear-gradient(
+    100deg,
+    #6e5bff 0%,
+    #2e93ff 24%,
+    #22cfc6 46%,
+    #f2c455 72%,
+    #ee6a4b 100%
+  );
+  --w-sweep-blend: multiply;
+  --w-sweep-core: light-dark(rgb(25 24 19 / 0.22), rgb(255 255 255 / 0.5));
+  --w-lift: light-dark(
+    0 32px 80px -28px rgb(46 40 24 / 0.34),
+    0 32px 80px -24px rgb(0 0 0 / 0.75)
+  );
+  --w-dock: light-dark(
+    0 18px 46px -18px rgb(46 40 24 / 0.4),
+    0 18px 46px -14px rgb(0 0 0 / 0.8)
+  );
+  --color-focus-inner: var(--w-ink);
+  --color-focus-outer: var(--w-paper);
+  color-scheme: light;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-workspace][data-theme="dark"] {
+  --w-sweep-blend: screen;
+  color-scheme: dark;
+}
+
+/* Editing warms the page colours */
+[data-workspace][data-mode="edit"] {
+  --w-paper: light-dark(#f1eade, #0c0b0a);
+  --w-card: light-dark(#fcf9f2, #16151a);
+  --w-hairline: light-dark(#e9e1d1, #221f26);
+}
+
+[data-workspace] :where(*, *::before, *::after) {
+  border-width: 0;
+  border-style: solid;
+}
+
+[data-workspace] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--w-line) transparent;
+}
+
+[data-workspace] :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-workspace] :where(button, [role="button"], summary, a):focus-visible {
+  outline: 2px solid var(--w-ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* The beam that crosses the page when editing starts */
+.w-blade {
+  position: absolute;
+  inset-block: -10%;
+  width: 34vw;
+  min-width: 240px;
+  pointer-events: none;
+  mix-blend-mode: var(--w-sweep-blend);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--w-sweep-core) 46%,
+      var(--w-sweep-core) 54%,
+      transparent 100%
+    ),
+    var(--w-spectrum);
+  background-blend-mode: overlay;
+  opacity: 0.75;
+  filter: blur(14px);
+}
+
+/* The spectral edge every editable region wears while editing */
+.w-refract {
+  position: relative;
+  border-radius: 14px;
+  container-type: inline-size;
+}
+
+/* Collections use two columns when the block is wide enough */
+.w-items {
+  display: grid;
+  gap: 0 2rem;
+}
+@container (min-width: 46rem) {
+  .w-items {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.w-refract::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  inset: -10px -14px;
+  border-radius: inherit;
+  background: var(--w-paper);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.w-refract::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: -10px -14px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--w-spectrum);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.w-refract[data-live="true"]::after {
+  opacity: 0.42;
+}
+.w-refract[data-live="true"]:hover::before,
+.w-refract[data-live="true"]:focus-visible::before {
+  opacity: 0.55;
+}
+.w-refract[data-live="true"]:hover::after,
+.w-refract[data-live="true"]:focus-visible::after {
+  opacity: 1;
+}
+.w-refract[data-live="true"]:focus-visible {
+  outline: none;
+}
+.w-refract[data-empty="true"]::after {
+  opacity: 0.7;
+}
+
+/* A one pixel spectral rule */
+.w-spectral-rule {
+  height: 1px;
+  background: var(--w-spectrum);
+  opacity: 0.5;
+}
+
+.w-glass {
+  background: var(--w-glass);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    inset 0 0 0 1px var(--w-glass-line),
+    var(--w-dock);
+}
+
+.w-writing {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 1.1875rem;
+  line-height: 1.85;
+  letter-spacing: 0.004em;
+}
+
+.w-field {
+  field-sizing: content;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-blade {
+    display: none;
+  }
+  .w-refract::before,
+  .w-refract::after {
+    transition: none;
+  }
+}

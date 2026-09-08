@@ -33,6 +33,14 @@
   },
   "overrides": [
     {
+      "includes": ["src/app/prototype/editor/theme.css"],
+      "css": {
+        "parser": {
+          "tailwindDirectives": true
+        }
+      }
+    },
+    {
       "includes": ["src/lib/publication-card.tsx"],
       "linter": {
         "rules": {
