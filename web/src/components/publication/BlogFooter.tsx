@@ -1,7 +1,7 @@
 import { Rss } from "lucide-react";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { ThemeControl } from "@/components/layout/ThemeControl";
+import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { PUBLICATION_FEEDS } from "@/lib/publication-metadata";
 import styles from "./BlogFooter.module.css";
@@ -34,7 +34,7 @@ export function BlogFooter() {
               </Link>
             ))}
           </nav>
-          <ThemeControl />
+          <AppearanceMenu labelled />
         </div>
       </div>
     </footer>

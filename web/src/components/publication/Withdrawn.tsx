@@ -1,4 +1,5 @@
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { WITHDRAWAL_MESSAGE } from "@/lib/publication-withdrawal";
 import styles from "./Withdrawn.module.css";
 
@@ -8,13 +9,8 @@ export function Withdrawn({ explanation }: { explanation: string }) {
     <section className={styles.gone}>
       <h1 className={styles.statement}>{WITHDRAWAL_MESSAGE}</h1>
       {explanation ? <p className={styles.said}>{explanation}</p> : null}
-      <Button
-        className={styles.onward}
-        href="/blog"
-        size="large"
-        variant="solid"
-      >
-        Read the rest of the blog
+      <Button asChild className={styles.onward} size="large" variant="primary">
+        <Link href="/blog">Read the rest of the blog</Link>
       </Button>
     </section>
   );

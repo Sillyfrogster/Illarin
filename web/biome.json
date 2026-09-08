@@ -34,6 +34,7 @@
   "overrides": [
     {
       "includes": [
+        "src/app/globals.css",
         "src/app/prototype/editor/theme.css",
         "src/app/prototype/direction/theme.css"
       ],

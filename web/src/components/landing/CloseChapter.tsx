@@ -3,9 +3,10 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useEffect, useRef } from "react";
 import { Shell } from "@/components/layout/Shell";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import styles from "./CloseChapter.module.css";
 
 const CLOSING_LINES = [
@@ -43,9 +44,11 @@ export function CloseChapter() {
         </h2>
 
         <div className={styles.action} data-action>
-          <Button href="/browse" size="large">
-            Browse the catalog
-            <ArrowRight size={16} strokeWidth={1.5} aria-hidden="true" />
+          <Button asChild variant="primary" size="large">
+            <Link href="/browse">
+              Browse the catalog
+              <ArrowRight aria-hidden="true" />
+            </Link>
           </Button>
         </div>
       </Shell>

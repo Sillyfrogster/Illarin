@@ -4,10 +4,11 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Fragment, useEffect, useRef } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { DefaultCover } from "@/components/media/DefaultCover";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import type { BrowseAsset } from "@/lib/api/query";
 import { KIND_LABELS } from "@/lib/kinds";
 import { withCoversFirst } from "@/lib/landing-work";
@@ -81,12 +82,14 @@ export function ConvergenceHero({ assets }: ConvergenceHeroProps) {
           </p>
 
           <div className={styles.actions} data-enter>
-            <Button href="/browse" size="large">
-              Browse the catalog
-              <ArrowRight size={16} strokeWidth={1.5} aria-hidden="true" />
+            <Button asChild variant="primary" size="large">
+              <Link href="/browse">
+                Browse the catalog
+                <ArrowRight aria-hidden="true" />
+              </Link>
             </Button>
-            <Button href="/upload" variant="outline" size="large">
-              Publish
+            <Button asChild variant="outline" size="large">
+              <Link href="/upload">Publish</Link>
             </Button>
           </div>
 
