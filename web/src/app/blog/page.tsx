@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicationFront } from "@/components/publication/Archive";
-import { fetchPostArchive } from "@/lib/api/query";
+import { fetchPostArchive, fetchPublishedPost } from "@/lib/api/query";
+import { postCover } from "@/lib/post-cover";
 import { blogAddress } from "@/lib/post-link";
 import {
   BLOG_DESCRIPTION,
@@ -23,5 +24,8 @@ export const metadata: Metadata = {
 export default async function BlogHomePage() {
   const archive = await fetchPostArchive({ page: 1 });
   if (!archive) notFound();
-  return <PublicationFront archive={archive} />;
+  const lead = archive.posts[0];
+  // Only the lead is shown by a picture, and only a whole post carries one.
+  const led = lead ? await fetchPublishedPost(lead.slug) : null;
+  return <PublicationFront archive={archive} cover={postCover(led)} />;
 }

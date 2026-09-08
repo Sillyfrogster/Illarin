@@ -1,10 +1,9 @@
 import Image from "next/image";
 import type { PostMedia } from "@/lib/api/query";
-import styles from "./ArticleHeader.module.css";
 
 export type Header = { mediaId: string; alt: string; caption?: string };
 
-/** The picture an article opens with. */
+/** The picture an article opens with, on the plate that keeps its own shape. */
 export function ArticleHeader({
   header,
   media,
@@ -15,17 +14,22 @@ export function ArticleHeader({
   const picture = header && media.find((one) => one.id === header.mediaId);
   if (!header || !picture) return null;
   return (
-    <figure className={styles.header}>
-      <Image
-        alt={header.alt}
-        className={styles.picture}
-        height={picture.height}
-        src={picture.url}
-        unoptimized
-        width={picture.width}
-      />
+    <figure className="mt-group">
+      <span className="block overflow-hidden rounded-plate bg-deep">
+        <Image
+          alt={header.alt}
+          className="mx-auto h-auto max-h-[30rem] w-full object-contain"
+          height={picture.height}
+          priority
+          src={picture.url}
+          unoptimized
+          width={picture.width}
+        />
+      </span>
       {header.caption ? (
-        <figcaption className={styles.caption}>{header.caption}</figcaption>
+        <figcaption className="mt-3 max-w-[70ch] font-prose text-meta leading-6 text-mute">
+          {header.caption}
+        </figcaption>
       ) : null}
     </figure>
   );

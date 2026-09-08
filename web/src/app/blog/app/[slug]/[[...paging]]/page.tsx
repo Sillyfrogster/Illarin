@@ -31,6 +31,7 @@ export default async function AppArchivePage({
       scope={{
         kind: "Publication app",
         heading: found.name,
+        statement: archiveDescription("app", found.name),
         address,
         home: found.home,
       }}

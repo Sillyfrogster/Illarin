@@ -4,8 +4,8 @@ import { ScopedArchive } from "@/components/publication/Archive";
 import { fetchPostArchive } from "@/lib/api/query";
 import {
   BLOG_DESCRIPTION,
+  BLOG_HEADING,
   BLOG_HOME,
-  BLOG_TITLE,
   blogMetadata,
   pageAddress,
 } from "@/lib/publication-metadata";
@@ -34,7 +34,8 @@ export default async function BlogArchivePage({
       archive={archive}
       scope={{
         kind: "Publication",
-        heading: BLOG_TITLE,
+        heading: BLOG_HEADING,
+        statement: BLOG_DESCRIPTION,
         address: BLOG_HOME,
         home: null,
       }}

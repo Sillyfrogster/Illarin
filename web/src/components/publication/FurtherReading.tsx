@@ -1,33 +1,43 @@
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { PostSummary } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
-import styles from "./FurtherReading.module.css";
 
 /** The few other posts an article points a reader at when they reach its end. */
 export function FurtherReading({ posts }: { posts: PostSummary[] }) {
   if (posts.length === 0) return null;
   return (
-    <section className={styles.further} aria-labelledby="further-reading">
-      <h2 className={styles.heading} id="further-reading">
-        Read next
+    <section aria-labelledby="further-reading" className="mt-section">
+      <h2
+        className="mb-2 font-display text-section font-medium"
+        id="further-reading"
+      >
+        Keep reading
       </h2>
-      <ul className={styles.list}>
+      <ul className="list-none">
         {posts.map((post) => (
-          <li className={styles.entry} key={post.id}>
-            <h3 className={styles.title}>
-              <Link className={styles.reach} href={`/blog/${post.slug}`}>
-                {post.title}
-              </Link>
-            </h3>
-            <p className={styles.filed}>
-              <span className={styles.category}>{post.category.label}</span>
-              {post.app ? (
-                <span className={styles.app}>{post.app.name}</span>
-              ) : null}
-              <time dateTime={post.publishedAt}>
-                {readableDate(post.publishedAt)}
-              </time>
-            </p>
+          <li key={post.id}>
+            <Link
+              className="group -mx-4 flex min-h-14 flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-plate px-4 py-3 transition-colors hover:bg-deep"
+              href={`/blog/${post.slug}`}
+            >
+              <span className="min-w-0">
+                <span className="block max-w-[52ch] font-display text-ui font-medium text-ink">
+                  {post.title}
+                </span>
+                <span className="mt-1 flex flex-wrap items-baseline gap-x-3 text-meta text-mute">
+                  <span className="text-accent">{post.category.label}</span>
+                  {post.app ? <span>{post.app.name}</span> : null}
+                  <time dateTime={post.publishedAt}>
+                    {readableDate(post.publishedAt)}
+                  </time>
+                </span>
+              </span>
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+              />
+            </Link>
           </li>
         ))}
       </ul>

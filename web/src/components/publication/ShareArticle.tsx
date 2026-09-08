@@ -7,10 +7,12 @@ import {
   type ShareState,
   shareReport,
 } from "@/lib/article-share";
-import styles from "./ArticleAside.module.css";
 
 /** How long the reader is told the copy worked before the rail goes quiet again. */
 const REPORT_LINGERS = 4000;
+
+const ACTION =
+  "inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-ui text-mute transition-colors hover:bg-deep hover:text-ink";
 
 /** The two ways to hand this article to someone, neither of which asks a network to help. */
 export function ShareArticle({
@@ -55,31 +57,28 @@ export function ShareArticle({
 
   const report = shareReport(state);
   return (
-    <div className={styles.share}>
-      <p aria-hidden="true" className={styles.label}>
-        Share
-      </p>
-      <div className={styles.actions}>
-        <button className={styles.action} onClick={copy} type="button">
-          {state === "copied" ? (
-            <Check aria-hidden="true" size={15} strokeWidth={2.2} />
-          ) : (
-            <Link2 aria-hidden="true" size={15} strokeWidth={1.8} />
-          )}
-          Copy link
+    <div className="-ml-3 grid justify-items-start gap-1">
+      <button className={ACTION} onClick={copy} type="button">
+        {state === "copied" ? (
+          <Check aria-hidden="true" className="size-4 text-accent" />
+        ) : (
+          <Link2 aria-hidden="true" className="size-4" />
+        )}
+        Copy link
+      </button>
+      {sheet ? (
+        <button className={ACTION} onClick={hand} type="button">
+          <Share2 aria-hidden="true" className="size-4" />
+          Share
         </button>
-        {sheet ? (
-          <button className={styles.action} onClick={hand} type="button">
-            <Share2 aria-hidden="true" size={15} strokeWidth={1.8} />
-            Share
-          </button>
-        ) : null}
-      </div>
-      <output className={styles.said}>{report.said}</output>
+      ) : null}
+      <output className="ml-3 block text-meta leading-5 text-mute text-pretty empty:hidden">
+        {report.said}
+      </output>
       {report.reveal ? (
         <input
           aria-label="This article's link"
-          className={styles.address}
+          className="ml-3 h-10 w-full rounded-control bg-deep px-3 font-mono text-[13px] text-ink"
           readOnly
           ref={address}
           value={permalink}

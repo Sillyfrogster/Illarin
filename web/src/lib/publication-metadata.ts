@@ -15,6 +15,9 @@ export const ILLARIN_APP = "illarin";
 
 export const BLOG_TITLE = "Illarin Blog";
 
+/** What the publication calls itself at the top of its own pages, where Illarin is already said. */
+export const BLOG_HEADING = "The blog";
+
 export const BLOG_DESCRIPTION =
   "Official announcements, releases and articles from Illarin and the projects it publishes for.";
 

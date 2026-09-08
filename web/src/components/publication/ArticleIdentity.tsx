@@ -1,65 +1,86 @@
 import Link from "next/link";
 import type { PostByline, PostMedia, PostRelease } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
-import styles from "./Article.module.css";
 import { ArticleHeader, type Header } from "./ArticleHeader";
 import { Byline } from "./Byline";
 import { titleBand } from "./post-title";
 
+const TITLE = {
+  short: "max-w-[18ch] text-hero",
+  medium: "max-w-[22ch] text-[clamp(2.1rem,4.3vw,3.4rem)]",
+  long: "max-w-[28ch] text-[clamp(1.9rem,3.2vw,2.6rem)]",
+} as const;
+
+/** Everything a post is, said once, above the writing itself. */
 export function ArticleIdentity({
-  category,
-  title,
-  summary,
-  release,
   byline,
+  category,
+  categorySlug,
   header,
   media,
   publishedAt,
-  updatedAt,
+  release,
   standing,
+  summary,
+  title,
+  updatedAt,
 }: {
-  category: string;
-  title: string;
-  summary: string;
-  release: PostRelease | null;
   byline: PostByline | null;
+  category: string;
+  categorySlug?: string;
   header?: Header | null;
   media?: PostMedia[];
   publishedAt: string | null;
-  updatedAt: string | null;
+  release: PostRelease | null;
   standing?: string;
+  summary: string;
+  title: string;
+  updatedAt: string | null;
 }) {
   return (
-    <header className={styles.identity}>
-      <h1 className={styles.title} data-length={titleBand(title)}>
+    <header>
+      <h1
+        className={`font-display font-medium tracking-[-0.03em] break-words text-balance ${TITLE[titleBand(title)]}`}
+      >
         {title}
       </h1>
-      {summary ? <p className={styles.summary}>{summary}</p> : null}
-      <div className={styles.band}>
+      {summary ? (
+        <p className="mt-6 max-w-[54ch] font-prose text-lede text-mute">
+          {summary}
+        </p>
+      ) : null}
+      <p className="mt-7 flex flex-wrap items-baseline gap-x-5 gap-y-2 text-meta text-mute">
+        {categorySlug ? (
+          <Link
+            className="font-medium text-accent hover:text-ink"
+            href={`/blog/category/${categorySlug}`}
+          >
+            {category}
+          </Link>
+        ) : (
+          <span className="font-medium text-accent">{category}</span>
+        )}
+        {publishedAt ? (
+          <time dateTime={publishedAt}>{readableDate(publishedAt)}</time>
+        ) : null}
+        {updatedAt ? (
+          <time dateTime={updatedAt}>Updated {readableDate(updatedAt)}</time>
+        ) : null}
+        {release ? (
+          <Link
+            className="text-ink hover:text-accent"
+            href={`/blog/app/${release.app.slug}`}
+          >
+            {release.app.name} {release.version}
+          </Link>
+        ) : null}
+      </p>
+      <div className="mt-6">
         {byline ? (
           <Byline byline={byline} />
         ) : (
-          <p className={styles.draft}>{standing}</p>
+          <p className="max-w-[34ch] text-meta text-mute">{standing}</p>
         )}
-        <p className={styles.filed}>
-          <span className={styles.category}>{category}</span>
-          {release ? (
-            <Link
-              className={styles.release}
-              href={`/blog/app/${release.app.slug}`}
-            >
-              {release.app.name} {release.version}
-            </Link>
-          ) : null}
-          {publishedAt ? (
-            <time dateTime={publishedAt}>{readableDate(publishedAt)}</time>
-          ) : null}
-          {updatedAt ? (
-            <time className={styles.revised} dateTime={updatedAt}>
-              Updated {readableDate(updatedAt)}
-            </time>
-          ) : null}
-        </p>
       </div>
       <ArticleHeader header={header} media={media ?? []} />
     </header>

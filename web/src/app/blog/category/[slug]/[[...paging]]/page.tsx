@@ -35,6 +35,7 @@ export default async function CategoryArchivePage({
       scope={{
         kind: "Category",
         heading: found.label,
+        statement: archiveDescription("category", found.label),
         address,
         home: null,
       }}

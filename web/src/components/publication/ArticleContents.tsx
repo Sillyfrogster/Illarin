@@ -2,8 +2,8 @@
 
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/cn";
 import type { PostContentsEntry } from "@/lib/post-contents";
-import styles from "./ArticleAside.module.css";
 
 /** How far down the window a heading has to pass before the contents call its section the one being read. */
 const READING_LINE = 0.18;
@@ -42,35 +42,36 @@ export function ArticleContents({ entries }: { entries: PostContentsEntry[] }) {
   }, [entries]);
 
   return (
-    <nav aria-label="Contents" className={styles.contents} data-open={open}>
-      <p aria-hidden="true" className={styles.label}>
-        Contents
+    <nav aria-label="Contents" className="group" data-open={open}>
+      <p aria-hidden="true" className="hidden text-meta font-medium lg:block">
+        In this article
       </p>
       <button
         aria-controls="article-contents"
         aria-expanded={open}
-        className={styles.disclosure}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-control bg-deep px-4 text-ui font-medium text-ink lg:hidden"
         onClick={() => setOpen(!open)}
         type="button"
       >
-        Contents
+        In this article
         <ChevronDown
           aria-hidden="true"
-          className={styles.chevron}
-          size={16}
-          strokeWidth={1.8}
+          className="size-4 transition-transform duration-200 group-data-[open=true]:rotate-180 motion-reduce:transition-none"
         />
       </button>
-      <ol className={styles.list} id="article-contents">
+      <ol
+        className="mt-2 hidden list-none group-data-[open=true]:block lg:mt-3 lg:block"
+        id="article-contents"
+      >
         {entries.map((entry) => (
-          <li
-            className={styles.entry}
-            data-level={entry.level}
-            key={entry.anchor}
-          >
+          <li data-level={entry.level} key={entry.anchor}>
             <a
               aria-current={entry.anchor === here ? "location" : undefined}
-              className={styles.reach}
+              className={cn(
+                "flex min-h-11 items-center py-1 text-ui text-mute transition-colors hover:text-ink",
+                "aria-[current=location]:font-medium aria-[current=location]:text-accent",
+                entry.level === 3 ? "pl-4" : null,
+              )}
               href={`#${entry.anchor}`}
               onClick={() => setOpen(false)}
             >

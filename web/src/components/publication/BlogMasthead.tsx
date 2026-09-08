@@ -1,10 +1,18 @@
 "use client";
 
+import {
+  motion,
+  useMotionTemplate,
+  useScroll,
+  useTransform,
+} from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { LineLink } from "@/components/ui/line-link";
 import type { PublicationCategory } from "@/lib/api/query";
-import styles from "./BlogMasthead.module.css";
+import { BLOG_HOME } from "@/lib/publication-metadata";
+import { siteAddress } from "@/lib/site-address";
 
 /** The blog's own chrome, carrying Illarin's identity, the publication's home and its categories. */
 export function BlogMasthead({
@@ -13,48 +21,62 @@ export function BlogMasthead({
   categories: PublicationCategory[];
 }) {
   const pathname = usePathname();
-  const onArchive = pathname === "/blog" || pathname.startsWith("/blog/page/");
+  const onArchive =
+    pathname === BLOG_HOME || pathname.startsWith(`${BLOG_HOME}/page/`);
+  const { scrollY } = useScroll();
+  const depth = useTransform(scrollY, [0, 40], [0.1, 0.28], { clamp: true });
+  const lift = useMotionTemplate`drop-shadow(0 6px 12px rgb(0 0 0 / ${depth}))`;
+
   return (
-    <header className={styles.masthead}>
-      <div className={styles.bar}>
-        <div className={styles.identity}>
-          <Link className={styles.brand} href="/" aria-label="Illarin home">
-            <BrandMark size={24} />
-            <span className={styles.wordmark}>Illarin</span>
-          </Link>
-          <span aria-hidden="true" className={styles.divider} />
-          <Link className={styles.publication} href="/blog">
+    <motion.header
+      className="sticky top-0 z-80 bg-plane"
+      style={{ filter: lift }}
+    >
+      <div className="mx-auto flex w-full max-w-[76rem] flex-wrap items-center justify-between gap-x-6 px-[var(--gutter)] py-2 sm:min-h-[var(--header-height)] sm:flex-nowrap sm:py-0">
+        <div className="flex min-w-0 items-center gap-3">
+          <a
+            aria-label="Illarin home"
+            className="flex min-h-11 shrink-0 items-center gap-2 text-ink"
+            href={siteAddress("/")}
+          >
+            <BrandMark size={22} tone="accent" />
+            <span className="font-display text-[1.375rem] leading-none font-medium tracking-[-0.03em]">
+              Illarin
+            </span>
+          </a>
+          <Link
+            className="flex min-h-11 items-center font-display text-[1.375rem] leading-none font-normal tracking-[-0.02em] text-mute hover:text-ink"
+            href={BLOG_HOME}
+          >
             Blog
           </Link>
         </div>
 
         {categories.length > 0 ? (
-          <nav className={styles.nav} aria-label="Publication categories">
-            <Link
-              aria-current={onArchive ? "page" : undefined}
-              className={styles.category}
-              href="/blog"
-            >
-              All
-            </Link>
+          <nav
+            aria-label="Publication categories"
+            className="-mx-1 flex min-w-0 items-center gap-x-4 overflow-x-auto px-1 [scrollbar-width:none] max-sm:w-full [&::-webkit-scrollbar]:hidden"
+          >
+            <LineLink current={onArchive} href={BLOG_HOME}>
+              Everything
+            </LineLink>
             {categories.map((category) => {
-              const address = `/blog/category/${category.slug}`;
-              const current =
-                pathname === address || pathname.startsWith(`${address}/`);
+              const address = `${BLOG_HOME}/category/${category.slug}`;
               return (
-                <Link
-                  aria-current={current ? "page" : undefined}
-                  className={styles.category}
+                <LineLink
+                  current={
+                    pathname === address || pathname.startsWith(`${address}/`)
+                  }
                   href={address}
                   key={category.id}
                 >
                   {category.label}
-                </Link>
+                </LineLink>
               );
             })}
           </nav>
         ) : null}
       </div>
-    </header>
+    </motion.header>
   );
 }

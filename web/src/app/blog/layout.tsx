@@ -13,8 +13,14 @@ export default async function BlogLayout({ children }: LayoutProps<"/blog">) {
   const categories = await fetchPostCategories();
   return (
     <>
+      <a
+        className="sr-only rounded-control bg-plane p-4 text-ui text-ink shadow-popover focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-90"
+        href="#main-content"
+      >
+        Skip to content
+      </a>
       <BlogMasthead categories={categories} />
-      <main>{children}</main>
+      <main id="main-content">{children}</main>
       <BlogFooter />
     </>
   );

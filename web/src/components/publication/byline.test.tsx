@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PostByline } from "@/lib/api/query";
-import { Byline, BylineLine } from "./Byline";
+import { Byline, BylineText } from "./Byline";
 
 const WREN: PostByline = {
   handle: "wren",
@@ -26,13 +26,19 @@ test("a name kept from before, with no account, is not a link at all", () => {
   expect(html).toContain("Wren Ashdown");
 });
 
-test("a listed name follows the same rule as a full byline", () => {
-  expect(renderToStaticMarkup(<BylineLine byline={WREN} />)).toContain(
-    'href="http://localhost:8000/@wren"',
+test("a listed name is words rather than a second action inside its row", () => {
+  const html = renderToStaticMarkup(<BylineText affiliation byline={WREN} />);
+  expect(html).toContain("Wren Ashdown");
+  expect(html).toContain("Illarin Team");
+  expect(html).not.toContain("href=");
+});
+
+test("a listed name drops the affiliation its archive already states", () => {
+  const html = renderToStaticMarkup(
+    <BylineText affiliation={false} byline={KEPT} />,
   );
-  expect(
-    renderToStaticMarkup(<BylineLine byline={KEPT} quiet />),
-  ).not.toContain("href=");
+  expect(html).toContain("Wren Ashdown");
+  expect(html).not.toContain("Illarin Team");
 });
 
 test("a byline with no display name is attributed to its handle", () => {

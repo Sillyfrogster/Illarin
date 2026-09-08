@@ -66,7 +66,10 @@ export function AccountMenu() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
+      <DropdownMenuContent
+        align="end"
+        className="w-72 max-w-[calc(100vw-2rem)]"
+      >
         {account ? (
           <DropdownMenuLabel>
             <span className="block text-ui font-medium break-words">

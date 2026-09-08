@@ -30,7 +30,7 @@ test("a heading renders at its level and answers to its address", () => {
     anchor: "release-notes",
     content: [{ type: "text", text: "Release notes" }],
   });
-  expect(html).toContain('<h3 id="release-notes">Release notes</h3>');
+  expect(html).toMatch(/<h3[^>]*id="release-notes"[^>]*>Release notes<\/h3>/);
 });
 
 test("every mark reaches its own element", () => {
@@ -45,7 +45,7 @@ test("every mark reaches its own element", () => {
   });
   expect(html).toContain("<strong>b</strong>");
   expect(html).toContain("<em>i</em>");
-  expect(html).toContain("<s>s</s>");
+  expect(html).toMatch(/<s[^>]*>s<\/s>/);
   expect(html).toContain(">c</code>");
 });
 
@@ -145,7 +145,7 @@ test("a heading row becomes column headings and a heading column becomes row hea
       },
     ],
   });
-  expect(columns).toContain("<thead>");
+  expect(columns).toContain("<thead");
   expect(columns).toContain('scope="col"');
   expect(columns).not.toContain('scope="row"');
 
@@ -168,7 +168,7 @@ test("a heading row becomes column headings and a heading column becomes row hea
       },
     ],
   });
-  expect(rowHeadings).not.toContain("<thead>");
+  expect(rowHeadings).not.toContain("<thead");
   expect(rowHeadings).toContain('scope="row"');
 });
 
@@ -179,8 +179,8 @@ test("code keeps its source and is highlighted from it", () => {
     source: 'func main() {\n\t// note\n\tprint("hi")\n}',
   });
   expect(html).toContain("Go</span>");
-  expect(html).toContain("<span>// note</span>");
-  expect(html).toContain("<span>func</span>");
+  expect(html).toMatch(/<span[^>]*>\/\/ note<\/span>/);
+  expect(html).toMatch(/<span[^>]*>func<\/span>/);
   expect(html).toContain("&quot;hi&quot;");
 });
 
@@ -236,8 +236,8 @@ test("a picture renders as a figure with its description and caption", () => {
   });
   expect(html).toContain(`src="/media/${PLACED}/detail/1"`);
   expect(html).toContain('alt="The workspace with one draft in it"');
-  expect(html).toContain(
-    "<figcaption>The workspace after the first draft is started.</figcaption>",
+  expect(html).toMatch(
+    /<figcaption[^>]*>The workspace after the first draft is started\.<\/figcaption>/,
   );
 });
 

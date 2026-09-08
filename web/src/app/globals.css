@@ -5,6 +5,18 @@
 @source "../lib";
 @source not "../app/prototype";
 
+/* The theme is a data attribute with a system default, so Tailwind's dark variant has to read both */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
 /* Clearing the defaults keeps the palette closed, so only these steps compile */
 @theme {
   --color-*: initial;

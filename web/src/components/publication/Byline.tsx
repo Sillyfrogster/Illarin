@@ -2,53 +2,59 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PostByline } from "@/lib/api/query";
 import { bylineName, bylineProfile } from "@/lib/byline";
-import styles from "./Byline.module.css";
 
 /** Who wrote a post and what they were writing as, exactly as its byline was stored. */
 export function Byline({ byline }: { byline: PostByline }) {
   const name = bylineName(byline);
   const profile = bylineProfile(byline);
   return (
-    <div className={styles.byline}>
-      <span className={styles.portrait} aria-hidden="true">
+    <div className="flex min-w-0 items-center gap-3">
+      <span
+        aria-hidden="true"
+        className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-deep"
+      >
         {byline.avatar ? (
           <Image
             alt=""
+            className="size-full object-cover"
             height={44}
             src={byline.avatar.url}
             unoptimized
             width={44}
           />
         ) : (
-          <span className={styles.monogram}>
+          <span className="font-display text-[19px] leading-none text-mute">
             {byline.handle.slice(0, 1).toUpperCase()}
           </span>
         )}
       </span>
-      <span className={styles.who}>
+      <span className="flex min-w-0 flex-col">
         {profile ? (
-          <a className={styles.name} href={profile}>
+          <a
+            className="truncate text-ui font-medium text-ink hover:text-accent"
+            href={profile}
+          >
             {name}
           </a>
         ) : (
-          <span className={styles.name}>{name}</span>
+          <span className="truncate text-ui font-medium text-ink">{name}</span>
         )}
-        <span className={styles.standing}>
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-meta text-mute max-sm:whitespace-normal">
           {byline.app ? (
             <>
               <Link
-                className={styles.affiliation}
+                className="truncate text-ink hover:text-accent"
                 href={`/blog/app/${byline.app.slug}`}
               >
                 {byline.app.name}
               </Link>
-              <span className={styles.publisher}>Published by Illarin</span>
+              <span className="truncate">Published by Illarin</span>
             </>
           ) : (
             <>
-              <span className={styles.affiliation}>Illarin Team</span>
+              <span className="truncate text-ink">Illarin Team</span>
               {standingOf(byline).length > 0 ? (
-                <span className={styles.publisher}>
+                <span className="min-w-0 truncate">
                   {standingOf(byline).join(" · ")}
                 </span>
               ) : null}
@@ -60,32 +66,18 @@ export function Byline({ byline }: { byline: PostByline }) {
   );
 }
 
-/** The same attribution on one line, for a list where a portrait in every row is noise. */
-export function BylineLine({
+/** The same attribution as plain words, for a list whose rows are one link each. */
+export function BylineText({
+  affiliation,
   byline,
-  quiet,
 }: {
+  affiliation: boolean;
   byline: PostByline;
-  quiet?: boolean;
 }) {
-  const name = bylineName(byline);
-  const profile = bylineProfile(byline);
   return (
-    <span className={styles.line}>
-      {profile ? (
-        <a className={styles.lineName} href={profile}>
-          {name}
-        </a>
-      ) : (
-        <span className={styles.lineName}>{name}</span>
-      )}
-      {quiet ? null : byline.app ? (
-        <Link className={styles.lineApp} href={`/blog/app/${byline.app.slug}`}>
-          {byline.app.name}
-        </Link>
-      ) : (
-        <span className={styles.lineApp}>Illarin Team</span>
-      )}
+    <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
+      <span className="font-medium">{bylineName(byline)}</span>
+      {affiliation ? <span>{byline.app?.name ?? "Illarin Team"}</span> : null}
     </span>
   );
 }
