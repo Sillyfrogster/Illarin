@@ -19,7 +19,7 @@ func (s *Service) VersionHistory(
 		return nil, err
 	}
 	rows, err := s.pool.Query(ctx, `
-		select id, number, recorded_at, version_label, summary, notes
+		select id, number, recorded_at, initial_recorded, version_label, summary, notes
 		  from asset_snapshots where asset_id = $1 order by number desc
 	`, assetID)
 	if err != nil {
@@ -30,7 +30,8 @@ func (s *Service) VersionHistory(
 	for rows.Next() {
 		var recorded Version
 		if err := rows.Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
-			&recorded.VersionLabel, &recorded.Summary, &recorded.Notes); err != nil {
+			&recorded.Initial, &recorded.VersionLabel, &recorded.Summary,
+			&recorded.Notes); err != nil {
 			return nil, fmt.Errorf("read a recorded version: %w", err)
 		}
 		history = append(history, recorded)
@@ -44,13 +45,14 @@ func (s *Service) CompareVersions(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	from, to int,
+	visibility ContentVisibility,
 ) (Comparison, error) {
 	owner, err := s.readerRole(ctx, assetID, viewerID)
 	if err != nil {
 		return Comparison{}, err
 	}
 	return s.Compare(ctx, ComparisonRequest{
-		AssetID: assetID, From: from, To: to, AsOwner: owner,
+		AssetID: assetID, From: from, To: to, AsOwner: owner, Visibility: visibility,
 		Access: func(Version) string { return "" },
 	})
 }

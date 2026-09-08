@@ -606,8 +606,18 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 		SealedBlocks:       countOrAbsent(found.SealedBlocks),
 		AddableBlocks:      addable,
 		Visibility:         AssetDetailVisibility(visibility),
+		LatestUpdate:       toAPILatestUpdate(found.LatestUpdate),
 		Withhold:           toAPIWithhold(found.Withhold),
 	}, nil
+}
+
+// toAPILatestUpdate carries the newest recorded version, or nothing where a draft has recorded none.
+func toAPILatestUpdate(recorded *asset.Version) *RecordedVersion {
+	if recorded == nil {
+		return nil
+	}
+	served := toAPIRecordedVersion(*recorded)
+	return &served
 }
 
 func apiAllowedApps(apps []string) []AssetDetailAllowedApps {

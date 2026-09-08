@@ -2075,6 +2075,9 @@ type AssetDetail struct {
 	IsOwner bool            `json:"isOwner"`
 	Kind    AssetDetailKind `json:"kind"`
 
+	// LatestUpdate The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none.
+	LatestUpdate *RecordedVersion `json:"latestUpdate,omitempty"`
+
 	// Lifecycle A draft resolves for its owner alone. Discovery applies to a published asset only.
 	Lifecycle AssetDetailLifecycle `json:"lifecycle"`
 
@@ -3840,12 +3843,15 @@ type RecordListContentSchema string
 
 // RecordedVersion defines model for RecordedVersion.
 type RecordedVersion struct {
-	Id           openapi_types.UUID `json:"id"`
-	Notes        string             `json:"notes"`
-	Number       int                `json:"number"`
-	RecordedAt   time.Time          `json:"recordedAt"`
-	Summary      string             `json:"summary"`
-	VersionLabel string             `json:"versionLabel"`
+	Id openapi_types.UUID `json:"id"`
+
+	// Initial Whether this version was captured from what the asset already was, rather than published as an update.
+	Initial      bool      `json:"initial"`
+	Notes        string    `json:"notes"`
+	Number       int       `json:"number"`
+	RecordedAt   time.Time `json:"recordedAt"`
+	Summary      string    `json:"summary"`
+	VersionLabel string    `json:"versionLabel"`
 }
 
 // RecordedVersionList defines model for RecordedVersionList.
@@ -4297,13 +4303,17 @@ type VerifyEmailRequest struct {
 
 // VersionChange defines model for VersionChange.
 type VersionChange struct {
-	After        *string             `json:"after,omitempty"`
-	AfterMedia   *openapi_types.UUID `json:"afterMedia,omitempty"`
-	Before       *string             `json:"before,omitempty"`
-	BeforeMedia  *openapi_types.UUID `json:"beforeMedia,omitempty"`
-	Kind         VersionChangeKind   `json:"kind"`
-	Name         string              `json:"name"`
-	PreviousName *string             `json:"previousName,omitempty"`
+	After *string `json:"after,omitempty"`
+
+	// AfterImage The address of the picture this change added or replaced it with
+	AfterImage *string `json:"afterImage,omitempty"`
+	Before     *string `json:"before,omitempty"`
+
+	// BeforeImage The address of the picture this change replaced or removed
+	BeforeImage  *string           `json:"beforeImage,omitempty"`
+	Kind         VersionChangeKind `json:"kind"`
+	Name         string            `json:"name"`
+	PreviousName *string           `json:"previousName,omitempty"`
 }
 
 // VersionChangeKind defines model for VersionChange.Kind.

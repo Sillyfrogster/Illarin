@@ -20,6 +20,7 @@ import { AssetBlocks } from "./AssetBlocks";
 import { AssetMedia } from "./AssetMedia";
 import { DownloadPanel } from "./DownloadPanel";
 import { DraftHeaderActions } from "./DraftHeaderActions";
+import { LatestUpdate } from "./LatestUpdate";
 import styles from "./page.module.css";
 import { SendToInstance } from "./SendToInstance";
 import { UpdatePanel } from "./UpdatePanel";
@@ -214,6 +215,14 @@ export default async function AssetPage({
 
                   {asset.withhold ? (
                     <WithholdNotice withhold={asset.withhold} />
+                  ) : null}
+
+                  {asset.latestUpdate ? (
+                    <LatestUpdate
+                      assetId={asset.id}
+                      kind={kind.toLowerCase()}
+                      version={asset.latestUpdate}
+                    />
                   ) : null}
                 </div>
               </div>

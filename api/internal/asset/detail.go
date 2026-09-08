@@ -66,6 +66,8 @@ type Detail struct {
 	Media []DetailImage
 	// Preview is the composed social preview a link unfurler fetches.
 	Preview *string
+	// LatestUpdate is the newest version this asset has recorded, and is nil for a draft, which has recorded none.
+	LatestUpdate *Version
 	// Readiness is the whole publish floor on a draft and only the shortfall on a published page, and stands only for the owner.
 	Readiness         []ReadinessItem
 	SealedBlocks      int
@@ -156,6 +158,10 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	if err != nil {
 		return Detail{}, err
 	}
+	found.LatestUpdate, err = latestUpdate(ctx, tx, id)
+	if err != nil {
+		return Detail{}, err
+	}
 	if working && found.Lifecycle == LifecyclePublished {
 		unpublished, err := s.unpublishedChanges(ctx, tx, id)
 		if err != nil {
@@ -238,6 +244,26 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		}
 	}
 	return found, nil
+}
+
+// latestUpdate reads the newest version the asset has recorded, which is the one readers have.
+func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*Version, error) {
+	var recorded Version
+	err := tx.QueryRow(ctx, `
+		select s.id, s.number, s.recorded_at, s.initial_recorded,
+		       s.version_label, s.summary, s.notes
+		  from public.assets a
+		  join public.asset_snapshots s on s.id = a.published_snapshot_id
+		 where a.id = $1
+	`, assetID).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
+		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read the latest recorded version: %w", err)
+	}
+	return &recorded, nil
 }
 
 // unpublishedChanges measures the working copy against the version readers have, by the same measure publication uses.

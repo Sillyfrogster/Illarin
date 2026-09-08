@@ -7968,6 +7968,11 @@ components:
             - hidden
             - blurred
             - shown
+        latestUpdate:
+          description: >-
+            The newest version this asset has recorded, and the one readers
+            have. Absent on a draft, which has recorded none.
+          $ref: '#/components/schemas/RecordedVersion'
         withhold:
           $ref: '#/components/schemas/AssetWithhold'
     DownloadTarget:
@@ -8593,6 +8598,7 @@ components:
         - id
         - number
         - recordedAt
+        - initial
         - versionLabel
         - summary
         - notes
@@ -8605,6 +8611,11 @@ components:
         recordedAt:
           type: string
           format: date-time
+        initial:
+          description: >-
+            Whether this version was captured from what the asset already was,
+            rather than published as an update.
+          type: boolean
         versionLabel:
           type: string
         summary:
@@ -8640,12 +8651,12 @@ components:
           type: string
         after:
           type: string
-        beforeMedia:
+        beforeImage:
+          description: The address of the picture this change replaced or removed
           type: string
-          format: uuid
-        afterMedia:
+        afterImage:
+          description: The address of the picture this change added or replaced it with
           type: string
-          format: uuid
     VersionChangeGroup:
       type: object
       required:

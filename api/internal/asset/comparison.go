@@ -28,9 +28,11 @@ var (
 
 // Version names one recorded version of an asset.
 type Version struct {
-	ID           uuid.UUID
-	Number       int
-	RecordedAt   time.Time
+	ID         uuid.UUID
+	Number     int
+	RecordedAt time.Time
+	// Initial says the version was captured from what the asset already was, rather than published as an update.
+	Initial      bool
 	VersionLabel string
 	Summary      string
 	Notes        string
@@ -45,7 +47,7 @@ const (
 	ChangeEdited  ChangeKind = "change"
 )
 
-// Change is one addition, removal or edit, carrying the text on each side where the change is textual and the media on each side where it swapped a picture.
+// Change is one addition, removal or edit, carrying the text on each side where the change is textual and the picture on each side where it swapped one.
 type Change struct {
 	Kind         ChangeKind
 	Name         string
@@ -54,6 +56,9 @@ type Change struct {
 	After        string
 	BeforeMedia  *uuid.UUID
 	AfterMedia   *uuid.UUID
+	// BeforeImage and AfterImage address the pictures on each side under the rules this reader is under.
+	BeforeImage string
+	AfterImage  string
 }
 
 // ChangeGroup collects the changes to one part of an asset.
@@ -78,11 +83,12 @@ type VersionAccess func(Version) string
 
 // ComparisonRequest is one reader asking what changed between two recorded versions, where a zero To is the published version and a zero From is the one recorded before it.
 type ComparisonRequest struct {
-	AssetID uuid.UUID
-	From    int
-	To      int
-	Access  VersionAccess
-	AsOwner bool
+	AssetID    uuid.UUID
+	From       int
+	To         int
+	Access     VersionAccess
+	AsOwner    bool
+	Visibility ContentVisibility
 }
 
 // The subjects a comparison reports outside the semantic roles.
@@ -129,7 +135,36 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		compared.PromptsWithheld = compared.PromptsWithheld || withheld
 	}
 	compared.Groups = compareVersions(earlier, later)
+	if err := s.addressPictures(ctx, tx, in, compared.Groups); err != nil {
+		return Comparison{}, err
+	}
 	return compared, nil
+}
+
+// addressPictures gives every picture a comparison names the address this reader may load it from.
+func (s *Service) addressPictures(
+	ctx context.Context,
+	tx pgx.Tx,
+	in ComparisonRequest,
+	groups []ChangeGroup,
+) error {
+	var flagged *bool
+	if err := tx.QueryRow(ctx,
+		`select is_nsfw from assets where id = $1`, in.AssetID).Scan(&flagged); err != nil {
+		return fmt.Errorf("read the asset to address its pictures: %w", err)
+	}
+	blurred := flagged != nil && *flagged && in.Visibility != ContentShown
+	for _, group := range groups {
+		for index, change := range group.Changes {
+			if change.BeforeMedia != nil {
+				group.Changes[index].BeforeImage = s.variantURL(*change.BeforeMedia, "thumb", blurred, false)
+			}
+			if change.AfterMedia != nil {
+				group.Changes[index].AfterImage = s.variantURL(*change.AfterMedia, "thumb", blurred, false)
+			}
+		}
+	}
+	return nil
 }
 
 // holdPrompts puts a recorded version's prompts under the rules its reader is under.
@@ -222,11 +257,12 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	var recorded recordedVersion
 	var stored []byte
 	err := tx.QueryRow(ctx, `
-		select id, number, recorded_at, version_label, summary, notes, payload, protected_payloads
+		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
+		       payload, protected_payloads
 		  from asset_snapshots where asset_id = $1 and number = $2
 	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
-		&recorded.VersionLabel, &recorded.Summary, &recorded.Notes, &stored,
-		&recorded.protectedPayloads)
+		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
+		&stored, &recorded.protectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordedVersion{}, ErrNotFound
 	}

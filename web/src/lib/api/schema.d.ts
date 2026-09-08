@@ -3193,6 +3193,8 @@ export interface components {
       addableBlocks?: components["schemas"]["AddableBlock"][];
       /** @enum {string} */
       visibility: "hidden" | "blurred" | "shown";
+      /** @description The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none. */
+      latestUpdate?: components["schemas"]["RecordedVersion"];
       withhold?: components["schemas"]["AssetWithhold"];
     };
     DownloadTarget: {
@@ -3460,6 +3462,8 @@ export interface components {
       number: number;
       /** Format: date-time */
       recordedAt: string;
+      /** @description Whether this version was captured from what the asset already was, rather than published as an update. */
+      initial: boolean;
       versionLabel: string;
       summary: string;
       notes: string;
@@ -3474,10 +3478,10 @@ export interface components {
       previousName?: string;
       before?: string;
       after?: string;
-      /** Format: uuid */
-      beforeMedia?: string;
-      /** Format: uuid */
-      afterMedia?: string;
+      /** @description The address of the picture this change replaced or removed */
+      beforeImage?: string;
+      /** @description The address of the picture this change added or replaced it with */
+      afterImage?: string;
     };
     VersionChangeGroup: {
       subject: string;

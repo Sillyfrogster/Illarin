@@ -38,9 +38,13 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params Co
 	if !ok {
 		return
 	}
+	visibility, ok := h.readerVisibility(c, nil)
+	if !ok {
+		return
+	}
 	compared, err := h.assets.CompareVersions(
 		c.Request.Context(), uuid.UUID(id), viewerID,
-		versionNumber(params.From), versionNumber(params.To),
+		versionNumber(params.From), versionNumber(params.To), visibility,
 	)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
@@ -127,8 +131,9 @@ func versionNumber(chosen *int) int {
 func toAPIRecordedVersion(recorded asset.Version) RecordedVersion {
 	return RecordedVersion{
 		Id: types.UUID(recorded.ID), Number: recorded.Number,
-		RecordedAt: recorded.RecordedAt, VersionLabel: recorded.VersionLabel,
-		Summary: recorded.Summary, Notes: recorded.Notes,
+		RecordedAt: recorded.RecordedAt, Initial: recorded.Initial,
+		VersionLabel: recorded.VersionLabel,
+		Summary:      recorded.Summary, Notes: recorded.Notes,
 	}
 }
 
@@ -176,13 +181,13 @@ func toAPIChange(change asset.Change) VersionChange {
 		after := change.After
 		served.After = &after
 	}
-	if change.BeforeMedia != nil {
-		before := types.UUID(*change.BeforeMedia)
-		served.BeforeMedia = &before
+	if change.BeforeImage != "" {
+		before := change.BeforeImage
+		served.BeforeImage = &before
 	}
-	if change.AfterMedia != nil {
-		after := types.UUID(*change.AfterMedia)
-		served.AfterMedia = &after
+	if change.AfterImage != "" {
+		after := change.AfterImage
+		served.AfterImage = &after
 	}
 	return served
 }

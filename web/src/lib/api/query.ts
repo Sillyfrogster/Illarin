@@ -44,6 +44,10 @@ export type AssetTag = components["schemas"]["AssetTag"];
 export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
 export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
+export type RecordedVersion = components["schemas"]["RecordedVersion"];
+export type VersionComparison = components["schemas"]["VersionComparison"];
+export type VersionChangeGroup = components["schemas"]["VersionChangeGroup"];
+export type VersionChange = components["schemas"]["VersionChange"];
 export type IngestOperation = components["schemas"]["IngestOperation"];
 export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
 export type ReplacementDecision =
@@ -574,6 +578,58 @@ export async function fetchPreservedNamespaces(
     params: { path: { id } },
   });
   return data ?? [];
+}
+
+/** The versions an asset has recorded, newest first. */
+export async function fetchAssetUpdates(
+  id: string,
+  cookie?: string,
+): Promise<RecordedVersion[]> {
+  const { data } = await api.GET("/v1/assets/{id}/updates", {
+    params: { path: { id } },
+    headers: cookie ? { cookie } : undefined,
+  });
+  return data?.items ?? [];
+}
+
+/** What changed between two recorded versions, or why the reader cannot see it. */
+export async function compareAssetVersions(
+  id: string,
+  from: number,
+  to: number,
+  cookie?: string,
+): Promise<
+  { compared: VersionComparison } | { compared: null; refusal: string }
+> {
+  const unreadable = {
+    compared: null,
+    refusal: "That comparison could not be read. Try again.",
+  } as const;
+  let data: VersionComparison | undefined;
+  let response: Response;
+  try {
+    ({ data, response } = await api.GET("/v1/assets/{id}/updates/comparison", {
+      params: { path: { id }, query: { from, to } },
+      headers: cookie ? { cookie } : undefined,
+    }));
+  } catch {
+    return unreadable;
+  }
+  if (data) return { compared: data };
+  if (response.status === 409) {
+    return {
+      compared: null,
+      refusal:
+        "This is the first version Illarin recorded, so there is nothing before it to compare.",
+    };
+  }
+  if (response.status === 404) {
+    return {
+      compared: null,
+      refusal: "That version is not available to read.",
+    };
+  }
+  return unreadable;
 }
 
 /** The recorded versions whose prompts no longer line up with the sealed ones. */
