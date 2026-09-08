@@ -113,7 +113,7 @@ function ItemList({
         element.type !== "dialogue_sample" && "w-items",
       )}
     >
-      {items.map((item, index) => {
+      {items.map((item) => {
         const body = (
           <>
             <span className="ws:flex ws:min-w-0 ws:items-baseline ws:gap-3">
@@ -133,8 +133,10 @@ function ItemList({
             </span>
             <span
               className={cn(
-                "w-writing ws:mt-1.5 ws:block ws:max-w-[62ch] ws:text-[1.0625rem] ws:leading-7 ws:text-mute",
-                conversation ? "ws:line-clamp-none" : "ws:line-clamp-2",
+                "w-writing ws:mt-2 ws:block ws:max-w-[62ch] ws:text-[1.0625rem] ws:leading-7 ws:text-mute",
+                live && !conversation
+                  ? "ws:line-clamp-3"
+                  : "ws:whitespace-pre-wrap",
               )}
             >
               {item.text.trim() || (live ? "Write this one." : "") || " "}
@@ -152,14 +154,7 @@ function ItemList({
                 {body}
               </button>
             ) : (
-              <div
-                className={cn(
-                  "ws:px-3 ws:py-2.5",
-                  index > 0 && "ws:shadow-[inset_0_1px_0_var(--w-hairline)]",
-                )}
-              >
-                {body}
-              </div>
+              <div className="ws:px-3 ws:py-1">{body}</div>
             )}
           </li>
         );
@@ -199,8 +194,8 @@ function BlockSection({
   if (!elements.length) return null;
   const narrow = width !== undefined && width <= NARROW_BLOCK_GRID_PX;
   return (
-    <section className="ws:min-w-0">
-      <header className="ws:mb-6 ws:flex ws:items-baseline ws:gap-4">
+    <section className="ws:min-w-0 ws:rounded-[24px] ws:bg-card ws:p-7 ws:shadow-[var(--w-sheet)] ws:md:p-10">
+      <header className="ws:mb-7 ws:flex ws:items-baseline ws:gap-4">
         <h2 className="ws:min-w-0 ws:font-display ws:text-[1.75rem] ws:leading-tight ws:font-medium ws:wrap-anywhere ws:md:text-4xl">
           {block.title || "Untitled block"}
         </h2>
@@ -208,7 +203,7 @@ function BlockSection({
           <button
             type="button"
             onClick={arrange}
-            className="ws:inline-flex ws:shrink-0 ws:items-center ws:gap-1.5 ws:rounded-full ws:px-2.5 ws:py-1 ws:text-xs ws:font-semibold ws:text-mute ws:transition ws:hover:bg-ink/8 ws:hover:text-ink ws:motion-reduce:transition-none"
+            className="w-hit ws:inline-flex ws:shrink-0 ws:items-center ws:gap-1.5 ws:rounded-full ws:px-2.5 ws:py-1 ws:text-xs ws:font-semibold ws:text-mute ws:transition ws:hover:bg-ink/8 ws:hover:text-ink ws:motion-reduce:transition-none"
           >
             {block.hidden ? (
               <EyeOff className="ws:size-3.5" />

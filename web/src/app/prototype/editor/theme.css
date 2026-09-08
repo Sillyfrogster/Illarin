@@ -52,6 +52,10 @@
     0 32px 80px -28px rgb(46 40 24 / 0.34),
     0 32px 80px -24px rgb(0 0 0 / 0.75)
   );
+  --w-sheet: light-dark(
+    0 1px 1px rgb(46 40 24 / 0.04),
+    0 22px 44px -34px rgb(46 40 24 / 0.5)
+  );
   --w-dock: light-dark(
     0 18px 46px -18px rgb(46 40 24 / 0.4),
     0 18px 46px -14px rgb(0 0 0 / 0.8)
@@ -128,7 +132,8 @@
 /* Collections use two columns when the block is wide enough */
 .w-items {
   display: grid;
-  gap: 0 2rem;
+  gap: 1.75rem 2.5rem;
+  align-content: start;
 }
 @container (min-width: 46rem) {
   .w-items {
@@ -188,6 +193,16 @@
   height: 1px;
   background: var(--w-spectrum);
   opacity: 0.5;
+}
+
+/* A small control keeps its size and grows only its touch target */
+.w-hit {
+  position: relative;
+}
+.w-hit::before {
+  content: "";
+  position: absolute;
+  inset: -10px -8px;
 }
 
 .w-glass {
