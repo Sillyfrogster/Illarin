@@ -3722,6 +3722,37 @@ paths:
           description: The file exceeds an upload limit or the account storage cap
         '503':
           description: The storage reserve cannot accept the revision
+    get:
+      operationId: getAssetReplacement
+      description: >-
+        The replacement upload this asset is still deciding about, so a creator
+        who reloads the page finds the file they left waiting.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: >-
+            The replacement still being read or reviewed, and null where the
+            asset has none waiting
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/IngestOperation'
+                  - type: 'null'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset does not belong to the creator
   /v1/assets/{id}/revisions/{operationId}/accept:
     post:
       operationId: acceptAssetRevision
@@ -7798,6 +7829,11 @@ components:
           description: >-
             Only returned with the owner's working copy or draft, from the same
             read snapshot
+        unpublishedChanges:
+          type: boolean
+          description: >-
+            Whether the working copy differs from the version readers see.
+            Returned with the owner's working copy of a published asset.
         id:
           type: string
           format: uuid

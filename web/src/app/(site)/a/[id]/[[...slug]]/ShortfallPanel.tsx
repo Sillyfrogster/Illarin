@@ -2,13 +2,8 @@
 
 import { AlertCircle } from "lucide-react";
 import type { ReadinessItem } from "@/lib/api/query";
+import { readinessHref } from "@/lib/readiness";
 import styles from "./PublishPanel.module.css";
-
-/** Where a creator goes to fill one thing in. */
-function itemHref(item: ReadinessItem): string {
-  if (item.blockId) return `#block-${item.blockId}`;
-  return item.id === "adult_content" ? "#adult-content-answer" : "#asset-name";
-}
 
 export function ShortfallPanel({
   kind,
@@ -40,7 +35,7 @@ export function ShortfallPanel({
               <strong>{item.label}</strong>
               <span className={styles.detail}>{item.detail}</span>
               <a
-                href={itemHref(item)}
+                href={readinessHref(item)}
                 onClick={(event) => {
                   if (!item.blockId) return;
                   event.preventDefault();

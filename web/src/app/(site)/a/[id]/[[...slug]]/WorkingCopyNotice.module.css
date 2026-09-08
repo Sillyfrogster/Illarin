@@ -1,0 +1,35 @@
+.notice {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-critical-border);
+  background: var(--color-critical-soft);
+  color: var(--color-critical-strong);
+}
+
+.notice > svg {
+  flex: none;
+}
+
+.notice p {
+  flex: 1 1 260px;
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-leading);
+}
+
+.notice button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding-inline: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-critical);
+  color: var(--color-on-critical);
+  font-size: var(--type-secondary-size);
+  font-weight: 700;
+}

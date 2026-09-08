@@ -1,5 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
-import { acceptCandidateVersion, type Candidate } from "@/lib/working-copy";
+import {
+  acceptCandidateVersion,
+  type Candidate,
+  reportStaleWorkingCopy,
+} from "@/lib/working-copy";
 import { browserFetch } from "./browser-mutation";
 import { api } from "./client";
 import type { components, paths } from "./schema";
@@ -40,6 +44,12 @@ export type AssetTag = components["schemas"]["AssetTag"];
 export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
 export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
+export type IngestOperation = components["schemas"]["IngestOperation"];
+export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
+export type ReplacementDecision =
+  components["schemas"]["ReplacementAcceptance"]["unrepresentable"];
+export type AssetUpdate = components["schemas"]["AssetUpdate"];
+export type AssetUpdateRequest = components["schemas"]["AssetUpdateRequest"];
 export type PromptCorrespondenceRequest =
   components["schemas"]["PromptCorrespondenceRequest"];
 export type Profile = components["schemas"]["Profile"];
@@ -126,6 +136,17 @@ export const assetKeys = {
     creator?: string,
   ) => ["assets", "list", creator, filters, visibility] as const,
 };
+
+/** Every working-copy write refuses the same way, and a stale one tells the page. */
+function writeRefusal(error: unknown, fallback: string): Error {
+  reportStaleWorkingCopy(error);
+  const detail = error as { error?: unknown } | undefined;
+  return new Error(
+    typeof detail?.error === "string"
+      ? detail.error.replace(/^invalid block:\s*/i, "")
+      : fallback,
+  );
+}
 
 export async function fetchProfile(handle: string): Promise<Profile | null> {
   const { data, error } = await api.GET("/v1/profiles/{handle}", {
@@ -249,12 +270,7 @@ export async function saveAssetBlock(
   );
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    const message =
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be saved. Try again.";
-    throw new Error(message);
+    throw writeRefusal(error, "The block could not be saved. Try again.");
   }
   return data;
 }
@@ -275,12 +291,7 @@ export async function addAssetBlock(
   });
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be added. Try again.",
-    );
+    throw writeRefusal(error, "The block could not be added. Try again.");
   }
   return data;
 }
@@ -331,12 +342,7 @@ export async function arrangeAssetBlocks(
   });
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block order could not be saved. Try again.",
-    );
+    throw writeRefusal(error, "The block order could not be saved. Try again.");
   }
   return data;
 }
@@ -358,12 +364,7 @@ export async function removeAssetBlock(
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be removed. Try again.",
-    );
+    throw writeRefusal(error, "The block could not be removed. Try again.");
   }
 }
 
@@ -386,12 +387,7 @@ export async function moveAssetBlockContent(
   );
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The content could not be moved. Try again.",
-    );
+    throw writeRefusal(error, "The content could not be moved. Try again.");
   }
   return data;
 }
@@ -411,12 +407,7 @@ export async function saveAssetIdentity(
   });
   acceptCandidateVersion(candidate, response);
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error
-        : "The details could not be saved. Try again.",
-    );
+    throw writeRefusal(error, "The details could not be saved. Try again.");
   }
 }
 
@@ -447,6 +438,130 @@ export async function publishAsset(
       typeof refusal?.error === "string"
         ? refusal.error
         : "The asset could not be published. Try again.",
+    readiness: refusal?.readiness,
+  };
+}
+
+/** The replacement this asset is still deciding about, or nothing where none waits. */
+export async function fetchWaitingReplacement(
+  id: string,
+): Promise<IngestOperation | null> {
+  const { data, error } = await api.GET("/v1/assets/{id}/revisions", {
+    params: { path: { id } },
+  });
+  if (error || !data) return null;
+  return data;
+}
+
+/** Hands over a replacement file. Nothing readers see changes until it is accepted. */
+export async function uploadAssetReplacement(
+  candidate: Candidate,
+  id: string,
+  file: File,
+): Promise<IngestOperation> {
+  const body = new FormData();
+  body.append("file", file, file.name);
+  const response = await browserFetch(`/api/v1/assets/${id}/revisions`, {
+    method: "POST",
+    headers: { "X-Working-Copy-Version": String(candidate.version) },
+    credentials: "same-origin",
+    body,
+  });
+  acceptCandidateVersion(candidate, response);
+  const answer = (await response.json()) as IngestOperation & {
+    error?: unknown;
+    code?: unknown;
+  };
+  if (!response.ok) {
+    throw writeRefusal(
+      answer,
+      response.status === 413
+        ? "That file is larger than Illarin accepts."
+        : "That file could not be accepted. Try again.",
+    );
+  }
+  return answer;
+}
+
+/** Reads one ingest operation again while it is being processed. */
+export async function readIngestOperation(
+  url: string,
+): Promise<IngestOperation> {
+  const response = await fetch(`/api${url}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Illarin could not read this upload yet.");
+  return (await response.json()) as IngestOperation;
+}
+
+/** Applies a reviewed replacement to the working copy, with a choice for each thing the file cannot hold. */
+export async function acceptAssetReplacement(
+  candidate: Candidate,
+  id: string,
+  operationId: string,
+  unrepresentable: ReplacementDecision,
+): Promise<IngestOperation> {
+  const { data, error, response } = await api.POST(
+    "/v1/assets/{id}/revisions/{operationId}/accept",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, operationId },
+      },
+      body: { unrepresentable },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error || !data) {
+    throw writeRefusal(error, "That file could not be applied. Try again.");
+  }
+  return data;
+}
+
+/** Discards a reviewed replacement and leaves the working copy as it was. */
+export async function cancelAssetReplacement(id: string, operationId: string) {
+  const { error } = await api.DELETE(
+    "/v1/assets/{id}/revisions/{operationId}",
+    { params: { path: { id, operationId } } },
+  );
+  if (error) throw new Error("That file could not be discarded. Try again.");
+}
+
+/** Publishes the reviewed working copy, or says what publication is waiting on. */
+export async function publishAssetUpdate(
+  candidate: Candidate,
+  id: string,
+  update: AssetUpdateRequest,
+): Promise<
+  | { published: true; update: AssetUpdate }
+  | {
+      published: false;
+      error: string;
+      code?: string;
+      readiness?: ReadinessItem[];
+    }
+> {
+  const { data, error, response } = await api.POST("/v1/assets/{id}/updates", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
+    body: update,
+  });
+  acceptCandidateVersion(candidate, response);
+  if (data) return { published: true, update: data };
+  reportStaleWorkingCopy(error);
+  const refusal = error as
+    | { error?: unknown; code?: unknown; readiness?: ReadinessItem[] }
+    | undefined;
+  return {
+    published: false,
+    error:
+      typeof refusal?.error === "string"
+        ? refusal.error
+        : "The update could not be published. Try again.",
+    code: typeof refusal?.code === "string" ? refusal.code : undefined,
     readiness: refusal?.readiness,
   };
 }
@@ -511,12 +626,7 @@ export async function deletePreservedNamespace(
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error
-        : "That data could not be deleted. Try again.",
-    );
+    throw writeRefusal(error, "That data could not be deleted. Try again.");
   }
 }
 

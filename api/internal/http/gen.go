@@ -2095,10 +2095,13 @@ type AssetDetail struct {
 	Readiness *[]ReadinessItem `json:"readiness,omitempty"`
 
 	// SealedBlocks How many sealed v1 preset blocks the asset preserves. Present only while the owner is reading their own asset, and absent where there are none, so a stranger cannot learn that an asset is withholding anything.
-	SealedBlocks *int                  `json:"sealedBlocks,omitempty"`
-	Tags         []AssetTag            `json:"tags"`
-	Visibility   AssetDetailVisibility `json:"visibility"`
-	Withhold     *AssetWithhold        `json:"withhold,omitempty"`
+	SealedBlocks *int       `json:"sealedBlocks,omitempty"`
+	Tags         []AssetTag `json:"tags"`
+
+	// UnpublishedChanges Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset.
+	UnpublishedChanges *bool                 `json:"unpublishedChanges,omitempty"`
+	Visibility         AssetDetailVisibility `json:"visibility"`
+	Withhold           *AssetWithhold        `json:"withhold,omitempty"`
 
 	// WorkingCopyVersion Only returned with the owner's working copy or draft, from the same read snapshot
 	WorkingCopyVersion *int64 `json:"workingCopyVersion,omitempty"`
@@ -5353,6 +5356,9 @@ type ServerInterface interface {
 	// (POST /v1/assets/{id}/restore)
 	RestoreAsset(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/assets/{id}/revisions)
+	GetAssetReplacement(c *gin.Context, id openapi_types.UUID)
+
 	// (POST /v1/assets/{id}/revisions)
 	AddAssetRevision(c *gin.Context, id openapi_types.UUID, params AddAssetRevisionParams)
 
@@ -6920,6 +6926,31 @@ func (siw *ServerInterfaceWrapper) RestoreAsset(c *gin.Context) {
 	}
 
 	siw.Handler.RestoreAsset(c, id)
+}
+
+// GetAssetReplacement operation middleware
+func (siw *ServerInterfaceWrapper) GetAssetReplacement(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAssetReplacement(c, id)
 }
 
 // AddAssetRevision operation middleware
@@ -10073,6 +10104,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/assets/:id", wrapper.DeleteAsset)
 	router.GET(options.BaseURL+"/v1/assets/:id", wrapper.GetAsset)
 	router.GET(options.BaseURL+"/v1/legacy-assets/:author/:name", wrapper.ResolveLegacyAsset)
+	router.GET(options.BaseURL+"/v1/assets/:id/revisions", wrapper.GetAssetReplacement)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions", wrapper.AddAssetRevision)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions/:operationId/accept", wrapper.AcceptAssetRevision)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/revisions/:operationId", wrapper.CancelAssetRevision)

@@ -22,7 +22,9 @@ import { DownloadPanel } from "./DownloadPanel";
 import { DraftHeaderActions } from "./DraftHeaderActions";
 import styles from "./page.module.css";
 import { SendToInstance } from "./SendToInstance";
+import { UpdatePanel } from "./UpdatePanel";
 import { WithholdNotice } from "./WithholdNotice";
+import { WorkingCopyNotice } from "./WorkingCopyNotice";
 
 const loadAsset = cache(async (id: string): Promise<AssetDetail | null> => {
   if (!isAssetId(id)) return null;
@@ -89,8 +91,10 @@ export default async function AssetPage({
     },
   );
   const holdsNothing = assetHoldsNothing(asset.blocks);
+  const updatable = asset.isOwner && !isDraft && !asset.withhold;
   const hasHeaderActions = Boolean(
     (isDraft && asset.isOwner && asset.readiness) ||
+      updatable ||
       asset.linkedInstallOnly ||
       asset.downloads.length > 0 ||
       (!asset.linkedInstallOnly && asset.original),
@@ -99,6 +103,7 @@ export default async function AssetPage({
   return (
     <WorkingCopyProvider key={asset.id} version={asset.workingCopyVersion}>
       <div className={styles.page}>
+        {asset.isOwner ? <WorkingCopyNotice /> : null}
         <article>
           <section className={styles.hero}>
             <Shell className={styles.heroShell}>
@@ -145,6 +150,14 @@ export default async function AssetPage({
                   <div className={styles.headerActions}>
                     {isDraft && asset.isOwner && asset.readiness ? (
                       <DraftHeaderActions />
+                    ) : null}
+
+                    {updatable ? (
+                      <UpdatePanel
+                        assetId={asset.id}
+                        kind={kind.toLowerCase()}
+                        unpublishedChanges={Boolean(asset.unpublishedChanges)}
+                      />
                     ) : null}
 
                     {!asset.linkedInstallOnly ? (

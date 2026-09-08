@@ -5,14 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReadinessItem } from "@/lib/api/query";
 import { publishAsset } from "@/lib/api/query";
+import { readinessHref } from "@/lib/readiness";
 import { useWorkingCopy } from "@/lib/working-copy";
 import styles from "./PublishPanel.module.css";
-
-/** Where a creator goes to meet one requirement. */
-function itemHref(item: ReadinessItem): string {
-  if (item.blockId) return `#block-${item.blockId}`;
-  return item.id === "adult_content" ? "#adult-content-answer" : "#asset-name";
-}
 
 export function PublishPanel({
   assetId,
@@ -73,7 +68,7 @@ export function PublishPanel({
               <span className={styles.detail}>{item.detail}</span>
               {item.met ? null : (
                 <a
-                  href={itemHref(item)}
+                  href={readinessHref(item)}
                   onClick={(event) => {
                     if (!item.blockId) return;
                     event.preventDefault();
@@ -124,7 +119,7 @@ export function PublishPanel({
                 <li key={item.id}>
                   <strong>{item.label}</strong> {item.detail}{" "}
                   <a
-                    href={itemHref(item)}
+                    href={readinessHref(item)}
                     onClick={(event) => {
                       dialog.current?.close();
                       if (!item.blockId) return;

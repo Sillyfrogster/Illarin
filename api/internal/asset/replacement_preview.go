@@ -553,6 +553,24 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	return accepted, nil
 }
 
+// ReviewedReplacement is the upload this asset is still deciding about, so reopening the page finds the file left waiting.
+func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, assetID uuid.UUID) (IngestOperation, error) {
+	var operationID uuid.UUID
+	err := s.pool.QueryRow(ctx, `
+		select id from ingest_operations
+		 where target_asset_id = $1 and owner_id = $2
+		   and status in ('pending', 'processing', 'preview')
+		 order by created_at desc limit 1
+	`, assetID, ownerID).Scan(&operationID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return IngestOperation{}, ErrIngestNotFound
+	}
+	if err != nil {
+		return IngestOperation{}, fmt.Errorf("read the replacement waiting on this asset: %w", err)
+	}
+	return s.GetIngest(ctx, ownerID, operationID)
+}
+
 func (s *Service) CancelReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID) error {
 	result, err := s.pool.Exec(ctx, `
 		update ingest_operations

@@ -36,6 +36,8 @@ type DetailImage struct {
 // kind, because nothing on that page displays one.
 type Detail struct {
 	WorkingCopyVersion *int64
+	// UnpublishedChanges says whether the working copy differs from the version readers have, and stands only on the owner's working copy of a published asset.
+	UnpublishedChanges *bool
 	ID                 uuid.UUID
 	Kind               string
 	Name               string
@@ -154,6 +156,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	if err != nil {
 		return Detail{}, err
 	}
+	if working && found.Lifecycle == LifecyclePublished {
+		unpublished, err := s.unpublishedChanges(ctx, tx, id)
+		if err != nil {
+			return Detail{}, err
+		}
+		found.UnpublishedChanges = &unpublished
+	}
 	if !working && !found.IsOwner {
 		if err := protected.ApplyPublishedPolicy(ctx, tx, id, found.Blocks); err != nil {
 			return Detail{}, err
@@ -229,6 +238,19 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		}
 	}
 	return found, nil
+}
+
+// unpublishedChanges measures the working copy against the version readers have, by the same measure publication uses.
+func (s *Service) unpublishedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
+	published, err := s.publishedDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	reviewed, err := s.assetDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	return reviewed.whole != published.whole, nil
 }
 
 // originalUpload names the creator's own file by what it is and when it

@@ -299,6 +299,24 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAss
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
+// GetAssetReplacement answers the replacement this asset is still deciding about.
+func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	operation, err := h.assets.ReviewedReplacement(c.Request.Context(), owner.ID, uuid.UUID(id))
+	if errors.Is(err, asset.ErrIngestNotFound) {
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the waiting replacement"})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIIngest(operation))
+}
+
 func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID, params AcceptAssetRevisionParams) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
@@ -564,6 +582,7 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
 	return AssetDetail{
 		WorkingCopyVersion: found.WorkingCopyVersion,
+		UnpublishedChanges: found.UnpublishedChanges,
 		Id:                 types.UUID(found.ID),
 		Kind:               AssetDetailKind(found.Kind),
 		Name:               found.Name,

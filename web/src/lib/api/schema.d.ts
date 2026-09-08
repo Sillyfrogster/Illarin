@@ -1540,7 +1540,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** @description The replacement upload this asset is still deciding about, so a creator who reloads the page finds the file they left waiting. */
+    get: operations["getAssetReplacement"];
     put?: never;
     /** @description Replace an asset's source bytes. A revision is the file only: name, blurb, tags and the NSFW flag stay as the creator left them. A file that reads as a different kind is refused and the asset is left untouched. */
     post: operations["addAssetRevision"];
@@ -3144,6 +3145,8 @@ export interface components {
        * @description Only returned with the owner's working copy or draft, from the same read snapshot
        */
       workingCopyVersion?: number;
+      /** @description Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset. */
+      unpublishedChanges?: boolean;
       /** Format: uuid */
       id: string;
       /** @enum {string} */
@@ -9160,6 +9163,49 @@ export interface operations {
         };
       };
       /** @description No asset a visitor may see */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getAssetReplacement: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The replacement still being read or reviewed, and null where the asset has none waiting */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IngestOperation"] | null;
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
       404: {
         headers: {
           [name: string]: unknown;
