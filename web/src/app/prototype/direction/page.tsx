@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { Newsreader } from "next/font/google";
+import { DM_Sans, Outfit } from "next/font/google";
 import { notFound } from "next/navigation";
 import { DirectionPrototype } from "./workspace";
 import "./theme.css";
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
+const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
+const body = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Visual direction study",
@@ -18,7 +15,7 @@ export const metadata: Metadata = {
 export default function DirectionPrototypePage() {
   if (process.env.NODE_ENV === "production") notFound();
   return (
-    <div className={newsreader.variable}>
+    <div className={`${outfit.variable} ${body.variable}`}>
       <DirectionPrototype />
     </div>
   );

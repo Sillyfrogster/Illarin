@@ -1,240 +1,222 @@
 "use client";
 
+import { MotionConfig } from "framer-motion";
+import { FlaskConical, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AmbientArticle } from "./ambient/article";
-import { AmbientAsset } from "./ambient/asset";
-import { AmbientBlog } from "./ambient/blog";
-import { ASSETS, KIND_LABEL, type Kind } from "./assets";
-import { DARK_TINT, RICH_POSTS, SPARSE_POSTS } from "./data";
-import { LedgerArticle } from "./ledger/article";
-import { LedgerAsset } from "./ledger/asset";
-import { LedgerBlog } from "./ledger/blog";
-import { cn, type Direction, tintStyle } from "./ui";
-import { VitrineArticle } from "./vitrine/article";
-import { VitrineAsset } from "./vitrine/asset";
-import { VitrineBlog } from "./vitrine/blog";
+import { ASSETS } from "./assets";
+import { Button } from "./components/button";
+import { NotchNav } from "./components/notch-nav";
+import { Popover, PopoverContent, PopoverTrigger } from "./components/popover";
+import { RICH_POSTS, SPARSE_POSTS } from "./data";
+import { StudioArticle, StudioBlog } from "./studio-publication";
+import { StudioReader } from "./studio-reader";
 
 type Surface = "blog" | "article" | "asset";
-type Content = "rich" | "sparse";
-type AssetPick = Kind | "sparse";
 type Theme = "light" | "dark";
 
-const DIRECTIONS: { id: Direction; name: string; line: string }[] = [
-  { id: "vitrine", name: "Vitrine", line: "Light is the material" },
-  { id: "ambient", name: "Ambient", line: "The work colours the room" },
-  { id: "ledger", name: "Ledger", line: "Typeset and indexed" },
-];
-
-const SURFACES: { id: Surface; name: string }[] = [
-  { id: "blog", name: "Blog" },
-  { id: "article", name: "Article" },
-  { id: "asset", name: "Asset" },
-];
-
-const ASSET_PICKS: { id: AssetPick; name: string }[] = [
-  { id: "character", name: KIND_LABEL.character },
-  { id: "lorebook", name: KIND_LABEL.lorebook },
-  { id: "preset", name: KIND_LABEL.preset },
-  { id: "theme", name: KIND_LABEL.theme },
-  { id: "pack", name: KIND_LABEL.pack },
-  { id: "sparse", name: "Sparse" },
-];
-
-function readSetting<T extends string>(
-  key: string,
-  allowed: readonly T[],
-  fallback: T,
-): T {
-  if (typeof window === "undefined") return fallback;
-  const value = new URLSearchParams(window.location.search).get(key);
-  return allowed.includes(value as T) ? (value as T) : fallback;
-}
-
-function Segment<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: { id: T; name: string }[];
-  onChange: (next: T) => void;
-}) {
-  return (
-    <div className="vd:flex vd:shrink-0 vd:items-center vd:gap-2">
-      <span className="vd:hidden vd:text-[0.6875rem] vd:font-bold vd:uppercase vd:tracking-[0.14em] vd:text-white/40 vd:xl:block">
-        {label}
-      </span>
-      <fieldset
-        aria-label={label}
-        className="vd:flex vd:items-center vd:gap-0.5 vd:rounded-full vd:bg-white/10 vd:p-0.5"
-      >
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={option.id === value}
-            onClick={() => onChange(option.id)}
-            className={cn(
-              "vd:min-h-9 vd:rounded-full vd:px-3.5 vd:text-[0.8125rem] vd:font-semibold vd:whitespace-nowrap vd:transition",
-              option.id === value
-                ? "vd:bg-white vd:text-neutral-900"
-                : "vd:text-white/70 vd:hover:text-white",
-            )}
-          >
-            {option.name}
-          </button>
-        ))}
-      </fieldset>
-    </div>
-  );
-}
-
 export function DirectionPrototype() {
-  const [direction, setDirection] = useState<Direction>("vitrine");
-  const [surface, setSurface] = useState<Surface>("blog");
-  const [content, setContent] = useState<Content>("rich");
-  const [pick, setPick] = useState<AssetPick>("character");
-  const [theme, setTheme] = useState<Theme>("light");
-
+  const [surface, setSurface] = useState<Surface>("asset");
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [pick, setPick] = useState("character");
+  const [sparse, setSparse] = useState(false);
+  const [postId, setPostId] = useState("");
+  const [category, setCategory] = useState("all");
+  const [app, setApp] = useState("");
+  const [readerState, setReaderState] = useState("owner");
   const [ready, setReady] = useState(false);
-  const [showControls, setShowControls] = useState(true);
-
   useEffect(() => {
-    setDirection(
-      readSetting("d", ["vitrine", "ambient", "ledger"] as const, "vitrine"),
-    );
-    setSurface(readSetting("s", ["blog", "article", "asset"] as const, "blog"));
-    setContent(readSetting("c", ["rich", "sparse"] as const, "rich"));
-    setPick(
-      readSetting(
-        "k",
-        ["character", "lorebook", "preset", "theme", "pack", "sparse"] as const,
-        "character",
-      ),
-    );
-    setTheme(readSetting("t", ["light", "dark"] as const, "light"));
+    const q = new URLSearchParams(window.location.search);
+    const s = q.get("s");
+    if (s === "blog" || s === "article" || s === "asset") setSurface(s);
+    setTheme(q.get("t") === "light" ? "light" : "dark");
+    const kind = q.get("k");
+    if (kind && Object.hasOwn(ASSETS, kind)) setPick(kind);
+    setSparse(q.get("c") === "sparse");
+    setPostId(q.get("p") ?? "");
+    setCategory(q.get("category") ?? "all");
+    setApp(q.get("app") ?? "");
+    setReaderState(q.get("state") ?? "owner");
     setReady(true);
   }, []);
-
+  const href = (next: Surface, post?: string) => {
+    const query = new URLSearchParams({
+      s: next,
+      t: theme,
+      k: pick,
+      c: sparse ? "sparse" : "rich",
+    });
+    if (post) query.set("p", post);
+    return `/prototype/direction?${query}`;
+  };
   useEffect(() => {
     if (!ready) return;
-    const query = new URLSearchParams({
-      d: direction,
-      s: surface,
-      c: content,
-      k: pick,
-      t: theme,
-    });
-    window.history.replaceState(null, "", `?${query}`);
-  }, [ready, direction, surface, content, pick, theme]);
-
-  const posts = content === "rich" ? RICH_POSTS : SPARSE_POSTS;
-  const asset = ASSETS[pick];
-  const article = posts[0];
-
-  const pageTint =
-    surface === "asset"
-      ? asset.tint
-      : surface === "article"
-        ? article?.tint
-        : undefined;
-
+    const query = new URLSearchParams(window.location.search);
+    query.delete("d");
+    query.set("s", surface);
+    query.set("t", theme);
+    query.set("k", pick);
+    query.set("c", sparse ? "sparse" : "rich");
+    query.set("state", readerState);
+    window.history.replaceState(null, "", `?${query}${window.location.hash}`);
+  }, [ready, surface, theme, pick, sparse, readerState]);
+  const posts = sparse ? SPARSE_POSTS : RICH_POSTS;
+  const post = posts.find((item) => item.id === postId) ?? posts[0];
+  const asset = ASSETS[sparse ? "sparse" : pick];
   return (
-    <div
-      data-direction={direction}
-      data-theme={theme}
-      style={tintStyle(
-        pageTint ?? (theme === "dark" ? DARK_TINT : undefined),
-        theme === "dark",
-      )}
-      className="vd:min-h-dvh"
-    >
-      {surface === "blog" && direction === "vitrine" && (
-        <VitrineBlog posts={posts} theme={theme} />
-      )}
-      {surface === "blog" && direction === "ambient" && (
-        <AmbientBlog posts={posts} theme={theme} />
-      )}
-      {surface === "blog" && direction === "ledger" && (
-        <LedgerBlog posts={posts} />
-      )}
-
-      {surface === "article" && direction === "vitrine" && (
-        <VitrineArticle post={article} />
-      )}
-      {surface === "article" && direction === "ambient" && (
-        <AmbientArticle post={article} theme={theme} />
-      )}
-      {surface === "article" && direction === "ledger" && (
-        <LedgerArticle post={article} />
-      )}
-
-      {surface === "asset" && direction === "vitrine" && (
-        <VitrineAsset asset={asset} theme={theme} />
-      )}
-      {surface === "asset" && direction === "ambient" && (
-        <AmbientAsset asset={asset} theme={theme} />
-      )}
-      {surface === "asset" && direction === "ledger" && (
-        <LedgerAsset asset={asset} theme={theme} />
-      )}
-
-      {/* The study's own controls stay clear of the centre, where a page may dock its own */}
-      <div className="vd:fixed vd:right-3 vd:bottom-3 vd:z-50 vd:flex vd:max-w-[calc(100vw-1.5rem)] vd:flex-col vd:items-end vd:gap-2">
-        {showControls && (
-          <div className="vd:flex vd:max-w-[26rem] vd:flex-wrap vd:justify-end vd:gap-2 vd:rounded-3xl vd:bg-neutral-900 vd:p-2 vd:shadow-[0_18px_40px_-18px_rgb(0_0_0/0.7)]">
-            <Segment
-              label="Direction"
-              value={direction}
-              options={DIRECTIONS}
-              onChange={setDirection}
-            />
-            <Segment
-              label="Surface"
-              value={surface}
-              options={SURFACES}
-              onChange={setSurface}
-            />
-            {surface === "asset" ? (
-              <Segment
-                label="Asset"
-                value={pick}
-                options={ASSET_PICKS}
-                onChange={setPick}
-              />
-            ) : (
-              <Segment
-                label="Content"
-                value={content}
-                options={[
-                  { id: "rich" as Content, name: "Rich" },
-                  { id: "sparse" as Content, name: "Sparse" },
-                ]}
-                onChange={setContent}
-              />
-            )}
-            <Segment
-              label="Theme"
-              value={theme}
-              options={[
-                { id: "light" as Theme, name: "Light" },
-                { id: "dark" as Theme, name: "Dark" },
-              ]}
-              onChange={setTheme}
-            />
-          </div>
-        )}
-        <button
-          type="button"
-          aria-expanded={showControls}
-          onClick={() => setShowControls(!showControls)}
-          className="vd:inline-flex vd:min-h-9 vd:shrink-0 vd:items-center vd:rounded-full vd:bg-neutral-900 vd:px-4 vd:text-[0.6875rem] vd:font-bold vd:tracking-[0.14em] vd:text-white/70 vd:uppercase vd:shadow-[0_18px_40px_-18px_rgb(0_0_0/0.7)] vd:hover:text-white"
+    <MotionConfig reducedMotion="user">
+      <div
+        data-direction="studio"
+        data-theme={theme}
+        aria-busy={!ready}
+        className="vd:min-h-dvh"
+      >
+        <a
+          href="#main-content"
+          className="vd:sr-only vd:focus:not-sr-only vd:focus:absolute vd:focus:z-50 vd:focus:bg-plane vd:focus:p-4"
         >
-          {showControls ? "Hide study controls" : "Direction study"}
-        </button>
+          Skip to content
+        </a>
+        <NotchNav
+          theme={theme}
+          onTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+          blog={surface !== "asset"}
+          href={href}
+        />
+        <div className="vd:mx-5 vd:mt-5 vd:flex vd:items-center vd:justify-between vd:gap-4 vd:text-meta vd:text-mute vd:md:mx-10 vd:xl:mx-14">
+          <span className="vd:flex vd:items-center vd:gap-2">
+            <FlaskConical className="vd:size-3.5" />
+            Interactive study · synthetic content
+          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="vd:gap-2 vd:px-2 vd:text-meta">
+                <Settings2 />
+                Preview settings
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end">
+              <h2 className="vd:text-section vd:font-medium">
+                Explore the direction
+              </h2>
+              <label
+                htmlFor="surface"
+                className="vd:mt-5 vd:block vd:text-meta"
+              >
+                Page
+              </label>
+              <select
+                id="surface"
+                value={surface}
+                onChange={(e) => setSurface(e.target.value as Surface)}
+                className="vd:mt-2 vd:h-11 vd:w-full vd:rounded-control vd:bg-deep vd:px-3 vd:text-ui"
+              >
+                <option value="asset">Asset reader</option>
+                <option value="blog">Blog discovery</option>
+                <option value="article">Article reading</option>
+              </select>
+              {surface === "asset" && (
+                <>
+                  <label
+                    htmlFor="kind"
+                    className="vd:mt-4 vd:block vd:text-meta"
+                  >
+                    Asset kind
+                  </label>
+                  <select
+                    id="kind"
+                    value={pick}
+                    onChange={(e) => setPick(e.target.value)}
+                    className="vd:mt-2 vd:h-11 vd:w-full vd:rounded-control vd:bg-deep vd:px-3 vd:text-ui"
+                  >
+                    {Object.keys(ASSETS)
+                      .filter((k) => k !== "sparse")
+                      .map((k) => (
+                        <option key={k} value={k}>
+                          {k[0].toUpperCase() + k.slice(1)}
+                        </option>
+                      ))}
+                  </select>
+                  <label
+                    htmlFor="reader-state"
+                    className="vd:mt-4 vd:block vd:text-meta"
+                  >
+                    Reader scenario
+                  </label>
+                  <select
+                    id="reader-state"
+                    value={readerState}
+                    onChange={(e) => setReaderState(e.target.value)}
+                    className="vd:mt-2 vd:h-11 vd:w-full vd:rounded-control vd:bg-deep vd:px-3 vd:text-ui"
+                  >
+                    <option value="owner">Creator can edit</option>
+                    <option value="visitor">Visitor can read</option>
+                    <option value="failure">Download fails once</option>
+                  </select>
+                </>
+              )}
+              <label className="vd:mt-4 vd:flex vd:min-h-11 vd:items-center vd:gap-3 vd:text-ui">
+                <input
+                  type="checkbox"
+                  checked={sparse}
+                  onChange={(e) => setSparse(e.target.checked)}
+                  className="vd:size-4 vd:accent-accent"
+                />
+                Sparse content, without a cover
+              </label>
+              <Button asChild variant="secondary" className="vd:mt-4 vd:w-full">
+                <a href="/prototype/editor">Open the editing workspace</a>
+              </Button>
+              <p className="vd:mt-3 vd:text-meta vd:text-mute">
+                A separate working example. Production pages are unchanged.
+              </p>
+            </PopoverContent>
+          </Popover>
+        </div>
+        {surface === "asset" && (
+          <StudioReader
+            key={`${asset.id}-${readerState}`}
+            asset={asset}
+            canEdit={readerState !== "visitor"}
+            failOnce={readerState === "failure"}
+          />
+        )}
+        {surface === "blog" && (
+          <StudioBlog
+            key={`${sparse}-${category}-${app}`}
+            posts={posts}
+            theme={theme}
+            href={href}
+            initialCategory={category}
+            initialApp={app}
+          />
+        )}
+        {surface === "article" && (
+          <StudioArticle key={post.id} post={post} posts={posts} href={href} />
+        )}
+        <footer className="vd:mx-5 vd:flex vd:flex-wrap vd:items-center vd:justify-between vd:gap-5 vd:py-8 vd:text-meta vd:text-mute vd:md:mx-10 vd:xl:mx-14">
+          <a
+            href="/"
+            className="vd:flex vd:min-h-11 vd:items-center vd:font-display vd:text-section vd:font-medium vd:text-ink"
+          >
+            illarin.
+          </a>
+          <span>A home for the things you make.</span>
+          <div className="vd:flex vd:gap-5">
+            <a
+              href="/legal/privacy"
+              className="vd:flex vd:min-h-11 vd:items-center"
+            >
+              Privacy
+            </a>
+            <a
+              href="/legal/terms"
+              className="vd:flex vd:min-h-11 vd:items-center"
+            >
+              Terms
+            </a>
+          </div>
+        </footer>
       </div>
-    </div>
+    </MotionConfig>
   );
 }

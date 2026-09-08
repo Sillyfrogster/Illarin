@@ -8,14 +8,14 @@ import { KIND_LABEL } from "./assets";
 import { cn, type Direction, Label } from "./ui";
 
 const PROSE: Record<Direction, string> = {
-  vitrine: "vd:text-[1.1875rem] vd:leading-[1.82]",
-  ambient: "vd:text-[1.1875rem] vd:leading-[1.8]",
-  ledger: "vd:text-[1.125rem] vd:leading-[1.78]",
+  vitrine: "vd:text-[1rem] vd:leading-[1.82]",
+  ambient: "vd:text-[1rem] vd:leading-[1.8]",
+  ledger: "vd:text-[1rem] vd:leading-[1.78]",
 };
 
 const ENTRY: Record<Direction, string> = {
-  vitrine: "vd:text-[1.125rem] vd:leading-[1.8]",
-  ambient: "vd:text-[1.125rem] vd:leading-[1.8]",
+  vitrine: "vd:text-[1rem] vd:leading-[1.8]",
+  ambient: "vd:text-[1rem] vd:leading-[1.8]",
   ledger: "vd:text-[1.0625rem] vd:leading-[1.76]",
 };
 
@@ -24,7 +24,7 @@ function Verbatim({ body }: { body: string }) {
   const [taken, setTaken] = useState(false);
   return (
     <div className="vd:relative vd:mt-3">
-      <pre className="vd:overflow-x-auto vd:rounded-plate vd:bg-ink/4 vd:py-4 vd:pr-14 vd:pl-4 vd:shadow-[inset_0_0_0_1px_var(--v-hair)]">
+      <pre className="vd:overflow-x-auto vd:rounded-plate vd:bg-ink/4 vd:py-4 vd:pr-14 vd:pl-4 vd:bg-deep">
         <code className="vd:font-mono vd:text-[0.875rem] vd:leading-7 vd:whitespace-pre-wrap vd:text-ink/90">
           {body}
         </code>
@@ -37,7 +37,7 @@ function Verbatim({ body }: { body: string }) {
           setTaken(true);
           setTimeout(() => setTaken(false), 1400);
         }}
-        className="vd:absolute vd:top-2 vd:right-2 vd:inline-flex vd:size-9 vd:items-center vd:justify-center vd:rounded-control vd:text-mute vd:hover:bg-ink/8 vd:hover:text-ink"
+        className="vd:absolute vd:top-2 vd:right-2 vd:inline-flex vd:size-11 vd:items-center vd:justify-center vd:rounded-control vd:text-mute vd:hover:bg-ink/8 vd:hover:text-ink"
       >
         {taken ? (
           <Check className="vd:size-4" />
@@ -54,10 +54,8 @@ function Flag({ children, off = false }: { children: string; off?: boolean }) {
   return (
     <span
       className={cn(
-        "vd:inline-flex vd:shrink-0 vd:items-center vd:rounded-control vd:px-2 vd:py-0.5 vd:text-label vd:font-bold vd:uppercase",
-        off
-          ? "vd:text-faint vd:shadow-[inset_0_0_0_1px_var(--v-hair)]"
-          : "vd:text-ink/70 vd:shadow-[inset_0_0_0_1px_var(--v-rule)]",
+        "vd:inline-flex vd:shrink-0 vd:items-center vd:rounded-control vd:px-2 vd:py-0.5 vd:text-label vd:font-bold ",
+        off ? "vd:text-faint vd:bg-deep" : "vd:text-ink/70 vd:bg-deep",
       )}
     >
       {children}
@@ -73,9 +71,7 @@ function Keys({ keys, weak = false }: { keys: string[]; weak?: boolean }) {
           key={key}
           className={cn(
             "vd:rounded-control vd:px-2 vd:py-0.5 vd:font-mono vd:text-[0.75rem]",
-            weak
-              ? "vd:text-faint vd:shadow-[inset_0_0_0_1px_var(--v-hair)]"
-              : "vd:text-mute vd:shadow-[inset_0_0_0_1px_var(--v-hair)]",
+            weak ? "vd:text-faint vd:bg-deep" : "vd:text-mute vd:bg-deep",
           )}
         >
           {key}
@@ -106,7 +102,7 @@ function ItemHead({
           "vd:shrink-0 vd:text-meta vd:font-semibold",
           direction === "ledger"
             ? "v-tabular"
-            : "vd:font-display vd:text-[1.125rem]",
+            : "vd:font-display vd:text-[1rem]",
         )}
         style={{ color: "var(--v-accent)" }}
       >
@@ -235,7 +231,7 @@ function DialogueSample({
             turn.speaker === "user" && "vd:pl-8 vd:sm:pl-14",
           )}
         >
-          <span className="vd:text-label vd:font-bold vd:uppercase vd:text-faint">
+          <span className="vd:text-label vd:font-bold  vd:text-faint">
             {turn.speaker === "char" ? "Character" : "You"}
           </span>
           <p
@@ -297,7 +293,7 @@ function EntryTable({
             <Keys keys={entry.keys} />
             {entry.secondaryKeys && (
               <span className="vd:flex vd:items-baseline vd:gap-2">
-                <span className="vd:text-label vd:font-bold vd:uppercase vd:text-faint">
+                <span className="vd:text-label vd:font-bold  vd:text-faint">
                   and
                 </span>
                 <Keys keys={entry.secondaryKeys} weak />
@@ -381,7 +377,7 @@ function LinkList({
           >
             <span className="vd:flex vd:items-start vd:justify-between vd:gap-4">
               <span className="vd:min-w-0">
-                <span className="vd:block vd:text-label vd:font-bold vd:uppercase vd:text-faint">
+                <span className="vd:block vd:text-label vd:font-bold  vd:text-faint">
                   {KIND_LABEL[link.kind]}
                 </span>
                 <span className="vd:mt-1.5 vd:block vd:font-display vd:text-[1.25rem] vd:leading-[1.24] vd:font-medium">
@@ -578,7 +574,7 @@ function ColorSet({
         <li key={token.name} className="vd:flex vd:items-center vd:gap-3">
           <span
             aria-hidden="true"
-            className="vd:size-9 vd:shrink-0 vd:rounded-control vd:shadow-[inset_0_0_0_1px_var(--v-rule)]"
+            className="vd:size-11 vd:shrink-0 vd:rounded-control vd:bg-deep"
             style={{ background: token.value }}
           />
           <span className="vd:min-w-0">
@@ -610,7 +606,7 @@ function StylesheetSet({
             </code>
             <span className="vd:text-meta vd:text-faint">{sheet.size}</span>
           </div>
-          <pre className="vd:mt-2 vd:overflow-x-auto vd:rounded-plate vd:bg-ink/4 vd:p-4 vd:shadow-[inset_0_0_0_1px_var(--v-hair)]">
+          <pre className="vd:mt-2 vd:overflow-x-auto vd:rounded-plate vd:bg-ink/4 vd:p-4 vd:bg-deep">
             <code className="vd:font-mono vd:text-[0.8125rem] vd:leading-6 vd:text-ink/85">
               {sheet.lines.join("\n")}
             </code>

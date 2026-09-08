@@ -4,8 +4,8 @@ import atlas from "./media/cover-atlas.webp";
 import chorus from "./media/cover-chorus.webp";
 import ember from "./media/cover-ember.webp";
 import lastLight from "./media/cover-last-light.webp";
-import nightDesk from "./media/cover-night-desk.webp";
 import verdant from "./media/cover-verdant.webp";
+import nightDesk from "./media/marisol-v1.png";
 
 export type Kind = "character" | "lorebook" | "preset" | "theme" | "pack";
 

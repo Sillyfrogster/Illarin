@@ -7,6 +7,7 @@ import verdant from "./media/cover-verdant.webp";
 import plate from "./media/figure-plate.webp";
 import pictures from "./media/header-pictures.webp";
 import structure from "./media/header-structure.webp";
+import marisol from "./media/marisol-v1.png";
 
 export type Category = "announcement" | "article" | "release";
 
@@ -28,6 +29,9 @@ export type Post = {
   category: Category;
   author: string;
   handle: string;
+  role?: string;
+  app?: { slug: string; name: string };
+  version?: string;
   date: string;
   updated?: string;
   minutes: number;
@@ -172,10 +176,12 @@ export const RICH_POSTS: Post[] = [
     category: "article",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "6 September 2026",
     minutes: 9,
     weight: 3,
-    image: structure,
+    image: marisol,
     tint: TINTS.structure,
     body: STRUCTURE_BODY,
   },
@@ -186,6 +192,8 @@ export const RICH_POSTS: Post[] = [
     category: "article",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "2 September 2026",
     minutes: 6,
     weight: 2,
@@ -199,6 +207,8 @@ export const RICH_POSTS: Post[] = [
     category: "announcement",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "29 August 2026",
     minutes: 2,
     weight: 1,
@@ -211,6 +221,8 @@ export const RICH_POSTS: Post[] = [
     category: "announcement",
     author: "Ilse Verrin",
     handle: "@ilse",
+    role: "Lumiverse contributor",
+    app: { slug: "lumiverse", name: "Lumiverse" },
     date: "27 August 2026",
     minutes: 3,
     weight: 2,
@@ -225,6 +237,8 @@ export const RICH_POSTS: Post[] = [
     category: "article",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "24 August 2026",
     updated: "1 September 2026",
     minutes: 14,
@@ -239,6 +253,8 @@ export const RICH_POSTS: Post[] = [
     category: "announcement",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "20 August 2026",
     minutes: 4,
     weight: 1,
@@ -248,8 +264,11 @@ export const RICH_POSTS: Post[] = [
     title: "A pack is five things at once",
     dek: "Packs hold a character, its lorebook, a preset and a theme, and export each of them separately.",
     category: "release",
+    version: "1.0",
     author: "Ilse Verrin",
     handle: "@ilse",
+    role: "Lumiverse contributor",
+    app: { slug: "lumiverse", name: "Lumiverse" },
     date: "16 August 2026",
     minutes: 5,
     weight: 2,
@@ -263,6 +282,8 @@ export const RICH_POSTS: Post[] = [
     category: "article",
     author: "Marek Sten",
     handle: "@marek",
+    role: "Illarin Team · Developer",
+    app: { slug: "illarin", name: "Illarin" },
     date: "11 August 2026",
     minutes: 7,
     weight: 1,
@@ -279,6 +300,8 @@ export const SPARSE_POSTS: Post[] = [
     category: "announcement",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "29 August 2026",
     minutes: 2,
     weight: 3,
@@ -291,6 +314,8 @@ export const SPARSE_POSTS: Post[] = [
     category: "article",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "24 August 2026",
     minutes: 14,
     weight: 2,
@@ -302,6 +327,8 @@ export const SPARSE_POSTS: Post[] = [
     category: "announcement",
     author: "Wren Ashdown",
     handle: "@wren",
+    role: "Illarin Team · Editor",
+    app: { slug: "illarin", name: "Illarin" },
     date: "20 August 2026",
     minutes: 4,
     weight: 1,
