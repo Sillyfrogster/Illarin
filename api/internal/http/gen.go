@@ -1355,22 +1355,22 @@ func (e ReplacementAcceptanceUnrepresentable) Valid() bool {
 
 // Defines values for ReplacementChangeKind.
 const (
-	Addition ReplacementChangeKind = "addition"
-	Change   ReplacementChangeKind = "change"
-	Conflict ReplacementChangeKind = "conflict"
-	Removal  ReplacementChangeKind = "removal"
+	ReplacementChangeKindAddition ReplacementChangeKind = "addition"
+	ReplacementChangeKindChange   ReplacementChangeKind = "change"
+	ReplacementChangeKindConflict ReplacementChangeKind = "conflict"
+	ReplacementChangeKindRemoval  ReplacementChangeKind = "removal"
 )
 
 // Valid indicates whether the value is a known member of the ReplacementChangeKind enum.
 func (e ReplacementChangeKind) Valid() bool {
 	switch e {
-	case Addition:
+	case ReplacementChangeKindAddition:
 		return true
-	case Change:
+	case ReplacementChangeKindChange:
 		return true
-	case Conflict:
+	case ReplacementChangeKindConflict:
 		return true
-	case Removal:
+	case ReplacementChangeKindRemoval:
 		return true
 	default:
 		return false
@@ -1524,6 +1524,21 @@ func (e ScriptListContentScriptsTargets) Valid() bool {
 	}
 }
 
+// Defines values for SealedExposureRefusalCode.
+const (
+	SealedExposure SealedExposureRefusalCode = "sealed_exposure"
+)
+
+// Valid indicates whether the value is a known member of the SealedExposureRefusalCode enum.
+func (e SealedExposureRefusalCode) Valid() bool {
+	switch e {
+	case SealedExposure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SettingGroupContentSettingsType.
 const (
 	SettingGroupContentSettingsTypeBoolean    SettingGroupContentSettingsType = "boolean"
@@ -1608,6 +1623,27 @@ func (e VariableSchemaContentVariablesWidget) Valid() bool {
 	case VariableSchemaContentVariablesWidgetText:
 		return true
 	case VariableSchemaContentVariablesWidgetTextarea:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VersionChangeKind.
+const (
+	VersionChangeKindAddition VersionChangeKind = "addition"
+	VersionChangeKindChange   VersionChangeKind = "change"
+	VersionChangeKindRemoval  VersionChangeKind = "removal"
+)
+
+// Valid indicates whether the value is a known member of the VersionChangeKind enum.
+func (e VersionChangeKind) Valid() bool {
+	switch e {
+	case VersionChangeKindAddition:
+		return true
+	case VersionChangeKindChange:
+		return true
+	case VersionChangeKindRemoval:
 		return true
 	default:
 		return false
@@ -2230,6 +2266,11 @@ type AssignDistinctionRequest struct {
 // AuthorizationCode defines model for AuthorizationCode.
 type AuthorizationCode = string
 
+// BlockSaveConflict defines model for BlockSaveConflict.
+type BlockSaveConflict struct {
+	union json.RawMessage
+}
+
 // BrowseAsset defines model for BrowseAsset.
 type BrowseAsset struct {
 	Cover   *BrowseCover       `json:"cover"`
@@ -2835,6 +2876,12 @@ type MoveAssetBlockContentRequest struct {
 	DestinationBlockId openapi_types.UUID `json:"destinationBlockId"`
 }
 
+// NamedPrompt defines model for NamedPrompt.
+type NamedPrompt struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.
 type NsfwVisibilityRequest struct {
 	Visibility NsfwVisibilityRequestVisibility `json:"visibility"`
@@ -3324,6 +3371,17 @@ type ProfileRestriction struct {
 	RestrictedBy *string   `json:"restrictedBy,omitempty"`
 }
 
+// PromptCorrespondenceRequest defines model for PromptCorrespondenceRequest.
+type PromptCorrespondenceRequest struct {
+	Matches []struct {
+		// Current A prompt the asset seals right now
+		Current openapi_types.UUID `json:"current"`
+
+		// Recorded The prompt this version carries in its place, absent where it carries none
+		Recorded *openapi_types.UUID `json:"recorded,omitempty"`
+	} `json:"matches"`
+}
+
 // PromptListContent A preset's prompt, in the order it is sent. One level of grouping is the list's own nesting rather than a second element.
 type PromptListContent struct {
 	Fragments []struct {
@@ -3367,6 +3425,21 @@ type PromptListContentFragmentsRole string
 // ProseContent defines model for ProseContent.
 type ProseContent struct {
 	Text string `json:"text"`
+}
+
+// ProtectionMismatch defines model for ProtectionMismatch.
+type ProtectionMismatch struct {
+	// Recorded The prompts this version does carry, which a match chooses from
+	Recorded []NamedPrompt `json:"recorded"`
+
+	// Unmatched The sealed prompts this version does not carry under the same id
+	Unmatched []NamedPrompt   `json:"unmatched"`
+	Version   RecordedVersion `json:"version"`
+}
+
+// ProtectionMismatchList defines model for ProtectionMismatchList.
+type ProtectionMismatchList struct {
+	Items []ProtectionMismatch `json:"items"`
 }
 
 // PublicPost defines model for PublicPost.
@@ -3762,6 +3835,21 @@ type RecordListContentRecordsGenderIdentity int
 // RecordListContentSchema defines model for RecordListContent.Schema.
 type RecordListContentSchema string
 
+// RecordedVersion defines model for RecordedVersion.
+type RecordedVersion struct {
+	Id           openapi_types.UUID `json:"id"`
+	Notes        string             `json:"notes"`
+	Number       int                `json:"number"`
+	RecordedAt   time.Time          `json:"recordedAt"`
+	Summary      string             `json:"summary"`
+	VersionLabel string             `json:"versionLabel"`
+}
+
+// RecordedVersionList defines model for RecordedVersionList.
+type RecordedVersionList struct {
+	Items []RecordedVersion `json:"items"`
+}
+
 // RefreshInstanceToken defines model for RefreshInstanceToken.
 type RefreshInstanceToken struct {
 	RefreshToken RefreshToken `json:"refreshToken"`
@@ -3851,7 +3939,10 @@ type SaveAssetBlockRequest struct {
 	// AllowedApps The applications that may receive a sealed prompt in this save. Send an empty list only when no fragment remains sealed.
 	AllowedApps *[]SaveAssetBlockRequestAllowedApps `json:"allowedApps,omitempty"`
 	Elements    []SaveAssetElement                  `json:"elements"`
-	Layout      SaveAssetBlockRequestLayout         `json:"layout"`
+
+	// ExposeProtected The creator confirming that this save makes sealed prompt text public. A save that unseals a prompt without it is refused.
+	ExposeProtected *bool                       `json:"exposeProtected,omitempty"`
+	Layout          SaveAssetBlockRequestLayout `json:"layout"`
 
 	// Title Null keeps the definition's current default wording.
 	Title *string                    `json:"title"`
@@ -3964,6 +4055,18 @@ type ScriptListContentScriptsAffects string
 
 // ScriptListContentScriptsTargets defines model for ScriptListContent.Scripts.Targets.
 type ScriptListContentScriptsTargets string
+
+// SealedExposureRefusal defines model for SealedExposureRefusal.
+type SealedExposureRefusal struct {
+	Code  SealedExposureRefusalCode `json:"code"`
+	Error string                    `json:"error"`
+
+	// Prompts The sealed prompts this save would make public
+	Prompts []string `json:"prompts"`
+}
+
+// SealedExposureRefusalCode defines model for SealedExposureRefusal.Code.
+type SealedExposureRefusalCode string
 
 // SendAssetRequest defines model for SendAssetRequest.
 type SendAssetRequest struct {
@@ -4187,6 +4290,40 @@ type VariableSchemaContentVariablesWidget string
 // VerifyEmailRequest defines model for VerifyEmailRequest.
 type VerifyEmailRequest struct {
 	Token string `json:"token"`
+}
+
+// VersionChange defines model for VersionChange.
+type VersionChange struct {
+	After        *string             `json:"after,omitempty"`
+	AfterMedia   *openapi_types.UUID `json:"afterMedia,omitempty"`
+	Before       *string             `json:"before,omitempty"`
+	BeforeMedia  *openapi_types.UUID `json:"beforeMedia,omitempty"`
+	Kind         VersionChangeKind   `json:"kind"`
+	Name         string              `json:"name"`
+	PreviousName *string             `json:"previousName,omitempty"`
+}
+
+// VersionChangeKind defines model for VersionChange.Kind.
+type VersionChangeKind string
+
+// VersionChangeGroup defines model for VersionChangeGroup.
+type VersionChangeGroup struct {
+	Changes []VersionChange `json:"changes"`
+	Label   string          `json:"label"`
+	Subject string          `json:"subject"`
+}
+
+// VersionComparison defines model for VersionComparison.
+type VersionComparison struct {
+	From   RecordedVersion      `json:"from"`
+	Groups []VersionChangeGroup `json:"groups"`
+
+	// PromptsWithheld Whether a version's prompts could not be matched to the asset's current sealed prompts, so none of them are shown
+	PromptsWithheld bool            `json:"promptsWithheld"`
+	To              RecordedVersion `json:"to"`
+
+	// Unavailable Why a version may not be opened, leaving the groups empty
+	Unavailable *string `json:"unavailable,omitempty"`
 }
 
 // WithdrawPostRequest defines model for WithdrawPostRequest.
@@ -4414,6 +4551,12 @@ type AcceptAssetRevisionParams struct {
 type PublishAssetUpdateParams struct {
 	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
 	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// CompareAssetVersionsParams defines parameters for CompareAssetVersions.
+type CompareAssetVersionsParams struct {
+	From *int `form:"from,omitempty" json:"from,omitempty"`
+	To   *int `form:"to,omitempty" json:"to,omitempty"`
 }
 
 // BeginDiscordParams defines parameters for BeginDiscord.
@@ -4712,6 +4855,9 @@ type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
 // PublishAssetUpdateJSONRequestBody defines body for PublishAssetUpdate for application/json ContentType.
 type PublishAssetUpdateJSONRequestBody = AssetUpdateRequest
 
+// ResolvePromptCorrespondenceJSONRequestBody defines body for ResolvePromptCorrespondence for application/json ContentType.
+type ResolvePromptCorrespondenceJSONRequestBody = PromptCorrespondenceRequest
+
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
 
@@ -4873,6 +5019,68 @@ type PublicationPostUpdatedJSONRequestBody = PublicationPostEvent
 
 // PublicationPostWithdrawnJSONRequestBody defines body for PublicationPostWithdrawn for application/json ContentType.
 type PublicationPostWithdrawnJSONRequestBody = PublicationPostEvent
+
+// AsCandidateConflict returns the union data inside the BlockSaveConflict as a CandidateConflict
+func (t BlockSaveConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the BlockSaveConflict as the provided CandidateConflict
+func (t *BlockSaveConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the BlockSaveConflict, using the provided CandidateConflict
+func (t *BlockSaveConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSealedExposureRefusal returns the union data inside the BlockSaveConflict as a SealedExposureRefusal
+func (t BlockSaveConflict) AsSealedExposureRefusal() (SealedExposureRefusal, error) {
+	var body SealedExposureRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSealedExposureRefusal overwrites any union data inside the BlockSaveConflict as the provided SealedExposureRefusal
+func (t *BlockSaveConflict) FromSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSealedExposureRefusal performs a merge with any union data inside the BlockSaveConflict, using the provided SealedExposureRefusal
+func (t *BlockSaveConflict) MergeSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t BlockSaveConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *BlockSaveConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -5157,8 +5365,20 @@ type ServerInterface interface {
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/assets/{id}/updates)
+	ListAssetUpdates(c *gin.Context, id openapi_types.UUID)
+
 	// (POST /v1/assets/{id}/updates)
 	PublishAssetUpdate(c *gin.Context, id openapi_types.UUID, params PublishAssetUpdateParams)
+
+	// (GET /v1/assets/{id}/updates/comparison)
+	CompareAssetVersions(c *gin.Context, id openapi_types.UUID, params CompareAssetVersionsParams)
+
+	// (GET /v1/assets/{id}/updates/protection)
+	ListProtectionMismatches(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/assets/{id}/updates/{number}/protection)
+	ResolvePromptCorrespondence(c *gin.Context, id openapi_types.UUID, number int)
 
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
@@ -6874,6 +7094,31 @@ func (siw *ServerInterfaceWrapper) ExportSealedContent(c *gin.Context) {
 	siw.Handler.ExportSealedContent(c, id)
 }
 
+// ListAssetUpdates operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdates(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdates(c, id)
+}
+
 // PublishAssetUpdate operation middleware
 func (siw *ServerInterfaceWrapper) PublishAssetUpdate(c *gin.Context) {
 
@@ -6924,6 +7169,109 @@ func (siw *ServerInterfaceWrapper) PublishAssetUpdate(c *gin.Context) {
 	}
 
 	siw.Handler.PublishAssetUpdate(c, id, params)
+}
+
+// CompareAssetVersions operation middleware
+func (siw *ServerInterfaceWrapper) CompareAssetVersions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CompareAssetVersionsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", c.Request.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", c.Request.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CompareAssetVersions(c, id, params)
+}
+
+// ListProtectionMismatches operation middleware
+func (siw *ServerInterfaceWrapper) ListProtectionMismatches(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListProtectionMismatches(c, id)
+}
+
+// ResolvePromptCorrespondence operation middleware
+func (siw *ServerInterfaceWrapper) ResolvePromptCorrespondence(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ResolvePromptCorrespondence(c, id, number)
 }
 
 // ClearAssetWithhold operation middleware
@@ -9739,7 +10087,11 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/restore", wrapper.RestoreAsset)
 	router.PUT(options.BaseURL+"/v1/assets/:id/identity", wrapper.SetAssetIdentity)
 	router.POST(options.BaseURL+"/v1/assets/:id/publish", wrapper.PublishAsset)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates", wrapper.ListAssetUpdates)
 	router.POST(options.BaseURL+"/v1/assets/:id/updates", wrapper.PublishAssetUpdate)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/comparison", wrapper.CompareAssetVersions)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/protection", wrapper.ListProtectionMismatches)
+	router.PUT(options.BaseURL+"/v1/assets/:id/updates/:number/protection", wrapper.ResolvePromptCorrespondence)
 	router.PUT(options.BaseURL+"/v1/assets/:id/discovery", wrapper.SetAssetDiscovery)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/deleted", wrapper.ListDeletedAssets)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/withhold", wrapper.ClearAssetWithhold)

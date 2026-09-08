@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -33,6 +34,16 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.U
 	saved, err := h.assets.SaveBlock(
 		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), update, candidate)
 	if candidateResult(c, candidate, err) {
+		return
+	}
+	var exposure asset.ExposureRefusal
+	if errors.As(err, &exposure) {
+		c.JSON(http.StatusConflict, SealedExposureRefusal{
+			Error: "Saving this makes " + joinNames(exposure.Prompts) +
+				" readable by anyone, and puts ordinary downloads back on the asset.",
+			Code:    SealedExposure,
+			Prompts: exposure.Prompts,
+		})
 		return
 	}
 	switch {
@@ -92,10 +103,21 @@ func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
 		allowedApps = &apps
 	}
 	return asset.BlockUpdate{
-		Title:       request.Title,
-		Layout:      block.Layout(request.Layout),
-		Width:       block.Width(request.Width),
-		Elements:    elements,
-		AllowedApps: allowedApps,
+		Title:           request.Title,
+		Layout:          block.Layout(request.Layout),
+		Width:           block.Width(request.Width),
+		Elements:        elements,
+		AllowedApps:     allowedApps,
+		ExposeProtected: request.ExposeProtected != nil && *request.ExposeProtected,
 	}, nil
+}
+
+// joinNames writes a list of prompts the way a person reads one.
+func joinNames(names []string) string {
+	switch len(names) {
+	case 1:
+		return names[0]
+	default:
+		return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+	}
 }

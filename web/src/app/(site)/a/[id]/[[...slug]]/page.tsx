@@ -231,6 +231,7 @@ export default async function AssetPage({
                   hasOriginal: Boolean(asset.original),
                   readiness: asset.readiness,
                   sealedBlocks: asset.sealedBlocks,
+                  sealsPrompts: asset.linkedInstallOnly,
                 }}
               />
             </section>

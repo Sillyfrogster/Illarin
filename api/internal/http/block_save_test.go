@@ -24,11 +24,12 @@ type saveBlockElement struct {
 }
 
 type saveBlockBody struct {
-	Title       *string            `json:"title"`
-	Layout      string             `json:"layout"`
-	Width       string             `json:"width"`
-	Elements    []saveBlockElement `json:"elements"`
-	AllowedApps *[]string          `json:"allowedApps,omitempty"`
+	Title           *string            `json:"title"`
+	Layout          string             `json:"layout"`
+	Width           string             `json:"width"`
+	Elements        []saveBlockElement `json:"elements"`
+	AllowedApps     *[]string          `json:"allowedApps,omitempty"`
+	ExposeProtected *bool              `json:"exposeProtected,omitempty"`
 }
 
 func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
@@ -127,6 +128,11 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	content := strings.ReplaceAll(string(core.Elements[0].Content), `"protected":true`, `"protected":false`)
 	core.Elements[0].Content = json.RawMessage(content)
 	core.AllowedApps = &[]string{}
+	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
+		t.Fatalf("unseal without confirming status = %d, want 409: %s", got.Code, got.Body.String())
+	}
+	confirmed := true
+	core.ExposeProtected = &confirmed
 	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}

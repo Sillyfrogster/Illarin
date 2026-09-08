@@ -12,6 +12,7 @@ import { DiscoveryControl } from "./DiscoveryControl";
 import { IdentityPanel } from "./IdentityPanel";
 import { PreservedPanel } from "./PreservedPanel";
 import { PublishPanel } from "./PublishPanel";
+import { RecordedPromptsPanel } from "./RecordedPromptsPanel";
 import { SealedPanel } from "./SealedPanel";
 import { ShortfallPanel } from "./ShortfallPanel";
 import { WithholdControl } from "./WithholdControl";
@@ -29,6 +30,7 @@ export type CreatorMenuProps = {
   hasOriginal: boolean;
   readiness?: ReadinessItem[];
   sealedBlocks?: number;
+  sealsPrompts: boolean;
 };
 
 export function CreatorMenu(props: CreatorMenuProps) {
@@ -154,6 +156,10 @@ export function CreatorMenu(props: CreatorMenuProps) {
 
                 {props.isOwner && props.hasOriginal ? (
                   <PreservedPanel assetId={props.assetId} />
+                ) : null}
+
+                {props.isOwner && !props.isDraft && props.sealsPrompts ? (
+                  <RecordedPromptsPanel assetId={props.assetId} />
                 ) : null}
 
                 {props.isOwner && props.sealedBlocks ? (

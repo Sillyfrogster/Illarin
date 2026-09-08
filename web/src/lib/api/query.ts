@@ -39,6 +39,9 @@ export type ElementType = components["schemas"]["ElementType"];
 export type AssetTag = components["schemas"]["AssetTag"];
 export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
+export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
+export type PromptCorrespondenceRequest =
+  components["schemas"]["PromptCorrespondenceRequest"];
 export type Profile = components["schemas"]["Profile"];
 export type ProfileLink = components["schemas"]["ProfileLink"];
 export type ProfileDistinction = components["schemas"]["ProfileDistinction"];
@@ -456,6 +459,39 @@ export async function fetchPreservedNamespaces(
     params: { path: { id } },
   });
   return data ?? [];
+}
+
+/** The recorded versions whose prompts no longer line up with the sealed ones. */
+export async function fetchProtectionMismatches(
+  id: string,
+): Promise<ProtectionMismatch[]> {
+  const { data } = await api.GET("/v1/assets/{id}/updates/protection", {
+    params: { path: { id } },
+  });
+  return data?.items ?? [];
+}
+
+/** Says which recorded prompt each sealed prompt is, on one recorded version. */
+export async function resolvePromptCorrespondence(
+  id: string,
+  number: number,
+  matches: PromptCorrespondenceRequest["matches"],
+) {
+  const { error } = await api.PUT(
+    "/v1/assets/{id}/updates/{number}/protection",
+    {
+      params: { path: { id, number } },
+      body: { matches },
+    },
+  );
+  if (error) {
+    const refusal = error as { error?: unknown } | undefined;
+    throw new Error(
+      typeof refusal?.error === "string"
+        ? refusal.error
+        : "That version could not be settled. Try again.",
+    );
+  }
 }
 
 /** Deletes one namespace and everything under it, for good. */

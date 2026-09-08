@@ -16,11 +16,21 @@ import (
 
 // BlockUpdate is everything one block sheet can save at once.
 type BlockUpdate struct {
-	Title       *string
-	Layout      block.Layout
-	Width       block.Width
-	Elements    []block.Element
-	AllowedApps *[]string
+	Title           *string
+	Layout          block.Layout
+	Width           block.Width
+	Elements        []block.Element
+	AllowedApps     *[]string
+	ExposeProtected bool
+}
+
+// ExposureRefusal is a save that would make sealed prompts public without saying so.
+type ExposureRefusal struct {
+	Prompts []string
+}
+
+func (refusal ExposureRefusal) Error() string {
+	return "making a sealed prompt public needs an explicit confirmation"
 }
 
 // SavedBlock is the saved row and the kind catalog that describes it.
@@ -97,6 +107,15 @@ func (s *Service) SaveBlock(
 	}
 	if err := s.validateProtectedApps(ctx, tx, assetID, kind, blocks, update.AllowedApps); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
+	}
+	if !update.ExposeProtected {
+		exposed, err := protected.UnsealedFragments(ctx, tx, assetID, blocks)
+		if err != nil {
+			return SavedBlock{}, err
+		}
+		if len(exposed) > 0 {
+			return SavedBlock{}, ExposureRefusal{Prompts: exposed}
+		}
 	}
 	if err := protected.SyncPromptFragments(ctx, tx, assetID, blocks, update.AllowedApps); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)

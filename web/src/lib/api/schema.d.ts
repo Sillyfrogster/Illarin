@@ -1745,10 +1745,62 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** @description The versions this asset has recorded, newest first. A draft, a withheld asset and a deleted one answer their owner or nobody. */
+    get: operations["listAssetUpdates"];
     put?: never;
     /** @description Publish the reviewed working copy as the asset's next public version. The summary says what changed, and an update that changes nothing is refused rather than recorded. */
     post: operations["publishAssetUpdate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/comparison": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What changed between two recorded versions, read under the rules the reader is under now. Omitting to compares the published version, and omitting from compares the version recorded before it. */
+    get: operations["compareAssetVersions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/protection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The recorded versions whose prompts Illarin cannot line up with the asset's current sealed prompts. Each one shows no prompt content and offers no download until its owner settles it. */
+    get: operations["listProtectionMismatches"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/protection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Say which recorded prompt each current sealed prompt is on one version. A match with no recorded prompt says that version never carried it. */
+    put: operations["resolvePromptCorrespondence"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2660,6 +2712,8 @@ export interface components {
       elements: components["schemas"]["SaveAssetElement"][];
       /** @description The applications that may receive a sealed prompt in this save. Send an empty list only when no fragment remains sealed. */
       allowedApps?: "lumiverse"[];
+      /** @description The creator confirming that this save makes sealed prompt text public. A save that unseals a prompt without it is refused. */
+      exposeProtected?: boolean;
     };
     ArrangeAssetBlocksRequest: {
       blocks: {
@@ -3386,6 +3440,84 @@ export interface components {
       unrepresentable: {
         [key: string]: "keep" | "remove";
       };
+    };
+    BlockSaveConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["SealedExposureRefusal"];
+    SealedExposureRefusal: {
+      error: string;
+      /** @enum {string} */
+      code: "sealed_exposure";
+      /** @description The sealed prompts this save would make public */
+      prompts: string[];
+    };
+    RecordedVersion: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: date-time */
+      recordedAt: string;
+      versionLabel: string;
+      summary: string;
+      notes: string;
+    };
+    RecordedVersionList: {
+      items: components["schemas"]["RecordedVersion"][];
+    };
+    VersionChange: {
+      /** @enum {string} */
+      kind: "addition" | "removal" | "change";
+      name: string;
+      previousName?: string;
+      before?: string;
+      after?: string;
+      /** Format: uuid */
+      beforeMedia?: string;
+      /** Format: uuid */
+      afterMedia?: string;
+    };
+    VersionChangeGroup: {
+      subject: string;
+      label: string;
+      changes: components["schemas"]["VersionChange"][];
+    };
+    VersionComparison: {
+      from: components["schemas"]["RecordedVersion"];
+      to: components["schemas"]["RecordedVersion"];
+      groups: components["schemas"]["VersionChangeGroup"][];
+      /** @description Why a version may not be opened, leaving the groups empty */
+      unavailable?: string;
+      /** @description Whether a version's prompts could not be matched to the asset's current sealed prompts, so none of them are shown */
+      promptsWithheld: boolean;
+    };
+    NamedPrompt: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
+    ProtectionMismatch: {
+      version: components["schemas"]["RecordedVersion"];
+      /** @description The sealed prompts this version does not carry under the same id */
+      unmatched: components["schemas"]["NamedPrompt"][];
+      /** @description The prompts this version does carry, which a match chooses from */
+      recorded: components["schemas"]["NamedPrompt"][];
+    };
+    ProtectionMismatchList: {
+      items: components["schemas"]["ProtectionMismatch"][];
+    };
+    PromptCorrespondenceRequest: {
+      matches: {
+        /**
+         * Format: uuid
+         * @description A prompt the asset seals right now
+         */
+        current: string;
+        /**
+         * Format: uuid
+         * @description The prompt this version carries in its place, absent where it carries none
+         */
+        recorded?: string;
+      }[];
     };
     ProfileLink: {
       label: string;
@@ -9273,13 +9405,13 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The working copy changed or the asset is frozen */
+      /** @description The working copy changed, the asset is frozen, or the save would make a sealed prompt public without saying so */
       409: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CandidateConflict"];
+          "application/json": components["schemas"]["BlockSaveConflict"];
         };
       };
       /** @description The uploaded bytes have been purged and cannot return */
@@ -9858,6 +9990,35 @@ export interface operations {
       };
     };
   };
+  listAssetUpdates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The recorded versions */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecordedVersionList"];
+        };
+      };
+      /** @description The asset is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   publishAssetUpdate: {
     parameters: {
       query?: never;
@@ -9923,6 +10084,134 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["PublishConflict"];
         };
+      };
+    };
+  };
+  compareAssetVersions: {
+    parameters: {
+      query?: {
+        from?: number;
+        to?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The grouped comparison */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VersionComparison"];
+        };
+      };
+      /** @description The asset, or one of the versions, is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The chosen version is the first one recorded */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listProtectionMismatches: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The versions still to settle */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProtectionMismatchList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  resolvePromptCorrespondence: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PromptCorrespondenceRequest"];
+      };
+    };
+    responses: {
+      /** @description The correspondence is settled */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A match names a prompt that is not one of the choices */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -62,17 +63,27 @@ type ChangeGroup struct {
 	Changes []Change
 }
 
-// Comparison is what changed between two recorded versions of one asset.
+// Comparison is what changed between two recorded versions of one asset, and it withholds a version's prompts where they cannot be matched to the current sealed ones.
 type Comparison struct {
 	From   Version
 	To     Version
 	Groups []ChangeGroup
 	// Unavailable is why a reader may not open one of the versions, and it leaves the groups empty rather than comparing something else.
-	Unavailable string
+	Unavailable     string
+	PromptsWithheld bool
 }
 
 // VersionAccess returns why a reader may not open a recorded version, and the empty string where they may. A comparison never decides access for itself.
 type VersionAccess func(Version) string
+
+// ComparisonRequest is one reader asking what changed between two recorded versions, where a zero To is the published version and a zero From is the one recorded before it.
+type ComparisonRequest struct {
+	AssetID uuid.UUID
+	From    int
+	To      int
+	Access  VersionAccess
+	AsOwner bool
+}
 
 // The subjects a comparison reports outside the semantic roles.
 const (
@@ -81,9 +92,9 @@ const (
 	preservedSubject    = "preserved_data"
 )
 
-// Compare reports what changed between two recorded versions of one asset. A zero to is the published version and a zero from is the version recorded before it.
-func (s *Service) Compare(ctx context.Context, assetID uuid.UUID, from, to int, access VersionAccess) (Comparison, error) {
-	if access == nil {
+// Compare reports what changed between two recorded versions of one asset.
+func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison, error) {
+	if in.Access == nil {
 		return Comparison{}, ErrAccessRequired
 	}
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
@@ -91,27 +102,50 @@ func (s *Service) Compare(ctx context.Context, assetID uuid.UUID, from, to int, 
 		return Comparison{}, err
 	}
 	defer tx.Rollback(ctx)
-	from, to, err = resolveVersions(ctx, tx, assetID, from, to)
+	from, to, err := resolveVersions(ctx, tx, in.AssetID, in.From, in.To)
 	if err != nil {
 		return Comparison{}, err
 	}
-	earlier, err := readVersion(ctx, tx, assetID, from)
+	earlier, err := readVersion(ctx, tx, in.AssetID, from)
 	if err != nil {
 		return Comparison{}, err
 	}
-	later, err := readVersion(ctx, tx, assetID, to)
+	later, err := readVersion(ctx, tx, in.AssetID, to)
 	if err != nil {
 		return Comparison{}, err
 	}
 	compared := Comparison{From: earlier.Version, To: later.Version}
 	for _, version := range []recordedVersion{earlier, later} {
-		if refusal := access(version.Version); refusal != "" {
+		if refusal := in.Access(version.Version); refusal != "" {
 			compared.Unavailable = refusal
 			return compared, nil
 		}
 	}
+	for _, version := range []recordedVersion{earlier, later} {
+		withheld, err := version.holdPrompts(ctx, tx, in.AssetID, in.AsOwner)
+		if err != nil {
+			return Comparison{}, err
+		}
+		compared.PromptsWithheld = compared.PromptsWithheld || withheld
+	}
 	compared.Groups = compareVersions(earlier, later)
 	return compared, nil
+}
+
+// holdPrompts puts a recorded version's prompts under the rules its reader is under.
+func (v recordedVersion) holdPrompts(
+	ctx context.Context,
+	tx pgx.Tx,
+	assetID uuid.UUID,
+	asOwner bool,
+) (bool, error) {
+	if err := protected.RestoreRecordedPrompts(v.protectedPayloads, v.blocks); err != nil {
+		return false, err
+	}
+	if asOwner {
+		return false, nil
+	}
+	return protected.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.blocks)
 }
 
 // resolveVersions fills in the published version and the one recorded before it.
@@ -148,10 +182,11 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to
 // recordedVersion is one snapshot read back into the shapes a comparison reads.
 type recordedVersion struct {
 	Version
-	kind      string
-	metadata  versionMetadata
-	blocks    []block.Block
-	preserved []versionPreserved
+	kind              string
+	metadata          versionMetadata
+	blocks            []block.Block
+	preserved         []versionPreserved
+	protectedPayloads []byte
 }
 
 // versionMetadata is what a recorded version says about the asset outside its page.
@@ -187,10 +222,11 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	var recorded recordedVersion
 	var stored []byte
 	err := tx.QueryRow(ctx, `
-		select id, number, recorded_at, version_label, summary, notes, payload
+		select id, number, recorded_at, version_label, summary, notes, payload, protected_payloads
 		  from asset_snapshots where asset_id = $1 and number = $2
 	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
-		&recorded.VersionLabel, &recorded.Summary, &recorded.Notes, &stored)
+		&recorded.VersionLabel, &recorded.Summary, &recorded.Notes, &stored,
+		&recorded.protectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordedVersion{}, ErrNotFound
 	}

@@ -258,7 +258,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 	owner, id := publishedAsset(t, svc, pool, "compare.owner")
 	open := func(Version) string { return "" }
 
-	if _, err := svc.Compare(ctx, id, 0, 0, open); !errors.Is(err, ErrNoEarlierVersion) {
+	if _, err := svc.Compare(ctx, ComparisonRequest{AssetID: id, Access: open}); !errors.Is(err, ErrNoEarlierVersion) {
 		t.Fatalf("first version compared against nothing: %v", err)
 	}
 	saveDescription(t, svc, owner, id, pool, "Second description")
@@ -272,7 +272,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 	}
 	publishUpdate(t, svc, owner, id, "Rewrote it again")
 
-	latest, err := svc.Compare(ctx, id, 0, 0, open)
+	latest, err := svc.Compare(ctx, ComparisonRequest{AssetID: id, Access: open})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 		renamed[0].Before != "Published name" || renamed[0].After != "Renamed" {
 		t.Fatalf("metadata changes = %+v", renamed)
 	}
-	chosen, err := svc.Compare(ctx, id, 1, 3, open)
+	chosen, err := svc.Compare(ctx, ComparisonRequest{AssetID: id, From: 1, To: 3, Access: open})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,15 +306,15 @@ func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T)
 	saveDescription(t, svc, owner, id, pool, "Second description")
 	publishUpdate(t, svc, owner, id, "Rewrote the description")
 
-	if _, err := svc.Compare(ctx, id, 0, 0, nil); !errors.Is(err, ErrAccessRequired) {
+	if _, err := svc.Compare(ctx, ComparisonRequest{AssetID: id}); !errors.Is(err, ErrAccessRequired) {
 		t.Fatalf("comparison ran without access rules: %v", err)
 	}
-	withheld, err := svc.Compare(ctx, id, 0, 0, func(version Version) string {
+	withheld, err := svc.Compare(ctx, ComparisonRequest{AssetID: id, Access: func(version Version) string {
 		if version.Number == 1 {
 			return "That version was withdrawn."
 		}
 		return ""
-	})
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}

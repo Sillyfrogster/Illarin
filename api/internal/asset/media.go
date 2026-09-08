@@ -352,7 +352,7 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 		select media.blob_id, blob.sha256,
 		       asset.lifecycle = 'draft' or not exists (
 		           select 1 from asset_snapshot_media r
-		           where r.snapshot_id = asset.published_snapshot_id and r.media_id = media.id
+		           where r.asset_id = asset.id and r.media_id = media.id
 		       ), coalesce(asset.owner_id = $2, false), asset.lifecycle = 'draft'
 		  from asset_media media
 		  join assets asset on asset.id = media.asset_id

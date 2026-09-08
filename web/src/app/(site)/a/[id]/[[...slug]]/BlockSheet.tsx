@@ -21,6 +21,7 @@ import {
   NO_ALLOWED_APP,
   SealedPolicy,
 } from "./SealedPolicy";
+import { UnsealConfirmation, unsealedPrompts } from "./UnsealConfirmation";
 
 export function BlockSheet({
   assetId,
@@ -62,10 +63,17 @@ export function BlockSheet({
   const [arrangementMessage, setArrangementMessage] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [allowedApps, setAllowedApps] = useState(initialAllowedApps);
-  const [finalUnseal, setFinalUnseal] = useState<AssetElement | null>(null);
+  const [unsealing, setUnsealing] = useState<AssetElement | null>(null);
+  const [exposeConfirmed, setExposeConfirmed] = useState(false);
 
   const expandedElement = elements.find((element) => element.id === expanded);
-  const editingIsLocked = pending || finalUnseal !== null;
+  const editingIsLocked = pending || unsealing !== null;
+  const unsealed = unsealing
+    ? unsealedPrompts(elementById(elements, unsealing.id), unsealing)
+    : [];
+  const keepsASeal = unsealing
+    ? hasSealedPrompts(withElement(elements, unsealing))
+    : true;
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -80,22 +88,20 @@ export function BlockSheet({
     const after = elements.map((element) =>
       element.id === next.id ? next : element,
     );
-    if (previous && finalPromptWasUnsealed(previous, next, elements, after)) {
-      setFinalUnseal(next);
+    if (previous && unsealedPrompts(previous, next).length > 0) {
+      setExpanded(null);
+      setUnsealing(next);
       return;
     }
     setElements(after);
   }
 
-  function confirmFinalUnseal() {
-    if (!finalUnseal) return;
-    setElements((current) =>
-      current.map((element) =>
-        element.id === finalUnseal.id ? finalUnseal : element,
-      ),
-    );
-    setAllowedApps([]);
-    setFinalUnseal(null);
+  function confirmUnseal() {
+    if (!unsealing) return;
+    setElements(withElement(elements, unsealing));
+    if (!keepsASeal) setAllowedApps([]);
+    setExposeConfirmed(true);
+    setUnsealing(null);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -115,6 +121,7 @@ export function BlockSheet({
         layout,
         width,
         elements: elements.map(toSaveElement),
+        exposeProtected: exposeConfirmed || undefined,
         allowedApps:
           hasSealedPrompts(elements) || initialAllowedApps.length > 0
             ? allowedApps
@@ -287,35 +294,6 @@ export function BlockSheet({
             </div>
           ) : null}
 
-          {finalUnseal ? (
-            <section className={styles.finalUnseal} aria-live="polite">
-              <div>
-                <h3>Make this prompt public?</h3>
-                <p>
-                  This is the final sealed prompt. Saving will restore public
-                  prompt text and ordinary downloads.
-                </p>
-              </div>
-              <div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => setFinalUnseal(null)}
-                >
-                  Keep sealed
-                </button>
-                <button
-                  type="button"
-                  className={styles.confirmUnseal}
-                  disabled={pending}
-                  onClick={confirmFinalUnseal}
-                >
-                  Make prompt public
-                </button>
-              </div>
-            </section>
-          ) : null}
-
           <section
             className={styles.blockActions}
             aria-labelledby="block-actions"
@@ -390,6 +368,15 @@ export function BlockSheet({
           </button>
         </footer>
       </form>
+      {unsealing ? (
+        <UnsealConfirmation
+          prompts={unsealed}
+          keepsASeal={keepsASeal}
+          pending={pending}
+          onKeepSealed={() => setUnsealing(null)}
+          onExpose={confirmUnseal}
+        />
+      ) : null}
       {expandedElement ? (
         <ElementOverlay
           assetId={assetId}
@@ -409,31 +396,19 @@ export function BlockSheet({
   );
 }
 
-/** Whether this edit turns the last sealed fragment public. */
-function finalPromptWasUnsealed(
-  previous: AssetElement,
-  next: AssetElement,
-  before: AssetElement[],
-  after: AssetElement[],
-): boolean {
-  if (
-    previous.type !== "prompt_list" ||
-    next.type !== "prompt_list" ||
-    !("fragments" in previous.content) ||
-    !("fragments" in next.content) ||
-    !hasSealedPrompts(before) ||
-    hasSealedPrompts(after)
-  ) {
-    return false;
-  }
-  const wasProtected = new Set(
-    previous.content.fragments
-      .filter((fragment) => fragment.protected)
-      .map((fragment) => fragment.id),
+/** The page with one element replaced by its edited self. */
+function withElement(
+  elements: AssetElement[],
+  edited: AssetElement,
+): AssetElement[] {
+  return elements.map((element) =>
+    element.id === edited.id ? edited : element,
   );
-  return next.content.fragments.some(
-    (fragment) => wasProtected.has(fragment.id) && !fragment.protected,
-  );
+}
+
+/** The element an edit came from, which the page still holds. */
+function elementById(elements: AssetElement[], id: string): AssetElement {
+  return elements.find((element) => element.id === id) as AssetElement;
 }
 
 function toSaveElement(

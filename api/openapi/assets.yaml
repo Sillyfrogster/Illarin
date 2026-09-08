@@ -416,11 +416,13 @@ paths:
         '404':
           description: The asset or block does not belong to the creator
         '409':
-          description: The working copy changed or the asset is frozen
+          description: >-
+            The working copy changed, the asset is frozen, or the save would
+            make a sealed prompt public without saying so
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CandidateConflict'
+                $ref: '#/components/schemas/BlockSaveConflict'
         '422':
           description: The uploaded bytes have been purged and cannot return
     delete:
@@ -849,6 +851,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/PublishConflict'
   /v1/assets/{id}/updates:
+    get:
+      operationId: listAssetUpdates
+      description: >-
+        The versions this asset has recorded, newest first. A draft, a withheld
+        asset and a deleted one answer their owner or nobody.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The recorded versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordedVersionList'
+        '404':
+          description: The asset is not readable
     post:
       operationId: publishAssetUpdate
       description: >-
@@ -901,6 +924,108 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublishConflict'
+  /v1/assets/{id}/updates/comparison:
+    get:
+      operationId: compareAssetVersions
+      description: >-
+        What changed between two recorded versions, read under the rules the
+        reader is under now. Omitting to compares the published version, and
+        omitting from compares the version recorded before it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The grouped comparison
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionComparison'
+        '404':
+          description: The asset, or one of the versions, is not readable
+        '409':
+          description: The chosen version is the first one recorded
+  /v1/assets/{id}/updates/protection:
+    get:
+      operationId: listProtectionMismatches
+      description: >-
+        The recorded versions whose prompts Illarin cannot line up with the
+        asset's current sealed prompts. Each one shows no prompt content and
+        offers no download until its owner settles it.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The versions still to settle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProtectionMismatchList'
+        '401':
+          description: No account is signed in
+        '404':
+          description: The asset does not belong to the creator
+  /v1/assets/{id}/updates/{number}/protection:
+    put:
+      operationId: resolvePromptCorrespondence
+      description: >-
+        Say which recorded prompt each current sealed prompt is on one version.
+        A match with no recorded prompt says that version never carried it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptCorrespondenceRequest'
+      responses:
+        '204':
+          description: The correspondence is settled
+        '400':
+          description: A match names a prompt that is not one of the choices
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset or version does not belong to the creator
   /v1/assets/{id}/discovery:
     put:
       operationId: setAssetDiscovery
@@ -1318,6 +1443,162 @@ components:
       anyOf:
         - $ref: '#/components/schemas/CandidateConflict'
         - $ref: '#/components/schemas/PublishRefusal'
+    BlockSaveConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/SealedExposureRefusal'
+    SealedExposureRefusal:
+      type: object
+      required: [error, code, prompts]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [sealed_exposure]
+        prompts:
+          description: The sealed prompts this save would make public
+          type: array
+          items:
+            type: string
+    RecordedVersion:
+      type: object
+      required:
+        - id
+        - number
+        - recordedAt
+        - versionLabel
+        - summary
+        - notes
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        versionLabel:
+          type: string
+        summary:
+          type: string
+        notes:
+          type: string
+    RecordedVersionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordedVersion'
+    VersionChange:
+      type: object
+      required: [kind, name]
+      properties:
+        kind:
+          type: string
+          enum: [addition, removal, change]
+        name:
+          type: string
+        previousName:
+          type: string
+        before:
+          type: string
+        after:
+          type: string
+        beforeMedia:
+          type: string
+          format: uuid
+        afterMedia:
+          type: string
+          format: uuid
+    VersionChangeGroup:
+      type: object
+      required: [subject, label, changes]
+      properties:
+        subject:
+          type: string
+        label:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionChange'
+    VersionComparison:
+      type: object
+      required: [from, to, groups, promptsWithheld]
+      properties:
+        from:
+          $ref: '#/components/schemas/RecordedVersion'
+        to:
+          $ref: '#/components/schemas/RecordedVersion'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionChangeGroup'
+        unavailable:
+          description: Why a version may not be opened, leaving the groups empty
+          type: string
+        promptsWithheld:
+          description: >-
+            Whether a version's prompts could not be matched to the asset's
+            current sealed prompts, so none of them are shown
+          type: boolean
+    NamedPrompt:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    ProtectionMismatch:
+      type: object
+      required: [version, unmatched, recorded]
+      properties:
+        version:
+          $ref: '#/components/schemas/RecordedVersion'
+        unmatched:
+          description: The sealed prompts this version does not carry under the same id
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedPrompt'
+        recorded:
+          description: The prompts this version does carry, which a match chooses from
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedPrompt'
+    ProtectionMismatchList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProtectionMismatch'
+    PromptCorrespondenceRequest:
+      type: object
+      additionalProperties: false
+      required: [matches]
+      properties:
+        matches:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [current]
+            properties:
+              current:
+                description: A prompt the asset seals right now
+                type: string
+                format: uuid
+              recorded:
+                description: The prompt this version carries in its place, absent where it carries none
+                type: string
+                format: uuid
     Asset:
       type: object
       required:

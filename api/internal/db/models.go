@@ -203,6 +203,13 @@ type AssetSnapshotProjection struct {
 	Projection []byte
 }
 
+type AssetSnapshotPromptMatch struct {
+	SnapshotID         pgtype.UUID
+	CurrentFragmentID  pgtype.UUID
+	RecordedFragmentID pgtype.UUID
+	ResolvedAt         pgtype.Timestamptz
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte

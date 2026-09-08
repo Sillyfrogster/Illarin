@@ -68,6 +68,7 @@ import {
   hasSealedPrompts,
   NO_ALLOWED_APP,
 } from "./SealedPolicy";
+import { UnsealConfirmation, unsealedPrompts } from "./UnsealConfirmation";
 
 function measureCandidateHeights(
   source: HTMLElement,
@@ -179,6 +180,10 @@ export function AssetBlocks({
   const [expandPending, setExpandPending] = useState(false);
   const [expandMessage, setExpandMessage] = useState("");
   const [expandApps, setExpandApps] = useState<AllowedApp[]>(allowedApps);
+  const [unsealing, setUnsealing] = useState<{
+    prompts: string[];
+    keepsASeal: boolean;
+  } | null>(null);
   const [suggestedWidths, setSuggestedWidths] = useState<
     Record<string, BlockWidth>
   >({});
@@ -298,7 +303,7 @@ export function AssetBlocks({
   }, [arranging, editingVisible, editing, expanding, measureSuggestedWidths]);
 
   /** A save that fails keeps the overlay open rather than closing over a loss. */
-  async function leaveOverlay() {
+  async function leaveOverlay(exposeProtected = false) {
     if (!expanding || !expandedBlock || expandPending) return;
     const elements = expandedBlock.elements.map((element) =>
       element.id === expanding.element.id ? expanding.element : element,
@@ -306,6 +311,16 @@ export function AssetBlocks({
     const sealed = hasSealedPrompts(elements);
     if (sealed && expandApps.length === 0) {
       setExpandMessage(NO_ALLOWED_APP);
+      return;
+    }
+    const exposed = unsealedPrompts(
+      expandedBlock.elements.find(
+        (element) => element.id === expanding.element.id,
+      ) as AssetElement,
+      expanding.element,
+    );
+    if (exposed.length > 0 && !exposeProtected) {
+      setUnsealing({ prompts: exposed, keepsASeal: sealed });
       return;
     }
     setExpandPending(true);
@@ -317,8 +332,12 @@ export function AssetBlocks({
         expandedBlock.id,
         blockSaveRequest(expandedBlock, {
           elements,
-          allowedApps:
-            sealed || allowedApps.length > 0 ? expandApps : undefined,
+          exposeProtected: exposeProtected || undefined,
+          allowedApps: sealed
+            ? expandApps
+            : allowedApps.length > 0
+              ? []
+              : undefined,
         }),
       );
       setCurrentBlocks((current) =>
@@ -743,6 +762,18 @@ export function AssetBlocks({
           onImageAdded={() => router.refresh()}
         />
       ) : null}
+      {unsealing ? (
+        <UnsealConfirmation
+          prompts={unsealing.prompts}
+          keepsASeal={unsealing.keepsASeal}
+          pending={expandPending}
+          onKeepSealed={() => setUnsealing(null)}
+          onExpose={() => {
+            setUnsealing(null);
+            void leaveOverlay(true);
+          }}
+        />
+      ) : null}
       {removing ? (
         <RemoveBlockDialog
           block={removing}
@@ -853,6 +884,7 @@ function blockSaveRequest(
     width?: AssetBlock["width"];
     elements?: AssetElement[];
     allowedApps?: AllowedApp[];
+    exposeProtected?: boolean;
   },
 ): SaveAssetBlockRequest {
   return {
@@ -860,6 +892,7 @@ function blockSaveRequest(
     layout: block.layout,
     width: changes.width ?? block.width,
     allowedApps: changes.allowedApps,
+    exposeProtected: changes.exposeProtected,
     elements: (changes.elements ?? block.elements).map((element) => ({
       id: element.id,
       type: element.type,

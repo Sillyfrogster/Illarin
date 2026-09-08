@@ -121,6 +121,8 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 		string(core.Elements[0].Content), `,"protected":true`, "", 1,
 	))
 	core.AllowedApps = &[]string{}
+	confirmed := true
+	core.ExposeProtected = &confirmed
 	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("unseal unchanged prompt: %d %s", response.Code, response.Body.String())
 	}

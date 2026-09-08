@@ -142,6 +142,11 @@ components:
             type: string
             enum:
               - lumiverse
+        exposeProtected:
+          description: >-
+            The creator confirming that this save makes sealed prompt text
+            public. A save that unseals a prompt without it is refused.
+          type: boolean
     ArrangeAssetBlocksRequest:
       type: object
       additionalProperties: false
