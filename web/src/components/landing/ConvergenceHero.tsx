@@ -212,10 +212,15 @@ function useHeroChoreography(root: React.RefObject<HTMLElement | null>) {
         const field = node.querySelector("[data-field]");
 
         if (!motion) {
-          gsap.set([words, entering, planes, field], {
-            clearProps: "all",
-            opacity: 1,
-          });
+          gsap.set(
+            node.querySelectorAll(
+              "[data-word], [data-enter], [data-plane], [data-field]",
+            ),
+            {
+              clearProps: "all",
+              opacity: 1,
+            },
+          );
           return;
         }
 
