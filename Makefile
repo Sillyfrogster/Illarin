@@ -61,6 +61,10 @@ web: ## Run the site
 editor-prototype: ## Run the synthetic editor at /prototype/editor
 	$(MAKE) web
 
+.PHONY: direction-prototype
+direction-prototype: ## Run the visual direction study at /prototype/direction
+	$(MAKE) web
+
 .PHONY: proxy
 proxy: ## Run the local nginx proxy on port 8000
 	$(NGINX) -g 'daemon off;'
@@ -240,6 +244,10 @@ quiet-page-art: ## Generate the empty and barren page artwork, one piece per kin
 .PHONY: archive-cutouts
 archive-cutouts: ## Neutralize the archive mascot glass cutouts
 	cd web && bun scripts/neutralize-archive-cutouts.mjs
+
+.PHONY: direction-fixtures
+direction-fixtures: ## Draw the synthetic art the visual direction prototype reads
+	cd web && bun scripts/generate-direction-fixtures.mjs
 
 # Guards
 

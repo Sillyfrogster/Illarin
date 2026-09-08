@@ -1,0 +1,462 @@
+@layer theme;
+@import "tailwindcss/theme.css" layer(theme) prefix(vd);
+@import "tailwindcss/utilities.css" prefix(vd) important;
+@source "./";
+
+@theme inline {
+  --color-field: var(--v-field);
+  --color-plane: var(--v-plane);
+  --color-deep: var(--v-deep);
+  --color-ink: var(--v-ink);
+  --color-mute: var(--v-mute);
+  --color-faint: var(--v-faint);
+  --color-rule: var(--v-rule);
+  --color-hair: var(--v-hair);
+  --color-strong: var(--v-strong);
+  --color-on-strong: var(--v-on-strong);
+  --color-accent: var(--v-accent);
+  --color-accent-wash: var(--v-accent-wash);
+  --color-warn: var(--v-warn);
+  --color-warn-wash: var(--v-warn-wash);
+  --color-stop: var(--v-stop);
+  --color-stop-wash: var(--v-stop-wash);
+  --color-over: var(--v-over);
+  --color-over-mute: var(--v-over-mute);
+
+  --font-display: var(--font-bodoni), Didot, Georgia, serif;
+  --font-ui: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-prose: var(--font-newsreader), Georgia, serif;
+
+  --text-hero: clamp(2.75rem, 5.4vw, 5rem);
+  --text-hero--line-height: 0.98;
+  --text-hero--letter-spacing: -0.022em;
+  --text-display: clamp(2rem, 3.6vw, 3.25rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.018em;
+  --text-title: clamp(1.6875rem, 2.5vw, 2.5rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.012em;
+  --text-section: 1.5rem;
+  --text-section--line-height: 1.28;
+  --text-lede: clamp(1.125rem, 1.35vw, 1.375rem);
+  --text-lede--line-height: 1.55;
+  --text-prose: 1.0625rem;
+  --text-prose--line-height: 1.75;
+  --text-ui: 0.9375rem;
+  --text-ui--line-height: 1.5;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.45;
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1;
+  --text-label--letter-spacing: 0.16em;
+
+  --spacing-flow: var(--v-flow);
+  --spacing-group: var(--v-group);
+  --spacing-section: var(--v-section);
+  --spacing-chapter: var(--v-chapter);
+
+  --radius-plate: var(--v-radius-plate);
+  --radius-control: var(--v-radius-control);
+}
+
+/* Every direction answers the same token names, so a composition can move between them */
+[data-direction] {
+  --v-ink: light-dark(#111114, #f2f2f0);
+  --v-mute: light-dark(#63636b, #9b9ba3);
+  --v-faint: light-dark(#8b8b93, #6f6f78);
+  --v-strong: light-dark(#111114, #f2f2f0);
+  --v-on-strong: light-dark(#fafaf9, #0a0a0c);
+  --v-warn: light-dark(#8a5a10, #f2c073);
+  --v-warn-wash: light-dark(#f5e8cf, #362810);
+  --v-stop: light-dark(#96292f, #ff9ba1);
+  --v-stop-wash: light-dark(#f6ded9, #3b1c1f);
+  --v-focus-inner: light-dark(#111114, #f2f2f0);
+  --v-focus-outer: light-dark(rgb(250 250 249 / 0.9), rgb(8 8 10 / 0.9));
+  --v-over: #f6f6f4;
+  --v-over-mute: #c6c6c2;
+  --v-beam-crest: light-dark(#ffffff, #ffffff);
+  --v-accent-line: linear-gradient(
+    90deg,
+    var(--v-accent) 0%,
+    color-mix(in oklab, var(--v-accent) 30%, transparent) 62%,
+    transparent 100%
+  );
+  --v-sweep-blend: multiply;
+
+  --measure-display: 15ch;
+  --measure-lede: 52ch;
+  --measure-prose: 68ch;
+  --measure-caption: 40ch;
+
+  color-scheme: light;
+  background: var(--v-field);
+  color: var(--v-ink);
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-prose);
+}
+
+[data-direction][data-theme="dark"] {
+  color-scheme: dark;
+  --v-sweep-blend: screen;
+}
+
+/* Dark borrows its room straight from the tint; light has to pass it through paper first */
+[data-direction="ambient"][data-theme="dark"] {
+  --v-room-a: color-mix(in oklab, var(--v-tint-a) 30%, transparent);
+  --v-room-b: color-mix(in oklab, var(--v-tint-b) 26%, transparent);
+  --v-drift-a: color-mix(in oklab, var(--v-tint-b) 18%, transparent);
+  --v-drift-b: color-mix(in oklab, var(--v-tint-a) 16%, transparent);
+  --v-drift-alpha: 1;
+}
+
+/* Vitrine: an achromatic instrument where light, not shadow, makes the depth */
+[data-direction="vitrine"] {
+  --v-field: light-dark(#eeeeec, #08080a);
+  --v-plane: light-dark(#f8f8f6, #101014);
+  --v-deep: light-dark(#ffffff, #17171c);
+  --v-rule: light-dark(rgb(17 17 20 / 0.14), rgb(242 242 240 / 0.16));
+  --v-hair: light-dark(rgb(17 17 20 / 0.07), rgb(242 242 240 / 0.08));
+  --v-accent: light-dark(#2f5f8c, #9cc6ec);
+  --v-accent-wash: light-dark(rgb(47 95 140 / 0.1), rgb(156 198 236 / 0.14));
+  --v-flow: 1.5rem;
+  --v-group: 3rem;
+  --v-section: 6.5rem;
+  --v-chapter: 11rem;
+  --v-radius-plate: 3px;
+  --v-radius-control: 999px;
+  --v-lit: light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.09));
+  --v-ambient: light-dark(
+    0 30px 70px -34px rgb(20 20 26 / 0.34),
+    0 30px 70px -30px rgb(0 0 0 / 0.85)
+  );
+}
+
+/* Ambient: the frame stays neutral and every page borrows its light from the work on it */
+[data-direction="ambient"] {
+  --v-field: light-dark(#f1f0ed, #0b0b0e);
+  --v-plane: light-dark(#fbfaf8, #15151a);
+  --v-deep: light-dark(#ffffff, #1d1d24);
+  --v-rule: light-dark(rgb(21 21 26 / 0.12), rgb(243 242 239 / 0.14));
+  --v-hair: light-dark(rgb(21 21 26 / 0.06), rgb(243 242 239 / 0.07));
+  --v-accent: var(--v-tint-ink);
+  --v-accent-wash: color-mix(in oklab, var(--v-tint-a) 16%, transparent);
+  --v-flow: 1.625rem;
+  --v-group: 3.25rem;
+  --v-section: 6.25rem;
+  --v-chapter: 10rem;
+  --v-room-a: color-mix(in oklab, var(--v-tint-a) 18%, #ffffff);
+  --v-room-b: color-mix(in oklab, var(--v-tint-b) 15%, #ffffff);
+  --v-drift-a: color-mix(in oklab, var(--v-tint-b) 30%, #ffffff);
+  --v-drift-b: color-mix(in oklab, var(--v-tint-a) 26%, #ffffff);
+  --v-drift-alpha: 0.5;
+  --v-radius-plate: 20px;
+  --v-radius-control: 999px;
+  /* The page tint, replaced per asset or article by the media it carries */
+  --v-tint-a: light-dark(#5f6ea8, #7f8fd0);
+  --v-tint-b: light-dark(#a8737f, #d09aa4);
+  --v-tint-ink: light-dark(#3d4a7a, #a9b6e8);
+  --v-ambient: 0 34px 80px -36px
+    color-mix(in oklab, var(--v-tint-a) 60%, transparent);
+}
+
+/* Ledger: a typeset volume where rules, numbering and pigment carry the structure */
+[data-direction="ledger"] {
+  --v-field: light-dark(#f1f1ef, #0c0c0e);
+  --v-plane: light-dark(#f8f8f7, #131315);
+  --v-deep: light-dark(#ffffff, #1a1a1d);
+  --v-rule: light-dark(rgb(18 18 20 / 0.2), rgb(240 240 238 / 0.2));
+  --v-hair: light-dark(rgb(18 18 20 / 0.09), rgb(240 240 238 / 0.1));
+  --v-accent: var(--v-oxide);
+  --v-accent-wash: color-mix(in oklab, var(--v-accent) 12%, transparent);
+  --v-flow: 1.375rem;
+  --v-group: 2.5rem;
+  --v-section: 5rem;
+  --v-chapter: 8rem;
+  --v-radius-plate: 2px;
+  --v-radius-control: 3px;
+  --v-oxide: light-dark(#a03a2c, #ef8b78);
+  --v-indigo: light-dark(#2f4b8c, #8fabe8);
+  --v-verdigris: light-dark(#1d6b5c, #63c4ac);
+  --v-ochre: light-dark(#8a600d, #e0b45f);
+  --v-ambient: none;
+}
+
+[data-direction] :where(*, *::before, *::after) {
+  border-width: 0;
+  border-style: solid;
+}
+
+[data-direction] :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-direction] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--v-rule) transparent;
+}
+
+/* Two rings, so focus stays visible on the field, on a plane and on artwork */
+[data-direction]
+  :where(a, button, [role="button"], summary, input, select):focus-visible {
+  outline: 2px solid var(--v-focus-inner);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--v-focus-outer);
+}
+
+/* Measure is set by the job a piece of text does, never by the column it lands in */
+.v-display {
+  max-width: var(--measure-display);
+}
+.v-lede {
+  max-width: var(--measure-lede);
+  text-wrap: balance;
+}
+.v-prose {
+  max-width: var(--measure-prose);
+}
+.v-caption {
+  max-width: var(--measure-caption);
+}
+
+.v-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A rule that starts at the page's own accent and gives out, so it reads as an edge lit from one side */
+.v-accent-rule {
+  height: 1px;
+  background: var(--v-accent-line);
+}
+
+/* Vitrine builds a plane out of a lit top edge and one broad ambient shadow */
+.v-plane {
+  background: var(--v-plane);
+  box-shadow:
+    inset 0 1px 0 var(--v-lit, transparent),
+    inset 0 0 0 1px var(--v-hair),
+    var(--v-ambient, none);
+}
+
+.v-glass {
+  background: color-mix(in srgb, var(--v-plane) 78%, transparent);
+  backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow:
+    inset 0 0 0 1px var(--v-hair),
+    var(--v-ambient, none);
+}
+
+/* Ambient paints the room from the two hues the page's media carries */
+.v-room {
+  background:
+    radial-gradient(62rem 42rem at 12% -8%, var(--v-room-a), transparent 70%),
+    radial-gradient(54rem 40rem at 92% 24%, var(--v-room-b), transparent 68%),
+    var(--v-field);
+}
+
+/* Ledger runs a dotted leader from the end of an entry to its date */
+.v-leader {
+  background-image: radial-gradient(circle, var(--v-rule) 1px, transparent 1px);
+  background-position: bottom;
+  background-size: 5px 1px;
+  background-repeat: repeat-x;
+}
+
+/* A small control keeps its drawn size and grows only the area a finger can hit */
+.v-hit {
+  position: relative;
+}
+.v-hit::before {
+  content: "";
+  position: absolute;
+  inset: -11px -9px;
+}
+
+.v-scrim {
+  background: linear-gradient(
+    to top,
+    rgb(6 6 9 / 0.88) 0%,
+    rgb(6 6 9 / 0.66) 38%,
+    rgb(6 6 9 / 0.18) 72%,
+    transparent 100%
+  );
+}
+
+/* Text that sits on artwork keeps its own fixed colours, because the artwork ignores the theme */
+.v-over {
+  color: var(--v-over);
+}
+
+.v-body p + p,
+.v-body p + ul,
+.v-body ul + p,
+.v-body p + figure,
+.v-body figure + p,
+.v-body p + blockquote,
+.v-body blockquote + p,
+.v-body p + pre,
+.v-body pre + p,
+.v-body p + table,
+.v-body table + p {
+  margin-top: var(--v-flow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-direction] *,
+  [data-direction] *::before,
+  [data-direction] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A light travelling the edge of a plate, the way the beam travels the glass in the artwork */
+.v-beam {
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 258deg,
+    color-mix(in oklab, var(--v-accent) 35%, transparent) 300deg,
+    var(--v-beam-crest) 338deg,
+    color-mix(in oklab, var(--v-accent) 45%, transparent) 352deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: v-beam-run var(--beam-seconds, 9s) linear infinite;
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes v-beam-run {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+/* The borrowed light moves slowly enough to read as light rather than as animation */
+.v-drift {
+  opacity: var(--v-drift-alpha, 1);
+  background:
+    radial-gradient(38rem 30rem at 30% 20%, var(--v-drift-a), transparent 70%),
+    radial-gradient(34rem 28rem at 74% 70%, var(--v-drift-b), transparent 70%);
+  animation: v-drift-move 42s ease-in-out infinite alternate;
+}
+
+@keyframes v-drift-move {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1.04);
+  }
+  to {
+    transform: translate3d(4%, 3%, 0) scale(1.1);
+  }
+}
+
+/* An index row that lends its media to the spine beside it */
+.v-row {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms ease;
+}
+.v-row-shift:hover,
+.v-row-shift:focus-visible,
+.v-row-shift[data-open="true"] {
+  transform: translateX(6px);
+}
+
+.v-row-rule {
+  transition: opacity 260ms ease;
+  opacity: 0;
+}
+.v-row:hover .v-row-rule,
+.v-row:focus-visible .v-row-rule,
+.v-row[data-open="true"] .v-row-rule {
+  opacity: 1;
+}
+
+/* A leader that fills toward its date as the entry is read */
+.v-leader-fill {
+  background-image: radial-gradient(
+    circle,
+    var(--v-accent) 1px,
+    transparent 1px
+  );
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+.v-row:hover .v-leader-fill,
+.v-row:focus-visible .v-leader-fill,
+.v-row[data-open="true"] .v-leader-fill {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-beam {
+    background: var(--v-accent-line);
+  }
+  .v-drift {
+    animation: none;
+  }
+}
+
+/* A reading column with two ways out of it, so a figure can break the measure without leaving the page */
+.v-article {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(1.25rem, 1fr)
+    [wide-start] minmax(0, var(--col-margin, 9rem))
+    [text-start] minmax(0, var(--col-text, 36rem)) [text-end]
+    minmax(0, var(--col-margin, 9rem)) [wide-end]
+    minmax(1.25rem, 1fr) [full-end];
+}
+.v-article > * {
+  grid-column: text;
+  min-width: 0;
+}
+.v-article > .v-wide {
+  grid-column: wide;
+}
+.v-article > .v-full {
+  grid-column: full;
+}
+
+/* The site stylesheet colours and underlines every link; inside the study a link takes its own surface's ink */
+[data-direction] a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* A title's words rise into place, and are simply in place when motion is reduced */
+.v-rise > span > span {
+  animation: v-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes v-rise {
+  from {
+    transform: translateY(108%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-rise > span > span {
+    animation: none;
+  }
+}
