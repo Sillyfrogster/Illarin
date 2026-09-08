@@ -6,6 +6,7 @@ import {
   useScroll,
   useTransform,
 } from "framer-motion";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand/BrandMark";
@@ -13,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
 import { AccountMenu } from "./AccountMenu";
-import { AppearanceMenu } from "./AppearanceMenu";
 import { isCurrentPage, NAV, publishAction } from "./destinations";
 import { MobileNav } from "./MobileNav";
 import { Notch } from "./Notch";
@@ -24,7 +24,7 @@ export function SiteHeader() {
   const { account } = useAuth();
   const publish = publishAction(account);
   const { scrollY } = useScroll();
-  const depth = useTransform(scrollY, [0, 40], [0, 0.32], { clamp: true });
+  const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
   const lift = useMotionTemplate`drop-shadow(0 6px 10px rgb(0 0 0 / ${depth}))`;
 
   return (
@@ -37,7 +37,7 @@ export function SiteHeader() {
           <>
             <MobileNav />
             <nav
-              className="hidden items-center gap-6 md:flex"
+              className="hidden items-center gap-2 md:flex"
               aria-label="Primary"
             >
               {NAV.map((item) => (
@@ -45,6 +45,7 @@ export function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   current={isCurrentPage(pathname, item.href)}
+                  className="rounded-control px-3 text-ink hover:bg-deep aria-[current=page]:bg-deep"
                 >
                   {item.label}
                 </LineLink>
@@ -66,20 +67,15 @@ export function SiteHeader() {
         }
         end={
           <>
-            <Button
-              asChild
-              variant="primary"
-              size="compact"
-              className="hidden md:inline-flex"
-            >
+            <Button asChild variant="primary" className="hidden md:inline-flex">
               <Link
                 href={publish.href}
                 aria-current={pathname === "/upload" ? "page" : undefined}
               >
+                <Plus aria-hidden="true" />
                 {publish.label}
               </Link>
             </Button>
-            <AppearanceMenu className="hidden md:inline-flex" />
             <AccountMenu />
           </>
         }

@@ -23,6 +23,7 @@
   --color-rule: var(--v-rule);
   --color-edge: var(--v-edge);
   --color-accent: var(--v-accent);
+  --color-action: var(--v-action);
   --color-on-accent: var(--v-on-accent);
   --color-accent-wash: var(--v-accent-wash);
   --color-stop: var(--v-stop);
@@ -103,16 +104,17 @@
   color-scheme: light dark;
 
   /* The first value of each pair is light */
-  --v-field: light-dark(#ffffff, #080a0c);
-  --v-plane: light-dark(#ffffff, #12161b);
-  --v-deep: light-dark(#eef1f5, #1c2128);
-  --v-ink: light-dark(#1e2228, #eef2f6);
-  --v-mute: light-dark(#5f6772, #9ca5b0);
-  --v-rule: light-dark(#b6bcc6, #3a4048);
-  --v-edge: light-dark(#8b94a1, #5d646d);
-  --v-accent: light-dark(#4074a5, #a0beda);
-  --v-on-accent: light-dark(#ffffff, #0a1620);
-  --v-accent-wash: light-dark(#e9f1f8, #1c2c3a);
+  --v-field: light-dark(#ffffff, #090909);
+  --v-plane: light-dark(#ffffff, #171717);
+  --v-deep: light-dark(#f0f0f0, #262626);
+  --v-ink: light-dark(#000000, #ffffff);
+  --v-mute: light-dark(#636363, #a3a3a3);
+  --v-rule: light-dark(#d4d4d4, #404040);
+  --v-edge: light-dark(#858585, #737373);
+  --v-accent: light-dark(#6d28d9, #b89aff);
+  --v-action: light-dark(#6d28d9, #7c3aed);
+  --v-on-accent: #ffffff;
+  --v-accent-wash: light-dark(#f1eaff, #302044);
   --v-stop: light-dark(#a12645, #ffa6bc);
   --v-on-stop: light-dark(#ffffff, #2b0f18);
   --v-stop-wash: light-dark(#ffeaf0, #3a1b24);
@@ -121,7 +123,8 @@
 
   --shell: 86rem;
   --gutter: 20px;
-  --header-height: 84px;
+  --header-height: 72px;
+  --header-bay-height: 96px;
 
   /* The rails start where the page's content column starts, so the nav lines up with the page */
   --rail-inset: calc(max(0px, (100% - var(--shell)) / 2) + var(--gutter));
@@ -196,7 +199,7 @@
   --color-border: var(--v-rule);
   --color-text-primary: var(--v-ink);
   --color-text-secondary: var(--v-mute);
-  --color-emphasis: var(--v-accent);
+  --color-emphasis: var(--v-action);
   --color-link: var(--v-mute);
 
   --color-on-emphasis: var(--v-on-accent);
@@ -235,12 +238,12 @@
   --color-focus-inner: var(--v-accent);
   --color-focus-outer: var(--v-field);
   --color-focus-ring: color-mix(in srgb, var(--v-accent) 38%, transparent);
-  --color-accent: var(--v-accent);
+  --color-accent: var(--v-action);
   --color-accent-strong: var(--color-emphasis-strong);
   --color-accent-soft: var(--v-accent-wash);
   --color-accent-border: var(--color-emphasis-border);
   --color-on-accent: var(--v-on-accent);
-  --color-signal: var(--v-accent);
+  --color-signal: var(--v-action);
   --color-signal-strong: var(--color-emphasis-strong);
   --color-scrim: light-dark(
     color-mix(in srgb, #050505 52%, transparent),
@@ -339,7 +342,7 @@ html {
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   background: var(--v-field);
   color: var(--color-text-primary);
   caret-color: var(--color-emphasis);
@@ -388,7 +391,7 @@ img {
 }
 
 ::selection {
-  background: var(--v-accent);
+  background: var(--v-action);
   color: var(--v-on-accent);
 }
 

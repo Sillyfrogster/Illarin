@@ -1,6 +1,16 @@
 "use client";
 
-import { ChevronDown, CircleUserRound } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronDown,
+  CircleUserRound,
+  LogIn,
+  LogOut,
+  Mail,
+  PenLine,
+  Settings,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -14,8 +24,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
+import { AppearanceMenu } from "./AppearanceMenu";
 import { accountDestinations, isCurrentPage } from "./destinations";
 import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
+
+const DESTINATION_ICONS = {
+  "View profile": CircleUserRound,
+  "Account settings": Settings,
+  Writers: PenLine,
+  "Profile badges": BadgeCheck,
+  "Verify email": Mail,
+  "Sign in": LogIn,
+  "Create account": UserPlus,
+};
 
 /** Everything an account reaches from the shell, behind one trigger */
 export function AccountMenu() {
@@ -31,21 +52,21 @@ export function AccountMenu() {
         <Button
           variant="ghost"
           size="compact"
-          className="max-w-48 gap-1.5 text-ink"
+          className="min-w-11 max-w-48 gap-2.5 text-ink data-[state=open]:bg-deep"
         >
           <CircleUserRound aria-hidden="true" />
-          <span className="hidden truncate sm:inline">
+          <span className="hidden truncate lg:inline">
             {account ? `@${account.handle}` : "Account"}
           </span>
           <ChevronDown
             aria-hidden="true"
-            className="hidden !size-3.5 text-mute sm:block"
+            className="hidden !size-3.5 text-mute lg:block"
           />
           <span className="sr-only">Account menu</span>
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
         {account ? (
           <DropdownMenuLabel>
             <span className="block text-ui font-medium break-words">
@@ -63,24 +84,36 @@ export function AccountMenu() {
           </DropdownMenuLabel>
         )}
 
-        {destinations.map((destination) => (
-          <DropdownMenuItem
-            key={destination.href}
-            asChild
-            data-current={
-              isCurrentPage(pathname, destination.href) ? "page" : undefined
-            }
-          >
-            <Link
-              href={destination.href}
-              aria-current={
+        {destinations.map((destination) => {
+          const Icon =
+            DESTINATION_ICONS[
+              destination.label as keyof typeof DESTINATION_ICONS
+            ];
+          return (
+            <DropdownMenuItem
+              key={destination.href}
+              asChild
+              data-current={
                 isCurrentPage(pathname, destination.href) ? "page" : undefined
               }
             >
-              {destination.label}
-            </Link>
-          </DropdownMenuItem>
-        ))}
+              <Link
+                href={destination.href}
+                aria-current={
+                  isCurrentPage(pathname, destination.href) ? "page" : undefined
+                }
+              >
+                {Icon ? (
+                  <Icon aria-hidden="true" className="text-mute" />
+                ) : null}
+                {destination.label}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+
+        <DropdownMenuSeparator />
+        <AppearanceMenu embedded />
 
         {account ? (
           <>
@@ -92,6 +125,7 @@ export function AccountMenu() {
                 signOut();
               }}
             >
+              <LogOut aria-hidden="true" className="text-mute" />
               {signingOut ? "Signing out…" : "Sign out"}
             </DropdownMenuItem>
             {failed ? (

@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-accent text-on-accent hover:-translate-y-px active:translate-y-0",
+          "bg-action text-on-accent shadow-[0_4px_14px_-5px_var(--v-action),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-action/90 hover:text-on-accent motion-safe:hover:-translate-y-px active:translate-y-0",
         secondary: "bg-deep text-ink hover:bg-rule/45",
         outline: "text-ink inset-ring inset-ring-edge hover:bg-deep",
         ghost: "text-mute hover:bg-deep hover:text-ink",

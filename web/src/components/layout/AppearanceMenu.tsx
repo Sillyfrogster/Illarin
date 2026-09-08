@@ -29,9 +29,11 @@ const CHOICES = [
 export function AppearanceMenu({
   className,
   labelled = false,
+  embedded = false,
 }: {
   className?: string;
   labelled?: boolean;
+  embedded?: boolean;
 }) {
   const [preference, setPreference] = useState<ThemePreference>("system");
 
@@ -64,6 +66,35 @@ export function AppearanceMenu({
 
   const current = CHOICES.find((choice) => choice.value === preference);
   const CurrentIcon = current?.Icon ?? Monitor;
+
+  if (embedded) {
+    return (
+      <>
+        <DropdownMenuLabel className="pt-1 pb-2 text-meta text-mute">
+          Appearance
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          aria-label="Appearance"
+          value={preference}
+          onValueChange={handleChange}
+          className="mx-1 mb-1 grid grid-cols-3 gap-1 rounded-control bg-deep p-1"
+        >
+          {CHOICES.map(({ value, label, Icon }) => (
+            <DropdownMenuRadioItem
+              key={value}
+              value={value}
+              aria-label={label}
+              onSelect={(event) => event.preventDefault()}
+              className="min-h-14 flex-col justify-center gap-1 px-2 py-2 text-meta data-[highlighted]:ring-2 data-[highlighted]:ring-accent data-[state=checked]:bg-plane data-[state=checked]:text-ink [&>span]:hidden"
+            >
+              <Icon aria-hidden="true" />
+              {value === "system" ? "System" : label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </>
+    );
+  }
 
   return (
     <DropdownMenu>

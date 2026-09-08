@@ -41,7 +41,7 @@ function DropdownMenuItem({
     <DropdownMenuPrimitive.Item
       className={cn(
         "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control px-3 text-ui outline-none select-none",
-        "focus:bg-deep data-[current=page]:text-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0",
+        "text-ink focus-visible:outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-ink data-[current=page]:text-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -59,7 +59,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       className={cn(
         "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control px-3 text-ui outline-none select-none",
-        "focus:bg-deep data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[state=checked]:text-accent [&_svg]:size-4 [&_svg]:shrink-0",
+        "focus-visible:outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[state=checked]:text-accent [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
