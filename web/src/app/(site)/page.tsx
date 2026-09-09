@@ -1,18 +1,29 @@
 import { cookies } from "next/headers";
+import { Suspense } from "react";
+import {
+  CatalogChapter,
+  CatalogLoading,
+} from "@/components/landing/CatalogChapter";
 import { HostedLanding } from "@/components/landing/HostedLanding";
 import { fetchAssets } from "@/lib/api/query";
 
-export default async function LandingPage() {
-  const cookie = (await cookies()).toString();
-  const latest = await fetchAssets({ limit: 9 }, cookie).catch(() => null);
-
+export default function LandingPage() {
   return (
-    <HostedLanding
-      assets={latest?.items ?? []}
-      visibility={latest?.visibility ?? "blurred"}
-      suppressed={latest?.suppressed ?? 0}
-      emptyState={latest?.emptyState ?? null}
-      unavailable={!latest}
-    />
+    <HostedLanding>
+      <Suspense fallback={<CatalogLoading />}>
+        <RecentCreations />
+      </Suspense>
+    </HostedLanding>
   );
+}
+
+async function RecentCreations() {
+  const cookie = (await cookies()).toString();
+  const latest = await fetchAssets(
+    { limit: 5 },
+    cookie,
+    AbortSignal.timeout(6000),
+  ).catch(() => null);
+
+  return <CatalogChapter page={latest} />;
 }

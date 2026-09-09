@@ -11,6 +11,8 @@ WEB_PORT ?= 3000
 WATCHER_DIR ?= $(CURDIR)/.local/watcher
 THRESHOLD_DIR ?= $(WATCHER_DIR)/passage
 THRESHOLD_PORT ?= 9117
+RUNE_DIR ?= $(CURDIR)/.local/rune-animation
+RUNE_FPS ?= 30
 TEST ?= ./...
 VERSION ?=
 SERVICE ?=
@@ -251,6 +253,11 @@ archive-cutouts: ## Neutralize the archive mascot glass cutouts
 .PHONY: direction-fixtures
 direction-fixtures: ## Draw the synthetic art the visual direction prototype reads
 	cd web && bun scripts/generate-direction-fixtures.mjs
+
+.PHONY: rune-cave-encode
+rune-cave-encode: ## Encode the desktop rune render for the landing page
+	python3 art/rune-cave/encode.py --frames "$(abspath $(RUNE_DIR))/frames" \
+		--output web/public/landing --fps "$(RUNE_FPS)"
 
 .PHONY: threshold-scene threshold-textures threshold-enhance
 threshold-textures: ## Download the passage's CC0 surface maps

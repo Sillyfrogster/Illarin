@@ -1,39 +1,19 @@
-import type { BrowseAsset, BrowsePage, NsfwVisibility } from "@/lib/api/query";
-import { AssetPageChapter } from "./AssetPageChapter";
-import { CatalogChapter } from "./CatalogChapter";
-import { CloseChapter } from "./CloseChapter";
-import { ConvergenceHero } from "./ConvergenceHero";
-import { DeliveryChapter } from "./DeliveryChapter";
-import styles from "./HostedLanding.module.css";
+import type { ReactNode } from "react";
+import { EncounterHero } from "./EncounterHero";
+import { InvitationChapter } from "./InvitationChapter";
+import { KindShowcase } from "./KindShowcase";
+import { LandingMotion, MotionControl } from "./LandingMotion";
 
-type HostedLandingProps = {
-  assets: BrowseAsset[];
-  visibility: NsfwVisibility;
-  suppressed: number;
-  emptyState: BrowsePage["emptyState"];
-  unavailable: boolean;
-};
-
-export function HostedLanding({
-  assets,
-  visibility,
-  suppressed,
-  emptyState,
-  unavailable,
-}: HostedLandingProps) {
+export function HostedLanding({ children }: { children: ReactNode }) {
   return (
-    <div className={styles.page}>
-      <ConvergenceHero assets={assets} />
-      <CatalogChapter
-        assets={assets}
-        visibility={visibility}
-        suppressed={suppressed}
-        emptyState={emptyState}
-        unavailable={unavailable}
-      />
-      <AssetPageChapter />
-      <DeliveryChapter />
-      <CloseChapter />
-    </div>
+    <LandingMotion>
+      <div className="bg-field text-ink">
+        <EncounterHero />
+        <KindShowcase />
+        {children}
+        <InvitationChapter />
+        <MotionControl />
+      </div>
+    </LandingMotion>
   );
 }

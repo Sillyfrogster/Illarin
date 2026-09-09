@@ -168,8 +168,10 @@ export async function fetchProfile(handle: string): Promise<Profile | null> {
 export async function fetchAssets(
   params: AssetListParams,
   cookie?: string,
+  signal?: AbortSignal,
 ): Promise<BrowsePage> {
   const { data, error } = await api.GET("/v1/assets", {
+    signal,
     params: { query: params },
     headers: cookie ? { cookie } : undefined,
   });
