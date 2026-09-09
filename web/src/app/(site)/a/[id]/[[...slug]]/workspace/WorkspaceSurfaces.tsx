@@ -3,11 +3,16 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { AssetDetail, AssetImage, ReadinessItem } from "@/lib/api/query";
+import type {
+  AssetDetail,
+  AssetElement,
+  AssetImage,
+  ReadinessItem,
+} from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { DeleteControl } from "../DeleteControl";
 import { DiscoveryControl } from "../DiscoveryControl";
-import { ElementFields } from "../ElementEditors";
+import { ElementFields, elementHint } from "../ElementEditors";
 import { PreservedPanel } from "../PreservedPanel";
 import { PublishPanel } from "../PublishPanel";
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
@@ -148,9 +153,9 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
         {pane?.kind === "element" && edited && element ? (
           <WorkspaceRail
-            description={
-              element.facts.length > 0 ? element.facts.join(" · ") : undefined
-            }
+            description={[...element.facts, elementHint(element.type)].join(
+              " · ",
+            )}
             key="element"
             onClose={workspace.closePane}
             title={element.label || edited.title}
@@ -304,7 +309,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   );
 }
 
-/** A collection editor stacks its list over its editor here, the way it does on a phone. */
+/** The rail remembers which item of a collection is open, so closing it does not lose the creator's place. */
 function Fields({
   assetId,
   blockId,
@@ -313,16 +318,18 @@ function Fields({
 }: {
   assetId: string;
   blockId: string;
-  element: Parameters<typeof ElementFields>[0]["element"];
+  element: AssetElement;
   images: AssetImage[];
 }) {
   const workspace = useWorkspace();
   return (
     <ElementFields
       assetId={assetId}
+      chosen={workspace.chosenItems[element.id] ?? null}
       element={element}
       images={images}
       onChange={(next) => workspace.writeElement(blockId, next)}
+      onChoose={(key) => workspace.chooseItem(element.id, key)}
       onImageAdded={() => workspace.say("Picture added.")}
       pending={workspace.busy}
     />

@@ -21,8 +21,8 @@ import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
 import {
   contentItemCount,
+  editsInTheRail,
   excerptDefinition,
-  opensFullScreen,
 } from "@/lib/page-arrangement";
 import { nameSlot } from "@/lib/preset-slots";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
@@ -69,7 +69,7 @@ export function ElementBody({
     elements: blockElements,
     title: blockTitle,
   });
-  const expandable = isOwner && onExpand && opensFullScreen(element.type);
+  const expandable = isOwner && onExpand && editsInTheRail(element.type);
 
   return (
     <section className="flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size] [&_p]:text-prose">

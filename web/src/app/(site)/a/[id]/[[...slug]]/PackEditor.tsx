@@ -10,18 +10,16 @@ import {
   type RecordListContent,
 } from "@/lib/api/query";
 import { useWorkingCopy } from "@/lib/working-copy";
+import { CollectionStep } from "./workspace/CollectionStep";
+import { moveItem, replaceAt, without } from "./workspace/collection";
 import {
-  CollectionEditor,
+  ChoiceField,
   Field,
   FieldGroup,
   FieldPair,
-  ItemFields,
-  ItemHeading,
-  NothingChosen,
-  replaceAt,
-  without,
-} from "./CollectionEditor";
-import styles from "./PackEditor.module.css";
+  TextAreaField,
+  TextField,
+} from "./workspace/fields";
 
 const PRONOUNS: Array<{
   value: LumiaRecord["genderIdentity"];
@@ -38,152 +36,143 @@ function recordName(record: LumiaRecord, position: number): string {
 
 export function PackEditor({
   assetId,
+  chosen,
   content,
   images,
-  pending,
   onChange,
+  onChoose,
   onImageAdded,
+  pending,
 }: {
   assetId: string;
+  chosen: string | null;
   content: RecordListContent;
   images: AssetImage[];
-  pending: boolean;
   onChange: (content: RecordListContent) => void;
+  onChoose: (key: string | null) => void;
   onImageAdded: () => void;
+  pending: boolean;
 }) {
-  const [selected, setSelected] = useState(0);
   const records = content.records;
-  const current = records[selected];
-
-  function replaceCurrent(changes: Partial<LumiaRecord>) {
-    onChange({ ...content, records: replaceAt(records, selected, changes) });
-  }
 
   return (
-    <CollectionEditor
-      noun="Lumia"
+    <CollectionStep
+      chosen={chosen}
       emptyMessage="This pack has no Lumia yet."
-      pending={pending}
-      selected={selected}
-      onSelect={setSelected}
+      noun="Lumia"
       onAdd={() =>
         onChange({
           ...content,
           records: [
             ...records,
             {
-              lumiaName: "",
-              lumiaDefinition: "",
-              lumiaPersonality: "",
-              lumiaBehavior: "",
-              genderIdentity: 2,
               authorName: "",
+              genderIdentity: 2,
+              lumiaBehavior: "",
+              lumiaDefinition: "",
+              lumiaName: "",
+              lumiaPersonality: "",
               version: 1,
             },
           ],
         })
       }
+      onChoose={onChoose}
+      onMove={(from, to) =>
+        onChange({ ...content, records: moveItem(records, from, to) })
+      }
+      onRemove={(index) =>
+        onChange({ ...content, records: without(records, index) })
+      }
+      pending={pending}
+      plural="Lumia"
       rows={records.map((record, index) => ({
-        name: recordName(record, index),
         detail: record.authorName.trim() || "No author named",
+        id: record.id,
+        name: recordName(record, index),
         search: [record.lumiaName, record.authorName, record.lumiaDefinition]
           .join(" ")
           .toLowerCase(),
       }))}
     >
-      {current ? (
+      {(index) => (
         <LumiaFields
           assetId={assetId}
-          record={current}
-          position={selected}
           images={images}
-          pending={pending}
-          onChange={replaceCurrent}
+          onChange={(changes) =>
+            onChange({
+              ...content,
+              records: replaceAt(records, index, changes),
+            })
+          }
           onImageAdded={onImageAdded}
-          onRemove={() => {
-            onChange({ ...content, records: without(records, selected) });
-            setSelected(Math.max(0, Math.min(selected, records.length - 2)));
-          }}
+          pending={pending}
+          record={records[index]}
         />
-      ) : (
-        <NothingChosen>
-          Choose a Lumia to edit it, or add the first one.
-        </NothingChosen>
       )}
-    </CollectionEditor>
+    </CollectionStep>
   );
 }
 
 function LumiaFields({
   assetId,
-  record,
-  position,
   images,
-  pending,
   onChange,
   onImageAdded,
-  onRemove,
+  pending,
+  record,
 }: {
   assetId: string;
-  record: LumiaRecord;
-  position: number;
   images: AssetImage[];
-  pending: boolean;
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
-  onRemove: () => void;
+  pending: boolean;
+  record: LumiaRecord;
 }) {
   return (
-    <ItemFields>
-      <ItemHeading
-        name={recordName(record, position)}
-        noun="Lumia"
-        pending={pending}
-        onRemove={onRemove}
-      />
-
+    <div className="space-y-6">
       <AvatarField
         assetId={assetId}
-        record={record}
         images={images}
-        pending={pending}
         onChange={onChange}
         onImageAdded={onImageAdded}
+        pending={pending}
+        record={record}
       />
 
       <Field label="Name">
-        <input
-          value={record.lumiaName}
-          onChange={(event) => onChange({ lumiaName: event.target.value })}
+        <TextField
           disabled={pending}
+          onChange={(event) => onChange({ lumiaName: event.target.value })}
+          value={record.lumiaName}
         />
       </Field>
 
       <FieldGroup legend="Credit and identity">
         <FieldPair>
           <Field label="Author">
-            <input
-              value={record.authorName}
-              onChange={(event) => onChange({ authorName: event.target.value })}
+            <TextField
               disabled={pending}
+              onChange={(event) => onChange({ authorName: event.target.value })}
+              value={record.authorName}
             />
           </Field>
           <Field label="Version">
-            <input
-              type="number"
+            <TextField
+              disabled={pending}
               min={1}
-              step={1}
-              value={record.version}
               onChange={(event) =>
                 onChange({ version: Math.max(1, Number(event.target.value)) })
               }
-              disabled={pending}
+              step={1}
+              type="number"
+              value={record.version}
             />
           </Field>
         </FieldPair>
         <Field label="Pronouns">
-          <select
-            value={record.genderIdentity}
+          <ChoiceField
+            disabled={pending}
             onChange={(event) =>
               onChange({
                 genderIdentity: Number(
@@ -191,63 +180,63 @@ function LumiaFields({
                 ) as LumiaRecord["genderIdentity"],
               })
             }
-            disabled={pending}
+            value={record.genderIdentity}
           >
             {PRONOUNS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
+          </ChoiceField>
         </Field>
       </FieldGroup>
 
       <Field label="Definition">
-        <textarea
-          rows={6}
-          value={record.lumiaDefinition}
+        <TextAreaField
+          disabled={pending}
           onChange={(event) =>
             onChange({ lumiaDefinition: event.target.value })
           }
-          disabled={pending}
+          rows={7}
+          value={record.lumiaDefinition}
         />
       </Field>
       <Field label="Personality">
-        <textarea
-          rows={6}
-          value={record.lumiaPersonality}
+        <TextAreaField
+          disabled={pending}
           onChange={(event) =>
             onChange({ lumiaPersonality: event.target.value })
           }
-          disabled={pending}
+          rows={7}
+          value={record.lumiaPersonality}
         />
       </Field>
       <Field label="Behaviour">
-        <textarea
-          rows={6}
-          value={record.lumiaBehavior}
-          onChange={(event) => onChange({ lumiaBehavior: event.target.value })}
+        <TextAreaField
           disabled={pending}
+          onChange={(event) => onChange({ lumiaBehavior: event.target.value })}
+          rows={7}
+          value={record.lumiaBehavior}
         />
       </Field>
-    </ItemFields>
+    </div>
   );
 }
 
 function AvatarField({
   assetId,
-  record,
   images,
-  pending,
   onChange,
   onImageAdded,
+  pending,
+  record,
 }: {
   assetId: string;
-  record: LumiaRecord;
   images: AssetImage[];
-  pending: boolean;
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
+  pending: boolean;
+  record: LumiaRecord;
 }) {
   const candidate = useWorkingCopy();
   const [uploading, setUploading] = useState(false);
@@ -262,6 +251,7 @@ function AvatarField({
     ? imagesById.get(record.avatarUrl)
     : undefined;
   const source = preview || stored?.thumbUrl;
+  const missing = Boolean(record.avatarUrl) && !source;
 
   async function upload(chosen: File | null) {
     if (!chosen || uploading) return;
@@ -290,52 +280,57 @@ function AvatarField({
   }
 
   return (
-    <div className={styles.avatarField}>
-      <div className={styles.avatarPreview}>
+    <div className="flex flex-wrap items-start gap-4">
+      <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-plate bg-media text-on-media">
         {source ? (
           <Image
-            src={source}
             alt=""
-            width={stored?.width ?? 240}
             height={stored?.height ?? 240}
             sizes="120px"
+            src={source}
             unoptimized
+            width={stored?.width ?? 240}
           />
         ) : (
-          <UserRound size={34} strokeWidth={1.35} aria-hidden="true" />
+          <UserRound aria-hidden="true" size={34} strokeWidth={1.35} />
         )}
       </div>
-      <div className={styles.avatarActions}>
-        <p>Avatar</p>
-        <span>Square images work best. The source Pack is left untouched.</span>
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="text-label font-medium text-mute">Avatar</p>
+        <p className="text-meta text-mute">
+          {missing
+            ? "This Lumia points at a picture the asset no longer holds. Add another to replace it."
+            : "Square images work best. The source Pack is left untouched."}
+        </p>
         {message ? (
-          <span className={styles.error} role="alert">
+          <p className="text-meta text-stop" role="alert">
             {message}
-          </span>
+          </p>
         ) : null}
-        <div>
-          <label className={styles.upload}>
-            <ImagePlus size={16} aria-hidden="true" />
+        <div className="flex flex-wrap items-center gap-1">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
+            <ImagePlus aria-hidden="true" size={16} />
             {uploading ? "Adding…" : source ? "Replace avatar" : "Add avatar"}
             <input
-              ref={file}
-              type="file"
               accept="image/*"
+              className="sr-only"
               disabled={pending || uploading}
               onChange={(event) => void upload(event.target.files?.[0] ?? null)}
+              ref={file}
+              type="file"
             />
           </label>
           {record.avatarUrl ? (
             <button
-              type="button"
-              className={styles.removeAvatar}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-45"
               disabled={pending || uploading}
               onClick={() => {
                 setPreview("");
                 onChange({ avatarUrl: undefined });
               }}
+              type="button"
             >
-              <X size={15} aria-hidden="true" />
+              <X aria-hidden="true" size={15} />
               Remove avatar
             </button>
           ) : null}

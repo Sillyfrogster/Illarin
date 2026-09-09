@@ -3,19 +3,12 @@ import type {
   AssetElement,
   SaveAssetBlockRequest,
 } from "@/lib/api/query";
+import { writesInPlace as writtenInPlace } from "@/lib/page-arrangement";
 import type { AllowedApp } from "../SealedPolicy";
 
 /** The element types the page itself can write. Everything else keeps its own editor. */
-const WRITTEN_IN_PLACE = new Set([
-  "prose",
-  "text_set",
-  "dialogue_sample",
-  "field_list",
-  "link_list",
-]);
-
 export function writesInPlace(element: AssetElement): boolean {
-  return WRITTEN_IN_PLACE.has(element.type);
+  return writtenInPlace(element.type);
 }
 
 export function blockSaveRequest(

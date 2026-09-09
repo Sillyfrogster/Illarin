@@ -216,19 +216,23 @@ export function packBlockRows<T extends { width: BlockWidth }>(
   return rows;
 }
 
-export const FULL_SCREEN_TYPES = [
-  "entry_table",
-  "image_set",
+/** The element types a creator writes directly on the page, in the type the reader sees. */
+export const WRITTEN_IN_PLACE_TYPES = [
+  "prose",
   "text_set",
   "dialogue_sample",
-  "prompt_list",
-  "variable_schema",
-  "setting_group",
-  "script_list",
-  "color_set",
-  "stylesheet_set",
-  "record_list",
-] as const;
+  "field_list",
+  "link_list",
+] as const satisfies readonly ElementType[];
+
+export function writesInPlace(type: string): boolean {
+  return (WRITTEN_IN_PLACE_TYPES as readonly string[]).includes(type);
+}
+
+/** Everything else keeps the reader's rendering and opens its own editor in the rail. */
+export function editsInTheRail(type: string): boolean {
+  return !writesInPlace(type);
+}
 
 /** How much of an element the page shows. `self` bounds its own height. */
 export type ExcerptDefinition =
@@ -255,22 +259,6 @@ export const EXCERPT_DEFINITIONS = {
 
 export function excerptDefinition(type: ElementType): ExcerptDefinition {
   return EXCERPT_DEFINITIONS[type];
-}
-
-export function opensFullScreen(type: string): boolean {
-  return (FULL_SCREEN_TYPES as readonly string[]).includes(type);
-}
-
-export const INLINE_ITEM_LIMIT = 8;
-
-export function fitsInTheSheet(element: {
-  type: string;
-  content: unknown;
-}): boolean {
-  return (
-    !opensFullScreen(element.type) ||
-    contentItemCount(element) <= INLINE_ITEM_LIMIT
-  );
 }
 
 export function contentItemCount(element: {

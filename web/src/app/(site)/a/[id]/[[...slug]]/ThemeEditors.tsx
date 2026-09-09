@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus2, Plus, Trash2 } from "lucide-react";
+import { FilePlus2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type {
   ColorSetContent,
@@ -10,190 +10,188 @@ import type {
   ThemeFile,
   ThemeStylesheet,
 } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import { pickerColor } from "@/lib/theme-colors";
-import { replaceAt, without } from "./CollectionEditor";
-import styles from "./ThemeEditors.module.css";
+import { moveItem, replaceAt, without } from "./workspace/collection";
+import {
+  AddAction,
+  Field,
+  FieldGroup,
+  ItemMoveActions,
+  Note,
+  RemoveAction,
+  Switch,
+  TextAreaField,
+  TextField,
+} from "./workspace/fields";
 
 export function ColorSetEditor({
   content,
-  pending,
   onChange,
+  pending,
 }: {
   content: ColorSetContent;
-  pending: boolean;
   onChange: (content: ColorSetContent) => void;
+  pending: boolean;
 }) {
   function changeMode(index: number, mode: ThemeColorMode) {
     onChange({ modes: replaceAt(content.modes, index, mode) });
   }
 
   return (
-    <div className={styles.paletteEditor}>
+    <div className="space-y-8">
       {content.modes.map((mode, modeIndex) => (
-        <section className={styles.mode} key={mode.name || modeIndex}>
-          <div className={styles.modeHeading}>
-            <label>
-              <span>Mode</span>
-              <input
-                value={mode.name ?? ""}
-                placeholder="Default"
-                onChange={(event) =>
-                  changeMode(modeIndex, {
-                    ...mode,
-                    name: event.target.value || undefined,
-                  })
-                }
-                disabled={pending}
-              />
-            </label>
-            {content.modes.length > 1 ? (
-              <button
-                type="button"
-                className={styles.remove}
-                onClick={() =>
-                  onChange({ modes: without(content.modes, modeIndex) })
-                }
-                disabled={pending}
-              >
-                <Trash2 size={14} aria-hidden="true" />
-                Remove mode
-              </button>
-            ) : null}
-          </div>
+        <FieldGroup
+          key={mode.name || modeIndex}
+          legend={mode.name?.trim() || "Default mode"}
+        >
+          <Field
+            hint="what the app calls this set of colours"
+            label="Mode name"
+          >
+            <TextField
+              disabled={pending}
+              onChange={(event) =>
+                changeMode(modeIndex, {
+                  ...mode,
+                  name: event.target.value || undefined,
+                })
+              }
+              placeholder="Default"
+              value={mode.name ?? ""}
+            />
+          </Field>
           <ColorRows
             colors={mode.colors}
-            pending={pending}
             onChange={(colors) => changeMode(modeIndex, { ...mode, colors })}
+            pending={pending}
           />
-        </section>
+          {content.modes.length > 1 ? (
+            <RemoveAction
+              disabled={pending}
+              onClick={() =>
+                onChange({ modes: without(content.modes, modeIndex) })
+              }
+            >
+              Remove mode
+            </RemoveAction>
+          ) : null}
+        </FieldGroup>
       ))}
-      <button
-        type="button"
-        className={styles.add}
+      <AddAction
+        disabled={pending}
         onClick={() =>
           onChange({
             modes: [
               ...content.modes,
-              { name: `Mode ${content.modes.length + 1}`, colors: [] },
+              { colors: [], name: `Mode ${content.modes.length + 1}` },
             ],
           })
         }
-        disabled={pending}
       >
-        <Plus size={16} aria-hidden="true" />
         Add mode
-      </button>
+      </AddAction>
     </div>
   );
 }
 
 function ColorRows({
   colors,
-  pending,
   onChange,
+  pending,
 }: {
   colors: ThemeColor[];
-  pending: boolean;
   onChange: (colors: ThemeColor[]) => void;
+  pending: boolean;
 }) {
   return (
-    <div className={styles.colorRows}>
-      {colors.map((color, index) => {
-        const pickerValue = pickerColor(color.value);
-        return (
-          <div className={styles.colorRow} key={color.id ?? index}>
-            <label
-              className={styles.colorPicker}
-              style={{ backgroundColor: color.value }}
-            >
-              <span className={styles.srOnly}>Choose {color.name} colour</span>
-              <input
-                type="color"
-                value={pickerValue}
-                onChange={(event) =>
-                  onChange(
-                    replaceAt(colors, index, { value: event.target.value }),
-                  )
-                }
-                disabled={pending}
-              />
-            </label>
-            <label>
-              <span>Name</span>
-              <input
-                value={color.name}
-                onChange={(event) =>
-                  onChange(
-                    replaceAt(colors, index, { name: event.target.value }),
-                  )
-                }
-                disabled={pending}
-              />
-            </label>
-            <label>
-              <span>Colour</span>
-              <input
-                value={color.value}
-                placeholder="#7c5cff or rgba(124, 92, 255, 1)"
-                onChange={(event) =>
-                  onChange(
-                    replaceAt(colors, index, { value: event.target.value }),
-                  )
-                }
-                disabled={pending}
-              />
-            </label>
-            <button
-              type="button"
-              className={styles.iconRemove}
-              aria-label={`Remove ${color.name || `colour ${index + 1}`}`}
-              onClick={() => onChange(without(colors, index))}
+    <div className="space-y-3">
+      {colors.length === 0 ? (
+        <Note>This mode names no colours yet.</Note>
+      ) : null}
+      {colors.map((color, index) => (
+        <div className="flex flex-wrap items-end gap-2" key={color.id ?? index}>
+          <label
+            className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-control focus-within:outline focus-within:outline-2 focus-within:outline-accent focus-within:outline-offset-2"
+            style={{ backgroundColor: color.value }}
+          >
+            <span className="sr-only">
+              Choose {color.name || `colour ${index + 1}`}
+            </span>
+            <input
+              className="size-11 cursor-pointer opacity-0"
               disabled={pending}
-            >
-              <Trash2 size={15} aria-hidden="true" />
-            </button>
-          </div>
-        );
-      })}
-      <button
-        type="button"
-        className={styles.add}
+              onChange={(event) =>
+                onChange(
+                  replaceAt(colors, index, { value: event.target.value }),
+                )
+              }
+              type="color"
+              value={pickerColor(color.value)}
+            />
+          </label>
+          <TextField
+            aria-label={`Name for colour ${index + 1}`}
+            className="min-w-28 flex-1"
+            disabled={pending}
+            onChange={(event) =>
+              onChange(replaceAt(colors, index, { name: event.target.value }))
+            }
+            placeholder="Name"
+            value={color.name}
+          />
+          <TextField
+            aria-label={`Value for ${color.name || `colour ${index + 1}`}`}
+            className="min-w-36 flex-1 font-mono"
+            disabled={pending}
+            onChange={(event) =>
+              onChange(replaceAt(colors, index, { value: event.target.value }))
+            }
+            placeholder="#7c5cff"
+            value={color.value}
+          />
+          <RemoveAction
+            disabled={pending}
+            label={`Remove ${color.name || `colour ${index + 1}`}`}
+            onClick={() => onChange(without(colors, index))}
+          />
+        </div>
+      ))}
+      <AddAction
+        disabled={pending}
         onClick={() =>
           onChange([
             ...colors,
             { id: crypto.randomUUID(), name: "colour", value: "#7c5cff" },
           ])
         }
-        disabled={pending}
       >
-        <Plus size={16} aria-hidden="true" />
         Add colour
-      </button>
+      </AddAction>
     </div>
   );
 }
 
 export function StylesheetSetEditor({
   content,
-  pending,
   onChange,
+  pending,
 }: {
   content: StylesheetSetContent;
-  pending: boolean;
   onChange: (content: StylesheetSetContent) => void;
+  pending: boolean;
 }) {
   const [message, setMessage] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const sheets = content.stylesheets ?? [];
+  const files = content.assets ?? [];
 
-  async function addFiles(files: FileList | null) {
-    if (!files?.length) return;
+  async function addFiles(chosen: FileList | null) {
+    if (!chosen?.length) return;
     setMessage("");
     try {
-      const attached = await Promise.all(Array.from(files, themeFile));
-      onChange({
-        ...content,
-        assets: [...(content.assets ?? []), ...attached],
-      });
+      const attached = await Promise.all(Array.from(chosen, themeFile));
+      onChange({ ...content, assets: [...files, ...attached] });
     } catch {
       setMessage("Those files could not be attached. Try them again.");
     } finally {
@@ -202,183 +200,180 @@ export function StylesheetSetEditor({
   }
 
   return (
-    <div className={styles.stylesEditor}>
-      <label className={styles.codeField}>
-        <span>Main stylesheet</span>
-        <textarea
-          rows={12}
-          spellCheck={false}
-          value={content.global}
+    <div className="space-y-8">
+      <Field label="Main stylesheet">
+        <TextAreaField
+          className="font-mono text-meta"
+          disabled={pending}
           onChange={(event) =>
             onChange({ ...content, global: event.target.value })
           }
-          disabled={pending}
+          rows={14}
+          spellCheck={false}
+          value={content.global}
         />
-      </label>
+      </Field>
 
-      <div className={styles.componentSheets}>
-        {(content.stylesheets ?? []).map((sheet, index) => (
+      <FieldGroup legend="Component stylesheets">
+        {sheets.length === 0 ? (
+          <Note>
+            The main sheet carries the theme until you split part of it out.
+          </Note>
+        ) : null}
+        {sheets.map((sheet, index) => (
           <ComponentSheet
             key={sheet.id ?? index}
-            sheet={sheet}
-            position={index}
-            pending={pending}
+            moves={{
+              onEarlier: () =>
+                onChange({
+                  ...content,
+                  stylesheets: moveItem(sheets, index, index - 1),
+                }),
+              onLater: () =>
+                onChange({
+                  ...content,
+                  stylesheets: moveItem(sheets, index, index + 1),
+                }),
+              position: index,
+              total: sheets.length,
+            }}
             onChange={(changes) =>
               onChange({
                 ...content,
-                stylesheets: replaceAt(
-                  content.stylesheets ?? [],
-                  index,
-                  changes,
-                ),
+                stylesheets: replaceAt(sheets, index, changes),
               })
             }
             onRemove={() =>
-              onChange({
-                ...content,
-                stylesheets: without(content.stylesheets ?? [], index),
-              })
+              onChange({ ...content, stylesheets: without(sheets, index) })
             }
+            pending={pending}
+            position={index}
+            sheet={sheet}
           />
         ))}
-        <button
-          type="button"
-          className={styles.add}
+        <AddAction
+          disabled={pending}
           onClick={() =>
             onChange({
               ...content,
               stylesheets: [
-                ...(content.stylesheets ?? []),
+                ...sheets,
                 {
-                  id: crypto.randomUUID(),
-                  name: `Component ${(content.stylesheets ?? []).length + 1}`,
                   css: "",
                   enabled: true,
+                  id: crypto.randomUUID(),
+                  name: `Component ${sheets.length + 1}`,
                 },
               ],
             })
           }
-          disabled={pending}
         >
-          <Plus size={16} aria-hidden="true" />
           Add component stylesheet
-        </button>
-      </div>
+        </AddAction>
+      </FieldGroup>
 
-      <section className={styles.files}>
-        <div className={styles.filesHeading}>
-          <div>
-            <h4>Theme files</h4>
-            <p>
-              Fonts and other files referenced by the CSS stay inside the theme
-              bundle.
-            </p>
-          </div>
-          <label className={styles.addFile}>
-            <FilePlus2 size={16} aria-hidden="true" />
-            Attach files
-            <input
-              ref={fileInput}
-              type="file"
-              multiple
-              accept="font/*,.woff,.woff2,.ttf,.otf"
-              onChange={(event) => void addFiles(event.target.files)}
-              disabled={pending}
-            />
-          </label>
-        </div>
-        {(content.assets ?? []).length > 0 ? (
-          <ul>
-            {(content.assets ?? []).map((asset, index) => (
-              <li key={asset.id ?? index}>
-                <span>{asset.path}</span>
-                <small>{asset.mediaType || "Attached file"}</small>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onChange({
-                      ...content,
-                      assets: without(content.assets ?? [], index),
-                    })
-                  }
+      <FieldGroup legend="Theme files">
+        <Note>
+          Fonts and other files referenced by the CSS stay inside the theme
+          bundle.
+        </Note>
+        {files.length > 0 ? (
+          <ul className="space-y-2">
+            {files.map((file, index) => (
+              <li
+                className="flex flex-wrap items-center gap-x-3 gap-y-1"
+                key={file.id ?? index}
+              >
+                <span className="min-w-0 flex-1 text-ui text-ink wrap-anywhere">
+                  {file.path}
+                </span>
+                <span className="text-label text-mute">
+                  {file.mediaType || "Attached file"}
+                </span>
+                <RemoveAction
                   disabled={pending}
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                  Remove
-                </button>
+                  label={`Remove ${file.path}`}
+                  onClick={() =>
+                    onChange({ ...content, assets: without(files, index) })
+                  }
+                />
               </li>
             ))}
           </ul>
         ) : (
-          <p className={styles.noFiles}>No files attached.</p>
+          <Note>No files attached.</Note>
         )}
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
+          <FilePlus2 aria-hidden="true" size={16} />
+          Attach files
+          <input
+            accept="font/*,.woff,.woff2,.ttf,.otf"
+            className="sr-only"
+            disabled={pending}
+            multiple
+            onChange={(event) => void addFiles(event.target.files)}
+            ref={fileInput}
+            type="file"
+          />
+        </label>
         {message ? (
-          <p role="alert" className={styles.error}>
+          <p className="text-meta text-stop" role="alert">
             {message}
           </p>
         ) : null}
-      </section>
+      </FieldGroup>
     </div>
   );
 }
 
 function ComponentSheet({
-  sheet,
-  position,
-  pending,
+  moves,
   onChange,
   onRemove,
+  pending,
+  position,
+  sheet,
 }: {
-  sheet: ThemeStylesheet;
-  position: number;
-  pending: boolean;
+  moves: Parameters<typeof ItemMoveActions>[0]["moves"];
   onChange: (changes: Partial<ThemeStylesheet>) => void;
   onRemove: () => void;
+  pending: boolean;
+  position: number;
+  sheet: ThemeStylesheet;
 }) {
   return (
-    <section
-      className={styles.componentSheet}
-      data-off={!sheet.enabled || undefined}
-    >
-      <div className={styles.sheetHeading}>
-        <label>
-          <span>Name</span>
-          <input
-            value={sheet.name}
-            onChange={(event) => onChange({ name: event.target.value })}
-            disabled={pending}
-          />
-        </label>
-        <label className={styles.enabled}>
-          <input
-            type="checkbox"
-            checked={sheet.enabled}
-            onChange={(event) => onChange({ enabled: event.target.checked })}
-            disabled={pending}
-          />
-          Included
-        </label>
-        <button
-          type="button"
-          className={styles.remove}
-          onClick={onRemove}
+    <div className={cn("space-y-3", !sheet.enabled && "opacity-70")}>
+      <Field label={`Component ${position + 1}`}>
+        <TextField
           disabled={pending}
-        >
-          <Trash2 size={14} aria-hidden="true" />
-          Remove
-        </button>
-      </div>
-      <label className={styles.codeField}>
-        <span>{sheet.name || `Component ${position + 1}`} CSS</span>
-        <textarea
-          rows={8}
+          onChange={(event) => onChange({ name: event.target.value })}
+          value={sheet.name}
+        />
+      </Field>
+      <Field label={`${sheet.name || `Component ${position + 1}`} CSS`}>
+        <TextAreaField
+          className="font-mono text-meta"
+          disabled={pending}
+          onChange={(event) => onChange({ css: event.target.value })}
+          rows={9}
           spellCheck={false}
           value={sheet.css}
-          onChange={(event) => onChange({ css: event.target.value })}
-          disabled={pending}
         />
-      </label>
-    </section>
+      </Field>
+      <Switch
+        checked={sheet.enabled}
+        hint="A sheet left out stays in the theme and reaches no reader."
+        label="Included"
+        onChange={(enabled) => onChange({ enabled })}
+        pending={pending}
+      />
+      <div className="flex flex-wrap items-center gap-1">
+        <ItemMoveActions moves={moves} pending={pending} />
+        <RemoveAction disabled={pending} onClick={onRemove}>
+          Remove sheet
+        </RemoveAction>
+      </div>
+    </div>
   );
 }
 
@@ -389,9 +384,9 @@ async function themeFile(file: File): Promise<ThemeFile> {
     binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
   }
   return {
-    id: crypto.randomUUID(),
-    path: `assets/${file.name.replaceAll("\\", "-")}`,
-    mediaType: file.type || undefined,
     data: btoa(binary),
+    id: crypto.randomUUID(),
+    mediaType: file.type || undefined,
+    path: `assets/${file.name.replaceAll("\\", "-")}`,
   };
 }

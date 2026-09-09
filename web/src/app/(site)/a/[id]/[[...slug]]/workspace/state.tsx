@@ -59,6 +59,7 @@ type Workspace = {
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
   cursor: string | null;
+  chosenItems: Record<string, string>;
   dirty: boolean;
   pane: Pane | null;
   saveState: SaveState;
@@ -68,6 +69,7 @@ type Workspace = {
   startEditing: () => void;
   stopEditing: () => void;
   setCursor: (cursor: string | null) => void;
+  chooseItem: (elementId: string, key: string | null) => void;
   setBlocks: (blocks: AssetBlock[]) => void;
   applyServerBlocks: (blocks: AssetBlock[]) => void;
   editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
@@ -121,6 +123,7 @@ export function AssetWorkspace({
   const [savedIdentity, setSavedIdentity] = useState(identity);
   const [apps, setApps] = useState<AllowedApp[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
+  const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
   const [pane, setPane] = useState<Pane | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -319,6 +322,7 @@ export function AssetWorkspace({
     allowedApps: apps,
     eligibleApps,
     cursor,
+    chosenItems,
     dirty,
     pane,
     saveState,
@@ -337,6 +341,14 @@ export function AssetWorkspace({
       setPane(null);
     },
     setCursor,
+    chooseItem: (elementId, key) =>
+      setChosenItems((current) => {
+        if (key === null) {
+          const { [elementId]: _gone, ...rest } = current;
+          return rest;
+        }
+        return { ...current, [elementId]: key };
+      }),
     setBlocks: setDraft,
     applyServerBlocks,
     editBlockList,

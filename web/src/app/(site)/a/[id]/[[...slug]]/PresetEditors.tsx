@@ -1,7 +1,8 @@
 "use client";
 
-import { Plus, Trash2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
+import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type {
   PresetSetting,
   PresetVariable,
@@ -11,23 +12,28 @@ import type {
   RegexScript,
   TypedValue,
 } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import { nameSlot } from "@/lib/preset-slots";
+import { CollectionStep } from "./workspace/CollectionStep";
 import {
-  CollectionEditor,
-  CollectionStack,
+  moveItem,
+  readLines,
+  replaceAt,
+  without,
+  writeLines,
+} from "./workspace/collection";
+import {
+  AddAction,
+  ChoiceField,
   Field,
   FieldGroup,
   FieldPair,
-  ItemFields,
-  ItemHeading,
-  NothingChosen,
-  readLines,
-  replaceAt,
+  Note,
+  RemoveAction,
   Switch,
-  without,
-  writeLines,
-} from "./CollectionEditor";
-import styles from "./PresetEditors.module.css";
+  TextAreaField,
+  TextField,
+} from "./workspace/fields";
 
 const PROMPT_ROLES: {
   value: NonNullable<PromptFragment["role"]>;
@@ -90,100 +96,94 @@ export function fragmentName(
 }
 
 export function PromptListEditor({
+  chosen,
   content,
-  pending,
   onChange,
+  onChoose,
+  pending,
 }: {
+  chosen: string | null;
   content: PromptListContent;
-  pending: boolean;
   onChange: (content: PromptListContent) => void;
+  onChoose: (key: string | null) => void;
+  pending: boolean;
 }) {
-  const [selected, setSelected] = useState(0);
   const groups = content.groups ?? [];
   const fragments = content.fragments ?? [];
   const groupNames = new Map(groups.map((group) => [group.id, group.name]));
-  const current = fragments[selected];
-
-  function replaceCurrent(changes: Partial<PromptFragment>) {
-    onChange({ groups, fragments: replaceAt(fragments, selected, changes) });
-  }
 
   return (
-    <CollectionStack
+    <CollectionStep
       above={
         <GroupEditor
-          groups={groups}
           fragments={fragments}
-          pending={pending}
+          groups={groups}
           onChange={onChange}
+          pending={pending}
         />
       }
+      chosen={chosen}
+      emptyMessage="This preset has no prompt fragments yet."
+      noun="fragment"
+      onAdd={() =>
+        onChange({
+          fragments: [
+            ...fragments,
+            { enabled: true, role: "system", text: "" },
+          ],
+          groups,
+        })
+      }
+      onChoose={onChoose}
+      onMove={(from, to) =>
+        onChange({ fragments: moveItem(fragments, from, to), groups })
+      }
+      onRemove={(index) =>
+        onChange({ fragments: without(fragments, index), groups })
+      }
+      pending={pending}
+      rows={fragments.map((fragment, index) => ({
+        detail: fragment.groupId ? groupNames.get(fragment.groupId) : undefined,
+        id: fragment.id,
+        name: fragmentName(fragment, index),
+        off: !fragment.enabled,
+        sealed: fragment.protected ?? false,
+        search: [
+          fragmentName(fragment, index),
+          fragment.text,
+          fragment.marker ?? "",
+        ]
+          .join(" ")
+          .toLowerCase(),
+      }))}
     >
-      <CollectionEditor
-        noun="fragment"
-        emptyMessage="This preset has no prompt fragments yet."
-        pending={pending}
-        selected={selected}
-        onSelect={setSelected}
-        onAdd={() =>
-          onChange({
-            groups,
-            fragments: [
-              ...fragments,
-              { role: "system", text: "", enabled: true },
-            ],
-          })
-        }
-        rows={fragments.map((fragment, index) => ({
-          name: fragmentName(fragment, index),
-          detail: fragment.groupId
-            ? groupNames.get(fragment.groupId)
-            : undefined,
-          off: !fragment.enabled,
-          sealed: fragment.protected ?? false,
-          search: [
-            fragmentName(fragment, index),
-            fragment.text,
-            fragment.marker ?? "",
-          ]
-            .join(" ")
-            .toLowerCase(),
-        }))}
-      >
-        {current ? (
-          <FragmentFields
-            fragment={current}
-            position={selected}
-            groups={groups}
-            pending={pending}
-            onChange={replaceCurrent}
-            onRemove={() => {
-              onChange({ groups, fragments: without(fragments, selected) });
-              setSelected(
-                Math.max(0, Math.min(selected, fragments.length - 2)),
-              );
-            }}
-          />
-        ) : (
-          <NothingChosen>
-            Choose a fragment to edit it, or add the first one.
-          </NothingChosen>
-        )}
-      </CollectionEditor>
-    </CollectionStack>
+      {(index) => (
+        <FragmentFields
+          fragment={fragments[index]}
+          groups={groups}
+          onChange={(changes) =>
+            onChange({
+              fragments: replaceAt(fragments, index, changes),
+              groups,
+            })
+          }
+          pending={pending}
+        />
+      )}
+    </CollectionStep>
   );
 }
 
 function GroupEditor({
-  groups,
   fragments,
-  pending,
+  groups,
   onChange,
+  pending,
 }: {
-  groups: PromptGroup[];
   fragments: PromptFragment[];
-  pending: boolean;
+  groups: PromptGroup[];
   onChange: (content: PromptListContent) => void;
+  pending: boolean;
 }) {
   const [adding, setAdding] = useState("");
 
@@ -191,8 +191,8 @@ function GroupEditor({
   function addGroup() {
     if (adding.trim() === "") return;
     onChange({
-      groups: [...groups, { id: crypto.randomUUID(), name: adding.trim() }],
       fragments,
+      groups: [...groups, { id: crypto.randomUUID(), name: adding.trim() }],
     });
     setAdding("");
   }
@@ -200,374 +200,365 @@ function GroupEditor({
   function removeGroup(index: number) {
     const gone = groups[index].id;
     onChange({
-      groups: without(groups, index),
       fragments: fragments.map((fragment) =>
         fragment.groupId === gone
           ? { ...fragment, groupId: undefined }
           : fragment,
       ),
+      groups: without(groups, index),
     });
   }
 
   return (
-    <FieldGroup legend="Headings">
-      {groups.length === 0 ? (
-        <p className={styles.quiet}>
-          Fragments run in one list until you add a heading to group them under.
-        </p>
-      ) : (
-        <ul className={styles.groups}>
-          {groups.map((group, index) => (
-            <li key={group.id ?? index} className={styles.group}>
-              <input
-                aria-label={`Heading ${index + 1}`}
-                size={Math.max(8, Math.min(28, group.name.length + 1))}
-                value={group.name}
-                onChange={(event) =>
-                  onChange({
-                    groups: replaceAt(groups, index, {
-                      name: event.target.value,
-                    }),
-                    fragments,
-                  })
-                }
-                disabled={pending}
-              />
-              <button
-                type="button"
-                className={styles.removeGroup}
-                aria-label={`Remove the heading ${group.name}`}
-                onClick={() => removeGroup(index)}
-                disabled={pending}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className={styles.addGroup}>
-        <input
-          aria-label="A new heading"
-          placeholder="A new heading"
-          value={adding}
-          onChange={(event) => setAdding(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            addGroup();
-          }}
-          disabled={pending}
-        />
-        <button
-          type="button"
-          onClick={addGroup}
-          disabled={pending || adding.trim() === ""}
-        >
-          <Plus size={16} aria-hidden="true" />
-          Add heading
-        </button>
+    <MorphingDisclosure
+      summary={
+        groups.length === 0
+          ? "No headings"
+          : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`
+      }
+    >
+      <div className="space-y-3 pt-3">
+        {groups.length === 0 ? (
+          <Note>
+            Fragments run in one list until you add a heading to group them
+            under.
+          </Note>
+        ) : (
+          <ul className="space-y-2">
+            {groups.map((group, index) => (
+              <li className="flex items-center gap-1" key={group.id ?? index}>
+                <TextField
+                  aria-label={`Heading ${index + 1}`}
+                  disabled={pending}
+                  onChange={(event) =>
+                    onChange({
+                      fragments,
+                      groups: replaceAt(groups, index, {
+                        name: event.target.value,
+                      }),
+                    })
+                  }
+                  value={group.name}
+                />
+                <button
+                  aria-label={`Remove the heading ${group.name}`}
+                  className="grid size-11 shrink-0 place-items-center rounded-control text-mute outline-offset-3 hover:bg-stop-wash hover:text-stop disabled:opacity-45"
+                  disabled={pending}
+                  onClick={() => removeGroup(index)}
+                  type="button"
+                >
+                  <X aria-hidden="true" size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <TextField
+            aria-label="A new heading"
+            className="min-w-40 flex-1"
+            disabled={pending}
+            onChange={(event) => setAdding(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              addGroup();
+            }}
+            placeholder="A new heading"
+            value={adding}
+          />
+          <AddAction
+            disabled={pending || adding.trim() === ""}
+            onClick={addGroup}
+          >
+            Add heading
+          </AddAction>
+        </div>
       </div>
-    </FieldGroup>
+    </MorphingDisclosure>
   );
 }
 
 function FragmentFields({
   fragment,
-  position,
   groups,
-  pending,
   onChange,
-  onRemove,
+  pending,
 }: {
   fragment: PromptFragment;
-  position: number;
   groups: PromptGroup[];
-  pending: boolean;
   onChange: (changes: Partial<PromptFragment>) => void;
-  onRemove: () => void;
+  pending: boolean;
 }) {
   const isMarker = (fragment.marker ?? "") !== "";
   return (
-    <ItemFields>
-      <ItemHeading
-        name={fragmentName(fragment, position)}
-        noun="fragment"
-        pending={pending}
-        onRemove={onRemove}
-      />
-
-      <Field label="Name" hint="optional, and never sent to a model">
-        <input
-          value={fragment.name ?? ""}
+    <div className="space-y-6">
+      <Field hint="optional, and never sent to a model" label="Name">
+        <TextField
+          disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
           }
-          disabled={pending}
+          value={fragment.name ?? ""}
         />
       </Field>
 
       {!isMarker ? (
         <Switch
-          label="Sealed prompt"
-          hint="Its text is sent only to an allowed linked application."
           checked={fragment.protected ?? false}
-          pending={pending}
+          hint="Its text is sent only to an allowed linked application."
+          label="Sealed prompt"
           onChange={(protectedPrompt) =>
             onChange({ protected: protectedPrompt })
           }
+          pending={pending}
         />
       ) : null}
 
       {isMarker ? (
-        <p className={styles.quiet}>
+        <Note>
           This fragment is a marker. The app splices its own content in here,
-          named <code>{fragment.marker}</code>, so it carries no text.
-        </p>
+          named <code className="font-mono">{fragment.marker}</code>, so it
+          carries no text.
+        </Note>
       ) : (
         <Field label="Fragment text">
-          <textarea
-            rows={10}
-            value={fragment.text}
-            onChange={(event) => onChange({ text: event.target.value })}
+          <TextAreaField
             disabled={pending}
+            onChange={(event) => onChange({ text: event.target.value })}
+            rows={12}
+            value={fragment.text}
           />
         </Field>
       )}
 
       <FieldGroup legend="How it is sent">
-        <FieldPair>
-          <Field label="Speaks as">
-            <select
-              value={fragment.role ?? ""}
-              onChange={(event) =>
-                onChange({
-                  role:
-                    event.target.value === ""
-                      ? undefined
-                      : (event.target.value as PromptFragment["role"]),
-                })
-              }
-              disabled={pending}
-            >
-              <option value="">Leave it to whatever reads the preset</option>
-              {PROMPT_ROLES.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Heading">
-            <select
-              value={fragment.groupId ?? ""}
-              onChange={(event) =>
-                onChange({ groupId: event.target.value || undefined })
-              }
-              disabled={pending}
-            >
-              <option value="">No heading</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </FieldPair>
+        <Field label="Speaks as">
+          <ChoiceField
+            disabled={pending}
+            onChange={(event) =>
+              onChange({
+                role:
+                  event.target.value === ""
+                    ? undefined
+                    : (event.target.value as PromptFragment["role"]),
+              })
+            }
+            value={fragment.role ?? ""}
+          >
+            <option value="">Leave it to whatever reads the preset</option>
+            {PROMPT_ROLES.map((role) => (
+              <option key={role.value} value={role.value}>
+                {role.label}
+              </option>
+            ))}
+          </ChoiceField>
+        </Field>
+        <Field label="Heading">
+          <ChoiceField
+            disabled={pending}
+            onChange={(event) =>
+              onChange({ groupId: event.target.value || undefined })
+            }
+            value={fragment.groupId ?? ""}
+          >
+            <option value="">No heading</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </ChoiceField>
+        </Field>
         <Switch
-          label="Switched on"
-          hint="A switched-off fragment stays in the preset and reaches no model."
           checked={fragment.enabled}
-          pending={pending}
+          hint="A switched-off fragment stays in the preset and reaches no model."
+          label="Switched on"
           onChange={(enabled) => onChange({ enabled })}
+          pending={pending}
         />
       </FieldGroup>
 
       <FieldGroup legend="Where it goes">
-        <FieldPair>
-          <Field label="Placement">
-            <select
-              value={fragment.placement ?? ""}
-              onChange={(event) =>
-                onChange({
-                  placement:
-                    event.target.value === ""
-                      ? undefined
-                      : (event.target.value as PromptFragment["placement"]),
-                })
-              }
-              disabled={pending}
-            >
-              <option value="">Leave it to whatever reads the preset</option>
-              {PLACEMENTS.map((placement) => (
-                <option key={placement.value} value={placement.value}>
-                  {placement.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Depth" hint="messages back from the most recent">
-            <input
-              type="number"
-              value={fragment.depth ?? ""}
-              onChange={(event) =>
-                onChange({
-                  depth:
-                    event.target.value === ""
-                      ? undefined
-                      : Number(event.target.value),
-                })
-              }
-              disabled={pending}
-            />
-          </Field>
-        </FieldPair>
+        <Field label="Placement">
+          <ChoiceField
+            disabled={pending}
+            onChange={(event) =>
+              onChange({
+                placement:
+                  event.target.value === ""
+                    ? undefined
+                    : (event.target.value as PromptFragment["placement"]),
+              })
+            }
+            value={fragment.placement ?? ""}
+          >
+            <option value="">Leave it to whatever reads the preset</option>
+            {PLACEMENTS.map((placement) => (
+              <option key={placement.value} value={placement.value}>
+                {placement.label}
+              </option>
+            ))}
+          </ChoiceField>
+        </Field>
+        <Field hint="messages back from the most recent" label="Depth">
+          <TextField
+            disabled={pending}
+            onChange={(event) =>
+              onChange({
+                depth:
+                  event.target.value === ""
+                    ? undefined
+                    : Number(event.target.value),
+              })
+            }
+            type="number"
+            value={fragment.depth ?? ""}
+          />
+        </Field>
       </FieldGroup>
-    </ItemFields>
+    </div>
   );
 }
 
 export function SettingGroupEditor({
-  settings,
-  pending,
   onChange,
+  pending,
+  settings,
 }: {
-  settings: PresetSetting[];
-  pending: boolean;
   onChange: (settings: PresetSetting[]) => void;
+  pending: boolean;
+  settings: PresetSetting[];
 }) {
   return (
-    <div className={styles.settings}>
+    <div className="space-y-4">
       {settings.length === 0 ? (
-        <p className={styles.quiet}>
+        <Note>
           This group has no settings yet. Add the names your app reads.
-        </p>
+        </Note>
       ) : null}
       {settings.map((setting, index) => (
         <SettingRow
           key={setting.id ?? setting.name}
-          setting={setting}
-          pending={pending}
           onChange={(changes) => onChange(replaceAt(settings, index, changes))}
           onRemove={() => onChange(without(settings, index))}
+          pending={pending}
+          setting={setting}
         />
       ))}
       <NewSetting
-        pending={pending}
         onAdd={(setting) => onChange([...settings, setting])}
+        pending={pending}
       />
     </div>
   );
 }
 
 function SettingRow({
-  setting,
-  pending,
   onChange,
   onRemove,
+  pending,
+  setting,
 }: {
-  setting: PresetSetting;
-  pending: boolean;
   onChange: (changes: Partial<PresetSetting>) => void;
   onRemove: () => void;
+  pending: boolean;
+  setting: PresetSetting;
 }) {
   const supplied = setting.value != null;
   const slot = nameSlot(setting.name);
   return (
-    <div className={styles.setting} data-unset={supplied ? undefined : true}>
-      <div className={styles.settingName}>
-        <span>{slot.name}</span>
-        <small>
-          {slot.rank === "unrecognised" ? null : <code>{setting.name}</code>}
-          {setting.type.replace("_", " ")}
-        </small>
-      </div>
-      <div className={styles.settingValue}>
-        <ValueField
-          type={setting.type}
-          choices={setting.choices}
-          value={setting.value}
-          label={setting.name}
-          pending={pending}
-          onChange={(value) => onChange({ value })}
-        />
-      </div>
-      <div className={styles.settingActions}>
-        {supplied ? (
-          <button
-            type="button"
-            onClick={() => onChange({ value: undefined })}
-            disabled={pending}
-          >
-            Leave it out
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onChange({ value: emptyValue(setting.type) })}
-            disabled={pending}
-          >
-            Fill it in
-          </button>
-        )}
-        <button
-          type="button"
-          className={styles.removeSetting}
-          onClick={onRemove}
-          disabled={pending}
-          aria-label={`Remove ${setting.name}`}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <span
+          className={cn(
+            "text-ui font-medium wrap-anywhere",
+            supplied ? "text-ink" : "text-mute",
+          )}
         >
-          <Trash2 size={14} aria-hidden="true" />
+          {slot.name}
+        </span>
+        <span className="flex flex-wrap gap-x-2 text-label text-mute">
+          {slot.rank === "unrecognised" ? null : (
+            <code className="font-mono wrap-anywhere">{setting.name}</code>
+          )}
+          {setting.type.replace("_", " ")}
+        </span>
+      </div>
+      <ValueField
+        choices={setting.choices}
+        label={setting.name}
+        onChange={(value) => onChange({ value })}
+        pending={pending}
+        type={setting.type}
+        value={setting.value}
+      />
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          className="inline-flex min-h-11 items-center rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-45"
+          disabled={pending}
+          onClick={() =>
+            onChange({
+              value: supplied ? undefined : emptyValue(setting.type),
+            })
+          }
+          type="button"
+        >
+          {supplied ? "Leave it out" : "Fill it in"}
         </button>
+        <RemoveAction
+          disabled={pending}
+          label={`Remove ${setting.name}`}
+          onClick={onRemove}
+        />
       </div>
     </div>
   );
 }
 
 function NewSetting({
-  pending,
   onAdd,
+  pending,
 }: {
-  pending: boolean;
   onAdd: (setting: PresetSetting) => void;
+  pending: boolean;
 }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<PresetSetting["type"]>("number");
   return (
-    <div className={styles.addSetting}>
-      <input
+    <div className="flex flex-wrap items-center gap-2 pt-2">
+      <TextField
         aria-label="A new setting's name"
+        className="max-w-64 flex-1"
+        disabled={pending}
+        onChange={(event) => setName(event.target.value)}
         placeholder="The name your app reads"
         value={name}
-        onChange={(event) => setName(event.target.value)}
-        disabled={pending}
       />
-      <select
+      <ChoiceField
         aria-label="What the new setting holds"
-        value={type}
+        className="max-w-44 flex-1"
+        disabled={pending}
         onChange={(event) =>
           setType(event.target.value as PresetSetting["type"])
         }
-        disabled={pending}
+        value={type}
       >
         <option value="number">A number</option>
         <option value="boolean">Yes or no</option>
         <option value="text">Text</option>
         <option value="string_list">A list of strings</option>
-      </select>
-      <button
-        type="button"
+      </ChoiceField>
+      <AddAction
+        disabled={pending || name.trim() === ""}
         onClick={() => {
           if (name.trim() === "") return;
           onAdd({ name: name.trim(), type });
           setName("");
         }}
-        disabled={pending || name.trim() === ""}
       >
-        <Plus size={16} aria-hidden="true" />
         Add setting
-      </button>
+      </AddAction>
     </div>
   );
 }
@@ -586,83 +577,87 @@ function emptyValue(type: PresetSetting["type"]): TypedValue {
 }
 
 function ValueField({
-  type,
   choices,
-  value,
   label,
-  pending,
   onChange,
+  pending,
+  type,
+  value,
 }: {
-  type: PresetSetting["type"];
   choices?: string[];
-  value: TypedValue | undefined;
   label: string;
-  pending: boolean;
   onChange: (value: TypedValue) => void;
+  pending: boolean;
+  type: PresetSetting["type"];
+  value: TypedValue | undefined;
 }) {
   if (value == null) {
-    return <p className={styles.unset}>Nobody has filled this in.</p>;
+    return (
+      <p className="font-display text-ui text-mute italic">
+        Nobody has filled this in.
+      </p>
+    );
   }
   if (type === "boolean") {
     return (
       <Switch
-        label={value.boolean ? "Yes" : "No"}
         checked={value.boolean ?? false}
-        pending={pending}
+        label={value.boolean ? "Yes" : "No"}
         onChange={(boolean) => onChange({ boolean })}
+        pending={pending}
       />
     );
   }
   if (type === "number") {
     return (
-      <input
-        type="number"
+      <TextField
         aria-label={label}
-        value={value.number ?? ""}
+        disabled={pending}
         onChange={(event) =>
           onChange({
             number: event.target.value === "" ? 0 : Number(event.target.value),
           })
         }
-        disabled={pending}
+        type="number"
+        value={value.number ?? ""}
       />
     );
   }
   if (type === "string_list") {
     return (
-      <textarea
+      <TextAreaField
         aria-label={`${label}, one per line`}
-        rows={3}
-        value={writeLines(value.strings)}
+        disabled={pending}
         onChange={(event) =>
           onChange({ strings: readLines(event.target.value) })
         }
-        disabled={pending}
+        rows={3}
+        value={writeLines(value.strings)}
       />
     );
   }
   if (choices && choices.length > 0) {
     return (
-      <select
+      <ChoiceField
         aria-label={label}
-        value={value.text ?? ""}
-        onChange={(event) => onChange({ text: event.target.value })}
         disabled={pending}
+        onChange={(event) => onChange({ text: event.target.value })}
+        value={value.text ?? ""}
       >
         {choices.map((choice) => (
           <option key={choice} value={choice}>
             {choice}
           </option>
         ))}
-      </select>
+      </ChoiceField>
     );
   }
   return (
-    <input
+    <TextField
       aria-label={label}
-      value={value.text ?? ""}
-      onChange={(event) => onChange({ text: event.target.value })}
       disabled={pending}
+      onChange={(event) => onChange({ text: event.target.value })}
+      value={value.text ?? ""}
     />
   );
 }
@@ -677,28 +672,32 @@ export function variableName(
 }
 
 export function VariableSchemaEditor({
-  variables,
-  pending,
+  chosen,
   onChange,
+  onChoose,
+  pending,
+  variables,
 }: {
-  variables: PresetVariable[];
-  pending: boolean;
+  chosen: string | null;
   onChange: (variables: PresetVariable[]) => void;
+  onChoose: (key: string | null) => void;
+  pending: boolean;
+  variables: PresetVariable[];
 }) {
-  const [selected, setSelected] = useState(0);
-  const current = variables[selected];
-
   return (
-    <CollectionEditor
-      noun="variable"
+    <CollectionStep
+      chosen={chosen}
       emptyMessage="This preset asks a reader for nothing yet."
-      pending={pending}
-      selected={selected}
-      onSelect={setSelected}
+      noun="variable"
       onAdd={() => onChange([...variables, { name: "", widget: "switch" }])}
+      onChoose={onChoose}
+      onMove={(from, to) => onChange(moveItem(variables, from, to))}
+      onRemove={(index) => onChange(without(variables, index))}
+      pending={pending}
       rows={variables.map((variable, index) => ({
-        name: variableName(variable, index),
         detail: variable.name,
+        id: variable.id,
+        name: variableName(variable, index),
         search: [
           variable.name,
           variable.label ?? "",
@@ -708,40 +707,25 @@ export function VariableSchemaEditor({
           .toLowerCase(),
       }))}
     >
-      {current ? (
+      {(index) => (
         <VariableFields
-          variable={current}
-          position={selected}
+          onChange={(changes) => onChange(replaceAt(variables, index, changes))}
           pending={pending}
-          onChange={(changes) =>
-            onChange(replaceAt(variables, selected, changes))
-          }
-          onRemove={() => {
-            onChange(without(variables, selected));
-            setSelected(Math.max(0, Math.min(selected, variables.length - 2)));
-          }}
+          variable={variables[index]}
         />
-      ) : (
-        <NothingChosen>
-          Choose a variable to edit it, or add the first one.
-        </NothingChosen>
       )}
-    </CollectionEditor>
+    </CollectionStep>
   );
 }
 
 function VariableFields({
-  variable,
-  position,
-  pending,
   onChange,
-  onRemove,
+  pending,
+  variable,
 }: {
-  variable: PresetVariable;
-  position: number;
-  pending: boolean;
   onChange: (changes: Partial<PresetVariable>) => void;
-  onRemove: () => void;
+  pending: boolean;
+  variable: PresetVariable;
 }) {
   const options = variable.options ?? [];
   const range = variable.range ?? {};
@@ -749,71 +733,61 @@ function VariableFields({
     variable.widget === "select" || variable.widget === "multiselect";
   const numeric = variable.widget === "number" || variable.widget === "slider";
   return (
-    <ItemFields>
-      <ItemHeading
-        name={variableName(variable, position)}
-        noun="variable"
-        pending={pending}
-        onRemove={onRemove}
-      />
-
-      <FieldPair>
-        <Field label="Name" hint="what the fragments refer to it by">
-          <input
-            value={variable.name}
-            onChange={(event) => onChange({ name: event.target.value })}
-            disabled={pending}
-          />
-        </Field>
-        <Field label="Filled in with">
-          <select
-            value={variable.widget}
-            onChange={(event) =>
-              onChange({
-                widget: event.target.value as PresetVariable["widget"],
-              })
-            }
-            disabled={pending}
-          >
-            {WIDGETS.map((widget) => (
-              <option key={widget.value} value={widget.value}>
-                {widget.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </FieldPair>
-
-      <Field label="Label" hint="what a reader sees above the control">
-        <input
-          value={variable.label ?? ""}
-          onChange={(event) =>
-            onChange({ label: event.target.value || undefined })
-          }
+    <div className="space-y-6">
+      <Field hint="what the fragments refer to it by" label="Name">
+        <TextField
           disabled={pending}
+          onChange={(event) => onChange({ name: event.target.value })}
+          value={variable.name}
         />
       </Field>
 
-      <Field label="Description" hint="the line under it">
-        <textarea
-          rows={3}
-          value={variable.description ?? ""}
+      <Field label="Filled in with">
+        <ChoiceField
+          disabled={pending}
+          onChange={(event) =>
+            onChange({ widget: event.target.value as PresetVariable["widget"] })
+          }
+          value={variable.widget}
+        >
+          {WIDGETS.map((widget) => (
+            <option key={widget.value} value={widget.value}>
+              {widget.label}
+            </option>
+          ))}
+        </ChoiceField>
+      </Field>
+
+      <Field hint="what a reader sees above the control" label="Label">
+        <TextField
+          disabled={pending}
+          onChange={(event) =>
+            onChange({ label: event.target.value || undefined })
+          }
+          value={variable.label ?? ""}
+        />
+      </Field>
+
+      <Field hint="the line under it" label="Description">
+        <TextAreaField
+          disabled={pending}
           onChange={(event) =>
             onChange({ description: event.target.value || undefined })
           }
-          disabled={pending}
+          rows={3}
+          value={variable.description ?? ""}
         />
       </Field>
 
       {listed ? (
         <FieldGroup legend="What a reader picks from">
           {options.map((option, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: Options stay ordered and hold no local state.
-            <div className={styles.option} key={index}>
-              <input
+            // biome-ignore lint/suspicious/noArrayIndexKey: Choices stay ordered and hold no local state.
+            <div className="flex flex-wrap items-center gap-2" key={index}>
+              <TextField
                 aria-label={`Wording for choice ${index + 1}`}
-                placeholder="Wording"
-                value={option.label}
+                className="min-w-32 flex-1"
+                disabled={pending}
                 onChange={(event) =>
                   onChange({
                     options: replaceAt(options, index, {
@@ -821,12 +795,13 @@ function VariableFields({
                     }),
                   })
                 }
-                disabled={pending}
+                placeholder="Wording"
+                value={option.label}
               />
-              <input
+              <TextField
                 aria-label={`Value for choice ${index + 1}`}
-                placeholder="What reaches the prompt"
-                value={option.value}
+                className="min-w-32 flex-1"
+                disabled={pending}
                 onChange={(event) =>
                   onChange({
                     options: replaceAt(options, index, {
@@ -834,41 +809,35 @@ function VariableFields({
                     }),
                   })
                 }
-                disabled={pending}
+                placeholder="What reaches the prompt"
+                value={option.value}
               />
-              <button
-                type="button"
-                className={styles.removeSetting}
-                onClick={() => onChange({ options: without(options, index) })}
+              <RemoveAction
                 disabled={pending}
-                aria-label={`Remove choice ${index + 1}`}
-              >
-                <Trash2 size={14} aria-hidden="true" />
-              </button>
+                label={`Remove choice ${index + 1}`}
+                onClick={() => onChange({ options: without(options, index) })}
+              />
             </div>
           ))}
-          <button
-            type="button"
-            className={styles.addOption}
+          <AddAction
+            disabled={pending}
             onClick={() =>
               onChange({ options: [...options, { label: "", value: "" }] })
             }
-            disabled={pending}
           >
-            <Plus size={16} aria-hidden="true" />
             Add choice
-          </button>
+          </AddAction>
           {variable.widget === "multiselect" ? (
             <Field
-              label="Separator"
               hint="what joins the chosen values in the prompt"
+              label="Separator"
             >
-              <input
-                value={variable.separator ?? ""}
+              <TextField
+                disabled={pending}
                 onChange={(event) =>
                   onChange({ separator: event.target.value || undefined })
                 }
-                disabled={pending}
+                value={variable.separator ?? ""}
               />
             </Field>
           ) : null}
@@ -879,9 +848,8 @@ function VariableFields({
         <FieldGroup legend="What it accepts">
           <FieldPair>
             <Field label="Lowest">
-              <input
-                type="number"
-                value={range.min ?? ""}
+              <TextField
+                disabled={pending}
                 onChange={(event) =>
                   onChange({
                     range: {
@@ -893,13 +861,13 @@ function VariableFields({
                     },
                   })
                 }
-                disabled={pending}
+                type="number"
+                value={range.min ?? ""}
               />
             </Field>
             <Field label="Highest">
-              <input
-                type="number"
-                value={range.max ?? ""}
+              <TextField
+                disabled={pending}
                 onChange={(event) =>
                   onChange({
                     range: {
@@ -911,14 +879,14 @@ function VariableFields({
                     },
                   })
                 }
-                disabled={pending}
+                type="number"
+                value={range.max ?? ""}
               />
             </Field>
           </FieldPair>
           <Field label="Step">
-            <input
-              type="number"
-              value={range.step ?? ""}
+            <TextField
+              disabled={pending}
               onChange={(event) =>
                 onChange({
                   range: {
@@ -930,12 +898,13 @@ function VariableFields({
                   },
                 })
               }
-              disabled={pending}
+              type="number"
+              value={range.step ?? ""}
             />
           </Field>
         </FieldGroup>
       ) : null}
-    </ItemFields>
+    </div>
   );
 }
 
@@ -946,132 +915,114 @@ export function scriptName(script: RegexScript, position: number): string {
 }
 
 export function ScriptListEditor({
-  scripts,
-  pending,
+  chosen,
   onChange,
+  onChoose,
+  pending,
+  scripts,
 }: {
-  scripts: RegexScript[];
-  pending: boolean;
+  chosen: string | null;
   onChange: (scripts: RegexScript[]) => void;
+  onChoose: (key: string | null) => void;
+  pending: boolean;
+  scripts: RegexScript[];
 }) {
-  const [selected, setSelected] = useState(0);
-  const current = scripts[selected];
-
   return (
-    <CollectionEditor
-      noun="script"
+    <CollectionStep
+      chosen={chosen}
       emptyMessage="This preset changes nothing yet."
-      pending={pending}
-      selected={selected}
-      onSelect={setSelected}
+      noun="script"
       onAdd={() =>
-        onChange([...scripts, { find: "", replace: "", enabled: true }])
+        onChange([...scripts, { enabled: true, find: "", replace: "" }])
       }
+      onChoose={onChoose}
+      onMove={(from, to) => onChange(moveItem(scripts, from, to))}
+      onRemove={(index) => onChange(without(scripts, index))}
+      pending={pending}
       rows={scripts.map((script, index) => ({
-        name: scriptName(script, index),
         detail: script.find,
+        id: script.id,
+        name: scriptName(script, index),
         off: !script.enabled,
         search: [script.name ?? "", script.find, script.replace]
           .join(" ")
           .toLowerCase(),
       }))}
     >
-      {current ? (
+      {(index) => (
         <ScriptFields
-          script={current}
-          position={selected}
+          onChange={(changes) => onChange(replaceAt(scripts, index, changes))}
           pending={pending}
-          onChange={(changes) =>
-            onChange(replaceAt(scripts, selected, changes))
-          }
-          onRemove={() => {
-            onChange(without(scripts, selected));
-            setSelected(Math.max(0, Math.min(selected, scripts.length - 2)));
-          }}
+          script={scripts[index]}
         />
-      ) : (
-        <NothingChosen>
-          Choose a script to edit it, or add the first one.
-        </NothingChosen>
       )}
-    </CollectionEditor>
+    </CollectionStep>
   );
 }
 
 function ScriptFields({
-  script,
-  position,
-  pending,
   onChange,
-  onRemove,
+  pending,
+  script,
 }: {
-  script: RegexScript;
-  position: number;
-  pending: boolean;
   onChange: (changes: Partial<RegexScript>) => void;
-  onRemove: () => void;
+  pending: boolean;
+  script: RegexScript;
 }) {
   const targets = script.targets ?? [];
   const affects = script.affects ?? [];
   return (
-    <ItemFields>
-      <ItemHeading
-        name={scriptName(script, position)}
-        noun="script"
-        pending={pending}
-        onRemove={onRemove}
-      />
-
-      <Field label="Name" hint="optional">
-        <input
-          value={script.name ?? ""}
+    <div className="space-y-6">
+      <Field hint="optional" label="Name">
+        <TextField
+          disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
           }
-          disabled={pending}
+          value={script.name ?? ""}
         />
       </Field>
 
       <FieldPair>
         <Field label="Find">
-          <input
-            className={styles.pattern}
-            value={script.find}
-            onChange={(event) => onChange({ find: event.target.value })}
+          <TextField
+            className="font-mono"
             disabled={pending}
+            onChange={(event) => onChange({ find: event.target.value })}
+            value={script.find}
           />
         </Field>
-        <Field label="Flags" hint="g for every match, i to ignore case">
-          <input
-            className={styles.pattern}
-            value={script.flags ?? ""}
+        <Field hint="g for every match, i to ignore case" label="Flags">
+          <TextField
+            className="font-mono"
+            disabled={pending}
             onChange={(event) =>
               onChange({ flags: event.target.value || undefined })
             }
-            disabled={pending}
+            value={script.flags ?? ""}
           />
         </Field>
       </FieldPair>
 
       <Field label="Replace it with">
-        <textarea
+        <TextAreaField
+          disabled={pending}
+          onChange={(event) => onChange({ replace: event.target.value })}
           rows={4}
           value={script.replace}
-          onChange={(event) => onChange({ replace: event.target.value })}
-          disabled={pending}
         />
       </Field>
 
       <FieldGroup legend="What it runs over">
         {SCRIPT_TARGETS.map((target) => (
           <Switch
+            checked={targets.includes(target.value)}
             key={target.value}
             label={target.label}
-            checked={targets.includes(target.value)}
-            pending={pending}
             onChange={(on) =>
               onChange({ targets: toggle(targets, target.value, on) })
             }
+            pending={pending}
           />
         ))}
       </FieldGroup>
@@ -1079,23 +1030,22 @@ function ScriptFields({
       <FieldGroup legend="What it changes">
         {SCRIPT_EFFECTS.map((effect) => (
           <Switch
+            checked={affects.includes(effect.value)}
             key={effect.value}
             label={effect.label}
-            checked={affects.includes(effect.value)}
-            pending={pending}
             onChange={(on) =>
               onChange({ affects: toggle(affects, effect.value, on) })
             }
+            pending={pending}
           />
         ))}
       </FieldGroup>
 
       <FieldGroup legend="How far back it reaches">
         <FieldPair>
-          <Field label="Nearest message" hint="counted from the most recent">
-            <input
-              type="number"
-              value={script.minDepth ?? ""}
+          <Field hint="counted from the most recent" label="Nearest message">
+            <TextField
+              disabled={pending}
               onChange={(event) =>
                 onChange({
                   minDepth:
@@ -1104,13 +1054,13 @@ function ScriptFields({
                       : Number(event.target.value),
                 })
               }
-              disabled={pending}
+              type="number"
+              value={script.minDepth ?? ""}
             />
           </Field>
           <Field label="Furthest message">
-            <input
-              type="number"
-              value={script.maxDepth ?? ""}
+            <TextField
+              disabled={pending}
               onChange={(event) =>
                 onChange({
                   maxDepth:
@@ -1119,36 +1069,37 @@ function ScriptFields({
                       : Number(event.target.value),
                 })
               }
-              disabled={pending}
+              type="number"
+              value={script.maxDepth ?? ""}
             />
           </Field>
         </FieldPair>
         <Switch
-          label="Switched on"
-          hint="A switched-off script stays in the preset and changes nothing."
           checked={script.enabled}
-          pending={pending}
+          hint="A switched-off script stays in the preset and changes nothing."
+          label="Switched on"
           onChange={(enabled) => onChange({ enabled })}
+          pending={pending}
         />
         <Switch
-          label="Run it again when a message is edited"
           checked={script.runOnEdit ?? false}
-          pending={pending}
+          label="Run it again when a message is edited"
           onChange={(runOnEdit) => onChange({ runOnEdit })}
+          pending={pending}
         />
       </FieldGroup>
 
-      <Field label="Trim" hint="text cut out of the match, one per line">
-        <textarea
-          rows={2}
-          value={writeLines(script.trim)}
+      <Field hint="text cut out of the match, one per line" label="Trim">
+        <TextAreaField
+          disabled={pending}
           onChange={(event) =>
             onChange({ trim: readLines(event.target.value) })
           }
-          disabled={pending}
+          rows={2}
+          value={writeLines(script.trim)}
         />
       </Field>
-    </ItemFields>
+    </div>
   );
 }
 
