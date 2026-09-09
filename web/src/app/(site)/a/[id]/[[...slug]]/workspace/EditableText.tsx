@@ -1,7 +1,7 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /** Where in the text the pointer landed, so a click leaves the caret there. */
@@ -73,10 +73,6 @@ export function EditableText({
     const at = caret.current ?? input.value.length;
     input.setSelectionRange(at, at);
     caret.current = undefined;
-  }, [active]);
-
-  useEffect(() => {
-    if (active && field.current) growToFit(field.current);
   }, [active]);
 
   if (active) {

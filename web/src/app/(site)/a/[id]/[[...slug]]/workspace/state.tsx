@@ -130,17 +130,9 @@ export function AssetWorkspace({
   const lastCursor = useRef<string | null>(null);
   const savedBlocks = useRef(blocks);
 
-  savedBlocks.current = saved;
-
   useEffect(() => {
-    setDraft(blocks);
-    setSaved(blocks);
-  }, [blocks]);
-
-  useEffect(() => {
-    setDraftIdentity(identity);
-    setSavedIdentity(identity);
-  }, [identity]);
+    savedBlocks.current = saved;
+  }, [saved]);
 
   useEffect(() => {
     const stale = () => setPane({ kind: "conflict" });
@@ -169,6 +161,18 @@ export function AssetWorkspace({
         : isDraft || unpublishedChanges
           ? "private"
           : "published";
+
+  /** A save refused for want of an allowed app opens the element that asks for one. */
+  const openSealedElement = useCallback((blocks: AssetBlock[]) => {
+    for (const block of blocks) {
+      const asking = block.elements.find((element) =>
+        hasSealedPrompts([element]),
+      );
+      if (!asking) continue;
+      setPane({ blockId: block.id, elementId: asking.id, kind: "element" });
+      return;
+    }
+  }, []);
 
   const save = useCallback(
     (expose = false) => {
@@ -202,6 +206,7 @@ export function AssetWorkspace({
       if (sealed && apps.length === 0) {
         setFailed(true);
         setMessage(NO_ALLOWED_APP);
+        openSealedElement(draft);
         return;
       }
 
@@ -265,6 +270,7 @@ export function AssetWorkspace({
       draftIdentity,
       identityChanged,
       isDraft,
+      openSealedElement,
       router,
       saved,
     ],
@@ -282,6 +288,16 @@ export function AssetWorkspace({
     });
     setSaved(incoming);
   }, []);
+
+  useEffect(() => {
+    applyServerBlocks(blocks);
+  }, [applyServerBlocks, blocks]);
+
+  useEffect(() => {
+    const answer = { isNsfw: identity.isNsfw, name: identity.name };
+    setDraftIdentity(answer);
+    setSavedIdentity(answer);
+  }, [identity.isNsfw, identity.name]);
 
   /** Adding or removing a block changes the saved copy as well, so it reads as saved. */
   const editBlockList = useCallback(

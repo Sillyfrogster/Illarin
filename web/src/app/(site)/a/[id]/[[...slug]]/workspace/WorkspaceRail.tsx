@@ -30,7 +30,11 @@ export function WorkspaceRail({
   useEffect(() => {
     if (!onClose) return;
     function leave(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose?.();
+      // Escape belongs to whatever field is open before it belongs to the rail.
+      const inField =
+        event.target instanceof HTMLElement &&
+        ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
+      if (event.key === "Escape" && !inField) onClose?.();
     }
     document.addEventListener("keydown", leave);
     return () => document.removeEventListener("keydown", leave);
