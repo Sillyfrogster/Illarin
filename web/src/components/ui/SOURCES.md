@@ -24,8 +24,27 @@ variant: the rule scales in from the left on hover and keyboard focus and
 retracts to the right. It adds the current-page state and expresses the source's
 stylesheet as utilities on one component.
 
+`ui/perspective-carousel.tsx` adapts Vengeance UI's perspective carousel, which
+turns a row of pictures around a centre slide. It keeps the source's rotation
+and depth, and replaces its fixed square slides with `next/image` under
+`object-contain` at a width the creator picks, so a picture keeps its own
+aspect. It adds a roving tab stop, arrow keys on each slide, 44px controls and
+a `useReducedMotion` path that jumps rather than turns.
+
+`ui/fullscreen-preview.tsx` adapts Vengeance UI's fullscreen preview, keeping
+its portal, its black backdrop, its Escape key and its scroll lock on the body.
+It takes one picture rather than arbitrary children, moves focus to the close
+button on opening and gives it back on closing, and raises that button to 44px.
+
+`ui/copy-button.tsx` adapts Vengeance UI's copy button. It keeps the icon swap
+and the timed confirmation, and adds a spoken confirmation, a failure state
+when the clipboard refuses, and a 44px target.
+
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/notch-navbar.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/line-hover-link.json
+- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/perspective-carousel.json
+- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/fullscreen-preview.json
+- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/copy-button.json
 - https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE
 
 Both sources use the MIT license. Copyright shadcn and Ashutoshx7 respectively.
