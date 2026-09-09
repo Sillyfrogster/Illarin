@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Select } from "@/components/ui/select";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type {
   AssetImage,
@@ -212,8 +213,8 @@ export function GetAsset({
             >
               Send to
             </label>
-            <select
-              className="mt-2 h-11 w-full rounded-control bg-deep px-3 text-ui text-ink outline-offset-3"
+            <Select
+              className="mt-2"
               disabled={busy}
               id="get-asset-destination"
               onChange={(event) => {
@@ -227,7 +228,7 @@ export function GetAsset({
                   {one.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </>
         ) : null}
 
