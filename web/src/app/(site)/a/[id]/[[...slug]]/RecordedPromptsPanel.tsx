@@ -7,7 +7,7 @@ import {
   type ProtectionMismatch,
   resolvePromptCorrespondence,
 } from "@/lib/api/query";
-import styles from "./RecordedPromptsPanel.module.css";
+import { cn } from "@/lib/cn";
 
 /** ABSENT is the answer that a recorded version never carried a sealed prompt. */
 const ABSENT = "absent";
@@ -58,42 +58,57 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
   }
 
   return (
-    <div className={styles.control}>
+    <div className={"mt-3.5 border-rule border-t"}>
       <button
-        className={styles.launch}
+        className={
+          "flex min-h-16 w-full items-center justify-between gap-3.5 py-3 text-left text-ink outline-offset-3 hover:text-accent"
+        }
         type="button"
         aria-expanded={open}
         aria-controls="recorded-prompts-menu"
         onClick={() => (open ? setOpen(false) : void read())}
       >
-        <span className={styles.launchCopy}>
+        <span
+          className={
+            "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
+          }
+        >
           <strong>Match your sealed prompts to older versions</strong>
           <span>
             A version Illarin cannot match shows readers no prompts at all
           </span>
         </span>
         <ChevronRight
-          className={open ? styles.chevronOpen : undefined}
+          className={cn(
+            "shrink-0 text-mute transition-transform duration-200 motion-reduce:transition-none",
+            open && "rotate-90",
+          )}
           size={18}
           aria-hidden="true"
         />
       </button>
 
       {open ? (
-        <div className={styles.menu} id="recorded-prompts-menu">
-          <p className={styles.menuLead}>
+        <div className={"pb-3.5"} id="recorded-prompts-menu">
+          <p className={"text-meta text-mute"}>
             Your sealed prompts changed identity, so Illarin cannot tell which
             prompt in an older version they are. Until you say, that version
             keeps every prompt hidden and refuses downloads.
           </p>
           {versions === null ? (
-            <p className={styles.menuState}>Reading the recorded versions…</p>
+            <p className={"mt-3 text-meta text-mute italic"}>
+              Reading the recorded versions…
+            </p>
           ) : versions.length === 0 ? (
-            <p className={styles.menuState}>
+            <p className={"mt-3 text-meta text-mute italic"}>
               Every recorded version matches your sealed prompts.
             </p>
           ) : (
-            <ul className={styles.versions}>
+            <ul
+              className={
+                "mt-3 list-none space-y-5 [&_h3]:text-ui [&_h3]:font-medium [&_h3]:text-ink"
+              }
+            >
               {versions.map((version) => (
                 <li key={version.version.id}>
                   <h3>
@@ -103,7 +118,12 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
                       : ""}
                   </h3>
                   {version.unmatched.map((prompt) => (
-                    <label key={prompt.id} className={styles.match}>
+                    <label
+                      key={prompt.id}
+                      className={
+                        "mt-2 grid gap-1 text-meta text-mute [&_select]:h-11 [&_select]:rounded-control [&_select]:bg-deep [&_select]:px-3 [&_select]:text-ui [&_select]:text-ink"
+                      }
+                    >
                       <span>{prompt.name}</span>
                       <select
                         value={answerKey(answers, version, prompt.id)}
@@ -127,7 +147,9 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
                     </label>
                   ))}
                   <button
-                    className={styles.settle}
+                    className={
+                      "mt-3 inline-flex min-h-11 items-center rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45"
+                    }
                     type="button"
                     disabled={pending !== 0}
                     onClick={() => void settle(version)}
@@ -141,13 +163,15 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
             </ul>
           )}
           {message ? (
-            <p className={styles.error} role="alert">
+            <p className={"mt-3 text-meta text-stop"} role="alert">
               {message}
             </p>
           ) : null}
           {versions === null ? (
             <button
-              className={styles.retry}
+              className={
+                "mt-3 inline-flex min-h-11 items-center gap-2 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3"
+              }
               type="button"
               onClick={() => {
                 setVersions(null);

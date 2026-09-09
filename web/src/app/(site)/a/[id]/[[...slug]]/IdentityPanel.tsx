@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { saveAssetIdentity } from "@/lib/api/query";
 import { useWorkingCopy } from "@/lib/working-copy";
-import styles from "./IdentityPanel.module.css";
 
 /** The three states the adult content question has while an asset is a draft. */
 const ANSWERS: { value: boolean | null; label: string }[] = [
@@ -56,11 +55,22 @@ export function IdentityPanel({
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="identity-heading">
-      <h2 id="identity-heading">Name and rating</h2>
+    <section
+      aria-labelledby="identity-heading"
+      className="rounded-plate bg-deep p-4"
+    >
+      <h2 className="text-ui font-medium text-ink" id="identity-heading">
+        Name and rating
+      </h2>
       <form onSubmit={submit}>
-        <label htmlFor="asset-name">Name</label>
+        <label
+          className="mt-4 block text-meta font-medium text-ink"
+          htmlFor="asset-name"
+        >
+          Name
+        </label>
         <input
+          className="mt-2 h-11 w-full rounded-control bg-plane px-3 text-ui text-ink outline-offset-3 disabled:opacity-45"
           id="asset-name"
           value={name}
           placeholder="Name this page"
@@ -71,13 +81,16 @@ export function IdentityPanel({
           disabled={pending}
         />
 
-        <fieldset id="adult-content-answer" className={styles.rating}>
-          <legend>Adult content</legend>
-          <div className={styles.answers}>
+        <fieldset className="mt-4" id="adult-content-answer">
+          <legend className="text-meta font-medium text-ink">
+            Adult content
+          </legend>
+          <div className="mt-2 flex flex-wrap gap-2">
             {answers.map((answer) => (
               <button
                 key={answer.label}
                 type="button"
+                className="min-h-11 rounded-control bg-plane px-4 text-ui text-ink outline-offset-3 aria-pressed:bg-action aria-pressed:text-on-accent disabled:opacity-45"
                 aria-pressed={answer.value === isNsfw}
                 onClick={() => {
                   setSaved(false);
@@ -90,18 +103,22 @@ export function IdentityPanel({
             ))}
           </div>
         </fieldset>
-        <p className={styles.note}>
+        <p className="mt-3 text-meta text-mute">
           {isNsfw === null
             ? "Publishing will not go through until this is answered. There is no default."
             : "You can change this after publishing."}
         </p>
 
-        <button type="submit" className={styles.save} disabled={pending}>
+        <button
+          className="mt-4 min-h-11 rounded-control bg-action px-5 text-ui font-medium text-on-accent outline-offset-3 disabled:opacity-45"
+          disabled={pending}
+          type="submit"
+        >
           {pending ? "Saving…" : "Save"}
         </button>
-        {saved ? <p className={styles.saved}>Saved.</p> : null}
+        {saved ? <p className="mt-2 text-meta text-accent">Saved.</p> : null}
         {message ? (
-          <p className={styles.error} role="alert">
+          <p className="mt-2 text-meta text-stop" role="alert">
             {message}
           </p>
         ) : null}

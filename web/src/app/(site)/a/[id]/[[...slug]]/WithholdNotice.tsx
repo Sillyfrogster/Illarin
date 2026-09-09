@@ -1,6 +1,5 @@
 import { LockKeyhole } from "lucide-react";
 import type { AssetDetail } from "@/lib/api/query";
-import styles from "./WithholdNotice.module.css";
 
 export function WithholdNotice({
   withhold,
@@ -16,12 +15,17 @@ export function WithholdNotice({
   });
 
   return (
-    <section className={styles.notice} aria-labelledby="withhold-heading">
-      <LockKeyhole size={19} aria-hidden="true" />
-      <div>
-        <h2 id="withhold-heading">Withheld from public view</h2>
-        <p className={styles.reason}>{withhold.reason}</p>
-        <p className={styles.recorded}>
+    <section
+      aria-labelledby="withhold-heading"
+      className="mt-6 flex max-w-[42ch] gap-3 rounded-plate bg-stop-wash p-4"
+    >
+      <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+      <div className="min-w-0">
+        <h2 className="text-ui font-medium text-ink" id="withhold-heading">
+          Withheld from public view
+        </h2>
+        <p className="mt-1 text-meta text-ink">{withhold.reason}</p>
+        <p className="mt-1 text-meta text-mute">
           Recorded by @{withhold.actor} on {recorded}
         </p>
       </div>

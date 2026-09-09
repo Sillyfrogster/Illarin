@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilLine } from "lucide-react";
+import { ChevronDown, PencilLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
@@ -31,6 +31,7 @@ import {
   rendersOnThePage,
   splitAssetPageContent,
 } from "@/lib/asset-page-content";
+import { cn } from "@/lib/cn";
 import {
   BLOCK_GRID_GAP_PX,
   type BlockWidth,
@@ -41,6 +42,7 @@ import {
   suggestedBlockWidth,
   suggestionCandidateWidths,
 } from "@/lib/page-arrangement";
+import { pageWashVariables } from "@/lib/quiet-page-art";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { AddBlockTray } from "./AddBlockTray";
@@ -50,7 +52,6 @@ import {
   RemoveBlockDialog,
 } from "./ArrangeBlocks";
 import { WidthPicker } from "./ArrangementPickers";
-import styles from "./AssetBlocks.module.css";
 import { BlockSheet } from "./BlockSheet";
 import { ContentsBar } from "./ContentsBar";
 import type { CreatorMenuProps } from "./CreatorMenu";
@@ -146,6 +147,7 @@ export function AssetBlocks({
   creatorMenu,
   allowedApps,
   eligibleApps,
+  shellClassName,
 }: {
   assetId: string;
   kind: BrowseKind;
@@ -156,6 +158,7 @@ export function AssetBlocks({
   creatorMenu: CreatorMenuProps;
   allowedApps: "lumiverse"[];
   eligibleApps: "lumiverse"[];
+  shellClassName: string;
 }) {
   const candidate = useWorkingCopy();
   const router = useRouter();
@@ -427,290 +430,323 @@ export function AssetBlocks({
           setReaderView(true);
         }}
         onReturnToEditing={() => setReaderView(false)}
+        shellClassName={shellClassName}
       />
 
-      {arranging && editingVisible ? (
-        <ArrangeBlocks
-          assetId={assetId}
-          blocks={currentBlocks}
-          suggestedWidths={suggestedWidths}
-          onChange={setCurrentBlocks}
-          onClose={() => setArranging(false)}
-        />
-      ) : (
-        <>
-          {editingVisible ? (
-            <p className={styles.narrowNote}>
-              Block widths arrange the desktop page. On this screen every block
-              fills the width, and no content is lost.
-            </p>
-          ) : null}
-          {arrangementMessage ? (
-            <p className={styles.arrangementMessage} role="alert">
-              {arrangementMessage}
-            </p>
-          ) : null}
-          {invited ? (
-            <EmptyPageInvitation
-              kind={kind}
-              coreBlocks={coreBlockTitles(currentBlocks)}
-              canAdd={addableBlocks.length > 0}
-            />
-          ) : fullness === "empty" ? (
-            <EmptyPage kind={kind} />
-          ) : null}
-          {rows.length === 0 ? null : (
-            <div
-              className={styles.rows}
-              ref={setRowsRef}
-              style={
-                {
-                  "--block-grid-gap": `${BLOCK_GRID_GAP_PX}px`,
-                } as CSSProperties
-              }
-            >
-              {rows.map((row, rowIndex) => (
-                <div
-                  className={styles.row}
-                  key={row.map((item) => item.block.id).join(":")}
-                >
-                  {row.map(({ block, columns, startColumn }) => (
-                    <article
-                      id={`block-${block.id}`}
-                      key={block.id}
-                      className={styles.block}
-                      data-block-id={block.id}
-                      data-hidden={
-                        editingVisible && block.hidden ? true : undefined
-                      }
-                      style={
-                        {
-                          "--block-columns": columns,
-                          "--block-start": startColumn,
-                        } as CSSProperties
-                      }
-                    >
-                      <header className={styles.header}>
-                        <div className={styles.heading}>
-                          <h2 className={styles.title}>{block.title}</h2>
-                          {editingVisible && block.required ? (
-                            <span>
-                              {block.hideable ? "Required" : "Always shown"}
-                            </span>
-                          ) : null}
-                          <BlockCounts elements={block.elements} />
-                        </div>
-                        {editingVisible ? (
-                          <div className={styles.controls}>
-                            <WidthPicker
-                              width={block.width}
-                              layout={block.layout}
-                              suggestedWidth={suggestedWidths[block.id]}
-                              pending={savingWidth === block.id}
-                              onIssue={setArrangementMessage}
-                              onSelect={async (width) => {
-                                if (savingWidth) return;
-                                setSavingWidth(block.id);
-                                setArrangementMessage("");
-                                try {
-                                  const saved = await saveAssetBlock(
-                                    candidate,
-                                    assetId,
-                                    block.id,
-                                    blockSaveRequest(block, { width }),
-                                  );
-                                  setCurrentBlocks((current) =>
-                                    current.map((item) =>
-                                      item.id === saved.id ? saved : item,
-                                    ),
-                                  );
-                                } catch (error) {
-                                  setArrangementMessage(
-                                    error instanceof Error
-                                      ? error.message
-                                      : "The width could not be saved. Try again.",
-                                  );
-                                } finally {
-                                  setSavingWidth(null);
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className={styles.edit}
-                              aria-label={`Edit ${block.title}`}
-                              onClick={() => setEditing(block.id)}
-                            >
-                              <PencilLine size={15} aria-hidden="true" />
-                              <span>Edit block</span>
-                            </button>
-                          </div>
-                        ) : null}
-                      </header>
-                      {editingVisible && block.hidden ? (
-                        <div className={styles.hiddenNotice}>
-                          <span>
-                            Hidden from the public page. Everything in it is
-                            kept, and it still travels in every download.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  const saved = await arrangeAssetBlocks(
-                                    candidate,
-                                    assetId,
-                                    {
-                                      blocks: currentBlocks.map((item) => ({
-                                        id: item.id,
-                                        hidden:
-                                          item.id === block.id
-                                            ? false
-                                            : item.hidden,
-                                        width: item.width,
-                                      })),
-                                    },
-                                  );
-                                  setCurrentBlocks(saved);
-                                } catch (error) {
-                                  setArrangementMessage(
-                                    error instanceof Error
-                                      ? error.message
-                                      : "The block could not be shown. Try again.",
-                                  );
-                                }
-                              })()
-                            }
-                          >
-                            Show it again
-                          </button>
-                        </div>
-                      ) : null}
-                      <div
-                        className={styles.elements}
-                        data-block-content
+      <div className={cn(shellClassName, "pt-10")}>
+        {arranging && editingVisible ? (
+          <ArrangeBlocks
+            assetId={assetId}
+            blocks={currentBlocks}
+            suggestedWidths={suggestedWidths}
+            onChange={setCurrentBlocks}
+            onClose={() => setArranging(false)}
+          />
+        ) : (
+          <>
+            {editingVisible ? (
+              <p className="mb-8 rounded-control bg-deep p-3 text-meta text-mute md:hidden">
+                Block widths arrange the desktop page. On this screen every
+                block fills the width, and no content is lost.
+              </p>
+            ) : null}
+            {arrangementMessage ? (
+              <p
+                className="mb-5 rounded-control bg-stop-wash p-3 text-meta text-ink"
+                role="alert"
+              >
+                {arrangementMessage}
+              </p>
+            ) : null}
+            {invited ? (
+              <EmptyPageInvitation
+                kind={kind}
+                coreBlocks={coreBlockTitles(currentBlocks)}
+                canAdd={addableBlocks.length > 0}
+              />
+            ) : fullness === "empty" ? (
+              <EmptyPage kind={kind} />
+            ) : null}
+            {rows.length === 0 ? null : (
+              <div
+                className="flex flex-col gap-14 md:gap-[5.5rem]"
+                ref={setRowsRef}
+                style={
+                  {
+                    "--block-grid-gap": `${BLOCK_GRID_GAP_PX}px`,
+                  } as CSSProperties
+                }
+              >
+                {rows.map((row, rowIndex) => (
+                  <div
+                    className="grid grid-cols-1 items-start gap-14 md:grid-cols-12 md:gap-[var(--block-grid-gap)] md:gap-y-[5.5rem]"
+                    key={row.map((item) => item.block.id).join(":")}
+                  >
+                    {row.map(({ block, columns, startColumn }) => (
+                      <article
+                        id={`block-${block.id}`}
+                        key={block.id}
+                        className={cn(
+                          "relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-type:inline-size] [container-name:block]",
+                          "col-span-full md:[grid-column:var(--block-start)_/_span_var(--block-columns)]",
+                          editingVisible && block.hidden
+                            ? "bg-deep/60 px-5 pt-6 pb-7"
+                            : null,
+                        )}
+                        data-block-id={block.id}
+                        data-hidden={
+                          editingVisible && block.hidden ? true : undefined
+                        }
                         style={
                           {
-                            "--element-tracks": elementTracks(
-                              block.layout,
-                              block.elements.length,
-                            ),
+                            "--block-columns": columns,
+                            "--block-start": startColumn,
                           } as CSSProperties
                         }
                       >
-                        {block.elements.map((element) => (
-                          <div
-                            key={element.id}
-                            data-empty={element.isEmpty ? true : undefined}
-                          >
-                            <ElementBody
-                              element={element}
-                              isOwner={editingVisible}
-                              images={images}
-                              blockTitle={block.title}
-                              blockElements={block.elements.length}
-                              markEmpty={!invited}
-                              onExpand={() => {
-                                setExpandApps(allowedApps);
-                                setExpandMessage("");
-                                setExpanding({
-                                  blockId: block.id,
-                                  element: structuredClone(element),
-                                });
-                              }}
-                              onReadMore={() =>
-                                setReading({
-                                  blockId: block.id,
-                                  element,
-                                })
-                              }
-                            />
-                            {reading?.blockId === block.id &&
-                            reading.element.id === element.id ? (
-                              <ElementReader
-                                element={reading.element}
-                                images={images}
-                                onDismiss={dismissReader}
-                              />
+                        <header
+                          className={cn(
+                            "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
+                            editingVisible && block.hidden
+                              ? "opacity-50"
+                              : null,
+                          )}
+                        >
+                          <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                            <h2 className="font-display text-title font-medium tracking-tight text-ink [overflow-wrap:anywhere]">
+                              {block.title}
+                            </h2>
+                            {editingVisible && block.required ? (
+                              <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
+                                {block.hideable ? "Required" : "Always shown"}
+                              </span>
                             ) : null}
+                            <BlockCounts elements={block.elements} />
                           </div>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
-                  {ornament?.row === rowIndex ? (
-                    <Ornament
-                      kind={kind}
-                      barren={fullness === "barren"}
-                      placement="inRow"
-                      style={
-                        {
-                          "--block-columns": ornament.columns,
-                          "--block-start": ornament.startColumn,
-                        } as CSSProperties
-                      }
-                    />
-                  ) : null}
-                </div>
-              ))}
-              {ornamentAtFoot ? (
-                <Ornament
-                  kind={kind}
-                  barren={fullness === "barren"}
-                  placement="atFoot"
-                />
-              ) : null}
-            </div>
-          )}
-          {modelContent.length > 0 ? (
-            <details className={styles.modelContent}>
-              <summary>
-                <span className={styles.modelContentTitle}>
-                  Model-facing content
-                </span>
-                <span className={styles.modelContentSummary}>
-                  System prompt and post-history instructions
-                </span>
-              </summary>
-              <div className={styles.modelContentBody}>
-                {modelContent.map(({ block, element }) => (
-                  <div key={element.id}>
-                    <ElementBody
-                      element={element}
-                      isOwner={false}
-                      images={images}
-                      onReadMore={() =>
-                        setReading({
-                          blockId: block.id,
-                          element,
-                        })
-                      }
-                    />
-                    {reading?.blockId === block.id &&
-                    reading.element.id === element.id ? (
-                      <ElementReader
-                        element={reading.element}
-                        images={images}
-                        onDismiss={dismissReader}
+                          {editingVisible ? (
+                            <div className="flex shrink-0 items-center gap-2">
+                              <WidthPicker
+                                width={block.width}
+                                layout={block.layout}
+                                suggestedWidth={suggestedWidths[block.id]}
+                                pending={savingWidth === block.id}
+                                onIssue={setArrangementMessage}
+                                onSelect={async (width) => {
+                                  if (savingWidth) return;
+                                  setSavingWidth(block.id);
+                                  setArrangementMessage("");
+                                  try {
+                                    const saved = await saveAssetBlock(
+                                      candidate,
+                                      assetId,
+                                      block.id,
+                                      blockSaveRequest(block, { width }),
+                                    );
+                                    setCurrentBlocks((current) =>
+                                      current.map((item) =>
+                                        item.id === saved.id ? saved : item,
+                                      ),
+                                    );
+                                  } catch (error) {
+                                    setArrangementMessage(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "The width could not be saved. Try again.",
+                                    );
+                                  } finally {
+                                    setSavingWidth(null);
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink"
+                                aria-label={`Edit ${block.title}`}
+                                onClick={() => setEditing(block.id)}
+                              >
+                                <PencilLine size={15} aria-hidden="true" />
+                                <span className="@max-[420px]:sr-only">
+                                  Edit block
+                                </span>
+                              </button>
+                            </div>
+                          ) : null}
+                        </header>
+                        {editingVisible && block.hidden ? (
+                          <div className="-mt-1 mb-5 flex flex-col items-stretch justify-between gap-3 rounded-control bg-plane p-3 text-meta text-mute sm:flex-row sm:items-center">
+                            <span>
+                              Hidden from the public page. Everything in it is
+                              kept, and it still travels in every download.
+                            </span>
+                            <button
+                              type="button"
+                              className="min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45"
+                              onClick={() =>
+                                void (async () => {
+                                  try {
+                                    const saved = await arrangeAssetBlocks(
+                                      candidate,
+                                      assetId,
+                                      {
+                                        blocks: currentBlocks.map((item) => ({
+                                          id: item.id,
+                                          hidden:
+                                            item.id === block.id
+                                              ? false
+                                              : item.hidden,
+                                          width: item.width,
+                                        })),
+                                      },
+                                    );
+                                    setCurrentBlocks(saved);
+                                  } catch (error) {
+                                    setArrangementMessage(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "The block could not be shown. Try again.",
+                                    );
+                                  }
+                                })()
+                              }
+                            >
+                              Show it again
+                            </button>
+                          </div>
+                        ) : null}
+                        <div
+                          className={cn(
+                            "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
+                            editingVisible && block.hidden
+                              ? "opacity-50"
+                              : null,
+                          )}
+                          data-block-content
+                          style={
+                            {
+                              "--element-tracks": elementTracks(
+                                block.layout,
+                                block.elements.length,
+                              ),
+                            } as CSSProperties
+                          }
+                        >
+                          {block.elements.map((element) => (
+                            <div
+                              key={element.id}
+                              data-empty={element.isEmpty ? true : undefined}
+                            >
+                              <ElementBody
+                                element={element}
+                                isOwner={editingVisible}
+                                images={images}
+                                blockTitle={block.title}
+                                blockElements={block.elements.length}
+                                markEmpty={!invited}
+                                onExpand={() => {
+                                  setExpandApps(allowedApps);
+                                  setExpandMessage("");
+                                  setExpanding({
+                                    blockId: block.id,
+                                    element: structuredClone(element),
+                                  });
+                                }}
+                                onReadMore={() =>
+                                  setReading({
+                                    blockId: block.id,
+                                    element,
+                                  })
+                                }
+                              />
+                              {reading?.blockId === block.id &&
+                              reading.element.id === element.id ? (
+                                <ElementReader
+                                  element={reading.element}
+                                  images={images}
+                                  onDismiss={dismissReader}
+                                />
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                    {ornament?.row === rowIndex ? (
+                      <Ornament
+                        kind={kind}
+                        barren={fullness === "barren"}
+                        placement="inRow"
+                        style={
+                          {
+                            "--block-columns": ornament.columns,
+                            "--block-start": ornament.startColumn,
+                          } as CSSProperties
+                        }
                       />
                     ) : null}
                   </div>
                 ))}
+                {ornamentAtFoot ? (
+                  <Ornament
+                    kind={kind}
+                    barren={fullness === "barren"}
+                    placement="atFoot"
+                  />
+                ) : null}
               </div>
-            </details>
-          ) : null}
-          {editingVisible && adding ? (
-            <AddBlockTray
-              addable={addableBlocks}
-              blocks={currentBlocks}
-              pending={blockActionPending}
-              onAdd={addBlock}
-              onClose={() => setAdding(false)}
-            />
-          ) : null}
-        </>
-      )}
+            )}
+            {modelContent.length > 0 ? (
+              <details className="group mt-section rounded-plate bg-deep/70">
+                <summary className="flex min-h-16 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-1 p-5 outline-offset-3 [&::-webkit-details-marker]:hidden">
+                  <span className="text-ui font-medium text-ink">
+                    Model-facing content
+                  </span>
+                  <span className="text-meta text-mute">
+                    System prompt and post-history instructions
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="ml-3 inline size-4 align-middle transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                    />
+                  </span>
+                </summary>
+                <div className="grid gap-7 px-5 pb-5">
+                  {modelContent.map(({ block, element }) => (
+                    <div key={element.id}>
+                      <ElementBody
+                        element={element}
+                        isOwner={false}
+                        images={images}
+                        onReadMore={() =>
+                          setReading({
+                            blockId: block.id,
+                            element,
+                          })
+                        }
+                      />
+                      {reading?.blockId === block.id &&
+                      reading.element.id === element.id ? (
+                        <ElementReader
+                          element={reading.element}
+                          images={images}
+                          onDismiss={dismissReader}
+                        />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+            {editingVisible && adding ? (
+              <AddBlockTray
+                addable={addableBlocks}
+                blocks={currentBlocks}
+                pending={blockActionPending}
+                onAdd={addBlock}
+                onClose={() => setAdding(false)}
+              />
+            ) : null}
+          </>
+        )}
+      </div>
       {editedBlock ? (
         <BlockSheet
           assetId={assetId}
@@ -846,8 +882,20 @@ function Ornament({
     <div
       aria-hidden="true"
       data-measurement-ignore
-      className={`${styles.ornament} ${styles[placement]}`}
-      style={style}
+      className={cn(
+        "relative",
+        placement === "inRow"
+          ? "min-h-52 md:min-h-60 md:[grid-column:var(--block-start)_/_span_var(--block-columns)]"
+          : "h-52 md:mt-10 md:h-70",
+        "[--art-bleed:max(72px,(100vw-var(--shell))/2+var(--gutter))]",
+        "before:absolute before:-z-1 before:bg-[image:var(--ornament-light)] before:bg-cover before:bg-[position:center_32%] before:bg-no-repeat before:opacity-50 before:content-['']",
+        "before:[mask-composite:intersect] before:[mask-image:linear-gradient(to_right,transparent,#000_52%),linear-gradient(to_bottom,transparent,#000_30%,#000_62%,transparent)]",
+        "dark:before:bg-[image:var(--ornament-dark)] dark:before:opacity-[0.78]",
+        placement === "inRow"
+          ? "before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:-inset-y-12 md:before:left-0 md:before:w-[calc(100%+var(--art-bleed))]"
+          : "before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:left-[46%] md:before:w-[calc(54%+var(--art-bleed))]",
+      )}
+      style={{ ...pageWashVariables(), ...style }}
     />
   );
 }
@@ -855,7 +903,7 @@ function Ornament({
 function BlockCounts({ elements }: { elements: AssetElement[] }) {
   const counts = blockCounts(elements);
   if (!counts) return null;
-  return <p className={styles.counts}>{counts}</p>;
+  return <p className="basis-full text-label text-mute">{counts}</p>;
 }
 
 function holdsCreatorPictures(row: readonly { block: AssetBlock }[]): boolean {

@@ -4,11 +4,15 @@ import { Eye, ListTree, Plus, Undo2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AssetBlock } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
-import styles from "./ContentsBar.module.css";
+import { cn } from "@/lib/cn";
 import { CreatorMenu, type CreatorMenuProps } from "./CreatorMenu";
 
 type ContentsBlock = Pick<AssetBlock, "id" | "title">;
 
+const TOOL =
+  "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
+
+/** The blocks a page holds, and the tools its creator works on it with */
 export function ContentsBar({
   blocks,
   isOwner,
@@ -17,6 +21,7 @@ export function ContentsBar({
   readerView,
   canAdd,
   creatorMenu,
+  shellClassName,
   onToggleArrange,
   onToggleAdd,
   onReaderView,
@@ -29,6 +34,7 @@ export function ContentsBar({
   readerView: boolean;
   canAdd: boolean;
   creatorMenu: CreatorMenuProps;
+  shellClassName: string;
   onToggleArrange: () => void;
   onToggleAdd: () => void;
   onReaderView: () => void;
@@ -91,84 +97,112 @@ export function ContentsBar({
   if (blocks.length === 0 && !hasPageTools) return null;
 
   return (
-    <div ref={bar} className={styles.bar}>
-      {arranging ? (
-        <p className={styles.mode}>Arrangement outline</p>
-      ) : blocks.length > 0 ? (
-        <nav className={styles.contents} aria-label="Contents">
-          <span className={styles.label}>Contents</span>
-          <ol className={styles.entries}>
-            {blocks.map((block) => (
-              <li key={block.id}>
-                <a
-                  href={`#block-${block.id}`}
-                  aria-current={
-                    activeBlockId === block.id ? "location" : undefined
-                  }
-                  onClick={() => setActiveBlockId(block.id)}
-                >
-                  {block.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      ) : isOwner ? (
-        <p className={styles.mode}>Start this page</p>
-      ) : null}
+    <div
+      className="sticky top-[var(--header-height)] z-20 bg-field shadow-contents"
+      ref={bar}
+    >
+      <div
+        className={cn(
+          shellClassName,
+          "flex items-center justify-between gap-6 overflow-x-auto py-1",
+        )}
+      >
+        {arranging ? (
+          <p className="shrink-0 py-3 text-meta text-mute">
+            Arrangement outline
+          </p>
+        ) : blocks.length > 0 ? (
+          <nav
+            aria-label="Contents"
+            className="flex min-w-0 items-center gap-6"
+          >
+            <span className="hidden shrink-0 text-meta text-mute lg:inline">
+              On this page
+            </span>
+            <ol className="flex min-w-0 list-none items-center gap-6 overflow-x-auto">
+              {blocks.map((block) => (
+                <li className="shrink-0" key={block.id}>
+                  <a
+                    aria-current={
+                      activeBlockId === block.id ? "location" : undefined
+                    }
+                    className="flex min-h-11 items-center whitespace-nowrap text-ui text-mute outline-offset-3 hover:text-ink aria-[current=location]:font-medium aria-[current=location]:text-accent"
+                    href={`#block-${block.id}`}
+                    onClick={() => setActiveBlockId(block.id)}
+                  >
+                    {block.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : isOwner ? (
+          <p className="shrink-0 py-3 text-meta text-mute">Start this page</p>
+        ) : null}
 
-      {hasPageTools ? (
-        <div className={styles.tools} role="toolbar" aria-label="Page tools">
-          {isOwner && readerView ? (
-            <>
-              <span className={styles.viewing}>
-                <Eye size={16} aria-hidden="true" />
-                <span>Reader’s view</span>
-              </span>
-              <button type="button" onClick={onReturnToEditing}>
-                <Undo2 size={16} aria-hidden="true" />
-                <span>Return</span>
-              </button>
-            </>
-          ) : isOwner ? (
-            <>
-              <button
-                type="button"
-                aria-expanded={arranging}
-                onClick={onToggleArrange}
-              >
-                {arranging ? (
-                  <X size={17} aria-hidden="true" />
-                ) : (
-                  <ListTree size={17} aria-hidden="true" />
-                )}
-                <span>{arranging ? "Close outline" : "Arrange"}</span>
-              </button>
-              {canAdd ? (
+        {hasPageTools ? (
+          <div
+            aria-label="Page tools"
+            className="flex shrink-0 items-center gap-1"
+            role="toolbar"
+          >
+            {isOwner && readerView ? (
+              <>
+                <span className="inline-flex min-h-11 shrink-0 items-center gap-2 px-3 text-meta text-mute">
+                  <Eye aria-hidden="true" size={16} />
+                  <span>Reader’s view</span>
+                </span>
                 <button
+                  className={TOOL}
+                  onClick={onReturnToEditing}
                   type="button"
-                  aria-expanded={adding}
-                  onClick={onToggleAdd}
                 >
-                  {adding ? (
-                    <X size={17} aria-hidden="true" />
-                  ) : (
-                    <Plus size={17} aria-hidden="true" />
-                  )}
-                  <span>{adding ? "Close add" : "Add block"}</span>
+                  <Undo2 aria-hidden="true" size={16} />
+                  <span>Return</span>
                 </button>
-              ) : null}
-              <button type="button" onClick={onReaderView}>
-                <Eye size={17} aria-hidden="true" />
-                <span>Reader’s view</span>
-              </button>
+              </>
+            ) : isOwner ? (
+              <>
+                <button
+                  aria-expanded={arranging}
+                  className={TOOL}
+                  onClick={onToggleArrange}
+                  type="button"
+                >
+                  {arranging ? (
+                    <X aria-hidden="true" size={17} />
+                  ) : (
+                    <ListTree aria-hidden="true" size={17} />
+                  )}
+                  <span>{arranging ? "Close outline" : "Arrange"}</span>
+                </button>
+                {canAdd ? (
+                  <button
+                    aria-expanded={adding}
+                    className={TOOL}
+                    onClick={onToggleAdd}
+                    type="button"
+                  >
+                    {adding ? (
+                      <X aria-hidden="true" size={17} />
+                    ) : (
+                      <Plus aria-hidden="true" size={17} />
+                    )}
+                    <span>{adding ? "Close add" : "Add block"}</span>
+                  </button>
+                ) : null}
+                <button className={TOOL} onClick={onReaderView} type="button">
+                  <Eye aria-hidden="true" size={17} />
+                  <span>Reader’s view</span>
+                </button>
+                <CreatorMenu {...creatorMenu} />
+              </>
+            ) : (
               <CreatorMenu {...creatorMenu} />
-            </>
-          ) : (
-            <CreatorMenu {...creatorMenu} />
-          )}
-        </div>
-      ) : null}
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

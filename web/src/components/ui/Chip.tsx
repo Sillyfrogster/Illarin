@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import styles from "./Chip.module.css";
+import { cn } from "@/lib/cn";
 
 export type ChipItem = {
   /** Distinct within the set, because a value may repeat. */
@@ -10,6 +10,9 @@ export type ChipItem = {
   label: string;
   href?: string;
 };
+
+const CHIP =
+  "inline-flex min-h-8 max-w-full items-center justify-center rounded-control bg-deep px-2.5 py-1 text-center font-prose text-label text-mute [overflow-wrap:anywhere]";
 
 /** A set of short values a reader scans, cut off after `limit` of them. */
 export function ChipSet({
@@ -27,28 +30,34 @@ export function ChipSet({
 
   return (
     <div className={className}>
-      <ul className={styles.list}>
+      <ul className="flex list-none flex-wrap items-start gap-1.5">
         {shown.map((item) => (
           <li key={item.id}>
             {item.href ? (
               <Link
-                className={`${styles.chip} ${styles.link}`}
+                className={cn(
+                  CHIP,
+                  "transition-colors duration-200 hover:bg-accent-wash hover:text-ink motion-reduce:transition-none",
+                )}
                 href={item.href}
               >
                 {item.label}
               </Link>
             ) : (
-              <span className={styles.chip}>{item.label}</span>
+              <span className={CHIP}>{item.label}</span>
             )}
           </li>
         ))}
         {held > 0 ? (
           <li>
             <button
-              type="button"
-              className={`${styles.chip} ${styles.more}`}
               aria-expanded={showingAll}
+              className={cn(
+                CHIP,
+                "cursor-pointer bg-transparent font-medium whitespace-nowrap text-ink hover:bg-deep",
+              )}
               onClick={() => setShowingAll((current) => !current)}
+              type="button"
             >
               {showingAll ? "Fewer" : `${held} more`}
             </button>

@@ -1,17 +1,19 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Expand, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { FullscreenPreview } from "@/components/ui/fullscreen-preview";
 import type { AssetImage, BrowseKind, NsfwVisibility } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import {
   readAssetReveal,
   readSessionVisibility,
   writeAssetReveal,
 } from "@/lib/nsfw-visibility";
-import styles from "./AssetMedia.module.css";
 
 interface AssetMediaProps {
   id: string;
@@ -23,6 +25,11 @@ interface AssetMediaProps {
   visibility: NsfwVisibility;
 }
 
+function clearVariant(url: string) {
+  return url.replace("_blurred/", "/");
+}
+
+/** The picture a creator put at the front, at the size and shape they made it */
 export function AssetMedia({
   id,
   media,
@@ -32,6 +39,7 @@ export function AssetMedia({
   visibility,
 }: AssetMediaProps) {
   const { account } = useAuth();
+  const reduced = useReducedMotion();
   const presentationMedia = media.filter((image) => image.role !== "pack_item");
   const [chosen, setChosen] = useState<number | null>(() => {
     const cover = presentationMedia.findIndex((image) => image.isCover);
@@ -39,6 +47,7 @@ export function AssetMedia({
   });
   const [failed, setFailed] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [enlarged, setEnlarged] = useState(false);
   const [signedOutVisibility, setSignedOutVisibility] =
     useState<NsfwVisibility>();
   const shown = chosen === null ? undefined : presentationMedia[chosen];
@@ -61,83 +70,120 @@ export function AssetMedia({
     setRevealed(readAssetReveal(id));
   }, [canReveal, id]);
 
-  function reveal() {
-    setRevealed(true);
-    writeAssetReveal(id);
-  }
+  const source = shown
+    ? showClear
+      ? clearVariant(shown.detailUrl)
+      : shown.detailUrl
+    : "";
 
   return (
-    <div className={styles.media}>
-      <div className={styles.frame}>
+    <div className="mx-auto w-full max-w-[350px]">
+      <motion.div
+        className="relative"
+        initial={false}
+        transition={{ type: "spring", stiffness: 180, damping: 22 }}
+        whileHover={reduced || useFallback ? undefined : { rotate: -1, y: -5 }}
+      >
         {useFallback ? (
-          <div className={styles.defaultCover}>
+          <div className="relative aspect-3/4 w-full overflow-hidden rounded-plate shadow-cover">
             <DefaultCover kind={kind} />
           </div>
         ) : (
-          <Image
-            className={styles.cover}
-            src={showClear ? clearVariant(shown.detailUrl) : shown.detailUrl}
-            alt={name}
-            width={shown.width}
-            height={shown.height}
-            sizes="(max-width: 900px) 100vw, 420px"
-            onError={() => setFailed(true)}
-            priority
-            unoptimized
-          />
+          <button
+            aria-label={`See ${name || "this picture"} at full size`}
+            className="group block w-full cursor-zoom-in rounded-plate outline-offset-3"
+            onClick={() => setEnlarged(true)}
+            type="button"
+          >
+            <Image
+              alt={name}
+              className="h-auto w-full rounded-plate bg-media shadow-cover"
+              height={shown.height}
+              onError={() => setFailed(true)}
+              priority
+              sizes="(max-width: 900px) 88vw, 350px"
+              src={source}
+              unoptimized
+              width={shown.width}
+            />
+            <span className="absolute right-3 bottom-3 flex size-11 items-center justify-center rounded-full bg-field text-ink opacity-100 transition-opacity duration-200 motion-reduce:transition-none lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-visible:opacity-100">
+              <Expand aria-hidden="true" className="size-4" />
+            </span>
+          </button>
         )}
         {isNsfw === true ? (
-          <p className={styles.flag}>
+          <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium tracking-wide text-on-media uppercase">
             {showClear ? (
-              <Eye size={13} aria-hidden="true" />
+              <Eye aria-hidden="true" className="size-3.5" />
             ) : (
-              <EyeOff size={13} aria-hidden="true" />
+              <EyeOff aria-hidden="true" className="size-3.5" />
             )}
             {showClear ? "Adult" : "Adult · blurred"}
           </p>
         ) : null}
         {canReveal && !revealed ? (
-          <button type="button" className={styles.reveal} onClick={reveal}>
-            <Eye size={16} aria-hidden="true" />
+          <button
+            className="absolute right-4 bottom-4 inline-flex min-h-11 items-center gap-2 rounded-control bg-field px-4 text-meta font-medium text-ink shadow-cover outline-offset-3"
+            onClick={() => {
+              setRevealed(true);
+              writeAssetReveal(id);
+            }}
+            type="button"
+          >
+            <Eye aria-hidden="true" className="size-4" />
             Show images
           </button>
         ) : null}
-      </div>
+      </motion.div>
 
       {presentationMedia.length > 1 ||
       (presentationMedia.length === 1 && chosen === null) ? (
-        <ul className={styles.strip}>
+        <ul className="mt-3 grid list-none grid-cols-5 gap-2">
           {presentationMedia.map((image, index) => (
             <li key={image.id}>
               <button
-                type="button"
-                className={index === chosen ? styles.pickedThumb : styles.thumb}
                 aria-current={index === chosen}
-                aria-label={`Image ${index + 1} of ${presentationMedia.length}`}
+                aria-label={`Picture ${index + 1} of ${presentationMedia.length}`}
+                className={cn(
+                  "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-200 motion-reduce:transition-none",
+                  index === chosen
+                    ? "inset-ring-2 inset-ring-accent"
+                    : "opacity-70 hover:-translate-y-0.5 hover:opacity-100",
+                )}
                 onClick={() => {
                   setChosen(index);
                   setFailed(false);
                 }}
+                type="button"
               >
                 <Image
+                  alt=""
+                  className="size-full object-cover"
+                  height={image.height}
+                  sizes="80px"
                   src={
                     showClear ? clearVariant(image.thumbUrl) : image.thumbUrl
                   }
-                  alt=""
-                  width={image.width}
-                  height={image.height}
-                  sizes="80px"
                   unoptimized
+                  width={image.width}
                 />
               </button>
             </li>
           ))}
         </ul>
       ) : null}
+
+      {enlarged && shown ? (
+        <FullscreenPreview
+          onClose={() => setEnlarged(false)}
+          picture={{
+            alt: name,
+            height: shown.height,
+            src: source,
+            width: shown.width,
+          }}
+        />
+      ) : null}
     </div>
   );
-}
-
-function clearVariant(url: string) {
-  return url.replace("_blurred/", "/");
 }

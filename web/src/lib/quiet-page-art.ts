@@ -1,4 +1,6 @@
 import type { StaticImageData } from "next/image";
+import detailDark from "@/assets/art/full/illarin-detail-page-art-dark-v2.webp";
+import detailLight from "@/assets/art/full/illarin-detail-page-art-light-v2.webp";
 import characterDark from "@/assets/art/full/illarin-quiet-page-character-dark-v1.webp";
 import characterLight from "@/assets/art/full/illarin-quiet-page-character-light-v1.webp";
 import lorebookDark from "@/assets/art/full/illarin-quiet-page-lorebook-dark-v1.webp";
@@ -44,5 +46,16 @@ export function quietPageArtVariables(
   return {
     "--quiet-art-light": `url(${art.light.src})`,
     "--quiet-art-dark": `url(${art.dark.src})`,
+  };
+}
+
+/**
+ * The wash a page with plenty on it puts in the space its last row leaves. It
+ * is one piece for the whole catalog rather than a piece per kind.
+ */
+export function pageWashVariables(): Record<string, string> {
+  return {
+    "--ornament-light": `url(${detailLight.src})`,
+    "--ornament-dark": `url(${detailDark.src})`,
   };
 }

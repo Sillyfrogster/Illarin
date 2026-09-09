@@ -6,8 +6,6 @@ import { FormattingNotice } from "@/components/ui/RichText";
 import type { AssetElement, AssetImage } from "@/lib/api/query";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
 import { ElementContent } from "./ElementBody";
-import elementStyles from "./ElementBody.module.css";
-import styles from "./ElementReader.module.css";
 
 export function ElementReader({
   element,
@@ -33,23 +31,39 @@ export function ElementReader({
   }, [onDismiss]);
 
   return (
-    <section className={styles.reader} aria-labelledby={titleId}>
-      <header className={styles.header}>
-        <h3 id={titleId}>{element.label || "Content"}</h3>
-        <button ref={dismiss} type="button" onClick={onDismiss}>
-          <ChevronUp size={16} aria-hidden="true" />
+    <section
+      aria-labelledby={titleId}
+      className="mt-6 rounded-plate bg-deep"
+      data-measurement-ignore
+    >
+      <header className="flex flex-col items-start justify-between gap-4 p-4 sm:flex-row sm:items-center">
+        <h3
+          className="min-w-0 font-display text-section font-medium tracking-tight text-ink [overflow-wrap:anywhere]"
+          id={titleId}
+        >
+          {element.label || "Content"}
+        </h3>
+        <button
+          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-control bg-plane px-3 text-meta font-medium text-mute outline-offset-3 hover:text-ink sm:w-auto"
+          onClick={onDismiss}
+          ref={dismiss}
+          type="button"
+        >
+          <ChevronUp aria-hidden="true" size={16} />
           Collapse
         </button>
       </header>
-      <div className={styles.scroller}>
-        <div className={elementStyles.element}>
+      <div className="max-h-[min(72dvh,760px)] overflow-y-auto px-4 pt-1 pb-6">
+        <div className="flex min-w-0 flex-col gap-2.5 text-mute">
           <ElementContent element={element} images={images} />
           {formattingWasRemoved(richTextsOf(element)) ? (
             <FormattingNotice />
           ) : null}
         </div>
       </div>
-      <footer className={styles.footer}>Esc closes this reader.</footer>
+      <p className="border-rule border-t px-4 py-3 text-meta text-mute">
+        Esc closes this reader.
+      </p>
     </section>
   );
 }

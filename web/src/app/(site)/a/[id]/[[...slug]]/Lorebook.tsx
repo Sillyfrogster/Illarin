@@ -12,13 +12,13 @@ import {
 import { ChipSet } from "@/components/ui/Chip";
 import { RichText } from "@/components/ui/RichText";
 import type { LorebookEntry } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import {
   type EntryPresentation,
   type EntrySort,
   type LorebookIndex,
   readLorebook,
 } from "@/lib/lorebook-entry";
-import styles from "./Lorebook.module.css";
 
 const KEY_PREVIEW_LIMIT = 6;
 
@@ -39,7 +39,7 @@ export function Lorebook({ entries }: { entries: LorebookEntry[] }) {
     book.entries.find((entry) => entry.id === chosen) ?? book.entries[0];
 
   return (
-    <div className={styles.lorebook}>
+    <div className="flex min-w-0 flex-col gap-5 [--index-gap:34px] [--index-width:272px]">
       <Controls
         search={search}
         sort={sort}
@@ -52,7 +52,7 @@ export function Lorebook({ entries }: { entries: LorebookEntry[] }) {
       {book.entries.length === 0 ? (
         <Nothing search={search} book={book} />
       ) : (
-        <div className={styles.body}>
+        <div className="relative grid items-start gap-6 @min-[760px]:grid-cols-[var(--index-width)_minmax(0,1fr)] @min-[760px]:gap-[var(--index-gap)] @min-[760px]:before:absolute @min-[760px]:before:inset-y-0 @min-[760px]:before:left-[calc(var(--index-width)+var(--index-gap)/2)] @min-[760px]:before:border-rule @min-[760px]:before:border-l @min-[760px]:before:content-['']">
           <Index
             entries={book.entries}
             names={names}
@@ -106,7 +106,7 @@ function Index({
 
   return (
     <div
-      className={styles.index}
+      className="flex max-h-67 flex-col gap-px overflow-y-auto overscroll-contain border-rule border-b pr-1 pb-5 [scrollbar-color:var(--v-rule)_transparent] [scrollbar-width:thin] @min-[760px]:sticky @min-[760px]:top-[calc(var(--header-height)+22px)] @min-[760px]:max-h-[min(70dvh,616px)] @min-[760px]:border-b-0 @min-[760px]:pr-3 @min-[760px]:pb-0"
       ref={index}
       role="tablist"
       aria-label="The entries in this book"
@@ -120,16 +120,25 @@ function Index({
           id={`${names}-${entry.id}`}
           aria-selected={entry.id === shownId}
           tabIndex={entry.id === shownId ? 0 : -1}
+          className="flex w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left outline-offset-[-1px] hover:bg-deep/60 aria-selected:bg-deep aria-selected:shadow-[inset_2px_0_0_var(--v-action)]"
           data-row={entry.id}
           data-off={entry.isOff ? true : undefined}
           onFocus={() => onChoose(entry.id)}
           onClick={() => onChoose(entry.id)}
           onKeyDown={(event) => moveFocus(event, row)}
         >
-          <span className={styles.rowName} title={entry.name}>
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-ui font-medium",
+              entry.isOff ? "text-mute" : "text-ink",
+            )}
+            title={entry.name}
+          >
             {entry.name}
           </span>
-          <span className={styles.rowNote}>{entry.note}</span>
+          <span className="shrink-0 text-label text-mute tabular-nums">
+            {entry.note}
+          </span>
         </button>
       ))}
     </div>
@@ -140,13 +149,14 @@ function Nothing({ search, book }: { search: string; book: LorebookIndex }) {
   const wanted = search.trim();
   if (wanted !== "") {
     return (
-      <p className={styles.nothing}>
-        Nothing here is named <strong>{wanted}</strong>, and no key holds it.
+      <p className="!text-ui text-mute">
+        Nothing here is named <strong className="text-ink">{wanted}</strong>,
+        and no key holds it.
       </p>
     );
   }
   return (
-    <p className={styles.nothing}>
+    <p className="!text-ui text-mute">
       {book.total === 0
         ? "This book holds no entries yet."
         : "Every entry in this book is switched off."}
@@ -175,13 +185,14 @@ function Controls({
   const sortField = useId();
 
   return (
-    <div className={styles.controls}>
-      <div className={styles.search}>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+      <div className="flex min-w-0 flex-[0_1_340px] items-center gap-2.5 rounded-control bg-deep px-3 text-mute">
         <Search size={16} aria-hidden="true" />
-        <label className={styles.srOnly} htmlFor={searchField}>
+        <label className="sr-only" htmlFor={searchField}>
           Search the entries by name and by key
         </label>
         <input
+          className="min-h-11 min-w-0 flex-auto border-0 bg-transparent text-ui text-ink outline-offset-3"
           id={searchField}
           type="search"
           value={search}
@@ -189,9 +200,12 @@ function Controls({
           onChange={(event) => onSearch(event.target.value)}
         />
       </div>
-      <div className={styles.sort}>
-        <label htmlFor={sortField}>Order</label>
+      <div className="flex items-center gap-2">
+        <label className="text-label text-mute" htmlFor={sortField}>
+          Order
+        </label>
         <select
+          className="min-h-11 rounded-control bg-deep px-3 text-meta text-ink outline-offset-3"
           id={sortField}
           value={sort}
           onChange={(event) => onSort(event.target.value as EntrySort)}
@@ -201,16 +215,17 @@ function Controls({
         </select>
       </div>
       {book.off > 0 ? (
-        <label className={styles.includeOff}>
+        <label className="inline-flex min-h-11 items-center gap-2 text-label text-mute">
           <input
             type="checkbox"
             checked={includeOff}
+            className="size-4 accent-[var(--v-action)]"
             onChange={(event) => onIncludeOff(event.target.checked)}
           />
           Include the {book.off} that {book.off === 1 ? "is" : "are"} off
         </label>
       ) : null}
-      <p className={styles.showing}>
+      <p className="text-label text-mute @min-[760px]:ml-auto">
         {book.entries.length === book.total
           ? null
           : `${book.entries.length} of ${book.total}`}
@@ -230,29 +245,31 @@ function Entry({
 }) {
   return (
     <div
-      className={styles.entry}
+      className="flex min-w-0 flex-col gap-3 outline-offset-8"
       role="tabpanel"
       aria-labelledby={labelledBy}
       tabIndex={0}
     >
       {entry.named === "opening" ? null : (
-        <h4 className={styles.entryName}>{entry.name}</h4>
+        <h4 className="font-display text-section font-medium tracking-tight text-ink [overflow-wrap:anywhere]">
+          {entry.name}
+        </h4>
       )}
-      <p className={styles.firing}>{entry.firing.join(" · ")}</p>
+      <p className="!text-label text-mute">{entry.firing.join(" · ")}</p>
       {entry.keys.length > 0 ? (
         <ChipSet
-          className={styles.keys}
+          className="mt-0.5"
           limit={KEY_PREVIEW_LIMIT}
           items={entry.keys}
         />
       ) : null}
       {entry.secondaryKeys.length > 0 ? (
-        <div className={styles.secondary}>
-          <p>Second keys</p>
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1.5">
+          <p className="!text-label text-mute">Second keys</p>
           <ChipSet limit={KEY_PREVIEW_LIMIT} items={entry.secondaryKeys} />
         </div>
       ) : null}
-      <RichText text={entry.text} className={styles.text} />
+      <RichText className="mt-1.5 max-w-[70ch]" text={entry.text} />
     </div>
   );
 }

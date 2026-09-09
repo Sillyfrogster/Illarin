@@ -43,10 +43,13 @@
   --color-stop-wash: var(--v-stop-wash);
   --color-over: var(--v-over);
   --color-over-mute: var(--v-over-mute);
+  --color-media: var(--v-media);
+  --color-on-media: var(--v-on-media);
 
   --font-display: var(--font-outfit), system-ui, sans-serif;
   --font-ui: var(--font-outfit), system-ui, sans-serif;
   --font-prose: var(--font-dm-sans), system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-hero: clamp(2.5rem, 4.5vw, 4.75rem);
   --text-hero--line-height: 1.05;
@@ -133,6 +136,10 @@
   --v-over: #ffffff;
   --v-over-mute: #d5dbe2;
 
+  /* Creator media stands on the same dark ground in both themes, so its colours read true */
+  --v-media: #050505;
+  --v-on-media: #f5f5f2;
+
   --shell: 86rem;
   --gutter: 20px;
   --header-height: 72px;
@@ -217,8 +224,8 @@
   --color-on-emphasis: var(--v-on-accent);
   --color-critical: var(--v-stop);
   --color-on-critical: var(--v-on-stop);
-  --color-media-surface: #050505;
-  --color-media-text: #f5f5f2;
+  --color-media-surface: var(--v-media);
+  --color-media-text: var(--v-on-media);
   --color-media-muted: #bec0bc;
   --color-media-border: color-mix(
     in srgb,

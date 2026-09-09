@@ -7,9 +7,9 @@ import {
   fetchPreservedNamespaces,
   type PreservedNamespace,
 } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import { describePreservedNamespace } from "@/lib/preserved";
 import { useWorkingCopy } from "@/lib/working-copy";
-import styles from "./PreservedPanel.module.css";
 
 /**
  * The source file's unread remainder is an owner tool, not page content. It
@@ -56,9 +56,11 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
   }
 
   return (
-    <div className={styles.control}>
+    <div className={"mt-3.5 border-rule border-t"}>
       <button
-        className={styles.launch}
+        className={
+          "flex min-h-16 w-full items-center justify-between gap-3.5 py-3 text-left text-ink outline-offset-3 hover:text-accent"
+        }
         type="button"
         aria-expanded={open}
         aria-controls="preserved-menu"
@@ -70,37 +72,52 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
           }
         }}
       >
-        <span className={styles.launchCopy}>
+        <span
+          className={
+            "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
+          }
+        >
           <strong>Manage file extras</strong>
           <span>Review what your upload kept for compatible downloads</span>
         </span>
         <ChevronRight
-          className={open ? styles.chevronOpen : undefined}
+          className={cn(
+            "shrink-0 text-mute transition-transform duration-200 motion-reduce:transition-none",
+            open && "rotate-90",
+          )}
           size={18}
           aria-hidden="true"
         />
       </button>
 
       {open ? (
-        <div className={styles.menu} id="preserved-menu">
-          <p className={styles.menuLead}>
+        <div className={"pb-3.5"} id="preserved-menu">
+          <p className={"text-meta text-mute"}>
             These details came with the original file but are not part of the
             editable page. Removing one stops it travelling in downloads for
             that format.
           </p>
           {namespaces === null ? (
-            <p className={styles.menuState}>Reading the file extras…</p>
+            <p className={"mt-3 text-meta text-mute italic"}>
+              Reading the file extras…
+            </p>
           ) : namespaces.length === 0 ? (
-            <p className={styles.menuState}>
+            <p className={"mt-3 text-meta text-mute italic"}>
               Nothing extra is being kept with this upload.
             </p>
           ) : (
-            <ul className={styles.namespaces}>
+            <ul
+              className={
+                "mt-3 list-none border-rule border-t [&>li]:flex [&>li]:min-h-13 [&>li]:items-center [&>li]:justify-between [&>li]:gap-3 [&>li]:border-rule [&>li]:border-b [&>li]:text-ui"
+              }
+            >
               {namespaces.map((namespace) => (
                 <li key={namespace.name}>
                   <span>{describePreservedNamespace(namespace.name)}</span>
                   <button
-                    className={styles.remove}
+                    className={
+                      "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
+                    }
                     type="button"
                     onClick={() => {
                       setMessage("");
@@ -117,13 +134,15 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
             </ul>
           )}
           {message ? (
-            <p className={styles.error} role="alert">
+            <p className={"mt-3 text-meta text-stop"} role="alert">
               {message}
             </p>
           ) : null}
           {namespaces === null ? (
             <button
-              className={styles.retry}
+              className={
+                "mt-3 inline-flex min-h-11 items-center gap-2 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3"
+              }
               type="button"
               onClick={() => {
                 setNamespaces(null);
@@ -168,31 +187,43 @@ function DeleteNamespaceDialog({
   return (
     <dialog
       ref={dialog}
-      className={styles.dialog}
+      className={
+        "m-auto w-[min(30rem,calc(100vw-2rem))] rounded-plate bg-plane p-0 text-ink backdrop:bg-black/60"
+      }
       onCancel={(event) => {
         event.preventDefault();
         onCancel();
       }}
     >
-      <div className={styles.dialogBody}>
-        <p className={styles.context}>Remove file extras</p>
+      <div
+        className={
+          "p-5 [&_h2]:mt-1 [&_h2]:font-display [&_h2]:text-section [&_h2]:font-medium [&_h2]:text-ink [&_p]:mt-2 [&_p]:text-ui [&_p]:text-mute"
+        }
+      >
+        <p className={"text-meta text-mute"}>Remove file extras</p>
         <h2>Remove {description}?</h2>
         <p>
           This detail came with your original file. Removing it means it will
           stop travelling in downloads made for that format.
         </p>
-        <p className={styles.noCopy}>
+        <p className={"mt-2 text-meta text-mute"}>
           This cannot be undone here. Re-upload the original file if you need it
           back.
         </p>
       </div>
-      <footer className={styles.dialogFooter}>
+      <footer
+        className={
+          "flex flex-wrap justify-end gap-2 border-rule border-t p-4 [&>button]:min-h-11 [&>button]:rounded-control [&>button]:px-4 [&>button]:text-ui [&>button]:font-medium [&>button]:outline-offset-3 [&>button]:disabled:opacity-45"
+        }
+      >
         <button type="button" onClick={onCancel} disabled={pending}>
           Keep it
         </button>
         <button
           type="button"
-          className={styles.confirmDelete}
+          className={
+            "inline-flex min-h-11 items-center gap-2 rounded-control bg-stop px-4 text-ui font-medium text-on-stop outline-offset-3 disabled:opacity-45"
+          }
           onClick={onDelete}
           disabled={pending}
         >

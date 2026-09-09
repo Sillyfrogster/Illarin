@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { RecordedVersion } from "@/lib/api/query";
 import { versionDate, versionSummary, versionTitle } from "@/lib/asset-updates";
 import { assetHistoryHref } from "@/lib/asset-url";
-import styles from "./LatestUpdate.module.css";
 
 /** What readers have, and the way into everything Illarin recorded before it. */
 export function LatestUpdate({
@@ -16,9 +15,12 @@ export function LatestUpdate({
   version: RecordedVersion;
 }) {
   return (
-    <section className={styles.band} aria-labelledby="latest-update">
-      <p className={styles.head}>
-        <span className={styles.title} id="latest-update">
+    <section
+      aria-labelledby="latest-update"
+      className="mt-8 max-w-[42ch] border-rule border-t pt-5"
+    >
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
+        <span className="font-medium text-ink" id="latest-update">
           {versionTitle(version)}
         </span>
         <time dateTime={version.recordedAt}>{versionDate(version)}</time>
@@ -26,10 +28,15 @@ export function LatestUpdate({
           <span>Creator's version {version.versionLabel}</span>
         ) : null}
       </p>
-      <p className={styles.summary}>{versionSummary(version, kind)}</p>
-      <Link href={assetHistoryHref(assetId)} className={styles.link}>
+      <p className="mt-2 text-meta text-mute">
+        {versionSummary(version, kind)}
+      </p>
+      <Link
+        className="mt-2 inline-flex min-h-11 items-center gap-2 text-meta font-medium text-accent hover:text-ink"
+        href={assetHistoryHref(assetId)}
+      >
         Update history
-        <ArrowRight size={15} aria-hidden="true" />
+        <ArrowRight aria-hidden="true" className="size-4" />
       </Link>
     </section>
   );

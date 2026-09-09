@@ -1,5 +1,22 @@
+/* The bar around it no longer styles its buttons, so the launch carries its own shape. */
 .launch {
   position: relative;
+  display: inline-flex;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.launch:hover {
+  background: var(--v-deep);
+  color: var(--color-text-primary);
 }
 
 .count {

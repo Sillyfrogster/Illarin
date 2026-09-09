@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import styles from "./SealedPanel.module.css";
+import { Button } from "@/components/ui/button";
 
 /** Offers an owner the sealed content preserved during migration. */
 export function SealedPanel({
@@ -12,19 +12,26 @@ export function SealedPanel({
   count: number;
 }) {
   return (
-    <section className={styles.panel} aria-labelledby="sealed-heading">
-      <h2 id="sealed-heading">Your sealed content</h2>
-      <p className={styles.lead}>
+    <section
+      aria-labelledby="sealed-heading"
+      className="rounded-plate bg-deep p-4"
+    >
+      <h2 className="text-ui font-medium text-ink" id="sealed-heading">
+        Your sealed content
+      </h2>
+      <p className="mt-2 text-meta text-mute">
         {count === 1
           ? "One block of this preset was sealed on LumiHub"
           : `${count} blocks of this preset were sealed on LumiHub`}
         . Readers never saw them and still do not. Illarin has no way to put
         them back into a download, so take a copy and keep it.
       </p>
-      <a className={styles.take} href={`/api/v1/assets/${assetId}/sealed`}>
-        <Lock size={16} aria-hidden="true" />
-        Download the sealed blocks
-      </a>
+      <Button asChild className="mt-3 w-full">
+        <a href={`/api/v1/assets/${assetId}/sealed`}>
+          <Lock aria-hidden="true" />
+          Download the sealed blocks
+        </a>
+      </Button>
     </section>
   );
 }

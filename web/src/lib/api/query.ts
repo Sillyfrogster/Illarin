@@ -52,6 +52,11 @@ export type IngestOperation = components["schemas"]["IngestOperation"];
 export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
 export type ReplacementDecision =
   components["schemas"]["ReplacementAcceptance"]["unrepresentable"];
+export type DownloadTarget = components["schemas"]["DownloadTarget"];
+export type OriginalUpload = components["schemas"]["OriginalUpload"];
+export type AssetInstance = components["schemas"]["AssetInstance"];
+export type AssetInstanceList = components["schemas"]["AssetInstanceList"];
+export type QueuedDelivery = components["schemas"]["QueuedDelivery"];
 export type AssetUpdate = components["schemas"]["AssetUpdate"];
 export type AssetUpdateRequest = components["schemas"]["AssetUpdateRequest"];
 export type PromptCorrespondenceRequest =
