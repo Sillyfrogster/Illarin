@@ -1,35 +1,8 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useId, useMemo, useRef, useState } from "react";
 import styles from "./CollectionEditor.module.css";
-
-const FullHeightEditing = createContext(false);
-
-/** Full-screen editing gives a collection two panes that scroll on their own. */
-export function FullHeightEditingProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return (
-    <FullHeightEditing.Provider value={true}>
-      {children}
-    </FullHeightEditing.Provider>
-  );
-}
-
-export function useFullHeightEditing(): boolean {
-  return useContext(FullHeightEditing);
-}
 
 /** CollectionStack keeps a collection's own controls above its two panes. */
 export function CollectionStack({
@@ -39,9 +12,8 @@ export function CollectionStack({
   above: ReactNode;
   children: ReactNode;
 }) {
-  const roomy = useFullHeightEditing();
   return (
-    <div className={`${styles.stack} ${roomy ? styles.roomy : ""}`}>
+    <div className={styles.stack}>
       {above}
       {children}
     </div>
@@ -78,7 +50,6 @@ export function CollectionEditor({
   const [search, setSearch] = useState("");
   const searchId = useId();
   const editor = useRef<HTMLDivElement>(null);
-  const roomy = useFullHeightEditing();
 
   const wanted = search.trim().toLowerCase();
   const matching = useMemo(
@@ -96,7 +67,7 @@ export function CollectionEditor({
   }
 
   return (
-    <div className={`${styles.editor} ${roomy ? styles.roomy : ""}`}>
+    <div className={styles.editor}>
       <div className={styles.list}>
         <div className={styles.search}>
           <label className={styles.hiddenLabel} htmlFor={searchId}>

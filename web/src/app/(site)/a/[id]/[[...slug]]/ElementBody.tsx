@@ -1,6 +1,6 @@
 "use client";
 
-import { Maximize2, UserRound } from "lucide-react";
+import { SquarePen, UserRound } from "lucide-react";
 import Image from "next/image";
 import {
   type CSSProperties,
@@ -82,14 +82,14 @@ export function ElementBody({
           )}
           {expandable ? (
             <button
-              aria-label={`Edit ${element.label || "this content"} in full screen`}
+              aria-label={`Edit ${element.label || "this content"}`}
               className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink"
               data-measurement-ignore
               onClick={onExpand}
               type="button"
             >
-              <Maximize2 aria-hidden="true" size={14} />
-              Edit in full screen
+              <SquarePen aria-hidden="true" size={14} />
+              Edit
             </button>
           ) : null}
         </div>

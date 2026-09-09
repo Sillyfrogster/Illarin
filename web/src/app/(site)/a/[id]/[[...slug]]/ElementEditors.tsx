@@ -10,8 +10,8 @@ import {
 } from "@/lib/api/query";
 import { fitsInTheSheet, opensFullScreen } from "@/lib/page-arrangement";
 import { useWorkingCopy } from "@/lib/working-copy";
-import styles from "./BlockSheet.module.css";
 import { replaceAt, without } from "./CollectionEditor";
+import styles from "./ElementEditors.module.css";
 import { EntryTableEditor } from "./EntryTableEditor";
 import { PackEditor } from "./PackEditor";
 import {
