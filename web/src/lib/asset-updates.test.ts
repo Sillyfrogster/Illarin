@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import type { RecordedVersion } from "@/lib/api/query";
-import { versionSummary, versionTitle } from "./asset-updates";
+import {
+  earlierVersions,
+  isLongNote,
+  versionAnchor,
+  versionSummary,
+  versionTitle,
+} from "./asset-updates";
 
 function version(over: Partial<RecordedVersion>): RecordedVersion {
   return {
@@ -36,4 +42,31 @@ test("names a later version by its update number and keeps the creator's summary
 
   expect(versionTitle(third)).toBe("Update 3");
   expect(versionSummary(third, "character")).toBe("Rewrote the opening.");
+});
+
+test("offers every version recorded before this one as a comparison, newest first", () => {
+  const history = [
+    version({ number: 1, initial: true }),
+    version({ number: 3 }),
+    version({ number: 2 }),
+  ];
+
+  const earlier = earlierVersions(history, version({ number: 3 }));
+
+  expect(earlier.map((one) => one.number)).toEqual([2, 1]);
+});
+
+test("offers nothing to compare against the first version Illarin recorded", () => {
+  const history = [version({ number: 2 }), version({ number: 1 })];
+
+  expect(earlierVersions(history, version({ number: 1 }))).toEqual([]);
+});
+
+test("folds a note only once it runs past a few lines", () => {
+  expect(isLongNote("Gave her a lamp-lit portrait.")).toBe(false);
+  expect(isLongNote("word ".repeat(120))).toBe(true);
+});
+
+test("gives every version one address the rail and the entry both use", () => {
+  expect(versionAnchor(version({ number: 4 }))).toBe("version-4");
 });

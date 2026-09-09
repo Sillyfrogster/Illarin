@@ -24,3 +24,26 @@ export function versionDate(version: RecordedVersion): string {
     year: "numeric",
   });
 }
+
+// How much of a note an entry shows before it folds the rest away, about four lines of it.
+const NOTE_FOLD = 280;
+
+/** Whether a creator's note runs long enough that an entry folds it. */
+export function isLongNote(notes: string): boolean {
+  return notes.length > NOTE_FOLD;
+}
+
+/** Everything Illarin recorded before this version, newest first. */
+export function earlierVersions(
+  versions: RecordedVersion[],
+  version: RecordedVersion,
+): RecordedVersion[] {
+  return versions
+    .filter((one) => one.number < version.number)
+    .sort((one, other) => other.number - one.number);
+}
+
+/** The address a version answers to, which the rail and the entry both use. */
+export function versionAnchor(version: RecordedVersion): string {
+  return `version-${version.number}`;
+}
