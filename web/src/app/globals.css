@@ -82,6 +82,7 @@
   --radius-control: 10px;
   --radius-plate: 14px;
 
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-pop-in: pop-in 150ms var(--ease-wipe);
   --animate-pop-out: pop-out 110ms ease-in;
   --animate-slide-in: slide-in 220ms var(--ease-wipe);
@@ -91,6 +92,11 @@
   --shadow-popover: 0 16px 60px -12px rgb(0 0 0 / 0.35);
   --shadow-contents: 0 8px 15px -15px rgb(0 0 0 / 0.5);
 
+  @keyframes pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
   @keyframes pop-in {
     from {
       opacity: 0;

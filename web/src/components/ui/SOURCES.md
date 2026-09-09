@@ -40,11 +40,19 @@ button on opening and gives it back on closing, and raises that button to 44px.
 and the timed confirmation, and adds a spoken confirmation, a failure state
 when the clipboard refuses, and a 44px target.
 
+`ui/morphing-disclosure.tsx` adapts Vengeance UI's morphing disclosure, keeping
+its layout spring and the fade-and-rise of the panel, so a region whose contents
+change while it is open settles into the new height rather than jumping. It
+replaces the source's clickable div and text plus sign with a button that reports
+`aria-expanded` and names its panel, gives the panel a lucide chevron, and holds
+the layout still under reduced motion.
+
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/notch-navbar.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/line-hover-link.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/perspective-carousel.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/fullscreen-preview.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/copy-button.json
+- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/morphing-disclosure.json
 - https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE
 
 Both sources use the MIT license. Copyright shadcn and Ashutoshx7 respectively.
