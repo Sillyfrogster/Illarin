@@ -187,7 +187,6 @@ function GroupEditor({
 }) {
   const [adding, setAdding] = useState("");
 
-  // Fragments can reference a new heading before the next save.
   function addGroup() {
     if (adding.trim() === "") return;
     onChange({
