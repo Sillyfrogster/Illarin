@@ -88,7 +88,7 @@ export function PerspectiveCarousel({
                 <button
                   aria-current={index === chosen ? "true" : undefined}
                   aria-label={`Show ${picture.name || `picture ${index + 1}`}`}
-                  className="block h-64 w-full cursor-pointer overflow-hidden rounded-control bg-plane outline-offset-3"
+                  className="block h-64 w-full cursor-pointer rounded-control outline-offset-3"
                   onClick={() => show(index)}
                   onKeyDown={moveWithArrows}
                   tabIndex={index === chosen ? 0 : -1}
@@ -96,7 +96,7 @@ export function PerspectiveCarousel({
                 >
                   <Image
                     alt={picture.name || ""}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full rounded-control object-contain"
                     draggable={false}
                     height={picture.height}
                     sizes="300px"

@@ -104,7 +104,7 @@ export function ContentsBar({
       <div
         className={cn(
           shellClassName,
-          "flex items-center justify-between gap-6 overflow-x-auto py-1",
+          "flex items-center gap-6 overflow-x-auto py-1 md:justify-between",
         )}
       >
         {arranging ? (
@@ -119,7 +119,7 @@ export function ContentsBar({
             <span className="hidden shrink-0 text-meta text-mute lg:inline">
               On this page
             </span>
-            <ol className="flex min-w-0 list-none items-center gap-6 overflow-x-auto">
+            <ol className="flex list-none items-center gap-6 md:min-w-0 md:overflow-x-auto">
               {blocks.map((block) => (
                 <li className="shrink-0" key={block.id}>
                   <a

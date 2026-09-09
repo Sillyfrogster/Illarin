@@ -81,7 +81,7 @@ export function IdentityPanel({
           disabled={pending}
         />
 
-        <fieldset className="mt-4" id="adult-content-answer">
+        <fieldset className="mt-4 border-0 p-0" id="adult-content-answer">
           <legend className="text-meta font-medium text-ink">
             Adult content
           </legend>

@@ -231,13 +231,7 @@ export function GetAsset({
           </>
         ) : null}
 
-        {instance ? (
-          <InstanceStanding instance={instance} />
-        ) : linkedInstallOnly && !account ? (
-          <p className="mt-4 text-meta text-mute">
-            Sign in to send this {kindLabel} to a linked application.
-          </p>
-        ) : null}
+        {instance ? <InstanceStanding instance={instance} /> : null}
 
         {toAFile ? (
           <Button asChild className="mt-4 w-full" variant="primary">
