@@ -163,8 +163,8 @@ export function AssetWorkspace({
           : "published";
 
   /** A save refused for want of an allowed app opens the element that asks for one. */
-  const openSealedElement = useCallback((blocks: AssetBlock[]) => {
-    for (const block of blocks) {
+  const openSealedElement = useCallback((pages: AssetBlock[]) => {
+    for (const block of pages) {
       const asking = block.elements.find((element) =>
         hasSealedPrompts([element]),
       );
