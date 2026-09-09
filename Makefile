@@ -8,11 +8,6 @@ SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 ACTIONLINT := go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 WEB_PORT ?= 3000
-WATCHER_DIR ?= $(CURDIR)/.local/watcher
-THRESHOLD_DIR ?= $(WATCHER_DIR)/passage
-THRESHOLD_PORT ?= 9117
-RUNE_DIR ?= $(CURDIR)/.local/rune-animation
-RUNE_FPS ?= 30
 TEST ?= ./...
 VERSION ?=
 SERVICE ?=
@@ -253,59 +248,6 @@ archive-cutouts: ## Neutralize the archive mascot glass cutouts
 .PHONY: direction-fixtures
 direction-fixtures: ## Draw the synthetic art the visual direction prototype reads
 	cd web && bun scripts/generate-direction-fixtures.mjs
-
-.PHONY: rune-cave-encode
-rune-cave-encode: ## Encode the desktop rune render for the landing page
-	python3 art/rune-cave/encode.py --frames "$(abspath $(RUNE_DIR))/frames" \
-		--output web/public/landing --fps "$(RUNE_FPS)"
-
-.PHONY: threshold-scene threshold-textures threshold-enhance
-threshold-textures: ## Download the passage's CC0 surface maps
-	python3 web/scripts/watcher/threshold-textures.py --output "$(abspath $(WATCHER_DIR))/textures"
-
-threshold-scene: ## Build and render the vaulted passage study
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background --factory-startup \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/threshold.py" -- \
-		--output "$(abspath $(WATCHER_DIR))/threshold" $(THRESHOLD_ARGS)
-
-threshold-enhance: ## Add scanned surfaces and architectural detail
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(WATCHER_DIR))/threshold/threshold.blend" \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/threshold-enhance.py" -- \
-		--textures "$(abspath $(WATCHER_DIR))/textures" \
-		--output "$(abspath $(WATCHER_DIR))/threshold-refined" $(THRESHOLD_ARGS)
-
-.PHONY: threshold-stills threshold-animation threshold-preview
-.PHONY: passage-scene
-passage-scene: ## Build the stone arcade, bridge supports and waterfront court
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(WATCHER_DIR))/threshold-refined/threshold.blend" \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/passage-scene.py" -- --output "$(abspath $(THRESHOLD_DIR))"
-	$(MAKE) threshold-frame THRESHOLD_ARGS='--frame 1 --percent 75 --samples 48'
-	cp "$(abspath $(THRESHOLD_DIR))/frame-0001-CYCLES.png" "$(abspath $(THRESHOLD_DIR))/threshold.png"
-
-threshold-stills: ## Render the passage camera compositions
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(THRESHOLD_DIR))/threshold.blend" \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/threshold-render.py" -- --output "$(abspath $(THRESHOLD_DIR))"
-
-threshold-animation: ## Render and encode the passage camera study
-	flatpak run --env=LP_NUM_THREADS=4 --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(THRESHOLD_DIR))/threshold.blend" --threads 4 \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/threshold-render.py" -- --output "$(abspath $(THRESHOLD_DIR))" --animation --engine BLENDER_EEVEE --percent 75 --samples 64 $(THRESHOLD_ARGS)
-	ffmpeg -y -framerate 24 -i "$(abspath $(THRESHOLD_DIR))/frames/frame-%04d.png" \
-		-c:v libx264 -crf 17 -pix_fmt yuv420p -movflags +faststart "$(abspath $(THRESHOLD_DIR))/threshold-rendering.mp4"
-	mv "$(abspath $(THRESHOLD_DIR))/threshold-rendering.mp4" "$(abspath $(THRESHOLD_DIR))/threshold.mp4"
-	cp "$(abspath $(THRESHOLD_DIR))/frames/frame-0001.png" "$(abspath $(THRESHOLD_DIR))/threshold.png"
-
-.PHONY: threshold-frame
-threshold-frame: ## Render one passage frame for a material or animation check
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(THRESHOLD_DIR))/threshold.blend" \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/threshold-render.py" -- --output "$(abspath $(THRESHOLD_DIR))" $(THRESHOLD_ARGS)
-
-.PHONY: threshold-inspect
-threshold-inspect: ## Check foundations and render the scene from inspection cameras
-	flatpak run --filesystem="$(CURDIR)" org.blender.Blender --background "$(abspath $(THRESHOLD_DIR))/threshold.blend" \
-		--python-exit-code 1 --python "$(CURDIR)/web/scripts/watcher/passage-inspect.py" -- --output "$(abspath $(THRESHOLD_DIR))" $(THRESHOLD_ARGS)
-
-threshold-preview: ## Inspect the passage with page text and scroll controls
-	bun web/scripts/watcher/threshold-server.mjs "$(abspath $(THRESHOLD_DIR))" $(THRESHOLD_PORT)
 
 # Guards
 

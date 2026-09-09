@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const apiUrl = process.env.API_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.WEB_DIST_DIR ?? ".next",
   output: "standalone",
   deploymentId: process.env.ILLARIN_VERSION,
   logging: {
