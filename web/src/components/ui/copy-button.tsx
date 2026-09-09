@@ -44,7 +44,7 @@ export function CopyButton({
       type="button"
     >
       <span className="sr-only">
-        {failed ? `${label} could not be copied` : label}
+        {failed ? `${label} could not be copied` : copied ? "Copied" : label}
       </span>
       {copied ? (
         <Check aria-hidden="true" className="size-4 text-accent" />
