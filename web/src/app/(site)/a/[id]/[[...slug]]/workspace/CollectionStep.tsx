@@ -9,13 +9,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { RailBack } from "@/components/workspace/WorkspaceRail";
 import { cn } from "@/lib/cn";
 import { chosenIndex, itemKeys, keyAfterMove } from "./collection";
 import {
   AddAction,
   ItemMoveActions,
   Note,
-  RailBack,
   RemoveAction,
   TextField,
 } from "./fields";

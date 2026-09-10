@@ -1,4 +1,4 @@
-import { ContributorWorkspace } from "@/components/publication/ContributorWorkspace";
+import { PostDesk } from "@/components/publication/writing/PostDesk";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
@@ -7,5 +7,5 @@ export const metadata = pageMetadata(
 );
 
 export default function PublicationWorkspacePage() {
-  return <ContributorWorkspace />;
+  return <PostDesk />;
 }

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RailBack } from "@/components/workspace/WorkspaceRail";
 import { publishAssetUpdate, type ReadinessItem } from "@/lib/api/query";
 import type { ReadinessTarget } from "@/lib/readiness";
 import type { ReplacementSummary } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
-import { Field, Note, RailBack, TextAreaField, TextField } from "./fields";
+import { Field, Note, TextAreaField, TextField } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { ReplacementChanges } from "./ReplacementStep";
 import { useWorkspace } from "./state";

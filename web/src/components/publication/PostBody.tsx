@@ -100,19 +100,19 @@ function Block({ block, media }: { block: PostBlock; media: PostMedia[] }) {
       );
     case "bulletList":
       return (
-        <ul className="my-6 list-disc space-y-3 pl-6 marker:text-mute">
+        <ul className="my-6 list-disc pl-6 marker:text-mute [&>li+li]:mt-3">
           <Items items={block.content} />
         </ul>
       );
     case "orderedList":
       return (
-        <ol className="my-6 list-decimal space-y-3 pl-6 marker:text-mute">
+        <ol className="my-6 list-decimal pl-6 marker:text-mute [&>li+li]:mt-3">
           <Items items={block.content} />
         </ol>
       );
     case "taskList":
       return (
-        <ul className="my-6 list-none space-y-3">
+        <ul className="my-6 list-none [&>li+li]:mt-3">
           <Tasks tasks={block.content} />
         </ul>
       );

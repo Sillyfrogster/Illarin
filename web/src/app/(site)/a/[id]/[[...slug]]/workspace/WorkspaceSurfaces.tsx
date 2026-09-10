@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
   AssetDetail,
   AssetElement,
@@ -31,7 +32,6 @@ import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
 import { WorkspaceDock } from "./WorkspaceDock";
-import { WorkspaceRail } from "./WorkspaceRail";
 
 export type WorkspaceSurfacesProps = {
   creator: string;

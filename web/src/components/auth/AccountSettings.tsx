@@ -1,16 +1,11 @@
 "use client";
 
-import {
-  Check,
-  KeyRound,
-  Mail,
-  MessageCircle,
-  ShieldCheck,
-} from "lucide-react";
+import { Check, KeyRound, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Said, TextInput } from "@/components/ui/field";
+import { Gate } from "@/components/ui/gate";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
 import { type Refusal, refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
@@ -48,24 +43,12 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
 
   if (!account) {
     return (
-      <div className="max-w-[34rem] rounded-plate bg-deep p-7">
-        <ShieldCheck
-          aria-hidden="true"
-          className="size-7 text-accent"
-          strokeWidth={1.4}
-        />
-        <h3 className="mt-4 font-display text-section font-medium tracking-tight text-ink">
-          Sign in to open account settings
-        </h3>
-        <p className="mt-2 font-prose text-prose text-mute">
-          Sign in to view or change the ways you access your account.
-        </p>
-        <div className="mt-6">
-          <Button asChild variant="primary">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-        </div>
-      </div>
+      <Gate
+        action="Sign in"
+        heading="Sign in to open account settings"
+        href="/sign-in"
+        line="Sign in to view or change the ways you access your account."
+      />
     );
   }
 

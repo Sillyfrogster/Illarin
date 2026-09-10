@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   fromEditor,
   toEditor,
-} from "@/components/publication/editor/tiptap-document";
+} from "@/components/publication/writing/tiptap-document";
 import type { PostMedia } from "@/lib/api/query";
 import { POST_DOCUMENT_VERSION, type PostDocument } from "@/lib/post-document";
 import { PostBody } from "./PostBody";

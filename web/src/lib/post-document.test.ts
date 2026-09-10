@@ -4,7 +4,7 @@ import { join } from "node:path";
 import {
   fromEditor,
   toEditor,
-} from "@/components/publication/editor/tiptap-document";
+} from "@/components/publication/writing/tiptap-document";
 import {
   isPostAnchor,
   isWritten,

@@ -48,7 +48,7 @@ test("no editor code reaches the published post page", () => {
     for (const path of reachable(entry)) {
       expect(path).not.toStartWith("@tiptap");
       expect(path).not.toContain("prosemirror");
-      expect(path).not.toContain("publication/editor");
+      expect(path).not.toContain("publication/writing");
     }
   }
 });
@@ -69,6 +69,6 @@ test("the editor is the only place Tiptap is imported", () => {
   };
   walk("src");
   for (const path of wanting) {
-    expect(path).toContain("publication/editor");
+    expect(path).toContain("publication/writing");
   }
 });

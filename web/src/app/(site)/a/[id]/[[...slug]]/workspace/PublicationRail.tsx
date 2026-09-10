@@ -5,6 +5,7 @@ import { ChevronRight, FileUp, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   fetchAsset,
   fetchWaitingReplacement,
@@ -16,7 +17,7 @@ import { reviewBlockedReason, updateStanding } from "@/lib/asset-publication";
 import type { PageTarget, ReadinessTarget } from "@/lib/readiness";
 import type { ReplacementSummary } from "@/lib/replacement-subject";
 import { useWorkingCopy, WORKING_COPY_SAVED } from "@/lib/working-copy";
-import { Note, RailBack } from "./fields";
+import { Note } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { ReplacementStep } from "./ReplacementStep";
 import { ReviewStep } from "./ReviewStep";

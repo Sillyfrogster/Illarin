@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   acceptAssetReplacement,
   cancelAssetReplacement,
@@ -22,7 +23,7 @@ import {
   summariseReplacement,
 } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
-import { Note, RailBack } from "./fields";
+import { Note } from "./fields";
 import { useWorkspace } from "./state";
 
 /** How often the step asks what Illarin has made of the file so far. */

@@ -1,5 +1,4 @@
-import { Shell } from "@/components/layout/Shell";
-import { PostWriter } from "@/components/publication/editor/PostWriter";
+import { PostWriter } from "@/components/publication/writing/PostWriter";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
@@ -13,9 +12,5 @@ export default async function PostEditorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <Shell>
-      <PostWriter id={id} />
-    </Shell>
-  );
+  return <PostWriter id={id} />;
 }
