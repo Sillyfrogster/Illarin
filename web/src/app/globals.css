@@ -87,6 +87,7 @@
   --animate-pop-out: pop-out 110ms ease-in;
   --animate-slide-in: slide-in 220ms var(--ease-wipe);
   --animate-slide-out: slide-out 160ms ease-in;
+  --animate-sweep: sweep 1.4s var(--ease-wipe) infinite;
 
   --shadow-cover: 0 20px 45px -20px rgb(0 0 0 / 0.5);
   --shadow-popover: 0 16px 60px -12px rgb(0 0 0 / 0.35);
@@ -95,6 +96,15 @@
   @keyframes pulse {
     50% {
       opacity: 0.45;
+    }
+  }
+  /* The bar travels its track rather than filling it, because ingest reports no measurable progress */
+  @keyframes sweep {
+    from {
+      transform: translateX(-110%);
+    }
+    to {
+      transform: translateX(360%);
     }
   }
   @keyframes pop-in {

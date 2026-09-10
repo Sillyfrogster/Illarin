@@ -1,107 +1,136 @@
 "use client";
 
-import { PenLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { KindMark } from "@/components/catalog/KindMark";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   type BrowseKind,
   type StartAssetApp,
   startAsset,
 } from "@/lib/api/query";
 import { assetHref } from "@/lib/asset-url";
-import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import {
   APP_CHOICES,
   BUILDABLE_KINDS,
   KIND_LABELS,
   KINDS_ASKING_FOR_AN_APP,
 } from "@/lib/kinds";
-import styles from "./StartFromNothing.module.css";
 
+const KIND =
+  "flex min-h-11 items-center gap-2 rounded-control bg-deep px-3.5 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-rule/45 disabled:opacity-45 motion-reduce:transition-none";
+
+/** The empty draft, where a preset and a theme ask which app names their fields and the other three have nothing to ask. */
 export function StartFromNothing() {
   const router = useRouter();
-  const { account } = useAuth();
-  const [pending, setPending] = useState("");
+  const [pending, setPending] = useState<BrowseKind | null>(null);
   const [asking, setAsking] = useState<BrowseKind | null>(null);
   const [message, setMessage] = useState("");
 
-  if (!account?.emailVerified) return null;
-
   async function start(kind: BrowseKind, app?: StartAssetApp) {
     setPending(kind);
+    setAsking(null);
     setMessage("");
     try {
       const started = await startAsset(kind, app);
       router.push(assetHref(started.id, started.name));
     } catch {
-      setPending("");
+      setPending(null);
       setMessage("The draft could not be started. Try again.");
     }
   }
 
-  function choose(kind: BrowseKind) {
-    if (KINDS_ASKING_FOR_AN_APP.includes(kind)) {
-      setMessage("");
-      setAsking(asking === kind ? null : kind);
-      return;
-    }
-    void start(kind);
-  }
-
   return (
-    <section className={styles.panel} aria-labelledby="start-heading">
-      <h2 id="start-heading">Start a new asset</h2>
-      <p>
-        Choose a supported kind. It opens as a private draft and stays private
-        until you publish it.
+    <section aria-labelledby="start-heading">
+      <h2
+        className="font-display text-section font-medium text-ink"
+        id="start-heading"
+      >
+        Start from nothing
+      </h2>
+      <p className="mt-2 text-ui text-mute">
+        An empty draft, written on its own page. You can bring a file into it
+        later, or never.
       </p>
-      <div className={styles.kinds}>
-        {BUILDABLE_KINDS.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            aria-expanded={
-              KINDS_ASKING_FOR_AN_APP.includes(kind)
-                ? asking === kind
-                : undefined
-            }
-            onClick={() => choose(kind)}
-            disabled={pending !== ""}
-          >
-            <PenLine size={16} aria-hidden="true" />
-            {pending === kind
-              ? "Starting…"
-              : `Start a ${KIND_LABELS[kind].toLowerCase()}`}
-          </button>
-        ))}
-      </div>
-      {asking ? (
-        <div className={styles.apps}>
-          <p className={styles.appQuestion}>
-            Which app is this {KIND_LABELS[asking].toLowerCase()} for? Its
-            editable fields get that app's names. Nothing else about the{" "}
-            {KIND_LABELS[asking].toLowerCase()} depends on the answer, and you
-            are not asked again.
-          </p>
-          <div className={styles.appChoices}>
-            {APP_CHOICES.map((app) => (
-              <button
-                key={app.value}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {BUILDABLE_KINDS.map((kind) =>
+          KINDS_ASKING_FOR_AN_APP.includes(kind) ? (
+            <Popover
+              key={kind}
+              onOpenChange={(open) => setAsking(open ? kind : null)}
+              open={asking === kind}
+            >
+              <PopoverTrigger
+                className={KIND}
+                disabled={pending !== null}
                 type="button"
-                onClick={() => void start(asking, app.value)}
-                disabled={pending !== ""}
               >
-                {app.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+                <KindLabel kind={kind} pending={pending === kind} />
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[min(24rem,calc(100vw-2rem))]"
+              >
+                <p className="text-meta text-mute">
+                  Which app is this {KIND_LABELS[kind].toLowerCase()} for? Its
+                  editable fields get that app's names. Nothing else about it
+                  depends on the answer, and you are not asked again.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {APP_CHOICES.map((app) => (
+                    <button
+                      className={cn(
+                        KIND,
+                        "bg-accent-wash hover:bg-accent-wash/70",
+                      )}
+                      key={app.value}
+                      onClick={() => void start(kind, app.value)}
+                      type="button"
+                    >
+                      {app.label}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <button
+              className={KIND}
+              disabled={pending !== null}
+              key={kind}
+              onClick={() => void start(kind)}
+              type="button"
+            >
+              <KindLabel kind={kind} pending={pending === kind} />
+            </button>
+          ),
+        )}
+      </div>
+
       {message ? (
-        <p className={styles.error} role="alert">
+        <p
+          className="mt-4 rounded-control bg-stop-wash p-3 text-meta text-ink"
+          role="alert"
+        >
           {message}
         </p>
       ) : null}
     </section>
+  );
+}
+
+function KindLabel({ kind, pending }: { kind: BrowseKind; pending: boolean }) {
+  return (
+    <>
+      <KindMark className="size-4 text-mute" kind={kind} />
+      {KIND_LABELS[kind]}
+      {pending ? <span className="text-meta text-mute">starting…</span> : null}
+    </>
   );
 }
