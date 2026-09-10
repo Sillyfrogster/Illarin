@@ -3,6 +3,7 @@ package character
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -26,6 +27,9 @@ func RestorePreserved(
 	}
 
 	for _, row := range rows {
+		if strings.HasPrefix(row.Namespace, MemberNamespace) {
+			continue
+		}
 		var fields map[string]json.RawMessage
 		if err := json.Unmarshal(row.Payload, &fields); err != nil {
 			fields = nil

@@ -131,10 +131,10 @@ func writeCharX(asset format.ExportAsset) (format.Artifact, error) {
 
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
-	if err := writeArchiveFile(archive, "card.json", card); err != nil {
+	if err := writeArchiveFile(archive, cardEntry, card); err != nil {
 		return format.Artifact{}, err
 	}
-	for _, file := range files {
+	for _, file := range slices.Concat(files, archivedMemberFiles(asset.Preserved, files)) {
 		if err := writeArchiveFile(archive, file.path, file.data); err != nil {
 			return format.Artifact{}, err
 		}
@@ -145,6 +145,28 @@ func writeCharX(asset format.ExportAsset) (format.Artifact, error) {
 	return format.Artifact{
 		Body: output.Bytes(), MediaType: "application/zip", Extension: ".charx",
 	}, nil
+}
+
+// archivedMemberFiles puts back the archived files this card came in with.
+func archivedMemberFiles(preserved []format.Remainder, written []archivedFile) []archivedFile {
+	taken := map[string]bool{cardEntry: true}
+	for _, file := range written {
+		taken[file.path] = true
+	}
+	given := make([]archivedFile, 0, len(preserved))
+	for _, row := range preserved {
+		name, archived := ArchivedMemberName(row.Namespace)
+		if !archived || taken[name] {
+			continue
+		}
+		data, readable := ArchivedMember(row.Payload)
+		if !readable {
+			continue
+		}
+		taken[name] = true
+		given = append(given, archivedFile{path: name, data: data})
+	}
+	return given
 }
 
 func writeArchiveFile(archive *zip.Writer, name string, data []byte) error {

@@ -2,7 +2,11 @@ package character
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
+	"path"
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -26,7 +30,7 @@ func (m CharXModule) Claim(file probe.Inspection) (format.Claim, bool) {
 }
 
 func (m CharXModule) Parse(
-	_ context.Context,
+	ctx context.Context,
 	file probe.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
@@ -34,7 +38,114 @@ func (m CharXModule) Parse(
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	return read.parsed(m.ID(), archivedImages(read, file))
+	images := archivedImages(read, file)
+	parsed, err := read.parsed(m.ID(), images)
+	if err != nil {
+		return format.Parsed{}, err
+	}
+	members, err := archivedMembers(ctx, file)
+	if err != nil {
+		return format.Parsed{}, err
+	}
+	parsed.Remainder = append(parsed.Remainder, members...)
+	return parsed, nil
+}
+
+const (
+	cardEntry = "card.json"
+	// MemberNamespace marks a preserved file that came out of an archive.
+	MemberNamespace        = "archive:"
+	maxArchiveMemberBytes  = 1 << 20
+	maxArchiveMembersBytes = 4 << 20
+)
+
+// archivedMembers keeps the archived files Illarin reads nothing from.
+func archivedMembers(ctx context.Context, file probe.Inspection) ([]format.Remainder, error) {
+	pictures := make(map[string]bool, len(file.Images))
+	for _, image := range file.Images {
+		if image.Locator.Container == probe.ZIP {
+			pictures[image.Locator.Name] = true
+		}
+	}
+	kept := make([]format.Remainder, 0)
+	budget := uint64(maxArchiveMembersBytes)
+	for _, entry := range file.ZIPEntries {
+		if entry.Directory || entry.Name == cardEntry || pictures[entry.Name] {
+			continue
+		}
+		if entry.UncompressedSize > maxArchiveMemberBytes || entry.UncompressedSize > budget {
+			return nil, format.LimitExceeded(fmt.Errorf(
+				"the archived %s is %d bytes, past what a card may carry beside it",
+				entry.Name, entry.UncompressedSize,
+			))
+		}
+		payload, err := readArchivedMember(ctx, file, entry.Name)
+		if err != nil {
+			return nil, err
+		}
+		budget -= entry.UncompressedSize
+		kept = append(kept, format.Remainder{
+			Owner:     format.OwnerAsset,
+			Namespace: MemberNamespace + entry.Name,
+			Payload:   payload,
+		})
+	}
+	return kept, nil
+}
+
+func readArchivedMember(
+	ctx context.Context,
+	file probe.Inspection,
+	name string,
+) (json.RawMessage, error) {
+	opened, err := file.OpenZIPEntry(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("open the archived %s: %w", name, err)
+	}
+	defer opened.Close()
+	held, err := io.ReadAll(io.LimitReader(opened, maxArchiveMemberBytes))
+	if err != nil {
+		return nil, fmt.Errorf("read the archived %s: %w", name, err)
+	}
+	payload, err := json.Marshal(archivedMember{
+		Bytes: base64.StdEncoding.EncodeToString(held),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("keep the archived %s: %w", name, err)
+	}
+	return payload, nil
+}
+
+type archivedMember struct {
+	Bytes string `json:"bytes"`
+}
+
+// ArchivedMember reads back the bytes a preserved archived file holds.
+func ArchivedMember(payload []byte) ([]byte, bool) {
+	var held archivedMember
+	if err := json.Unmarshal(payload, &held); err != nil {
+		return nil, false
+	}
+	given, err := base64.StdEncoding.DecodeString(held.Bytes)
+	if err != nil {
+		return nil, false
+	}
+	return given, true
+}
+
+// ArchivedMemberName is the archive entry a preserved file goes back to.
+func ArchivedMemberName(namespace string) (string, bool) {
+	name, marked := strings.CutPrefix(namespace, MemberNamespace)
+	if !marked || name == "" || name == cardEntry {
+		return "", false
+	}
+	if path.IsAbs(name) || strings.Contains(name, "\\") || path.Clean(name) != name {
+		return "", false
+	}
+	if name == ".." || strings.HasPrefix(name, "../") {
+		return "", false
+	}
+	return name, true
 }
 
 type cardAsset struct {

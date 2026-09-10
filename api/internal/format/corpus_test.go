@@ -83,6 +83,11 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		if parsed.Kind != declared.Kind || parsed.Format != resolution.Module.ID() {
 			t.Errorf("%s parsed as kind %q format %q", entry.Name(), parsed.Kind, parsed.Format)
 		}
+		for _, sidecar := range unreadArchiveEntries(file) {
+			if !slices.Contains(preservedNamespaces(parsed.Remainder), sidecar) {
+				t.Errorf("%s lost the archived %s", entry.Name(), sidecar)
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -94,4 +99,33 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 	if claimed == 0 {
 		t.Fatal("no fixture in the local probe corpus resolved to a module")
 	}
+}
+
+// unreadArchiveEntries names the archived files a card carries and Illarin reads nothing from.
+func unreadArchiveEntries(file probe.Inspection) []string {
+	if file.Container != probe.ZIP {
+		return nil
+	}
+	pictures := make(map[string]bool, len(file.Images))
+	for _, image := range file.Images {
+		if image.Locator.Container == probe.ZIP {
+			pictures[image.Locator.Name] = true
+		}
+	}
+	unread := make([]string, 0)
+	for _, entry := range file.ZIPEntries {
+		if entry.Directory || entry.Name == "card.json" || pictures[entry.Name] {
+			continue
+		}
+		unread = append(unread, character.MemberNamespace+entry.Name)
+	}
+	return unread
+}
+
+func preservedNamespaces(rows []format.Remainder) []string {
+	kept := make([]string, 0, len(rows))
+	for _, row := range rows {
+		kept = append(kept, row.Namespace)
+	}
+	return kept
 }
