@@ -391,7 +391,7 @@ export function LinkApproval() {
           void loadReview({ kind: "device", userCode });
         }}
         ref={capturePanel}
-        style={{ outline: "none" }}
+        className="outline-none focus-visible:outline-none"
         tabIndex={-1}
       >
         <label
@@ -472,8 +472,7 @@ function Panel({
       aria-busy={busy}
       aria-live="polite"
       ref={capture}
-      // A container that takes focus when the step changes is not a control, so it draws no ring
-      style={{ outline: "none" }}
+      className="outline-none focus-visible:outline-none"
       tabIndex={-1}
     >
       {children}

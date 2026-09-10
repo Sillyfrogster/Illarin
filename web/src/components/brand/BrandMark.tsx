@@ -4,9 +4,9 @@ type BrandMarkProps = {
 };
 
 const FILL = {
-  full: "var(--color-text-primary)",
-  accent: "var(--color-accent)",
-  faint: "var(--color-text-secondary)",
+  full: "var(--v-ink)",
+  accent: "var(--v-action)",
+  faint: "var(--v-mute)",
 } as const;
 
 /** The blade between two stars that share their tips */

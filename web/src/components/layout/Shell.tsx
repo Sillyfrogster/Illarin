@@ -1,5 +1,8 @@
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
-import styles from "./Shell.module.css";
+import { cn } from "@/lib/cn";
+
+export const shellClasses =
+  "mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]";
 
 type ShellProps = ComponentPropsWithoutRef<"div"> & {
   children: ReactNode;
@@ -14,10 +17,7 @@ export function Shell({
   ...rest
 }: ShellProps) {
   return (
-    <Tag
-      className={className ? `${styles.shell} ${className}` : styles.shell}
-      {...rest}
-    >
+    <Tag className={cn(shellClasses, className)} {...rest}>
       {children}
     </Tag>
   );

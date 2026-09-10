@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { shellClasses } from "@/components/layout/Shell";
 import { Gate } from "@/components/ui/gate";
 import { PageWaiting } from "@/components/ui/waiting";
 import {
@@ -197,7 +198,7 @@ export function PostWriter({ id }: { id: string }) {
 
   if (!account) {
     return (
-      <div className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)] pt-14">
+      <div className={`${shellClasses} pt-14`}>
         <Gate
           action="Sign in"
           heading="Sign in to write"
@@ -218,7 +219,7 @@ export function PostWriter({ id }: { id: string }) {
   const showingReader = reading || deleted;
 
   return (
-    <div className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)] pt-6 pb-40">
+    <div className={`${shellClasses} pt-6 pb-40`}>
       <div className="mx-auto max-w-[64rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link

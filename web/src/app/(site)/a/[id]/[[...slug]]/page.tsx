@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
+import { shellClasses } from "@/components/layout/Shell";
 import { type AssetDetail, fetchAsset } from "@/lib/api/query";
 import { assetMetadata } from "@/lib/asset-metadata";
 import { assetHoldsNothing } from "@/lib/asset-page-content";
@@ -19,8 +20,6 @@ const loadAsset = cache(async (id: string): Promise<AssetDetail | null> => {
   const cookie = (await cookies()).toString();
   return fetchAsset(id, cookie);
 });
-
-const SHELL = "mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]";
 
 export async function generateMetadata({
   params,
@@ -72,13 +71,13 @@ export default async function AssetPage({
               holdsNothing={assetHoldsNothing(asset.blocks)}
               kind={kind}
               sharedDate={sharedDate}
-              shellClassName={SHELL}
+              shellClassName={shellClasses}
             />
             <AssetBlocks
               images={asset.media}
               isOwner={asset.isOwner}
               kind={asset.kind}
-              shellClassName={SHELL}
+              shellClassName={shellClasses}
             />
           </article>
         </div>

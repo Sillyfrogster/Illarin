@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { shellClasses } from "@/components/layout/Shell";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import {
   type AssetDetail,
@@ -20,8 +21,6 @@ import { readableForMetadata } from "@/lib/site-metadata";
 import { GetAsset } from "../[[...slug]]/GetAsset";
 import { WithholdNotice } from "../[[...slug]]/WithholdNotice";
 import { UpdateHistory } from "./UpdateHistory";
-
-const SHELL = "mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]";
 
 const loadAsset = cache(async (id: string): Promise<AssetDetail | null> => {
   if (!isAssetId(id)) return null;
@@ -55,7 +54,7 @@ export default async function AssetHistoryPage({
   const published = asset.lifecycle !== "draft";
 
   return (
-    <div className={`${SHELL} pt-6 pb-chapter`}>
+    <div className={`${shellClasses} pt-6 pb-chapter`}>
       <div className="mx-auto max-w-[64rem]">
         <AssetPlate asset={asset} />
 

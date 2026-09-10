@@ -1,4 +1,5 @@
 import { BrandMark } from "@/components/brand/BrandMark";
+import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { NAV } from "./destinations";
@@ -13,7 +14,7 @@ const DESTINATIONS = [
 export function SiteFooter() {
   return (
     <footer className="mt-chapter bg-field pb-16">
-      <div className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]">
+      <div className={shellClasses}>
         <div className="h-px w-full bg-edge" />
         <div className="grid gap-group pt-10 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-14">
           <div className="min-w-0">

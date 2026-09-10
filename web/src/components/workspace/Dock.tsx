@@ -40,7 +40,7 @@ export function StatusLight({ state }: { state: DockState }) {
           state === "failed" && "bg-stop",
           state === "unsaved" && "bg-accent",
           state === "saving" && "bg-accent",
-          state === "private" && "shadow-[inset_0_0_0_2px_var(--color-accent)]",
+          state === "private" && "shadow-[inset_0_0_0_2px_var(--v-action)]",
           state === "published" && "bg-field/60",
         )}
       />

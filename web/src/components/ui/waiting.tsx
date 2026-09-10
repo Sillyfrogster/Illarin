@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { shellClasses } from "@/components/layout/Shell";
 import { cn } from "@/lib/cn";
 
 /** What a page says while it reads what it needs, in one voice across the site. */
@@ -28,9 +29,5 @@ export function Waiting({
 
 /** The same line when it is the whole page, held in the page's own column. */
 export function PageWaiting({ children }: { children: ReactNode }) {
-  return (
-    <Waiting className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)] py-16">
-      {children}
-    </Waiting>
-  );
+  return <Waiting className={`${shellClasses} py-16`}>{children}</Waiting>;
 }

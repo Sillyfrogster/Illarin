@@ -62,10 +62,7 @@ export function PerspectiveCarousel({
       aria-roledescription="carousel"
       className={cn("rounded-plate bg-deep py-5", className)}
     >
-      <div
-        className="relative h-72 overflow-hidden"
-        style={{ perspective: "1200px" }}
-      >
+      <div className="relative h-72 overflow-hidden [perspective:1200px]">
         <motion.div
           animate={{ x: -(chosen * slideWidth + slideWidth / 2) }}
           className="absolute top-1/2 left-1/2 flex w-fit -translate-y-1/2 items-center"
@@ -73,16 +70,16 @@ export function PerspectiveCarousel({
         >
           {pictures.map((picture, index) => (
             <div
-              className="shrink-0 px-2"
+              className="shrink-0 px-2 [perspective:1200px]"
               key={picture.id}
-              style={{ width: slideWidth, perspective: "1200px" }}
+              style={{ width: slideWidth }}
             >
               <motion.div
                 animate={{
                   rotateY: reduced ? 0 : (chosen - index) * ROTATION_STEP,
                   scale: index === chosen ? 1 : 0.86,
                 }}
-                style={{ transformStyle: "preserve-3d" }}
+                className="[transform-style:preserve-3d]"
                 transition={settle}
               >
                 <button

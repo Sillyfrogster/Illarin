@@ -3,7 +3,6 @@
 @source "../app";
 @source "../components";
 @source "../lib";
-@source not "../app/prototype";
 
 /* The theme is a data attribute with a system default, so Tailwind's dark variant has to read both */
 @custom-variant dark {
@@ -164,28 +163,9 @@
   /* The rails start where the page's content column starts, so the nav lines up with the page */
   --rail-inset: calc(max(0px, (100% - var(--shell)) / 2) + var(--gutter));
 
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-wipe: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Spring curves, so arrivals overshoot and settle instead of easing flat */
-  --spring-snappy: linear(
-    0,
-    0.009,
-    0.035 2.1%,
-    0.141 4.4%,
-    0.723 12.9%,
-    0.938 16.7%,
-    1.017 19.4%,
-    1.067 22.5%,
-    1.089 26%,
-    1.079 30.3%,
-    1.049 36%,
-    1.024 42.6%,
-    1.011 50.3%,
-    1.004 59.2%,
-    1.001 69.3%,
-    1
-  );
   --spring-smooth: linear(
     0,
     0.004,
@@ -220,144 +200,12 @@
   }
 }
 
-/* Superseded names, retargeted so pages that still read them stay legible */
-:root {
-  --color-carbon: #050505;
-  --color-carbon-soft: #0d0d0e;
-  --color-optical-white: #ffffff;
-  --color-silver: var(--v-mute);
-
-  --color-background: var(--v-field);
-  --color-surface: var(--v-plane);
-  --color-elevated: var(--v-plane);
-  --color-muted: var(--v-deep);
-  --color-border: var(--v-rule);
-  --color-text-primary: var(--v-ink);
-  --color-text-secondary: var(--v-mute);
-  --color-emphasis: var(--v-action);
-  --color-link: var(--v-mute);
-
-  --color-on-emphasis: var(--v-on-accent);
-  --color-critical: var(--v-stop);
-  --color-on-critical: var(--v-on-stop);
-  --color-media-surface: var(--v-media);
-  --color-media-text: var(--v-on-media);
-  --color-media-muted: #bec0bc;
-  --color-media-border: color-mix(
-    in srgb,
-    var(--color-media-text) 18%,
-    transparent
-  );
-  --color-emphasis-strong: color-mix(
-    in srgb,
-    var(--color-emphasis) 82%,
-    var(--color-text-primary)
-  );
-  --color-emphasis-soft: var(--v-accent-wash);
-  --color-emphasis-border: color-mix(
-    in srgb,
-    var(--color-emphasis) 54%,
-    var(--color-border)
-  );
-  --color-critical-strong: color-mix(
-    in srgb,
-    var(--color-critical) 84%,
-    var(--color-text-primary)
-  );
-  --color-critical-soft: var(--v-stop-wash);
-  --color-critical-border: color-mix(
-    in srgb,
-    var(--color-critical) 68%,
-    var(--color-border)
-  );
-  --color-focus-inner: var(--v-accent);
-  --color-focus-outer: var(--v-field);
-  --color-focus-ring: color-mix(in srgb, var(--v-accent) 38%, transparent);
-  --color-accent: var(--v-action);
-  --color-accent-strong: var(--color-emphasis-strong);
-  --color-accent-soft: var(--v-accent-wash);
-  --color-accent-border: var(--color-emphasis-border);
-  --color-on-accent: var(--v-on-accent);
-  --color-signal: var(--v-action);
-  --color-signal-strong: var(--color-emphasis-strong);
-  --color-scrim: light-dark(
-    color-mix(in srgb, #050505 52%, transparent),
-    color-mix(in srgb, #050505 78%, transparent)
-  );
-  --color-shadow: light-dark(#171719, #020202);
-  --mask-opaque: #050505;
-  --art-wash-blend: multiply;
-  --color-ground-veil: var(--v-plane);
-  --color-ground-depth: var(--v-deep);
-
-  --color-brand-detail: var(--v-accent);
-
-  --shadow-card: 0 12px 28px
-    color-mix(in srgb, var(--color-shadow) 9%, transparent);
-  --shadow-lift: 0 24px 56px
-    color-mix(in srgb, var(--color-shadow) 18%, transparent);
-  --shadow-button: 0 7px 18px
-    color-mix(in srgb, var(--color-shadow) 16%, transparent);
-  --shadow-button-hover: 0 11px 26px
-    color-mix(in srgb, var(--color-shadow) 22%, transparent);
-  --shadow-cta: 0 10px 28px
-    color-mix(in srgb, var(--color-shadow) 19%, transparent);
-  --shadow-cta-hover: 0 15px 36px
-    color-mix(in srgb, var(--color-shadow) 25%, transparent);
-  --shadow-panel: var(--shadow-popover);
-  --shadow-soft: 0 14px 38px
-    color-mix(in srgb, var(--color-shadow) 10%, transparent);
-  --shadow-lightbox: 0 38px 88px
-    color-mix(in srgb, var(--color-shadow) 46%, transparent);
-
-  --radius-xs: 6px;
-  --radius-sm: var(--radius-control);
-  --radius-md: var(--radius-control);
-  --radius-lg: var(--radius-plate);
-  --radius-xl: var(--radius-plate);
-  --radius-pill: var(--radius-control);
-
-  --shell-reading: 64rem;
-
-  --font-display: var(--font-outfit), system-ui, sans-serif;
-  --font-body: var(--font-dm-sans), system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --type-display-size: 3rem;
-  --type-display-leading: 1.05;
-  --type-display-fluid: clamp(2.5rem, 4.5vw, 4.75rem);
-  --type-display-fluid-leading: 1.05;
-  --type-section-size: 2rem;
-  --type-section-leading: 1.1;
-  --type-section-fluid: clamp(2rem, 3.5vw, 3.5rem);
-  --type-title-size: 1.375rem;
-  --type-title-leading: 1.3;
-  --type-block-title-size: 1.5rem;
-  --type-block-title-leading: 1.2;
-  --type-lead-size: 1.1875rem;
-  --type-lead-leading: 1.6;
-  --type-lead-weight: 400;
-  --type-body-size: 1rem;
-  --type-body-leading: 1.8;
-  --type-secondary-size: 0.9375rem;
-  --type-secondary-leading: 1.5;
-  --type-label-size: 0.8125rem;
-  --type-label-leading: 1.5;
-}
-
 :root[data-theme="light"] {
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --art-wash-blend: screen;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --art-wash-blend: screen;
-  }
 }
 
 * {
@@ -368,23 +216,23 @@
 
 html,
 body {
-  background: var(--color-background);
+  background: var(--v-field);
 }
 
 html {
-  scrollbar-color: var(--color-text-secondary) var(--color-background);
+  scrollbar-color: var(--v-mute) var(--v-field);
   scrollbar-gutter: stable;
 }
 
 body {
   min-width: 0;
   background: var(--v-field);
-  color: var(--color-text-primary);
-  caret-color: var(--color-emphasis);
-  font-family: var(--font-body);
-  font-size: var(--type-body-size);
+  color: var(--v-ink);
+  caret-color: var(--v-action);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-size: 1rem;
   font-weight: 400;
-  line-height: var(--type-body-leading);
+  line-height: 1.8;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   text-wrap: pretty;
@@ -395,14 +243,14 @@ main {
 }
 
 a {
-  color: var(--color-link);
+  color: var(--v-mute);
   text-decoration: none;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.22em;
 }
 
 a:hover {
-  color: var(--color-text-primary);
+  color: var(--v-ink);
 }
 
 button {
@@ -416,7 +264,8 @@ button {
 input,
 select,
 textarea {
-  caret-color: var(--color-emphasis);
+  border: 0;
+  caret-color: var(--v-action);
   font-family: inherit;
 }
 
@@ -450,117 +299,17 @@ img {
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: var(--v-field);
 }
 
 *::-webkit-scrollbar-thumb {
-  border: 3px solid var(--color-background);
-  border-radius: var(--radius-pill);
-  background: var(--color-text-secondary);
+  border: 3px solid var(--v-field);
+  border-radius: var(--radius-control);
+  background: var(--v-mute);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-primary);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-@keyframes lhRise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes lhFade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes lhArt {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(1.02);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes lhWipe {
-  from {
-    clip-path: inset(0 102% 0 0);
-  }
-  to {
-    clip-path: inset(0 -2% 0 0);
-  }
-}
-
-@keyframes lhDrift {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(-26px, -14px);
-  }
-}
-
-@keyframes lhBreathe {
-  0%,
-  100% {
-    opacity: 0.42;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes lhTwinkle {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.85;
-  }
-}
-
-@keyframes lhSway {
-  0%,
-  100% {
-    transform: rotate(-1.2deg);
-  }
-  50% {
-    transform: rotate(1.2deg);
-  }
-}
-
-@keyframes lhSpin {
-  to {
-    transform: rotate(360deg);
-  }
+  background: var(--v-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowUp, Rss } from "lucide-react";
 import Link from "next/link";
+import { shellClasses } from "@/components/layout/Shell";
 import { ArticleContents } from "@/components/publication/ArticleContents";
 import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
@@ -16,10 +17,7 @@ export function Article({ post }: { post: PublicPost }) {
   const document = asPostDocument(post.document);
   const contents = postContents(document);
   return (
-    <article
-      className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)] pb-16"
-      id="article-top"
-    >
+    <article className={`${shellClasses} pb-16`} id="article-top">
       <Link
         className="mt-6 inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
         href={BLOG_HOME}

@@ -34,15 +34,22 @@ export function QuietPageArt({
   kind,
   placement,
   style,
+  compact = false,
 }: {
   kind: BrowseKind;
   placement: ArtPlacement;
   style?: CSSProperties;
+  compact?: boolean;
 }) {
   return (
     <div
       aria-hidden="true"
-      className={cn(ART, PLACEMENT[placement])}
+      className={cn(
+        ART,
+        PLACEMENT[placement],
+        compact &&
+          "min-h-[clamp(190px,18vw,240px)] md:min-h-[clamp(190px,18vw,240px)]",
+      )}
       data-measurement-ignore
       style={{ ...quietPageArtVariables(kind), ...style } as CSSProperties}
     />
@@ -123,11 +130,7 @@ function QuietComposition({
         </h2>
         <p className="mt-3.5 text-ui text-mute">{children}</p>
       </div>
-      <QuietPageArt
-        kind={kind}
-        placement="beside"
-        style={compact ? { minHeight: "clamp(190px, 18vw, 240px)" } : undefined}
-      />
+      <QuietPageArt kind={kind} placement="beside" compact={compact} />
     </section>
   );
 }

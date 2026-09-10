@@ -57,14 +57,6 @@ api: need-db ## Run the API
 web: ## Run the site
 	cd web && PORT=$(WEB_PORT) bun run dev
 
-.PHONY: editor-prototype
-editor-prototype: ## Run the synthetic editor at /prototype/editor
-	$(MAKE) web
-
-.PHONY: direction-prototype
-direction-prototype: ## Run the visual direction study at /prototype/direction
-	$(MAKE) web
-
 .PHONY: proxy
 proxy: ## Run the local nginx proxy on port 8000
 	$(NGINX) -g 'daemon off;'

@@ -2,6 +2,7 @@
 
 import type { MotionValue } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import cave from "../../../public/landing/cave.json";
 import { useLandingMotion } from "./LandingMotion";
 
@@ -105,8 +106,10 @@ export function CaveFilm({ progress }: { progress: MotionValue<number> }) {
       preload="auto"
       aria-hidden="true"
       tabIndex={-1}
-      className="absolute inset-0 h-full w-full object-cover object-[51%_center]"
-      style={{ opacity: visible ? 1 : 0 }}
+      className={cn(
+        "absolute inset-0 h-full w-full object-cover object-[51%_center]",
+        visible ? "opacity-100" : "opacity-0",
+      )}
     />
   );
 }

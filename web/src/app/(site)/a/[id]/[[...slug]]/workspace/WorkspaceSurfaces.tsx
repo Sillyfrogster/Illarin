@@ -367,7 +367,7 @@ function ActivationSweep() {
     <div className="pointer-events-none fixed inset-0 z-20 overflow-hidden">
       <motion.div
         animate={{ left: "110vw" }}
-        className="absolute inset-y-[-10%] w-[34vw] min-w-60 bg-[linear-gradient(90deg,transparent,var(--color-accent),transparent)] opacity-25 blur-[14px]"
+        className="absolute inset-y-[-10%] w-[34vw] min-w-60 bg-[linear-gradient(90deg,transparent,var(--v-action),transparent)] opacity-25 blur-[14px]"
         initial={{ left: "-40vw" }}
         key={workspace.sweep}
         transition={{ duration: 0.95, ease: [0.4, 0, 0.2, 1] }}
