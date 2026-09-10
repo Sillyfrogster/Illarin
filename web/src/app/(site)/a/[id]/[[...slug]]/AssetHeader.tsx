@@ -133,6 +133,11 @@ export function AssetHeader({
                 Linked install only
               </>
             ) : null}
+            {isDraft ? (
+              <span className="rounded-control bg-accent-wash px-2 py-0.5 text-label font-medium text-ink">
+                Private draft
+              </span>
+            ) : null}
           </p>
           {writing ? (
             <fieldset
