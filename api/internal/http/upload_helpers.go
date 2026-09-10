@@ -7,6 +7,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -162,7 +164,9 @@ func (h *Handlers) refuse(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": fmt.Sprintf("the upload is over the limit of %d bytes", h.maxUploadBytes),
+			"error": fmt.Sprintf(
+				"That file is larger than the %s upload limit.", readableSize(h.maxUploadBytes),
+			),
 		})
 		return
 	}
@@ -173,4 +177,21 @@ func (h *Handlers) refuse(c *gin.Context, err error) {
 		return
 	}
 	c.JSON(http.StatusBadRequest, gin.H{"error": "could not create the asset"})
+}
+
+// readableSize writes a byte ceiling the way a person says it, so a refusal names a size a creator can compare their own file against.
+func readableSize(bytes int64) string {
+	units := []struct {
+		suffix string
+		scale  int64
+	}{{suffix: "GB", scale: 1 << 30}, {suffix: "MB", scale: 1 << 20}, {suffix: "KB", scale: 1 << 10}}
+	for _, unit := range units {
+		if bytes < unit.scale {
+			continue
+		}
+		return strings.TrimSuffix(
+			strconv.FormatFloat(float64(bytes)/float64(unit.scale), 'f', 1, 64), ".0",
+		) + " " + unit.suffix
+	}
+	return fmt.Sprintf("%d bytes", bytes)
 }
