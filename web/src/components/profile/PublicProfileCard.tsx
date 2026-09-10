@@ -3,11 +3,13 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar } from "@/components/media/Avatar";
+import { CreatorPortrait } from "@/components/media/CreatorPortrait";
+import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
-import styles from "./PublicProfileCard.module.css";
+import { whatIsPublic } from "@/lib/profile-draft";
 
+/** Who visitors meet at this handle, and the way to the editor that changes it. */
 export function PublicProfileCard() {
   const { account } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -32,30 +34,37 @@ export function PublicProfileCard() {
 
   if (!account || !profile) return null;
 
-  const filled = [
-    profile.displayName && "display name",
-    profile.avatar && "avatar",
-    profile.biography && "biography",
-    profile.contactEmail && "contact",
-    profile.links.length > 0 &&
-      `${profile.links.length} ${profile.links.length === 1 ? "link" : "links"}`,
-  ].filter(Boolean);
+  const showing = whatIsPublic({
+    avatar: Boolean(profile.avatar),
+    biography: profile.biography,
+    contactEmail: profile.contactEmail,
+    displayName: profile.displayName,
+    links: profile.links,
+  });
 
   return (
-    <section className={styles.card}>
-      <Avatar handle={profile.handle} portrait={profile.avatar} size="sm" />
-      <div className={styles.copy}>
-        <h3>{profile.displayName || `@${profile.handle}`}</h3>
-        <p>
-          {filled.length > 0
-            ? `Showing ${filled.join(", ")}.`
+    <section className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-plate bg-deep px-5 py-5">
+      <CreatorPortrait
+        className="size-14"
+        handle={profile.handle}
+        picture={profile.avatar}
+      />
+      <div className="min-w-0 flex-1 basis-56">
+        <h3 className="font-ui text-ui font-medium text-ink [overflow-wrap:anywhere]">
+          {profile.displayName || `@${profile.handle}`}
+        </h3>
+        <p className="font-ui text-meta text-mute">
+          {showing.length > 0
+            ? `Showing ${showing.join(", ")}.`
             : "Only your handle is public so far."}
         </p>
       </div>
-      <Link className={styles.action} href="/settings/profile">
-        Edit
-        <ArrowRight size={15} strokeWidth={1.7} aria-hidden="true" />
-      </Link>
+      <Button asChild variant="secondary">
+        <Link href="/settings/profile">
+          Edit
+          <ArrowRight aria-hidden="true" />
+        </Link>
+      </Button>
     </section>
   );
 }

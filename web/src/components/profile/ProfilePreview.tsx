@@ -1,54 +1,76 @@
 import { ArrowUpRight, Mail } from "lucide-react";
-import { Avatar } from "@/components/media/Avatar";
+import { CreatorPortrait } from "@/components/media/CreatorPortrait";
 import type { Profile, ProfileLink } from "@/lib/api/query";
-import styles from "./ProfilePreview.module.css";
 
+/** The identity band as a visitor meets it, changing as the fields beside it are typed. */
 export function ProfilePreview({
-  handle,
-  avatar,
-  displayName,
   biography,
   contactEmail,
+  displayName,
+  handle,
   links,
+  picture,
 }: {
-  handle: string;
-  avatar: Profile["avatar"];
-  displayName: string;
   biography: string;
   contactEmail: string;
+  displayName: string;
+  handle: string;
   links: ProfileLink[];
+  picture: Profile["avatar"];
 }) {
   const shown = links.filter((link) => link.label || link.address);
 
   return (
-    <aside className={styles.preview} aria-label="Profile preview">
-      <p className={styles.caption}>As visitors see it</p>
-      <div className={styles.band}>
-        <Avatar handle={handle} portrait={avatar} size="sm" />
-        <div className={styles.identity}>
-          <p className={styles.name}>{displayName || `@${handle}`}</p>
-          {displayName ? <p className={styles.handle}>@{handle}</p> : null}
-        </div>
-        {biography ? <p className={styles.biography}>{biography}</p> : null}
+    <aside
+      aria-label="Profile preview"
+      className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+2.5rem)]"
+    >
+      <p className="font-ui text-meta text-mute">As visitors see it</p>
+      <div className="mt-3 rounded-plate bg-deep p-6">
+        <CreatorPortrait handle={handle} picture={picture} size="md" />
+        <p className="mt-4 font-display text-section font-medium tracking-tight text-ink [overflow-wrap:anywhere]">
+          {displayName || `@${handle}`}
+        </p>
+        {displayName ? (
+          <p className="font-ui text-ui text-mute [overflow-wrap:anywhere]">
+            @{handle}
+          </p>
+        ) : null}
+        {biography ? (
+          <p className="mt-3 font-prose text-ui text-ink [overflow-wrap:anywhere]">
+            {biography}
+          </p>
+        ) : null}
         {contactEmail || shown.length > 0 ? (
-          <ul className={styles.reach}>
+          <ul className="m-0 mt-4 grid list-none gap-1.5 p-0">
             {contactEmail ? (
-              <li>
-                <Mail size={13} strokeWidth={1.6} aria-hidden="true" />
+              <li className="flex items-center gap-2 font-ui text-meta text-mute [overflow-wrap:anywhere]">
+                <Mail
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0"
+                  strokeWidth={1.7}
+                />
                 {contactEmail}
               </li>
             ) : null}
             {shown.map((link, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: a link's position is its identity here
-              <li key={index}>
+              <li
+                className="flex items-center gap-1 font-ui text-meta text-mute [overflow-wrap:anywhere]"
+                // biome-ignore lint/suspicious/noArrayIndexKey: a link's position is its identity here
+                key={index}
+              >
                 {link.label || link.address}
-                <ArrowUpRight size={13} strokeWidth={1.6} aria-hidden="true" />
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0"
+                  strokeWidth={1.7}
+                />
               </li>
             ))}
           </ul>
         ) : null}
       </div>
-      <p className={styles.note}>
+      <p className="mt-3 font-ui text-meta text-mute [overflow-wrap:anywhere]">
         Your published work follows straight after this, at /@{handle}.
       </p>
     </aside>
