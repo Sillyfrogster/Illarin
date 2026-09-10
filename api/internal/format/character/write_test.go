@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -166,11 +167,43 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 			t.Errorf("the archive has no %q", entry)
 		}
 	}
-	if !bytes.Equal(files["assets/emotion/2.png"], []byte("happy-bytes")) {
-		t.Errorf("the expression file holds %q", files["assets/emotion/2.png"])
+	if !bytes.Equal(files["assets/emotion/image/2.png"], []byte("happy-bytes")) {
+		t.Errorf("the expression file holds %q", files["assets/emotion/image/2.png"])
 	}
-	if !bytes.Equal(files["assets/x_gallery/3.webp"], []byte("gallery-bytes")) {
-		t.Errorf("the gallery file holds %q", files["assets/x_gallery/3.webp"])
+	if !bytes.Equal(files["assets/other/image/3.webp"], []byte("gallery-bytes")) {
+		t.Errorf("the gallery file holds %q", files["assets/other/image/3.webp"])
+	}
+}
+
+func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
+	expressionID, galleryID := uuid.New(), uuid.New()
+	asset := format.ExportAsset{
+		Kind:   Kind,
+		Header: format.Header{Name: "Ana"},
+		Elements: []block.Element{
+			prose(block.RoleDescription, "Quiet"),
+			greetings("Hello"),
+			images(block.RoleExpressions, block.ImageItem{
+				ID: uuid.New(), MediaID: expressionID, Name: "happy",
+			}),
+			images(block.RoleGallery, block.ImageItem{ID: uuid.New(), MediaID: galleryID}),
+		},
+		Cover: &format.ExportMedia{MediaType: "image/png", Data: testPNG(t)},
+		Images: map[uuid.UUID]format.ExportMedia{
+			expressionID: {MediaType: "image/png", Data: []byte("happy-bytes")},
+			galleryID:    {MediaType: "image/png", Data: []byte("gallery-bytes")},
+		},
+	}
+
+	files := archiveEntries(t, write(t, CharXModule{}, asset).Body)
+	for _, wanted := range []string{
+		"assets/icon/image/main.png",
+		"assets/emotion/image/2.png",
+		"assets/other/image/3.png",
+	} {
+		if _, held := files[wanted]; !held {
+			t.Errorf("the archive has no %s: %v", wanted, slices.Sorted(maps.Keys(files)))
+		}
 	}
 }
 
@@ -488,4 +521,47 @@ func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
+	travelling, left := uuid.New(), uuid.New()
+	asset := format.ExportAsset{
+		Kind:   Kind,
+		Header: format.Header{Name: "Ana"},
+		Elements: []block.Element{
+			prose(block.RoleDescription, "Quiet"),
+			greetings("Hello"),
+			images(block.RoleGallery, block.ImageItem{
+				ID: uuid.New(), MediaID: travelling, Name: "At the door",
+			}),
+		},
+		Images: map[uuid.UUID]format.ExportMedia{
+			travelling: {MediaType: "image/png", Data: []byte("door-bytes")},
+			left:       {MediaType: "image/png", Data: []byte("stair-bytes")},
+		},
+	}
+
+	for _, module := range []format.Writer{CCv3Module{}, CharXModule{}} {
+		card := writtenCard(t, module, write(t, module, asset))
+		var records []cardAssetRecord
+		if err := json.Unmarshal(card["assets"], &records); err != nil {
+			t.Fatalf("read %s's asset list: %v", module.ID(), err)
+		}
+		if len(records) != 1 || records[0].Name != "At the door" {
+			t.Fatalf("%s wrote %+v, want the one gallery image it was given",
+				module.ID(), records)
+		}
+	}
+}
+
+func writtenCard(
+	t *testing.T,
+	module format.Writer,
+	written format.Artifact,
+) map[string]json.RawMessage {
+	t.Helper()
+	if module.ID() != CharX {
+		return writtenBody(t, written.Body, V3)
+	}
+	return writtenBody(t, archiveEntries(t, written.Body)["card.json"], V3)
 }

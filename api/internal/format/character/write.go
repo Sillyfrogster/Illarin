@@ -311,7 +311,12 @@ func archivedAssets(asset format.ExportAsset) ([]archivedFile, json.RawMessage) 
 	taken := make(map[string]bool)
 	for index, picture := range exportedPictures(asset) {
 		extension := mediaExtension(picture.media.MediaType)
-		entry := path.Join("assets", picture.assetType, fmt.Sprintf("%d.%s", index+1, extension))
+		entry := path.Join(
+			archiveFolder(picture.assetType), fmt.Sprintf("%d.%s", index+1, extension),
+		)
+		if picture.assetType == iconAssetType && index == 0 {
+			entry = path.Join(archiveFolder(iconAssetType), "main."+extension)
+		}
 		if taken[entry] {
 			continue
 		}
@@ -332,6 +337,18 @@ const (
 	mainIconAssetName   = "main"
 	fallbackPictureName = "image"
 )
+
+// archiveFolder puts each picture where the apps that read a CharX look for it.
+func archiveFolder(assetType string) string {
+	switch assetType {
+	case iconAssetType:
+		return "assets/icon/image"
+	case emotionAssetType:
+		return "assets/emotion/image"
+	default:
+		return "assets/other/image"
+	}
+}
 
 type exportedPicture struct {
 	assetType string
