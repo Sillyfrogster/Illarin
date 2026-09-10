@@ -18,7 +18,6 @@ import type { Controls } from "./use-controls";
 
 export type Upload = (file: File) => Promise<PostMedia | null>;
 
-/** What choosing a file is about to do to the post. */
 export type PictureIntent = "picture" | "gallery" | "add" | "replace";
 
 const INTENT_LABELS: Record<PictureIntent, string> = {
@@ -28,7 +27,6 @@ const INTENT_LABELS: Record<PictureIntent, string> = {
   replace: "Replace the picture",
 };
 
-/** The native file control never shows; a labelled choice opens it. */
 const FILE = "sr-only";
 
 export function PictureRow({
@@ -166,7 +164,6 @@ export function PictureRow({
   );
 }
 
-// placement answers the node an intent puts after whatever the caret is on.
 function placement(intent: PictureIntent, picture: PictureAttributes) {
   if (intent === "picture") return { type: "image", attrs: picture };
   if (intent === "gallery") {

@@ -10,7 +10,6 @@ import { normalizedSlug } from "@/lib/post-link";
 
 type Part = "address" | "name";
 
-/** What publishing fixed: the address readers have and the name on the post. */
 export function PublishedIdentity({
   admin,
   post,
@@ -159,7 +158,6 @@ function Named({ post }: { post: Post }) {
   );
 }
 
-// useOpenedField moves the keyboard to the field that replaced the button.
 function useOpenedField() {
   const field = useRef<HTMLInputElement>(null);
   useEffect(() => {

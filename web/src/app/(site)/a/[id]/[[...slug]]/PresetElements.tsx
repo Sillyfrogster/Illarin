@@ -186,11 +186,6 @@ function Settings({
   );
 }
 
-/**
- * A setting's value. Text made only of spaces and newlines is shown as it is
- * written, because saying a setting holds nothing when it holds two blank
- * lines is a lie a reader would act on.
- */
 function SettingValue({
   name,
   value,

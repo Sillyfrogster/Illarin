@@ -11,8 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// alreadyPast is a deadline that has gone by before the handler starts, so a
-// test about a limit does not depend on how fast the database answers.
 const alreadyPast = time.Nanosecond
 
 func deadlines(json time.Duration) Deadlines {

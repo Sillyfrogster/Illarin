@@ -4,7 +4,6 @@ import { type FocusEvent, type KeyboardEvent, useEffect, useRef } from "react";
 
 const MOVES = ["ArrowLeft", "ArrowRight", "Home", "End"];
 
-/** The bar is one stop on the way to the writing, and arrow keys move inside it. */
 export function useToolbarKeys() {
   const bar = useRef<HTMLDivElement>(null);
   const at = useRef(0);

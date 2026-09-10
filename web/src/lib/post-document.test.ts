@@ -17,7 +17,6 @@ import {
 } from "@/lib/post-document";
 import { isSafeAddress } from "@/lib/post-link";
 
-/** The one corpus Go validation and the site both read. Go owns the document. */
 const CORPUS = join(
   import.meta.dir,
   "../../../api/internal/postdoc/testdata/corpus",
@@ -394,7 +393,6 @@ test("an inserted table and callout survive before anything is typed into them",
   ]);
 });
 
-// The invalid corpus proves the vocabulary, not the placement rules Go owns.
 for (const [name, one] of corpus("invalid")) {
   test(`${name} loses what Go refuses before it reaches a working copy`, () => {
     const carried = fromEditor({

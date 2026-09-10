@@ -7,7 +7,6 @@ import { versionAnchor, versionDate, versionTitle } from "@/lib/asset-updates";
 import { cn } from "@/lib/cn";
 import { useReadingMark } from "@/lib/use-reading-mark";
 
-/** Every recorded version as a way into it, in the margin on a wide screen and a disclosure on a narrow one. */
 export function VersionSpine({ versions }: { versions: RecordedVersion[] }) {
   const [open, setOpen] = useState(false);
   const here = useReadingMark(versions.map(versionAnchor));

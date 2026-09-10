@@ -1,18 +1,15 @@
 import type { PostAction, PostRevision } from "@/lib/api/query";
 
-/** One thing the editorial history shows, in the order it happened. */
 export type HistoryEntry =
   | { kind: "edition"; at: string; revision: PostRevision }
   | { kind: "note"; at: string; action: PostAction };
 
-// keptBy names the actions an edition card already accounts for.
 const keptBy = new Set([
   "post.checkpointed",
   "post.published",
   "post.scheduled",
 ]);
 
-/** The editions and what was done around them as one stream, newest first. */
 export function historyStream(
   revisions: PostRevision[],
   actions: PostAction[],
@@ -30,7 +27,6 @@ export function historyStream(
   );
 }
 
-/** What one recorded action reads as after the name of who did it. */
 export function noteWords(done: PostAction): string {
   switch (done.action) {
     case "post.created":
@@ -60,7 +56,6 @@ export function noteWords(done: PostAction): string {
   }
 }
 
-/** What one kept edition reads as beside its number. */
 export function revisionWords(capturedFor: string): string {
   if (capturedFor === "publication") return "Published";
   if (capturedFor === "schedule") return "Kept to go live later";

@@ -17,7 +17,6 @@ import { PublishedIdentity } from "./PublishedIdentity";
 
 type Release = NonNullable<Draft["release"]>;
 
-/** Everything about the post that is not the writing itself. */
 export function DetailsRail({
   admin,
   apps,

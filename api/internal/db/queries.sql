@@ -1,5 +1,4 @@
 -- name: InsertAsset :one
--- indexed_at is left to its default so nothing a caller sends can reach it.
 insert into assets
   (id, kind, owner_id, name, blurb, tags, is_nsfw, discovery, lifecycle,
    asset_version, credited_author, nickname, origin_format, created_at)
@@ -31,8 +30,6 @@ update assets set current_revision_id = $2, updated_at = now() where id = $1;
 select a.id, a.kind, revision.format, a.origin_format,
        a.asset_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       -- Only a draft leaves the question unanswered and no draft reaches a
-       -- listing. If one ever did, the safe reading is the one that blurs it.
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
        a.current_revision_id, a.created_at
   from assets a
@@ -51,8 +48,6 @@ select a.id, a.kind, revision.format, a.origin_format,
  limit $5;
 
 -- name: BrowseAssets :many
--- A creator's own listing is the one place a draft appears, so the adult
--- content answer comes back as it is stored, unanswered included.
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.kind, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
@@ -218,8 +213,6 @@ select count(*)
    and a.is_nsfw;
 
 -- name: AssetPage :one
--- Unlisted is missing from this predicate on purpose. A stranger holding the
--- link gets a normal answer.
 select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        a.lifecycle, a.created_at,
        revision.format as original_format, revision.media_type as original_media_type,
@@ -237,7 +230,6 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: AssetPageMedia :many
--- The direct cover comes first; remaining media follows the established role order.
 select media.id, media.role, media.width, media.height,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
   from assets a
@@ -259,7 +251,6 @@ select media.id, media.role, media.width, media.height,
           media.created_at desc, media.id desc;
 
 -- name: CurrentRevisionLocation :one
--- A draft has no download for anyone, its owner included.
 select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
   from assets a
   left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
@@ -275,8 +266,6 @@ select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_i
 select a.id, a.kind, revision.format, a.origin_format,
        a.asset_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       -- Imported drafts carry an answer. The fallback protects older rows
-       -- that predate this invariant.
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
        a.current_revision_id, a.created_at
   from assets a
@@ -1017,7 +1006,6 @@ insert into migration_preserved_records
 values ($1, $2, $3, sqlc.narg('asset_id')::uuid, sqlc.narg('owner_id')::uuid, $4);
 
 -- name: InsertLegacyCounters :exec
--- migrated_at defaults to the transaction clock, so every row in a run shares one cutover stamp.
 insert into migration_legacy_counters (asset_id, v1_downloads, v1_views, v1_updated_at)
 values ($1, $2, $3, $4);
 
@@ -1070,7 +1058,6 @@ select count(*)::bigint
  where instance_id = sqlc.arg('instance_id') and state in ('queued', 'released');
 
 -- name: AbandonExhaustedDeliveries :execrows
--- A delivery an instance keeps taking and never acknowledging stops rather than being handed out forever.
 update instance_deliveries
    set state = 'failed', settled_at = now(), settled_reason = 'abandoned',
        lease_expires_at = null
@@ -1080,8 +1067,6 @@ update instance_deliveries
    and attempts >= sqlc.arg('max_attempts');
 
 -- name: ClaimDeliveries :many
--- One claim takes both the waiting work and the work whose lease ran out.
--- The instance is authorised here, at the moment work leaves the queue, so a link cut since the wait opened releases nothing.
 with candidates as (
     select waiting.id
       from instance_deliveries as waiting
@@ -1204,7 +1189,6 @@ select entry.instance_id,
  group by entry.instance_id;
 
 -- name: ReportLibraryEntries :execrows
--- An instance that cannot say which version it holds has not told us it is behind.
 insert into instance_library_entries (instance_id, asset_id, content_generation, reported_at)
 select sqlc.arg('instance_id'), asset.id,
        coalesce(nullif(reported.generation, 0), asset.content_generation), now()

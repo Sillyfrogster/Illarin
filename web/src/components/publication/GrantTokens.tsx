@@ -10,13 +10,11 @@ import type { IssuedPublicationToken, PublicationGrant } from "@/lib/api/query";
 import { TokenRows } from "./TokenRows";
 import { useGrantTokens } from "./use-grant-tokens";
 
-/** An approval's API tokens; the holder makes them, and anyone shown them can revoke. */
 export function GrantTokens({
   grant,
   mine = true,
 }: {
   grant: PublicationGrant;
-  /** Whether this is the holder looking at their own tokens rather than the authority. */
   mine?: boolean;
 }) {
   const [failure, setFailure] = useState("");
@@ -107,7 +105,6 @@ export function GrantTokens({
   );
 }
 
-/** The two questions a token asks, and the one time its value can be taken. */
 function NewToken({
   appName,
   grantId,

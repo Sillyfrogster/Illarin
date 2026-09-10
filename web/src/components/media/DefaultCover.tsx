@@ -22,7 +22,6 @@ const SHARD = "polygon(18% 0, 100% 0, 82% 100%, 0 100%)";
 const STAR =
   "polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%)";
 
-/** Each kind stands on its own ground with its own two marks behind it */
 const KINDS: Record<
   BrowseKind,
   { ground: string; ink: string; shard: string; star: string }
@@ -59,7 +58,6 @@ const KINDS: Record<
   },
 };
 
-/** The plate an asset stands on when its creator gave it no picture */
 export function DefaultCover({
   kind,
   compact = false,

@@ -6,7 +6,6 @@ import { Gate } from "@/components/ui/gate";
 import { Waiting } from "@/components/ui/waiting";
 import { useAuth } from "@/lib/auth";
 
-/** A register behind the one account that runs Illarin's publication. */
 export function AuthorityPage({
   children,
   heading,

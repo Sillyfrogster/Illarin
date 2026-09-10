@@ -1,5 +1,3 @@
-// Package block holds the asset content model. Elements carry semantic roles;
-// blocks only arrange them.
 package block
 
 import (
@@ -12,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Type is what an element's data structure is. A type exists because its
-// structure differs from every other, never because a feature has a name.
 type Type string
 
 const (
@@ -33,48 +29,34 @@ const (
 	TypeRecordList     Type = "record_list"
 )
 
-// Role is what an element's content means, and it is the whole of what import
-// and export read. An element with no import or export meaning carries none.
 type Role string
 
 const (
-	RoleDescription     Role = "description"
-	RolePersonality     Role = "personality"
-	RoleScenario        Role = "scenario"
-	RoleGreetings       Role = "greetings"
-	RoleGroupGreetings  Role = "group_greetings"
-	RoleExampleDialogue Role = "example_dialogue"
-	// RoleSystemPrompt and RolePostHistoryInstructions are prompt text a
-	// creator writes for a model rather than for a reader.
+	RoleDescription             Role = "description"
+	RolePersonality             Role = "personality"
+	RoleScenario                Role = "scenario"
+	RoleGreetings               Role = "greetings"
+	RoleGroupGreetings          Role = "group_greetings"
+	RoleExampleDialogue         Role = "example_dialogue"
 	RoleSystemPrompt            Role = "system_prompt"
 	RolePostHistoryInstructions Role = "post_history_instructions"
-	// RoleCreatorNotes is what the creator wanted to say about making the
-	// thing, which is the note every card format carries as creator_notes.
-	RoleCreatorNotes Role = "creator_notes"
-	RoleGallery      Role = "gallery"
-	// RoleExpressions is a named set of pictures of one face. The names are
-	// free text and an exporter maps them. Illarin holds no vocabulary of
-	// emotions to check them against.
-	RoleExpressions Role = "expressions"
-	// RoleLorebookEntries covers both embedded and standalone lorebooks.
-	RoleLorebookEntries Role = "lorebook_entries"
-	// The preset roles. Four of them are settings a creator fills in and three
-	// are content they write, which is why they are seven roles and not one.
-	RolePromptFragments    Role = "prompt_fragments"
-	RolePromptVariables    Role = "prompt_variables"
-	RoleSamplerSettings    Role = "sampler_settings"
-	RoleCompletionSettings Role = "completion_settings"
-	RoleAdvancedSettings   Role = "advanced_settings"
-	RolePromptNudges       Role = "prompt_nudges"
-	RoleRegexScripts       Role = "regex_scripts"
-	RoleThemeTokens        Role = "theme_tokens"
-	RoleThemeControls      Role = "theme_controls"
-	RoleStylesheets        Role = "stylesheets"
-	RolePackItems          Role = "pack_items"
+	RoleCreatorNotes            Role = "creator_notes"
+	RoleGallery                 Role = "gallery"
+	RoleExpressions             Role = "expressions"
+	RoleLorebookEntries         Role = "lorebook_entries"
+	RolePromptFragments         Role = "prompt_fragments"
+	RolePromptVariables         Role = "prompt_variables"
+	RoleSamplerSettings         Role = "sampler_settings"
+	RoleCompletionSettings      Role = "completion_settings"
+	RoleAdvancedSettings        Role = "advanced_settings"
+	RolePromptNudges            Role = "prompt_nudges"
+	RoleRegexScripts            Role = "regex_scripts"
+	RoleThemeTokens             Role = "theme_tokens"
+	RoleThemeControls           Role = "theme_controls"
+	RoleStylesheets             Role = "stylesheets"
+	RolePackItems               Role = "pack_items"
 )
 
-// Roles returns the semantic vocabulary in the order a report reads it, which
-// is the order the roles are declared above.
 func Roles() []Role {
 	return []Role{
 		RoleDescription, RolePersonality, RoleScenario, RoleGreetings,
@@ -88,7 +70,6 @@ func Roles() []Role {
 	}
 }
 
-// Known reports whether the role belongs to the shared semantic vocabulary.
 func (r Role) Known() bool {
 	switch r {
 	case RoleDescription, RolePersonality, RoleScenario, RoleGreetings,
@@ -104,20 +85,13 @@ func (r Role) Known() bool {
 	}
 }
 
-// Cardinality says how many elements one role may have on an asset.
 type Cardinality int
 
 const (
-	// Singular roles hold list-like data inside one element rather than
-	// repeating. Greetings is one element holding an ordered list.
 	Singular Cardinality = iota
-	// Repeatable roles are presentation content, and export concatenates the
-	// repeats in page order.
 	Repeatable
 )
 
-// Cardinality returns how many elements of this role an asset may carry. An
-// unknown role is singular, which is the stricter answer.
 func (r Role) Cardinality() Cardinality {
 	if r == RoleGallery {
 		return Repeatable
@@ -125,7 +99,6 @@ func (r Role) Cardinality() Cardinality {
 	return Singular
 }
 
-// Display says whether a text body is authored prose or exact prompt text.
 type Display string
 
 const (
@@ -133,14 +106,10 @@ const (
 	DisplayVerbatim Display = "verbatim"
 )
 
-// Known reports whether the display option belongs to the closed vocabulary.
 func (d Display) Known() bool {
 	return d == DisplayRich || d == DisplayVerbatim
 }
 
-// ItemSize is how large the images inside an element are drawn. It names what
-// it controls rather than the element's own geometry, and these three values
-// are all an element may say about size.
 type ItemSize string
 
 const (
@@ -149,25 +118,19 @@ const (
 	ItemLarge  ItemSize = "large"
 )
 
-// Known reports whether the item size belongs to the closed vocabulary.
 func (s ItemSize) Known() bool {
 	return s == ItemSmall || s == ItemMedium || s == ItemLarge
 }
 
-// ItemSizes returns the sizes an element may draw its images at.
 func ItemSizes() []ItemSize { return []ItemSize{ItemSmall, ItemMedium, ItemLarge} }
 
-// Options are an element's presentation choices, each from a closed set.
 type Options struct {
 	Display  Display  `json:"display,omitempty"`
 	ItemSize ItemSize `json:"itemSize,omitempty"`
 }
 
-// Slot is the place an element takes in its block's layout.
 type Slot string
 
-// Element is one piece of content inside a block. Elements have no rows of
-// their own, so a block row carries its whole ordered element list.
 type Element struct {
 	ID      uuid.UUID
 	Type    Type
@@ -177,21 +140,16 @@ type Element struct {
 	Content Content
 }
 
-// Content is the body of one element type. Every type has exactly one
-// implementation.
 type Content interface {
-	// Empty reports whether the element carries nothing a reader would see.
 	Empty() bool
 }
 
-// Prose is one text body.
 type Prose struct {
 	Text string `json:"text"`
 }
 
 func (p Prose) Empty() bool { return p.Text == "" }
 
-// TextSet is an ordered list of named text bodies.
 type TextSet struct {
 	Texts []TextItem `json:"texts"`
 }
@@ -211,7 +169,6 @@ func (s TextSet) Empty() bool {
 	return true
 }
 
-// DialogueSample is an ordered list of speaker-tagged turns.
 type DialogueSample struct {
 	Turns []DialogueTurn `json:"turns"`
 }
@@ -224,9 +181,6 @@ type DialogueTurn struct {
 
 func (d DialogueSample) Empty() bool { return len(d.Turns) == 0 }
 
-// ImageSet is an ordered list of images, each with an optional free-text name.
-// There is no separate caption field, which is what lets an image move between
-// a gallery and an expression set.
 type ImageSet struct {
 	Images []ImageItem `json:"images"`
 }
@@ -239,7 +193,6 @@ type ImageItem struct {
 
 func (s ImageSet) Empty() bool { return len(s.Images) == 0 }
 
-// FieldList is an ordered list of short named values.
 type FieldList struct {
 	Fields []FieldItem `json:"fields"`
 }
@@ -259,8 +212,6 @@ func (l FieldList) Empty() bool {
 	return true
 }
 
-// LinkList is an ordered list of web links, each with the wording a reader
-// sees and an optional line about why it is there.
 type LinkList struct {
 	Links []LinkItem `json:"links"`
 }
@@ -281,7 +232,6 @@ func (l LinkList) Empty() bool {
 	return true
 }
 
-// Empty returns the content an element of this type starts with.
 func (t Type) Empty() (Content, error) {
 	known, ok := schemas[t]
 	if !ok {
@@ -290,13 +240,11 @@ func (t Type) Empty() (Content, error) {
 	return known.empty(), nil
 }
 
-// Known reports whether the vocabulary carries this type.
 func (t Type) Known() bool {
 	_, ok := schemas[t]
 	return ok
 }
 
-// DecodeContent reads a save request through the schema for its element type.
 func DecodeContent(elementType Type, raw json.RawMessage) (Content, error) {
 	if !elementType.Known() {
 		return nil, fmt.Errorf("no element type %q", elementType)
@@ -436,8 +384,6 @@ func DecodeContent(elementType Type, raw json.RawMessage) (Content, error) {
 	}
 }
 
-// checkWebAddress takes http and https and refuses everything else, because
-// any other scheme is a way to run code from a page a reader trusts.
 func checkWebAddress(address string) error {
 	parsed, err := url.Parse(address)
 	if err != nil {
@@ -464,8 +410,6 @@ func decodeContentJSON(raw json.RawMessage, destination any) error {
 	return nil
 }
 
-// wireElement is how an element is stored and served. The version belongs to
-// the content, so a writer cannot forget to stamp it.
 type wireElement struct {
 	ID      uuid.UUID       `json:"id"`
 	Type    Type            `json:"type"`
@@ -491,7 +435,6 @@ func (e Element) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// ContentJSON returns the element's body on its own.
 func (e Element) ContentJSON() (json.RawMessage, error) {
 	body, err := json.Marshal(withEmptyCollections(e.Content))
 	if err != nil {
@@ -520,8 +463,6 @@ func (e *Element) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// labels is the wording a role carries on the page. It sits on the role
-// because it stays the same wherever a creator moves the element.
 var labels = map[Role]string{
 	RoleDescription:     "Description",
 	RolePersonality:     "Personality",
@@ -550,8 +491,6 @@ var labels = map[Role]string{
 	RolePackItems:          "Items",
 }
 
-// typeLabels name an element that carries no role, so a removal confirmation
-// can still say what a creator is about to lose.
 var typeLabels = map[Type]string{
 	TypeProse:          "Text",
 	TypeTextSet:        "List",
@@ -569,8 +508,6 @@ var typeLabels = map[Type]string{
 	TypeRecordList:     "Records",
 }
 
-// Label returns the element's wording, from its role where it has one and from
-// its type where it does not.
 func (e Element) Label() string {
 	if label := e.Role.Label(); label != "" {
 		return label
@@ -606,10 +543,8 @@ var roleTypes = map[Role][]Type{
 	RolePackItems:          {TypeRecordList},
 }
 
-// Label returns the role's wording on the page.
 func (r Role) Label() string { return labels[r] }
 
-// Allows reports whether this role may attach to an element type.
 func (r Role) Allows(elementType Type) bool {
 	allowed, ok := roleTypes[r]
 	if !ok {
@@ -623,5 +558,4 @@ func (r Role) Allows(elementType Type) bool {
 	return false
 }
 
-// AllowedTypes returns the element types this role may attach to.
 func (r Role) AllowedTypes() []Type { return roleTypes[r] }

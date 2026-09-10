@@ -56,8 +56,6 @@ func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID, _ RepublishPostP
 	c.JSON(http.StatusOK, h.toAPIPost(back))
 }
 
-// withdrawnPost answers a withdrawn address with the tombstone behind it, and
-// says whether the address had one at all.
 func (h *Handlers) withdrawnPost(c *gin.Context, slug string) bool {
 	found, err := h.publications.WithdrawnPost(c.Request.Context(), slug)
 	if errors.Is(err, publication.ErrPostNotFound) {

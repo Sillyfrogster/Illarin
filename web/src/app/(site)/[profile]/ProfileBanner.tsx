@@ -21,7 +21,6 @@ function Portrait({ profile }: { profile: Profile }) {
   );
 }
 
-/** Who this creator is, everything Illarin has given them, and the ways to reach them. */
 export function ProfileBanner({
   deletedCount,
   isOwner,

@@ -1,8 +1,3 @@
-# One entry point for both halves of the project. Run every target from here.
-#
-# Settings come from api/.env, which is not committed. Run make setup once on a
-# fresh clone to write it.
-
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
 SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
@@ -14,6 +9,8 @@ SERVICE ?=
 OUTPUT ?= illarin-release.tar.gz
 PROD_ENV ?= /etc/illarin/production.env
 NGINX_IMAGE ?= nginx:alpine
+# Serialize tests because packages share one database.
+GO_TEST_FLAGS := -p 1
 NGINX := docker run --rm --network host -v "$(CURDIR):/work:ro" -w /work $(NGINX_IMAGE) \
 	nginx -p /work/ -c nginx/local.conf
 
@@ -117,8 +114,7 @@ check: fmt-check vet test test-web lint openapi-check workflow-check ## Everythi
 
 .PHONY: test
 test: need-test-db ## Run the Go tests
-# -p 1 because every package sharing the test database empties it on the way in.
-	cd api && go test -p 1 $(TEST)
+	cd api && go test $(GO_TEST_FLAGS) $(TEST)
 
 .PHONY: test-web
 test-web: ## Run the site tests
@@ -126,7 +122,7 @@ test-web: ## Run the site tests
 
 .PHONY: cover
 cover: need-test-db ## Report Go test coverage per package
-	cd api && go test -p 1 -cover ./...
+	cd api && go test $(GO_TEST_FLAGS) -cover ./...
 
 .PHONY: vet
 vet: ## Report suspicious Go code

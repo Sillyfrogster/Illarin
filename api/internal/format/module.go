@@ -8,26 +8,22 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-// Module provides a format's identity and declaration.
 type Module interface {
 	ID() string
 	Declaration() Declaration
 }
 
-// Reader claims and parses source bytes.
 type Reader interface {
 	Module
 	Claim(probe.Inspection) (Claim, bool)
 	Parse(ctx context.Context, file probe.Inspection, claim Claim) (Parsed, error)
 }
 
-// DatabaseReader reads a database row through the module interface.
 type DatabaseReader interface {
 	Module
 	ReadDatabaseRow(ctx context.Context, row any) (Parsed, error)
 }
 
-// SpecOwner names standards contained by a format.
 type SpecOwner interface {
 	OwnedSpecs() []string
 }
@@ -56,7 +52,6 @@ type Claim struct {
 
 const wholeFilePayloadID = ^uint32(0)
 
-// WholeFileCompatibilityClaim claims a container as one payload.
 func WholeFileCompatibilityClaim(file probe.Inspection) Claim {
 	return Claim{
 		payloadID: wholeFilePayloadID, strength: compatibility, byteSize: file.ByteSize(),
@@ -87,13 +82,11 @@ func (c Claim) Payload(file probe.Inspection) (probe.Payload, bool) {
 	return probe.Payload{}, false
 }
 
-// LabelledText is one labelled run of text pulled out of a file.
 type LabelledText struct {
 	Label string
 	Text  string
 }
 
-// TextExtractor reads text from formats that provide it.
 type TextExtractor interface {
 	ExtractText(ctx context.Context, src io.Reader) ([]LabelledText, error)
 }

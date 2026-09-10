@@ -9,7 +9,6 @@ import {
 
 export const config = { matcher: "/blog/:slug" };
 
-/** Answers a withdrawn address with a tombstone, which needs a status a page cannot set. */
 export async function proxy(request: NextRequest) {
   const asked = postAddressIn(request.nextUrl.pathname);
   if (!asked) return;

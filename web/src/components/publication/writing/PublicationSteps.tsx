@@ -25,10 +25,8 @@ import { AnnouncementChoice } from "./AnnouncementChoice";
 import { ScheduleFields } from "./ScheduleFields";
 import { Commit, Editions, Heading, Subject } from "./StepParts";
 
-/** How long a takedown reason or a reader's explanation may run. */
 const SAID_LIMIT = 500;
 
-/** What every step of the rail is handed: the post, and the ways back out of it. */
 export type StepProps = {
   onFailure: (message: string) => void;
   onSaveFirst: () => Promise<number>;
@@ -416,7 +414,6 @@ export function UnscheduleStep({ onFailure, onSettled, post }: StepProps) {
   );
 }
 
-// useRevisions reads the kept editions once, for the steps that choose between them.
 function useRevisions(
   postId: string,
   onFailure: (message: string) => void,
@@ -440,7 +437,6 @@ function useRevisions(
   return kept;
 }
 
-// publishHint says what this step will do, including to a schedule already waiting.
 function publishHint(door: "now" | "later", post: Post): string {
   const schedule = post.schedule;
   const waiting =

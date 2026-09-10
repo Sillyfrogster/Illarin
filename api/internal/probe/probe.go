@@ -25,8 +25,7 @@ const maxRangeRead = 64 * 1024
 var (
 	ErrMalformedInput  = errors.New("malformed input")
 	ErrSafetyViolation = errors.New("archive safety violation")
-	// ErrRangeRead marks a failure in the backing blob store rather than bad source bytes.
-	ErrRangeRead = errors.New("blob range read failed")
+	ErrRangeRead       = errors.New("blob range read failed")
 )
 
 type Limits struct {
@@ -57,12 +56,10 @@ const (
 	ZIP     Container = "zip"
 )
 
-// RangeStore reads parts of a stored blob.
 type RangeStore interface {
 	ReadRange(ctx context.Context, id uuid.UUID, offset, length int64) (io.ReadCloser, error)
 }
 
-// Inspection holds the container details and decoded payloads from one file.
 type Inspection struct {
 	Container  Container
 	Payloads   []Payload
@@ -70,12 +67,9 @@ type Inspection struct {
 	PNGChunks  []PNGChunk
 	ZIPEntries []ZIPEntry
 
-	// source is where the file lives, so an image can be read back later
-	// without a caller having to remember the blob.
 	source blobSource
 }
 
-// ByteSize returns the exact size of the inspected source container.
 func (i Inspection) ByteSize() int64 { return i.source.size }
 
 type blobSource struct {
@@ -84,21 +78,15 @@ type blobSource struct {
 	size  int64
 }
 
-// Image is one picture the probe found. A format module labels images by ID;
-// only the layer that stores media ever reads the bytes.
 type Image struct {
 	ID      uint32
 	Locator Locator
 }
 
-// ErrImageUnavailable marks an optional image that cannot be reopened from the source.
 var ErrImageUnavailable = errors.New("the probe located no such image")
 
-// ErrZIPEntryUnavailable marks an archive entry the inspection did not find.
 var ErrZIPEntryUnavailable = errors.New("the probe located no such archive entry")
 
-// OpenImage streams one located image through the same bounded range reads the
-// inspection itself used.
 func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, error) {
 	var found Image
 	var ok bool
@@ -132,7 +120,6 @@ func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, er
 	return nil, fmt.Errorf("archive entry %q: %w", found.Locator.Name, ErrImageUnavailable)
 }
 
-// OpenZIPEntry streams one named file from an inspected archive.
 func (i Inspection) OpenZIPEntry(ctx context.Context, name string) (io.ReadCloser, error) {
 	if i.Container != ZIP {
 		return nil, fmt.Errorf("archive entry %q: %w", name, ErrZIPEntryUnavailable)
@@ -165,9 +152,6 @@ func (i Inspection) OpenZIPEntry(ctx context.Context, name string) (io.ReadClose
 	return nil, fmt.Errorf("archive entry %q: %w", name, ErrZIPEntryUnavailable)
 }
 
-// imageExtensions name the raster formats the media layer can decode. An
-// archived entry is worth offering as an image when its name ends in one of
-// them. The name only says where to look; the decoder decides what it is.
 var imageExtensions = map[string]bool{
 	".png":  true,
 	".apng": true,
@@ -184,12 +168,10 @@ var inlineMediaTypes = map[Container]string{
 	GIF:  "image/gif",
 }
 
-// InlineMediaType returns a browser-safe type only for a verified raster container.
 func (i Inspection) InlineMediaType() string {
 	return inlineMediaTypes[i.Container]
 }
 
-// IsInlineMediaType reports whether a stored probe result is safe to render.
 func IsInlineMediaType(mediaType string) bool {
 	for _, known := range inlineMediaTypes {
 		if mediaType == known {
@@ -240,7 +222,6 @@ type ZIPEntry struct {
 	GeneralPurposeBits uint16
 }
 
-// Inspect identifies a stored container and decodes its format payloads.
 func Inspect(ctx context.Context, store RangeStore, id uuid.UUID, size int64, filename string) (Inspection, error) {
 	return InspectWithLimits(ctx, store, id, size, filename, DefaultLimits())
 }

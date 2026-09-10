@@ -5,10 +5,8 @@ import { ChevronDown } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { cn } from "@/lib/cn";
 
-// The spring that settles the height rather than running it to a fixed duration
 const MORPH = { type: "spring", stiffness: 500, damping: 40 } as const;
 
-/** A disclosure whose height settles into what it holds, so content that changes while it is open does not jump */
 export function MorphingDisclosure({
   summary,
   children,
@@ -18,7 +16,6 @@ export function MorphingDisclosure({
   summary: ReactNode;
   children: ReactNode;
   className?: string;
-  /** Content that shares the summary's row without being part of its control. */
   lead?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);

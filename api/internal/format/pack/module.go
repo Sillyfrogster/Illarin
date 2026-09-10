@@ -1,4 +1,3 @@
-// Package pack reads and writes Lumiverse Pack files.
 package pack
 
 import (

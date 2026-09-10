@@ -5,11 +5,6 @@ import { DeadEnd } from "@/components/ui/dead-end";
 import { FONT_VARIABLES } from "@/lib/fonts";
 import "./globals.css";
 
-/**
- * What is left when even the page frame failed, so it carries its own document.
- * The appearance script does not run here and the router is gone with the frame,
- * so it follows the system setting and leaves by a plain link.
- */
 export default function GlobalError({
   error,
   retry,

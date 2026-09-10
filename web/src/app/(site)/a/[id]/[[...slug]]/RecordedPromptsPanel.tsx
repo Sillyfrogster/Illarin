@@ -9,10 +9,8 @@ import {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 
-/** ABSENT is the answer that a recorded version never carried a sealed prompt. */
 const ABSENT = "absent";
 
-/** Lets an owner say which recorded prompt each sealed prompt is, on a version Illarin cannot match. */
 export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
   const [open, setOpen] = useState(false);
   const [versions, setVersions] = useState<ProtectionMismatch[] | null>(null);
@@ -188,7 +186,6 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
   );
 }
 
-/** answerKey is what the select shows, defaulting to the absent answer. */
 function answerKey(
   answers: Record<string, string>,
   version: ProtectionMismatch,
@@ -197,7 +194,6 @@ function answerKey(
   return answers[`${version.version.id}:${promptId}`] ?? ABSENT;
 }
 
-/** answerFor is the recorded prompt chosen, and nothing where none was. */
 function answerFor(
   answers: Record<string, string>,
   version: ProtectionMismatch,

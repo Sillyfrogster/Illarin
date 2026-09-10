@@ -1,4 +1,3 @@
-/** The grounds a creator without a picture stands on, so a page of them has rhythm. */
 export const PORTRAIT_GROUNDS: string[] = [
   "bg-accent-wash text-accent",
   "bg-deep text-ink",
@@ -6,7 +5,6 @@ export const PORTRAIT_GROUNDS: string[] = [
   "bg-rule/50 text-ink",
 ];
 
-/** Spreads handles across the grounds without storing a value against any of them. */
 export function portraitGround(handle: string): string {
   let hash = 0;
   for (const character of handle) {

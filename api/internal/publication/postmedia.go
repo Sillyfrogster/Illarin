@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The purposes a post picture is uploaded for.
 const (
 	PurposeHeader   = "header"
 	PurposeDocument = "document"
@@ -29,7 +28,6 @@ const (
 
 var ErrPostMediaNotFound = errors.New("no such post media")
 
-// PostMedia is one uploaded picture a post owns. Its bytes never change.
 type PostMedia struct {
 	ID      uuid.UUID
 	PostID  uuid.UUID
@@ -38,14 +36,12 @@ type PostMedia struct {
 	Height  int
 }
 
-// Header is the picture an article opens with.
 type Header struct {
 	MediaID uuid.UUID
 	Alt     string
 	Caption string
 }
 
-// PostMediaURL addresses the size a picture is shown at on its own.
 func PostMediaURL(mediaID uuid.UUID, purpose string, version uint32) string {
 	variant := shownVariant
 	if purpose == PurposeSocial {
@@ -54,17 +50,14 @@ func PostMediaURL(mediaID uuid.UUID, purpose string, version uint32) string {
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, version)
 }
 
-// PostMediaThumbURL addresses the size a gallery shows a picture at.
 func PostMediaThumbURL(mediaID uuid.UUID, version uint32) string {
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, galleryVariant, version)
 }
 
-// SignPrivate stamps a picture address no published edition carries yet.
 func (s *Service) SignPrivate(path string) string {
 	return s.signer.Sign(path, s.now())
 }
 
-// AddPostMedia stores an uploaded picture against one post and nothing else.
 func (s *Service) AddPostMedia(
 	ctx context.Context,
 	editor Editor,
@@ -106,7 +99,6 @@ func (s *Service) AddPostMedia(
 	return added, nil
 }
 
-// PostMediaVariant serves one size of a post picture.
 func (s *Service) PostMediaVariant(
 	ctx context.Context,
 	mediaID uuid.UUID,
@@ -156,14 +148,12 @@ func (s *Service) PostMediaVariant(
 	return redirect, s.media.DerivativeType(), !published, nil
 }
 
-// placed is every picture one edition refers to, in the order a reader meets them.
 type placed struct {
 	header  *Header
 	social  *uuid.UUID
 	ordered []uuid.UUID
 }
 
-// checkPlacement holds what an edition places against what the post owns.
 func (s *Service) checkPlacement(
 	ctx context.Context,
 	postID uuid.UUID,
@@ -256,7 +246,6 @@ func (s *Service) ownedMedia(ctx context.Context, postID uuid.UUID) (map[uuid.UU
 	return owned, nil
 }
 
-// recordUses replaces what one edition refers to.
 func recordUses(
 	ctx context.Context,
 	tx pgx.Tx,

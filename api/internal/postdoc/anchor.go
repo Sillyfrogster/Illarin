@@ -13,8 +13,6 @@ const (
 	fallbackAnchor = "section"
 )
 
-// anchor answers the address a heading keeps. A heading that arrives without
-// one is given the address its words make.
 func (r *reader) anchor(
 	path string,
 	fields map[string]json.RawMessage,
@@ -87,7 +85,6 @@ func words(spans []Span) string {
 	return said.String()
 }
 
-// slug is the one shape a heading address takes, whoever chose it.
 func slug(said string) string {
 	var out strings.Builder
 	hyphen := false
@@ -106,7 +103,6 @@ func slug(said string) string {
 	return out.String()
 }
 
-// cut keeps a minted address short without ending it mid-word.
 func cut(said string, limit int) string {
 	if len(said) <= limit {
 		return said

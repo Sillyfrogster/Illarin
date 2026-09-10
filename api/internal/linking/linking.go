@@ -1,4 +1,3 @@
-// Package linking joins an application installation to an Illarin account.
 package linking
 
 import (
@@ -19,7 +18,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Scope is one permission granted to a linked instance.
 type Scope string
 
 const (
@@ -47,7 +45,6 @@ var (
 	ErrInstanceMissingScope = errors.New("the instance was not granted that scope")
 )
 
-// Declaration is self-asserted interoperability metadata, never authority.
 type Declaration struct {
 	ApplicationName    string
 	InstanceName       string
@@ -57,13 +54,11 @@ type Declaration struct {
 	AcceptedTargets    []string
 }
 
-// StartInput is the common input for either authorization path.
 type StartInput struct {
 	Declaration
 	Scopes []Scope
 }
 
-// AuthorizationInput starts same-device browser authorization.
 type AuthorizationInput struct {
 	StartInput
 	RedirectURI         string
@@ -72,7 +67,6 @@ type AuthorizationInput struct {
 	CodeChallengeMethod string
 }
 
-// Request is a device authorization request.
 type Request struct {
 	DeviceCode string
 	UserCode   string
@@ -81,13 +75,11 @@ type Request struct {
 	Interval   time.Duration
 }
 
-// Authorization is the Illarin page a native application opens.
 type Authorization struct {
 	URL       string
 	ExpiresAt time.Time
 }
 
-// Pending is what a creator reviews before deciding.
 type Pending struct {
 	Declaration
 	Scopes        []Scope
@@ -95,12 +87,10 @@ type Pending struct {
 	ApprovalToken string
 }
 
-// Redirect is a validated loopback destination after a browser decision.
 type Redirect struct {
 	URL string
 }
 
-// Instance is one independently authorised installation.
 type Instance struct {
 	ID     uuid.UUID
 	UserID uuid.UUID
@@ -112,7 +102,6 @@ type Instance struct {
 	RevokedAt  *time.Time
 }
 
-// Grants reports whether the instance has a scope.
 func (i Instance) Grants(scope Scope) bool {
 	for _, held := range i.Scopes {
 		if held == scope {
@@ -122,7 +111,6 @@ func (i Instance) Grants(scope Scope) bool {
 	return false
 }
 
-// TokenGrant is the only response that exposes a new token pair.
 type TokenGrant struct {
 	Instance             Instance
 	AccessToken          string
@@ -290,7 +278,6 @@ func newCode(length int) (string, error) {
 	return string(code), nil
 }
 
-// FormatUserCode groups a user code for reading aloud.
 func FormatUserCode(code string) string {
 	return code[:codeGroupSize] + "-" + code[codeGroupSize:]
 }

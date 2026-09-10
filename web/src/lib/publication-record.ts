@@ -5,7 +5,6 @@ import {
   type PublicationCategory,
 } from "@/lib/api/query";
 
-/** The published chronology a pull surface reads, and the scope it was read under. */
 export type PublicationRecord = {
   posts: PostSummary[];
   pages: number;
@@ -13,7 +12,6 @@ export type PublicationRecord = {
   app: PublicationApp | null;
 };
 
-/** Reads the chronology a page at a time, stopping once it holds as much as it was asked for. */
 export async function readPublication(
   scope: { category?: string; app?: string },
   wanted: number,

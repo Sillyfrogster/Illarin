@@ -35,7 +35,6 @@ async function post(
   }
 }
 
-/** Where a recovery step has landed, said once and acted on once. */
 function Landing({
   action,
   body,
@@ -72,7 +71,6 @@ function Mark({ children }: { children: ReactNode }) {
   );
 }
 
-/** Asks where to send a one-use link, and never says whether the address was found. */
 export function PasswordResetRequestPanel() {
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -147,7 +145,6 @@ export function PasswordResetRequestPanel() {
   );
 }
 
-/** Takes the new password the one-use link opened the door for. */
 export function PasswordResetCompletionPanel() {
   const token = useSearchParams().get("token");
   const [pending, setPending] = useState(false);

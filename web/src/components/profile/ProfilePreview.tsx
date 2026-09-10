@@ -2,7 +2,6 @@ import { ArrowUpRight, Mail } from "lucide-react";
 import { CreatorPortrait } from "@/components/media/CreatorPortrait";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 
-/** The identity band as a visitor meets it, changing as the fields beside it are typed. */
 export function ProfilePreview({
   biography,
   contactEmail,

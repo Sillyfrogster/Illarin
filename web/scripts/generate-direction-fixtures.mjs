@@ -1,4 +1,3 @@
-// Draws the synthetic cover and header art the visual direction prototype reads
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +13,6 @@ const OUT = join(
   "media",
 );
 
-// A fixed sequence, so every run draws the same art
 function sequence(seed) {
   let state = seed >>> 0;
   return () => {
@@ -70,7 +68,6 @@ function scene({ width, height, ground, sky, lights, figure }) {
   </svg>`;
 }
 
-// A standing figure, kept as a silhouette so no synthetic face is invented
 function standing(tone, opacity) {
   return (width, height) => {
     const x = width * 0.52;
@@ -84,7 +81,6 @@ function standing(tone, opacity) {
   };
 }
 
-// A horizon of shelves, for the pieces that stand in for a book or a world
 function shelves(tone, opacity) {
   return (width, height) => {
     const bars = [];

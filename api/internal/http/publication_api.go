@@ -18,8 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// publicationAPIPrefix is the one route prefix a publication token reaches. It
-// is the whole public surface of an otherwise private service.
 const publicationAPIPrefix = "/v1/publication/"
 
 const idempotencyKeyHeader = "Idempotency-Key"
@@ -28,15 +26,10 @@ const minIdempotencyKey = 8
 
 const maxIdempotencyKey = 200
 
-// idempotencySlack is what a multipart envelope adds to the file inside it.
 const idempotencySlack = 1 << 20
 
 const publicationBearerKey = "publicationBearer"
 
-// publicationAPI is the external half of the publication routes. It keeps a
-// publication token to those routes and out of a browser, resolves it once for
-// the handler behind it, holds it to a pace, and answers a retried mutation
-// with the outcome its first attempt produced.
 func (h *Handlers) publicationAPI() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		value := bearerToken(c)
@@ -69,7 +62,6 @@ func (h *Handlers) publicationAPI() gin.HandlerFunc {
 	}
 }
 
-// publicationBearing answers the token this request already authenticated as.
 func publicationBearing(c *gin.Context) (publication.Bearer, bool) {
 	held, ok := c.Get(publicationBearerKey)
 	if !ok {
@@ -79,9 +71,6 @@ func publicationBearing(c *gin.Context) (publication.Bearer, bool) {
 	return bearing, ok
 }
 
-// replayable runs the request once per idempotency key. The first attempt keeps
-// its answer and the digest of the body that produced it; a repeat gets that
-// answer back, and a different body under the same key is refused.
 func (h *Handlers) replayable(c *gin.Context, bearing publication.Bearer) {
 	key := c.GetHeader(idempotencyKeyHeader)
 	if key == "" || safeMethod(c.Request.Method) {
@@ -114,10 +103,6 @@ func (h *Handlers) replayable(c *gin.Context, bearing publication.Bearer) {
 	h.runOnce(c, bearing, operation, key)
 }
 
-// runOnce serves the request and keeps what it answered against the key. A
-// refusal is kept as faithfully as a success, and a failure the caller is meant
-// to retry hands the key back instead. The answer has already gone out by then,
-// so there is nobody left to tell if keeping it fails.
 func (h *Handlers) runOnce(
 	c *gin.Context,
 	bearing publication.Bearer,
@@ -145,8 +130,6 @@ func (h *Handlers) runOnce(
 	c.Next()
 }
 
-// answerEarlierAttempt gives a repeat of a stored request its stored answer and
-// refuses a different request that reused the key.
 func answerEarlierAttempt(c *gin.Context, attempt publication.Attempt) {
 	if attempt.Running {
 		refusePublication(c, http.StatusConflict, CodeIdempotencyInProgress,
@@ -169,8 +152,6 @@ func answerEarlierAttempt(c *gin.Context, attempt publication.Attempt) {
 	c.Data(attempt.Status, "application/json; charset=utf-8", attempt.Response)
 }
 
-// operationOf names the pace this request is held to. Reading, changing a post
-// and sending pictures cost different things, so they are counted apart.
 func operationOf(c *gin.Context) string {
 	switch {
 	case safeMethod(c.Request.Method):
@@ -182,8 +163,6 @@ func operationOf(c *gin.Context) string {
 	}
 }
 
-// retryAfterSeconds rounds a wait up, so a client that waits exactly that long
-// is past the window rather than inside it.
 func retryAfterSeconds(after time.Duration) string {
 	return strconv.Itoa(int((after + time.Second - 1) / time.Second))
 }
@@ -226,8 +205,6 @@ func refusePace(c *gin.Context, err error) {
 			" limit allows. Wait and try again.")
 }
 
-// refusePublication answers with the one refusal shape every publication route
-// uses, and stops the request there.
 func refusePublication(c *gin.Context, status int, code PublicationErrorCode, message string) {
 	c.AbortWithStatusJSON(status, PublicationError{Error: message, Code: code})
 }
@@ -242,8 +219,6 @@ func refuseField(
 	c.AbortWithStatusJSON(status, PublicationError{Error: message, Code: code, Field: &field})
 }
 
-// hashedBody digests everything the request sent, so the same key with a
-// different body can be told apart from an honest retry.
 type hashedBody struct {
 	io.ReadCloser
 	sum hash.Hash
@@ -257,8 +232,6 @@ func (b *hashedBody) Read(p []byte) (int, error) {
 	return read, err
 }
 
-// keptResponse copies what a handler answered so a retry can be given the same
-// answer without the work being done again.
 type keptResponse struct {
 	gin.ResponseWriter
 	body       *bytes.Buffer
@@ -275,7 +248,6 @@ func (k *keptResponse) WriteString(s string) (int, error) {
 	return k.ResponseWriter.WriteString(s)
 }
 
-// answer is what was written, never nil, so an empty answer is still an answer.
 func (k *keptResponse) answer() []byte {
 	if k.body.Len() == 0 {
 		return []byte{}

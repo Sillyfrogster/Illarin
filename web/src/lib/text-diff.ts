@@ -1,13 +1,10 @@
-/** One run of text, and whether an update left it alone, took it out or put it in. */
 export type DiffPiece = {
   kind: "same" | "removed" | "added";
   text: string;
 };
 
-// Beyond this many differing words a side is reported whole, because the comparison table grows with both sides multiplied together.
 const WORD_LIMIT = 600;
 
-/** What an update did to one piece of text, word by word, reporting a wholly rewritten passage as one removal and one addition rather than a trail of coincidental words. */
 export function wordDiff(before: string, after: string): DiffPiece[] {
   const earlier = words(before);
   const later = words(after);
@@ -46,12 +43,10 @@ export function wordDiff(before: string, after: string): DiffPiece[] {
   ]);
 }
 
-// words splits text into words and the spacing between them, so rejoining the pieces returns the original.
 function words(text: string): string[] {
   return text.split(/(\s+)/).filter((piece) => piece !== "");
 }
 
-// alignWords keeps the longest run of words both sides share and reports the rest as taken out or put in.
 function alignWords(removed: string[], added: string[]): DiffPiece[] {
   const shared: number[][] = Array.from({ length: removed.length + 1 }, () =>
     new Array(added.length + 1).fill(0),
@@ -90,7 +85,6 @@ function alignWords(removed: string[], added: string[]): DiffPiece[] {
   return pieces;
 }
 
-// merge joins neighbouring pieces of one kind and drops the empty ones.
 function merge(pieces: DiffPiece[]): DiffPiece[] {
   const joined: DiffPiece[] = [];
   for (const piece of pieces) {

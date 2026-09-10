@@ -14,18 +14,12 @@ import {
 import { describeScope } from "@/lib/scopes";
 import { DeclaredValues } from "./DeclaredValues";
 
-/**
- * One installation, as much as it takes to tell it from another. What it
- * declared about itself waits behind a disclosure, because the reader is here
- * to recognise an installation and cut it off, not to read its capabilities.
- */
 export function InstanceRow({
   busy,
   instance,
   onRevoke,
   revoking,
 }: {
-  /** True while any row is being revoked, so two cannot run at once. */
   busy: boolean;
   instance: ManagedInstance;
   onRevoke: () => void;

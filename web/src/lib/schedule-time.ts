@@ -1,7 +1,5 @@
-/** The date and time halves a pair of native inputs holds. */
 export type LocalParts = { date: string; time: string };
 
-/** The instant a local date and time name, carrying the reader's offset. */
 export function toInstant(date: string, time: string): string {
   if (!date || !time) return "";
   const moment = new Date(`${date}T${time}`);
@@ -9,7 +7,6 @@ export function toInstant(date: string, time: string): string {
   return `${date}T${time}:00${offsetOf(moment)}`;
 }
 
-/** The date and time inputs show for an instant, in the reader's own zone. */
 export function localParts(instant: string): LocalParts {
   const moment = new Date(instant);
   if (Number.isNaN(moment.getTime())) return { date: "", time: "" };
@@ -19,12 +16,10 @@ export function localParts(instant: string): LocalParts {
   };
 }
 
-/** A first suggestion far enough ahead that the worker has not passed it. */
 export function atLeastAnHourAhead(from: Date = new Date()): LocalParts {
   return localParts(new Date(from.getTime() + 3600_000).toString());
 }
 
-/** The zone a time is being entered in, named the way the reader's system does. */
 export function zoneLabel(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "your time zone";
 }
@@ -40,7 +35,6 @@ function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-/** How far off an instant is, in the largest unit that still reads plainly. */
 export function howSoon(instant: string, from: Date = new Date()): string {
   const moment = new Date(instant);
   if (Number.isNaN(moment.getTime())) return "";

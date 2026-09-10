@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// expectation is what the source asked for, counted from it rather than from the rows just inserted.
 type expectation struct {
 	Assets      int
 	Images      int
@@ -16,7 +15,6 @@ type expectation struct {
 	Exceptions  int
 }
 
-// reconcile proves the written rows are the rows the source asked for, and a count that does not add up is fatal.
 func reconcile(ctx context.Context, tx pgx.Tx, wanted expectation, ledger *Ledger) error {
 	counted := []struct {
 		Table  string

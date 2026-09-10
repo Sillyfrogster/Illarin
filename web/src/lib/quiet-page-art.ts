@@ -13,11 +13,6 @@ import themeDark from "@/assets/art/full/illarin-quiet-page-theme-dark-v1.webp";
 import themeLight from "@/assets/art/full/illarin-quiet-page-theme-light-v1.webp";
 import type { BrowseKind } from "./api/query";
 
-/**
- * The artwork a page shows when its creator has displayed nothing, or close to
- * nothing. Each kind has its own piece, and each piece is composed twice so
- * neither theme is the other one inverted.
- */
 export type QuietPageArt = {
   light: StaticImageData;
   dark: StaticImageData;
@@ -35,10 +30,6 @@ export function quietPageArt(kind: BrowseKind): QuietPageArt {
   return QUIET_PAGE_ART[kind];
 }
 
-/**
- * The two files as CSS urls, so one rule can pick the piece and another can
- * pick the theme.
- */
 export function quietPageArtVariables(
   kind: BrowseKind,
 ): Record<string, string> {
@@ -49,10 +40,6 @@ export function quietPageArtVariables(
   };
 }
 
-/**
- * The wash a page with plenty on it puts in the space its last row leaves. It
- * is one piece for the whole catalog rather than a piece per kind.
- */
 export function pageWashVariables(): Record<string, string> {
   return {
     "--ornament-light": `url(${detailLight.src})`,

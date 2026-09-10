@@ -205,8 +205,6 @@ func TestAnUnreachableReceiverIsAnError(t *testing.T) {
 	}
 }
 
-// receiverCaller points a caller at one test receiver, which lives on loopback
-// and would otherwise be refused.
 func receiverCaller(t *testing.T, receiver *httptest.Server) *Caller {
 	t.Helper()
 	at := netip.MustParseAddrPort(strings.TrimPrefix(receiver.URL, "https://"))

@@ -9,7 +9,6 @@ type ShellProps = ComponentPropsWithoutRef<"div"> & {
   as?: ElementType;
 };
 
-/** Holds page content to a fixed width */
 export function Shell({
   children,
   as: Tag = "div",

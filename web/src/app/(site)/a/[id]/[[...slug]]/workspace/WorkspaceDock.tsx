@@ -13,7 +13,6 @@ const STATUS: Record<SaveState, string> = {
   unsaved: "Unsaved",
 };
 
-/** One bar carries save status, the reading view, the tools and the publication action. */
 export function WorkspaceDock({
   detail,
   onJump,

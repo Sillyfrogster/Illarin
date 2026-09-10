@@ -20,25 +20,20 @@ import (
 )
 
 var (
-	// ErrNoEarlierVersion is a default comparison for the first version an asset recorded.
 	ErrNoEarlierVersion = errors.New("nothing was recorded before that version")
-	// ErrAccessRequired is a comparison asked for without the rules its reader is under.
-	ErrAccessRequired = errors.New("a comparison needs the reader's access rules")
+	ErrAccessRequired   = errors.New("a comparison needs the reader's access rules")
 )
 
-// Version names one recorded version of an asset.
 type Version struct {
-	ID         uuid.UUID
-	Number     int
-	RecordedAt time.Time
-	// Initial says the version was captured from what the asset already was, rather than published as an update.
+	ID           uuid.UUID
+	Number       int
+	RecordedAt   time.Time
 	Initial      bool
 	VersionLabel string
 	Summary      string
 	Notes        string
 }
 
-// ChangeKind is what happened to one item between two versions.
 type ChangeKind string
 
 const (
@@ -47,7 +42,6 @@ const (
 	ChangeEdited  ChangeKind = "change"
 )
 
-// Change is one addition, removal or edit, carrying the text on each side where the change is textual and the picture on each side where it swapped one.
 type Change struct {
 	Kind         ChangeKind
 	Name         string
@@ -56,32 +50,26 @@ type Change struct {
 	After        string
 	BeforeMedia  *uuid.UUID
 	AfterMedia   *uuid.UUID
-	// BeforeImage and AfterImage address the pictures on each side under the rules this reader is under.
-	BeforeImage string
-	AfterImage  string
+	BeforeImage  string
+	AfterImage   string
 }
 
-// ChangeGroup collects the changes to one part of an asset.
 type ChangeGroup struct {
 	Subject string
 	Label   string
 	Changes []Change
 }
 
-// Comparison is what changed between two recorded versions of one asset, and it withholds a version's prompts where they cannot be matched to the current sealed ones.
 type Comparison struct {
-	From   Version
-	To     Version
-	Groups []ChangeGroup
-	// Unavailable is why a reader may not open one of the versions, and it leaves the groups empty rather than comparing something else.
+	From            Version
+	To              Version
+	Groups          []ChangeGroup
 	Unavailable     string
 	PromptsWithheld bool
 }
 
-// VersionAccess returns why a reader may not open a recorded version, and the empty string where they may. A comparison never decides access for itself.
 type VersionAccess func(Version) string
 
-// ComparisonRequest is one reader asking what changed between two recorded versions, where a zero To is the published version and a zero From is the one recorded before it.
 type ComparisonRequest struct {
 	AssetID    uuid.UUID
 	From       int
@@ -91,14 +79,12 @@ type ComparisonRequest struct {
 	Visibility ContentVisibility
 }
 
-// The subjects a comparison reports outside the semantic roles.
 const (
 	metadataSubject     = "metadata"
 	presentationSubject = "presentation"
 	preservedSubject    = "preserved_data"
 )
 
-// Compare reports what changed between two recorded versions of one asset.
 func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison, error) {
 	if in.Access == nil {
 		return Comparison{}, ErrAccessRequired
@@ -141,7 +127,6 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 	return compared, nil
 }
 
-// addressPictures gives every picture a comparison names the address this reader may load it from.
 func (s *Service) addressPictures(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -167,7 +152,6 @@ func (s *Service) addressPictures(
 	return nil
 }
 
-// holdPrompts puts a recorded version's prompts under the rules its reader is under.
 func (v recordedVersion) holdPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -183,7 +167,6 @@ func (v recordedVersion) holdPrompts(
 	return protected.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.blocks)
 }
 
-// resolveVersions fills in the published version and the one recorded before it.
 func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to int) (int, int, error) {
 	if to == 0 {
 		err := tx.QueryRow(ctx, `
@@ -214,7 +197,6 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to
 	return from, to, nil
 }
 
-// recordedVersion is one snapshot read back into the shapes a comparison reads.
 type recordedVersion struct {
 	Version
 	kind              string
@@ -224,7 +206,6 @@ type recordedVersion struct {
 	protectedPayloads []byte
 }
 
-// versionMetadata is what a recorded version says about the asset outside its page.
 type versionMetadata struct {
 	Name           string     `json:"name"`
 	Blurb          string     `json:"blurb"`
@@ -236,7 +217,6 @@ type versionMetadata struct {
 	Cover          *uuid.UUID `json:"cover_media_id"`
 }
 
-// versionPreserved is one piece of data a format module kept that Illarin does not read.
 type versionPreserved struct {
 	Owner     string    `json:"owner_kind"`
 	OwnerID   uuid.UUID `json:"owner_id"`
@@ -244,7 +224,6 @@ type versionPreserved struct {
 	Payload   string    `json:"payload"`
 }
 
-// versionPayload is the stored snapshot body.
 type versionPayload struct {
 	versionMetadata
 	Kind      string             `json:"kind"`
@@ -252,7 +231,6 @@ type versionPayload struct {
 	Preserved []versionPreserved `json:"preserved_data"`
 }
 
-// readVersion loads one recorded version by its update number.
 func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (recordedVersion, error) {
 	var recorded recordedVersion
 	var stored []byte
@@ -280,7 +258,6 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	return recorded, nil
 }
 
-// compareVersions groups what changed between two recorded versions.
 func compareVersions(earlier, later recordedVersion) []ChangeGroup {
 	groups := make([]ChangeGroup, 0, 8)
 	groups = addGroup(groups, metadataSubject, "Details", compareMetadata(earlier.metadata, later.metadata))
@@ -299,7 +276,6 @@ func addGroup(groups []ChangeGroup, subject, label string, changes []Change) []C
 	return append(groups, ChangeGroup{Subject: subject, Label: label, Changes: changes})
 }
 
-// compareMetadata reports the catalog fields an update changed.
 func compareMetadata(earlier, later versionMetadata) []Change {
 	changes := make([]Change, 0, 8)
 	for _, field := range []struct{ name, before, after string }{
@@ -349,7 +325,6 @@ func mediaChangeKind(earlier, later *uuid.UUID) ChangeKind {
 	}
 }
 
-// textChange reads an empty side as the field arriving or leaving rather than as an edit.
 func textChange(name, before, after string) (Change, bool) {
 	switch {
 	case before == after:
@@ -363,13 +338,11 @@ func textChange(name, before, after string) (Change, bool) {
 	}
 }
 
-// subjectItems is everything one version holds under one semantic subject.
 type subjectItems struct {
 	label string
 	items []versionItem
 }
 
-// versionItem is one comparable piece of content. The body carries the whole item without its id, so a regenerated id is not read as an edit.
 type versionItem struct {
 	key   string
 	name  string
@@ -385,7 +358,6 @@ func (i versionItem) mediaRef() *uuid.UUID {
 	return &i.media
 }
 
-// compareContent reports the additions, removals and edits under each semantic subject.
 func compareContent(earlier, later []block.Block) []ChangeGroup {
 	before := contentSubjects(earlier)
 	after := contentSubjects(later)
@@ -400,7 +372,6 @@ func compareContent(earlier, later []block.Block) []ChangeGroup {
 	return groups
 }
 
-// contentSubjects collects a version's items under the role each carries, or under its element type where it carries none.
 func contentSubjects(blocks []block.Block) map[string]subjectItems {
 	subjects := make(map[string]subjectItems)
 	for _, holder := range blocks {
@@ -421,7 +392,6 @@ func contentSubjects(blocks []block.Block) map[string]subjectItems {
 	return subjects
 }
 
-// subjectOrder reads the semantic roles in their declared order and the remaining subjects by name.
 func subjectOrder(before, after map[string]subjectItems) []string {
 	present := make(map[string]bool, len(before)+len(after))
 	for subject := range before {
@@ -445,7 +415,6 @@ func subjectOrder(before, after map[string]subjectItems) []string {
 	return append(ordered, rest...)
 }
 
-// elementItems reduces one element to the items a comparison matches and reports.
 func elementItems(element block.Element) []versionItem {
 	switch held := element.Content.(type) {
 	case block.Prose:
@@ -536,7 +505,6 @@ func elementItems(element block.Element) []versionItem {
 	}
 }
 
-// proseKey identifies one text body by its role, because a role holds one body and an import mints a new element id for it.
 func proseKey(element block.Element) string {
 	if element.Role != "" {
 		return string(element.Role)
@@ -554,7 +522,6 @@ func listItems[T any](list []T, describe func(T) versionItem) []versionItem {
 	return items
 }
 
-// itemBody encodes one item without its id, so reordering and reimporting leave identical content identical.
 func itemBody(item any) string {
 	encoded, err := json.Marshal(item)
 	if err != nil {
@@ -579,7 +546,6 @@ func preferredName(preferred, fallback string) string {
 	return fallback
 }
 
-// settingValue reads a filled-in slot as the words a creator would recognise.
 func settingValue(value *block.Value) string {
 	switch {
 	case value == nil:
@@ -595,7 +561,6 @@ func settingValue(value *block.Value) string {
 	}
 }
 
-// compareItems pairs items by their own identity first and by identical content second, so what is left over is an addition or a removal rather than a guess.
 func compareItems(earlier, later []versionItem) []Change {
 	partner := make([]int, len(later))
 	for index := range partner {
@@ -628,7 +593,6 @@ func compareItems(earlier, later []versionItem) []Change {
 	return changes
 }
 
-// matchItems pairs the items still unmatched whose keys agree, in the order each version holds them.
 func matchItems(earlier, later []versionItem, taken []bool, partner []int, key func(versionItem) string) {
 	available := make(map[string][]int, len(earlier))
 	for index, item := range earlier {
@@ -650,7 +614,6 @@ func matchItems(earlier, later []versionItem, taken []bool, partner []int, key f
 	}
 }
 
-// editedItem reports only the sides that differ, and reads an emptied bare text body as words taken away rather than as an edit.
 func editedItem(was, now versionItem) Change {
 	if was.name == "" && now.name == "" && was.media == uuid.Nil && now.media == uuid.Nil {
 		if change, changed := textChange("", was.text, now.text); changed {
@@ -670,7 +633,6 @@ func editedItem(was, now versionItem) Change {
 	return edited
 }
 
-// comparePresentation reports the page changes an update made without touching what the asset says.
 func comparePresentation(kind string, earlier, later []block.Block) []Change {
 	before := blocksByID(earlier)
 	after := blocksByID(later)
@@ -702,7 +664,6 @@ func blocksByID(blocks []block.Block) map[uuid.UUID]block.Block {
 	return held
 }
 
-// sharedOrder is the order of the blocks both versions carry, so adding a block does not report every other block as moved.
 func sharedOrder(blocks []block.Block, other map[uuid.UUID]block.Block) []uuid.UUID {
 	shared := make([]uuid.UUID, 0, len(blocks))
 	for _, holder := range blocks {
@@ -750,7 +711,6 @@ func blockTitle(holder block.Block) string {
 	return *holder.Title
 }
 
-// blockName is the creator's own title where they wrote one and the catalog's wording where they did not.
 func blockName(kind string, holder block.Block) string {
 	if title := blockTitle(holder); title != "" {
 		return title
@@ -785,7 +745,6 @@ func optionWords(options block.Options) string {
 	return strings.Join(words, " ")
 }
 
-// comparePreserved reports that data Illarin does not read changed, and never what it holds.
 func comparePreserved(earlier, later []versionPreserved) []Change {
 	before := preservedDigests(earlier)
 	after := preservedDigests(later)
@@ -815,7 +774,6 @@ func comparePreserved(earlier, later []versionPreserved) []Change {
 	return changes
 }
 
-// preservedDigests reduces each namespace to one fingerprint of everything kept under it.
 func preservedDigests(preserved []versionPreserved) map[string]string {
 	keyed := make(map[string][]string)
 	for _, item := range preserved {

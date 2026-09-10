@@ -33,7 +33,6 @@ const pictureAttributes = {
   height: { default: null },
 };
 
-// figure draws one picture and marks it so the same node parses back.
 function figure(
   attributes: Record<string, unknown>,
   marker: string,
@@ -55,7 +54,6 @@ function figure(
     : ["figure", frame, picture];
 }
 
-/** A picture placed on its own. Illarin owns the shape; Tiptap only draws it. */
 export const Picture = Node.create({
   name: "image",
   group: "block",
@@ -74,7 +72,6 @@ export const Picture = Node.create({
   },
 });
 
-/** One picture inside a gallery. Its place in the run is the reading order. */
 export const GalleryPicture = Node.create({
   name: "galleryImage",
   atom: true,
@@ -127,7 +124,6 @@ export const GalleryPicture = Node.create({
   },
 });
 
-/** A run of pictures the author put in an order. */
 export const Gallery = Node.create({
   name: "gallery",
   group: "block",

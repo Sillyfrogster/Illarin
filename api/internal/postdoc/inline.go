@@ -126,7 +126,6 @@ func checkAddress(path, address string) error {
 	return nil
 }
 
-// addressProblem says why a link address cannot be followed, or nothing.
 func addressProblem(address string) string {
 	if len(address) > maxAddress {
 		return "This link address is too long."

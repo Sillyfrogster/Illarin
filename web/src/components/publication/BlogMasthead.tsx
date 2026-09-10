@@ -14,7 +14,6 @@ import type { PublicationCategory } from "@/lib/api/query";
 import { BLOG_HOME } from "@/lib/publication-metadata";
 import { siteAddress } from "@/lib/site-address";
 
-/** The blog's own chrome, carrying Illarin's identity, the publication's home and its categories. */
 export function BlogMasthead({
   categories,
 }: {

@@ -11,7 +11,6 @@ const TITLE = {
   long: "max-w-[28ch] text-[clamp(1.9rem,3.2vw,2.6rem)]/[1.14]",
 } as const;
 
-/** Everything a post is, said once, above the writing itself. */
 export function ArticleIdentity({
   byline,
   category,

@@ -6,15 +6,8 @@ import { useCatalogNavigation } from "@/components/catalog/use-catalog-navigatio
 import { Shell } from "@/components/layout/Shell";
 import type { BrowseFilters } from "@/lib/api/query";
 
-/** She is cut by the page rather than by a frame, so her lower edge dissolves into it */
 const DISSOLVE = "linear-gradient(to bottom, #000 72%, transparent 99%)";
 
-/**
- * The way into the catalog. Illarin's host stands on the page itself rather
- * than inside a frame beside it, and the question she is asking is answered by
- * the field beneath it. A narrow page has no room beside her, so she takes the
- * top of the band and the question follows underneath.
- */
 export function BrowseThreshold({ filters }: { filters: BrowseFilters }) {
   const { navigate } = useCatalogNavigation("/browse");
 

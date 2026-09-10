@@ -2,7 +2,6 @@ package http
 
 import "testing"
 
-// The refusal a creator reads names a size they recognise, not the byte count the ceiling is configured in.
 func TestAnOverSizedUploadIsRefusedInASizeAPersonReads(t *testing.T) {
 	for _, row := range []struct {
 		bytes int64

@@ -10,7 +10,6 @@ declare module "@tiptap/core" {
   }
 }
 
-/** The editor's callout is Illarin's node, not a Tiptap one with a class on it. */
 export const Callout = Node.create({
   name: "callout",
   group: "block",

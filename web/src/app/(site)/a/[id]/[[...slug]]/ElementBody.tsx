@@ -33,7 +33,6 @@ import {
 } from "./PresetElements";
 import { ThemePalette, ThemeStyles } from "./ThemeElements";
 
-/** How wide one picture stands in a gallery, at each size a creator can pick */
 const ITEM_WIDTHS = { small: 168, medium: 224, large: 296 };
 
 export function ElementBody({
@@ -50,15 +49,9 @@ export function ElementBody({
   isOwner: boolean;
   images?: AssetImage[];
   blockTitle?: string;
-  /** How many elements the block renders, this one included. */
   blockElements?: number;
-  /**
-   * Whether an empty element says so. A page where nothing is filled in says
-   * it once at the top instead, so the marker does not run down every label.
-   */
   markEmpty?: boolean;
   onReadMore?: () => void;
-  /** The owner's controls for this element, where the page is being written. */
   tools?: ReactNode;
 }) {
   if (element.isEmpty && !isOwner) return null;
@@ -134,7 +127,6 @@ function ExcerptedElementContent({
   const isCut = definition.unit === "lines" ? lineCut : hasItemCut;
   const itemLimit = definition.unit === "items" ? definition.limit : undefined;
 
-  // A gallery turns rather than cuts, so every picture is already reachable.
   if (definition.unit === "self" || element.type === "image_set") {
     return (
       <ElementContent element={element} images={images} isOwner={isOwner} />
@@ -381,7 +373,6 @@ export function ElementContent({
   return null;
 }
 
-/** Writing shown exactly as it was typed, with a way to take it away */
 function Verbatim({ text }: { text: string }) {
   return (
     <div className="relative">

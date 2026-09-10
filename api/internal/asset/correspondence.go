@@ -13,29 +13,24 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ErrUnknownPrompt is an answer naming a prompt the asset or the version does not hold.
 var ErrUnknownPrompt = errors.New("that prompt is not one of the choices")
 
-// NamedPrompt is one prompt fragment, named the way its creator would recognise it.
 type NamedPrompt struct {
 	ID   uuid.UUID
 	Name string
 }
 
-// ProtectionMismatch is one recorded version whose prompts Illarin cannot line up with the asset's current sealed prompts.
 type ProtectionMismatch struct {
 	Version   Version
 	Unmatched []NamedPrompt
 	Recorded  []NamedPrompt
 }
 
-// PromptCorrespondence says which recorded prompt one current sealed prompt is, and a nil Recorded says the version never carried it.
 type PromptCorrespondence struct {
 	Current  uuid.UUID
 	Recorded *uuid.UUID
 }
 
-// ProtectionMismatches lists the recorded versions their owner still has to settle.
 func (s *Service) ProtectionMismatches(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -91,7 +86,6 @@ func (s *Service) ProtectionMismatches(
 	return mismatches, nil
 }
 
-// ResolvePromptCorrespondence records which recorded prompt each current sealed prompt is on one recorded version.
 func (s *Service) ResolvePromptCorrespondence(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -140,7 +134,6 @@ func (s *Service) ResolvePromptCorrespondence(
 	return tx.Commit(ctx)
 }
 
-// ownedAsset refuses anyone but the owner of an asset that still exists.
 func ownedAsset(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) error {
 	var found bool
 	err := tx.QueryRow(ctx, `
@@ -173,7 +166,6 @@ func recordedNumbers(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) ([]int, 
 	return numbers, rows.Err()
 }
 
-// settledPrompts names the sealed prompts whose correspondence one version already carries.
 func settledPrompts(ctx context.Context, tx pgx.Tx, snapshotID uuid.UUID) (map[uuid.UUID]bool, error) {
 	rows, err := tx.Query(ctx,
 		`select current_fragment_id from asset_snapshot_prompt_matches where snapshot_id = $1`,
@@ -193,7 +185,6 @@ func settledPrompts(ctx context.Context, tx pgx.Tx, snapshotID uuid.UUID) (map[u
 	return settled, rows.Err()
 }
 
-// recordedPrompts names every prompt one recorded version carries, in page order.
 func recordedPrompts(blocks []block.Block) []NamedPrompt {
 	prompts := make([]NamedPrompt, 0)
 	for _, holder := range blocks {

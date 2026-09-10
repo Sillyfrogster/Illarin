@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import type { BrowseKind } from "@/lib/api/query";
 
-/** One drawn mark per kind, used wherever the catalog names a kind beside its word. */
 export const KIND_MARKS = {
   character: UserRound,
   lorebook: BookOpen,

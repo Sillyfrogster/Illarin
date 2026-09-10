@@ -10,7 +10,6 @@ import type { PostMedia } from "@/lib/api/query";
 import { POST_DOCUMENT_VERSION, type PostDocument } from "@/lib/post-document";
 import { PostBody } from "./PostBody";
 
-/** The one corpus Go converts Markdown into and the site reads back. */
 const IMPORTS = join(
   import.meta.dir,
   "../../../../api/internal/postdoc/testdata/markdown/carried",

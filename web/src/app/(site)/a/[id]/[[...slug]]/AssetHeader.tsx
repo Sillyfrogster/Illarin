@@ -34,7 +34,6 @@ function browseTagHref(value: string): string {
   return `/browse?q=${encodeURIComponent(`tag:${quoted}`)}`;
 }
 
-/** Who the asset is, what it is rated, and the way into writing it. */
 export function AssetHeader({
   asset,
   holdsNothing,

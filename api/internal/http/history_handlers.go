@@ -10,7 +10,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// ListAssetUpdates answers the versions an asset has recorded.
 func (h *Handlers) ListAssetUpdates(c *gin.Context, id types.UUID) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
@@ -32,7 +31,6 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
 
-// CompareAssetVersions answers what changed between two recorded versions.
 func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params CompareAssetVersionsParams) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
@@ -58,7 +56,6 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params Co
 	}
 }
 
-// ListProtectionMismatches answers the recorded versions an owner still has to settle.
 func (h *Handlers) ListProtectionMismatches(c *gin.Context, id types.UUID) {
 	owner, ok := h.signedInAccount(c, "reading an asset's sealed prompts")
 	if !ok {
@@ -84,7 +81,6 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, ProtectionMismatchList{Items: items})
 }
 
-// ResolvePromptCorrespondence records which recorded prompt each sealed prompt is.
 func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context, id types.UUID, number int) {
 	owner, ok := h.verifiedAccount(c, "settling an asset's sealed prompts")
 	if !ok {
@@ -120,7 +116,6 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context, id types.UUID, nu
 	}
 }
 
-// versionNumber reads an absent version as the one the comparison picks itself.
 func versionNumber(chosen *int) int {
 	if chosen == nil {
 		return 0

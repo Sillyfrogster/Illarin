@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The three reasons an edition is kept: while writing, to publish now, or to
-// publish at a set time.
 const (
 	RevisionCheckpoint  = "checkpoint"
 	RevisionPublication = "publication"
@@ -22,7 +20,6 @@ const (
 
 var ErrRevisionNotFound = errors.New("no such revision of that post")
 
-// Revision is one immutable edition of a post as its history lists it.
 type Revision struct {
 	ID          uuid.UUID
 	Number      int
@@ -36,7 +33,6 @@ type Revision struct {
 	Public      bool
 }
 
-// Revisions answers the editions one post has kept, newest first.
 func (s *Service) Revisions(ctx context.Context, editor Editor, id uuid.UUID) ([]Revision, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
@@ -88,7 +84,6 @@ func (s *Service) Revisions(ctx context.Context, editor Editor, id uuid.UUID) ([
 	return kept, nil
 }
 
-// Checkpoint keeps the named working copy as an edition without publishing it.
 func (s *Service) Checkpoint(
 	ctx context.Context,
 	editor Editor,
@@ -135,7 +130,6 @@ func (s *Service) Checkpoint(
 	return s.revision(ctx, id, revisionID)
 }
 
-// RestoreRevision copies a kept edition into a new working copy and changes no history.
 func (s *Service) RestoreRevision(
 	ctx context.Context,
 	editor Editor,
@@ -209,7 +203,6 @@ func (s *Service) RestoreRevision(
 	return s.post(ctx, id)
 }
 
-// restoredAddress keeps a published post at the address readers already have.
 func restoredAddress(ctx context.Context, tx pgx.Tx, locked working, kept working) (*string, error) {
 	if locked.PublishedAt != nil || kept.Slug == "" || kept.Slug == locked.Slug {
 		return nullable(locked.Slug), nil
@@ -224,7 +217,6 @@ func restoredAddress(ctx context.Context, tx pgx.Tx, locked working, kept workin
 	return nullable(kept.Slug), nil
 }
 
-// carryUsesBack gives the working copy the pictures the restored edition refers to.
 func carryUsesBack(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		delete from post_media_uses where post_id = $1 and revision_id is null
@@ -242,7 +234,6 @@ func carryUsesBack(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID)
 	return nil
 }
 
-// carryUsesForward gives the revision the pictures the working copy referred to.
 func carryUsesForward(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		insert into post_media_uses (media_id, post_id, revision_id)
@@ -282,7 +273,6 @@ func captureRevision(
 	return id, nil
 }
 
-// lockedRevision reads one kept edition of one post inside the restore transaction.
 func lockedRevision(ctx context.Context, tx pgx.Tx, postID, id uuid.UUID) (working, error) {
 	var kept working
 	err := tx.QueryRow(ctx, `

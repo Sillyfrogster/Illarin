@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Refresh rotates one refresh token and detects reuse.
 func (s *Service) Refresh(ctx context.Context, source, refreshToken string) (TokenGrant, error) {
 	if err := s.takeRate(ctx, "refresh", source, 600, time.Hour); err != nil {
 		return TokenGrant{}, err
@@ -139,7 +138,6 @@ func rotateRefreshGrant(
 	}, nil
 }
 
-// Authenticate resolves an access token and checks its scope.
 func (s *Service) Authenticate(ctx context.Context, token string, needs Scope) (Instance, error) {
 	hash, ok := credentialHash(token, accessTokenKind)
 	if !ok {

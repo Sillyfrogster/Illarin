@@ -10,7 +10,6 @@ import { useWorkspace } from "./state";
 const TOOL =
   "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-control px-2 text-meta font-medium text-mute outline-offset-3 hover:bg-plane hover:text-ink disabled:opacity-35 disabled:hover:bg-transparent";
 
-/** An element's own controls for where it sits in its block and whether it stays. */
 export function ElementTools({
   block,
   element,

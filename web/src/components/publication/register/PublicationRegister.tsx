@@ -36,7 +36,6 @@ import { DeliveryRows } from "./DeliveryRows";
 import { DestinationRows, DestinationStep } from "./DestinationRows";
 import { SecretStep } from "./SecretStep";
 
-/** What the rail beside the register is open on, and which thing it is about. */
 type Step =
   | { what: "contributor"; grant: PublicationGrant | null }
   | { what: "app"; app: PublicationApp | null }
@@ -44,7 +43,6 @@ type Step =
   | { what: "destination"; destination: PublicationDestination | null }
   | { what: "secret"; destination: PublicationDestination };
 
-/** The publication page, showing one register at a time with edits in a rail beside it. */
 export function PublicationRegister() {
   const [apps, setApps] = useState<PublicationApp[] | null>(null);
   const [categories, setCategories] = useState<PublicationCategory[]>([]);
@@ -364,14 +362,12 @@ export function PublicationRegister() {
   );
 }
 
-/** Counts announcements Illarin gave up on, not ones it stopped on purpose. */
 function countStopped(deliveries: PostDelivery[]): number {
   return deliveries.filter(
     (one) => deliveryState(one) === "gaveUp" && !one.removed,
   ).length;
 }
 
-/** Keeps a step's typed input while the list behind it changes. */
 function stepKey(step: Step): string {
   if (step.what === "contributor") return `contributor-${step.grant?.id ?? ""}`;
   if (step.what === "app") return `app-${step.app?.id ?? ""}`;

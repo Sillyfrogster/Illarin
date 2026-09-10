@@ -1,6 +1,4 @@
 -- +goose Up
--- A schedule names an edition and an instant. It never holds the edition itself,
--- so editing the working copy afterwards cannot reach what will go live.
 create table post_schedules (
     id               uuid primary key,
     post_id          uuid not null references posts (id) on delete cascade,

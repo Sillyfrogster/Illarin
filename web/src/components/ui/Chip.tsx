@@ -5,7 +5,6 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 
 export type ChipItem = {
-  /** Distinct within the set, because a value may repeat. */
   id: string;
   label: string;
   href?: string;
@@ -14,7 +13,6 @@ export type ChipItem = {
 const CHIP =
   "inline-flex min-h-8 max-w-full items-center justify-center rounded-control bg-deep px-2.5 py-1 text-center font-prose text-label text-mute [overflow-wrap:anywhere]";
 
-/** A set of short values a reader scans, cut off after `limit` of them. */
 export function ChipSet({
   items,
   limit,

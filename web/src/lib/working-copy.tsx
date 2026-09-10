@@ -4,10 +4,8 @@ import { createContext, type ReactNode, useContext, useState } from "react";
 
 export type Candidate = { version: number };
 
-/** WORKING_COPY_SAVED says a write moved the working copy this page is editing. */
 export const WORKING_COPY_SAVED = "illarin:working-copy-saved";
 
-/** WORKING_COPY_STALE says a write was refused because another tab saved first. */
 export const WORKING_COPY_STALE = "illarin:working-copy-stale";
 
 const WorkingCopyContext = createContext<Candidate | null>(null);
@@ -46,7 +44,6 @@ export function acceptCandidateVersion(
   }
 }
 
-/** Tells the page when a refusal was a stale working copy rather than a bad edit. */
 export function reportStaleWorkingCopy(refusal: unknown) {
   const detail = refusal as { code?: unknown } | undefined;
   if (detail?.code !== "working_copy_conflict") return;

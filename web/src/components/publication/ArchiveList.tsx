@@ -6,7 +6,6 @@ import type { PostSummary } from "@/lib/api/query";
 import type { ArchiveNarrowing } from "@/lib/archive-entry";
 import { ArchiveRow } from "./ArchiveEntry";
 
-/** The chronology, with one plate that travels to whichever entry the reader is on. */
 export function ArchiveList({
   narrowed,
   posts,

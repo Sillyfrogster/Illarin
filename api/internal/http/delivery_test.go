@@ -697,7 +697,6 @@ func TestARevokedInstanceReleasesNothingEvenWithRowsLeftBehind(t *testing.T) {
 	}
 }
 
-// claimable runs the claim the delivery wait runs, which is where an instance is authorised.
 func claimable(t *testing.T, pool *pgxpool.Pool, instanceID string) int {
 	t.Helper()
 	parsed, err := uuid.Parse(instanceID)

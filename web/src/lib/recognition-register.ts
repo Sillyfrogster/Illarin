@@ -6,10 +6,8 @@ import type {
 } from "@/lib/api/query";
 import { moved } from "@/lib/reorder";
 
-/** One of the things Illarin gives out, or the account it gives them to. */
 export type RecognitionRegister = "titles" | "positions" | "accounts";
 
-/** The order the registers are offered in, everywhere they are offered. */
 export const RECOGNITION_REGISTERS: RecognitionRegister[] = [
   "titles",
   "positions",
@@ -22,7 +20,6 @@ const NAMES: Record<RecognitionRegister, string> = {
   titles: "Titles and badges",
 };
 
-/** A badge is a title with a mark, so one register holds both, marks first. */
 const FORMS: Record<RecognitionRegister, DistinctionForm[]> = {
   accounts: [],
   positions: ["position"],
@@ -33,7 +30,6 @@ export function registerName(register: RecognitionRegister): string {
   return NAMES[register];
 }
 
-/** What each register carries, for the rail that chooses between them. */
 export function recognitionCells(
   definitions: Distinction[],
 ): RegisterCell<RecognitionRegister>[] {
@@ -47,7 +43,6 @@ export function recognitionCells(
   }));
 }
 
-/** What a register still gives out, and what it has stopped giving out. */
 export function registerHolds(
   register: RecognitionRegister,
   definitions: Distinction[],
@@ -62,7 +57,6 @@ export function registerHolds(
   };
 }
 
-/** What an empty register says, which is what to do about it rather than that it is empty. */
 export function nothingIn(register: RecognitionRegister): string {
   if (register === "titles") {
     return "Nothing is defined yet. Give one a mark and it shows as a badge; leave the mark off and it shows as a title.";
@@ -73,15 +67,10 @@ export function nothingIn(register: RecognitionRegister): string {
   return "Look up a handle to see what that account holds.";
 }
 
-/** A title or badge that says nothing about what earns it leaves a profile reader guessing. */
 export function unexplained(one: Distinction): boolean {
   return one.form !== "position" && one.explanation.trim() === "";
 }
 
-/**
- * The new order for one form when a definition moves a step through it. The
- * retired ones come along, because the server orders the whole form at once.
- */
 export function movedDefinitions(
   definitions: Distinction[],
   one: Distinction,
@@ -102,7 +91,6 @@ export function movedDefinitions(
   );
 }
 
-/** An account's jobs, what it earned, and what was taken back. */
 export function heldBy(assignments: DistinctionAssignment[]): {
   earned: DistinctionAssignment[];
   past: DistinctionAssignment[];
@@ -116,7 +104,6 @@ export function heldBy(assignments: DistinctionAssignment[]): {
   };
 }
 
-/** One line saying what an account carries on its profile. */
 export function whatIsHeld(assignments: DistinctionAssignment[]): string {
   const { earned, positions } = heldBy(assignments);
   if (earned.length === 0 && positions.length === 0) {
@@ -126,7 +113,6 @@ export function whatIsHeld(assignments: DistinctionAssignment[]): string {
   return `${jobs} · ${earned.length} earned`;
 }
 
-/** What is left to give this account, which is everything still given out that they do not hold. */
 export function offeredTo(
   definitions: Distinction[],
   assignments: DistinctionAssignment[],
@@ -138,10 +124,6 @@ export function offeredTo(
   return definitions.filter((one) => !one.retired && !held.has(one.id));
 }
 
-/**
- * The new order for one account when an earned title moves a step. Positions
- * keep their places in it, because the server orders every assignment at once.
- */
 export function movedAssignments(
   assignments: DistinctionAssignment[],
   one: DistinctionAssignment,

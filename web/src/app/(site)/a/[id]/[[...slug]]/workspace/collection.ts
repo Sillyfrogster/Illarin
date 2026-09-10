@@ -1,11 +1,9 @@
 const UNSAVED = "new:";
 
-/** A key for every item in a collection, stable across a save for items the server has seen. */
 export function itemKeys(items: readonly { id?: string }[]): string[] {
   return items.map((item, index) => item.id ?? `${UNSAVED}${index}`);
 }
 
-/** Which item a remembered choice points at now that the collection has changed under it. */
 export function chosenIndex(keys: readonly string[], chosen: string | null) {
   if (keys.length === 0) return -1;
   if (chosen === null) return 0;
@@ -16,7 +14,6 @@ export function chosenIndex(keys: readonly string[], chosen: string | null) {
   return Number.isInteger(added) && added < keys.length ? added : 0;
 }
 
-/** The key that follows an item to its new position, since an unsaved item is known by position. */
 export function keyAfterMove(key: string, to: number): string {
   return key.startsWith(UNSAVED) ? `${UNSAVED}${to}` : key;
 }

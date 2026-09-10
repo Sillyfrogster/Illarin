@@ -35,7 +35,6 @@ type publicationCategoryList struct {
 	Categories []publicationCategory `json:"categories"`
 }
 
-// profileAvatar carries the same url, width and height a hosted mark does.
 type profileAvatar = distinctionMark
 
 type publicationGrantHolder struct {

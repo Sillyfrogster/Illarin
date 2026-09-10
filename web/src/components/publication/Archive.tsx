@@ -15,7 +15,6 @@ import { ArchiveList } from "./ArchiveList";
 import { ArchivePages } from "./ArchivePages";
 import { BackToIllarin } from "./BackToIllarin";
 
-/** What an archive was narrowed by, which is also the word it shows a reader. */
 export type ArchiveKind = "Publication" | "Category" | "Publication app";
 
 export type ArchiveScope = {
@@ -32,7 +31,6 @@ const NARROWED: Record<ArchiveKind, ArchiveNarrowing> = {
   "Publication app": "app",
 };
 
-/** The publication's front page, which leads with its newest writing and its picture. */
 export function PublicationFront({
   archive,
   cover,
@@ -64,7 +62,6 @@ export function PublicationFront({
   );
 }
 
-/** A numbered, category or app archive, which states its scope above the same chronology. */
 export function ScopedArchive({
   archive,
   scope,
@@ -119,7 +116,6 @@ function ArchivePage({
   );
 }
 
-/** What this archive is, how much of it there is, and the ways out of it. */
 function ArchiveFacts({
   archive,
   scope,
@@ -164,7 +160,6 @@ function ArchiveFacts({
   );
 }
 
-/** The address a reader would recognise, without the scheme they never type. */
 function siteName(address: string): string {
   try {
     return new URL(address).host.replace(/^www\./, "");

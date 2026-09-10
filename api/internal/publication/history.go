@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Action is one entry of the private record of what happened to a post.
 type Action struct {
 	ID         uuid.UUID
 	Actor      string
@@ -20,7 +19,6 @@ type Action struct {
 	At         time.Time
 }
 
-// PostHistory answers what has been done to one post, newest first.
 func (s *Service) PostHistory(ctx context.Context, editor Editor, id uuid.UUID) ([]Action, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {

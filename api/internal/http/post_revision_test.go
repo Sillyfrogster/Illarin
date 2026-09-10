@@ -135,7 +135,6 @@ func (s distinctionStack) history(
 	return listed.Actions, response.Body.String()
 }
 
-// taken answers what each action in a history was called, oldest first.
 func taken(done []postAction) []string {
 	names := make([]string, 0, len(done))
 	for index := len(done) - 1; index >= 0; index-- {

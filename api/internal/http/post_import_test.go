@@ -27,8 +27,6 @@ type importNote struct {
 	Message string `json:"message"`
 }
 
-// theSameThing is one post written twice, once as Markdown and once as the
-// document JSON that Markdown means.
 const theSameThing = "## Release notes\n\n" +
 	"Illarin now reads **Markdown**. See the [notes](https://example.com/notes).\n"
 

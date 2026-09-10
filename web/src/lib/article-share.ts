@@ -11,12 +11,10 @@ const REPORTS: Record<ShareState, ShareReport> = {
   },
 };
 
-/** Whether the device carries its own share sheet, which is the only reason to offer one. */
 export function hasNativeShare(agent: Navigator): boolean {
   return typeof agent.share === "function";
 }
 
-/** What a reader is told after asking for the link, and whether it is handed to them. */
 export function shareReport(state: ShareState): ShareReport {
   return REPORTS[state];
 }

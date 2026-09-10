@@ -10,7 +10,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// defaultDeliveryListing is how much delivery work the console reads at once.
 const defaultDeliveryListing = 50
 
 func (h *Handlers) ListPublicationDestinations(c *gin.Context) {
@@ -320,8 +319,6 @@ func (h *Handlers) ListPostDeliveries(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, PostDeliveryList{Deliveries: toAPIDeliveries(sent)})
 }
 
-// announcementOf reads a transition's delivery choice, keeping an absent list
-// apart from an empty one because they mean opposite things.
 func announcementOf(
 	destinations *[]types.UUID,
 	roles *[]types.UUID,
@@ -338,8 +335,6 @@ func announcementOf(
 	return made
 }
 
-// readEvents reads a subscription, keeping an absent list apart from an empty
-// one because they mean opposite things.
 func readEvents(named *[]PublicationEvent) *[]string {
 	if named == nil {
 		return nil
@@ -351,8 +346,6 @@ func readEvents(named *[]PublicationEvent) *[]string {
 	return &events
 }
 
-// readDestinationPolicy reads an allowed and default set, keeping an absent
-// list apart from an empty one because they mean opposite things.
 func readDestinationPolicy(c *gin.Context) (publication.DestinationPolicy, bool) {
 	var request DestinationPolicyRequest
 	if err := c.ShouldBindJSON(&request); err != nil {

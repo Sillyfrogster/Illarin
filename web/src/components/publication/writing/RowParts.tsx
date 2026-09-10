@@ -12,7 +12,6 @@ const STRONG =
 
 const LABEL = "shrink-0 font-ui text-meta text-mute";
 
-/** The strip under the formatting bar. One is open at a time, and it acts where the caret is. */
 export function Row({
   children,
   label,
@@ -38,7 +37,6 @@ export function Row({
   );
 }
 
-/** A label and its field, kept together when the row wraps. */
 export function Pair({
   children,
   field,
@@ -58,7 +56,6 @@ export function Pair({
   );
 }
 
-/** One thing a row does. */
 export function Choice({
   children,
   label,
@@ -89,7 +86,6 @@ export function Choice({
   );
 }
 
-/** A short text field inside a row, such as a link address or a description. */
 export function RowInput({ className, ...props }: ComponentProps<"input">) {
   return (
     <input
@@ -102,12 +98,10 @@ export function RowInput({ className, ...props }: ComponentProps<"input">) {
   );
 }
 
-/** A choice from a short list inside a row. */
 export function RowSelect({ className, ...props }: ComponentProps<"select">) {
   return <Select className={cn("bg-plane text-meta", className)} {...props} />;
 }
 
-/** What a row has to say back: what is happening, or why it will not go through. */
 export function RowNote({
   children,
   id,

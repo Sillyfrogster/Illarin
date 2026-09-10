@@ -88,7 +88,6 @@ type publicPost struct {
 	UpdatedAt    *time.Time          `json:"updatedAt"`
 }
 
-// paragraph is a one-sentence post body in the document vocabulary.
 func paragraph(words string) string {
 	return fmt.Sprintf(
 		`{"version":2,"content":[{"type":"paragraph","content":[{"type":"text","text":%q}]}]}`,
@@ -132,7 +131,6 @@ func (s distinctionStack) save(
 	), session))
 }
 
-// finished is the working copy of a post that has everything publication asks for.
 func finished(draft blogPost, changes map[string]any) map[string]any {
 	working := map[string]any{
 		"version":    draft.Version,
@@ -162,7 +160,6 @@ func (s distinctionStack) saved(
 	return decodePost(t, response)
 }
 
-// publish releases whatever the working copy holds now.
 func (s distinctionStack) publish(
 	t *testing.T,
 	session *http.Cookie,
@@ -192,7 +189,6 @@ func (s distinctionStack) publishAt(
 	), session))
 }
 
-// working reads the post's current working copy.
 func (s distinctionStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := send(t, s.router, authorized(
@@ -254,7 +250,6 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 	return found
 }
 
-// admin is a verified account carrying the admin role.
 func (s distinctionStack) admin(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	session := s.member(t, email, handle)
@@ -858,7 +853,6 @@ func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
 	}
 }
 
-// readCorpus reads one document from the corpus Go validation and the site share.
 func readCorpus(t *testing.T, name string) json.RawMessage {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join(

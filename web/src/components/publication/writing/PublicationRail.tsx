@@ -33,7 +33,6 @@ import {
   WithdrawStep,
 } from "./PublicationSteps";
 
-/** What the writer is doing to the post's standing right now. */
 type Step = "home" | PublicationAction | "reschedule" | "unschedule";
 
 const OFFERS: Record<
@@ -74,11 +73,6 @@ const OFFERS: Record<
   },
 };
 
-/**
- * Everything a writer does to reach readers, as one step of the rail at a time.
- * The post itself stays on the page beside it, so what is about to be published
- * is the thing being looked at.
- */
 export function PublicationRail({
   admin,
   onFailure,
@@ -89,11 +83,9 @@ export function PublicationRail({
 }: {
   admin: boolean;
   onFailure: (message: string) => void;
-  /** Publishing captures what is written, so anything unsaved is saved first. */
   onSaveFirst: () => Promise<number>;
   onSettled: (post: Post) => void;
   post: Post;
-  /** Changes when the post settles, so what was sent is read again. */
   stamp: number;
 }) {
   const [step, setStep] = useState<Step>("home");
@@ -266,7 +258,6 @@ function Offer({
   );
 }
 
-/** What readers can do with the post now, said once at the head of the rail. */
 function readersHave(post: Post): string {
   const standing = writerStanding(post);
   if (standing === "deleted") return "Deleted. Nobody can read this.";
@@ -319,7 +310,6 @@ function Sent({ postId }: { postId: string }) {
   );
 }
 
-// troubled answers whether a delivery ended somewhere the writer has to know about.
 function troubled(one: PostDelivery): boolean {
   const state = deliveryState(one);
   return state === "gaveUp" || state === "stopped";

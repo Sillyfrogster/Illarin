@@ -2,7 +2,6 @@ package block
 
 import "reflect"
 
-// withEmptyCollections keeps a collection in stored content a list, because a slice nobody filled in would otherwise be written as null.
 func withEmptyCollections(value any) any {
 	if value == nil {
 		return nil

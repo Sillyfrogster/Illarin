@@ -10,10 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ErrArtifactNotFound is a delivery artifact nobody may fetch, whatever the reason.
 var ErrArtifactNotFound = errors.New("no such delivery artifact")
 
-// Artifact resolves a signed export address, bounded by the signature and by the delivery's lease.
 func (s *Service) Artifact(
 	ctx context.Context,
 	deliveryID uuid.UUID,

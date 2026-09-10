@@ -105,14 +105,11 @@ type attemptList struct {
 	Attempts []deliveryAttempt `json:"attempts"`
 }
 
-// arrived is one request a test receiver was sent.
 type arrived struct {
 	Headers http.Header
 	Body    []byte
 }
 
-// receiver is an endpoint a test runs. It records what arrived and answers
-// however the test told it to.
 type receiver struct {
 	server *httptest.Server
 	answer func(arrived) (int, string)
@@ -159,7 +156,6 @@ func (r *receiver) arrivals() []arrived {
 	return append([]arrived(nil), r.got...)
 }
 
-// forget clears what arrived, so a test counts only the requests it is about.
 func (r *receiver) forget() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -172,7 +168,6 @@ func (r *receiver) answers(with func(arrived) (int, string)) {
 	r.answer = with
 }
 
-// holds puts one header on everything the receiver answers with.
 func (r *receiver) holds(name, value string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -182,8 +177,6 @@ func (r *receiver) holds(name, value string) {
 	r.extra.Set(name, value)
 }
 
-// echoesTheChallenge is the answer an endpoint gives to prove it is under the
-// control of whoever configured it.
 func echoesTheChallenge(one arrived) (int, string) {
 	var sent struct {
 		Challenge string `json:"challenge"`
@@ -194,11 +187,6 @@ func echoesTheChallenge(one arrived) (int, string) {
 	return http.StatusOK, sent.Challenge
 }
 
-// throughLoopback widens the outbound address policy by the two servers this
-// test runs, the receiver and the stand-in for Discord, and holds every other
-// address to the real rule. It resolves the host on every request the way the
-// real caller does, so a test can move a host out of public space between
-// attempts.
 type throughLoopback struct {
 	receiver string
 	discord  string
@@ -228,8 +216,6 @@ func (t throughLoopback) Post(
 	return t.send(ctx, http.MethodPost, address, headers, body)
 }
 
-// dialed answers where this test actually sends, which is the real address for
-// everything but the Discord stand-in the test runs itself.
 func (t throughLoopback) dialed(address string) string {
 	if t.discord == "" {
 		return address
@@ -302,8 +288,6 @@ func newDestinationStack(t *testing.T) destinationStack {
 	return newDestinationStackThrough(t, nil)
 }
 
-// newDestinationStackThrough builds the stack with a resolver a test controls,
-// so an attempt can find a host somewhere Illarin refuses to connect.
 func newDestinationStackThrough(
 	t *testing.T,
 	resolves func(host string) ([]netip.Addr, error),
@@ -367,7 +351,6 @@ func (s destinationStack) verify(
 	), session))
 }
 
-// active is one destination configured and proven, ready to receive.
 func (s destinationStack) active(t *testing.T, name string) addedDestination {
 	t.Helper()
 	s.to.answers(echoesTheChallenge)
@@ -464,14 +447,11 @@ func (s destinationStack) publishTo(
 	), session))
 }
 
-// sendQueued runs the delivery worker the way the API process does.
 func (s destinationStack) sendQueued(t *testing.T) int {
 	t.Helper()
 	return s.sendQueuedAt(t, time.Now())
 }
 
-// sendQueuedAt runs the worker at an instant the test chooses, which is how the
-// retry schedule is proved without waiting on it.
 func (s destinationStack) sendQueuedAt(t *testing.T, at time.Time) int {
 	t.Helper()
 	made, err := s.handlers.publications.SendDueDeliveries(t.Context(), at)
@@ -481,7 +461,6 @@ func (s destinationStack) sendQueuedAt(t *testing.T, at time.Time) int {
 	return made
 }
 
-// readyPost is one admin post with everything publication asks for.
 func (s destinationStack) readyPost(t *testing.T) blogPost {
 	t.Helper()
 	draft := s.illarinDraft(t, s.editor, "Illarin keeps its own writing now")
@@ -907,7 +886,6 @@ func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
 	}
 }
 
-// publishedTo publishes one post to one destination and answers what it became.
 func (s destinationStack) publishedTo(
 	t *testing.T,
 	ready blogPost,
@@ -923,8 +901,6 @@ func (s destinationStack) publishedTo(
 	return decodePost(t, response)
 }
 
-// checkSignature proves one arrival carries the Standard Webhooks envelope over
-// the exact bytes that were sent.
 func checkSignature(t *testing.T, one arrived, secret string) {
 	t.Helper()
 	id := one.Headers.Get(webhook.IDHeader)

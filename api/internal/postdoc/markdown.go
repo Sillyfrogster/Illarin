@@ -16,16 +16,13 @@ const maxMarkdownSource = 400000
 
 const maxNotes = 40
 
-// MediaPrefix is how imported Markdown names a picture the post already owns.
 const MediaPrefix = "media:"
 
-// Note is one place an import could not carry the Markdown across as written.
 type Note struct {
 	Line    int
 	Message string
 }
 
-// Refused is an import that cannot go ahead, and every place that stopped it.
 type Refused struct {
 	Notes []Note
 }
@@ -38,12 +35,10 @@ func (r Refused) Error() string {
 	return strings.Join(said, "; ")
 }
 
-// constrained is the Markdown an import reads, and nothing else is parsed.
 var constrained = goldmark.New(goldmark.WithExtensions(
 	extension.Table, extension.Strikethrough, extension.TaskList, extension.Footnote,
 ))
 
-// FromMarkdown converts constrained Markdown into a canonical post document.
 func FromMarkdown(source string) ([]byte, []Note, error) {
 	if len(source) > maxMarkdownSource {
 		return nil, nil, Refused{Notes: []Note{{
@@ -72,7 +67,6 @@ func FromMarkdown(source string) ([]byte, []Note, error) {
 	return canonical, settle(state.notes), nil
 }
 
-// importer carries the source one import reads and what it has to say about it.
 type importer struct {
 	source   []byte
 	starts   []int
@@ -88,7 +82,6 @@ func (i *importer) refuse(node ast.Node, message string) {
 	i.refusals = append(i.refusals, Note{Line: i.lineOf(node), Message: message})
 }
 
-// settle puts what an import said in source order and says each thing once.
 func settle(notes []Note) []Note {
 	sort.SliceStable(notes, func(one, two int) bool {
 		return notes[one].Line < notes[two].Line
@@ -135,7 +128,6 @@ func (i *importer) lineOf(node ast.Node) int {
 	return sort.SearchInts(i.starts, at+1)
 }
 
-// offsetOf answers where a node begins, climbing to a parent that knows.
 func offsetOf(node ast.Node) (int, bool) {
 	for at := node; at != nil; at = at.Parent() {
 		if found, ok := selfOffset(at); ok {
@@ -162,7 +154,6 @@ func selfOffset(node ast.Node) (int, bool) {
 	return 0, false
 }
 
-// lines answers the source a block holds, joined as it was written.
 func (i *importer) lines(segments *text.Segments) string {
 	var out strings.Builder
 	for at := range segments.Len() {

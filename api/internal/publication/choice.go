@@ -10,30 +10,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// noteLimit is the longest announcement note one transition may carry.
 const noteLimit = 500
 
-// Announcement is the delivery choice one public transition captures. A nil
-// destination list accepts what the policy already defaults to; an empty one
-// is a deliberately quiet publication.
 type Announcement struct {
 	Destinations *[]uuid.UUID
 	Ping         []uuid.UUID
 	Note         string
 }
 
-// ErrRoleRefused says a transition asked to ping a destination that has no
-// approved role, or one it is not sending to at all.
 var ErrRoleRefused = errors.New("the destination has no role this post may ping")
 
-// DestinationPolicy is the allowed and default set an app or a grant carries.
-// A nil Allowed on a grant means the grant follows its app.
 type DestinationPolicy struct {
 	Allowed  *[]uuid.UUID
 	Defaults []uuid.UUID
 }
 
-// AppChoices answers the safe destination identities one app allows.
 func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
 		select destination.id, destination.name, destination.kind, destination.state,
@@ -45,8 +36,6 @@ func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, er
 	`, appID)
 }
 
-// GrantChoices answers the safe destination identities one grant may send to,
-// which is the grant's own set where it has one and its app's set otherwise.
 func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice, error) {
 	var overridden bool
 	var appID uuid.UUID
@@ -69,9 +58,6 @@ func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice
 	`, grantID)
 }
 
-// PostChoices answers what one post may send to. A post published under a grant
-// is bound by that grant; a post an admin owns outright may reach any active
-// destination, because an admin holds post authority without holding a grant.
 func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice, error) {
 	if grantID != nil {
 		return s.GrantChoices(ctx, *grantID)
@@ -84,8 +70,6 @@ func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice
 	`)
 }
 
-// PostDestinations answers the destinations one post may send to, to the
-// contributor who owns it and to an admin.
 func (s *Service) PostDestinations(
 	ctx context.Context,
 	editor Editor,
@@ -105,7 +89,6 @@ func (s *Service) PostDestinations(
 	return activeAmong(allowed), nil
 }
 
-// SetAppDestinations records the baseline every grant on one app follows.
 func (s *Service) SetAppDestinations(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -150,8 +133,6 @@ func (s *Service) SetAppDestinations(
 	return nil
 }
 
-// SetGrantDestinations narrows one contributor to its own set, or clears the
-// override so the grant follows its app again.
 func (s *Service) SetGrantDestinations(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -204,8 +185,6 @@ func (s *Service) SetGrantDestinations(
 	return nil
 }
 
-// checkPolicy refuses a set naming a destination that does not exist and a
-// default outside the set it belongs to.
 func (s *Service) checkPolicy(
 	ctx context.Context,
 	in DestinationPolicy,
@@ -238,16 +217,11 @@ func (s *Service) checkPolicy(
 	return allowed, nil
 }
 
-// sending is one destination a transition picked, and whether the author asked
-// for the notification role the authority approved on it.
 type sending struct {
 	Choice
 	Ping bool
 }
 
-// chosen answers the destinations one transition will send to, having refused
-// every identity the post is not allowed to reach and every role it may not
-// ping.
 func (s *Service) chosen(
 	ctx context.Context,
 	grantID *uuid.UUID,
@@ -277,7 +251,6 @@ func (s *Service) chosen(
 	return going, note, nil
 }
 
-// named answers the destinations a request picked out of the ones it may reach.
 func named(allowed []Choice, wanted []uuid.UUID) ([]Choice, error) {
 	byID := make(map[uuid.UUID]Choice, len(allowed))
 	for _, one := range allowed {
@@ -299,8 +272,6 @@ func named(allowed []Choice, wanted []uuid.UUID) ([]Choice, error) {
 	return picked, nil
 }
 
-// pinged marks the destinations whose approved role this transition asked for,
-// and refuses a role on anything that is not offering one.
 func pinged(picked []Choice, wanted []uuid.UUID) ([]sending, error) {
 	asked := make(map[uuid.UUID]bool, len(wanted))
 	for _, id := range wanted {
@@ -321,8 +292,6 @@ func pinged(picked []Choice, wanted []uuid.UUID) ([]sending, error) {
 	return going, nil
 }
 
-// activeAmong drops a destination that is not ready to receive anything, so a
-// disabled endpoint never becomes delivery work nobody asked for.
 func activeAmong(held []Choice) []Choice {
 	ready := make([]Choice, 0, len(held))
 	for _, one := range held {
@@ -356,8 +325,6 @@ func choicesFrom(
 	return collectChoices(rows)
 }
 
-// collectSending reads a captured choice, whose last column is the role this
-// transition asked for rather than a policy default.
 func collectSending(rows pgx.Rows) ([]sending, error) {
 	defer rows.Close()
 	found := make([]sending, 0, 4)

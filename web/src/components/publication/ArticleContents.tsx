@@ -6,7 +6,6 @@ import { cn } from "@/lib/cn";
 import type { PostContentsEntry } from "@/lib/post-contents";
 import { useReadingMark } from "@/lib/use-reading-mark";
 
-/** The outline a post's own headings make, in the margin on a wide screen and a disclosure on a narrow one. */
 export function ArticleContents({ entries }: { entries: PostContentsEntry[] }) {
   const [open, setOpen] = useState(false);
   const here = useReadingMark(entries.map((entry) => entry.anchor));

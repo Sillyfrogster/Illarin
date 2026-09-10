@@ -10,19 +10,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// SourceGrant is the assignment source for a badge an active grant carries.
 const SourceGrant = "publication-grant"
 
-// VerifiedAppContributor is the badge every active publication grant carries.
 var VerifiedAppContributor = uuid.MustParse("9d3f1c00-0000-4000-8000-000000000021")
 
-// Holder is the little a grant says about the account it was made for.
 type Holder struct {
 	ID     uuid.UUID
 	Handle string
 }
 
-// Grant is one account's approval to publish for one app.
 type Grant struct {
 	ID                    uuid.UUID
 	Holder                Holder
@@ -37,7 +33,6 @@ type Grant struct {
 	Active                bool
 }
 
-// GrantEdit is what the authority supplies to approve one contributor.
 type GrantEdit struct {
 	Handle            string
 	AppID             uuid.UUID
@@ -45,18 +40,15 @@ type GrantEdit struct {
 	DefaultCategoryID uuid.UUID
 }
 
-// GrantUpdate carries only the parts of a grant a request named.
 type GrantUpdate struct {
 	CategoryIDs       []uuid.UUID
 	DefaultCategoryID *uuid.UUID
 }
 
-// Grants answers every grant ever made, revoked ones included.
 func (s *Service) Grants(ctx context.Context) ([]Grant, error) {
 	return s.grantsWhere(ctx, `order by grant_row.active desc, grant_row.granted_at desc`)
 }
 
-// Workspace answers the apps, categories and defaults one contributor may use.
 func (s *Service) Workspace(ctx context.Context, accountID uuid.UUID) ([]Grant, error) {
 	return s.grantsWhere(ctx, `
 		where grant_row.user_id = $1 and grant_row.active and app.retired_at is null
@@ -64,7 +56,6 @@ func (s *Service) Workspace(ctx context.Context, accountID uuid.UUID) ([]Grant, 
 	`, accountID)
 }
 
-// CreateGrant approves one verified account to publish for one app.
 func (s *Service) CreateGrant(ctx context.Context, actor uuid.UUID, in GrantEdit) (Grant, error) {
 	holder, err := s.verifiedAccountByHandle(ctx, in.Handle)
 	if err != nil {
@@ -121,7 +112,6 @@ func (s *Service) CreateGrant(ctx context.Context, actor uuid.UUID, in GrantEdit
 	return s.grant(ctx, id)
 }
 
-// UpdateGrant narrows or widens the categories one grant allows.
 func (s *Service) UpdateGrant(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -179,7 +169,6 @@ func (s *Service) UpdateGrant(
 	return s.grant(ctx, id)
 }
 
-// RevokeGrant ends an approval and keeps everything it already produced.
 func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -218,7 +207,6 @@ func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	return nil
 }
 
-// carryBadge gives the contributor badge to an account that does not hold it.
 func carryBadge(ctx context.Context, tx pgx.Tx, holderID, actor uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		insert into profile_distinction_assignments
@@ -235,7 +223,6 @@ func carryBadge(ctx context.Context, tx pgx.Tx, holderID, actor uuid.UUID) error
 	return nil
 }
 
-// dropBadgeWhenLastGrant keeps the badge while any other grant is still active
 func dropBadgeWhenLastGrant(ctx context.Context, tx pgx.Tx, holderID uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		update profile_distinction_assignments
@@ -263,7 +250,6 @@ func writeGrantCategories(ctx context.Context, tx pgx.Tx, id uuid.UUID, allowed 
 	return nil
 }
 
-// allowedCategories refuses an empty, unknown, retired or unbacked default set.
 func (s *Service) allowedCategories(
 	ctx context.Context,
 	ids []uuid.UUID,
@@ -321,7 +307,6 @@ func (s *Service) verifiedAccountByHandle(ctx context.Context, handle string) (H
 	return holder, nil
 }
 
-// Grant answers one approval and everything it bounds.
 func (s *Service) Grant(ctx context.Context, id uuid.UUID) (Grant, error) {
 	return s.grant(ctx, id)
 }
@@ -353,8 +338,6 @@ func (s *Service) grantsWhere(ctx context.Context, clause string, args ...any) (
 	return s.withAllowedDestinations(ctx, found)
 }
 
-// withAllowedDestinations gives each grant the safe destination identities it
-// may send to, which is its own set where it has one and its app's otherwise.
 func (s *Service) withAllowedDestinations(ctx context.Context, found []Grant) ([]Grant, error) {
 	for index := range found {
 		allowed, err := s.GrantChoices(ctx, found[index].ID)
@@ -369,7 +352,6 @@ func (s *Service) withAllowedDestinations(ctx context.Context, found []Grant) ([
 	return found, nil
 }
 
-// withAllowedCategories fills each grant's category set in one further read.
 func (s *Service) withAllowedCategories(ctx context.Context, found []Grant) ([]Grant, error) {
 	if len(found) == 0 {
 		return found, nil

@@ -10,30 +10,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// MaxNameRunes is as long as a name may be. It is a boundary on stored text
-// rather than a judgement about what a good name is.
 const MaxNameRunes = 200
 
 var (
-	// ErrNameTooLong is a name past MaxNameRunes.
-	ErrNameTooLong = errors.New("the name is too long")
-	// ErrRatingUnanswerable is an attempt to unanswer the adult content
-	// question on a published asset, which readers have already been told.
+	ErrNameTooLong        = errors.New("the name is too long")
 	ErrRatingUnanswerable = errors.New("a published asset needs an adult content answer")
 )
 
-// Identity is the header an asset carries above its blocks. A blank name and
-// an unanswered adult content question are both ordinary states for a draft.
 type Identity struct {
 	OwnerID uuid.UUID
 	AssetID uuid.UUID
 	Name    string
-	// IsNSFW is nil where the creator has not answered. Only a draft may be
-	// unanswered.
-	IsNSFW *bool
+	IsNSFW  *bool
 }
 
-// SetIdentity saves the working copy's name and adult content answer.
 func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candidate) error {
 	name := strings.TrimSpace(in.Name)
 	if utf8.RuneCountInString(name) > MaxNameRunes {
@@ -69,8 +59,6 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candi
 	`, in.AssetID, name, in.IsNSFW); err != nil {
 		return fmt.Errorf("save asset header: %w", err)
 	}
-	// A name is part of a file and the adult content answer is part of a page,
-	// so the counter follows the name alone.
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return err
 	}

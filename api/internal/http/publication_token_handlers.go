@@ -77,9 +77,6 @@ func (h *Handlers) GetPublicationCredential(c *gin.Context) {
 	})
 }
 
-// publicationBearer answers the grant a publication token authenticates as.
-// The token was checked before any handler ran, so a session cookie cannot
-// stand in for a token and a token cannot stand in for a session.
 func (h *Handlers) publicationBearer(c *gin.Context) (publication.Bearer, bool) {
 	bearing, ok := publicationBearing(c)
 	if !ok {

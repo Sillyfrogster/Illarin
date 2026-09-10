@@ -4,31 +4,25 @@ import { bylineName, bylineProfile } from "@/lib/byline";
 import { blogAddress, postPermalink } from "@/lib/post-link";
 import { pageMetadata, SITE_NAME, siteUrl } from "@/lib/site-metadata";
 
-/** Where the publication answers, and what every archive address is built beneath */
 export const BLOG_HOME = "/blog";
 
-/** The size every link preview expects a social image to be. */
 export const CARD_SIZE = { width: 1200, height: 630 } as const;
 
-/** The publication app Illarin publishes as, which its own posts need not name twice */
 export const ILLARIN_APP = "illarin";
 
 export const BLOG_TITLE = "Illarin Blog";
 
-/** What the publication calls itself at the top of its own pages, where Illarin is already said. */
 export const BLOG_HEADING = "The blog";
 
 export const BLOG_DESCRIPTION =
   "Official announcements, releases and articles from Illarin and the projects it publishes for.";
 
-/** Where the two feeds answer beneath the archive they summarize. */
 export function feedAddresses(archive: string): { rss: string; json: string } {
   return { rss: `${archive}/feed.xml`, json: `${archive}/feed.json` };
 }
 
 export const PUBLICATION_FEEDS = feedAddresses(BLOG_HOME);
 
-/** What a narrowed archive holds, said the same way on its page and in its feed. */
 export function archiveDescription(
   scope: "category" | "app",
   name: string,
@@ -38,7 +32,6 @@ export function archiveDescription(
     : `Everything Illarin has published about ${name}.`;
 }
 
-/** Reads the page number out of an archive address, refusing anything but /page/<number>. */
 export function archivePage(paging: string[] | undefined): number | null {
   if (!paging || paging.length === 0) return 1;
   if (paging.length !== 2 || paging[0] !== "page") return null;
@@ -46,12 +39,10 @@ export function archivePage(paging: string[] | undefined): number | null {
   return Number(paging[1]);
 }
 
-/** Page one of any archive lives at the archive's own address, not under /page/1. */
 export function pageAddress(address: string, page: number): string {
   return page === 1 ? address : `${address}/page/${page}`;
 }
 
-/** A short tab title under the publication's template, and the full name in a link preview. */
 export function blogMetadata(
   name: string,
   description: string,
@@ -68,7 +59,6 @@ export function blogMetadata(
   };
 }
 
-/** The feeds a reader can subscribe to from the archive they are looking at. */
 export function feedTypes(archive: string): Record<string, string> {
   const feeds = feedAddresses(archive);
   return {
@@ -77,7 +67,6 @@ export function feedTypes(archive: string): Record<string, string> {
   };
 }
 
-/** The tags a link preview, a search engine and a reader's browser read off one post. */
 export function postMetadata(post: PublicPost): Metadata {
   const canonical = postPermalink(post.slug);
   const card = socialCard(post);
@@ -106,7 +95,6 @@ export function postMetadata(post: PublicPost): Metadata {
   };
 }
 
-/** The same published facts as the page's own tags, in the form a search engine indexes. */
 export function postStructuredData(post: PublicPost): string {
   const profile = bylineProfile(post.byline);
   return inertInAScript(
@@ -130,7 +118,6 @@ export function postStructuredData(post: PublicPost): string {
   );
 }
 
-/** The characters that could close a script element early, which the article data escapes. */
 const CLOSES_A_SCRIPT = /[<>&\u2028\u2029]/g;
 
 function inertInAScript(json: string): string {
@@ -140,7 +127,6 @@ function inertInAScript(json: string): string {
   );
 }
 
-/** The picture a shared link shows: the author's own upload, or the card Illarin composes. */
 export function socialCard(post: PublicPost): {
   url: string;
   width: number;

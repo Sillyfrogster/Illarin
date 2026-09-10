@@ -1,4 +1,3 @@
-// Package protected keeps content that leaves Illarin only through an explicit view.
 package protected
 
 import (
@@ -22,8 +21,6 @@ const (
 
 var ErrPolicyRequired = errors.New("choose at least one allowed app before sealing a prompt")
 
-// ImportPromptFragments stores protected prompt text a format module separated
-// before persistence. A keyed placeholder may reuse exactly one prior payload.
 func ImportPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -140,7 +137,6 @@ func promptTextBySourceKey(
 	return texts[0], nil
 }
 
-// AppTargets names the code-owned export targets each allowed app can receive.
 func AppTargets(kind, app string) []string {
 	if kind == "preset" && app == AppLumiverse {
 		return []string{"preset_lumiverse"}
@@ -148,7 +144,6 @@ func AppTargets(kind, app string) []string {
 	return nil
 }
 
-// EligibleApps returns the code-known apps with at least one offered target.
 func EligibleApps(kind string, offered []string) []string {
 	apps := []string{}
 	for _, app := range []string{AppLumiverse} {
@@ -171,7 +166,6 @@ func EligibleApps(kind string, offered []string) []string {
 	return apps
 }
 
-// HasPromptFragments reports whether this page needs a protected-content policy.
 func HasPromptFragments(blocks []block.Block) bool {
 	for _, holder := range blocks {
 		for _, element := range holder.Elements {
@@ -189,8 +183,6 @@ func HasPromptFragments(blocks []block.Block) bool {
 	return false
 }
 
-// SyncPromptFragments splits sealed prompt text from the public blocks in the
-// transaction that saves them. A nil policy keeps an existing policy only.
 func SyncPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -326,7 +318,6 @@ func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]strin
 	return apps, rows.Err()
 }
 
-// RestorePromptFragments returns the owner or delivery view. Readers never call it.
 func RestorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID, blocks []block.Block) error {
@@ -386,7 +377,6 @@ func restorePromptFragments(ctx context.Context, q interface {
 	return nil
 }
 
-// Apps returns an asset's policy. An ordinary asset has no entries.
 func Apps(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID) ([]string, error) {

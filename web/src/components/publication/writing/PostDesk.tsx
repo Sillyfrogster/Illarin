@@ -19,7 +19,6 @@ import { PostRow } from "./PostRow";
 import { StandingRail } from "./StandingRail";
 import { StartPost } from "./StartPost";
 
-/** Everything this account has written for the blog, and what Illarin approved it to publish. */
 export function PostDesk() {
   const { account } = useAuth();
   const [workspace, setWorkspace] = useState<PublicationWorkspace | null>(null);
@@ -185,7 +184,6 @@ function Inside({
   );
 }
 
-// What each standing holds, so the rail says so before it is opened.
 function tally(posts: Post[], deleted: Post[]): Record<Standing, number> {
   const counted = {} as Record<Standing, number>;
   for (const standing of STANDINGS) {

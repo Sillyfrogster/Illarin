@@ -22,7 +22,6 @@ import type {
 import { PostCode } from "./PostCode";
 import { PostSpans } from "./PostSpans";
 
-/** The mark, the word and the wash each kind of callout wears. */
 const CALLOUTS: Record<
   PostCalloutKind,
   { label: string; mark: typeof Info; wash: string; kind: string }
@@ -70,7 +69,6 @@ export function PostBody({
   );
 }
 
-// Pictures sit at the top level of a body, so nothing nested carries media.
 function Blocks({ blocks }: { blocks: PostBlock[] }) {
   return (
     <>

@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 
-/** The skip link, header, main landmark and footer every page of the site stands in. */
 export function SiteChrome({ children }: { children: ReactNode }) {
   return (
     <>

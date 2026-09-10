@@ -71,7 +71,6 @@ func (s distinctionStack) recovered(
 	return decodePost(t, response)
 }
 
-// listing reads one standing of the posts a session may manage.
 func (s distinctionStack) listing(t *testing.T, session *http.Cookie, deleted bool) []blogPost {
 	t.Helper()
 	address := "/v1/publication/posts"
@@ -91,7 +90,6 @@ func (s distinctionStack) listing(t *testing.T, session *http.Cookie, deleted bo
 	return listed.Posts
 }
 
-// clearOut is the recovery worker, run once at an instant the test chooses.
 func (s distinctionStack) clearOut(t *testing.T, at time.Time) int {
 	t.Helper()
 	removed, err := s.handlers.publications.RemoveExpiredPosts(t.Context(), at)
@@ -101,7 +99,6 @@ func (s distinctionStack) clearOut(t *testing.T, at time.Time) int {
 	return removed
 }
 
-// blobOf reads the bytes one picture stands for, which outlive the picture.
 func blobOf(t *testing.T, stack distinctionStack, mediaID string) string {
 	t.Helper()
 	var blob string
@@ -113,8 +110,6 @@ func blobOf(t *testing.T, stack distinctionStack, mediaID string) string {
 	return blob
 }
 
-// markedBlob answers whether the sweeper has one set of bytes in its sights,
-// which it only does once nothing live refers to them.
 func markedBlob(t *testing.T, stack distinctionStack, blobID string) bool {
 	t.Helper()
 	var sighted bool

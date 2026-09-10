@@ -16,16 +16,10 @@ import (
 
 const roleNameLimit = 48
 
-// ErrNotDiscord says an operation meant for one kind of destination was aimed
-// at the other.
 var ErrNotDiscord = errors.New("the destination is not a Discord channel")
 
-// SettledUnconfirmed is the reason on an announcement Discord accepted without
-// confirming, which is neither a success nor a failure.
 const SettledUnconfirmed = "unconfirmed"
 
-// ChannelEdit is what the authority supplies to add or change a Discord
-// destination. An empty role id takes the approved role away.
 type ChannelEdit struct {
 	Name     string
 	Address  string
@@ -33,9 +27,6 @@ type ChannelEdit struct {
 	RoleName string
 }
 
-// AddChannel records one Discord channel, having asked Discord itself what the
-// capability address is for. It is active from the moment Discord answers,
-// because that answer is the proof a challenge would otherwise have to be.
 func (s *Service) AddChannel(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -85,8 +76,6 @@ func (s *Service) AddChannel(
 	return s.Destination(ctx, id)
 }
 
-// UpdateChannel renames a Discord destination, changes its approved role or
-// points it at another capability, which Discord is asked about again.
 func (s *Service) UpdateChannel(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -153,8 +142,6 @@ func (s *Service) UpdateChannel(
 	return s.Destination(ctx, id)
 }
 
-// provenByDiscord asks Discord about a channel's stored capability again and
-// puts the destination back in service when Discord still recognizes it.
 func (s *Service) provenByDiscord(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -194,12 +181,8 @@ func (s *Service) provenByDiscord(
 	return s.Destination(ctx, id)
 }
 
-// discordHost is the host every Discord capability answers on, held apart from
-// the sealed address so a masked view can name it.
 const discordHost = "discord.com"
 
-// askDiscord reads the capability and has Discord confirm what it points at,
-// which is the whole of what proves a Discord destination.
 func (s *Service) askDiscord(
 	ctx context.Context,
 	address string,
@@ -233,8 +216,6 @@ func (s *Service) askDiscord(
 	return capability, found, nil
 }
 
-// whyDiscordRefused says what to do about the answer Discord gave, because the
-// common refusals each have a different fix.
 func whyDiscordRefused(status int) string {
 	switch status {
 	case http.StatusNotFound:
@@ -247,8 +228,6 @@ func whyDiscordRefused(status int) string {
 	}
 }
 
-// approved is the one role a Discord destination may name, held as the pair of
-// nulls the row keeps when there is none.
 type approved struct {
 	id   *string
 	name *string
@@ -274,9 +253,6 @@ func checkRole(roleID, roleName string) (approved, error) {
 	return approved{id: &id, name: &name}, nil
 }
 
-// announceOnDiscord composes the one announcement Illarin decided on and sends
-// it in confirming mode, so an accepted request either carries a message id or
-// is recorded as one Discord never confirmed.
 func (s *Service) announceOnDiscord(
 	ctx context.Context,
 	held waiting,
@@ -312,15 +288,11 @@ func (s *Service) announceOnDiscord(
 	return s.record(ctx, held, said.verdict, now)
 }
 
-// announced is what Discord said, alongside the id of the message it made.
 type announced struct {
 	verdict
 	Message string
 }
 
-// readAnnouncement turns Discord's answer into what Illarin does next. An
-// accepted request with no message id is never called a success, because a
-// second attempt at it could post the announcement twice.
 func readAnnouncement(answer outbound.Answer) announced {
 	if answer.Status < http.StatusOK || answer.Status >= http.StatusMultipleChoices {
 		return announced{verdict: readAnswer(answer)}
@@ -336,8 +308,6 @@ func readAnnouncement(answer outbound.Answer) announced {
 	return announced{verdict: arrived, Message: message}
 }
 
-// announcementOf turns the summary an event carries into the fixed shape
-// Illarin announces in.
 func announcementOf(said sent, role string) discord.Announcement {
 	one := discord.Announcement{
 		Title:    said.Post.Title,
@@ -356,9 +326,6 @@ func announcementOf(said sent, role string) discord.Announcement {
 	return one
 }
 
-// channelOf opens the capability one Discord destination was configured with
-// and the role it may name. They leave this package only as a request already
-// made.
 func (s *Service) channelOf(
 	ctx context.Context,
 	id uuid.UUID,
@@ -388,8 +355,6 @@ func (s *Service) channelOf(
 	return capability, *role, nil
 }
 
-// keepMessage holds the id of the announcement Discord made, which is the only
-// handle a deliberate repair ever has on it.
 func (s *Service) keepMessage(ctx context.Context, deliveryID uuid.UUID, message string) error {
 	_, err := s.pool.Exec(ctx, `
 		update publication_deliveries set message_id = $2 where id = $1

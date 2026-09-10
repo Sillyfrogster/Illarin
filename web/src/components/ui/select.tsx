@@ -2,7 +2,6 @@ import { ChevronDown } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** A choice from a short list, native so a phone opens its own picker */
 export function Select({
   className,
   children,

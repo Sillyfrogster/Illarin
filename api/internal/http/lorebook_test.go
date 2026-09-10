@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// aBookOf writes a book of the given size, with the first entry switched off,
-// so a test can see both counts an element reports about itself.
 func aBookOf(entries int) json.RawMessage {
 	written := make([]string, entries)
 	for i := range written {
@@ -20,7 +18,6 @@ func aBookOf(entries int) json.RawMessage {
 	return json.RawMessage(`{"entries":[` + strings.Join(written, ",") + `]}`)
 }
 
-// uploadedImageID stores one picture against an asset and answers with its id.
 func uploadedImageID(t *testing.T, r http.Handler, session *http.Cookie, assetID string) string {
 	t.Helper()
 	response := send(t, r, authorized(mediaUploadRequest(
@@ -119,7 +116,6 @@ func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
 			t.Errorf("%s is shown as %q, want the exact text", element.Role, element.Display)
 		}
 	}
-	// Half width has no room for duo, so the block arrives stacked.
 	if added.Layout != "stack-2" || added.Width != "half" {
 		t.Errorf("model instructions arrived %s wide in %s", added.Width, added.Layout)
 	}

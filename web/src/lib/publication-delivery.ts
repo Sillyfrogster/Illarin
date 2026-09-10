@@ -5,7 +5,6 @@ import type {
 } from "@/lib/api/query";
 import { shortMoment } from "@/lib/dates";
 
-/** What one public transition is called, and what it is. */
 export const EVENT_WORDS: Record<
   PublicationEvent,
   { word: string; what: string }
@@ -24,20 +23,17 @@ export const EVENT_WORDS: Record<
   },
 };
 
-/** The order Illarin lists events in, everywhere it lists them. */
 export const EVENTS: PublicationEvent[] = [
   "publication.post.published.v1",
   "publication.post.updated.v1",
   "publication.post.withdrawn.v1",
 ];
 
-/** The word for one event name as it arrives on the wire. */
 export function eventWord(type: string): string {
   const held = EVENTS.find((one) => one === type);
   return held ? EVENT_WORDS[held].word : "Publication";
 }
 
-/** The editor actions that announce, and the event each one sends. */
 export type Transition = "publish" | "changes" | "withdraw" | "republish";
 
 export function transitionEvent(transition: Transition): PublicationEvent {
@@ -46,7 +42,6 @@ export function transitionEvent(transition: Transition): PublicationEvent {
   return "publication.post.published.v1";
 }
 
-/** Whether one destination is offered for a transition a post is making. */
 export function offeredFor(
   destination: PublicationDestinationChoice,
   event: PublicationEvent,
@@ -56,7 +51,6 @@ export function offeredFor(
   return destination.kind !== "discord" || !announced;
 }
 
-/** How a delivery reads once it has settled, or while it is still going. */
 export type DeliveryState =
   | "waiting"
   | "arrived"
@@ -80,7 +74,6 @@ const STOPPED_WORDS: Record<string, string> = {
   moved: "The destination moved to another address.",
 };
 
-/** One line saying what a delivery is doing, or what it stopped doing. */
 export function deliveryStanding(one: PostDelivery, now = new Date()): string {
   if (one.state === "delivered") {
     return `Arrived ${shortMoment(one.settledAt ?? one.occurredAt)}`;

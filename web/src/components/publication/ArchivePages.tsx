@@ -6,7 +6,6 @@ import { pageAddress } from "@/lib/publication-metadata";
 const STEP =
   "flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-3 text-ui";
 
-/** Every page of an archive, each at an address a reader and a crawler can both follow. */
 export function ArchivePages({
   address,
   page,

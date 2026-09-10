@@ -25,7 +25,6 @@ export function elementCursor(
   return [elementId, ...parts].join(":");
 }
 
-/** One element under its own label, or the reader's rendering where the page cannot write it. */
 export function EditableElementSection({
   block,
   element,
@@ -75,7 +74,6 @@ export function EditableElementSection({
   );
 }
 
-/** An element's own fields, written where the page already shows them. */
 export function EditableElement({
   blockId,
   element,

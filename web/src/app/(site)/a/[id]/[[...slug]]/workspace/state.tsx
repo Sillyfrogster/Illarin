@@ -148,7 +148,6 @@ export function AssetWorkspace({
   }, [saved]);
 
   useEffect(() => {
-    // The publication rail reports its own refusal, and taking the pane would drop what was typed.
     const stale = () =>
       setPane((open) =>
         open?.kind === "publication" ? open : { kind: "conflict" },
@@ -179,7 +178,6 @@ export function AssetWorkspace({
           ? "private"
           : "published";
 
-  /** A save refused for want of an allowed app opens the element that asks for one. */
   const openSealedElement = useCallback((pages: AssetBlock[]) => {
     for (const block of pages) {
       const asking = block.elements.find((element) =>
@@ -293,7 +291,6 @@ export function AssetWorkspace({
     ],
   );
 
-  // Writing the creator has not saved yet is kept over the server's answer.
   const applyServerBlocks = useCallback((incoming: AssetBlock[]) => {
     setDraft((current) => {
       const changed = new Set(changedBlockIds(current, savedBlocks.current));
@@ -317,7 +314,6 @@ export function AssetWorkspace({
     setSavedIdentity(answer);
   }, [identity.isNsfw, identity.name]);
 
-  /** Adding or removing a block changes the saved copy as well, so it reads as saved. */
   const editBlockList = useCallback(
     (change: (blocks: AssetBlock[]) => AssetBlock[]) => {
       setDraft(change);
@@ -418,7 +414,6 @@ export function AssetWorkspace({
   );
 }
 
-// A block the server has just rearranged, still holding what the creator wrote.
 function keepWriting(
   server: AssetBlock,
   draft: AssetBlock,

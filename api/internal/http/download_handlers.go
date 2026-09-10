@@ -48,8 +48,6 @@ func (h *Handlers) downloadError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
 }
 
-// handOffExport writes a generated file straight out. There is nothing on disk
-// to hand nginx, because an export is produced on request and never cached.
 func (h *Handlers) handOffExport(c *gin.Context, download asset.Export) {
 	if download.Event != nil {
 		if err := h.assets.RecordDownload(c.Request.Context(), *download.Event); err != nil {
@@ -116,8 +114,6 @@ func (h *Handlers) GetMediaVariant(
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
 		return
 	}
-	// A public image can never resolve to different bytes, so it is cached
-	// hard. A draft's image is served against a signature that runs out.
 	cache := "public, max-age=31536000, immutable"
 	if download.Private {
 		cache = "private, no-store"
@@ -130,7 +126,6 @@ func (h *Handlers) GetMediaVariant(
 	c.Status(http.StatusOK)
 }
 
-// sharedImageVariant answers the same address for an image no asset owns.
 func (h *Handlers) sharedImageVariant(
 	c *gin.Context,
 	mediaID uuid.UUID,

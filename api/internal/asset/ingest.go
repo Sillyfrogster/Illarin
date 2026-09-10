@@ -21,13 +21,9 @@ import (
 
 var (
 	errIngestLeaseLost = errors.New("ingest lease lost")
-	// errWrongKind marks a revision that reads as a different kind of thing
-	// than the asset it would replace. Kind is immutable, so the asset and
-	// its current revision are left exactly as they were.
-	errWrongKind = errors.New("revision resolves to a different kind")
+	errWrongKind       = errors.New("revision resolves to a different kind")
 )
 
-// RunIngestWorkers processes operations until ctx is cancelled.
 func (s *Service) RunIngestWorkers(ctx context.Context, count int, report func(error)) {
 	var workers sync.WaitGroup
 	workers.Add(count)
@@ -77,9 +73,7 @@ type ingestJob struct {
 	Discovery  Discovery
 	ByteSize   int64
 	Attempts   int
-	// Target is the asset this file becomes a revision of. Nil means the
-	// ingest is creating one.
-	Target *revisionTarget
+	Target     *revisionTarget
 }
 
 type revisionTarget struct {
@@ -114,8 +108,6 @@ type preparedImport struct {
 	MediaType string
 }
 
-// readImport runs the one format-module pipeline shared by immediate creation
-// and queued ingest. Callers choose lifecycle and transaction boundaries.
 func (s *Service) readImport(
 	ctx context.Context,
 	inspected probe.Inspection,
@@ -195,8 +187,6 @@ func (s *Service) readImport(
 	}, nil
 }
 
-// heaviestNamespace reports the largest preserved namespace when it explains a
-// rejected file. It adds no separate limit.
 func heaviestNamespace(payload probe.Payload, declaration format.Declaration) string {
 	container := payload.Root
 	for _, part := range declaration.Preservation.Container {
@@ -222,7 +212,6 @@ func heaviestNamespace(payload probe.Payload, declaration format.Declaration) st
 	return fmt.Sprintf(". The largest part of it is the %s data, at %d bytes", heaviest, size)
 }
 
-// ProcessNextIngest leases and processes one available operation.
 func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	job, ok, err := s.leaseNextIngest(ctx)
 	if err != nil || !ok {
@@ -553,9 +542,6 @@ func importProtectedPrompts(
 	return nil
 }
 
-// writeIngestResult turns a finished parse into rows. Either it publishes a new
-// catalog entry or it adds a revision to one that already exists, and both end
-// with the asset pointing at the revision just written.
 func (s *Service) writeIngestResult(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -662,8 +648,6 @@ func (s *Service) writeIngestResultWithDecisions(
 	return assetID, s.writeProjections(ctx, tx, assetID)
 }
 
-// replacePreservedData replaces preserved fields for the asset, its elements,
-// and their current items.
 func replacePreservedData(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -699,7 +683,6 @@ func replacePreservedData(
 	return nil
 }
 
-// appendRevision adds source bytes without replacing creator metadata.
 func appendRevision(
 	ctx context.Context,
 	tx pgx.Tx,

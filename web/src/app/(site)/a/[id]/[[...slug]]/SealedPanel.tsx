@@ -3,7 +3,6 @@
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** Offers an owner the sealed content preserved during migration. */
 export function SealedPanel({
   assetId,
   count,

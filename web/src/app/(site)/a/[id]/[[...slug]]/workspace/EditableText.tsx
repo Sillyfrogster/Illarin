@@ -4,7 +4,6 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
-/** Where in the text the pointer landed, so a click leaves the caret there. */
 function offsetAtPoint(x: number, y: number, host: HTMLElement) {
   const document_ = document as Document & {
     caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
@@ -27,7 +26,6 @@ function growToFit(field: HTMLTextAreaElement) {
   field.style.height = `${field.scrollHeight}px`;
 }
 
-/** One piece of page copy that is written where it sits, with no change of surface. */
 export function EditableText({
   value,
   onChange,

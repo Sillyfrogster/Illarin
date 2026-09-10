@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// sent is the whole of what a destination receives. It summarizes a post and
-// links to it; the blog stays the only place the article itself lives.
 type sent struct {
 	ID         uuid.UUID `json:"id"`
 	Type       string    `json:"type"`
@@ -62,9 +60,6 @@ type sentByline struct {
 	App       *sentApp `json:"app,omitempty"`
 }
 
-// eventBody writes the exact bytes one event is signed and sent as. Every
-// attempt on one event produces the same body, so a receiver that saw a retry
-// sees the same summary it saw before.
 func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, error) {
 	held, err := s.summary(ctx, eventID)
 	if err != nil {
@@ -77,8 +72,6 @@ func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, err
 	return body, nil
 }
 
-// summary reads what one event says about its post, which is what a webhook is
-// sent and what a Discord announcement is composed from.
 func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
 	var held sent
 	var post sentPost
@@ -158,18 +151,14 @@ func (s *Service) sentByline(ctx context.Context, postID uuid.UUID) (sentByline,
 	return shown, nil
 }
 
-// postAddress is the permanent address a published post answers at.
 func (s *Service) postAddress(slug string) string {
 	return s.blogAddress("/blog/" + url.PathEscape(slug))
 }
 
-// appAddress is where the publication collects one app's posts.
 func (s *Service) appAddress(slug string) string {
 	return s.blogAddress("/blog/app/" + url.PathEscape(slug))
 }
 
-// profileAddress is where the person behind a byline is found, which is on
-// Illarin itself rather than on the publication.
 func (s *Service) profileAddress(handle string) string {
 	return strings.TrimRight(s.site, "/") + "/@" + url.PathEscape(handle)
 }

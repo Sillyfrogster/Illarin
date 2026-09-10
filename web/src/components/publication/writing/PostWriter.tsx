@@ -55,16 +55,10 @@ import { PostNotices } from "./PostNotices";
 import { PublicationRail } from "./PublicationRail";
 import { WritingSurface } from "./WritingSurface";
 
-/** How long the writer pauses before the working copy is saved. */
 const AUTOSAVE_PAUSE = 1200;
 
 type Rail = "details" | "history" | "publication" | null;
 
-/**
- * The post is the page. A writer types where a reader reads, one bar at the
- * foot carries how the work stands, and everything that needs its own space —
- * the details, the history, publication — opens in a rail beside the writing.
- */
 export function PostWriter({ id }: { id: string }) {
   const { account } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
@@ -86,7 +80,6 @@ export function PostWriter({ id }: { id: string }) {
   const writing = useRef<HTMLElement | null>(null);
   const place = useRef(0);
 
-  // settle replaces what the page holds with the copy the server just gave.
   const settle = useCallback((written: Post, rewrite: boolean) => {
     setPost(written);
     version.current = written.version;
@@ -165,7 +158,6 @@ export function PostWriter({ id }: { id: string }) {
     setState("dirty");
   }
 
-  // Leaving the writing keeps the caret and the place on the page to come back to.
   function look(atReading: boolean) {
     if (atReading && !reading) place.current = window.scrollY;
     setReading(atReading);
@@ -477,7 +469,6 @@ export function PostWriter({ id }: { id: string }) {
   );
 }
 
-// lightOf reads the save first, because trouble with it outranks the standing.
 function lightOf(state: Saving, post: Post): DockState {
   if (state === "conflict" || state === "refused") return "failed";
   if (state === "dirty") return "unsaved";
@@ -485,7 +476,6 @@ function lightOf(state: Saving, post: Post): DockState {
   return writerStanding(post) === "published" ? "published" : "private";
 }
 
-// detail is the second line of the dock, and it never repeats the line above it.
 function detail(state: Saving, post: Post, refusal: string): string {
   if (state === "conflict") return "Open the newer copy to carry on.";
   if (state === "refused") return refusal || "Nothing was lost. Try again.";
@@ -500,7 +490,6 @@ function detail(state: Saving, post: Post, refusal: string): string {
   return at ? `Published ${readableDate(at)}.` : "Every change is with them.";
 }
 
-// writingUnder answers the writing element focus just arrived in, if it is one.
 function writingUnder(target: EventTarget): HTMLElement | null {
   if (!(target instanceof HTMLElement)) return null;
   return target.closest("textarea, .ProseMirror");

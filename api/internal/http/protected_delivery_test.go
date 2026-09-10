@@ -19,7 +19,6 @@ const ordinaryPreset = `{
 	]
 }`
 
-// sealEveryFragment marks the saved prompt fragments protected, keeping their ids.
 func sealEveryFragment(t *testing.T, body saveBlockBody, apps []string) saveBlockBody {
 	t.Helper()
 	var list struct {
@@ -41,7 +40,6 @@ func sealEveryFragment(t *testing.T, body saveBlockBody, apps []string) saveBloc
 	return body
 }
 
-// publishSealedPreset builds one linked-install-only preset from nothing.
 func publishSealedPreset(
 	t *testing.T,
 	router *gin.Engine,

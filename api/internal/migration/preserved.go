@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// writePreservedRecords keeps every v1 row Illarin does not model, because deleting is irreversible and keeping commits Illarin to nothing.
 func writePreservedRecords(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -86,7 +85,6 @@ func writePreservedRecord(ctx context.Context, tx pgx.Tx, record preservedRecord
 	return nil
 }
 
-// preserveSourceTable copies a whole v1 table across, binding each row to the asset and account it names where they resolve.
 func preserveSourceTable(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -157,7 +155,6 @@ func sealedBlockPayload(sealed v1.SealedBlock) map[string]any {
 	return payload
 }
 
-// preservedRecordCount is what the source asks for, so a short count fails rather than being explained afterwards.
 func preservedRecordCount(results []v1.Result, source map[string]int) int {
 	total := 0
 	for _, result := range results {

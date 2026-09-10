@@ -20,7 +20,6 @@ interface AssetMediaProps {
   media: AssetImage[];
   kind: BrowseKind;
   name: string;
-  // Null while a draft has not been asked the adult content question.
   isNsfw: boolean | null;
   visibility: NsfwVisibility;
 }
@@ -29,7 +28,6 @@ function clearVariant(url: string) {
   return url.replace("_blurred/", "/");
 }
 
-/** The picture a creator put at the front, at the size and shape they made it */
 export function AssetMedia({
   id,
   media,

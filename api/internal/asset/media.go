@@ -51,20 +51,14 @@ type AddMediaInput struct {
 type MediaDownload struct {
 	InternalRedirect string
 	MediaType        string
-	// Private is a draft's image, which is short-lived and must not be cached
-	// the way a public one is.
-	Private bool
+	Private          bool
 }
 
-// MediaRequest is one image request. It names the image and the size wanted,
-// and carries whatever the caller presented for it.
 type MediaRequest struct {
-	MediaID  uuid.UUID
-	Variant  string
-	Version  uint32
-	ViewerID *uuid.UUID
-	// Expires and Signature carry the signature a draft's image is served
-	// against. A published image needs neither.
+	MediaID   uuid.UUID
+	Variant   string
+	Version   uint32
+	ViewerID  *uuid.UUID
 	Expires   string
 	Signature string
 }
@@ -92,7 +86,6 @@ func (r *sourceErrorReader) Read(payload []byte) (int, error) {
 	return count, err
 }
 
-// AddMedia stores one creator-managed image under a new media ID.
 func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Candidate) (Media, error) {
 	if !in.Role.Valid() {
 		return Media{}, ErrInvalidMediaRole
@@ -152,9 +145,6 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 			return Media{}, err
 		}
 	}
-	// A picture nothing points at yet reaches no file. This moves the counter
-	// where the new picture became the cover, and leaves it where a gallery
-	// image waits for the block save that will use it.
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return Media{}, err
 	}
@@ -168,7 +158,6 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	}, nil
 }
 
-// ListMedia returns an asset's media.
 func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uuid.UUID) ([]Media, error) {
 	var foundAssetID uuid.UUID
 	err := s.pool.QueryRow(ctx,
@@ -335,9 +324,6 @@ func mediaIngestFailure(err error) format.FailureReason {
 	}
 }
 
-// MediaVariant returns a cached image and safely regenerates a missing one. A
-// draft's image is at the same address as a published one and is served only
-// against a signature Go wrote.
 func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownload, error) {
 	_, ordinary := mediaproc.VariantByName(in.Variant)
 	_, composed := mediaproc.SocialPreviewByName(in.Variant)

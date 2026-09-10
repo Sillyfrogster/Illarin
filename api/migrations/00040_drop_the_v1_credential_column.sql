@@ -1,5 +1,4 @@
 -- +goose Up
--- No v1 credential crosses the migration, so the hash column and the checks that admitted it are unreachable.
 alter table linked_instances drop constraint linked_instances_declaration_state_check;
 alter table linked_instances add constraint linked_instances_declaration_state_check
     check (

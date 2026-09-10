@@ -6,27 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// Offer is one block the add tray shows.
 type Offer struct {
 	Definition DefinitionID
 	Title      string
 	Summary    string
 	Group      Group
 	Repeatable bool
-	// Choices are the ways a creator may start the block. Where there is
-	// only one, the tray adds the block without asking anything.
-	Choices []Choice
+	Choices    []Choice
 }
 
-// Choice is one way a block can start, named by the element type that leads
-// it.
 type Choice struct {
 	Type  Type
 	Label string
 }
 
-// Offers returns every block a creator can add to a kind, in catalog order.
-// A required block is never among them, because it is on the page already.
 func Offers(kind string) ([]Offer, bool) {
 	definitions, ok := Catalog(kind)
 	if !ok {
@@ -54,8 +47,6 @@ func Offers(kind string) ([]Offer, bool) {
 	return offers, true
 }
 
-// NewBlock builds the block a creator asked the add tray for. It goes at the
-// foot of the page holding the one element they chose.
 func NewBlock(kind string, id DefinitionID, elementType Type, page []Block) (Block, error) {
 	definition, ok := id.Definition(kind)
 	if !ok {

@@ -1,9 +1,7 @@
 import type { Post } from "@/lib/api/query";
 
-/** What readers can currently do with a post. Scheduling never changes it. */
 export type Lifecycle = "draft" | "published" | "withdrawn" | "deleted";
 
-/** One view of the workspace. Scheduled cuts across the lifecycle states. */
 export type Standing = "everything" | Lifecycle | "scheduled";
 
 export const STANDINGS: Standing[] = [
@@ -60,7 +58,6 @@ export function lifecycleOf(post: Post): Lifecycle {
   return "draft";
 }
 
-/** When a post has an edition still on its way to readers, if it has one. */
 export function goingLiveAt(post: Post): string | null {
   const schedule = post.schedule;
   if (!schedule) return null;
@@ -69,7 +66,6 @@ export function goingLiveAt(post: Post): string | null {
   return onItsWay ? schedule.at : null;
 }
 
-/** Whether one post belongs in a standing, given the list it came from. */
 export function inStanding(post: Post, standing: Standing): boolean {
   if (standing === "everything" || standing === "deleted") return true;
   if (standing === "scheduled") return goingLiveAt(post) !== null;

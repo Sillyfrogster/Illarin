@@ -59,8 +59,6 @@ func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
 		!slices.Contains(v3.ConsumedKeys, "group_only_greetings") {
 		t.Error("declared consumed keys do not match the versioned character readers")
 	}
-	// A CharX asset list is read for its pictures and never consumed, because
-	// it also names a reader's own icon and files that live somewhere else.
 	if slices.Contains((CharXModule{}).Declaration().ConsumedKeys, "assets") {
 		t.Error("CharX declared the asset list consumed")
 	}
@@ -115,7 +113,6 @@ func TestCharacterReaderReturnsHeaderFieldsAndRoleTaggedElements(t *testing.T) {
 			t.Errorf("%s content = %#v, want %#v", role, got, content)
 		}
 	}
-	// A text item also carries an id Illarin minted, which has its own test.
 	wantTexts := map[block.Role][]string{
 		block.RoleGreetings:      {"Welcome back.", "You found me."},
 		block.RoleGroupGreetings: {"All of you made it."},
@@ -390,8 +387,6 @@ func TestBadLorebookValuesCostOnlyThoseValues(t *testing.T) {
 		t.Fatalf("bad values were not degraded locally: %+v, %+v, %+v",
 			book.Entries[4], book.Entries[100], book.Entries[250])
 	}
-	// Each unread value stays with the entry it came from, keyed against that
-	// entry's id rather than its place in the book.
 	byEntry := make(map[uuid.UUID][]byte)
 	for _, remainder := range parsed.Remainder {
 		if remainder.Owner == format.OwnerItem && remainder.Namespace == "character_book" {
@@ -416,7 +411,6 @@ func TestAChunkNameNeverOverridesWhatTheCardSaysItIs(t *testing.T) {
 	}
 }
 
-// CCv3 asks a writer to keep the v2 copy, so nearly every v3 card is this file.
 func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
 	file := pngCardChunks(t,
 		textChunk{name: "ccv3", body: `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`},
@@ -430,7 +424,6 @@ func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
 	}
 }
 
-// Standing down for v3 must not take a plain v2 card away from CCv2.
 func TestAV2CardWithNoV3CopyIsStillReadAsV2(t *testing.T) {
 	file := pngCardChunks(t,
 		textChunk{name: "chara", body: `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`},
@@ -450,8 +443,6 @@ func TestAV3CardInAnArchiveIsCharXAndNotCCv3(t *testing.T) {
 	}
 }
 
-// resolveAndParse runs a file through the registry the server builds, so a test
-// exercises module selection rather than naming the module itself.
 func resolveAndParse(t *testing.T, file probe.Inspection) format.Parsed {
 	t.Helper()
 	registry := format.NewRegistry()
@@ -483,9 +474,6 @@ func claimFor(t *testing.T, module format.Reader, file probe.Inspection) format.
 	return claim
 }
 
-// The helpers below build real containers and inspect them, so the tests read
-// what the probe actually produces rather than a hand-made structure.
-
 func jsonCard(t *testing.T, body string) probe.Inspection {
 	t.Helper()
 	return inspect(t, []byte(body), "card.json")
@@ -501,7 +489,6 @@ type textChunk struct{ name, body string }
 func pngCardChunks(t *testing.T, chunks ...textChunk) probe.Inspection {
 	t.Helper()
 	file := testPNG(t)
-	// The card sits in a text chunk before IEND, where a real card does.
 	end := len(file) - 12
 	withCards := slices.Clone(file[:end])
 	for _, chunk := range chunks {

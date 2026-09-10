@@ -4,11 +4,6 @@ import { readableDate } from "./dates";
 
 export type ManagedInstance = components["schemas"]["ManagedInstance"];
 
-/**
- * The instance as it stands once its credential is cut. Illarin stops reporting
- * what a revoked installation declared, so the row keeps only what identifies
- * it and when it was linked and cut.
- */
 export function revoked(
   instance: ManagedInstance,
   at: string,
@@ -23,7 +18,6 @@ export function revoked(
   };
 }
 
-/** What an instance reports holding, or nothing at all when it reports no library. */
 export function installedHere(instance: ManagedInstance): string | null {
   if (!instance.scopes.includes("library:sync")) return null;
   if (instance.installed === 0) return "Nothing reported installed here yet";
@@ -36,7 +30,6 @@ export function installedHere(instance: ManagedInstance): string | null {
     : `${held} · all up to date`;
 }
 
-/** When Illarin last heard from an instance, said plainly when it never has. */
 export function seenAt(instance: ManagedInstance): string {
   return instance.lastSeenAt
     ? `last seen ${readableDate(instance.lastSeenAt)}`

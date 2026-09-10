@@ -12,7 +12,6 @@ import { ReadinessList } from "./ReadinessList";
 import { ReplacementChanges } from "./ReplacementStep";
 import { useWorkspace } from "./state";
 
-/** Where the reviewed working copy becomes the next public version readers get. */
 export function ReviewStep({
   applied,
   kind,

@@ -75,7 +75,6 @@ func (s distinctionStack) cancelSchedule(
 	), session))
 }
 
-// runSchedules is the worker, run once at an instant the test chooses.
 func (s distinctionStack) runSchedules(t *testing.T, at time.Time) int {
 	t.Helper()
 	settled, err := s.handlers.publications.PublishDueSchedules(t.Context(), at)
@@ -85,8 +84,6 @@ func (s distinctionStack) runSchedules(t *testing.T, at time.Time) int {
 	return settled
 }
 
-// scheduledDraft is a draft with everything publication asks for, waiting to go
-// live at the returned instant.
 func (s distinctionStack) scheduledDraft(
 	t *testing.T,
 	session *http.Cookie,
@@ -500,7 +497,6 @@ func scheduleState(t *testing.T, stack distinctionStack, id string) string {
 	return state
 }
 
-// firstWords is the sentence a one-paragraph public post reads.
 func firstWords(document postDocument) string {
 	if len(document.Content) == 0 {
 		return ""

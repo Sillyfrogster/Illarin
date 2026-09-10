@@ -7,7 +7,6 @@ type LineLinkProps = Omit<ComponentProps<typeof Link>, "children"> & {
   current?: boolean;
 };
 
-/** A link whose rule draws in from the left and retracts to the right */
 export function LineLink({
   children,
   className,

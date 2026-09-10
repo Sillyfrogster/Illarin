@@ -3,13 +3,11 @@ import type { PostSummary } from "@/lib/api/query";
 import { blogAddress, postPermalink } from "@/lib/post-link";
 import { pageAddress } from "@/lib/publication-metadata";
 
-/** One browsable archive and how many numbered pages it runs to. */
 export type CrawlableArchive = {
   address: string;
   pages: number;
 };
 
-/** Every address a crawler may follow into the publication, and nothing that is not public. */
 export function publicationSitemap(
   posts: PostSummary[],
   archives: CrawlableArchive[],

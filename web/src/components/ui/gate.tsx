@@ -4,10 +4,6 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
-/**
- * A closed door and the one way through it, for a page that has nothing to show
- * until the reader signs in or Illarin approves them.
- */
 export function Gate({
   action,
   children,
@@ -17,7 +13,6 @@ export function Gate({
   line,
 }: {
   action: string;
-  /** Anything the reader needs beyond the one way through, such as a second door. */
   children?: ReactNode;
   className?: string;
   heading: string;

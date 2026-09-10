@@ -1,6 +1,5 @@
 import type { BrowseFilters, BrowseKind, BrowsePage } from "./api/query";
 
-/** One choice the reader has made, and the catalog they would see without it. */
 export type Narrowing = {
   id: string;
   group: string;
@@ -16,7 +15,6 @@ const KIND_PLURALS: Record<BrowseKind, string> = {
   pack: "Packs",
 };
 
-/** Drops the keys a lifted narrowing leaves empty, so an unfiltered catalog compares equal to one. */
 function settled(filters: BrowseFilters): BrowseFilters {
   const settled: BrowseFilters = {};
   if (filters.kind) settled.kind = filters.kind;
@@ -26,7 +24,6 @@ function settled(filters: BrowseFilters): BrowseFilters {
   return settled;
 }
 
-/** What a facet's `key=value` pair is called, when the catalog described it. */
 function facetLabel(encoded: string, overview: BrowsePage | null): string {
   const divide = encoded.indexOf("=");
   const key = divide === -1 ? encoded : encoded.slice(0, divide);
@@ -36,11 +33,6 @@ function facetLabel(encoded: string, overview: BrowsePage | null): string {
   return option?.label ?? value ?? encoded;
 }
 
-/**
- * Everything the reader has narrowed the catalog by, in the order the controls
- * offer them. A kind carries its facets away with it, because the facets a
- * catalog offers belong to the kind that was chosen.
- */
 export function narrowingsInForce(
   filters: BrowseFilters,
   overview: BrowsePage | null,

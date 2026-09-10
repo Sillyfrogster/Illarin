@@ -54,7 +54,6 @@ func TestCCv2UsesLegacyShapeOnlyWithoutARecognizedSpec(t *testing.T) {
 	}
 }
 
-// document puts a payload in a container the card standards allow.
 func document(root map[string]json.RawMessage) probe.Inspection {
 	return probe.Inspection{Payloads: []probe.Payload{{
 		ID:      0,

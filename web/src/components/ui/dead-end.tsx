@@ -2,21 +2,15 @@ import type { ReactNode } from "react";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { Shell } from "@/components/layout/Shell";
 
-/**
- * A page that cannot show what was asked for. It says what happened in one
- * sentence and carries the ways on, rather than leaving a reader at a wall.
- */
 export function DeadEnd({
   children,
   heading,
   line,
   note,
 }: {
-  /** The ways on from here, the first of them the one most readers want. */
   children: ReactNode;
   heading: string;
   line: string;
-  /** Anything a reader might quote when they report this, such as a reference. */
   note?: ReactNode;
 }) {
   return (

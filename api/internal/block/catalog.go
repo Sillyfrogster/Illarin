@@ -2,7 +2,6 @@ package block
 
 import "slices"
 
-// DefinitionID names a block's entry in a kind catalog.
 type DefinitionID string
 
 const (
@@ -31,7 +30,6 @@ const (
 	CustomBlock       DefinitionID = "custom_block"
 )
 
-// Group identifies where a block's content belongs.
 type Group string
 
 const (
@@ -48,27 +46,22 @@ var groupTitles = map[Group]string{
 	GroupOther:  "Anything else",
 }
 
-// Groups returns the add tray's groups in the order a creator reads them.
 func Groups() []Group { return []Group{GroupFile, GroupReader, GroupWork, GroupOther} }
 
-// Title returns the group's wording in the add tray.
 func (g Group) Title() string { return groupTitles[g] }
 
-// Definition describes a kind's block at render time.
 type Definition struct {
-	ID       DefinitionID
-	Title    string
-	Required bool
-	Hideable bool
-	Elements []DefinedElement
-	// Layouts are in preference order.
+	ID         DefinitionID
+	Title      string
+	Required   bool
+	Hideable   bool
+	Elements   []DefinedElement
 	Layouts    []Layout
 	Width      Width
 	Summary    string
 	Group      Group
 	Repeatable bool
-	// Choices override the starting elements in the add tray.
-	Choices []DefinedElement
+	Choices    []DefinedElement
 }
 
 type start struct {
@@ -95,13 +88,11 @@ func (d Definition) starts() []start {
 	return []start{{Type: d.Elements[0].Type, Label: d.Title, Elements: d.Elements}}
 }
 
-// DefinedElement is one element a definition places.
 type DefinedElement struct {
 	Role    Role
 	Type    Type
 	Options Options
-	// Pinned elements cannot be removed or moved.
-	Pinned bool
+	Pinned  bool
 }
 
 var character = []Definition{
@@ -379,7 +370,6 @@ var catalogs = map[string][]Definition{
 	"pack":      pack,
 }
 
-// Catalog returns a kind's block definitions in page order.
 func Catalog(kind string) ([]Definition, bool) {
 	own, ok := catalogs[kind]
 	if !ok {
@@ -388,7 +378,6 @@ func Catalog(kind string) ([]Definition, bool) {
 	return slices.Concat(own, shared), true
 }
 
-// Kinds returns every kind that has a catalog.
 func Kinds() []string {
 	kinds := make([]string, 0, len(catalogs))
 	for kind := range catalogs {
@@ -397,7 +386,6 @@ func Kinds() []string {
 	return kinds
 }
 
-// Definition returns one kind's entry for a definition id.
 func (id DefinitionID) Definition(kind string) (Definition, bool) {
 	definitions, ok := Catalog(kind)
 	if !ok {

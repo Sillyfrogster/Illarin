@@ -247,7 +247,6 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 	if len(greetings.Texts) != 1 || greetings.Texts[0].Text != "The west shelf moved again. Come in." {
 		t.Errorf("saved greetings = %s", messages.Elements[0].Content)
 	}
-	// The greeting is an item, so it left the save with an id of its own.
 	if greetings.Texts[0].ID == uuid.Nil {
 		t.Error("the saved greeting carries no id")
 	}
@@ -690,7 +689,6 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	}
 }
 
-// protectedCounts reads how many private payloads and delivery policy rows an asset still holds.
 func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int) {
 	t.Helper()
 	var payloads, policies int
@@ -705,7 +703,6 @@ func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int
 	return payloads, policies
 }
 
-// withoutFragment returns the preset's prompt content with one named fragment taken out.
 func withoutFragment(t *testing.T, owner startedAsset, name string) json.RawMessage {
 	t.Helper()
 	var content struct {

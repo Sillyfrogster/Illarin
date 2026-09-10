@@ -1,18 +1,14 @@
 import type { ProfileLink } from "@/lib/api/query";
 
-/** How many addresses a profile may carry. */
 export const LINK_LIMIT = 6;
 
-/** How long a biography may run. */
 export const BIOGRAPHY_LIMIT = 400;
 
-/** Appends the empty row the next address is typed into. */
 export function addLink(links: ProfileLink[]): ProfileLink[] {
   if (links.length >= LINK_LIMIT) return links;
   return [...links, { address: "", label: "" }];
 }
 
-/** Replaces one field of one address, leaving every other row untouched. */
 export function writeLink(
   links: ProfileLink[],
   index: number,
@@ -28,7 +24,6 @@ export function removeLink(links: ProfileLink[], index: number): ProfileLink[] {
   return links.filter((_, position) => position !== index);
 }
 
-/** Swaps an address with its neighbour; a move off either end changes nothing. */
 export function moveLink(
   links: ProfileLink[],
   index: number,
@@ -49,10 +44,6 @@ type PublicFields = {
   links: ProfileLink[];
 };
 
-/**
- * Names what a visitor would find on the profile, so the account page can say
- * what is showing without repeating the whole editor.
- */
 export function whatIsPublic(fields: PublicFields): string[] {
   const shown = fields.links.filter((link) => link.label || link.address);
   return [

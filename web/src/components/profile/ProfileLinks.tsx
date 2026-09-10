@@ -12,15 +12,9 @@ import {
   writeLink,
 } from "@/lib/profile-draft";
 
-/** A cell of the row: no box of its own, because the row is already the box. */
 const CELL =
   "min-h-11 w-full min-w-0 border-0 bg-transparent px-0 font-ui text-ui text-ink outline-offset-2 placeholder:text-mute";
 
-/**
- * The addresses a creator points visitors at, in the order they choose. One
- * address is one row rather than two boxed fields and three buttons, because a
- * label and its address are one thing.
- */
 export function ProfileLinks({
   links,
   onChange,

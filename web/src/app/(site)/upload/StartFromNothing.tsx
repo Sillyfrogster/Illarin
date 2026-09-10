@@ -25,7 +25,6 @@ import {
 const KIND =
   "flex min-h-11 items-center gap-2 rounded-control bg-deep px-3.5 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-rule/45 disabled:opacity-45 motion-reduce:transition-none";
 
-/** The empty draft, where a preset and a theme ask which app names their fields and the other three have nothing to ask. */
 export function StartFromNothing() {
   const router = useRouter();
   const [pending, setPending] = useState<BrowseKind | null>(null);

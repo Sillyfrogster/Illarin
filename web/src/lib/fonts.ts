@@ -11,5 +11,4 @@ const dmSans = DM_Sans({
   style: ["normal", "italic"],
 });
 
-/** The two typefaces, named on the document so every token that reads them resolves. */
 export const FONT_VARIABLES = `${outfit.variable} ${dmSans.variable}`;

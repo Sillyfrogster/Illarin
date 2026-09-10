@@ -5,7 +5,6 @@ import type { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import type { ImportStage } from "@/lib/import-stage";
 
-/** What the page shows while Illarin has the file and has not finished with it. */
 export function ImportWatch({
   onCheckAgain,
   stage,
@@ -39,7 +38,6 @@ export function ImportWatch({
   );
 }
 
-/** A file Illarin will not take, and the way back to choosing another. */
 export function ImportRefusal({
   headingRef,
   message,

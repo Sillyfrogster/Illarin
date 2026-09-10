@@ -12,7 +12,6 @@ export type PreviewPicture = {
   height: number;
 };
 
-/** One picture at the size it was made, over the page rather than in a new tab */
 export function FullscreenPreview({
   picture,
   onClose,

@@ -31,7 +31,6 @@ export const metadata: Metadata = {
   },
 };
 
-/** The browser chrome follows the reader's theme */
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [

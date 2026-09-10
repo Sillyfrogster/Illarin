@@ -29,19 +29,11 @@ var (
 	ErrAssetFrozen      = errors.New("asset is frozen")
 	ErrInvalidBlock     = errors.New("invalid block")
 	ErrStorageCap       = errors.New("account storage cap exceeded")
-	// ErrAssetIsDraft is an operation only a published asset has. Discovery
-	// is the one a creator meets.
-	ErrAssetIsDraft = errors.New("the asset is still a draft")
-	// ErrKindNotBuildable is a kind with no block catalog, which is refused
-	// rather than answered with a page that has nothing on it.
+	ErrAssetIsDraft     = errors.New("the asset is still a draft")
 	ErrKindNotBuildable = errors.New("that kind cannot be built yet")
-	// ErrAppNotAnswered is a kind that is asked which app it is for and was
-	// not told, or was told an app Illarin has no slot names for.
-	ErrAppNotAnswered = errors.New("that kind needs to know which app it is for")
+	ErrAppNotAnswered   = errors.New("that kind needs to know which app it is for")
 )
 
-// Service runs the catalog. It knows the module interfaces, never a concrete
-// format.
 type Service struct {
 	pool     *pgxpool.Pool
 	reg      *format.Registry
@@ -54,7 +46,6 @@ type Service struct {
 	announce AnnounceUpdate
 }
 
-// beginReadSnapshot selects recorded content while retaining live access controls.
 func (s *Service) beginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly,
@@ -151,7 +142,6 @@ func NewServiceWithMediaProcessor(
 	}
 }
 
-// AcceptIngest durably stores an upload and records the work that remains.
 func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (IngestOperation, error) {
 	stored, err := s.store.Put(ctx, in.File)
 	if err != nil {
@@ -253,7 +243,6 @@ func (s *Service) ensureAccountStorage(
 	return nil
 }
 
-// GetIngest returns one operation only to the creator who started it.
 func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (IngestOperation, error) {
 	var status IngestStatus
 	var assetID pgtype.UUID
@@ -319,8 +308,6 @@ func (s *Service) ingestFailureMessage(reason string) string {
 	}
 }
 
-// StartFromNothing creates a draft with the kind's required blocks. Preset app
-// choice seeds slot names but is not stored.
 func (s *Service) StartFromNothing(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -365,13 +352,10 @@ func (s *Service) StartFromNothing(
 	return a.ID, nil
 }
 
-// Create stores the upload, reads what it can from it, and publishes one
-// catalog entry. Nothing is committed unless every step succeeds.
 func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 	assetID := uuid.New()
 	revisionID := uuid.New()
 
-	// Write first so failures leave sweepable orphans instead of missing files.
 	stored, err := s.store.Put(ctx, in.File)
 	if err != nil {
 		return Asset{}, fmt.Errorf("store upload: %w", err)
@@ -458,8 +442,6 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 	return a, nil
 }
 
-// orElse prefers the uploader's catalog metadata. A module only fills in
-// blanks.
 func orElse(preferred, fallback string) string {
 	if preferred != "" {
 		return preferred
@@ -467,8 +449,6 @@ func orElse(preferred, fallback string) string {
 	return fallback
 }
 
-// firstDate prefers the caller's made date over the file's. Nil from both
-// leaves the date to the database, which writes the time of the row.
 func firstDate(preferred, fallback *time.Time) *time.Time {
 	if preferred != nil {
 		return preferred
@@ -476,7 +456,6 @@ func firstDate(preferred, fallback *time.Time) *time.Time {
 	return fallback
 }
 
-// List returns the assets a visitor is allowed to see, newest first.
 func (s *Service) List(ctx context.Context, f ListFilter) ([]Asset, error) {
 	if f.Limit <= 0 || f.Limit > 100 {
 		f.Limit = 24
@@ -490,7 +469,6 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]Asset, error) {
 	return listAssets(ctx, tx, f)
 }
 
-// Browse returns card-safe catalog results and the reader's effective count.
 func (s *Service) Browse(
 	ctx context.Context,
 	f ListFilter,
@@ -505,7 +483,6 @@ func (s *Service) Browse(
 	return s.browseAssets(ctx, f, visibility)
 }
 
-// OpenSource opens the stored upload exactly as it arrived.
 func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadCloser, error) {
 	location, err := currentRevisionLocation(ctx, s.pool, assetID, nil)
 	if err != nil {
@@ -529,7 +506,6 @@ type SourceDownload struct {
 	Event            DownloadEvent
 }
 
-// DownloadSource resolves the exact current source for an nginx handoff.
 func (s *Service) DownloadSource(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -576,8 +552,6 @@ func (s *Service) DownloadSource(
 	}, nil
 }
 
-// DownloadExport writes one generated artifact. It is produced on request and
-// never cached, because an export is a response rather than stored content.
 func (s *Service) DownloadExport(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -587,7 +561,6 @@ func (s *Service) DownloadExport(
 	return s.OpenExport(ctx, assetID, viewerID, target)
 }
 
-// DownloadExportForLinkedInstance prepares an export after instance authentication.
 func (s *Service) DownloadExportForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -603,8 +576,6 @@ func (s *Service) DownloadExportForLinkedInstance(
 	return download, nil
 }
 
-// joinReadable writes the formats a person can upload the way a person reads
-// a list.
 func joinReadable(labels []string) string {
 	switch len(labels) {
 	case 0:

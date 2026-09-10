@@ -46,7 +46,6 @@ func publishAsset(
 		httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/publish", nil), session))
 }
 
-// writeCharacterFloor fills everything a character needs to be published.
 func writeCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started startedAsset) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, started.ID,
@@ -160,8 +159,6 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 		t.Fatalf("save identity status = %d: %s", got.Code, got.Body.String())
 	}
 
-	// Every required block already exists and is empty, so publishing has to
-	// refuse on content.
 	refused := publishAsset(t, r, session, started.ID)
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("an asset with empty required blocks published: %d", refused.Code)

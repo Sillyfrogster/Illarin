@@ -4,7 +4,6 @@ import { controlClasses, Field } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { type LocalParts, zoneLabel } from "@/lib/schedule-time";
 
-/** When an edition goes live, in the zone the writer's own browser is in. */
 export function ScheduleFields({
   disabled,
   id,

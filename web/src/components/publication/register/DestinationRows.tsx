@@ -61,7 +61,6 @@ const STATE_MARKS: Record<
   unverified: { icon: CircleDashed, tone: "quiet" },
 };
 
-/** Everywhere an announcement can be sent, and whether each one is listening. */
 export function DestinationRows({
   destinations,
   onFailure,
@@ -150,7 +149,6 @@ export function DestinationRows({
   );
 }
 
-/** Adding a destination, or changing one Illarin already sends to. */
 export function DestinationStep({
   existing,
   onClose,

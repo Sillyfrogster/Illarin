@@ -10,7 +10,6 @@ const SheetClose = SheetPrimitive.Close;
 const SheetTitle = SheetPrimitive.Title;
 const SheetDescription = SheetPrimitive.Description;
 
-/** A panel that arrives from the top edge, for the widths a menu cannot serve */
 function SheetContent({
   className,
   children,

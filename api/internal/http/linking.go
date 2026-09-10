@@ -517,8 +517,6 @@ func toAPIInstance(instance linking.Instance) LinkedInstance {
 	}
 }
 
-// toAPIManagedInstance is the settings page's view of an instance: what it is,
-// plus how much of what it reports installing has moved on since.
 func toAPIManagedInstance(
 	instance linking.Instance,
 	counts delivery.LibraryCounts,

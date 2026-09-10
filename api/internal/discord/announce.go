@@ -7,14 +7,10 @@ import (
 	"time"
 )
 
-// Publication is the name every announcement is signed with.
 const Publication = "Illarin Blog"
 
-// Stripe is the colour down the side of every announcement, which is Illarin's
-// own ink read against Discord's dark ground.
 const Stripe = 0xE2E2DD
 
-// What Discord accepts in each part of a message.
 const (
 	ContentLimit     = 2000
 	TitleLimit       = 256
@@ -22,21 +18,16 @@ const (
 	FieldLimit       = 1024
 )
 
-// The headings on the two facts an announcement states beside the summary.
 const (
 	CategoryHeading = "Category"
 	VersionHeading  = "Version"
 )
 
-// Author is the stored attribution one announcement carries.
 type Author struct {
 	Name string
 	URL  string
 }
 
-// Announcement is everything Illarin says about a post on Discord. A
-// contributor supplies the note and nothing else here, because the shape below
-// is Illarin's rather than theirs.
 type Announcement struct {
 	Title    string
 	Summary  string
@@ -50,7 +41,6 @@ type Announcement struct {
 	At       time.Time
 }
 
-// Body writes the exact bytes one announcement is sent as.
 func (a Announcement) Body() ([]byte, error) {
 	body, err := json.Marshal(message{
 		Content:  a.content(),
@@ -102,8 +92,6 @@ func (a Announcement) embed() embed {
 	return shown
 }
 
-// cut holds one part of a message inside what Discord accepts, counted the way
-// Discord counts it.
 func cut(said string, limit int) string {
 	held := []rune(said)
 	if len(held) <= limit {
@@ -112,16 +100,12 @@ func cut(said string, limit int) string {
 	return strings.TrimRight(string(held[:limit-1]), " ") + "…"
 }
 
-// message is the whole request body. It names no username, avatar or thread,
-// so Discord keeps the identity the authority configured the webhook with.
 type message struct {
 	Content  string   `json:"content"`
 	Embeds   []embed  `json:"embeds"`
 	Mentions mentions `json:"allowed_mentions"`
 }
 
-// mentions is closed by construction. Parsing is off for every message, and
-// the only role that can be named is the one the authority approved.
 type mentions struct {
 	Parse []string `json:"parse"`
 	Roles []string `json:"roles"`

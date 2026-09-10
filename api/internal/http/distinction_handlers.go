@@ -205,7 +205,6 @@ func (h *Handlers) RemoveAccountDistinction(c *gin.Context, handle string, assig
 	c.Status(http.StatusNoContent)
 }
 
-// publicationAuthority answers the signed-in account only when it holds it
 func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountIdentity, bool) {
 	current, ok := h.verifiedAccount(c, action)
 	if !ok {
@@ -225,7 +224,6 @@ func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountI
 	return accountIdentity{ID: current.ID, Handle: current.Handle}, true
 }
 
-// accountIdentity is the little a distinction change needs about its actor.
 type accountIdentity struct {
 	ID     uuid.UUID
 	Handle string

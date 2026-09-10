@@ -80,7 +80,6 @@ func (s distinctionStack) republished(
 	return decodePost(t, response)
 }
 
-// gone reads the tombstone one address answers with, refusing any other status.
 func (s distinctionStack) gone(t *testing.T, slug string) (tombstone, string) {
 	t.Helper()
 	response := s.read(t, slug)

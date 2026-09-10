@@ -33,7 +33,6 @@ import { grantAllowance, nothingIn } from "@/lib/publication-register";
 import { GrantTokens } from "../GrantTokens";
 import { CategoryChoice, DestinationChoice } from "./choices";
 
-/** Everyone Illarin has approved to publish, and what each approval covers. */
 export function ContributorRows({
   apps,
   grants,
@@ -107,7 +106,6 @@ export function ContributorRows({
   );
 }
 
-/** Approving somebody, or changing what somebody already approved may publish. */
 export function ContributorStep({
   apps,
   categories,
@@ -297,7 +295,6 @@ export function ContributorStep({
   );
 }
 
-/** Says what following the app means here, naming the app rather than leaving it abstract. */
 function appPolicy(
   existing: PublicationGrant | null,
   apps: PublicationApp[],

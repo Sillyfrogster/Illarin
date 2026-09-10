@@ -3,19 +3,11 @@
 import { type ReactNode, useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
-/** How long the plate takes to reach the cell it is moving to, in milliseconds */
 const TRAVEL = 320;
 
-/** The sheen the source lays over its highlight, so the plate has a lit top and a shaded foot */
 const SHEEN =
   "radial-gradient(120% 120% at 50% 0%, rgb(255 255 255 / 0.26), rgb(255 255 255 / 0) 54%), linear-gradient(180deg, rgb(255 255 255 / 0) 55%, rgb(0 0 0 / 0.18))";
 
-/**
- * One plate that glides between the cells of a row. It sits behind whichever
- * cell holds the pointer or the keyboard, and returns to the chosen one when
- * both leave, so a row of choices says where you are and where you are about
- * to go at once. Cells mark themselves with `data-cell`.
- */
 export function TravellingHighlight({
   chosen,
   children,
@@ -26,7 +18,6 @@ export function TravellingHighlight({
   chosen: string;
   children: ReactNode;
   className?: string;
-  /** Which cell the plate is under now, so its label can be lettered to match. */
   onLit?: (key: string) => void;
   plateClassName?: string;
 }) {
@@ -60,7 +51,6 @@ export function TravellingHighlight({
     settled.current = true;
   }, [chosen, moveTo]);
 
-  // The row rewraps and its cells resize, so the plate is placed again rather than left behind
   useEffect(() => {
     const here = row.current;
     if (!here) return;
@@ -76,7 +66,6 @@ export function TravellingHighlight({
     };
   }, [chosen, moveTo]);
 
-  // The row only watches, because the cells inside it are the controls
   useEffect(() => {
     const here = row.current;
     if (!here) return;

@@ -26,7 +26,6 @@ const MARKS: Record<WayInId, ReactNode> = {
   ),
 };
 
-/** The independent ways back into this account, and what each one still needs. */
 export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
   const { account, setAccount } = useAuth();
   const [said, setSaid] = useState(discordNotice ?? "");
@@ -192,7 +191,6 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
   );
 }
 
-/** The one thing a reader can do about a way in, or the mark saying it is done. */
 function WayAction({
   account,
   detach,

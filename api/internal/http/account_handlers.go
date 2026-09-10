@@ -419,7 +419,6 @@ func (h *Handlers) GetProfile(c *gin.Context, handle string) {
 	h.showProfile(c, profile)
 }
 
-// ResolveLegacyProfile answers for v1's /user/<discordId> address, resolving before anything redirects
 func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
 	profile, err := h.accounts.PublicProfileByDiscordSubject(c.Request.Context(), discordId)
 	if errors.Is(err, account.ErrProfileNotFound) {
@@ -553,8 +552,6 @@ func (h *Handlers) uploadOwner(c *gin.Context) (account.Account, bool) {
 	return h.verifiedAccount(c, "uploading")
 }
 
-// signedInAccount answers the account behind the session cookie, or writes the
-// refusal and returns false. The action finishes the sentence "Sign in before".
 func (h *Handlers) signedInAccount(c *gin.Context, action string) (account.Account, bool) {
 	token, err := c.Cookie(sessionCookieName)
 	if err != nil {
@@ -573,8 +570,6 @@ func (h *Handlers) signedInAccount(c *gin.Context, action string) (account.Accou
 	return *current, true
 }
 
-// verifiedAccount answers the signed-in account only once its email is
-// verified, and otherwise writes the refusal and returns false.
 func (h *Handlers) verifiedAccount(c *gin.Context, action string) (account.Account, bool) {
 	current, ok := h.signedInAccount(c, action)
 	if !ok {
@@ -587,7 +582,6 @@ func (h *Handlers) verifiedAccount(c *gin.Context, action string) (account.Accou
 	return current, true
 }
 
-// adminAccount answers the signed-in account only when it carries the admin role.
 func (h *Handlers) adminAccount(c *gin.Context, action string) (account.Account, bool) {
 	current, ok := h.verifiedAccount(c, action)
 	if !ok {

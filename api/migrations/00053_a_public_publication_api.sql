@@ -1,5 +1,4 @@
 -- +goose Up
--- A stored outcome is kept whole or not at all, so a retry never replays half of one.
 create table publication_idempotency (
     token_id     uuid not null references publication_tokens (id) on delete cascade,
     operation    text not null,

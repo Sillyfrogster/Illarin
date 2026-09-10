@@ -3,14 +3,10 @@ alter table publication_destinations drop constraint publication_destinations_ki
 alter table publication_destinations add constraint publication_destinations_kind_check
     check (kind in ('webhook', 'discord'));
 
--- A Discord destination signs nothing. The capability address is the whole
--- credential, so it is sealed and the signing secret column stays empty.
 alter table publication_destinations alter column signing_secret drop not null;
 alter table publication_destinations add constraint publication_destinations_secret_check
     check ((kind = 'webhook') = (signing_secret is not null));
 
--- The safe guild and channel identity Discord answered with, kept for the
--- admin display, alongside the one role the authority approved.
 alter table publication_destinations add column guild_id text;
 alter table publication_destinations add column channel_id text;
 alter table publication_destinations add column webhook_name text;
@@ -25,8 +21,6 @@ alter table publication_destinations add constraint publication_destinations_rol
 alter table publication_destinations add constraint publication_destinations_role_name_check
     check (role_name is null or char_length(role_name) between 1 and 48);
 
--- Discord announces a first publication and nothing else, so it subscribes to
--- one event and cannot be moved off it.
 alter table publication_destinations add constraint publication_destinations_announces_check
     check (kind <> 'discord'
            or events = array['publication.post.published.v1']::text[]);
@@ -34,8 +28,6 @@ alter table publication_destinations add constraint publication_destinations_ann
 alter table publication_deliveries add column mention_role boolean not null default false;
 alter table publication_deliveries add column message_id text;
 
--- An accepted request Discord did not confirm is neither delivered nor failed,
--- and saying so is the only honest record of it.
 alter table publication_deliveries drop constraint publication_deliveries_state_check;
 alter table publication_deliveries add constraint publication_deliveries_state_check
     check (state in ('pending', 'sending', 'delivered', 'failed', 'unconfirmed'));

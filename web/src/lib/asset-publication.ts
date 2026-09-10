@@ -1,9 +1,7 @@
 import type { IngestOperation, ReplacementDecision } from "@/lib/api/query";
 
-/** The statuses a replacement passes through before its creator has answered it. */
 const UNSETTLED = ["pending", "processing", "preview"];
 
-/** What the publication rail says about the version readers have. */
 export function updateStanding(
   waiting: IngestOperation | null,
   changed: boolean,
@@ -20,7 +18,6 @@ export function updateStanding(
   return "Readers have everything on this page.";
 }
 
-/** Why an update cannot be reviewed yet, and nothing where it can. */
 export function reviewBlockedReason(
   waiting: IngestOperation | null,
   changed: boolean,
@@ -34,7 +31,6 @@ export function reviewBlockedReason(
   return "";
 }
 
-/** What the replacement step's one action does in the state it is in. */
 export function replacementAction(
   operation: IngestOperation | null,
   busy: boolean,
@@ -47,7 +43,6 @@ export function replacementAction(
   return busy ? "Uploading…" : "Upload this file";
 }
 
-/** Whether that action has everything it needs. */
 export function replacementReady(
   operation: IngestOperation | null,
   file: File | null,
@@ -62,7 +57,6 @@ export function replacementReady(
   return !operation && file !== null;
 }
 
-/** The operation the page still has to account for, and nothing once it is settled. */
 export function unsettledReplacement(
   operation: IngestOperation,
 ): IngestOperation | null {

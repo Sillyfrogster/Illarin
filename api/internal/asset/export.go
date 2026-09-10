@@ -18,27 +18,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ErrTargetNotOffered is a format this asset is not offered in. The menu is a
-// list of choices and a target outside it was never one of them.
 var ErrTargetNotOffered = errors.New("that download is not offered for this asset")
 
-// ErrLinkedInstallOnly is a file that may leave only through an allowed linked instance.
 var ErrLinkedInstallOnly = errors.New("this asset is linked-install-only")
 
-// Export is one finished file on its way to a reader. It is a response rather
-// than stored content, so no blob is created and nothing enters a quota.
 type Export struct {
 	Body      []byte
 	MediaType string
 	Filename  string
 	Target    string
-	// Event is what the download log records, and is nil for a draft, which
-	// no reader has been handed anything from.
-	Event *DownloadEvent
+	Event     *DownloadEvent
 }
 
-// exportSubject is one asset as export reads it. It carries what the asset is,
-// where it came from, and the content a writer empties into a file.
 type exportSubject struct {
 	assetID    uuid.UUID
 	kind       string
@@ -51,7 +42,6 @@ type exportSubject struct {
 	revisionID *uuid.UUID
 }
 
-// OpenExport validates the current export gates, then writes the target format.
 func (s *Service) OpenExport(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -109,7 +99,6 @@ func (s *Service) OpenExport(
 	return export, nil
 }
 
-// OpenExportForLinkedInstance restores protected fields at the delivery boundary.
 func (s *Service) OpenExportForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -209,7 +198,6 @@ func (s *Service) writeExport(
 	return written, nil
 }
 
-// elements includes hidden page content because hiding does not change exports.
 func (subject exportSubject) elements() []block.Element {
 	elements := make([]block.Element, 0)
 	for _, holder := range subject.blocks {
@@ -233,8 +221,6 @@ func offersTarget(offered []format.Target, target string) bool {
 	return false
 }
 
-// exportSubject reads the asset a writer is about to be handed. A draft answers
-// to its owner alone, exactly as its page does.
 func (s *Service) exportSubject(
 	ctx context.Context,
 	q db.DBTX,
@@ -275,9 +261,6 @@ func (s *Service) exportSubject(
 	return subject, nil
 }
 
-// travellingPreservedData reads what the asset kept from the file it arrived
-// as, and only where the target belongs to that file's family. Having somewhere
-// to put a namespace never makes a target eligible for it.
 func (s *Service) travellingPreservedData(
 	ctx context.Context,
 	q db.DBTX,
@@ -313,8 +296,6 @@ func (s *Service) travellingPreservedData(
 	return preserved, rows.Err()
 }
 
-// exportImages opens the pictures a writer may put in the file. That is the
-// asset's own picture and every one an image element points at.
 func (s *Service) exportImages(
 	ctx context.Context,
 	q db.DBTX,
@@ -409,9 +390,6 @@ func (s *Service) readBlob(ctx context.Context, blobID uuid.UUID) (format.Export
 	return format.ExportMedia{MediaType: http.DetectContentType(data), Data: data}, nil
 }
 
-// downloadFilename names the file after the asset and the format it is in.
-// Two of the three character formats are a picture, so a name that said only
-// the asset would put three files in a folder that nothing tells apart.
 func downloadFilename(name, label, extension string) string {
 	parts := make([]string, 0, 2)
 	for _, part := range []string{name, label} {
@@ -438,9 +416,6 @@ func filenameSlug(text string) string {
 	return strings.Trim(string(slug), "-")
 }
 
-// OriginalUpload is the creator's own file. It sits on its own below the
-// generated downloads, because a reader should never mistake a year-old file
-// for the current work.
 type OriginalUpload struct {
 	Label     string
 	MediaType string

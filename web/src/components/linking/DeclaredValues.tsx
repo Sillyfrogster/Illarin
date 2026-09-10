@@ -1,4 +1,3 @@
-/** One thing an application or an installation says about itself, which grants nothing. */
 export function DeclaredValues({
   label,
   values,

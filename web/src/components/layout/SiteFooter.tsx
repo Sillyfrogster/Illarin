@@ -10,7 +10,6 @@ const DESTINATIONS = [
   { label: "Account", href: "/settings" },
 ];
 
-/** The way onward from the bottom of any page */
 export function SiteFooter() {
   return (
     <footer className="mt-chapter bg-field pb-16">

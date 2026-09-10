@@ -4,7 +4,6 @@ import { Search, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
-/** The catalog's one question. It is wide on Browse and inline on a creator's page. */
 export function CatalogSearch({
   hint,
   id,

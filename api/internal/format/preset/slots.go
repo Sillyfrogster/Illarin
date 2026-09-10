@@ -1,4 +1,3 @@
-// Package preset holds the supported preset formats and their named slots.
 package preset
 
 import (
@@ -8,8 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// App selects the initial slot names for a preset built from nothing. The
-// choice is not stored as preset identity.
 type App string
 
 const (
@@ -22,27 +19,20 @@ var appLabels = map[App]string{
 	Lumiverse:   "Lumiverse",
 }
 
-// Apps returns the apps a preset can be built for, in the order they are
-// offered.
 func Apps() []App { return []App{SillyTavern, Lumiverse} }
 
-// Label returns the app's name as its own users write it.
 func (a App) Label() string { return appLabels[a] }
 
-// Known reports whether the app is one Illarin has slot names for.
 func (a App) Known() bool {
 	_, ok := appLabels[a]
 	return ok
 }
 
-// slot is one setting name and value type an app reads.
 type slot struct {
 	name        string
 	settingType block.SettingType
 }
 
-// namedSlots is one app's settings, in the three groups the kind catalog
-// carries, plus the nudges it sends on its own.
 type namedSlots struct {
 	samplers   []slot
 	completion []slot
@@ -50,8 +40,6 @@ type namedSlots struct {
 	nudges     []string
 }
 
-// slotsByApp is read from real preset files of each format. Every name here
-// appears in one of them, and nothing is here that does not.
 var slotsByApp = map[App]namedSlots{
 	SillyTavern: {
 		samplers: []slot{
@@ -151,7 +139,6 @@ var slotsByApp = map[App]namedSlots{
 	},
 }
 
-// Seed returns the app's empty settings groups and named nudges.
 func Seed(app App) ([]block.Element, error) {
 	named, ok := slotsByApp[app]
 	if !ok {

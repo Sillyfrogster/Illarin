@@ -8,17 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// sent is one line of the order SillyTavern reads: which prompt, and whether
-// it is switched on. The switch lives here rather than on the prompt, which is
-// where SillyTavern reads it from.
 type sent struct {
 	identifier string
 	enabled    bool
 }
 
-// takeLiveOrder takes the one order SillyTavern reads out of the list of them.
-// The orders belonging to other characters stay where they are and travel back
-// out untouched.
 func takeLiveOrder(source map[string]json.RawMessage) ([]sent, bool) {
 	var orders []map[string]json.RawMessage
 	if !keys.Take(source, stOrder, &orders) {
@@ -54,8 +48,6 @@ func takeLiveOrder(source map[string]json.RawMessage) ([]sent, bool) {
 	return live, found
 }
 
-// readSillyTavernPrompts applies the send order, then appends unlisted prompts
-// as disabled content.
 func readSillyTavernPrompts(
 	prompts []json.RawMessage,
 	live []sent,
@@ -81,7 +73,6 @@ func readSillyTavernPrompts(
 			fields[stRole] = keys.Must(fragment.Role)
 			fragment.Role = ""
 		}
-		// Marker prompts use their identifier as the insertion name.
 		var marker bool
 		if keys.Take(fields, stMarker, &marker) && marker {
 			fragment.Marker = identifier
@@ -130,8 +121,6 @@ func readSillyTavernPrompts(
 	return list, leftovers
 }
 
-// readSillyTavernScripts reads the find and replace the file keeps under
-// `extensions`.
 func readSillyTavernScripts(
 	source map[string]json.RawMessage,
 ) ([]block.Script, map[uuid.UUID]map[string]json.RawMessage) {
@@ -140,8 +129,6 @@ func readSillyTavernScripts(
 	if !keys.Take(extensions, stScripts, &listed) {
 		return nil, nil
 	}
-	// An empty list is a key the file carries and this module has no content
-	// for, so it goes back where it was rather than being taken and dropped.
 	if len(listed) == 0 {
 		return nil, nil
 	}
@@ -185,9 +172,6 @@ func readSillyTavernScripts(
 	return scripts, fields
 }
 
-// takeNumberedTargets reads the text a script runs over. SillyTavern numbers
-// them, and a number Illarin has no wording for leaves the whole list where it
-// is rather than being read to the nearest one it has.
 func takeNumberedTargets(script map[string]json.RawMessage) []block.ScriptTarget {
 	var numbered []float64
 	if !keys.Take(script, stScriptOver, &numbered) {
@@ -205,9 +189,6 @@ func takeNumberedTargets(script map[string]json.RawMessage) []block.ScriptTarget
 	return targets
 }
 
-// takeSillyTavernEffects reads what a replacement changes. The file says it
-// with two switches, and neither one set means the replacement changes both
-// what a person is shown and what the model is sent.
 func takeSillyTavernEffects(script map[string]json.RawMessage) []block.ScriptEffect {
 	var display, prompt bool
 	shown := keys.Take(script, stScriptDisplay, &display)

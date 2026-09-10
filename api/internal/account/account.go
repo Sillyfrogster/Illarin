@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Account is a person's identity on Illarin.
 type Account struct {
 	ID            uuid.UUID
 	Handle        string
@@ -69,7 +68,6 @@ type DiscordCompletion struct {
 	Intent         DiscordIntent
 }
 
-// CreatorListing is what a creator's asset listing needs to know about them.
 type CreatorListing struct {
 	ID                             uuid.UUID
 	Handle                         string

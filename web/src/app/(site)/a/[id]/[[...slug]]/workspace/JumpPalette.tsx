@@ -38,7 +38,6 @@ export function destinationsIn(blocks: AssetBlock[]): Destination[] {
   ]);
 }
 
-/** Every block and element the page holds, one search away. */
 export function JumpPalette({
   destinations,
   onClose,

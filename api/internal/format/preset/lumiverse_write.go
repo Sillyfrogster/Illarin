@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Write builds a Lumiverse preset from canonical roles and preserved fields.
 func (LumiverseModule) Write(
 	_ context.Context,
 	asset format.ExportAsset,
@@ -24,8 +23,6 @@ func (LumiverseModule) Write(
 		lvName:   keys.Must(asset.Header.Name),
 		lvBlocks: keys.Must(writeLumiverseBlocks(asset, held)),
 	}
-	// A blurb the creator has not written leaves the description to
-	// preservation, which is where a description too long to bind stayed.
 	keys.WriteIfSet(body, lvDescription, asset.Header.Blurb != "", asset.Header.Blurb)
 	keys.WriteIfSet(body, lvVersion, asset.Header.AssetVersion != "", asset.Header.AssetVersion)
 	if saved := writeSavedValues(asset, held); len(saved) > 0 {
@@ -60,8 +57,6 @@ func (LumiverseModule) Write(
 	}, nil
 }
 
-// writeNested writes one of the file's own objects, and leaves the key out
-// where the asset holds nothing that belongs in it.
 func writeNested(body map[string]json.RawMessage, key string, values map[string]json.RawMessage) {
 	if len(values) == 0 {
 		return
@@ -69,8 +64,6 @@ func writeNested(body map[string]json.RawMessage, key string, values map[string]
 	body[key] = keys.Must(values)
 }
 
-// writeLumiverseBlocks writes the prompt list. A heading is a block of its own
-// and sits where its first fragment does, which is where the file put it.
 func writeLumiverseBlocks(
 	asset format.ExportAsset,
 	held kept,
@@ -88,9 +81,6 @@ func writeLumiverseBlocks(
 		headings[group.ID] = group
 	}
 
-	// A heading is a block of its own and goes in front of the fragments under
-	// it. One nobody put a fragment under still belongs to the preset, so it
-	// goes with the headings it sits between rather than being dropped.
 	written := make([]map[string]json.RawMessage, 0, len(list.Fragments)+len(list.Groups))
 	placed := make(map[uuid.UUID]bool, len(list.Groups))
 	next := 0
@@ -117,9 +107,6 @@ func writeLumiverseBlocks(
 	return written
 }
 
-// lumiverseBlockNames is the identifier the file knows each heading and
-// fragment by. One that arrived in a file keeps the identifier it arrived
-// with, and one a creator added here is named by the id Illarin minted for it.
 func lumiverseBlockNames(list block.PromptList, held kept) map[uuid.UUID]string {
 	names := make(map[uuid.UUID]string, len(list.Groups)+len(list.Fragments))
 	for _, group := range list.Groups {
@@ -175,9 +162,6 @@ func writeLumiverseFragment(
 	return written
 }
 
-// writeLumiverseVariable writes one thing a reader chooses before the preset
-// runs. It goes on the fragment it belongs to, which is where this file keeps
-// its variables.
 func writeLumiverseVariable(variable block.Variable, held kept) map[string]json.RawMessage {
 	fields := map[string]json.RawMessage{
 		lvVarID:     keys.Must(itemName(held, lumiverseVariableNamespace, variable.ID, lvVarID)),
@@ -211,9 +195,6 @@ func writeLumiverseVariable(variable block.Variable, held kept) map[string]json.
 	return fields
 }
 
-// writeSavedValues writes the choices a creator saved, keyed by the fragment
-// the variable belongs to. A variable belonging to no fragment has nowhere to
-// go, which is what this format's declaration says it loses.
 func writeSavedValues(
 	asset format.ExportAsset,
 	held kept,
@@ -236,9 +217,6 @@ func writeSavedValues(
 	return saved
 }
 
-// writeLumiverseSettings writes one group of named settings. Every slot the
-// group carries is written, because this format spells a slot nobody filled in
-// as an empty one rather than by leaving it out.
 func writeLumiverseSettings(
 	asset format.ExportAsset,
 	role block.Role,
@@ -293,7 +271,6 @@ func writeLumiverseScripts(
 	return written
 }
 
-// namesFor writes a list of Illarin's wording back in the file's own words.
 func namesFor[T comparable](values []T, known map[string]T) []string {
 	names := make([]string, 0, len(values))
 	for _, value := range values {
@@ -307,8 +284,6 @@ func namesFor[T comparable](values []T, known map[string]T) []string {
 	return names
 }
 
-// writeFreeValue writes a value whose shape the widget decides rather than a
-// declared slot.
 func writeFreeValue(value block.Value) json.RawMessage {
 	switch {
 	case value.Number != nil:
@@ -322,8 +297,6 @@ func writeFreeValue(value block.Value) json.RawMessage {
 	}
 }
 
-// restoreLumiversePreserved restores nested settings, top-level fields, and
-// extension namespaces without overwriting current content.
 func restoreLumiversePreserved(body map[string]json.RawMessage, held kept) {
 	preserved := held.object(lumiverseNamespace)
 	for _, key := range []string{lvSamplers, lvCompletion, lvAdvanced, lvBehaviour} {

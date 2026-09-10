@@ -18,11 +18,6 @@ const MARKS: Record<PostNotice["kind"], LucideIcon> = {
   scheduled: CalendarClock,
 };
 
-/**
- * A standing that outranks whatever is being typed, said above the writing.
- * Everything about changing it lives in the publication rail, so a notice
- * states the standing and points at the one control that opens it.
- */
 export function PostNotices({
   onOpenPublication,
   post,

@@ -18,7 +18,6 @@ import type { PublicationCategory } from "@/lib/api/query";
 import { nothingIn } from "@/lib/publication-register";
 import { moved } from "@/lib/reorder";
 
-/** What a post can be filed as, in the order readers meet on the blog. */
 export function CategoryRows({
   categories,
   onFailure,
@@ -125,7 +124,6 @@ export function CategoryRows({
   );
 }
 
-/** Renaming a category, or taking it out of what a post can be filed as. */
 export function CategoryStep({
   category,
   onClose,

@@ -76,7 +76,6 @@ func (h *Handlers) ReadPostHistory(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, PostActionList{Actions: toAPIActions(done)})
 }
 
-// workingVersion reads the version of the working copy an action names.
 func (h *Handlers) workingVersion(c *gin.Context) (int, bool) {
 	var request PostVersionRequest
 	if err := c.ShouldBindJSON(&request); err != nil {

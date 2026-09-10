@@ -39,10 +39,8 @@ var (
 	ErrTokenRevoked      = errors.New("the publication token has been revoked")
 )
 
-// ErrCategoryRefused says a grant does not cover the category a post named.
 var ErrCategoryRefused = errors.New("the grant does not cover that category")
 
-// FieldError names the field a request was refused over.
 type FieldError struct {
 	Field   string
 	Message string
@@ -53,9 +51,6 @@ func (e FieldError) Error() string { return e.Message }
 
 func (e FieldError) Unwrap() error { return e.cause }
 
-// Publishing is what the service needs beyond the database to publish: the key
-// that seals endpoint configuration, the way out to the world, and the two
-// origins every address in a publication event is built from.
 type Publishing struct {
 	Sealing secrets.Key
 	Sender  Sender
@@ -63,7 +58,6 @@ type Publishing struct {
 	Blog    string
 }
 
-// DefaultPublishing sends through one bounded outbound caller.
 func DefaultPublishing(sealing secrets.Key, site, blog string) Publishing {
 	return Publishing{
 		Sealing: sealing,
@@ -73,7 +67,6 @@ func DefaultPublishing(sealing secrets.Key, site, blog string) Publishing {
 	}
 }
 
-// Service owns publication authority and the profile distinctions it manages.
 type Service struct {
 	pool    *pgxpool.Pool
 	media   *mediaproc.Library
@@ -100,7 +93,6 @@ func NewService(
 	}
 }
 
-// HoldsAuthority answers whether the recorded assignment names this account
 func (s *Service) HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error) {
 	var held bool
 	err := s.pool.QueryRow(ctx, `
@@ -112,7 +104,6 @@ func (s *Service) HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool
 	return held, nil
 }
 
-// AssignAuthority records that one account is the publication authority.
 func (s *Service) AssignAuthority(ctx context.Context, handle string) (uuid.UUID, error) {
 	accountID, err := s.accountByHandle(ctx, handle)
 	if err != nil {

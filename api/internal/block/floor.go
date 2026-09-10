@@ -2,27 +2,19 @@ package block
 
 import "github.com/google/uuid"
 
-// Requirement names the element role that must contain content before publish.
 type Requirement struct {
-	// ID stays the same when the wording changes, so a page can anchor on it.
 	ID     string
 	Label  string
 	Detail string
 	Role   Role
 }
 
-// Check is one requirement measured against an asset, with the block a creator
-// fills it in.
 type Check struct {
 	Requirement
-	Met bool
-	// BlockID is nil where the asset carries no block for the role.
+	Met     bool
 	BlockID *uuid.UUID
 }
 
-// contentFloors is what each kind asks for beyond a name and an adult content
-// answer. It is content in the one element that makes the kind mean anything,
-// and a kind with no entry asks for nothing yet.
 var contentFloors = map[string][]Requirement{
 	"character": {
 		{
@@ -72,8 +64,6 @@ var contentFloors = map[string][]Requirement{
 	},
 }
 
-// ContentFloor measures a kind's content requirements against an asset's
-// blocks, in the order a creator reads them.
 func ContentFloor(kind string, blocks []Block) []Check {
 	requirements := contentFloors[kind]
 	checks := make([]Check, 0, len(requirements))
@@ -97,9 +87,6 @@ func ContentFloor(kind string, blocks []Block) []Check {
 	return checks
 }
 
-// RequiredRoles names the roles a kind asks for before an asset may be
-// published. Export reads the same list, because a target that would drop
-// content a kind requires is not the asset and is never offered.
 func RequiredRoles(kind string) []Role {
 	requirements := contentFloors[kind]
 	roles := make([]Role, 0, len(requirements))

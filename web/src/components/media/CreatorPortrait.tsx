@@ -17,12 +17,6 @@ const INITIAL: Record<Size, string> = {
   sm: "text-ui",
 };
 
-/**
- * A creator as a page shows them: their own picture, or the first letter of
- * their handle on one of a few grounds. The same plate serves the profile, the
- * account page and the preview beside the editor, so a creator sees the face
- * visitors meet wherever they look at it.
- */
 export function CreatorPortrait({
   className,
   handle,

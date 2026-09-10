@@ -5,7 +5,6 @@ import { type FormEvent, useState } from "react";
 import { saveAssetIdentity } from "@/lib/api/query";
 import { useWorkingCopy } from "@/lib/working-copy";
 
-/** The three states the adult content question has while an asset is a draft. */
 const ANSWERS: { value: boolean | null; label: string }[] = [
   { value: null, label: "Not yet" },
   { value: false, label: "No" },

@@ -9,7 +9,6 @@ import { mediaUrl } from "@/lib/site-metadata";
 
 export const dynamic = "force-dynamic";
 
-/** How long a generated card may be kept before it is composed again. */
 const CARD_MAX_AGE = 86400;
 
 const FONTS = [
@@ -55,7 +54,6 @@ async function composed(post: PublicPost): Promise<CardSubject> {
   };
 }
 
-/** Reads uploaded bytes into the card, leaving the picture out when they cannot be had. */
 async function drawable(address: string): Promise<string | null> {
   try {
     const response = await fetch(new URL(address, mediaUrl));

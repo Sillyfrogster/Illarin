@@ -11,7 +11,6 @@ const MOVE =
 const CONTROL =
   "w-full rounded-control border-0 bg-deep px-3 text-ui text-ink outline-offset-3 placeholder:text-mute disabled:opacity-60";
 
-/** One labelled control, with its label above it and an optional aside on the same line. */
 export function Field({
   children,
   hint,
@@ -33,7 +32,6 @@ export function Field({
   );
 }
 
-/** Controls that answer one question together, under a heading of their own. */
 export function FieldGroup({
   children,
   legend,
@@ -51,7 +49,6 @@ export function FieldGroup({
   );
 }
 
-/** Two short fields side by side where the rail has room for them. */
 export function FieldPair({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 @sm:grid-cols-2">{children}</div>;
 }
@@ -78,7 +75,6 @@ export function ChoiceField(props: ComponentProps<"select">) {
   return <Select {...props} className={cn("w-full", props.className)} />;
 }
 
-/** A yes-or-no answer, filled when it is yes so a column of them reads at a glance. */
 export function Switch({
   checked,
   hint,
@@ -117,7 +113,6 @@ export function Switch({
   );
 }
 
-/** The one action that puts another item into a collection. */
 export function AddAction({
   children,
   disabled,
@@ -140,7 +135,6 @@ export function AddAction({
   );
 }
 
-/** The action that takes an item out of a collection. */
 export function RemoveAction({
   children,
   disabled,
@@ -169,12 +163,10 @@ export function RemoveAction({
   );
 }
 
-/** A short note beside the fields, for a collection with nothing in it or a fragment with no text. */
 export function Note({ children }: { children: ReactNode }) {
   return <p className="text-meta text-mute">{children}</p>;
 }
 
-/** One item of a list written where it sits, named above its fields and moved from below them. */
 export function InlineItem({
   children,
   moves,
@@ -211,7 +203,6 @@ export type ItemMoves = {
   total: number;
 };
 
-/** Moves an item earlier or later, because where it sits is part of what it means. */
 export function ItemMoveActions({
   moves,
   pending,

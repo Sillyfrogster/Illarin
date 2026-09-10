@@ -11,7 +11,6 @@ import type {
 } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 
-/** A new signing secret, and the window the old one keeps working in. */
 export function SecretStep({
   destination,
   onClose,
@@ -86,7 +85,6 @@ export function SecretStep({
   );
 }
 
-/** The one chance to take a secret Illarin will not show again. */
 export function TakeTheSecret({
   carry,
   copied,

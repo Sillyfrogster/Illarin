@@ -4,7 +4,6 @@ import blogDark from "@/assets/art/full/illarin-blog-masthead-dark-v1.webp";
 import blogLight from "@/assets/art/full/illarin-blog-masthead-light-v1.webp";
 import { siteAddress } from "@/lib/site-address";
 
-/** The plate the blog closes on, which is also the way back to the catalog it belongs to. */
 export function BackToIllarin() {
   return (
     <a

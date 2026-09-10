@@ -18,13 +18,11 @@ const MARKS = {
   deleted: Trash2,
 } satisfies Record<Lifecycle, typeof PenLine>;
 
-/** How close a recovery deadline has to be before it is stated as a warning. */
 const CLOSING_SOON = 7 * 24 * 60 * 60 * 1000;
 
 const TAG =
   "inline-flex min-h-7 items-center gap-1.5 rounded-control px-2.5 font-ui text-label font-medium whitespace-nowrap";
 
-/** One post the writer owns: what it is called, where it stands, and the way into it. */
 export function PostRow({ post }: { post: Post }) {
   const state = lifecycleOf(post);
   const Mark = MARKS[state];
@@ -100,7 +98,6 @@ function Deadline({ until }: { until: string }) {
   );
 }
 
-// The date that matters for the state a post is in.
 function dateWords(post: Post, state: Lifecycle): string {
   if (post.deletion) return `Deleted ${readableDate(post.deletion.at)}`;
   if (state === "published" || state === "withdrawn") {

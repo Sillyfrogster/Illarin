@@ -37,7 +37,6 @@ export function splitAssetPageContent<
   return { publicBlocks, modelContent };
 }
 
-/** Whether a reader's page draws this block. One that does not holds no columns. */
 export function rendersOnThePage(block: {
   hidden: boolean;
   empty: boolean;
@@ -45,7 +44,6 @@ export function rendersOnThePage(block: {
   return !block.hidden && !block.empty;
 }
 
-/** How many blocks an invitation can name before it stops being a sentence. */
 const INVITATION_BLOCK_LIMIT = 3;
 
 type FillableBlock = {
@@ -54,21 +52,12 @@ type FillableBlock = {
   isEmpty: boolean;
 };
 
-/**
- * Whether no block on the asset has anything in it. A page that displays
- * nothing is a different question, because hidden content is still held and
- * still travels.
- */
 export function assetHoldsNothing(
   blocks: readonly Pick<FillableBlock, "isEmpty">[],
 ): boolean {
   return blocks.every((block) => block.isEmpty);
 }
 
-/**
- * The blocks an invitation names. A kind's required blocks are its core. A
- * kind that requires none is invited to fill in whatever it was given.
- */
 export function coreBlockTitles(
   blocks: readonly Pick<FillableBlock, "title" | "required">[],
 ): string[] {

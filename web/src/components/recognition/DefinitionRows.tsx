@@ -36,7 +36,6 @@ import {
 const NAME_LIMIT = 48;
 const EARNED_LIMIT = 200;
 
-/** Everything one register gives out, in the order a profile shows it. */
 export function DefinitionRows({
   definitions,
   onChanged,
@@ -156,7 +155,6 @@ export function DefinitionRows({
   );
 }
 
-/** The mark a badge wears, or the space a title leaves where one would go. */
 function DistinctionMark({ one }: { one: Distinction }) {
   return (
     <RowMark tone={one.mark ? "accent" : "quiet"}>
@@ -176,7 +174,6 @@ function DistinctionMark({ one }: { one: Distinction }) {
   );
 }
 
-/** Defining what Illarin gives out, or changing one it already gives out. */
 export function DefinitionStep({
   existing,
   onClose,

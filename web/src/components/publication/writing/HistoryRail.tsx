@@ -18,10 +18,6 @@ import {
   revisionWords,
 } from "@/lib/post-history";
 
-/**
- * Every edition this post has kept and everything done around them, on one
- * spine. Nothing here reaches readers, and nothing here can be changed.
- */
 export function HistoryRail({
   handle,
   keeping,
@@ -219,7 +215,6 @@ function Note({ action, handle }: { action: PostAction; handle: string }) {
   );
 }
 
-// who names the person who acted, and says you when it was this account.
 function who(actor: string, handle: string): string {
   if (!actor) return "A closed account";
   return actor === handle ? "You" : `@${actor}`;

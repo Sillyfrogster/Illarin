@@ -4,7 +4,6 @@ import type { RecordedVersion } from "@/lib/api/query";
 import { versionDate, versionSummary, versionTitle } from "@/lib/asset-updates";
 import { assetHistoryHref } from "@/lib/asset-url";
 
-/** What readers have, and the way into everything Illarin recorded before it. */
 export function LatestUpdate({
   assetId,
   kind,

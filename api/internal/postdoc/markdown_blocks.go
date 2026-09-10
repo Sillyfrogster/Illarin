@@ -18,7 +18,6 @@ const (
 	placeCallout  = "callout"
 )
 
-// placeNames is how a refusal names the structure a block tried to go inside.
 var placeNames = map[string]string{
 	placeContent:  "a post",
 	placeListItem: "a list item",
@@ -28,7 +27,6 @@ var placeNames = map[string]string{
 	"tableCell":   "a table cell",
 }
 
-// blockNames is how a refusal names the block that could not go there.
 var blockNames = map[string]string{
 	"paragraph":   "Prose",
 	"heading":     "A heading",
@@ -178,7 +176,6 @@ func (i *importer) entry(node ast.Node, place, empty string) ([]Block, bool) {
 	return blocks, true
 }
 
-// emptyRefusal says a structure holds nothing only if nothing in it was refused.
 func (i *importer) emptyRefusal(node ast.Node, before int, message string) {
 	if len(i.refusals) == before {
 		i.refuse(node, message)
@@ -209,7 +206,6 @@ func (i *importer) quotation(node *ast.Blockquote) (Block, bool) {
 	return Callout{Kind: kind, Blocks: blocks}, true
 }
 
-// marker reads a leading callout line and answers the kind it names.
 func (i *importer) marker(node *ast.Blockquote) (string, ast.Node, bool) {
 	first := node.FirstChild()
 	if first == nil || (first.Kind() != ast.KindParagraph && first.Kind() != ast.KindTextBlock) {
@@ -237,7 +233,6 @@ func named(line string, from ast.Node) (string, ast.Node, bool) {
 	return trimmed[len("[!") : len(trimmed)-len("]")], from, true
 }
 
-// aside converts a callout's content, which starts on the line naming its kind.
 func (i *importer) aside(node *ast.Blockquote, from ast.Node) []Block {
 	blocks := make([]Block, 0, 4)
 	if spans := i.spansFrom(from, Span{}); spanLength(spans) > 0 {
@@ -301,7 +296,6 @@ func (i *importer) cells(line ast.Node, heading bool) []Cell {
 	return cells
 }
 
-// lonePicture answers the one picture a paragraph holds and nothing else.
 func (i *importer) lonePicture(node ast.Node) *ast.Image {
 	var only *ast.Image
 	for inline := node.FirstChild(); inline != nil; inline = inline.NextSibling() {

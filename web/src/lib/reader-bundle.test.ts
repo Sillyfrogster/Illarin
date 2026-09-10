@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-/** Everything the signed-out reader downloads for one published post. */
 const READER_FILES = [
   "src/app/blog/[slug]/page.tsx",
   "src/components/publication/Article.tsx",

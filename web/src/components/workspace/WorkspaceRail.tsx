@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
-/** Work that needs its own space sits beside the page, so the page stays visible and writable. */
 export function WorkspaceRail({
   children,
   description,
@@ -30,7 +29,6 @@ export function WorkspaceRail({
   useEffect(() => {
     if (!onClose) return;
     function leave(event: KeyboardEvent) {
-      // Escape belongs to whatever field is open before it belongs to the rail.
       const inField =
         event.target instanceof HTMLElement &&
         ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
@@ -86,7 +84,6 @@ export function WorkspaceRail({
   );
 }
 
-/** The control that returns from a step of the rail to the home it opened from. */
 export function RailBack({
   children,
   onClick,

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { cn } from "@/lib/cn";
 
-/** How a thing is doing, said in colour as well as words. */
 export type Tone = "quiet" | "accent" | "stop";
 
 const TONES: Record<Tone, string> = {
@@ -12,7 +11,6 @@ const TONES: Record<Tone, string> = {
   stop: "bg-stop-wash text-stop",
 };
 
-/** The head of a register, with the one thing you can start from here. */
 export function PanelHead({
   action,
   id,
@@ -35,14 +33,12 @@ export function PanelHead({
   );
 }
 
-/** Everything a register holds, as rows on the page rather than cells in a table. */
 export function Rows({ children }: { children: ReactNode }) {
   return (
     <ul className="-mx-4 mt-4 flex list-none flex-col sm:-mx-5">{children}</ul>
   );
 }
 
-/** One row; its name opens it and covers the row, so other controls sit above. */
 export function Row({
   aside,
   children,
@@ -54,19 +50,14 @@ export function Row({
   title,
   trailing,
 }: {
-  /** Controls at the end of the row, which stand above the name stretched under them. */
   aside?: ReactNode;
-  /** Anything below the facts, such as a control or a disclosure. */
   children?: ReactNode;
   facts?: ReactNode;
-  /** A portrait, mark or state light before the name. */
   lead?: ReactNode;
   onOpen?: () => void;
-  /** What opening this row is called, for anyone who cannot see the row. */
   open?: string;
   standing?: ReactNode;
   title: ReactNode;
-  /** A mark beside the name, such as what state this is in. */
   trailing?: ReactNode;
 }) {
   return (
@@ -109,7 +100,6 @@ export function Row({
   );
 }
 
-/** A plate carrying a picture or a mark, at the size a row's name sits against. */
 export function RowMark({
   children,
   tone = "quiet",
@@ -131,7 +121,6 @@ export function RowMark({
   );
 }
 
-/** A short standing worn beside a name. */
 export function Mark({
   children,
   icon: Icon,
@@ -156,7 +145,6 @@ export function Mark({
   );
 }
 
-/** A way to move a row within an order a reader will see. */
 export function RowMove({
   disabled,
   icon: Icon,
@@ -181,7 +169,6 @@ export function RowMove({
   );
 }
 
-/** A control on a row, which has to stand above the name stretched under it. */
 export function RowAction({
   busy,
   children,
@@ -203,7 +190,6 @@ export function RowAction({
   );
 }
 
-/** What to do about an empty register, rather than the news that it is empty. */
 export function Nothing({ children }: { children: ReactNode }) {
   return (
     <p className="mt-8 max-w-[54ch] font-prose text-prose text-mute">
@@ -212,7 +198,6 @@ export function Nothing({ children }: { children: ReactNode }) {
   );
 }
 
-/** What a register no longer uses, kept reachable without being in the way. */
 export function Past({
   children,
   summary,
@@ -232,7 +217,6 @@ export function Past({
   );
 }
 
-/** One line of what a register no longer uses, and the way to bring it back. */
 export function PastRow({
   action,
   children,
@@ -248,7 +232,6 @@ export function PastRow({
   );
 }
 
-/** The way a register starts something new, at the head of the register itself. */
 export function StartAction({
   children,
   disabled,

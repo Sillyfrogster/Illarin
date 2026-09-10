@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// recordAudit keeps who changed what, as identifiers and never as profile text
 func recordAudit(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -27,16 +26,12 @@ func recordAudit(
 	return nil
 }
 
-// CredentialSession is the credential class of a change made from a browser.
 const CredentialSession = "session"
 
-// CredentialToken is the credential class of a change made through the publication API.
 const CredentialToken = "token"
 
-// CredentialSystem is the credential class of a change Illarin made unattended.
 const CredentialSystem = "system"
 
-// change is one entry in the private record of who changed the publication.
 type change struct {
 	Actor      uuid.UUID
 	Credential string
@@ -56,8 +51,6 @@ type change struct {
 	After         string
 }
 
-// recordPublicationAudit keeps who changed what, as identifiers and never as a
-// token value, a profile field or anything else a reader could spend.
 func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 	if made.Credential == "" {
 		made.Credential = CredentialSession

@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// BlockUpdate is everything one block sheet can save at once.
 type BlockUpdate struct {
 	Title           *string
 	Layout          block.Layout
@@ -24,7 +23,6 @@ type BlockUpdate struct {
 	ExposeProtected bool
 }
 
-// ExposureRefusal is a save that would make sealed prompts public without saying so.
 type ExposureRefusal struct {
 	Prompts []string
 }
@@ -33,26 +31,22 @@ func (refusal ExposureRefusal) Error() string {
 	return "making a sealed prompt public needs an explicit confirmation"
 }
 
-// SavedBlock is the saved row and the kind catalog that describes it.
 type SavedBlock struct {
 	Kind  string
 	Block block.Block
 }
 
-// BlockArrangement is one row in the page outline.
 type BlockArrangement struct {
 	ID     uuid.UUID
 	Hidden bool
 	Width  block.Width
 }
 
-// SavedBlocks is the whole saved page and the kind catalog that describes it.
 type SavedBlocks struct {
 	Kind   string
 	Blocks []block.Block
 }
 
-// SaveBlock rewrites one block row and leaves every other block untouched.
 func (s *Service) SaveBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -202,8 +196,6 @@ func (s *Service) validateProtectedApps(
 	return nil
 }
 
-// AddBlock puts one optional block at the foot of the page, holding the
-// element the creator chose.
 func (s *Service) AddBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -237,8 +229,6 @@ func (s *Service) AddBlock(
 	if err := block.ValidateStructure(added); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
 	}
-	// The new element has no earlier identity to keep, so the page it joins is
-	// both sides of the check.
 	after := append(page, added)
 	if err := block.ValidateBuilderConstraints(kind, after, after); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
@@ -258,7 +248,6 @@ func (s *Service) AddBlock(
 	return SavedBlock{Kind: kind, Block: added}, nil
 }
 
-// ArrangeBlocks changes page presentation without changing exported content.
 func (s *Service) ArrangeBlocks(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -328,7 +317,6 @@ func (s *Service) ArrangeBlocks(
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
 }
 
-// RemoveBlock deletes one optional block and closes the gap in page order.
 func (s *Service) RemoveBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -394,7 +382,6 @@ func (s *Service) RemoveBlock(
 	return candidate.commit(ctx, tx, assetID)
 }
 
-// MoveBlockContent moves unpinned elements, then removes their old block.
 func (s *Service) MoveBlockContent(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -556,7 +543,6 @@ func lockEditableAsset(
 	return kind, nil
 }
 
-// insertBlocks writes an asset's blocks, one row each.
 func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []block.Block) error {
 	queries := db.New(tx)
 	for _, b := range blocks {
@@ -585,7 +571,6 @@ func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []bl
 	return nil
 }
 
-// readBlocks returns an asset's blocks in page order.
 func readBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
 	rows, err := db.New(q).AssetBlocks(ctx, uuidToPgtype(assetID))
 	if err != nil {

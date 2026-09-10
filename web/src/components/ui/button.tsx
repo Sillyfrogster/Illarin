@@ -34,7 +34,6 @@ type ButtonProps = ComponentProps<"button"> &
     loading?: boolean;
   };
 
-/** Every action on the site, in one hierarchy */
 export function Button({
   className,
   variant,

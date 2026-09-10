@@ -6,7 +6,6 @@ import { CreatorPortrait } from "@/components/media/CreatorPortrait";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/api/query";
 
-/** The picture visitors meet, replaced or taken away in place. */
 export function ProfilePicture({
   confirmingRemoval,
   onConfirmRemoval,

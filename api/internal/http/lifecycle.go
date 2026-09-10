@@ -10,7 +10,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// SetAssetIdentity saves the header fields that sit above an asset's blocks.
 func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAssetIdentityParams) {
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
@@ -47,9 +46,6 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAss
 	}
 }
 
-// PublishAsset makes a draft public. It happens once and nothing returns an
-// asset to draft, so a draft short of the floor is refused with the whole list
-// rather than published in part.
 func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID, params PublishAssetParams) {
 	owner, ok := h.verifiedAccount(c, "publishing an asset")
 	if !ok {
@@ -118,7 +114,6 @@ func toAPIReadiness(items []asset.ReadinessItem) *[]ReadinessItem {
 	return &out
 }
 
-// PublishAssetUpdate records the reviewed working copy as the asset's next public version.
 func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params PublishAssetUpdateParams) {
 	owner, ok := h.verifiedAccount(c, "publishing an asset update")
 	if !ok {

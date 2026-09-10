@@ -10,15 +10,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ArchivePageSize is how many posts one numbered archive page carries.
 const ArchivePageSize = 12
 
-// relatedLimit is how many further posts an article offers a reader.
 const relatedLimit = 3
 
-// PostSummary is one published post as an archive lists it. Every field comes
-// from the published edition, so a listing writes no excerpt and reads no live
-// profile.
 type PostSummary struct {
 	ID             uuid.UUID
 	Slug           string
@@ -33,14 +28,12 @@ type PostSummary struct {
 	UpdatedAt      *time.Time
 }
 
-// ArchiveQuery is the page a reader asked for and the scope they asked for it in.
 type ArchiveQuery struct {
 	Page     int
 	Category string
 	App      string
 }
 
-// Archive is one page of the publication and the scope it was read under.
 type Archive struct {
 	Posts    []PostSummary
 	Page     int
@@ -50,9 +43,6 @@ type Archive struct {
 	App      *App
 }
 
-// selectSummaries reads the parts of a published edition an archive entry shows.
-// A post's app is the one its release names, and otherwise the one its byline
-// was captured under.
 const selectSummaries = `
 	select post.id, post.slug, ` + firstAddress + `, revision.title, revision.summary,
 	       category.id, category.slug, category.label, category.position,
@@ -72,16 +62,12 @@ const selectSummaries = `
 	 where post.status = 'published'
 	`
 
-// narrowArchive holds an archive to one category and one app, and both the
-// count and the page read it.
 const narrowArchive = `
 		   and ($1::uuid is null or revision.category_id = $1)
 		   and ($2::uuid is null
 		        or coalesce(revision.release_app_id, byline.app_id) = $2)
 	`
 
-// ReadableCategories answers the categories that carry published posts, in the
-// order the publication shows them.
 func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
 	rows, err := s.pool.Query(ctx, selectCategories+`
 		 where exists (
@@ -99,8 +85,6 @@ func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
 	return collectCategories(rows)
 }
 
-// ReadableApps answers the apps that carry published posts, in the order the
-// publication shows them.
 func (s *Service) ReadableApps(ctx context.Context) ([]App, error) {
 	rows, err := s.pool.Query(ctx, selectApps+`
 		 where exists (
@@ -120,8 +104,6 @@ func (s *Service) ReadableApps(ctx context.Context) ([]App, error) {
 	return collectApps(rows)
 }
 
-// Archive answers one page of the publication, newest first, narrowed to a
-// category or an app where the reader named one.
 func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, error) {
 	found := Archive{Page: asked.Page, Posts: []PostSummary{}}
 	var categoryID, appID *uuid.UUID
@@ -163,8 +145,6 @@ func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, err
 	return found, nil
 }
 
-// RelatedPosts answers the further reading one article offers, preferring the
-// same app, then the same category, and otherwise the newest writing there is.
 func (s *Service) RelatedPosts(
 	ctx context.Context,
 	postID uuid.UUID,
@@ -203,7 +183,6 @@ func (s *Service) collectSummaries(ctx context.Context, rows pgx.Rows) ([]PostSu
 	return s.attachBylines(ctx, listed)
 }
 
-// attachBylines gives every listed post the attribution it went public with.
 func (s *Service) attachBylines(ctx context.Context, listed []PostSummary) ([]PostSummary, error) {
 	if len(listed) == 0 {
 		return listed, nil

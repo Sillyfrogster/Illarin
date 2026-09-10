@@ -10,8 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The states a schedule passes through. A post has at most one schedule
-// pending or publishing at a time.
 const (
 	SchedulePending    = "pending"
 	SchedulePublishing = "publishing"
@@ -20,15 +18,10 @@ const (
 	ScheduleStopped    = "stopped"
 )
 
-// SchedulePoll is how often the worker looks for an edition that is due.
 const SchedulePoll = 15 * time.Second
 
-// ScheduleLease is how long one attempt holds a due schedule before another
-// attempt may take it over.
 const ScheduleLease = 2 * time.Minute
 
-// ScheduleAttempts is how many times publication is tried before the schedule
-// is stopped and left for a person.
 const ScheduleAttempts = 5
 
 var (
@@ -37,7 +30,6 @@ var (
 	ErrSchedulePublishing = errors.New("the schedule is already publishing")
 )
 
-// The reasons Illarin stops a schedule rather than publishing what it names.
 const (
 	stoppedByRevocation = "The approval behind this post was revoked."
 	stoppedByAddress    = "Another post took this address before the edition went live."
@@ -46,8 +38,6 @@ const (
 	stoppedByDeletion   = "The post was deleted before this edition went live."
 )
 
-// Schedule is a post's most recent plan to publish one exact edition at one
-// instant. It never holds the edition, only names it.
 type Schedule struct {
 	ID             uuid.UUID
 	RevisionID     uuid.UUID
@@ -59,8 +49,6 @@ type Schedule struct {
 	CreatedAt      time.Time
 }
 
-// SchedulePost captures the named working copy and sets that exact edition to
-// go live at one instant. Editing the working copy afterwards cannot reach it.
 func (s *Service) SchedulePost(
 	ctx context.Context,
 	editor Editor,
@@ -137,8 +125,6 @@ func (s *Service) SchedulePost(
 	return s.post(ctx, id)
 }
 
-// ReplaceSchedule points a waiting schedule at another edition the post has
-// already kept. The edition it leaves stays exactly as it was.
 func (s *Service) ReplaceSchedule(
 	ctx context.Context,
 	editor Editor,
@@ -208,8 +194,6 @@ func (s *Service) ReplaceSchedule(
 	return s.post(ctx, id)
 }
 
-// CancelSchedule stops a waiting schedule. A post with nothing waiting is
-// already in the state the caller asked for, so asking again changes nothing.
 func (s *Service) CancelSchedule(ctx context.Context, editor Editor, id uuid.UUID) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
@@ -252,7 +236,6 @@ func (s *Service) CancelSchedule(ctx context.Context, editor Editor, id uuid.UUI
 	return s.post(ctx, id)
 }
 
-// RunScheduler publishes due editions until the context is done.
 func (s *Service) RunScheduler(ctx context.Context, onError func(error)) {
 	ticker := time.NewTicker(SchedulePoll)
 	defer ticker.Stop()
@@ -269,8 +252,6 @@ func (s *Service) RunScheduler(ctx context.Context, onError func(error)) {
 	}
 }
 
-// PublishDueSchedules publishes every edition due at the given instant and
-// answers how many it settled.
 func (s *Service) PublishDueSchedules(ctx context.Context, now time.Time) (int, error) {
 	settled := 0
 	for {
@@ -285,7 +266,6 @@ func (s *Service) PublishDueSchedules(ctx context.Context, now time.Time) (int, 
 	}
 }
 
-// leased is one due schedule this worker holds and the work it names.
 type leased struct {
 	ID         uuid.UUID
 	PostID     uuid.UUID
@@ -296,8 +276,6 @@ type leased struct {
 	Attempts   int
 }
 
-// leaseDueSchedule takes one due schedule, including one an earlier attempt
-// stopped holding, and answers false when nothing is due.
 func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, bool, error) {
 	var held leased
 	held.Token = uuid.New()
@@ -331,8 +309,6 @@ func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, 
 	return held, true, nil
 }
 
-// publishLeased puts the exact edition a leased schedule names in front of
-// readers, or stops the schedule when it may no longer be published.
 func (s *Service) publishLeased(ctx context.Context, held leased) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -385,8 +361,6 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 	return commitScheduleRun(ctx, tx)
 }
 
-// refusesLeased answers why this edition may no longer go live, or the empty
-// string when nothing stands in its way.
 func refusesLeased(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -428,8 +402,6 @@ func refusesLeased(
 	return "", nil
 }
 
-// heldByThisAttempt answers whether the lease this attempt took is still the
-// one on the row, so an attempt someone else took over gives up quietly.
 func heldByThisAttempt(ctx context.Context, tx pgx.Tx, held leased) (bool, error) {
 	var found bool
 	err := tx.QueryRow(ctx, `
@@ -446,8 +418,6 @@ func heldByThisAttempt(ctx context.Context, tx pgx.Tx, held leased) (bool, error
 	return found, nil
 }
 
-// lockWaitingSchedule holds the one schedule a post is waiting on, and refuses
-// to hand over one an attempt is already publishing.
 func lockWaitingSchedule(ctx context.Context, tx pgx.Tx, postID uuid.UUID) (uuid.UUID, error) {
 	var id uuid.UUID
 	var state string
@@ -468,8 +438,6 @@ func lockWaitingSchedule(ctx context.Context, tx pgx.Tx, postID uuid.UUID) (uuid
 	return id, nil
 }
 
-// keepScheduleChoice holds the destinations a scheduled edition will send to,
-// so a policy narrowed afterwards cannot widen what was already agreed.
 func keepScheduleChoice(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -488,8 +456,6 @@ func keepScheduleChoice(
 	return nil
 }
 
-// scheduledChoice reads the destinations a due edition still has, dropping one
-// the authority has since disabled or removed.
 func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]sending, error) {
 	rows, err := tx.Query(ctx, `
 		select destination.id, destination.name, destination.kind, destination.state,
@@ -518,8 +484,6 @@ func settleSchedule(ctx context.Context, tx pgx.Tx, id uuid.UUID, state, because
 	return nil
 }
 
-// recordScheduleRun keeps what the worker did under the account that asked for
-// it, so an unattended action still names a person.
 func recordScheduleRun(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -542,8 +506,6 @@ func commitScheduleRun(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// actorOf names the account a scheduled run acts for, falling back to the post's
-// author when the account that made the schedule is gone.
 func actorOf(held leased, locked working) uuid.UUID {
 	if held.CreatedBy != nil {
 		return *held.CreatedBy
@@ -551,7 +513,6 @@ func actorOf(held leased, locked working) uuid.UUID {
 	return locked.AuthorID
 }
 
-// checkInstant keeps a schedule pointed at a moment that has not passed.
 func (s *Service) checkInstant(at time.Time) error {
 	if at.IsZero() {
 		return FieldError{Field: "at", Message: "Say when the post goes live."}
@@ -562,8 +523,6 @@ func (s *Service) checkInstant(at time.Time) error {
 	return nil
 }
 
-// stopSchedulesUnder takes the waiting schedules of every post under one grant
-// out of the queue, so revoked approval cannot publish later.
 func stopSchedulesUnder(ctx context.Context, tx pgx.Tx, grantID uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		update post_schedules schedule
@@ -579,7 +538,6 @@ func stopSchedulesUnder(ctx context.Context, tx pgx.Tx, grantID uuid.UUID) error
 	return nil
 }
 
-// attachSchedules gives each post the last schedule it was given, if any.
 func (s *Service) attachSchedules(ctx context.Context, posts []Post) error {
 	if len(posts) == 0 {
 		return nil
@@ -635,8 +593,6 @@ func (s *Service) attachSchedules(ctx context.Context, posts []Post) error {
 	return nil
 }
 
-// overtakeSchedule stops a schedule an author has just published past, so a
-// waiting edition cannot pull readers back to older words.
 func overtakeSchedule(
 	ctx context.Context,
 	tx pgx.Tx,

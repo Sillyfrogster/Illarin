@@ -34,7 +34,6 @@ import {
 } from "@/lib/publication-delivery";
 import { canReplay, nothingDelivered } from "@/lib/publication-register";
 
-/** The views the authority narrows announcement work to. */
 export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =
   [
     { key: "all", word: "Everything" },
@@ -55,7 +54,6 @@ const MARKS: Record<
   waiting: { icon: Clock, tone: "quiet" },
 };
 
-/** Every announcement one publication sent, and what became of it. */
 export function DeliveryRows({
   deliveries,
   onChanged,

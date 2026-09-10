@@ -8,7 +8,6 @@ import type {
 import { DeletedAssets } from "./DeletedAssets";
 import { ProfileBanner } from "./ProfileBanner";
 
-/** A creator's page: who they are, then everything of theirs the catalog holds. */
 export function ProfileListing({
   deletedAssets,
   filters,

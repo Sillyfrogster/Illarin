@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// AccountReport is what one accounts migration carried across.
 type AccountReport struct {
 	Accounts   int
 	Roles      map[string]int
@@ -61,7 +60,6 @@ type account struct {
 	DiscordSubject string
 }
 
-// MigrateAccounts carries every v1 account into an empty v2 schema and ledgers what it leaves behind.
 func MigrateAccounts(ctx context.Context, source, target *pgxpool.Pool) (AccountReport, error) {
 	ledger, err := NewLedger(accountAnomalies())
 	if err != nil {
@@ -169,7 +167,6 @@ func requireDeclaredColumns(ctx context.Context, source *pgxpool.Pool, ledger *L
 	return nil
 }
 
-// readV1Accounts reads v1's timestamps as UTC, which is what its timezone-free column holds.
 func readV1Accounts(ctx context.Context, source *pgxpool.Pool) ([]v1Account, error) {
 	rows, err := source.Query(ctx,
 		`select id, discord_id, username, coalesce(banner, ''), coalesce(display_name, ''),
@@ -397,7 +394,6 @@ func sameJSON(left, right []byte) bool {
 	return reflect.DeepEqual(first, second)
 }
 
-// AccountsMigrated reports whether the accounts run has already happened.
 func AccountsMigrated(ctx context.Context, target *pgxpool.Pool) (bool, error) {
 	empty, err := db.New(target).MigrationTargetIsEmpty(ctx)
 	if err != nil {

@@ -112,7 +112,6 @@ func TestARoleIsOnlyEverASnowflake(t *testing.T) {
 	}
 }
 
-// announcement is the fixed shape Illarin composes, read back as a test sees it.
 type announcement struct {
 	Content string `json:"content"`
 	Embeds  []struct {

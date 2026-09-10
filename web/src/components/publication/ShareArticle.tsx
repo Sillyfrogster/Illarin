@@ -8,13 +8,11 @@ import {
   shareReport,
 } from "@/lib/article-share";
 
-/** How long the reader is told the copy worked before the rail goes quiet again. */
 const REPORT_LINGERS = 4000;
 
 const ACTION =
   "inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-ui text-mute transition-colors hover:bg-deep hover:text-ink";
 
-/** The two ways to hand this article to someone, neither of which asks a network to help. */
 export function ShareArticle({
   permalink,
   title,

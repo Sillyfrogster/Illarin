@@ -46,7 +46,6 @@ function draftOf(profile: Profile): Draft {
   };
 }
 
-/** Everything a visitor meets at a creator's handle, written beside what it will look like. */
 export function PublicProfileEditor() {
   const { account } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -365,7 +364,6 @@ export function PublicProfileEditor() {
   );
 }
 
-/** One thing the profile is made of, so the page is three questions rather than six boxes. */
 function Group({
   children,
   note,

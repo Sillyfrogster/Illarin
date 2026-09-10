@@ -25,9 +25,6 @@ create table publication_destinations (
 
 create index publication_destinations_order_idx on publication_destinations (name, created_at);
 
--- An app's baseline reaches every grant that names it. A grant that overrides
--- carries its own rows instead, which is how one contributor is narrowed
--- without narrowing the app.
 create table publication_app_destinations (
     app_id         uuid not null references publication_apps (id) on delete cascade,
     destination_id uuid not null references publication_destinations (id) on delete cascade,
@@ -49,8 +46,6 @@ alter table publication_events add column note text not null default '';
 alter table publication_events add constraint publication_events_note_check
     check (char_length(note) <= 500);
 
--- A delivery is the captured choice as much as it is the work, so it holds the
--- name it was sent under and survives a destination the authority later removes.
 create table publication_deliveries (
     id               uuid primary key,
     event_id         uuid not null references publication_events (id) on delete cascade,

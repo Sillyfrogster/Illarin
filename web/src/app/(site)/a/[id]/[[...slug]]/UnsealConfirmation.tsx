@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssetElement } from "@/lib/api/query";
 
-/** The sealed prompts this edit turns public, named as the creator wrote them. */
 export function unsealedPrompts(
   previous: AssetElement,
   next: AssetElement,
@@ -27,7 +26,6 @@ export function unsealedPrompts(
     .map((fragment) => fragment.name || "an untitled prompt");
 }
 
-/** Asks before a save puts sealed prompt text in front of every reader. */
 export function UnsealConfirmation({
   prompts,
   keepsASeal,
@@ -76,7 +74,6 @@ export function UnsealConfirmation({
   );
 }
 
-/** Writes a list of prompts the way a person reads one. */
 function namePrompts(names: string[]): string {
   if (names.length < 2) return names[0] ?? "this prompt";
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;

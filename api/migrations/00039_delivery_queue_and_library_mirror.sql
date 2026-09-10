@@ -30,7 +30,6 @@ create table instance_deliveries (
     constraint instance_deliveries_expiry_check check (expires_at > queued_at)
 );
 
--- One live delivery per asset per instance, so pressing send twice queues once.
 create unique index instance_deliveries_live_idx
     on instance_deliveries (instance_id, asset_id)
  where state in ('queued', 'released');
@@ -40,7 +39,6 @@ create index instance_deliveries_collect_idx
 create index instance_deliveries_expires_at_idx on instance_deliveries (expires_at);
 create index instance_deliveries_asset_id_idx on instance_deliveries (asset_id);
 
--- The mirror an instance writes, whose generation against the asset's answers installed and out of date.
 create table instance_library_entries (
     instance_id        uuid not null references linked_instances (id) on delete cascade,
     asset_id           uuid not null references assets (id) on delete cascade,

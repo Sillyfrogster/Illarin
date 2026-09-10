@@ -26,7 +26,6 @@ func (s corpusStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-// TestLocalCorpusRunsThroughEveryModule catches overlapping authoritative claims.
 func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 	registry := format.NewRegistry()
 	for _, module := range slices.Concat(character.Modules(), lorebook.Modules(), preset.Modules(), theme.Modules(), pack.Modules()) {

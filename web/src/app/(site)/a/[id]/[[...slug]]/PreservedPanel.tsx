@@ -11,10 +11,6 @@ import { cn } from "@/lib/cn";
 import { describePreservedNamespace } from "@/lib/preserved";
 import { useWorkingCopy } from "@/lib/working-copy";
 
-/**
- * The source file's unread remainder is an owner tool, not page content. It
- * stays closed until a creator asks for it.
- */
 export function PreservedPanel({ assetId }: { assetId: string }) {
   const candidate = useWorkingCopy();
   const [open, setOpen] = useState(false);

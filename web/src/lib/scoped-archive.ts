@@ -10,7 +10,6 @@ const loadArchive = cache(
     fetchPostArchive({ page, [scope]: slug }),
 );
 
-/** One page of a category or app archive, refusing any address a reader could not have followed. */
 export async function scopedArchive<Scope extends Narrowing>(
   scope: Scope,
   slug: string,

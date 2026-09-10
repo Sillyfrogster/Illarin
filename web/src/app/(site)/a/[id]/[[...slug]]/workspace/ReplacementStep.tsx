@@ -26,10 +26,8 @@ import { useWorkingCopy } from "@/lib/working-copy";
 import { Note } from "./fields";
 import { useWorkspace } from "./state";
 
-/** How often the step asks what Illarin has made of the file so far. */
 const POLL_MS = 600;
 
-/** Uploading a replacement, reading what it carries, and deciding whether to take it. */
 export function ReplacementStep({
   onApplied,
   onBack,
@@ -299,7 +297,6 @@ export function ReplacementStep({
   );
 }
 
-/** What an uploaded file does to each part of the asset, counted into one line each. */
 export function ReplacementChanges({
   changes,
 }: {

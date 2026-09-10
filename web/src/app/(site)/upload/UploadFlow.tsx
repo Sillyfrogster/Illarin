@@ -11,13 +11,11 @@ import { ImportReceipt } from "./ImportReceipt";
 import { ImportRefusal, ImportWatch } from "./ImportWatch";
 import { StartFromNothing } from "./StartFromNothing";
 
-/** How often the page asks what Illarin has made of the file so far. */
 const POLL_MS = 600;
 
 const LOST =
   "The connection was interrupted. Your file is safe; check again to see where it got to.";
 
-/** The two ways into a draft, together on the page because both end in the same private page. */
 export function UploadFlow() {
   const { account } = useAuth();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -134,7 +132,6 @@ export function UploadFlow() {
   );
 }
 
-/** What the page offers an account that cannot publish yet, in place of the entries. */
 function Gate({
   action,
   children,

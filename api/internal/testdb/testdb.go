@@ -9,10 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// immutableTables refuse the mutations a reset needs, so the reset lifts their guard and puts it straight back.
 var immutableTables = []string{"download_events", "migration_legacy_counters"}
 
-// seeded puts the rows migration 00047 adds back the way it left them.
 const seeded = `
 	truncate publication_apps, publication_categories cascade;
 	delete from profile_distinctions where id = '9d3f1c00-0000-4000-8000-000000000021';
@@ -31,15 +29,11 @@ const seeded = `
 	        'Publishes official updates for a project on Illarin.', 0);
 `
 
-// Connect opens a pool on the test database with the settings the server runs
-// on, and empties every table.
 func Connect(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	return ConnectWith(t, nil)
 }
 
-// ConnectWith is Connect with one setting changed, so a test can prove a limit
-// without waiting for the real one.
 func ConnectWith(t *testing.T, tune func(*postgres.Settings)) *pgxpool.Pool {
 	t.Helper()
 

@@ -332,7 +332,6 @@ func (h *Handlers) publicationError(c *gin.Context, err error) {
 	}
 }
 
-// categoryOr names a refusal the grant's allowed categories caused.
 func categoryOr(err error, otherwise PublicationErrorCode) PublicationErrorCode {
 	if errors.Is(err, publication.ErrCategoryRefused) {
 		return CodeCategoryRefused
@@ -379,7 +378,6 @@ func toAPICategory(found publication.Category) PublicationCategory {
 	}
 }
 
-// withHolders names each grant's contributor the way their profile names them.
 func (h *Handlers) withHolders(
 	c *gin.Context,
 	made []publication.Grant,

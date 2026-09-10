@@ -3,7 +3,6 @@ import type { PostDocument } from "@/lib/post-document";
 import { asPostDocument } from "@/lib/post-document";
 import { type Lifecycle, lifecycleOf } from "@/lib/post-standing";
 
-/** How the working copy stands with the server, which is not how the post stands with readers. */
 export type Saving =
   | "clean"
   | "dirty"
@@ -12,7 +11,6 @@ export type Saving =
   | "conflict"
   | "refused";
 
-/** Everything the writer may change, and the only shape the save endpoint takes. */
 export type Draft = {
   categoryId: string;
   title: string;
@@ -24,7 +22,6 @@ export type Draft = {
   socialMediaId: string | null;
 };
 
-/** One thing a writer can do to a post's standing with readers. */
 export type PublicationAction =
   | "publish"
   | "schedule"
@@ -33,14 +30,12 @@ export type PublicationAction =
   | "delete"
   | "recover";
 
-/** A standing the page states above the writing, because it outranks what is being typed. */
 export type PostNotice = {
   kind: "deleted" | "withdrawn" | "scheduled";
   tone: "accent" | "stop";
   heading: string;
   said: string;
   meanwhile: string;
-  /** What Illarin recorded and readers never see, where a standing has one. */
   record?: string;
 };
 
@@ -57,7 +52,6 @@ const STANDING: Record<Lifecycle, string> = {
   deleted: "Deleted",
 };
 
-/** What the writer's status line says: the save when it has something to say, the post otherwise. */
 export function savingWords(state: Saving, post: Post): string {
   switch (state) {
     case "saving":
@@ -75,12 +69,10 @@ export function savingWords(state: Saving, post: Post): string {
   }
 }
 
-/** What readers can do with this post now. A schedule is a plan, not a standing. */
 export function writerStanding(post: Post): Lifecycle {
   return lifecycleOf(post);
 }
 
-/** The one control that opens publication names the state it would leave the post in. */
 export function publicationLabel(post: Post): string {
   const standing = writerStanding(post);
   if (standing === "deleted") return "Bring it back";
@@ -88,7 +80,6 @@ export function publicationLabel(post: Post): string {
   return standing === "published" ? "Publish changes" : "Publish";
 }
 
-/** Which publication steps this post is eligible for, in the order they are offered. */
 export function publicationActions(
   post: Post,
   admin: boolean,
@@ -104,13 +95,11 @@ export function publicationActions(
     : ["publish", "schedule"];
 }
 
-// A published post is never discarded, and one that has published before needs an admin.
 function mayDelete(post: Post, admin: boolean): boolean {
   if (post.status === "published") return false;
   return admin || post.publishedAt === undefined;
 }
 
-/** The standings the page states above the writing, newest concern first. */
 export function postNotices(post: Post): PostNotice[] {
   const deletion = post.deletion;
   if (deletion) {
@@ -169,7 +158,6 @@ export function postNotices(post: Post): PostNotice[] {
   return notices;
 }
 
-// standingBeforeDeletion answers what readers could do with the post before it went.
 function standingBeforeDeletion(
   post: Post,
 ): "draft" | "published" | "withdrawn" {
@@ -183,7 +171,6 @@ function scheduleHeading(state: string): string {
   return "Waiting to go live";
 }
 
-/** The writable copy of a post, which is what the writer types into and what is saved. */
 export function draftFromPost(post: Post): Draft {
   return {
     categoryId: post.category.id,
@@ -209,7 +196,6 @@ export function draftFromPost(post: Post): Draft {
   };
 }
 
-/** The pictures the page knows about: what the server just returned, plus uploads it has not seen. */
 export function mergedMedia(
   held: PostMedia[],
   saved: PostMedia[],
@@ -218,7 +204,6 @@ export function mergedMedia(
   return [...saved, ...held.filter((one) => !known.has(one.id))];
 }
 
-/** The projects a release may name, keeping a post's own project listed after it retires. */
 export function namedRelease(
   open: PublicationApp[],
   post: Post,

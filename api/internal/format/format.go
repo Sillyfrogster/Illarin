@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Media points to one image found by the probe.
 type Media struct {
 	Role        media.Role
 	ImageID     uint32
@@ -22,14 +21,12 @@ type Media struct {
 	Name        string
 }
 
-// Parsed is the content a module reads from a source.
 type Parsed struct {
-	Kind   string
-	Format string
-	Tags   []string
-	IsNSFW *bool
-	Media  []Media
-	// CreatedAt is the date the file carries. Nil means the file does not say.
+	Kind      string
+	Format    string
+	Tags      []string
+	IsNSFW    *bool
+	Media     []Media
 	CreatedAt *time.Time
 	Header    Header
 	Elements  []block.Element
@@ -37,15 +34,11 @@ type Parsed struct {
 	Protected ProtectedImport
 }
 
-// ProtectedImport contains protected content that a format module separated
-// before storage.
 type ProtectedImport struct {
 	Prompts []ProtectedPrompt
 	Apps    []string
 }
 
-// ProtectedPrompt is a prompt fragment withheld by a source format. SourceKey is
-// optional compatibility metadata and is not required for prompts authored in Illarin.
 type ProtectedPrompt struct {
 	FragmentID    uuid.UUID
 	SourceKey     string
@@ -53,7 +46,6 @@ type ProtectedPrompt struct {
 	ReuseExisting bool
 }
 
-// Header is creator-authored identity stored above the blocks.
 type Header struct {
 	Name           string
 	Blurb          string
@@ -62,10 +54,8 @@ type Header struct {
 	Nickname       string
 }
 
-// MaxBlurbRunes limits catalog copy without truncating the source.
 const MaxBlurbRunes = 400
 
-// Owner identifies what a preserved payload belongs to.
 type Owner string
 
 const (
@@ -74,7 +64,6 @@ const (
 	OwnerItem    Owner = "item"
 )
 
-// Remainder is source data a reader could not model.
 type Remainder struct {
 	Owner     Owner
 	OwnerID   uuid.UUID
@@ -102,7 +91,6 @@ const (
 	ColumnDropped   ColumnDispositionKind = "dropped"
 )
 
-// ColumnDisposition accounts for one database source column.
 type ColumnDisposition struct {
 	Table       string
 	Column      string
@@ -111,21 +99,18 @@ type ColumnDisposition struct {
 	Reason      string
 }
 
-// MappedColumn declares a source column that reaches the destination named.
 func MappedColumn(table, column, destination string) ColumnDisposition {
 	return ColumnDisposition{
 		Table: table, Column: column, Disposition: ColumnMapped, Destination: destination,
 	}
 }
 
-// PreservedColumn declares a source column kept verbatim at the destination named.
 func PreservedColumn(table, column, destination string) ColumnDisposition {
 	return ColumnDisposition{
 		Table: table, Column: column, Disposition: ColumnPreserved, Destination: destination,
 	}
 }
 
-// DroppedColumn declares a source column that does not migrate, and why.
 func DroppedColumn(table, column, reason string) ColumnDisposition {
 	return ColumnDisposition{
 		Table: table, Column: column, Disposition: ColumnDropped, Reason: reason,
@@ -162,19 +147,16 @@ const (
 	ValueArray   ValueType = "array"
 )
 
-// Recognition is declared evidence that a payload belongs to one format.
 type Recognition struct {
-	Kind       RecognitionKind
-	Containers []probe.Container
-	Path       []string
-	Values     []string
-	Required   map[string]ValueType
-	LegacyOnly bool
-	// SupersededBy names values at the same Path that outrank this one.
+	Kind         RecognitionKind
+	Containers   []probe.Container
+	Path         []string
+	Values       []string
+	Required     map[string]ValueType
+	LegacyOnly   bool
 	SupersededBy []string
 }
 
-// ClaimByDeclaration matches a file against declared recognition rules.
 func ClaimByDeclaration(file probe.Inspection, declaration Declaration) (Claim, bool) {
 	for _, recognition := range declaration.Recognition {
 		if supersededInFile(file, recognition) {
@@ -289,18 +271,15 @@ const (
 	SupportNone    SupportGrade = "none"
 )
 
-// ContentCondition decides when partial support applies.
 type ContentCondition struct {
 	Description string
 	Matches     func(block.Content) bool
 }
 
 type RoleSupport struct {
-	Grade     SupportGrade
-	Condition *ContentCondition
-	// DropWhen identifies content the format cannot carry.
-	DropWhen *ContentCondition
-	// Destination names a nonstandard output location.
+	Grade       SupportGrade
+	Condition   *ContentCondition
+	DropWhen    *ContentCondition
 	Destination string
 }
 
@@ -321,24 +300,17 @@ type ContentLimits struct {
 	ItemBytes       int
 }
 
-// Boilerplate identifies empty tool-stamped data.
 type Boilerplate struct {
 	Namespace string
-	// Path is empty when the namespace itself holds the value.
-	Path []string
-	// Unchosen lists defaults written when nobody picked a value.
-	Unchosen []string
+	Path      []string
+	Unchosen  []string
 }
 
-// PreservationDeclaration locates preserved namespaces in a format.
 type PreservationDeclaration struct {
-	// Body names the format's leftover top-level keys.
-	Body string
-	// Container locates an object whose keys are namespaces.
+	Body      string
 	Container []string
 }
 
-// RecordsNothing reports whether a preserved payload is empty boilerplate.
 func (d Declaration) RecordsNothing(namespace string, payload []byte) bool {
 	for _, entry := range d.Boilerplate {
 		if entry.Namespace != namespace {
@@ -400,33 +372,28 @@ func scalarText(value json.RawMessage) string {
 	return string(bytes.TrimSpace(value))
 }
 
-// Declaration is one format module's static contract.
 type Declaration struct {
-	ID          string
-	Label       string
-	Kind        string
-	Kinds       []string
-	Input       Input
-	Columns     []ColumnDisposition
-	Anomalies   []AnomalyDeclaration
-	Direction   Direction
-	Recognition []Recognition
-	Roles       map[block.Role]DirectionalRoleSupport
-	// Header names the asset fields this writer puts in its output.
-	Header        []HeaderField
-	Slots         []SlotDeclaration
-	Limits        ContentLimits
-	ConsumedKeys  []string
-	Boilerplate   []Boilerplate
-	Preservation  PreservationDeclaration
-	TestedOrigins []string
-	// PreservesOrigins names exceptional compatible source modules.
+	ID               string
+	Label            string
+	Kind             string
+	Kinds            []string
+	Input            Input
+	Columns          []ColumnDisposition
+	Anomalies        []AnomalyDeclaration
+	Direction        Direction
+	Recognition      []Recognition
+	Roles            map[block.Role]DirectionalRoleSupport
+	Header           []HeaderField
+	Slots            []SlotDeclaration
+	Limits           ContentLimits
+	ConsumedKeys     []string
+	Boilerplate      []Boilerplate
+	Preservation     PreservationDeclaration
+	TestedOrigins    []string
 	PreservesOrigins []string
-	// CrossPlatform requires an explicit allowance.
-	CrossPlatform bool
+	CrossPlatform    bool
 }
 
-// ValidateDeclaration checks a module's static contract.
 func ValidateDeclaration(d Declaration) error {
 	checks := []func(Declaration) error{
 		validateDeclarationShape,
@@ -484,7 +451,6 @@ func validateColumns(d Declaration) error {
 	return ValidateColumns(d.Columns)
 }
 
-// ValidateColumns checks that every source column is accounted for once.
 func ValidateColumns(columns []ColumnDisposition) error {
 	seenColumns := make(map[string]bool, len(columns))
 	for _, column := range columns {
@@ -516,7 +482,6 @@ func validateAnomalies(d Declaration) error {
 	return ValidateAnomalies(d.Anomalies)
 }
 
-// ValidateAnomalies checks an ahead-of-run anomaly policy.
 func ValidateAnomalies(anomalies []AnomalyDeclaration) error {
 	seenAnomalies := make(map[string]bool, len(anomalies))
 	for _, anomaly := range anomalies {

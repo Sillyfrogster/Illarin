@@ -20,7 +20,6 @@ import { cn } from "@/lib/cn";
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-/** Signing in and creating an account are one form, because they ask the same things. */
 export function AccountForm({
   discordError,
   mode,

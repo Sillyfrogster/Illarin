@@ -4,7 +4,6 @@ import { AlertCircle, Check } from "lucide-react";
 import type { ReadinessItem } from "@/lib/api/query";
 import { type ReadinessTarget, readinessTarget } from "@/lib/readiness";
 
-/** What publication waits on, and the way to each thing that is still missing. */
 export function ReadinessList({
   items,
   onGo,

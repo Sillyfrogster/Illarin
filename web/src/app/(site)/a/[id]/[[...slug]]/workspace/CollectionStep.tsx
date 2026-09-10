@@ -29,7 +29,6 @@ export type CollectionRow = {
   sealed?: boolean;
 };
 
-/** A collection is its list or one of its items, never both at once, so each gets the whole rail. */
 export function CollectionStep({
   above,
   children,

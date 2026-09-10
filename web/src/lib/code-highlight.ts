@@ -15,7 +15,6 @@ import yaml from "highlight.js/lib/languages/yaml";
 import { createLowlight } from "lowlight";
 import type { PostLanguage } from "./post-document";
 
-/** The name a reader sees for each language label. */
 export const LANGUAGE_LABELS: Record<PostLanguage, string> = {
   plain: "Plain text",
   bash: "Bash",
@@ -34,7 +33,6 @@ export const LANGUAGE_LABELS: Record<PostLanguage, string> = {
   yaml: "YAML",
 };
 
-/** The part a run of code plays, which is all the article distinguishes. */
 export type CodeRole = "comment" | "keyword" | "literal" | "name";
 
 export type CodeRun = { text: string; role?: CodeRole };
@@ -91,7 +89,6 @@ const lowlight = createLowlight({
   yaml,
 });
 
-/** Highlighting is derived from the code and its label, never stored beside it. */
 export function highlightCode(
   source: string,
   language: PostLanguage,

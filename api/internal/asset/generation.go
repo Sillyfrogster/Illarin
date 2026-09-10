@@ -19,9 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Content generation advances when a change alters downloadable bytes.
-
-// contentFingerprint excludes page arrangement and digests elements by ID.
 func (s *Service) contentFingerprint(
 	ctx context.Context,
 	q db.DBTX,
@@ -45,8 +42,6 @@ func (s *Service) contentFingerprint(
 	if err != nil {
 		return "", fmt.Errorf("read the asset to fingerprint: %w", err)
 	}
-	// The origin decides which writers are offered and which preserved
-	// namespaces travel, so a moved origin is a moved file.
 	fmt.Fprintf(digest, "asset\x00%s\x00%s\n", kind, origin.String)
 
 	values := map[format.HeaderField]string{
@@ -75,12 +70,9 @@ func (s *Service) contentFingerprint(
 		return bytes.Compare(a.ID[:], b.ID[:])
 	})
 	for _, element := range elements {
-		// An element the creator has left empty is one no writer writes, so a
-		// block added and not yet filled in changes no file.
 		if element.Content == nil || element.Content.Empty() {
 			continue
 		}
-		// Prompt protection does not change generated content.
 		if prompts, ok := element.Content.(block.PromptList); ok {
 			prompts.Fragments = append([]block.PromptFragment(nil), prompts.Fragments...)
 			for index := range prompts.Fragments {
@@ -104,9 +96,6 @@ func (s *Service) contentFingerprint(
 	return hex.EncodeToString(digest.Sum(nil)), nil
 }
 
-// fingerprintPreserved digests what the asset kept from the file it arrived
-// as, exactly as it is stored. A namespace deleted or replaced is a namespace
-// the next download will not carry.
 func fingerprintPreserved(
 	ctx context.Context,
 	q db.DBTX,
@@ -135,10 +124,6 @@ func fingerprintPreserved(
 	return rows.Err()
 }
 
-// fingerprintPictures digests the cover and every image an element points at,
-// which are the pictures a writer may put in the file. The blob behind each one
-// stands for its bytes, so a replaced picture reads as a changed file without
-// any of them being opened.
 func fingerprintPictures(
 	ctx context.Context,
 	q db.DBTX,
@@ -184,10 +169,6 @@ func fingerprintPictures(
 	return rows.Err()
 }
 
-// moveContentGeneration advances the counter where the change just made would
-// alter a file a reader could download, and leaves it alone otherwise. The
-// before fingerprint has to have been taken in this transaction, under the row
-// lock the change itself holds.
 func (s *Service) moveContentGeneration(
 	ctx context.Context,
 	tx pgx.Tx,

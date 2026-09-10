@@ -13,7 +13,6 @@ const SEARCH_FROM = 6;
 const CHOICE =
   "inline-flex min-h-11 items-center rounded-control bg-deep px-3.5 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45";
 
-/** The blocks a creator can still put on this page, grouped by where their content ends up. */
 export function BlockCatalog() {
   const workspace = useWorkspace();
   const { addableBlocks, arrangement, blocks } = workspace;

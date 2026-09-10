@@ -61,7 +61,6 @@ export type BlockGrip = {
   onDragStart: DragEventHandler;
 };
 
-/** The controls a block carries, held together so they read as one instrument. */
 export function BlockTools({
   block,
   grip,
@@ -319,7 +318,6 @@ const GLYPH: Record<BlockLayout, string> = {
   trio: "grid-cols-3",
 };
 
-/** The shape a layout puts a block's content into, drawn at the size of an icon. */
 function LayoutGlyph({ layout }: { layout: BlockLayout }) {
   return (
     <span

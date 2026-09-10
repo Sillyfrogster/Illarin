@@ -19,7 +19,6 @@ const (
 	maxHeadingLevel = 4
 )
 
-// Problem says what is wrong with a document and where it is.
 type Problem struct {
 	Path    string
 	Message string
@@ -29,7 +28,6 @@ func (p Problem) Error() string {
 	return p.Path + ": " + p.Message
 }
 
-// blockPlaces is the set of blocks each container accepts.
 var blockPlaces = map[string][]string{
 	"content": {
 		"paragraph", "heading", "bulletList", "orderedList", "taskList",
@@ -42,8 +40,6 @@ var blockPlaces = map[string][]string{
 	"tableCell": {"paragraph"},
 }
 
-// Read turns submitted bytes into a document, refusing anything outside the
-// vocabulary rather than keeping it invisibly.
 func Read(raw []byte) (Document, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &body); err != nil {
@@ -73,7 +69,6 @@ func Read(raw []byte) (Document, error) {
 	return Document{Blocks: blocks}, nil
 }
 
-// Empty answers whether a document would publish as a blank page.
 func (d Document) Empty() bool {
 	return d.textLength() == 0
 }
@@ -129,7 +124,6 @@ func spanLength(spans []Span) int {
 	return total
 }
 
-// reader carries the counts and names that bound one document as it is read.
 type reader struct {
 	nodes   int
 	text    int
@@ -203,7 +197,6 @@ func (r *reader) block(path string, raw json.RawMessage, place string, depth int
 	return nil, Problem{Path: path + ".type", Message: fmt.Sprintf("%q is not a post block.", kind)}
 }
 
-// node counts one node against the document bound and names its type.
 func (r *reader) node(path string, raw json.RawMessage) (map[string]json.RawMessage, string, error) {
 	r.nodes++
 	if r.nodes > maxNodes {

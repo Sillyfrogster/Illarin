@@ -11,7 +11,6 @@ type ContentsBlock = Pick<AssetBlock, "id" | "title">;
 const TOOL =
   "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
 
-/** The blocks a page holds, and the one way to put another on it. */
 export function ContentsBar({
   blocks,
   shellClassName,

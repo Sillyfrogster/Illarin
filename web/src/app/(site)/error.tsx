@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DeadEnd } from "@/components/ui/dead-end";
 
-/** What a page says when Illarin itself broke on the way to it. */
 export default function SiteError({
   error,
   retry,

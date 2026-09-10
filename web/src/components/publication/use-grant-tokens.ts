@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { readTokens } from "@/lib/api/publication";
 import type { PublicationToken } from "@/lib/api/query";
 
-/** Reads one grant's tokens, and reads them again after any change to them. */
 export function useGrantTokens(
   grantId: string,
   onFailure: (message: string) => void,

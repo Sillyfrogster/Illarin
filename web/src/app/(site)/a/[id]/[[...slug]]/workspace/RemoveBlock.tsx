@@ -9,7 +9,6 @@ import { useWorkspace } from "./state";
 const KEEP =
   "inline-flex min-h-11 items-center self-start rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45";
 
-/** The blocks with room for everything one block would leave behind. */
 export function contentDestinations(source: AssetBlock, blocks: AssetBlock[]) {
   const movable = source.elements.filter((element) => !element.pinned).length;
   if (movable === 0) return [];
@@ -20,7 +19,6 @@ export function contentDestinations(source: AssetBlock, blocks: AssetBlock[]) {
   );
 }
 
-/** What a removal takes with it, and the ways to keep it instead. */
 export function RemoveBlock({ block }: { block: AssetBlock }) {
   const workspace = useWorkspace();
   const { arrangement } = workspace;

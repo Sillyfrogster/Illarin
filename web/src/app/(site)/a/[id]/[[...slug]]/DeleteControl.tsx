@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { deleteAsset } from "@/lib/api/query";
 
-/** Moving an asset to Deleted, and the confirmation that asks first. */
 export function DeleteControl({
   assetId,
   creator,

@@ -37,12 +37,10 @@ const (
 	internalDerivativePrefix = "/_illarin/derivatives/"
 )
 
-// NewStore opens a content-addressed store rooted at root.
 func NewStore(pool *pgxpool.Pool, root string) (Store, error) {
 	return NewStoreWithCapacity(pool, root, Capacity{})
 }
 
-// NewStoreWithCapacity opens a content-addressed store with disk safeguards.
 func NewStoreWithCapacity(pool *pgxpool.Pool, root string, capacity Capacity) (Store, error) {
 	if capacity.FreeSpaceReserveBytes < 0 || capacity.MaximumBlobWriteBytes < 0 {
 		return nil, fmt.Errorf("storage capacity values cannot be negative")

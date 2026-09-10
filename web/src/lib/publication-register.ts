@@ -9,7 +9,6 @@ import type {
 import { readableDate } from "@/lib/dates";
 import { deliveryState, EVENT_WORDS } from "@/lib/publication-delivery";
 
-/** One of the things the publication authority keeps, and the page shows one at a time. */
 export type Register =
   | "contributors"
   | "apps"
@@ -17,7 +16,6 @@ export type Register =
   | "destinations"
   | "deliveries";
 
-/** The order the registers are offered in, everywhere they are offered. */
 export const REGISTERS: Register[] = [
   "contributors",
   "apps",
@@ -38,10 +36,8 @@ export function registerName(register: Register): string {
   return NAMES[register];
 }
 
-/** What a register carries, and whether that number is asking to be looked at. */
 export type RegisterStanding = { count: number | null; attention: boolean };
 
-/** Counts what each register still uses; announcements count only what stopped short. */
 export function registerStandings(held: {
   grants: PublicationGrant[];
   apps: PublicationApp[];
@@ -65,7 +61,6 @@ function kept(count: number): RegisterStanding {
   return { attention: false, count };
 }
 
-/** What an empty register says, which is what to do about it rather than that it is empty. */
 export function nothingIn(
   register: Register,
   held: { apps: PublicationApp[] },
@@ -87,7 +82,6 @@ export function nothingIn(
   return "No post has announced anywhere yet.";
 }
 
-/** What an empty delivery listing says, which depends on what was looked for. */
 export function nothingDelivered(view: string): string {
   if (view === "failed") return "Nothing has stopped short.";
   if (view === "pending") return "Nothing is on its way.";
@@ -98,7 +92,6 @@ export function nothingDelivered(view: string): string {
   return "No post has announced anywhere yet.";
 }
 
-/** One line naming the app a contributor writes for and what they may file it as. */
 export function grantAllowance(grant: PublicationGrant): string {
   const app = grant.app.retired
     ? `${grant.app.name} (retired)`
@@ -107,7 +100,6 @@ export function grantAllowance(grant: PublicationGrant): string {
   return `${app} · ${categories} · ${grant.defaultCategory.label} by default`;
 }
 
-/** One line saying what a destination is doing and since when. */
 export function destinationStanding(one: PublicationDestination): string {
   if (
     one.previousSecretUntil &&
@@ -127,7 +119,6 @@ export function destinationStanding(one: PublicationDestination): string {
   return `Receiving. Proved it was listening on ${readableDate(one.verifiedAt)}.`;
 }
 
-/** What a destination receives, and the role it may mention. */
 export function destinationTakes(one: PublicationDestination): string {
   if (one.channel) {
     const role = one.channel.roleName;
@@ -137,7 +128,6 @@ export function destinationTakes(one: PublicationDestination): string {
   return one.events.map((event) => EVENT_WORDS[event].word).join(" · ");
 }
 
-/** Which of the three standing changes a destination is open to right now. */
 export function destinationActions(one: PublicationDestination): {
   rotate: boolean;
   switchOff: boolean;
@@ -150,12 +140,10 @@ export function destinationActions(one: PublicationDestination): {
   };
 }
 
-/** Only an announcement Illarin gave up on, to a destination that still exists, can be sent again. */
 export function canReplay(one: PostDelivery): boolean {
   return deliveryState(one) === "gaveUp" && !one.removed;
 }
 
-/** What one token has done, in the order that matters when you are choosing one to revoke. */
 export function tokenStanding(one: PublicationToken): string {
   const said = [`Made ${readableDate(one.createdAt)}`];
   said.push(
@@ -167,7 +155,6 @@ export function tokenStanding(one: PublicationToken): string {
   return said.join(" · ");
 }
 
-/** How a token that no longer works ended. */
 export function tokenEnded(one: PublicationToken): string {
   if (one.revokedAt) return `Revoked ${readableDate(one.revokedAt)}`;
   if (one.expiresAt) return `Expired ${readableDate(one.expiresAt)}`;

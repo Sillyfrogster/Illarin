@@ -66,8 +66,6 @@ func (neverClaimsModule) Parse(context.Context, probe.Inspection, format.Claim) 
 
 func (opaqueTestModule) ID() string { return "test_opaque" }
 
-// The stand-in reads and writes, because an asset with no writer is offered no
-// download at all.
 func (opaqueTestModule) Declaration() format.Declaration {
 	declaration := testReaderDeclaration("test_opaque", "character")
 	declaration.Label = "Test format"
@@ -343,8 +341,6 @@ func newVerifiedIngestRouter(
 	return router, session, assets
 }
 
-// newVerifiedIngestRouterWithPool also returns the pool, for a test that needs
-// a row in a state no route can reach.
 func newVerifiedIngestRouterWithPool(
 	t *testing.T,
 	registry *format.Registry,
@@ -1334,8 +1330,6 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	}
 }
 
-// servedSourcePath is the file nginx is told to send, which is how a caller
-// can see that a download changed without Go reading the bytes.
 func servedSourcePath(t *testing.T, r *gin.Engine, assetID string) string {
 	t.Helper()
 	rec := send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))

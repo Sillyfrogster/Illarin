@@ -6,7 +6,6 @@ import type {
 import { writesInPlace as writtenInPlace } from "@/lib/page-arrangement";
 import type { AllowedApp } from "../SealedPolicy";
 
-/** The element types the page itself can write. Everything else keeps its own editor. */
 export function writesInPlace(element: AssetElement): boolean {
   return writtenInPlace(element.type);
 }
@@ -64,7 +63,6 @@ export function replaceElement(
   };
 }
 
-/** Which blocks a creator has written since the last save, compared by content alone. */
 export function changedBlockIds(
   draft: AssetBlock[],
   saved: AssetBlock[],
@@ -123,7 +121,6 @@ export function isEmptyContent(element: AssetElement): boolean {
   return element.isEmpty;
 }
 
-/** The first field of an element, so arriving from search lands on something writable. */
 export function firstCursor(element: AssetElement): string | null {
   if (!writesInPlace(element)) return null;
   const content = element.content as Record<string, unknown>;

@@ -49,11 +49,6 @@ type Stage =
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-/**
- * One route serving two ways an installation asks for a door into an account:
- * a browser request the application opened itself, and a code typed by hand
- * where it cannot open one. Both end at the same decision.
- */
 export function LinkApproval() {
   const search = useSearchParams();
   const { account } = useAuth();
@@ -439,7 +434,6 @@ export function LinkApproval() {
   );
 }
 
-/** The page's own heading, which names the situation the reader is actually in. */
 function Frame({ children, lede }: { children: ReactNode; lede: string }) {
   return (
     <>

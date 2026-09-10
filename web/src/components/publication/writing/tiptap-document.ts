@@ -18,7 +18,6 @@ import {
 } from "@/lib/post-document";
 import { isSafeAddress } from "@/lib/post-link";
 
-/** The editor node each Illarin block is written as, and read back from. */
 const EDITOR_NODES: Record<string, string> = {
   quote: "blockquote",
   divider: "horizontalRule",
@@ -117,7 +116,6 @@ function editorBlock(block: PostBlock, media: Held): JSONContent {
   }
 }
 
-// editorPicture gives a placed picture the address the editor draws it from.
 function editorPicture(
   picture: PostImage | PostGalleryImage,
   media: Held,
@@ -264,8 +262,6 @@ function illarinTasks(nodes: JSONContent[] | undefined): PostTask[] {
     .filter((task) => task.content.length > 0);
 }
 
-// illarinRows squares the table off, because Go stores a rectangle and a
-// pasted table can arrive with merged or missing cells.
 function illarinRows(nodes: JSONContent[] | undefined): PostRow[] {
   const rows = (nodes ?? [])
     .filter((node) => node.type === "tableRow")
@@ -343,7 +339,6 @@ function codeSource(nodes: JSONContent[] | undefined): string {
     .join("");
 }
 
-// illarinPicture keeps only what Illarin stores: which upload, and what it says.
 function illarinPicture<kind extends "image" | "galleryImage">(
   attrs: Record<string, unknown> | undefined,
   type: kind,
@@ -361,7 +356,6 @@ function illarinPicture<kind extends "image" | "galleryImage">(
   } as kind extends "image" ? PostImage : PostGalleryImage;
 }
 
-// written keeps a line the author has not typed into out of the working copy.
 function written(spans: PostSpan[]): boolean {
   return spans.some((span) => span.text.trim().length > 0);
 }

@@ -119,7 +119,6 @@ func plainText(path, value string, limit int) error {
 	return nil
 }
 
-// MediaIDs answers every picture the document places, in reading order.
 func (d Document) MediaIDs() []string {
 	found := make([]string, 0, 4)
 	for _, block := range d.Blocks {

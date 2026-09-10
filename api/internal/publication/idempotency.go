@@ -10,17 +10,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// AttemptStale is how long a claimed key waits for its request before another
-// request may take it over. It outlasts the longest deadline a route carries.
 const AttemptStale = 20 * time.Minute
 
-// AttemptRetention is how long a finished outcome is kept for a retry.
 const AttemptRetention = 24 * time.Hour
 
-// MaxAttemptResponse is the largest answer worth keeping for a retry.
 const MaxAttemptResponse = 1 << 20
 
-// Attempt is what an idempotency key already knows about the request carrying it.
 type Attempt struct {
 	Fresh       bool
 	Running     bool
@@ -29,8 +24,6 @@ type Attempt struct {
 	Response    []byte
 }
 
-// ClaimAttempt takes one key for one credential and operation, or answers what
-// the earlier request under that key did.
 func (s *Service) ClaimAttempt(
 	ctx context.Context,
 	tokenID uuid.UUID,
@@ -72,7 +65,6 @@ func (s *Service) ClaimAttempt(
 	return found, nil
 }
 
-// FinishAttempt keeps what the claimed key produced so a retry gets it back.
 func (s *Service) FinishAttempt(
 	ctx context.Context,
 	tokenID uuid.UUID,
@@ -98,8 +90,6 @@ func (s *Service) FinishAttempt(
 	return nil
 }
 
-// ReleaseAttempt hands a claimed key back when the request failed in a way the
-// caller is meant to retry.
 func (s *Service) ReleaseAttempt(
 	ctx context.Context,
 	tokenID uuid.UUID,
@@ -116,12 +106,8 @@ func (s *Service) ReleaseAttempt(
 	return nil
 }
 
-// SweepInterval is how often the finished keys past their window are dropped.
 const SweepInterval = time.Hour
 
-// RunSweeper drops what the publication has outlived until the context is
-// done: idempotency keys past their window, and rotated signing secrets past
-// the overlap they were kept for.
 func (s *Service) RunSweeper(ctx context.Context, onError func(error)) {
 	ticker := time.NewTicker(SweepInterval)
 	defer ticker.Stop()
@@ -141,7 +127,6 @@ func (s *Service) RunSweeper(ctx context.Context, onError func(error)) {
 	}
 }
 
-// SweepAttempts drops the keys that have outlived the retry window.
 func (s *Service) SweepAttempts(ctx context.Context) (int64, error) {
 	command, err := s.pool.Exec(ctx, `
 		delete from publication_idempotency where claimed_at < $1

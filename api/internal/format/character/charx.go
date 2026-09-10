@@ -11,13 +11,8 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-// embeddedPrefix is how a CharX card points at a file beside it in the archive.
-// The misspelling is the standard's.
 const embeddedPrefix = "embeded://"
 
-// CharXModule reads a CharX archive: a card and the pictures it names, zipped
-// together. The card inside declares chara_card_v3, so the module owns that
-// spec rather than one of its own.
 type CharXModule struct{}
 
 func (CharXModule) ID() string { return CharX }
@@ -49,8 +44,6 @@ type cardAsset struct {
 	Ext  string `json:"ext"`
 }
 
-// archivedImages gives a role to each picture the card names in the archive.
-// The card decides what is in it; a picture nothing points at is left alone.
 func archivedImages(read card, file probe.Inspection) []format.Media {
 	var assets []cardAsset
 	if raw, ok := read.fields["assets"]; ok {
@@ -87,8 +80,6 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 	return found
 }
 
-// assetRole maps a CharX asset type onto Illarin's role vocabulary. A card
-// carries one avatar, so a second icon becomes an alternate.
 func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
 	switch asset.Type {
 	case "icon":
@@ -99,7 +90,6 @@ func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
 	case "emotion":
 		return media.Expression, true
 	case "user_icon":
-		// The reader's own picture, not the character's.
 		return "", false
 	default:
 		return media.Gallery, true

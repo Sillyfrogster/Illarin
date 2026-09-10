@@ -20,8 +20,6 @@ const (
 	defaultAccountStorageCapBytes       = 1 << 30
 )
 
-// Config holds every setting the service runs on. They are gathered here and
-// handed down, so nothing reaches for a setting on its own.
 type Config struct {
 	Port                         string
 	SiteURL                      string
@@ -61,7 +59,6 @@ type DiscordSettings struct {
 	ClientSecret string
 }
 
-// Load reads settings from the environment and rejects anything missing.
 func Load() (Config, error) {
 	databaseURL := get("DATABASE_URL", "")
 	cfg := Config{

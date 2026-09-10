@@ -6,13 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Item IDs are minted locally and never imported. Preserved fields key by them
-// so reorder and deletion cannot attach data to a neighboring item.
-
-// NewItemID mints the id one new item carries for the rest of its life.
 func NewItemID() uuid.UUID { return uuid.New() }
 
-// itemID keeps the id an item arrived with and mints one where it has none.
 func itemID(supplied uuid.UUID) uuid.UUID {
 	if supplied != uuid.Nil {
 		return supplied
@@ -20,7 +15,6 @@ func itemID(supplied uuid.UUID) uuid.UUID {
 	return NewItemID()
 }
 
-// ItemIDs returns an element's item IDs in order for preservation cleanup.
 func ItemIDs(content Content) []uuid.UUID {
 	switch held := content.(type) {
 	case TextSet:
@@ -36,8 +30,6 @@ func ItemIDs(content Content) []uuid.UUID {
 	case EntryTable:
 		return collectItemIDs(held.Entries, func(item Entry) uuid.UUID { return item.ID })
 	case PromptList:
-		// Groups and fragments are both items a preserved key can belong to,
-		// so both are in the one list this element owns.
 		return append(
 			collectItemIDs(held.Groups, func(item PromptGroup) uuid.UUID { return item.ID }),
 			collectItemIDs(held.Fragments, func(item PromptFragment) uuid.UUID { return item.ID })...,
@@ -74,9 +66,6 @@ func collectItemIDs[T any](items []T, id func(T) uuid.UUID) []uuid.UUID {
 	return ids
 }
 
-// mintItemIDs is the upgrade that carries content written before items had ids
-// forward. It gives an id to every item in the named list that lacks one and
-// leaves everything else in the item exactly as it was stored.
 func mintItemIDs(list string) func(json.RawMessage) (json.RawMessage, error) {
 	return func(stored json.RawMessage) (json.RawMessage, error) {
 		var content map[string]json.RawMessage

@@ -262,8 +262,6 @@ func (r *reader) tableCell(path string, raw json.RawMessage, depth int) (Cell, e
 	return Cell{Heading: heading, Blocks: blocks}, nil
 }
 
-// checkTableHeadings holds heading cells to a whole first row, a whole first
-// column, or both, so a reader can be told what every cell is a heading for.
 func checkTableHeadings(path string, rows []Row) error {
 	headingRow := wholeHeading(rows[0].Cells)
 	first := make([]Cell, 0, len(rows))
@@ -287,7 +285,6 @@ func checkTableHeadings(path string, rows []Row) error {
 	return nil
 }
 
-// entry reads one list entry, which holds blocks and the entry's own state.
 func (r *reader) entry(
 	path string,
 	raw json.RawMessage,
@@ -336,8 +333,6 @@ func entryList(
 	return entries, nil
 }
 
-// canonicalSource settles line endings so the same code compares equal
-// whichever editor typed it.
 func canonicalSource(source string) string {
 	source = strings.ReplaceAll(source, "\r\n", "\n")
 	source = strings.ReplaceAll(source, "\r", "\n")

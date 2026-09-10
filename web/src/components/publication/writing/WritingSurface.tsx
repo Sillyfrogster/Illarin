@@ -14,7 +14,6 @@ import { fromEditor, toEditor } from "./tiptap-document";
 import { WritingToolbar } from "./WritingToolbar";
 import { WRITING_SURFACE } from "./writing-surface";
 
-/** The body of the post, written where the reader will read it. */
 export function WritingSurface({
   document,
   media,

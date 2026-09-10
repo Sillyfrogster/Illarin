@@ -17,7 +17,6 @@ import { fileWeight } from "@/lib/file-weight";
 const UNCONFIRMED =
   "Confirm the catalog details below, then hand the file over.";
 
-/** Handing over an original file, on a plate that takes a drop or opens the picker and then names what it holds. */
 export function ImportFile({
   onAccepted,
 }: {

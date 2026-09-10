@@ -9,7 +9,6 @@ const FILL = {
   faint: "var(--v-mute)",
 } as const;
 
-/** The blade between two stars that share their tips */
 export const MARK_BLADE =
   "M12 .1C12 8.192 15.648 12 23.4 12 15.648 12 12 15.808 12 23.9 12 15.808 8.352 12 .6 12 8.352 12 12 8.192 12 .1Z" +
   "M12 .1C12 10.215 13.71 12 23.4 12 13.71 12 12 13.785 12 23.9 12 13.785 10.29 12 .6 12 10.29 12 12 10.215 12 .1Z";

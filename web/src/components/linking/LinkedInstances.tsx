@@ -20,7 +20,6 @@ type Notice = { kind: "said" | "trouble"; message: string };
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-/** Every installation that can reach this account, and the way to cut one off. */
 export function LinkedInstances() {
   const { account } = useAuth();
   const [instances, setInstances] = useState<

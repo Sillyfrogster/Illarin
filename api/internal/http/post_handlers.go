@@ -28,8 +28,6 @@ func (h *Handlers) ListPosts(c *gin.Context, params ListPostsParams) {
 	c.JSON(http.StatusOK, PostList{Posts: h.toAPIPosts(held)})
 }
 
-// listing answers the reader the request asked for, which is the active posts
-// unless it asked for the deleted ones.
 func (h *Handlers) listing(params ListPostsParams) func(
 	context.Context, publication.Editor,
 ) ([]publication.Post, error) {
@@ -278,7 +276,6 @@ func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
 	c.JSON(http.StatusOK, toAPIPublicPost(found))
 }
 
-// refusePostMedia answers an upload the byte path could not take.
 func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
@@ -297,9 +294,6 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	}
 }
 
-// postEditor answers the credential acting on a post and how far its access
-// reaches. A publication token reaches its own grant; a session reaches
-// everything the account behind it may manage.
 func (h *Handlers) postEditor(c *gin.Context, action string) (publication.Editor, bool) {
 	if bearing, ok := publicationBearing(c); ok {
 		return bearing.Editor(), true
@@ -505,7 +499,6 @@ func toAPISummary(found publication.PostSummary) PostSummary {
 	return shown
 }
 
-// showPostMedia addresses a set of pictures, signing a working copy's own.
 func showPostMedia(held []publication.PostMedia, sign func(string) string) []PostMedia {
 	shown := make([]PostMedia, 0, len(held))
 	for _, one := range held {
@@ -580,7 +573,6 @@ func toAPIRelease(found *publication.Release) *PostRelease {
 	return &shown
 }
 
-// toAPIDocument hands on the body Go already validated and stored.
 func toAPIDocument(stored json.RawMessage) PostDocument {
 	var shown PostDocument
 	if err := json.Unmarshal(stored, &shown); err != nil {

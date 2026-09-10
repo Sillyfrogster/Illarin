@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DeadEnd } from "@/components/ui/dead-end";
 
-/** The one answer Illarin gives for an address it holds nothing at, whatever the reason. */
 export function NothingHere() {
   return (
     <DeadEnd

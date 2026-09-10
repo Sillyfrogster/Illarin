@@ -122,7 +122,6 @@ func (c *Client) ExchangeProfile(ctx context.Context, code string) (account.Disc
 	}, nil
 }
 
-// imageURL addresses one Discord CDN image, in the shape the migrated v1 rows already hold.
 func (c *Client) imageURL(collection, subject, hash, query string) string {
 	if hash == "" {
 		return ""

@@ -51,7 +51,6 @@ export type Controls = {
 
 const NEW_TABLE = { rows: 3, cols: 3, withHeaderRow: true };
 
-/** What the bar and the row read. The live editor answers until Tiptap's snapshot has the editor. */
 export function useControls(editor: Editor | null): Controls | null {
   const watched = useEditorState({
     editor,

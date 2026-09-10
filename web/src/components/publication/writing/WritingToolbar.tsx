@@ -35,11 +35,6 @@ const CONTROL =
 
 const ACTIVE = "bg-action text-on-accent hover:bg-action hover:text-on-accent";
 
-/**
- * The bar over the writing. It stays with the column while the writer scrolls,
- * and whatever it opens becomes one row under it rather than a layer over the
- * page, so the writing never leaves the screen.
- */
 export function WritingToolbar({
   editor,
   onUpload,

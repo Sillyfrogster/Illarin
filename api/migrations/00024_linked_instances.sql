@@ -47,8 +47,6 @@ create table linked_instances (
     constraint linked_instances_token_prefix_check
         check (token_prefix ~ '^[BCDFGHJKLMNPQRSTVWXZ23456789]{8}$'),
     constraint linked_instances_scopes_check check (is_instance_scope_set(scopes)),
-    -- A revoked instance keeps its name and dates so a creator sees what they
-    -- cut, and loses the credential so the cut takes effect.
     constraint linked_instances_credential_check check (
         (revoked_at is null and token_hash is not null and octet_length(token_hash) = 32)
         or (revoked_at is not null and token_hash is null)

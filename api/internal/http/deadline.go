@@ -10,27 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Deadlines is how long each kind of route may take. A route answering out of
-// the database and a route sending 32 MB have nothing in common, so they do
-// not share a number.
 type Deadlines struct {
 	JSON     time.Duration
 	Upload   time.Duration
 	Download time.Duration
-	// Deliver is the only route that waits on purpose. It has to outlast the
-	// longest hold the delivery queue takes, or the wait would end in a cut
-	// connection instead of an empty answer.
-	Deliver time.Duration
-	// Verify is for the routes that make a request of their own while the
-	// caller waits, so it outlasts the limits those requests run under.
-	Verify time.Duration
+	Deliver  time.Duration
+	Verify   time.Duration
 }
 
 type Readiness func(context.Context) error
 
-// DefaultDeadlines are what the server runs with. Fifteen minutes for a file
-// still gets 32 MB through on a connection carrying 64 KB a second, which is
-// slower than anything we expect to see.
 func DefaultDeadlines() Deadlines {
 	return Deadlines{
 		JSON:     5 * time.Second,
@@ -41,9 +30,6 @@ func DefaultDeadlines() Deadlines {
 	}
 }
 
-// Register puts every route the service answers on the router, each under a
-// deadline. A route without one is refused rather than served with no limit at
-// all, so adding a route means saying how long it may take.
 func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) error {
 	if readiness == nil {
 		return fmt.Errorf("readiness check is required")
@@ -223,8 +209,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 	return nil
 }
 
-// health says the service is up. It checks nothing else, so a database
-// outage does not read as a dead service.
 func health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
@@ -239,8 +223,6 @@ func ready(check Readiness) gin.HandlerFunc {
 	}
 }
 
-// document serves a file that ships with the binary, so what an implementer
-// reads is what this build answers to.
 func document(mediaType string, body []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -248,24 +230,18 @@ func document(mediaType string, body []byte) gin.HandlerFunc {
 	}
 }
 
-// withDeadline limits a route to d, both on the work it does and on how long
-// it may hold the connection while answering.
 func withDeadline(d time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), d)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
 
-		// A recorded response in a test has no connection to put a deadline on.
 		_ = http.NewResponseController(c.Writer).SetWriteDeadline(time.Now().Add(d))
 
 		c.Next()
 	}
 }
 
-// deadlineByRoute applies whichever deadline belongs to the route that was
-// matched. The generated registration puts every route on one router, so it
-// cannot carry a different middleware for each.
 func deadlineByRoute(limits map[string]time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		d, ok := limits[routeKey(c.Request.Method, c.FullPath())]

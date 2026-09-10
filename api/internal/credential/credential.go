@@ -1,4 +1,3 @@
-// Package credential mints and reads the bearer secrets Illarin hands out.
 package credential
 
 import (
@@ -10,8 +9,6 @@ import (
 	"strings"
 )
 
-// Kind names one family of bearer secret. A secret of one kind never reads as
-// another, so a credential issued for one purpose cannot be spent on another.
 type Kind string
 
 const (
@@ -20,8 +17,6 @@ const (
 	Publication     Kind = "ip1"
 )
 
-// Secret is one bearer secret and the two parts of it worth keeping. The
-// prefix names which credential it is and the hash is all that proves it.
 type Secret struct {
 	Value  string
 	Prefix string
@@ -37,8 +32,6 @@ const (
 	valueLength  = kindLength + 1 + prefixLength + 1 + bodyLength
 )
 
-// Mint makes a new secret of one kind. Only the returned value can ever be
-// spent, and nothing here writes it down.
 func Mint(kind Kind) (Secret, error) {
 	prefix, err := newPrefix()
 	if err != nil {
@@ -52,8 +45,6 @@ func Mint(kind Kind) (Secret, error) {
 	return Secret{Value: value, Prefix: prefix, Hash: hashOf(value)}, nil
 }
 
-// Read answers what a supplied value would have been stored as, and refuses
-// anything the wrong shape before doing any work on it.
 func Read(value string, kind Kind) (Secret, bool) {
 	if len(value) != valueLength {
 		return Secret{}, false
@@ -74,7 +65,6 @@ func Read(value string, kind Kind) (Secret, bool) {
 	return Secret{Value: value, Prefix: parts[1], Hash: hashOf(value)}, true
 }
 
-// Matches compares two stored hashes without leaking where they diverge.
 func Matches(one, other []byte) bool {
 	return subtle.ConstantTimeCompare(one, other) == 1
 }

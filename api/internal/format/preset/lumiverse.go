@@ -14,12 +14,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// LumiverseID identifies presets whose schema version is 1 or 2.
 const LumiverseID = "preset_lumiverse"
 
-// Where a Lumiverse preset's leftovers sit. The first is Illarin's name for
-// the file's own top level, the rest are one item's own keys, and every other
-// namespace is a key of `extensions`.
 const (
 	lumiverseNamespace         = LumiverseID
 	lumiverseBlockNamespace    = LumiverseID + "_block"
@@ -28,8 +24,6 @@ const (
 	lumiverseScriptNamespace   = LumiverseID + "_script"
 )
 
-// lumiversePreservation is where this module keeps what a file carried that
-// Illarin has no place for.
 var lumiversePreservation = preservation{
 	body: lumiverseNamespace, extensions: lvExtensions,
 	reserved: []string{
@@ -38,7 +32,6 @@ var lumiversePreservation = preservation{
 	},
 }
 
-// The file's own top-level keys.
 const (
 	lvSchemaVersion = "schemaVersion"
 	lvBlocks        = "blocks"
@@ -54,8 +47,6 @@ const (
 	lvVersion       = "presetVersion"
 )
 
-// One block's own keys. A block is either a heading or a prompt fragment, and
-// the marker is what says which.
 const (
 	lvBlockID            = "id"
 	lvBlockName          = "name"
@@ -73,7 +64,6 @@ const (
 	lvHeadingMarker      = "category"
 )
 
-// One variable definition's own keys, and one choice's.
 const (
 	lvVarID          = "id"
 	lvVarName        = "name"
@@ -92,7 +82,6 @@ const (
 	lvOptionValue    = "value"
 )
 
-// One script's own keys.
 const (
 	lvScriptName        = "name"
 	lvScriptDescription = "description"
@@ -108,7 +97,6 @@ const (
 	lvScriptRunOnEdit   = "run_on_edit"
 )
 
-// The text a Lumiverse script runs over, and what its replacement changes.
 var (
 	lumiverseScriptTargets = map[string]block.ScriptTarget{
 		"user_input": block.TargetUserInput,
@@ -120,7 +108,6 @@ var (
 	}
 )
 
-// LumiverseModule reads and writes a Lumiverse preset.
 type LumiverseModule struct{}
 
 func (LumiverseModule) ID() string { return LumiverseID }
@@ -130,7 +117,6 @@ func (LumiverseModule) Declaration() format.Declaration {
 	return format.Declaration{
 		ID: LumiverseID, Label: "Lumiverse preset", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
-		// The schema version is the format discriminator, not a compatibility gate.
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionDiscriminator,
 			Containers: []probe.Container{probe.JSON},
@@ -176,7 +162,6 @@ func (LumiverseModule) Declaration() format.Declaration {
 				Write: format.RoleSupport{Grade: format.SupportNone},
 			},
 		},
-		// Description and catalog blurb share one value.
 		Header: []format.HeaderField{
 			format.HeaderName, format.HeaderBlurb, format.HeaderAssetVersion,
 		},
@@ -189,22 +174,15 @@ func (LumiverseModule) Declaration() format.Declaration {
 			lvName, lvDescription, lvVersion, lvBlocks, lvSaved, lvSamplers,
 			lvCompletion, lvAdvanced, lvBehaviour, lvScripts,
 		},
-		// No boilerplate. A preset carries an `extensions` object only where a
-		// tool put something in it, and nothing in the corpus stamps a
-		// namespace that records nothing onto every file.
 		Boilerplate: nil,
 		Preservation: format.PreservationDeclaration{
 			Body: lumiverseNamespace, Container: []string{lvExtensions},
 		},
-		// This module does not convert between preset formats.
 		TestedOrigins:    []string{LumiverseID, format.OriginIllarin, format.OriginV1},
 		PreservesOrigins: []string{format.OriginV1},
 	}
 }
 
-// lumiverseSettingSupport is what one settings group survives. Reading takes
-// whatever of the app's names the file supplied; writing puts back the names
-// this app reads and no others, so a name from somewhere else stays behind.
 func lumiverseSettingSupport(named []slot) format.DirectionalRoleSupport {
 	return format.DirectionalRoleSupport{
 		Read:  format.RoleSupport{Grade: format.SupportFull},
@@ -216,7 +194,6 @@ func (m LumiverseModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-// Parse reads a Lumiverse preset and preserves fields it cannot model.
 func (m LumiverseModule) Parse(
 	_ context.Context,
 	file probe.Inspection,
@@ -226,8 +203,6 @@ func (m LumiverseModule) Parse(
 	if !ok {
 		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", LumiverseID)
 	}
-	// The probe's payload is read by every module that looked at this file, so
-	// the leftovers are computed on a copy of it.
 	source := maps.Clone(payload.Root)
 
 	var blocks []json.RawMessage
@@ -314,8 +289,6 @@ func protectedImport(prompts []format.ProtectedPrompt) format.ProtectedImport {
 	}
 }
 
-// boundBlurb binds descriptions that fit the catalog. Longer text stays
-// preserved in the source payload.
 func boundBlurb(source map[string]json.RawMessage) string {
 	var description string
 	if !keys.Take(source, lvDescription, &description) {
@@ -328,9 +301,6 @@ func boundBlurb(source map[string]json.RawMessage) string {
 	return description
 }
 
-// readNested reads one of the file's own objects into an element and puts back
-// whatever the element did not take. An object emptied of everything this
-// module reads is a key the file no longer needs.
 func readNested(
 	source map[string]json.RawMessage,
 	key string,
@@ -353,9 +323,6 @@ func readNested(
 	return element, filled
 }
 
-// savedValues takes the choices a creator saved for their variables. They are
-// keyed by the block the variable belongs to, so they are read here and handed
-// to whichever variable they name.
 func savedValues(source map[string]json.RawMessage) map[string]map[string]json.RawMessage {
 	var saved map[string]map[string]json.RawMessage
 	if keys.Take(source, lvSaved, &saved) {

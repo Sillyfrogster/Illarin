@@ -22,8 +22,6 @@ const (
 	filePart     = "file"
 )
 
-// readMetadata reads the catalog fields, which come first because the file is
-// stored as it arrives and the fields have to be known by then.
 func readMetadata(parts *multipart.Reader) (CreateAssetRequest, error) {
 	part, err := nextPart(parts, metadataPart)
 	if err != nil {
@@ -132,9 +130,6 @@ func ingestInput(
 	return in
 }
 
-// refusal is a reason a request cannot be accepted, worded for whoever sent
-// it. The cause stays attached so the ceiling can still be recognised through
-// the layers that wrapped it.
 type refusal struct {
 	reason string
 	cause  error
@@ -179,7 +174,6 @@ func (h *Handlers) refuse(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{"error": "could not create the asset"})
 }
 
-// readableSize writes a byte ceiling the way a person says it, so a refusal names a size a creator can compare their own file against.
 func readableSize(bytes int64) string {
 	units := []struct {
 		suffix string

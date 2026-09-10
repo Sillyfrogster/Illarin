@@ -26,7 +26,6 @@ import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
 const ROW =
   "flex min-h-12 items-center rounded-control px-3 text-ui text-ink hover:bg-deep aria-[current=page]:text-accent";
 
-/** Every destination the rails cannot hold at this width */
 export function MobileNav() {
   const pathname = usePathname();
   const { account, publicationAuthority } = useAuth();

@@ -20,8 +20,6 @@ const (
 	lastUseInterval = time.Minute
 )
 
-// Token is everything Illarin can still say about a publication token once its
-// value has been handed over.
 type Token struct {
 	ID         uuid.UUID
 	GrantID    uuid.UUID
@@ -33,36 +31,29 @@ type Token struct {
 	RevokedAt  *time.Time
 }
 
-// Issued is a new token together with the one reading of its value.
 type Issued struct {
 	Token Token
 	Value string
 }
 
-// TokenEdit is what a contributor supplies to issue one token.
 type TokenEdit struct {
 	Name      string
 	ExpiresAt *time.Time
 }
 
-// Bearer is the token and grant a supplied publication token resolves to.
 type Bearer struct {
 	Token Token
 	Grant Grant
 }
 
-// Editor answers how far a publication token reaches on posts. It is the grant
-// holder acting for one grant and never for anything else that holder owns.
 func (b Bearer) Editor() Editor {
 	return Editor{ID: b.Grant.Holder.ID, Grant: &b.Grant.ID, Token: &b.Token.ID}
 }
 
-// Live answers whether a token still authenticates at the given moment.
 func (t Token) Live(now time.Time) bool {
 	return t.RevokedAt == nil && (t.ExpiresAt == nil || t.ExpiresAt.After(now))
 }
 
-// GrantTokens lists one grant's tokens for its holder or the authority.
 func (s *Service) GrantTokens(
 	ctx context.Context,
 	reader uuid.UUID,
@@ -81,7 +72,6 @@ func (s *Service) GrantTokens(
 	return collectTokens(rows)
 }
 
-// IssueToken makes one token under a grant its holder still holds.
 func (s *Service) IssueToken(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -139,7 +129,6 @@ func (s *Service) IssueToken(
 	return Issued{Token: made, Value: minted.Value}, nil
 }
 
-// RevokeToken stops one token for its owner or the publication authority.
 func (s *Service) RevokeToken(ctx context.Context, actor uuid.UUID, id uuid.UUID) error {
 	found, err := s.token(ctx, id)
 	if err != nil {
@@ -177,10 +166,6 @@ func (s *Service) RevokeToken(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	return nil
 }
 
-// Bearing answers the token and grant a supplied value authenticates as. It
-// refuses anything the wrong shape without reading the database, rechecks the
-// account and grant every time rather than trusting the stored hash alone, and
-// names the reason only once the supplied secret has proved it holds the token.
 func (s *Service) Bearing(ctx context.Context, value string) (Bearer, error) {
 	supplied, ok := credential.Read(value, credential.Publication)
 	if !ok {
@@ -230,8 +215,6 @@ func (s *Service) Bearing(ctx context.Context, value string) (Bearer, error) {
 	return Bearer{Token: found, Grant: held}, nil
 }
 
-// markUsed keeps a coarse last-use time. Writing on every request would make
-// one row the bottleneck of every call the token makes.
 func (s *Service) markUsed(ctx context.Context, found Token) error {
 	if found.LastUsedAt != nil && time.Since(*found.LastUsedAt) < lastUseInterval {
 		return nil
@@ -245,7 +228,6 @@ func (s *Service) markUsed(ctx context.Context, found Token) error {
 	return nil
 }
 
-// readableGrant answers a grant the reader holds or has authority over.
 func (s *Service) readableGrant(
 	ctx context.Context,
 	reader uuid.UUID,

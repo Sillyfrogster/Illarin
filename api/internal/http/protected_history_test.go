@@ -40,7 +40,6 @@ type protectionMismatchBody struct {
 	} `json:"items"`
 }
 
-// sealedPresetPrompts writes one public prompt and one sealed prompt under ids the test chose.
 func sealedPresetPrompts(publicID, sealedID uuid.UUID, publicText, sealedText string) json.RawMessage {
 	return json.RawMessage(`{"groups":[],"fragments":[` +
 		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"` +
@@ -49,7 +48,6 @@ func sealedPresetPrompts(publicID, sealedID uuid.UUID, publicText, sealedText st
 		sealedText + `","protected":true,"enabled":true}]}`)
 }
 
-// publishTwoPromptPreset publishes a preset carrying one public and one sealed prompt.
 func publishTwoPromptPreset(
 	t *testing.T,
 	router *gin.Engine,

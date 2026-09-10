@@ -12,8 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// readBlocks is one pass over the block list. A block is a heading or a prompt
-// fragment, and everything a preset holds under a fragment comes out with it.
 type readBlocks struct {
 	list      block.PromptList
 	variables []block.Variable
@@ -21,8 +19,6 @@ type readBlocks struct {
 	protected []format.ProtectedPrompt
 }
 
-// readLumiverseBlocks resolves explicit group IDs and implicit preceding
-// headings while reading the block list.
 func readLumiverseBlocks(
 	blocks []json.RawMessage,
 	saved map[string]map[string]json.RawMessage,
@@ -194,9 +190,6 @@ func readLumiverseSealedPrompt(
 	}, true, nil
 }
 
-// keep puts one item's leftover keys aside, with the identifier the file knew
-// it by among them. Illarin mints its own ids, so the file's is preserved data
-// like anything else and the writer puts it back where it was.
 func (r *readBlocks) keep(
 	id uuid.UUID,
 	namespace string,
@@ -211,9 +204,6 @@ func (r *readBlocks) keep(
 	}
 }
 
-// fragmentHeading answers which heading a fragment sits under. A file that
-// names one names it by the heading's own identifier; a file that names none
-// at all leaves the fragment under the last heading above it.
 func fragmentHeading(
 	fields map[string]json.RawMessage,
 	headings map[string]uuid.UUID,
@@ -239,8 +229,6 @@ func fragmentHeading(
 	return &heading
 }
 
-// readLumiverseVariables reads the form a fragment asks a reader to fill in,
-// and the choices the creator saved against it.
 func readLumiverseVariables(
 	fields map[string]json.RawMessage,
 	fragmentID uuid.UUID,
@@ -289,9 +277,6 @@ func readLumiverseVariables(
 	return variables
 }
 
-// readLumiverseOptions reads what a select offers. The file names a choice
-// separately from the text it stands for, and a saved choice names the first,
-// so both come across.
 func readLumiverseOptions(definition map[string]json.RawMessage) []block.VariableOption {
 	var listed []json.RawMessage
 	if !keys.Take(definition, lvVarOptions, &listed) {
@@ -328,9 +313,6 @@ func readLumiverseRange(definition map[string]json.RawMessage) *block.VariableRa
 	return &bounds
 }
 
-// readFreeValue reads a value whose shape the file decides rather than a
-// declared slot. A variable's default and the choice saved for it are both
-// whatever the widget wanted.
 func readFreeValue(raw json.RawMessage) (*block.Value, bool) {
 	if len(raw) == 0 || keys.IsNull(raw) {
 		return nil, false
@@ -362,9 +344,6 @@ func readFreeValue(raw json.RawMessage) (*block.Value, bool) {
 	return nil, false
 }
 
-// readLumiverseScripts reads the find and replace list. The file keeps a copy
-// of it under `extensions` as well, and the two are the same list, so both are
-// read here and the writer puts both back.
 func readLumiverseScripts(
 	source map[string]json.RawMessage,
 ) ([]block.Script, map[uuid.UUID]map[string]json.RawMessage) {
@@ -372,8 +351,6 @@ func readLumiverseScripts(
 	if !keys.Take(source, lvScripts, &listed) {
 		return nil, nil
 	}
-	// An empty list is a key the file carries and this module has no content
-	// for, so it goes back where it was rather than being taken and dropped.
 	if len(listed) == 0 {
 		source[lvScripts] = keys.Must([]json.RawMessage{})
 		return nil, nil
@@ -423,9 +400,6 @@ func readLumiverseScripts(
 	return scripts, fields
 }
 
-// takeScriptTargets reads the text a script runs over. A list holding a name
-// Illarin has no wording for is left where it is rather than being read to the
-// nearest one it has, so the whole list travels back out untouched.
 func takeScriptTargets(
 	script map[string]json.RawMessage,
 	key string,

@@ -38,13 +38,11 @@ import {
   whatIsHeld,
 } from "@/lib/recognition-register";
 
-/** One account and everything Illarin has given it, found by handle. */
 export type LookedUpAccount = {
   assignments: DistinctionAssignment[];
   handle: string;
 };
 
-/** The register that gives what Illarin defines to one account, and takes it back. */
 export function AccountRows({
   account,
   definitions,
@@ -235,7 +233,6 @@ export function AccountRows({
   );
 }
 
-/** One thing an account holds, quieter than a register row because it sits inside one. */
 function HeldRow({
   children,
   lead,
@@ -261,7 +258,6 @@ function HeldRow({
   );
 }
 
-/** One kind of thing an account holds, with the rule that governs its order. */
 function HeldGroup({
   children,
   hint,
@@ -280,7 +276,6 @@ function HeldGroup({
   );
 }
 
-/** The mark a held thing wears beside its name, or the glyph for what kind it is. */
 function HeldMark({ one }: { one: Distinction }) {
   return (
     <span
@@ -311,7 +306,6 @@ function HeldMark({ one }: { one: Distinction }) {
   );
 }
 
-/** Everything left to give this account, each with the one way to give it. */
 export function GiveStep({
   account,
   definitions,

@@ -7,11 +7,6 @@ import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
 import { GrantTokens } from "../GrantTokens";
 
-/**
- * What Illarin has approved this account to publish. Every grant is a byline
- * and a set of categories, so the writer can see whose name a post will carry
- * before they start one.
- */
 export function Approvals({ workspace }: { workspace: PublicationWorkspace }) {
   return (
     <section aria-labelledby="approvals" className="min-w-0">

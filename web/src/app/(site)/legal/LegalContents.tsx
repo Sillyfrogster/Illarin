@@ -7,7 +7,6 @@ import { clauseAnchor } from "@/lib/legal-documents";
 import { useReadingMark } from "@/lib/use-reading-mark";
 import type { LegalClause } from "./LegalPage";
 
-/** The clauses of one document, in the margin on a wide screen and a disclosure on a narrow one. */
 export function LegalContents({ clauses }: { clauses: LegalClause[] }) {
   const [open, setOpen] = useState(false);
   const anchors = clauses.map((clause) => clauseAnchor(clause.heading));

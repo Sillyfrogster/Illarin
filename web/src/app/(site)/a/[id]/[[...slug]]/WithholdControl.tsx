@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { withholdAsset } from "@/lib/api/query";
 import { Field, TextAreaField } from "./workspace/fields";
 
-/** The staff action that takes public access away without touching the creator's file. */
 export function WithholdControl({
   assetId,
   creator,

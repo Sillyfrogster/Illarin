@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { DeadEnd } from "@/components/ui/dead-end";
 import { BLOG_HOME } from "@/lib/publication-metadata";
 
-/** What the blog says when Illarin itself broke on the way to a post. */
 export default function BlogError({
   error,
   retry,

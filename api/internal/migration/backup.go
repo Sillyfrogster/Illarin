@@ -12,12 +12,10 @@ import (
 	"time"
 )
 
-// FileBackup is v1's uploads directory as the compressed archive that holds it.
 type FileBackup struct {
 	path string
 }
 
-// backupEntry is one regular file, readable only while its visit is running.
 type backupEntry struct {
 	Name    string
 	Size    int64
@@ -25,7 +23,6 @@ type backupEntry struct {
 	Body    io.Reader
 }
 
-// OpenFileBackup names an archive without reading it.
 func OpenFileBackup(archive string) (*FileBackup, error) {
 	if _, err := os.Stat(archive); err != nil {
 		return nil, fmt.Errorf("open the v1 file backup: %w", err)
@@ -33,7 +30,6 @@ func OpenFileBackup(archive string) (*FileBackup, error) {
 	return &FileBackup{path: archive}, nil
 }
 
-// each walks every regular file once, so matching hundreds of paths reads the archive once.
 func (backup *FileBackup) each(visit func(backupEntry) error) error {
 	file, err := os.Open(backup.path)
 	if err != nil {
@@ -66,7 +62,6 @@ func (backup *FileBackup) each(visit func(backupEntry) error) error {
 	}
 }
 
-// backupIndex answers which record an entry belongs to, matching a stored path against the end of an entry name.
 type backupIndex struct {
 	paths map[string]int
 	stems map[string]int
@@ -76,14 +71,12 @@ func newBackupIndex() *backupIndex {
 	return &backupIndex{paths: make(map[string]int), stems: make(map[string]int)}
 }
 
-// want claims the entry whose name ends with this stored path.
 func (index *backupIndex) want(stored string, at int) {
 	if cleaned := cleanBackupPath(stored); cleaned != "" {
 		index.paths[cleaned] = at
 	}
 }
 
-// wantStem claims the entry whose filename without its extension is this identifier.
 func (index *backupIndex) wantStem(identifier string, at int) {
 	if identifier != "" {
 		index.stems[identifier] = at

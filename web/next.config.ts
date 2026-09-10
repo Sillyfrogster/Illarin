@@ -2,8 +2,15 @@ import type { NextConfig } from "next";
 
 const apiUrl = process.env.API_URL ?? "http://localhost:8080";
 
-// An upload passes through the rewrite below and proxy.ts makes Next buffer it, and anything over this is truncated rather than refused, so it matches nginx and leaves the refusal to the API's own MAX_UPLOAD_BYTES.
+/** Leaves oversized-upload refusal to the API. */
 const uploadBodyCeiling = "34mb";
+
+/** Keeps link credentials out of request logs. */
+const privateRequestPaths = [
+  /^\/link(?:\?|$)/,
+  /^\/api\/v1\/link\/requests\/[^/]+/,
+  /^\/api\/v1\/link\/authorizations\/[^/]+/,
+];
 
 const nextConfig: NextConfig = {
   distDir: process.env.WEB_DIST_DIR ?? ".next",
@@ -12,12 +19,7 @@ const nextConfig: NextConfig = {
   deploymentId: process.env.ILLARIN_VERSION,
   logging: {
     incomingRequests: {
-      // These URLs carry short-lived link secrets. nginx redacts them too.
-      ignore: [
-        /^\/link(?:\?|$)/,
-        /^\/api\/v1\/link\/requests\/[^/]+/,
-        /^\/api\/v1\/link\/authorizations\/[^/]+/,
-      ],
+      ignore: privateRequestPaths,
     },
   },
   async headers() {

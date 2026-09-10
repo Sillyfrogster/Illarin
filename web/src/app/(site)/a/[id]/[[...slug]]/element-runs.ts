@@ -1,4 +1,3 @@
-/** A run of items down the page, each stood off a drawn line */
 export const STACK = "flex list-none flex-col gap-4.5";
 
 export const RUNG = "border-rule border-l-2 pl-4";

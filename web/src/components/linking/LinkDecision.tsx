@@ -11,12 +11,6 @@ import { DeclaredValues } from "./DeclaredValues";
 
 export type Decision = "approve" | "deny";
 
-/**
- * The decision itself: who is asking, what they would be able to do, and the
- * two buttons. Everything the application says about itself that grants nothing
- * waits behind one disclosure, so the reader is never scrolling past technical
- * detail to reach a security decision.
- */
 export function LinkDecision({
   deciding,
   link,
@@ -27,7 +21,6 @@ export function LinkDecision({
 }: {
   deciding: Decision | null;
   link: PendingLink;
-  /** Only a typed code can be swapped for another; a browser request cannot. */
   onCancel?: () => void;
   onDecide: (decision: Decision) => void;
   trouble: string;

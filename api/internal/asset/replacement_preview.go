@@ -495,7 +495,6 @@ func readRemainder(ctx context.Context, tx pgx.Tx, table string, assetID uuid.UU
 	return current, nil
 }
 
-// AcceptReplacement applies one stored preview only while the reviewed working copy is current.
 func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *Candidate, decisions map[string]string) (IngestOperation, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -553,7 +552,6 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	return accepted, nil
 }
 
-// ReviewedReplacement is the upload this asset is still deciding about, so reopening the page finds the file left waiting.
 func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, assetID uuid.UUID) (IngestOperation, error) {
 	var operationID uuid.UUID
 	err := s.pool.QueryRow(ctx, `

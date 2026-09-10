@@ -12,14 +12,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// EventPublished and EventUpdated are the immutable record of a post reaching
-// or changing its public edition.
 const (
 	EventPublished = "publication.post.published.v1"
 	EventUpdated   = "publication.post.updated.v1"
 )
 
-// PublicPost is the one edition a signed-out reader receives.
 type PublicPost struct {
 	ID           uuid.UUID
 	RevisionID   uuid.UUID
@@ -39,7 +36,6 @@ type PublicPost struct {
 	UpdatedAt    *time.Time
 }
 
-// PublishPost puts the exact edition a named working copy holds into public view.
 func (s *Service) PublishPost(
 	ctx context.Context,
 	editor Editor,
@@ -107,17 +103,11 @@ func (s *Service) PublishPost(
 	return s.post(ctx, id)
 }
 
-// captured is the delivery choice one public transition is making. It belongs
-// to that transition, so nothing edited afterwards can rewrite it.
 type captured struct {
 	Chosen []sending
 	Note   string
 }
 
-// makePublic puts one already-captured edition in front of readers, and is the
-// whole of what publishing does whether an author asked now or a schedule did.
-// It queues the delivery work but makes no request, so the transaction that
-// puts a post live never waits on anything outside Illarin.
 func makePublic(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -163,7 +153,6 @@ func makePublic(
 	return queueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
 }
 
-// PublishedPost answers the public edition behind one address, current or former, and always names the address it lives at now.
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
 	var found PublicPost
 	var headerID, socialID *uuid.UUID
@@ -216,8 +205,6 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 	return found, nil
 }
 
-// postApp answers the app a post belongs to, taken from its release where it
-// has one and from its byline otherwise.
 func postApp(found PublicPost) *uuid.UUID {
 	if found.Release != nil {
 		return &found.Release.App.ID
@@ -228,7 +215,6 @@ func postApp(found PublicPost) *uuid.UUID {
 	return nil
 }
 
-// attachRevisionMedia gives an edition the exact pictures it was captured with.
 func (s *Service) attachRevisionMedia(
 	ctx context.Context,
 	found *PublicPost,
@@ -302,7 +288,6 @@ func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*
 	return release, nil
 }
 
-// working is the exact edition a publish transaction locked and will capture.
 type working struct {
 	ID               uuid.UUID
 	AuthorID         uuid.UUID
@@ -328,8 +313,6 @@ type working struct {
 	UpdatedAt        time.Time
 }
 
-// lockPost holds the post a change is about to be made to, refusing one that
-// has been deleted, because nothing is edited or published out of recovery.
 func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	locked, err := lockRemovedPost(ctx, tx, id)
 	if err != nil {
@@ -341,8 +324,6 @@ func lockPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	return locked, nil
 }
 
-// lockRemovedPost holds a post whether or not it has been deleted, which is
-// what recovery and removal both act on.
 func lockRemovedPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, error) {
 	var locked working
 	var slug *string
@@ -382,8 +363,6 @@ func lockRemovedPost(ctx context.Context, tx pgx.Tx, id uuid.UUID) (working, err
 	return locked, nil
 }
 
-// readyToPublish checks what publication requires and answers the body the
-// revision keeps, read at the current document version.
 func readyToPublish(locked working) ([]byte, error) {
 	if _, err := checkTitle(locked.Title); err != nil {
 		return nil, err

@@ -17,8 +17,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// twoEntries is the shape a real book has: a list of entries, each carrying
-// the keys the entry table models and several it does not.
 const twoEntries = `{
 	"name": "Zenless lore",
 	"description": "A compendium of events, factions and locations.",
@@ -63,8 +61,6 @@ func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
 		declaration.Recognition[0].Kind != format.RecognitionSignature {
 		t.Errorf("recognition = %+v, want one structural signature", declaration.Recognition)
 	}
-	// A book has no settings group and no colour set, so it declares no
-	// named slots and nothing stamps a dead namespace on it.
 	if len(declaration.Slots) != 0 || len(declaration.Boilerplate) != 0 {
 		t.Errorf("declaration invented slots %v or boilerplate %v",
 			declaration.Slots, declaration.Boilerplate)
@@ -73,15 +69,11 @@ func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
 		!slices.Contains(declaration.TestedOrigins, format.OriginIllarin) {
 		t.Errorf("tested origins = %v, want its own format and Illarin", declaration.TestedOrigins)
 	}
-	// The book's description stays in the file, so a description longer than
-	// a browse card can hold is never shortened on the way back out.
 	if slices.Contains(declaration.ConsumedKeys, "description") {
 		t.Error("the module declared the book's description consumed")
 	}
 }
 
-// The lorebook signature has to be tellable apart from every other module's,
-// which is checked against the registry the server actually builds.
 func TestTheSignatureDoesNotOverlapAnotherModules(t *testing.T) {
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
@@ -97,16 +89,13 @@ func TestOnlyADocumentHoldingEntriesIsClaimed(t *testing.T) {
 		{name: "a book", body: `{"entries": []}`, claimant: ID},
 		{name: "a book with fields around it", body: twoEntries, claimant: ID},
 		{
-			name: "a card before any spec existed",
-			body: `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
-			// A card keeps its book nested, so it never looks like one.
+			name:     "a card before any spec existed",
+			body:     `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
 			claimant: "chara_card_v2",
 		},
 		{
-			name: "entries as an object",
-			body: `{"entries": {"0": {}}}`,
-			// Keyed entries are SillyTavern's file, and the listed book never
-			// claims one.
+			name:     "entries as an object",
+			body:     `{"entries": {"0": {}}}`,
 			claimant: SillyTavernID,
 		},
 		{name: "nothing recognisable", body: `{"colours": []}`, claimant: ""},
@@ -153,8 +142,6 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 		t.Errorf("second entry = %+v, want switched off and case sensitive", second)
 	}
 
-	// The description, the two book settings and the extensions namespace are
-	// all things the entry table has no place for, so they are kept.
 	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, bookNamespace)
 	for _, key := range []string{"description", "scan_depth", "token_budget"} {
 		if _, held := body[key]; !held {
@@ -170,8 +157,6 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 	}
 }
 
-// Failure past the required role degrades locally. Three bad values in 285
-// entries do not cost the other 282.
 func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
 	parsed := parse(t, `{
 		"entries": [
@@ -216,8 +201,6 @@ func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
 	}
 }
 
-// The entry list is the required role. If it will not parse the import is
-// refused and nothing is stored.
 func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 	file := document(t, `{"entries": {"0": {"content": "x"}}}`)
 	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityClaim(file.Payloads[0]))
@@ -270,8 +253,6 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 		t.Errorf("second entry enabled = %s, want the creator's switch", entries[1]["enabled"])
 	}
 
-	// Reading the written file back gives the same book, which is what makes
-	// a download something a creator can upload again.
 	again := parse(t, string(written.Body))
 	before, after := onlyEntryTable(t, parsed.Elements), onlyEntryTable(t, again.Elements)
 	for i := range before.Entries {
@@ -283,9 +264,6 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 	}
 }
 
-// A lorebook page can hold a gallery and an author's note, and the file has
-// nowhere to put either. The download is still offered, because nothing is
-// withheld for losing optional content.
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind, Origin: ID,
@@ -315,8 +293,6 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	}
 }
 
-// A character card is not a lorebook origin, so no card writer is offered a
-// book however compatible an entry list looks.
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: "character", Origin: ID,
@@ -326,8 +302,6 @@ func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	}
 }
 
-// Import fills the kind's blocks through its catalog rather than through the
-// module, so a book lands as the one block a lorebook has.
 func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	parsed := parse(t, twoEntries)
 	blocks, err := block.Place(parsed.Kind, parsed.Elements)
@@ -350,8 +324,6 @@ func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	}
 }
 
-// testRegistry is the registry the server builds, so recognition and the
-// export gates are exercised against the modules a real upload meets.
 func testRegistry(t *testing.T) *format.Registry {
 	t.Helper()
 	registry := format.NewRegistry()
@@ -427,8 +399,6 @@ func preservedPayload(
 	return payload
 }
 
-// document inspects real bytes, so a test reads what the probe produces rather
-// than a hand-made structure.
 func document(t *testing.T, body string) probe.Inspection {
 	t.Helper()
 	data := []byte(body)

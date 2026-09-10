@@ -10,7 +10,6 @@ const FILL = {
   right: `path('M0 0 H${CORNER} V${RAIL} C${CONTROL} ${RAIL} ${CONTROL} ${DROP} 0 ${DROP} Z')`,
 } as const;
 
-/** The curve that carries the header's edge down around the wordmark */
 function Corner({ side }: { side: "left" | "right" }) {
   return (
     <div className="relative h-[var(--header-bay-height)] w-7 shrink-0">
@@ -22,7 +21,6 @@ function Corner({ side }: { side: "left" | "right" }) {
   );
 }
 
-/** Two rails, two curves, and the bay the mark sits in */
 export function Notch({
   start,
   centre,

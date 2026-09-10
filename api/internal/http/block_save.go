@@ -112,7 +112,6 @@ func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
 	}, nil
 }
 
-// joinNames writes a list of prompts the way a person reads one.
 func joinNames(names []string) string {
 	switch len(names) {
 	case 1:

@@ -7,7 +7,6 @@ import { protectedAppLabel } from "@/lib/protected-apps";
 
 export type AllowedApp = "lumiverse";
 
-/** The allowed-app choice every surface that can seal a prompt has to offer. */
 export type SealedPolicyState = {
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];

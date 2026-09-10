@@ -84,7 +84,6 @@ func (i *importer) autolink(node *ast.AutoLink, wearing Span) []Span {
 	return []Span{worn.saying(string(node.Label(i.source)))}
 }
 
-// plain answers the words under a node with every mark dropped.
 func (i *importer) plain(node ast.Node) string {
 	var said strings.Builder
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
@@ -100,7 +99,6 @@ func (i *importer) plain(node ast.Node) string {
 	return said.String()
 }
 
-// join runs neighbouring words wearing the same marks back together.
 func join(spans []Span) []Span {
 	joined := make([]Span, 0, len(spans))
 	for _, span := range spans {
@@ -124,13 +122,11 @@ func emphasis(level int) string {
 	return markItalic
 }
 
-// wearing answers this span with one more mark on it.
 func (s Span) wearing(mark string) Span {
 	s.wear(mark)
 	return s
 }
 
-// saying answers this span's marks worn by different words.
 func (s Span) saying(text string) Span {
 	s.Text = text
 	return s

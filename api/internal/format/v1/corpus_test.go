@@ -537,8 +537,6 @@ func sameMediaNames(before, after []string) bool {
 		return false
 	}
 	for i := range before {
-		// An unnamed image acquires a carrier-format filename on export. It is
-		// still unnamed creator content; a name the creator supplied must match.
 		if before[i] != "" && before[i] != after[i] {
 			return false
 		}

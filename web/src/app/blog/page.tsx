@@ -25,7 +25,6 @@ export default async function BlogHomePage() {
   const archive = await fetchPostArchive({ page: 1 });
   if (!archive) notFound();
   const lead = archive.posts[0];
-  // Only the lead is shown by a picture, and only a whole post carries one.
   const led = lead ? await fetchPublishedPost(lead.slug) : null;
   return <PublicationFront archive={archive} cover={postCover(led)} />;
 }

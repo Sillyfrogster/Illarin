@@ -11,7 +11,6 @@ import (
 	"testing"
 )
 
-// What the Discord stand-in says it is, and what it says it made.
 const (
 	discordWebhookID = "1234567890123456789"
 	discordGuildID   = "111111111111111111"
@@ -25,8 +24,6 @@ func discordCapability() string {
 	return "https://discord.com/api/webhooks/" + discordWebhookID + "/" + discordToken
 }
 
-// discordServer is Discord as far as a test is concerned. It answers the
-// webhook read and the confirming send, and records what arrived.
 type discordServer struct {
 	server *httptest.Server
 
@@ -92,7 +89,6 @@ func (d *discordServer) answersSendWith(with func(arrived) (int, string)) {
 	d.send = with
 }
 
-// announcement is one Discord message, read back as a test sees it.
 type announcement struct {
 	Content string `json:"content"`
 	Embeds  []struct {
@@ -149,8 +145,6 @@ func (s destinationStack) addChannel(
 	), session))
 }
 
-// channelWithRole is one Discord destination configured, with an approved role
-// when the test names one.
 func (s destinationStack) channelWithRole(t *testing.T, role string) destination {
 	t.Helper()
 	body := fmt.Sprintf(`{"name":"Announcements","address":%q}`, discordCapability())
@@ -171,8 +165,6 @@ func (s destinationStack) channelWithRole(t *testing.T, role string) destination
 	return made
 }
 
-// announcedPost publishes one ready post under the given delivery choice and
-// runs the worker, answering what the post's deliveries then say.
 func (s destinationStack) announcedPost(t *testing.T, choice string) (blogPost, []postDelivery) {
 	t.Helper()
 	post := s.readyPost(t)
@@ -184,7 +176,6 @@ func (s destinationStack) announcedPost(t *testing.T, choice string) (blogPost, 
 	return post, s.deliveries(t, s.editor, post.ID).Deliveries
 }
 
-// choosing is a publish request for the version a post is actually on.
 func choosing(post blogPost, choice string) string {
 	return fmt.Sprintf(`{"version":%d,%s}`, post.Version, choice)
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// restrictedOwnerMessage is all an owner learns when a restriction blocks a save.
 const restrictedOwnerMessage = "An admin has restricted your public profile. Contact Illarin to have it reviewed."
 
 func (h *Handlers) SavePublicProfile(c *gin.Context) {
@@ -99,7 +98,6 @@ func (h *Handlers) profileError(c *gin.Context, err error) {
 	}
 }
 
-// refuseProfile answers an avatar upload the byte path could not take.
 func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
@@ -118,7 +116,6 @@ func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 	}
 }
 
-// showProfile answers a public profile with the distinctions it shows.
 func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
 	if found.Restricted {
 		c.JSON(http.StatusOK, toAPIProfile(found, publication.Showcase{}))

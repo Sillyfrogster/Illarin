@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// VersionHistory lists the versions an asset has recorded, newest first.
 func (s *Service) VersionHistory(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -39,7 +38,6 @@ func (s *Service) VersionHistory(
 	return history, rows.Err()
 }
 
-// CompareVersions reports what changed between two recorded versions under the rules the reader is under now.
 func (s *Service) CompareVersions(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -57,7 +55,6 @@ func (s *Service) CompareVersions(
 	})
 }
 
-// readerRole says whether this reader may open the asset's history, and whether they own it.
 func (s *Service) readerRole(
 	ctx context.Context,
 	assetID uuid.UUID,

@@ -13,19 +13,15 @@ export type FormatChoice = {
   format: string;
   label: string;
   recommended: boolean;
-  /** What taking this format costs, in one line. */
   cost: string;
-  /** What it leaves behind, and what it puts somewhere unexpected. */
   losses: FormatLoss[];
 };
 
 export type DeliveryDestination = {
-  /** The instance id, or `file` for a download. */
   id: string;
   label: string;
 };
 
-/** Where a download goes when it is not going into an application. */
 export const DOWNLOAD_DESTINATION = "file";
 
 const FAILURES: Record<string, string> = {
@@ -56,7 +52,6 @@ function costLine(target: DownloadTarget, holdsNothing: boolean): string {
   return lost === 1 ? "1 thing left out" : `${lost} things left out`;
 }
 
-/** Every format this asset can be written in, the recommended one first. */
 export function formatChoices({
   downloads,
   holdsNothing,
@@ -86,7 +81,6 @@ export function formatChoices({
   }));
 }
 
-/** A file, then every linked installation that can take this asset. */
 export function deliveryDestinations(
   instances: AssetInstance[],
 ): DeliveryDestination[] {
@@ -101,7 +95,6 @@ export function deliveryDestinations(
   ];
 }
 
-/** What sending to this installation would do, given what it already holds. */
 export function sendActionLabel(instance: AssetInstance): string {
   if (instance.delivery && instance.delivery.state !== "failed") {
     return "Waiting to be collected";
@@ -111,7 +104,6 @@ export function sendActionLabel(instance: AssetInstance): string {
   return "Send";
 }
 
-/** Where this installation stands with this asset, in one sentence. */
 export function instanceStanding(instance: AssetInstance): string {
   if (instance.updateAvailable) {
     return "Installed, and a newer version exists here.";

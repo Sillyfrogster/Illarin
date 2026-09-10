@@ -4,7 +4,6 @@ import Image from "next/image";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type { ProfileDistinction } from "@/lib/api/query";
 
-/** A mark at the size its art was drawn to be read at. */
 function Mark({ one, size }: { one: ProfileDistinction; size: number }) {
   if (!one.mark) return null;
   return (
@@ -20,11 +19,6 @@ function Mark({ one, size }: { one: ProfileDistinction; size: number }) {
   );
 }
 
-/**
- * What Illarin has given this creator, on one shelf: the marks it drew for
- * them, then the titles that carry no mark. Opening it says what each was
- * given for, because a mark without its reason is only a decoration.
- */
 export function ProfileRecognition({
   badges,
   titles,

@@ -4,16 +4,13 @@ import { useState } from "react";
 import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import { cn } from "@/lib/cn";
 
-/** One cell of the rail, naming a register and what it carries. */
 export type RegisterCell<Id extends string> = {
-  /** True when the count is something to look at rather than a size. */
   attention?: boolean;
   count: number | null;
   id: Id;
   name: string;
 };
 
-/** Chooses which register the page shows, with a count on each. */
 export function RegisterRail<Id extends string>({
   cells,
   chosen,

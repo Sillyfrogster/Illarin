@@ -10,7 +10,6 @@ import { POST_PICTURE_TEXT_LIMIT } from "@/lib/post-document";
 
 export type Chosen = { mediaId: string; alt: string; caption: string };
 
-/** One uploaded picture a post carries beside its body. */
 export function PicturePicker({
   chosen,
   describe,

@@ -14,14 +14,12 @@ import { EVENT_WORDS, EVENTS } from "@/lib/publication-delivery";
 const BOX =
   "size-5 shrink-0 appearance-none rounded-[5px] bg-deep outline-offset-3 inset-ring-1 inset-ring-rule checked:bg-action checked:inset-ring-0 checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat disabled:opacity-40";
 
-/** The tick inside a chosen box, inline so it needs no request. */
 const TICK =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5 6.5 12 13 4.5'/></svg>\")";
 
 const DOT =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='4' fill='white'/></svg>\")";
 
-/** A group of related answers with a name of its own. */
 export function Choice({
   children,
   hint,
@@ -42,7 +40,6 @@ export function Choice({
   );
 }
 
-/** One thing that is either allowed or not, with what it is under its name. */
 export function Allow({
   checked,
   disabled,
@@ -58,7 +55,6 @@ export function Allow({
   name?: string;
   onChange: (on: boolean) => void;
   radio?: boolean;
-  /** The stable name a post references, which renaming does not change. */
   slug?: string;
   under?: string;
   word: string;
@@ -95,7 +91,6 @@ export function Allow({
   );
 }
 
-/** The one of an allowed set that a publication starts with. */
 function Fallback({
   checked,
   disabled,
@@ -134,7 +129,6 @@ function Fallback({
   );
 }
 
-/** What a contributor may file a post as, and which of those they start in. */
 export function CategoryChoice({
   allowed,
   categories,
@@ -190,7 +184,6 @@ export function CategoryChoice({
   );
 }
 
-/** Which destinations a policy allows, and which of them a publication starts with. */
 export function DestinationChoice({
   allowed,
   defaults,
@@ -204,7 +197,6 @@ export function DestinationChoice({
   allowed: string[];
   defaults: string[];
   destinations: PublicationDestination[];
-  /** What following the app means here, when this policy is allowed to follow it. */
   inherit?: { label: string; on: boolean };
   legend: string;
   onAllowed: (allowed: string[]) => void;
@@ -263,7 +255,6 @@ export function DestinationChoice({
   );
 }
 
-/** Which public transitions one endpoint receives. */
 export function EventChoice({
   chosen,
   onChosen,
@@ -321,7 +312,6 @@ const KINDS: {
   },
 ];
 
-/** What a new destination is, chosen before anything is asked about it. */
 export function DestinationKind({
   chosen,
   onChosen,

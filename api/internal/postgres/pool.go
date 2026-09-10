@@ -31,8 +31,6 @@ type Settings struct {
 	IdleTransactionTimeout time.Duration
 }
 
-// DefaultSettings are what the server runs with. A test takes these and changes
-// the one limit it is about.
 func DefaultSettings(url string) Settings {
 	return Settings{
 		URL:                    url,
@@ -45,8 +43,6 @@ func DefaultSettings(url string) Settings {
 	}
 }
 
-// NewPool opens the pool. Connections are made as they are needed, so a
-// database that is down shows up on the first query rather than here.
 func NewPool(ctx context.Context, s Settings) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(s.URL)
 	if err != nil {
@@ -58,7 +54,6 @@ func NewPool(ctx context.Context, s Settings) (*pgxpool.Pool, error) {
 	cfg.MaxConnLifetime = s.MaxConnLifetime
 	cfg.MaxConnIdleTime = s.MaxConnIdleTime
 
-	// Sent as a connection starts, so connections opened later carry them too.
 	cfg.ConnConfig.RuntimeParams["statement_timeout"] = milliseconds(s.StatementTimeout)
 	cfg.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = milliseconds(s.IdleTransactionTimeout)
 

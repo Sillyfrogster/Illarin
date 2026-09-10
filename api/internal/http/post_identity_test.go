@@ -46,7 +46,6 @@ func (s distinctionStack) correctByline(
 	), session))
 }
 
-// livePost is a published Illarin post written by the signed-in admin.
 func (s distinctionStack) livePost(t *testing.T, session *http.Cookie, title string) blogPost {
 	t.Helper()
 	draft := s.illarinDraft(t, session, title)

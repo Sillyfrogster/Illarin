@@ -12,8 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ListFilter says which assets Browse should return. Empty fields mean no
-// restriction.
 type ListFilter struct {
 	Kind        string
 	Profile     *ProfileListingScope
@@ -34,7 +32,7 @@ type ProfileListingScope struct {
 
 type Cursor struct {
 	MadeAt time.Time
-	ID     uuid.UUID // two assets can share a made date
+	ID     uuid.UUID
 }
 
 type ContentVisibility string
@@ -52,15 +50,11 @@ type BrowseCover struct {
 }
 
 type BrowseItem struct {
-	ID      uuid.UUID
-	Name    string
-	Creator string
-	Kind    string
-	// IsNSFW is nil on a draft whose creator has not answered the adult
-	// content question, so a card states that rather than reading as a no.
-	IsNSFW *bool
-	// OwnerState is what the owner's own listing marks a card with, and is
-	// empty everywhere else.
+	ID         uuid.UUID
+	Name       string
+	Creator    string
+	Kind       string
+	IsNSFW     *bool
 	OwnerState string
 	Cover      *BrowseCover
 	Withhold   *Withhold
@@ -94,8 +88,6 @@ type FacetSelection struct {
 	Value string
 }
 
-// listAssets takes anything that runs a query, so a read does not have to open
-// a transaction.
 func listAssets(ctx context.Context, q db.DBTX, f ListFilter) ([]Asset, error) {
 	queries := db.New(q)
 
@@ -116,9 +108,8 @@ func listAssets(ctx context.Context, q db.DBTX, f ListFilter) ([]Asset, error) {
 	out := make([]Asset, len(rows))
 	for i, row := range rows {
 		out[i] = Asset{
-			ID:   uuidFromPgtype(row.ID),
-			Kind: row.Kind,
-			// An asset built from nothing has no file, so no origin format.
+			ID:                uuidFromPgtype(row.ID),
+			Kind:              row.Kind,
 			Format:            row.Format.String,
 			Name:              row.Name,
 			Blurb:             row.Blurb,

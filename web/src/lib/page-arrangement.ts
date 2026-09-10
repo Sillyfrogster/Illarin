@@ -67,7 +67,6 @@ export const LAYOUT_LABELS: Record<BlockLayout, string> = {
 
 const ONE_COLUMN = "minmax(0, 1fr)";
 
-/** The columns a block's elements arrange into. An empty one holds no slot. */
 export function elementTracks(layout: BlockLayout, rendered: number): string {
   const columns = Math.min(Math.max(rendered, 1), LAYOUTS[layout].slots.length);
   if (columns === 1) return ONE_COLUMN;
@@ -216,7 +215,6 @@ export function packBlockRows<T extends { width: BlockWidth }>(
   return rows;
 }
 
-/** The element types a creator writes directly on the page, in the type the reader sees. */
 export const WRITTEN_IN_PLACE_TYPES = [
   "prose",
   "text_set",
@@ -229,12 +227,10 @@ export function writesInPlace(type: string): boolean {
   return (WRITTEN_IN_PLACE_TYPES as readonly string[]).includes(type);
 }
 
-/** Everything else keeps the reader's rendering and opens its own editor in the rail. */
 export function editsInTheRail(type: string): boolean {
   return !writesInPlace(type);
 }
 
-/** How much of an element the page shows. `self` bounds its own height. */
 export type ExcerptDefinition =
   | { unit: "lines"; limit: number }
   | { unit: "items"; limit: number }
@@ -338,11 +334,6 @@ function colorCount(content: unknown): number {
   }, 0);
 }
 
-/**
- * How much a page has to show, which decides the composition it gets. A page
- * with nothing on it and a page with one row of blocks are both short, and
- * both need artwork rather than a run of blank ground.
- */
 export type PageFullness = "empty" | "barren" | "full";
 
 export function pageFullness(rows: readonly unknown[]): PageFullness {

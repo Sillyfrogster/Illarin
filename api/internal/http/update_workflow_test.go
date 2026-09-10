@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
-// workingCopyStanding is what an owner's own page says about the version readers have.
 type workingCopyStanding struct {
 	UnpublishedChanges bool `json:"unpublishedChanges"`
 }

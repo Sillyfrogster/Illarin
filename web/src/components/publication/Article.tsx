@@ -12,7 +12,6 @@ import { postPermalink } from "@/lib/post-link";
 import { BLOG_HOME, PUBLICATION_FEEDS } from "@/lib/publication-metadata";
 import { FurtherReading } from "./FurtherReading";
 
-/** The reading column, its apparatus in the margin beside it, and what follows the article. */
 export function Article({ post }: { post: PublicPost }) {
   const document = asPostDocument(post.document);
   const contents = postContents(document);

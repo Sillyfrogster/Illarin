@@ -19,7 +19,6 @@ function restoreDeadline(value: string) {
   });
 }
 
-/** What the creator deleted, for as long as Illarin can still give it back. */
 export function DeletedAssets({
   initialItems,
 }: {

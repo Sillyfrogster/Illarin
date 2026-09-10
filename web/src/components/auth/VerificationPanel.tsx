@@ -15,7 +15,6 @@ type Standing = "checking" | "waiting" | "verified" | "refused";
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-/** Opens a verification link, or waits for one and corrects the address it went to. */
 export function VerificationPanel() {
   const search = useSearchParams();
   const router = useRouter();

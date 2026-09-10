@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Exception is one thing the migration did not carry across, or one reference it could not resolve.
 type Exception struct {
 	Kind    string
 	Subject string
@@ -18,13 +17,11 @@ type Exception struct {
 	AssetID *uuid.UUID
 }
 
-// Ledger is the migration's record of every discrepancy, holding each kind to a policy set before the run.
 type Ledger struct {
 	policy  map[string]format.AnomalyDisposition
 	entries []Exception
 }
 
-// NewLedger takes the anomaly policy the ledger holds its callers to.
 func NewLedger(anomalies []format.AnomalyDeclaration) (*Ledger, error) {
 	if err := format.ValidateAnomalies(anomalies); err != nil {
 		return nil, fmt.Errorf("anomaly policy: %w", err)
@@ -36,7 +33,6 @@ func NewLedger(anomalies []format.AnomalyDeclaration) (*Ledger, error) {
 	return &Ledger{policy: policy}, nil
 }
 
-// Raise records a tolerated anomaly and carries on, and returns an error for a fatal one.
 func (l *Ledger) Raise(entry Exception) error {
 	if entry.Kind == "" || entry.Subject == "" || entry.Detail == "" {
 		return fmt.Errorf("anomaly %q needs a kind, a subject and a detail", entry.Kind)
@@ -55,12 +51,10 @@ func (l *Ledger) Raise(entry Exception) error {
 	return nil
 }
 
-// Entries returns what the run recorded, in the order it was raised.
 func (l *Ledger) Entries() []Exception {
 	return l.entries
 }
 
-// Count returns how many entries carry one kind.
 func (l *Ledger) Count(kind string) int {
 	total := 0
 	for _, entry := range l.entries {
@@ -71,7 +65,6 @@ func (l *Ledger) Count(kind string) int {
 	return total
 }
 
-// Persist writes the ledger through the run's own transaction, so no entry outlives a failed migration.
 func (l *Ledger) Persist(ctx context.Context, tx db.DBTX) error {
 	queries := db.New(tx)
 	for _, entry := range l.entries {

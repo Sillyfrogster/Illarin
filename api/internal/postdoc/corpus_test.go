@@ -9,7 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
 )
 
-// corpusCase is one synthetic document Go and the site both read.
 type corpusCase struct {
 	Note      string          `json:"note"`
 	Path      string          `json:"path"`

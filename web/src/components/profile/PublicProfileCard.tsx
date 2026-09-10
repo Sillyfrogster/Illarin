@@ -9,7 +9,6 @@ import type { Profile } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { whatIsPublic } from "@/lib/profile-draft";
 
-/** Who visitors meet at this handle, and the way to the editor that changes it. */
 export function PublicProfileCard() {
   const { account } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);

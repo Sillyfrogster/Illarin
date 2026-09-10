@@ -477,7 +477,6 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 	}
 }
 
-// These numbers stopped moving at the cutover, and the database is what says so rather than a convention.
 func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	pool := Connect(t)
 	assetID, _, _ := insertAssetRevision(t, pool)

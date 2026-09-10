@@ -5,7 +5,6 @@ import { LinkApproval } from "@/components/linking/LinkApproval";
 import { Waiting } from "@/components/ui/waiting";
 import { pageMetadata } from "@/lib/site-metadata";
 
-/** She is cut by the page rather than by a frame, so her lower edge dissolves into it */
 const DISSOLVE = "linear-gradient(to bottom, #000 70%, transparent 98%)";
 
 export const metadata = pageMetadata(

@@ -102,7 +102,6 @@ export default async function AssetHistoryPage({
   );
 }
 
-/** The asset this history belongs to, and the way back to it. */
 function AssetPlate({ asset }: { asset: AssetDetail }) {
   const cover = asset.media.find((image) => image.isCover) ?? asset.media[0];
 

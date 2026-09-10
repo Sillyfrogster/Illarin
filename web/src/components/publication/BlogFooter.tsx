@@ -8,7 +8,6 @@ import {
 } from "@/lib/publication-metadata";
 import { siteAddress } from "@/lib/site-address";
 
-/** The blog's footer carries the way back to Illarin and nothing a reader cannot use here. */
 export function BlogFooter() {
   return (
     <footer className="mt-20 bg-plane">

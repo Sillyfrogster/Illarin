@@ -9,7 +9,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Every published post, however long the publication has run. */
 const EVERY_POST = Number.POSITIVE_INFINITY;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -5,14 +5,8 @@ import { emptyPageInvitation } from "@/lib/empty-page-invitation";
 import { KIND_LABELS } from "@/lib/kinds";
 import { quietPageArtVariables } from "@/lib/quiet-page-art";
 
-/** Where on the page a piece of artwork is standing. */
 export type ArtPlacement = "beside" | "inRow" | "atFoot";
 
-/**
- * The artwork carries its own ground, so it is masked into the page rather
- * than tinted or framed. Light and dark are two pieces, each drawn for the
- * ground it sits on.
- */
 const ART = [
   "relative [--art-bleed:max(72px,(100vw-var(--shell))/2+var(--gutter))]",
   "before:absolute before:-z-1 before:bg-[image:var(--quiet-art-light)] before:bg-cover before:bg-[position:center_42%] before:bg-no-repeat before:opacity-90 before:content-['']",
@@ -29,7 +23,6 @@ const PLACEMENT: Record<ArtPlacement, string> = {
     "h-52 md:mt-12 md:h-75 before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:left-[42%] md:before:w-[calc(58%+var(--art-bleed))]",
 };
 
-/** The artwork that holds the space a page's content would have taken */
 export function QuietPageArt({
   kind,
   placement,
@@ -56,11 +49,6 @@ export function QuietPageArt({
   );
 }
 
-/**
- * A reader's page for an asset that displays nothing. The creator may have
- * written no more than the upload, or hidden all of it on purpose. Either way
- * the file is intact, which is the one thing worth saying.
- */
 export function EmptyPage({ kind }: { kind: BrowseKind }) {
   const label = KIND_LABELS[kind].toLowerCase();
 
@@ -72,10 +60,6 @@ export function EmptyPage({ kind }: { kind: BrowseKind }) {
   );
 }
 
-/**
- * The owner's page for an asset that holds nothing yet. One invitation naming
- * the blocks this kind is built around, in place of a marker on every element.
- */
 export function EmptyPageInvitation({
   kind,
   coreBlocks,
@@ -96,10 +80,6 @@ export function EmptyPageInvitation({
   );
 }
 
-/**
- * Words in a narrow column with the kind's artwork beside them. An owner is at
- * work on the page below, so their band is the shorter of the two.
- */
 function QuietComposition({
   kind,
   heading,

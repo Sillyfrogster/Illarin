@@ -29,7 +29,6 @@ const SENT: Record<Transition, string> = {
     "Each one receives the summary again for the edition going back up.",
 };
 
-/** Where one public transition announces, and the line it may say alongside. */
 export function AnnouncementChoice({
   postId,
   transition,

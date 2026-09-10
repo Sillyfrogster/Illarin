@@ -1,7 +1,3 @@
-// Package outbound holds the rule for where Illarin's own requests may go. A
-// webhook address is supplied by a person, so every request it produces is a
-// request an outsider chose the target of. Nothing here follows a redirect, and
-// nothing dials an address it has not just checked.
 package outbound
 
 import (
@@ -20,28 +16,22 @@ import (
 	"time"
 )
 
-// The scheme and port an endpoint is required to use.
 const (
 	Scheme = "https"
 	Port   = "443"
 )
 
-// MaxAddressBytes is the longest endpoint address Illarin will hold.
 const MaxAddressBytes = 300
 
-// ErrNotPublic says a host resolved somewhere Illarin refuses to connect.
 var ErrNotPublic = errors.New("the host does not resolve into public address space")
 
-// Address is one endpoint that has passed the policy.
 type Address struct {
 	URL  *url.URL
 	Host string
 }
 
-// String answers the address as it will be sent to.
 func (a Address) String() string { return a.URL.String() }
 
-// Check answers the address behind a supplied value, or why it was refused.
 func Check(raw string) (Address, error) {
 	if len(raw) > MaxAddressBytes {
 		return Address{}, fmt.Errorf("an endpoint address is at most %d characters", MaxAddressBytes)
@@ -76,7 +66,6 @@ func Check(raw string) (Address, error) {
 	return Address{URL: parsed, Host: host}, nil
 }
 
-// Public answers whether one resolved address is somewhere Illarin will connect.
 func Public(at netip.Addr) bool {
 	if !at.IsValid() || at.Zone() != "" {
 		return false
@@ -114,24 +103,18 @@ func prefixes(raw ...string) []netip.Prefix {
 	return held
 }
 
-// Limits are what one outbound request may spend and read back.
 type Limits struct {
 	Connect   time.Duration
 	Request   time.Duration
 	ReadBytes int64
 }
 
-// DefaultLimits are what Illarin sends publication events under.
 func DefaultLimits() Limits {
 	return Limits{Connect: 5 * time.Second, Request: 10 * time.Second, ReadBytes: 8 << 10}
 }
 
-// MaxRetryAfter is the longest wait Illarin will take from an endpoint, so a
-// receiver asking for a month cannot park work indefinitely.
 const MaxRetryAfter = 24 * time.Hour
 
-// Answer is the safe part of what an endpoint said back. The body is bounded
-// and is compared, never logged.
 type Answer struct {
 	Status     int
 	Body       []byte
@@ -139,12 +122,10 @@ type Answer struct {
 	RetryAfter time.Duration
 }
 
-// Reaching turns a host into the one address a request is dialed at.
 type Reaching struct {
 	Resolve func(ctx context.Context, host string) ([]netip.Addr, error)
 }
 
-// At answers the address to dial, having refused every non-public result.
 func (r Reaching) At(ctx context.Context, host, port string) (string, error) {
 	resolve := r.Resolve
 	if resolve == nil {
@@ -166,8 +147,6 @@ func lookup(ctx context.Context, host string) ([]netip.Addr, error) {
 	return net.DefaultResolver.LookupNetIP(ctx, "ip", host)
 }
 
-// Caller sends one bounded request to a checked address. It never follows a
-// redirect and never reuses a connection, so every attempt resolves again.
 type Caller struct {
 	Limits Limits
 	Reach  func(ctx context.Context, host, port string) (string, error)
@@ -176,7 +155,6 @@ type Caller struct {
 	client    *http.Client
 }
 
-// NewCaller builds the caller Illarin sends publication events with.
 func NewCaller(limits Limits) *Caller {
 	caller := &Caller{Limits: limits, Reach: Reaching{}.At}
 	caller.transport = &http.Transport{
@@ -203,8 +181,6 @@ func NewCaller(limits Limits) *Caller {
 	return caller
 }
 
-// Check answers the host behind a supplied address, refusing anything the
-// policy does not allow.
 func (c *Caller) Check(address string) (string, error) {
 	checked, err := Check(address)
 	if err != nil {
@@ -213,7 +189,6 @@ func (c *Caller) Check(address string) (string, error) {
 	return checked.Host, nil
 }
 
-// Post sends one JSON body and answers what came back, bounded.
 func (c *Caller) Post(
 	ctx context.Context,
 	address string,
@@ -223,8 +198,6 @@ func (c *Caller) Post(
 	return c.send(ctx, http.MethodPost, address, headers, body)
 }
 
-// Get asks one checked address what it is, under the same bounds and the same
-// refusal to follow a redirect.
 func (c *Caller) Get(ctx context.Context, address string) (Answer, error) {
 	return c.send(ctx, http.MethodGet, address, nil, nil)
 }
@@ -272,8 +245,6 @@ func (c *Caller) send(
 	}, nil
 }
 
-// RetryAfter reads how long an endpoint asked to be left alone, in either form
-// the header takes, and holds the answer inside what Illarin will wait.
 func RetryAfter(header string, from time.Time) time.Duration {
 	header = strings.TrimSpace(header)
 	if header == "" {
@@ -291,5 +262,4 @@ func RetryAfter(header string, from time.Time) time.Duration {
 	return min(wait, MaxRetryAfter)
 }
 
-// trust lets a test point a caller at a receiver holding its own certificate.
 func (c *Caller) trust(config *tls.Config) { c.transport.TLSClientConfig = config }

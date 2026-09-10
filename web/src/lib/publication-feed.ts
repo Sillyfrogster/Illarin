@@ -8,10 +8,8 @@ import {
   feedAddresses,
 } from "@/lib/publication-metadata";
 
-/** How much of the publication one feed carries before a reader has to browse. */
 export const FEED_LENGTH = 20;
 
-/** The publication an RSS or JSON feed summarizes, whole or narrowed to one archive. */
 export type FeedScope = {
   name: string;
   description: string;
@@ -24,7 +22,6 @@ export const PUBLICATION_SCOPE: FeedScope = {
   archive: BLOG_HOME,
 };
 
-/** The publication as a feed reader pulls it, with summaries and links but never a body. */
 export function publicationFeed(
   scope: FeedScope,
   posts: PostSummary[],
@@ -46,7 +43,6 @@ ${items}
 `;
 }
 
-/** The same publication for a reader that prefers JSON Feed to RSS. */
 export function publicationJsonFeed(
   scope: FeedScope,
   posts: PostSummary[],
@@ -132,7 +128,6 @@ function jsonItem(post: PostSummary): Record<string, unknown> {
   };
 }
 
-/** The characters XML 1.0 cannot carry, which a feed drops rather than escapes. */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
 const UNWRITABLE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
 

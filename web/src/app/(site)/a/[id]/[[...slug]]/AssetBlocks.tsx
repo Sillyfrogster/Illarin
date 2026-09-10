@@ -54,7 +54,6 @@ function returnToBlock(blockId: string) {
   window.location.hash = anchor;
 }
 
-/** The asset's content. An owner also sees the blocks they have yet to fill. */
 export function AssetBlocks({
   images,
   isOwner,
@@ -78,7 +77,6 @@ export function AssetBlocks({
   const writing = isOwner && workspace.editing;
   const drag = useBlockDrag(workspace.arrangement.move);
 
-  // A block a creator has just added is scrolled to wherever it lands.
   useEffect(() => {
     const seen = known.current;
     const fresh = seen ? blocks.find((block) => !seen.has(block.id)) : null;
@@ -104,7 +102,6 @@ export function AssetBlocks({
     : publicBlocks.filter(rendersOnThePage);
   const rows = packBlockRows(packable, { availableWidth });
   const fullness = pageFullness(rows);
-  /** An owner filling in an empty page is invited once, not block by block. */
   const invited = writing && assetHoldsNothing(blocks);
   const ornament = invited
     ? null
@@ -367,7 +364,6 @@ export function AssetBlocks({
   );
 }
 
-/** A block heading a creator writes over, and a save restores where they clear it. */
 function BlockTitle({ block }: { block: AssetBlock }) {
   const workspace = useWorkspace();
   const cursor = `block:${block.id}:title`;
@@ -396,11 +392,6 @@ function BlockTitle({ block }: { block: AssetBlock }) {
   );
 }
 
-/**
- * The artwork that takes what a row leaves. A page with plenty on it gets the
- * shared wash. A page with one row gets the kind's own piece, because there
- * the artwork is the composition rather than a hint of one.
- */
 function Ornament({
   barren,
   kind,

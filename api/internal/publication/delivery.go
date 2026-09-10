@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The states a delivery passes through. No settled state changes whether the
-// post is public.
 const (
 	DeliveryPending     = "pending"
 	DeliverySending     = "sending"
@@ -22,7 +20,6 @@ const (
 	DeliveryUnconfirmed = "unconfirmed"
 )
 
-// What one attempt found at the far end.
 const (
 	AttemptDelivered   = "delivered"
 	AttemptRefused     = "refused"
@@ -30,24 +27,16 @@ const (
 	AttemptUnconfirmed = "unconfirmed"
 )
 
-// DeliveryPoll is how often the worker looks for delivery work.
 const DeliveryPoll = 5 * time.Second
 
-// DeliveryLease is how long one attempt holds a delivery before another
-// attempt may take it over.
 const DeliveryLease = time.Minute
 
-// ErrDeliveryNotFound says no such delivery is on record.
 var ErrDeliveryNotFound = errors.New("no such publication delivery")
 
-// ErrDeliveryUnsettled says a delivery still has attempts of its own to make.
 var ErrDeliveryUnsettled = errors.New("the delivery has not finished trying")
 
-// ErrDeliveryUnsendable says there is no longer anywhere to send a delivery.
 var ErrDeliveryUnsendable = errors.New("the destination no longer receives")
 
-// Sender is how a publication destination is checked and reached, under
-// Illarin's outbound address policy.
 type Sender interface {
 	Check(address string) (string, error)
 	Get(ctx context.Context, address string) (outbound.Answer, error)
@@ -59,8 +48,6 @@ type Sender interface {
 	) (outbound.Answer, error)
 }
 
-// Delivery is what a contributor and an admin are told about one event on its
-// way to one destination.
 type Delivery struct {
 	ID            uuid.UUID
 	EventID       uuid.UUID
@@ -82,8 +69,6 @@ type Delivery struct {
 	Last          *DeliveryAttempt
 }
 
-// DeliveryAttempt is the safe record of one request. It holds no body, in
-// either direction, and no header Illarin signed it with.
 type DeliveryAttempt struct {
 	Run       int
 	Number    int
@@ -94,8 +79,6 @@ type DeliveryAttempt struct {
 	Attempted time.Time
 }
 
-// PostDeliveries answers what one post's public transitions have produced, to
-// the contributor who owns it and to an admin.
 func (s *Service) PostDeliveries(
 	ctx context.Context,
 	editor Editor,
@@ -118,8 +101,6 @@ func (s *Service) PostDeliveries(
 	return collectDeliveries(rows)
 }
 
-// Deliveries answers the delivery work the authority is diagnosing, newest
-// first, narrowed to one state where it asked for one.
 func (s *Service) Deliveries(ctx context.Context, state string, limit int) ([]Delivery, error) {
 	rows, err := s.pool.Query(ctx, selectDeliveries+`
 		 where $1 = '' or work.state = $1
@@ -132,7 +113,6 @@ func (s *Service) Deliveries(ctx context.Context, state string, limit int) ([]De
 	return collectDeliveries(rows)
 }
 
-// Delivery answers one piece of delivery work.
 func (s *Service) Delivery(ctx context.Context, id uuid.UUID) (Delivery, error) {
 	rows, err := s.pool.Query(ctx, selectDeliveries+` where work.id = $1`, id)
 	if err != nil {
@@ -148,8 +128,6 @@ func (s *Service) Delivery(ctx context.Context, id uuid.UUID) (Delivery, error) 
 	return found[0], nil
 }
 
-// DeliveryHistory answers every attempt one delivery has made, oldest first,
-// so a replay never hides what the runs before it found.
 func (s *Service) DeliveryHistory(ctx context.Context, id uuid.UUID) ([]DeliveryAttempt, error) {
 	if _, err := s.Delivery(ctx, id); err != nil {
 		return nil, err
@@ -183,8 +161,6 @@ func (s *Service) DeliveryHistory(ctx context.Context, id uuid.UUID) ([]Delivery
 	return made, nil
 }
 
-// ReplayDelivery puts settled work back in the queue under a new run. The
-// Publication event it carries and every attempt already made stay as they are.
 func (s *Service) ReplayDelivery(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -244,10 +220,6 @@ func (s *Service) ReplayDelivery(
 	return s.Delivery(ctx, id)
 }
 
-// queueDeliveries turns one transition's captured choice into durable work,
-// skipping a destination that did not subscribe to this event and a Discord
-// channel this post has already announced in. It runs inside the transaction
-// that changes the post and makes no request.
 func queueDeliveries(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -276,8 +248,6 @@ func queueDeliveries(
 	return nil
 }
 
-// stopDeliveriesTo settles the work waiting on a destination that is no longer
-// somewhere Illarin will send, and says so in one safe attempt record.
 func stopDeliveriesTo(ctx context.Context, tx pgx.Tx, id uuid.UUID, reason string) error {
 	said := stopped(reason)
 	rows, err := tx.Query(ctx, `
@@ -317,7 +287,6 @@ func stopDeliveriesTo(ctx context.Context, tx pgx.Tx, id uuid.UUID, reason strin
 	return nil
 }
 
-// RunDeliveries sends queued publication events until the context is done.
 func (s *Service) RunDeliveries(ctx context.Context, onError func(error)) {
 	ticker := time.NewTicker(DeliveryPoll)
 	defer ticker.Stop()
@@ -334,8 +303,6 @@ func (s *Service) RunDeliveries(ctx context.Context, onError func(error)) {
 	}
 }
 
-// SendDueDeliveries attempts every delivery due at the given instant and
-// answers how many attempts it made.
 func (s *Service) SendDueDeliveries(ctx context.Context, now time.Time) (int, error) {
 	made := 0
 	for {
@@ -350,7 +317,6 @@ func (s *Service) SendDueDeliveries(ctx context.Context, now time.Time) (int, er
 	}
 }
 
-// waiting is one due delivery this worker holds and what it has to send.
 type waiting struct {
 	ID            uuid.UUID
 	EventID       uuid.UUID
@@ -363,10 +329,6 @@ type waiting struct {
 	Made          int
 }
 
-// leaseDueDelivery takes one due delivery, including one an earlier attempt
-// stopped holding, and answers false when nothing is due. An attempt that left
-// no record behind does not spend a place in the run, which is what makes an
-// interrupted process cost a receiver nothing.
 func (s *Service) leaseDueDelivery(ctx context.Context, now time.Time) (waiting, bool, error) {
 	var held waiting
 	held.Token = uuid.New()
@@ -402,8 +364,6 @@ func (s *Service) leaseDueDelivery(ctx context.Context, now time.Time) (waiting,
 	return held, true, nil
 }
 
-// sendLeased makes the one request a leased delivery names and records what
-// came of it, whether that ends the work or leaves it due again.
 func (s *Service) sendLeased(ctx context.Context, held waiting, now time.Time) error {
 	if held.DestinationID == nil {
 		return s.record(ctx, held, stopped(SettledRemoved), now)
@@ -445,8 +405,6 @@ func (s *Service) sendLeased(ctx context.Context, held waiting, now time.Time) e
 	return s.retireDestination(ctx, *held.DestinationID)
 }
 
-// record keeps one attempt and leaves the delivery either due again or settled,
-// which is the whole of what a bounded at-least-once schedule decides.
 func (s *Service) record(
 	ctx context.Context,
 	held waiting,
@@ -474,7 +432,6 @@ func (s *Service) record(
 	return s.settle(ctx, held, state, reason, made)
 }
 
-// deferAttempt leaves a delivery waiting for the next place in its run.
 func (s *Service) deferAttempt(
 	ctx context.Context,
 	held waiting,
@@ -495,7 +452,6 @@ func (s *Service) deferAttempt(
 	})
 }
 
-// settle closes one delivery for good and says why it closed.
 func (s *Service) settle(
 	ctx context.Context,
 	held waiting,
@@ -516,8 +472,6 @@ func (s *Service) settle(
 	})
 }
 
-// close writes one attempt and whatever it did to the delivery in the same
-// transaction, and leaves work another attempt has taken over alone.
 func (s *Service) close(
 	ctx context.Context,
 	held waiting,
@@ -559,8 +513,6 @@ func recordAttempt(ctx context.Context, tx pgx.Tx, deliveryID uuid.UUID, made De
 	return nil
 }
 
-// deliveryHeldByThisAttempt answers whether the lease this attempt took is
-// still the one on the row, so work someone else took over is left alone.
 func deliveryHeldByThisAttempt(ctx context.Context, tx pgx.Tx, held waiting) (bool, error) {
 	var found bool
 	err := tx.QueryRow(ctx, `
@@ -577,8 +529,6 @@ func deliveryHeldByThisAttempt(ctx context.Context, tx pgx.Tx, held waiting) (bo
 	return found, nil
 }
 
-// destinationStanding answers what a destination is and whether it still
-// receives, which together decide how one leased delivery is sent.
 func (s *Service) destinationStanding(ctx context.Context, id uuid.UUID) (string, string, error) {
 	var kind, state string
 	err := s.pool.QueryRow(ctx, `

@@ -207,8 +207,6 @@ func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publica
 	)
 }
 
-// testPublishing keeps publication deliveries on this machine. A test that
-// needs one to arrive passes the receiver it is running.
 func testPublishing(to publication.Sender) publication.Publishing {
 	if to == nil {
 		to = closedSender{}
@@ -229,8 +227,6 @@ func testSealingKey() secrets.Key {
 	return key
 }
 
-// closedSender checks an address the way production does and sends nowhere,
-// which is what a test stack running no receiver needs.
 type closedSender struct{}
 
 func (closedSender) Check(address string) (string, error) {
@@ -259,9 +255,6 @@ func newTestDeliveryService(
 	return delivery.NewService(pool, assets, links, testDeliverySettings())
 }
 
-// testDeliverySettings keep every bound the service runs under and shorten only
-// the waiting, so a test that queues nothing finishes rather than holding for
-// half a minute.
 func testDeliverySettings() delivery.Settings {
 	settings := delivery.DefaultSettings()
 	settings.HoldFloor = 50 * time.Millisecond
@@ -329,7 +322,6 @@ func newVerifiedTestRoutersWithPool(
 	return setupRouter, registerTestRouter(t, handlers, deadlines), session, handlers.assets, pool
 }
 
-// verifiedSignUp signs an account up and follows the link the outbox caught, so the session it returns is past the verification gate.
 func verifiedSignUp(
 	t *testing.T,
 	setupRouter *gin.Engine,

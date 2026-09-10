@@ -10,15 +10,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-// App describes formats an application can open for download recommendations.
 type App struct {
 	ID    string
 	Label string
-	// Reads names the formats the app opens.
 	Reads []string
 }
 
-// Apps returns the applications Illarin names, in the order it names them.
 func Apps() []App {
 	return []App{
 		{ID: "sillytavern", Label: "SillyTavern", Reads: []string{
@@ -45,7 +42,6 @@ func reach(formatID string) int {
 	return count
 }
 
-// Verdict describes how much content a target keeps.
 type Verdict string
 
 const (
@@ -54,31 +50,24 @@ const (
 	Dropped Verdict = "dropped"
 )
 
-// RoleLoss is one role measured against one target, on one asset.
 type RoleLoss struct {
-	Role    block.Role `json:"role"`
-	Label   string     `json:"label"`
-	Verdict Verdict    `json:"verdict"`
-	// Reason names what went, and stands only on a reduced verdict.
-	Reason string `json:"reason,omitempty"`
-	// Destination names a nonstandard output location.
+	Role        block.Role   `json:"role"`
+	Label       string       `json:"label"`
+	Verdict     Verdict      `json:"verdict"`
+	Reason      string       `json:"reason,omitempty"`
 	Destination string       `json:"destination,omitempty"`
 	Sample      block.Sample `json:"sample"`
 }
 
-// Lossy reports whether this verdict costs the asset something.
 func (l RoleLoss) Lossy() bool { return l.Verdict != Carried }
 
-// Target is one offered download format and its content costs.
 type Target struct {
-	Format string `json:"format"`
-	Label  string `json:"label"`
-	// Recommended is computed from compatibility and loss.
+	Format      string     `json:"format"`
+	Label       string     `json:"label"`
 	Recommended bool       `json:"recommended"`
 	Roles       []RoleLoss `json:"roles"`
 }
 
-// Losses returns the verdicts that cost the asset something.
 func (t Target) Losses() []RoleLoss {
 	losses := make([]RoleLoss, 0, len(t.Roles))
 	for _, role := range t.Roles {
@@ -89,13 +78,10 @@ func (t Target) Losses() []RoleLoss {
 	return losses
 }
 
-// CapabilitySubject is the asset as the export gates read it.
 type CapabilitySubject struct {
-	Kind string
-	// Origin is empty for content authored in Illarin.
-	Origin   string
-	Elements []block.Element
-	// AllowedCrossPlatform names explicitly allowed targets.
+	Kind                 string
+	Origin               string
+	Elements             []block.Element
 	AllowedCrossPlatform []string
 }
 
@@ -106,7 +92,6 @@ func (s CapabilitySubject) origin() string {
 	return s.Origin
 }
 
-// WritesKind reports whether any module writes this kind at all, which tells an empty target list apart from a kind Illarin only reads.
 func (r *Registry) WritesKind(kind string) bool {
 	for _, module := range r.modules {
 		declaration := module.Declaration()
@@ -117,7 +102,6 @@ func (r *Registry) WritesKind(kind string) bool {
 	return false
 }
 
-// OfferedTargets returns tested, permitted formats and their content costs.
 func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
@@ -202,7 +186,6 @@ func matchesAny(condition *ContentCondition, written []block.Content) bool {
 	return false
 }
 
-// recommend prefers reach, fewer losses, and wider role support.
 func recommend(targets []Target, r *Registry) {
 	best := -1
 	for i := range targets {
@@ -243,7 +226,6 @@ func writableRoles(r *Registry, formatID string) int {
 	return count
 }
 
-// CapabilityStamp identifies the current writer and app declarations.
 func (r *Registry) CapabilityStamp() string {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {

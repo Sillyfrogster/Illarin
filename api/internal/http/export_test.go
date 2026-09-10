@@ -60,9 +60,6 @@ func losses(target downloadTarget) []roleVerdict {
 	return lost
 }
 
-// A character offers all three card formats, and the loss report is checked
-// against the asset rather than fixed per format: the same writer reports
-// nothing for a plain card and a dropped role once the asset has expressions.
 func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -85,15 +82,11 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	if lost[0].Sample.Count != 1 || len(lost[0].Sample.Images) != 1 {
 		t.Errorf("sample = %+v, want the picture that is at stake", lost[0].Sample)
 	}
-	// Nothing is withheld for losing optional content, so the target is still
-	// on the menu with the loss stated.
 	if len(withImages) != 3 {
 		t.Fatalf("menu = %+v, want the lossy target still offered", withImages)
 	}
 }
 
-// The recommendation is the widest-compatibility rule: CharX carries at least
-// as much and is still not recommended, because SillyTavern cannot open one.
 func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -114,8 +107,6 @@ func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
 		len(losses(targetLine(t, menu, "chara_card_v3"))) {
 		t.Fatal("CharX lost more here, so least loss would have chosen CCv3 anyway")
 	}
-	// A gallery has no standard home in either, so its verdict carries a note
-	// about where it actually lands.
 	gallery := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
 	if gallery.Verdict != "carried" || gallery.Destination == "" {
 		t.Fatalf("gallery verdict = %+v, want carried with a destination note", gallery)
@@ -133,8 +124,6 @@ func roleVerdictNamed(t *testing.T, target downloadTarget, role string) roleVerd
 	return roleVerdict{}
 }
 
-// Two of the three character formats are a picture, so a download that named
-// only the asset would put three files in a folder that nothing tells apart.
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -156,7 +145,6 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	}
 }
 
-// The creator's panel is the reader's, read from the same projection.
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -178,8 +166,6 @@ func mustJSON(t *testing.T, value any) []byte {
 	return encoded
 }
 
-// The upload is its own group, labelled by what it is and when it arrived, and
-// an asset built from nothing simply has none.
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -202,14 +188,11 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	if fromNothing.Original != nil {
 		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
 	}
-	// The builder is an origin in its own right, so all three targets stand.
 	if len(fromNothing.Downloads) != 3 {
 		t.Fatalf("menu = %+v, want all three character targets", fromNothing.Downloads)
 	}
 }
 
-// The projection is written with the change that caused it, for a draft as
-// much as a published asset, and publishing computes nothing.
 func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -227,8 +210,6 @@ func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *test
 	}
 }
 
-// Hiding is a promise about a page and an export is a promise about a file, so
-// a hidden block leaves the download alone and its content still travels.
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -262,15 +243,11 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	}
 }
 
-// giveExpressions adds a picture and puts it in an expressions block, which
-// is a role two of the three character formats have nowhere to put.
 func giveExpressions(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
 	givePictures(t, r, session, assetID, "expression", "expressions")
 }
 
-// givePictures adds one picture in a role and puts it in the block that
-// carries that role.
 func givePictures(
 	t *testing.T,
 	r http.Handler,
@@ -300,8 +277,6 @@ func givePictures(
 	}
 }
 
-// publishCharacter fills the floor an uploaded character still misses and
-// publishes it.
 func publishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, assetID,

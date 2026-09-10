@@ -15,22 +15,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// EventVerification is the one event a destination receives before it is
-// allowed to receive anything real.
 const EventVerification = "publication.endpoint.verification.v1"
 
-// challengeBytes is the length of the value an endpoint has to hand back.
 const challengeBytes = 24
 
-// maxChallengeReply is the most of a reply Illarin reads while looking for the
-// challenge in it.
 const maxChallengeReply = 1 << 10
 
-// ErrNotProven says an endpoint did not return the challenge it was sent.
 var ErrNotProven = errors.New("the endpoint did not return the challenge")
 
-// verification is the whole body sent to prove an endpoint is under the
-// control of whoever configured it.
 type verification struct {
 	ID        uuid.UUID `json:"id"`
 	Type      string    `json:"type"`
@@ -38,8 +30,6 @@ type verification struct {
 	SentAt    time.Time `json:"sentAt"`
 }
 
-// VerifyDestination sends a signed challenge and activates the destination
-// only when the exact value comes back.
 func (s *Service) VerifyDestination(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -116,8 +106,6 @@ func (s *Service) VerifyDestination(
 	return s.Destination(ctx, id)
 }
 
-// proves answers whether a bounded reply is the challenge, whether the endpoint
-// echoed it plainly or wrapped it in the object the documentation describes.
 func proves(reply []byte, challenge string) bool {
 	if len(reply) > maxChallengeReply {
 		return false

@@ -38,7 +38,6 @@ const DESTINATION_ICONS = {
   "Create account": UserPlus,
 };
 
-/** Everything an account reaches from the shell, behind one trigger */
 export function AccountMenu() {
   const pathname = usePathname();
   const { account, publicationAuthority } = useAuth();

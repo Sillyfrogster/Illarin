@@ -8,30 +8,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// OperationRead is the pace a publication token reads at.
 const OperationRead = "read"
 
-// OperationWrite is the pace a publication token changes a post at.
 const OperationWrite = "write"
 
-// OperationUpload is the pace a publication token sends pictures at.
 const OperationUpload = "upload"
 
-// Rate is how many attempts one credential may make inside one window.
 type Rate struct {
 	Attempts int
 	Window   time.Duration
 }
 
-// Rates hold a publication token to a pace for each kind of work it asks for.
 type Rates struct {
 	Read   Rate
 	Write  Rate
 	Upload Rate
 }
 
-// DefaultRates are what the service runs with. They sit far above the pace a
-// tool writing posts keeps and far below the pace a runaway client keeps.
 func DefaultRates() Rates {
 	return Rates{
 		Read:   Rate{Attempts: 300, Window: time.Minute},
@@ -40,7 +33,6 @@ func DefaultRates() Rates {
 	}
 }
 
-// TooManyRequests says a token has spent its pace and when it may carry on.
 type TooManyRequests struct {
 	Operation string
 	After     time.Duration
@@ -48,8 +40,6 @@ type TooManyRequests struct {
 
 func (e TooManyRequests) Error() string { return "the publication token is going too fast" }
 
-// Take spends one of a token's attempts at one kind of operation. The count
-// lives in the database, so every API process holds one token to one pace.
 func (s *Service) Take(ctx context.Context, tokenID uuid.UUID, operation string) error {
 	limit := s.rates.of(operation)
 	var attempts int

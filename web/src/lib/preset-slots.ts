@@ -1,12 +1,6 @@
-/**
- * The names a preset's settings and nudges are read under. Nothing here
- * reaches a download, and a key with no entry is shown as the file wrote it.
- */
-
 export type SlotRank = "lead" | "supporting" | "unrecognised";
 
 export type NamedSlot = {
-  /** The key the file uses, whether or not Illarin knows it. */
   key: string;
   name: string;
   note?: string;
@@ -17,7 +11,6 @@ type SlotEntry = {
   keys: string[];
   name: string;
   note?: string;
-  /** Set on the handful a reader checks to see whether a preset suits them. */
   lead?: true;
 };
 
@@ -255,7 +248,6 @@ const RANK_ORDER: Record<SlotRank, number> = {
   unrecognised: 2,
 };
 
-/** The settings a group shows, in the order a reader wants them. */
 export function orderSettings<T extends { name: string }>(
   settings: readonly T[],
 ): Array<T & { slot: NamedSlot }> {

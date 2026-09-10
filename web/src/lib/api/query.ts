@@ -128,7 +128,7 @@ export type BrowseFilters = Pick<
 export type AssetListParams = BrowseFilters &
   Pick<AssetQuery, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
 
-/** A fresh client every call. A shared one would leak one visitor's cache into another's page. */
+/** Creates an isolated cache for each server render. */
 export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -146,7 +146,6 @@ export const assetKeys = {
   ) => ["assets", "list", creator, filters, visibility] as const,
 };
 
-/** Every working-copy write refuses the same way, and a stale one tells the page. */
 function writeRefusal(error: unknown, fallback: string): Error {
   reportStaleWorkingCopy(error);
   const detail = error as { error?: unknown } | undefined;
@@ -212,7 +211,6 @@ export async function fetchDeletedAssets(
   return data.items;
 }
 
-/** The API intentionally makes withheld, deleted, and missing assets identical. */
 export async function fetchAsset(
   id: string,
   cookie?: string,
@@ -237,7 +235,6 @@ export async function startAsset(
   const { data, error } = await api.POST("/v1/assets", {
     body: app ? { kind, app } : { kind },
   });
-  /** The upload variant returns an ingest operation, so require a page here. */
   if (error || !data || !("blocks" in data)) {
     throw new Error("Could not start the asset");
   }
@@ -262,7 +259,6 @@ export async function saveAssetDiscovery(
   if (error) throw new Error("Could not save discovery");
 }
 
-/** Saves one builder block without changing any other block on the page. */
 export async function saveAssetBlock(
   candidate: Candidate,
   assetId: string,
@@ -286,7 +282,6 @@ export async function saveAssetBlock(
   return data;
 }
 
-/** Adds one block to the foot of the page, holding the element chosen for it. */
 export async function addAssetBlock(
   candidate: Candidate,
   assetId: string,
@@ -307,7 +302,6 @@ export async function addAssetBlock(
   return data;
 }
 
-/** Media is stored first, then linked when its block is saved. */
 export async function addAssetImage(
   candidate: Candidate,
   assetId: string,
@@ -338,7 +332,6 @@ export async function addAssetImage(
   return added.id;
 }
 
-/** Saves the full page outline as one arrangement. */
 export async function arrangeAssetBlocks(
   candidate: Candidate,
   assetId: string,
@@ -358,7 +351,6 @@ export async function arrangeAssetBlocks(
   return data;
 }
 
-/** Removes one optional block and all of the elements it holds. */
 export async function removeAssetBlock(
   candidate: Candidate,
   assetId: string,
@@ -379,7 +371,6 @@ export async function removeAssetBlock(
   }
 }
 
-/** Moves a block's unpinned content, then removes the emptied block. */
 export async function moveAssetBlockContent(
   candidate: Candidate,
   assetId: string,
@@ -403,7 +394,6 @@ export async function moveAssetBlockContent(
   return data;
 }
 
-/** A null adult-content answer is allowed only while the asset is a draft. */
 export async function saveAssetIdentity(
   candidate: Candidate,
   id: string,
@@ -422,9 +412,6 @@ export async function saveAssetIdentity(
   }
 }
 
-/**
- * Publishes a draft, or comes back with what publication is still waiting on.
- */
 export async function publishAsset(
   candidate: Candidate,
   id: string,
@@ -453,7 +440,6 @@ export async function publishAsset(
   };
 }
 
-/** The replacement this asset is still deciding about, or nothing where none waits. */
 export async function fetchWaitingReplacement(
   id: string,
 ): Promise<IngestOperation | null> {
@@ -464,7 +450,6 @@ export async function fetchWaitingReplacement(
   return data;
 }
 
-/** Hands over a replacement file. Nothing readers see changes until it is accepted. */
 export async function uploadAssetReplacement(
   candidate: Candidate,
   id: string,
@@ -494,7 +479,6 @@ export async function uploadAssetReplacement(
   return answer;
 }
 
-/** Reads one ingest operation again while it is being processed. */
 export async function readIngestOperation(
   url: string,
 ): Promise<IngestOperation> {
@@ -506,7 +490,6 @@ export async function readIngestOperation(
   return (await response.json()) as IngestOperation;
 }
 
-/** Applies a reviewed replacement to the working copy, with a choice for each thing the file cannot hold. */
 export async function acceptAssetReplacement(
   candidate: Candidate,
   id: string,
@@ -530,7 +513,6 @@ export async function acceptAssetReplacement(
   return data;
 }
 
-/** Discards a reviewed replacement and leaves the working copy as it was. */
 export async function cancelAssetReplacement(id: string, operationId: string) {
   const { error } = await api.DELETE(
     "/v1/assets/{id}/revisions/{operationId}",
@@ -539,7 +521,6 @@ export async function cancelAssetReplacement(id: string, operationId: string) {
   if (error) throw new Error("That file could not be discarded. Try again.");
 }
 
-/** Publishes the reviewed working copy, or says what publication is waiting on. */
 export async function publishAssetUpdate(
   candidate: Candidate,
   id: string,
@@ -577,7 +558,6 @@ export async function publishAssetUpdate(
   };
 }
 
-/** Preserved namespaces belong to the source file and are owner-only. */
 export async function fetchPreservedNamespaces(
   id: string,
 ): Promise<PreservedNamespace[]> {
@@ -587,7 +567,6 @@ export async function fetchPreservedNamespaces(
   return data ?? [];
 }
 
-/** The versions an asset has recorded, newest first. */
 export async function fetchAssetUpdates(
   id: string,
   cookie?: string,
@@ -599,7 +578,6 @@ export async function fetchAssetUpdates(
   return data?.items ?? [];
 }
 
-/** What changed between two recorded versions, or why the reader cannot see it. */
 export async function compareAssetVersions(
   id: string,
   from: number,
@@ -639,7 +617,6 @@ export async function compareAssetVersions(
   return unreadable;
 }
 
-/** The recorded versions whose prompts no longer line up with the sealed ones. */
 export async function fetchProtectionMismatches(
   id: string,
 ): Promise<ProtectionMismatch[]> {
@@ -649,7 +626,6 @@ export async function fetchProtectionMismatches(
   return data?.items ?? [];
 }
 
-/** Says which recorded prompt each sealed prompt is, on one recorded version. */
 export async function resolvePromptCorrespondence(
   id: string,
   number: number,
@@ -672,7 +648,6 @@ export async function resolvePromptCorrespondence(
   }
 }
 
-/** Deletes one namespace and everything under it, for good. */
 export async function deletePreservedNamespace(
   candidate: Candidate,
   id: string,
@@ -717,7 +692,6 @@ export async function fetchPostArchive(query: {
   return data;
 }
 
-/** The blog masthead reads these, so an unreachable API leaves it bare rather than taking the page down with it. */
 export async function fetchPostCategories(): Promise<PublicationCategory[]> {
   const answer = await api.GET("/v1/post-categories", {}).catch(() => null);
   return answer?.data?.categories ?? [];

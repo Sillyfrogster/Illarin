@@ -13,7 +13,6 @@ import {
 import type { Candidate } from "@/lib/working-copy";
 import { arrangementRequest, moveBlock } from "./composition";
 
-/** The operations the server answers with a whole page rather than one block. */
 export type Arrangement = {
   busy: boolean;
   add: (definition: string, elementType: ElementType) => void;
@@ -33,12 +32,10 @@ type Page = {
   say: (message: string) => void;
 };
 
-/** The grip a creator moves a block by, named so a rebuilt page can hand focus back. */
 export function gripId(blockId: string): string {
   return `grip-${blockId}`;
 }
 
-// A move rebuilds the row the block sat in, so the keyboard needs its grip back.
 function returnFocusToGrip(blockId: string) {
   if (document.activeElement?.id !== gripId(blockId)) return () => {};
   return () =>

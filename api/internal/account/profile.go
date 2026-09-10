@@ -23,7 +23,6 @@ const (
 	profileLinkLimit = 6
 )
 
-// avatarVariant is the one size a profile avatar is published at.
 const avatarVariant = "grid"
 
 var (
@@ -31,18 +30,15 @@ var (
 	ErrAvatarMissing        = errors.New("profile has no avatar")
 )
 
-// AvatarURL addresses one avatar on the byte path every image shares.
 func AvatarURL(mediaID uuid.UUID, version uint32) string {
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, avatarVariant, version)
 }
 
-// ProfileLink is one labelled address a creator chose to publish.
 type ProfileLink struct {
 	Label   string
 	Address string
 }
 
-// ProfileAvatar is the creator's uploaded portrait.
 type ProfileAvatar struct {
 	MediaID           uuid.UUID
 	Width             int
@@ -50,7 +46,6 @@ type ProfileAvatar struct {
 	DerivativeVersion uint32
 }
 
-// PublicProfile is everything a visitor may see about an account.
 type PublicProfile struct {
 	ID                             uuid.UUID
 	Handle                         string
@@ -63,7 +58,6 @@ type PublicProfile struct {
 	Restricted                     bool
 }
 
-// ProfileEdit is the whole set of added fields. An empty value removes one.
 type ProfileEdit struct {
 	DisplayName  string
 	Biography    string
@@ -71,7 +65,6 @@ type ProfileEdit struct {
 	Links        []ProfileLink
 }
 
-// PublicProfile answers the profile behind a handle.
 func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfile, error) {
 	var found PublicProfile
 	var avatarID *uuid.UUID
@@ -124,7 +117,6 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	return found, nil
 }
 
-// SaveProfile replaces every added field on one account's profile.
 func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit) (PublicProfile, error) {
 	edit, err := validateProfileEdit(in)
 	if err != nil {
@@ -168,7 +160,6 @@ func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-// SetAvatar puts an image at a fresh address and drops the one it replaces.
 func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) (PublicProfile, error) {
 	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
 		return PublicProfile{}, err
@@ -202,7 +193,6 @@ func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) 
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-// RemoveAvatar takes the portrait off a profile and lets its bytes go.
 func (s *Service) RemoveAvatar(ctx context.Context, owner Account) (PublicProfile, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -233,7 +223,6 @@ func (s *Service) RemoveAvatar(ctx context.Context, owner Account) (PublicProfil
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-// AvatarVariant serves one size of a profile avatar. Every avatar is public.
 func (s *Service) AvatarVariant(
 	ctx context.Context,
 	mediaID uuid.UUID,
@@ -295,7 +284,6 @@ func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *u
 	return nil
 }
 
-// lockProfileForEdit holds the account row so an admin restriction cannot land beside an owner's edit.
 func lockProfileForEdit(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID) error {
 	var locked uuid.UUID
 	if err := tx.QueryRow(ctx, `select id from users where id = $1 for update`, ownerID).Scan(&locked); err != nil {

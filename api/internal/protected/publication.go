@@ -10,12 +10,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Querier is the read side of a pool or transaction a policy is applied through.
 type Querier interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }
 
-// ApplyPublishedPolicy keeps recorded text under the current protection rules.
 func ApplyPublishedPolicy(ctx context.Context, q Querier, assetID uuid.UUID, blocks []block.Block) error {
 	if err := restorePromptFragments(ctx, q, assetID, blocks, "asset_public.protected_content"); err != nil {
 		return err
@@ -24,7 +22,6 @@ func ApplyPublishedPolicy(ctx context.Context, q Querier, assetID uuid.UUID, blo
 	return err
 }
 
-// ApplyRecordedPolicy holds one recorded version's prompts to the asset's current protection, and says whether it left correspondence unsettled, which hides every prompt in that version.
 func ApplyRecordedPolicy(
 	ctx context.Context,
 	q Querier,
@@ -63,7 +60,6 @@ func ApplyRecordedPolicy(
 	return uncertain, nil
 }
 
-// RestoreRecordedPrompts puts a recorded version's own sealed text back for its owner.
 func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 	var recorded []struct {
 		OwnerKind string          `json:"owner_kind"`
@@ -94,7 +90,6 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 	return nil
 }
 
-// UnsealedFragments names the sealed prompts a save would make public.
 func UnsealedFragments(
 	ctx context.Context,
 	q Querier,
@@ -129,7 +124,6 @@ func UnsealedFragments(
 	return exposed, nil
 }
 
-// PromptName is what a person calls one prompt fragment.
 func PromptName(fragment block.PromptFragment) string {
 	if fragment.Name != "" {
 		return fragment.Name
@@ -137,7 +131,6 @@ func PromptName(fragment block.PromptFragment) string {
 	return "Untitled prompt"
 }
 
-// SealedPrompts names the asset's currently sealed prompts by fragment.
 func SealedPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.UUID]string, error) {
 	current, err := currentPrompts(ctx, q, assetID)
 	if err != nil {
@@ -152,13 +145,11 @@ func SealedPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.
 	return sealed, nil
 }
 
-// promptState is what the working copy says about one prompt fragment now.
 type promptState struct {
 	sealed bool
 	name   string
 }
 
-// currentPrompts reads the prompts the working copy holds, sealed or not.
 func currentPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.UUID]promptState, error) {
 	rows, err := q.Query(ctx,
 		`select elements from public.asset_blocks where asset_id = $1`, assetID)
@@ -191,7 +182,6 @@ func currentPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid
 	return current, rows.Err()
 }
 
-// correspondence reads the owner's answers about which recorded prompt each current sealed prompt is, keyed both ways.
 func correspondence(
 	ctx context.Context,
 	q Querier,
@@ -224,7 +214,6 @@ func correspondence(
 	return settled, standsFor, rows.Err()
 }
 
-// forEachFragment walks every prompt fragment a page holds, in place.
 func forEachFragment(blocks []block.Block, visit func(*block.PromptFragment)) {
 	for blockIndex := range blocks {
 		for elementIndex := range blocks[blockIndex].Elements {

@@ -4,10 +4,8 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
-/** How long the button says it copied before returning to its resting state */
 const CONFIRMATION_MS = 2000;
 
-/** Takes a piece of writing to the clipboard and says so */
 export function CopyButton({
   text,
   label,

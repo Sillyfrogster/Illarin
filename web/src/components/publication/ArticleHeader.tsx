@@ -3,7 +3,6 @@ import type { PostMedia } from "@/lib/api/query";
 
 export type Header = { mediaId: string; alt: string; caption?: string };
 
-/** The picture an article opens with, on the plate that keeps its own shape. */
 export function ArticleHeader({
   header,
   media,

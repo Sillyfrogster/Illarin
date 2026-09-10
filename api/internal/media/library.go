@@ -12,7 +12,6 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// Renderer turns stored image bytes into the variants a page asks for.
 type Renderer interface {
 	Prepare(context.Context, io.Reader) (Prepared, error)
 	Render(context.Context, io.Reader, string) (Derivative, error)
@@ -20,7 +19,6 @@ type Renderer interface {
 	DerivativeType() string
 }
 
-// Library is the byte path every image travels, whatever record points at it.
 type Library struct {
 	store    storage.Store
 	renderer Renderer
@@ -35,10 +33,8 @@ func NewLibrary(store storage.Store, renderer Renderer, workers int) *Library {
 	return &Library{store: store, renderer: renderer, slots: make(chan struct{}, workers)}
 }
 
-// DerivativeType names the encoding every variant is served in.
 func (l *Library) DerivativeType() string { return l.renderer.DerivativeType() }
 
-// Accept stores an uploaded image and measures what arrived.
 func (l *Library) Accept(ctx context.Context, r io.Reader) (storage.StoredBlob, Prepared, error) {
 	stored, err := l.store.Put(ctx, r)
 	if err != nil {
@@ -51,7 +47,6 @@ func (l *Library) Accept(ctx context.Context, r io.Reader) (storage.StoredBlob, 
 	return stored, prepared, nil
 }
 
-// Prepare measures a stored image and writes the variants it can.
 func (l *Library) Prepare(ctx context.Context, stored storage.StoredBlob) (Prepared, error) {
 	source, err := l.store.Open(ctx, stored.ID)
 	if err != nil {
@@ -87,7 +82,6 @@ func (l *Library) Prepare(ctx context.Context, stored storage.StoredBlob) (Prepa
 	return prepared, nil
 }
 
-// Serve returns the internal redirect for one variant and renders a missing one.
 func (l *Library) Serve(
 	ctx context.Context,
 	blobID uuid.UUID,

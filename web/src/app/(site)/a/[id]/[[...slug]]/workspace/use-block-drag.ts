@@ -19,7 +19,6 @@ export type BlockDrag = {
   };
 };
 
-/** Dragging a block onto another puts it in that block's place. */
 export function useBlockDrag(move: (blockId: string, to: number) => void) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -50,7 +49,6 @@ export function useBlockDrag(move: (blockId: string, to: number) => void) {
       },
       onDrop: (event: DragEvent) => {
         event.preventDefault();
-        // The payload outlives the render that started the drag, so it decides.
         const moved = event.dataTransfer.getData(BLOCK) || dragging;
         setDragging(null);
         setOver(null);

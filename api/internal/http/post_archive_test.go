@@ -65,7 +65,6 @@ func (s distinctionStack) archive(t *testing.T, query string) postArchive {
 	return found
 }
 
-// dated moves a published post back in time so a test can write a real chronology.
 func (s distinctionStack) dated(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
@@ -76,7 +75,6 @@ func (s distinctionStack) dated(t *testing.T, id string, at time.Time) {
 	}
 }
 
-// revisedOn moves a published post's last public change to the given day.
 func (s distinctionStack) revisedOn(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
@@ -87,7 +85,6 @@ func (s distinctionStack) revisedOn(t *testing.T, id string, at time.Time) {
 	}
 }
 
-// publishedOn writes one finished Illarin post and puts it in public view on the given day.
 func (s distinctionStack) publishedOn(
 	t *testing.T,
 	session *http.Cookie,

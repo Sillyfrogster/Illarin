@@ -9,13 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// LegacyPath is one v1 public address and the asset that answers for it.
 type LegacyPath struct {
 	Path    string
 	AssetID uuid.UUID
 }
 
-// legacyCandidate is one asset's claim on a v1 address, with the creation time that settles a collision.
 type legacyCandidate struct {
 	AssetID   uuid.UUID
 	Author    string
@@ -24,7 +22,6 @@ type legacyCandidate struct {
 	CreatedAt time.Time
 }
 
-// address is the credited author and the name slugified, falling back to the owner's handle where v1 rendered that instead.
 func (candidate legacyCandidate) address() string {
 	head := legacySlug(candidate.Author)
 	if head == "" {
@@ -37,7 +34,6 @@ func (candidate legacyCandidate) address() string {
 	return head + "/" + tail
 }
 
-// legacySlug lowercases and joins on anything that is not an ASCII letter or digit, as v1 did.
 func legacySlug(text string) string {
 	var built strings.Builder
 	separated := false
@@ -55,7 +51,6 @@ func legacySlug(text string) string {
 	return built.String()
 }
 
-// resolveLegacyPaths gives each address to the asset that held it first and returns the later claims for the ledger.
 func resolveLegacyPaths(candidates []legacyCandidate) ([]LegacyPath, []legacyCandidate) {
 	ordered := append([]legacyCandidate(nil), candidates...)
 	sort.SliceStable(ordered, func(i, j int) bool {

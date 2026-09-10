@@ -2,7 +2,6 @@ import type { IngestOperation } from "./api/query";
 
 export type ImportedAsset = NonNullable<IngestOperation["asset"]>;
 
-/** Where an import has got to, and the one thing the page says about it there. */
 export type ImportStage =
   | { at: "choosing" }
   | { at: "reading"; heading: string }
@@ -12,7 +11,6 @@ export type ImportStage =
 
 const STILL_READING = "Reading your file";
 
-/** Reads the operation and the last connection trouble into the one state the page shows. */
 export function importStage(
   operation: IngestOperation | null,
   message: string,

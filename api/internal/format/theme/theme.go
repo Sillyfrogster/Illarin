@@ -1,4 +1,3 @@
-// Package theme holds the supported theme formats and their named slots.
 package theme
 
 import (

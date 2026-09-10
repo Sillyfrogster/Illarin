@@ -2,14 +2,8 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Shell } from "@/components/layout/Shell";
 
-/** She is cut by the page rather than by a frame, so her lower edge dissolves into it */
 const DISSOLVE = "linear-gradient(to bottom, #000 74%, transparent 99%)";
 
-/**
- * The door into Illarin. The task holds the page's own column and the host
- * stands beside it on the same field, the way she does at the catalog. A
- * narrow page has no room beside the task, so she steps out of it.
- */
 export function AuthPage({
   children,
   introduction,

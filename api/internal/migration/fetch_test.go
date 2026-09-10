@@ -81,7 +81,6 @@ func imageServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 	return server
 }
 
-// fetcherFor allows the test server's host and trusts its certificate, which a local server cannot otherwise supply.
 func fetcherFor(t *testing.T, server *httptest.Server, limits FetchLimits) *AllowlistedFetcher {
 	t.Helper()
 	address, err := url.Parse(server.URL)

@@ -20,21 +20,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
 )
 
-// The card writers build a file out of the asset's roles. Nothing here reads
-// another format's bytes. What a card carries is decided by what the asset
-// holds and by what the standard has a place for.
-
 const (
-	v2SpecVersion = "2.0"
-	v3SpecVersion = "3.0"
-	// dialogueStart is the separator a card puts before an example exchange.
-	dialogueStart = "<START>"
-	// defaultAssetURI is how a CCv3 card points at the picture its own
-	// container carries.
+	v2SpecVersion   = "2.0"
+	v3SpecVersion   = "3.0"
+	dialogueStart   = "<START>"
 	defaultAssetURI = "ccdefault:"
 )
 
-// v3OnlyKeys must not leak into v2 exports after preservation is restored.
 var v3OnlyKeys = []string{
 	"assets", "nickname", "group_only_greetings", "creation_date",
 	"modification_date", "source", "creator_notes_multilingual",
@@ -52,8 +44,6 @@ func (CharXModule) Write(_ context.Context, asset format.ExportAsset) (format.Ar
 	return writeCharX(asset)
 }
 
-// writeCard chooses an image or JSON container from available media. V3 cards
-// also include the v2 payload needed by older readers.
 func writeCard(asset format.ExportAsset, formatID string) (format.Artifact, error) {
 	picture := embeddablePicture(asset)
 	body, entries := cardFields(asset, formatID)
@@ -96,8 +86,6 @@ func writeCard(asset format.ExportAsset, formatID string) (format.Artifact, erro
 	return format.Artifact{Body: written, MediaType: "image/png", Extension: ".png"}, nil
 }
 
-// olderShape is the body with the keys the v3 standard added taken out, which
-// is what the v2 copy of a card holds.
 func olderShape(body map[string]json.RawMessage) map[string]json.RawMessage {
 	older := make(map[string]json.RawMessage, len(body))
 	for key, value := range body {
@@ -108,9 +96,6 @@ func olderShape(body map[string]json.RawMessage) map[string]json.RawMessage {
 	return older
 }
 
-// legacyFields are the six a card carried before any spec existed. A v3 JSON
-// document repeats them at its top level for the same reason a v3 picture
-// carries a v2 chunk: a reader that knows only the older shape looks there.
 var legacyFields = []string{
 	"name", "description", "personality", "scenario", "first_mes", "mes_example",
 }
@@ -132,8 +117,6 @@ func withLegacyFields(card []byte, body map[string]json.RawMessage) ([]byte, err
 	return written, nil
 }
 
-// writeCharX writes the archive form. A v3 card sits beside the pictures it
-// names, each one a file rather than a string inside the card.
 func writeCharX(asset format.ExportAsset) (format.Artifact, error) {
 	body, entries := cardFields(asset, CharX)
 	files, records := archivedAssets(asset)
@@ -195,7 +178,6 @@ func marshalCard(formatID string, body map[string]json.RawMessage) ([]byte, erro
 	return card, nil
 }
 
-// chunkName is the PNG text keyword each standard puts its card under.
 func chunkName(formatID string) string {
 	if formatID == V2 {
 		return "chara"
@@ -203,9 +185,6 @@ func chunkName(formatID string) string {
 	return "ccv3"
 }
 
-// cardFields writes the card body one key at a time out of the asset's roles,
-// and returns the book's entries in the order they were written so preserved
-// keys can find their way back to them.
 func cardFields(
 	asset format.ExportAsset,
 	formatID string,
@@ -262,7 +241,6 @@ func textsOf(items []block.TextItem) []string {
 	return texts
 }
 
-// dialogueText writes one line per turn; multiline turns cannot round-trip.
 func dialogueText(asset format.ExportAsset) string {
 	content, ok := asset.Content(block.RoleExampleDialogue)
 	if !ok {
@@ -296,13 +274,10 @@ func bookEntries(asset format.ExportAsset) []block.Entry {
 	return table.Entries
 }
 
-// writtenBook writes the entries a card carries. Everything a book held that
-// the entry table has no place for comes back afterwards, from preservation.
 func writtenBook(entries []block.Entry) json.RawMessage {
 	return keys.Must(map[string]any{"entries": book.Write(entries)})
 }
 
-// cardAssetRecord is one entry of a v3 card's asset list.
 type cardAssetRecord struct {
 	Type string `json:"type"`
 	URI  string `json:"uri"`
@@ -310,15 +285,11 @@ type cardAssetRecord struct {
 	Ext  string `json:"ext"`
 }
 
-// archivedFile is one picture written beside the card in a CharX archive.
 type archivedFile struct {
 	path string
 	data []byte
 }
 
-// inlineAssets writes the picture list a JSON or PNG card carries, each image
-// as a string inside the card itself. The card's own picture points at the
-// container it is embedded in rather than repeating it.
 func inlineAssets(asset format.ExportAsset, embedded bool) json.RawMessage {
 	records := make([]cardAssetRecord, 0)
 	for _, picture := range exportedPictures(asset) {
@@ -334,8 +305,6 @@ func inlineAssets(asset format.ExportAsset, embedded bool) json.RawMessage {
 	return keys.Must(records)
 }
 
-// archivedAssets writes the picture list a CharX card carries and the files it
-// points at.
 func archivedAssets(asset format.ExportAsset) ([]archivedFile, json.RawMessage) {
 	files := make([]archivedFile, 0)
 	records := make([]cardAssetRecord, 0)
@@ -364,15 +333,12 @@ const (
 	fallbackPictureName = "image"
 )
 
-// exportedPicture is one picture on its way into a card, with the asset type
-// the standard files it under.
 type exportedPicture struct {
 	assetType string
 	name      string
 	media     format.ExportMedia
 }
 
-// exportedPictures is every picture a card carries, the asset's own first.
 func exportedPictures(asset format.ExportAsset) []exportedPicture {
 	pictures := make([]exportedPicture, 0)
 	if asset.Cover != nil {
@@ -418,9 +384,6 @@ func pictureName(name string, index int) string {
 	return fmt.Sprintf("%s-%d", fallbackPictureName, index+1)
 }
 
-// embeddablePicture is the asset's own picture where a card can be written
-// inside it. A card goes into a PNG and nothing else, so an asset whose cover
-// is another kind of image downloads as a JSON document.
 func embeddablePicture(asset format.ExportAsset) *format.ExportMedia {
 	if asset.Cover == nil || !bytes.HasPrefix(asset.Cover.Data, pngSignature) {
 		return nil
@@ -452,14 +415,11 @@ func mediaExtension(mediaType string) string {
 
 var pngSignature = []byte("\x89PNG\r\n\x1a\n")
 
-// cardCopy is one card and the PNG text keyword it goes under.
 type cardCopy struct {
 	keyword string
 	card    []byte
 }
 
-// embedCardsInPNG writes the cards into a copy of the picture, replacing any
-// card chunk already there and leaving every other chunk exactly as it was.
 func embedCardsInPNG(source []byte, copies []cardCopy) ([]byte, error) {
 	if !bytes.HasPrefix(source, pngSignature) {
 		return nil, errors.New("the asset's picture is not a PNG")

@@ -19,7 +19,6 @@ const REASON_LIMIT = 500;
 const PANEL = "mt-8 rounded-plate bg-deep p-5 sm:p-6";
 const HEADING = "flex items-center gap-2 font-ui text-ui font-medium text-ink";
 
-/** Illarin's own control over a profile, which only an admin ever sees. */
 export function RestrictionControl({
   handle,
   restricted,

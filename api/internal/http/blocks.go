@@ -5,8 +5,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// toAPIBlocks serves an asset's blocks with what the kind catalog says about
-// them today, so changing what a kind asks for reaches every asset at once.
 func toAPIBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
 	out := make([]AssetBlock, 0, len(blocks))
 	for _, b := range blocks {
@@ -30,10 +28,9 @@ func toAPIBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
 			Width:          AssetBlockWidth(b.Width),
 			AllowedLayouts: apiLayouts(definition.Layouts),
 			Required:       definition.Required,
-			// Every optional block is hideable, because it can be removed.
-			Hideable: !definition.Required || definition.Hideable,
-			IsEmpty:  b.Empty(),
-			Elements: elements,
+			Hideable:       !definition.Required || definition.Hideable,
+			IsEmpty:        b.Empty(),
+			Elements:       elements,
 		})
 	}
 	return out, nil

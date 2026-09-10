@@ -8,7 +8,6 @@ import {
   suggestionCandidateWidths,
 } from "@/lib/page-arrangement";
 
-/** Renders a block at each width it could take, to find the one that wastes least. */
 function measureCandidateHeights(
   source: HTMLElement,
   layout: AssetBlock["layout"],
@@ -80,7 +79,6 @@ function sameSuggestions(
   );
 }
 
-/** The width each block would rather have, remeasured whenever the page settles. */
 export function useSuggestedWidths({
   availableWidth,
   blocks,

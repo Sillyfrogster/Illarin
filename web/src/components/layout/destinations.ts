@@ -9,7 +9,6 @@ export const NAV = [
 
 export type Destination = { label: string; href: string };
 
-/** Publishing needs an account and a verified address, and says which one is missing */
 export function publishAction(
   account: SignedInAccount | null | undefined,
 ): Destination {
@@ -27,7 +26,6 @@ export function publishAction(
   return { label: "Publish", href: "/upload" };
 }
 
-/** Where an account can go from the shell, in one list both the menu and the sheet read */
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
   publicationAuthority: boolean,
@@ -58,7 +56,6 @@ export function accountDestinations(
   ];
 }
 
-/** A destination is current when the reader is on it or inside it */
 export function isCurrentPage(pathname: string, href: string) {
   const [path] = href.split("?");
   return pathname === path || pathname.startsWith(`${path}/`);

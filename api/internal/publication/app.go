@@ -17,10 +17,8 @@ const (
 	addressLimit = 300
 )
 
-// slugPattern is the shape every public publication slug has to take.
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// App is one project the publication carries posts for.
 type App struct {
 	ID           uuid.UUID
 	Slug         string
@@ -32,14 +30,12 @@ type App struct {
 	Destinations []Choice
 }
 
-// AppEdit is the app text the authority supplies.
 type AppEdit struct {
 	Slug string
 	Name string
 	Home string
 }
 
-// AppUpdate carries only the parts of an app a request named.
 type AppUpdate struct {
 	Slug    *string
 	Name    *string
@@ -47,7 +43,6 @@ type AppUpdate struct {
 	Retired *bool
 }
 
-// Apps answers every configured app, retired ones included.
 func (s *Service) Apps(ctx context.Context) ([]App, error) {
 	rows, err := s.pool.Query(ctx, selectApps+` order by app.position, app.created_at`)
 	if err != nil {
@@ -61,8 +56,6 @@ func (s *Service) Apps(ctx context.Context) ([]App, error) {
 	return s.withAppDestinations(ctx, found)
 }
 
-// withAppDestinations gives each app the destinations it allows, which is what
-// every grant on it follows unless the grant names its own.
 func (s *Service) withAppDestinations(ctx context.Context, found []App) ([]App, error) {
 	for index := range found {
 		allowed, err := s.AppChoices(ctx, found[index].ID)
@@ -74,7 +67,6 @@ func (s *Service) withAppDestinations(ctx context.Context, found []App) ([]App, 
 	return found, nil
 }
 
-// DefineApp records a new app below the ones already configured.
 func (s *Service) DefineApp(ctx context.Context, actor uuid.UUID, in AppEdit) (App, error) {
 	edit, err := validateApp(in)
 	if err != nil {
@@ -105,7 +97,6 @@ func (s *Service) DefineApp(ctx context.Context, actor uuid.UUID, in AppEdit) (A
 	return s.app(ctx, id)
 }
 
-// UpdateApp changes what one app says and whether it is still current.
 func (s *Service) UpdateApp(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -163,7 +154,6 @@ func (s *Service) UpdateApp(
 	return s.app(ctx, id)
 }
 
-// OrderApps puts the configured apps in the order it is given them.
 func (s *Service) OrderApps(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) ([]App, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -198,7 +188,6 @@ func (s *Service) OrderApps(ctx context.Context, actor uuid.UUID, ids []uuid.UUI
 	return s.Apps(ctx)
 }
 
-// SetAppMark puts an Illarin-hosted image on an app and drops the one it replaces.
 func (s *Service) SetAppMark(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -230,7 +219,6 @@ func (s *Service) SetAppMark(
 	return s.app(ctx, id)
 }
 
-// App answers one configured app and the destinations it allows.
 func (s *Service) App(ctx context.Context, id uuid.UUID) (App, error) {
 	return s.app(ctx, id)
 }
@@ -327,7 +315,6 @@ func validateSlug(raw string) (string, error) {
 	return slug, nil
 }
 
-// NameableApps answers the publication apps one account may name in a release.
 func (s *Service) NameableApps(
 	ctx context.Context,
 	held []Grant,

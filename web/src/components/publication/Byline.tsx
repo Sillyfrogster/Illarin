@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { PostByline } from "@/lib/api/query";
 import { bylineName, bylineProfile } from "@/lib/byline";
 
-/** Who wrote a post and what they were writing as, exactly as its byline was stored. */
 export function Byline({ byline }: { byline: PostByline }) {
   const name = bylineName(byline);
   const profile = bylineProfile(byline);
@@ -66,7 +65,6 @@ export function Byline({ byline }: { byline: PostByline }) {
   );
 }
 
-/** The same attribution as plain words, for a list whose rows are one link each. */
 export function BylineText({
   affiliation,
   byline,

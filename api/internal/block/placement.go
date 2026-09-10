@@ -6,14 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Place arranges role-tagged elements into the blocks a kind's catalog
-// declares. Import and migration both call it, so a file and a database row
-// land on the same page.
-//
-// A required block is returned whether or not anything filled it, because a
-// creator has to see what the kind is asking of them. An optional block is
-// returned only where something fills it, so it is either absent or populated
-// and never present and empty.
 func Place(kind string, tagged []Element) ([]Block, error) {
 	definitions, ok := Catalog(kind)
 	if !ok {
@@ -60,8 +52,6 @@ func Place(kind string, tagged []Element) ([]Block, error) {
 	return blocks, nil
 }
 
-// fill takes the definition's elements from what a source supplied, marking
-// what it took. A pinned element the source did not supply is created empty.
 func (d Definition) fill(tagged []Element, placed []bool) ([]Element, error) {
 	elements := make([]Element, 0, len(d.Elements))
 	for _, defined := range d.Elements {
@@ -94,15 +84,12 @@ func (d Definition) fill(tagged []Element, placed []bool) ([]Element, error) {
 		if element.ID == uuid.Nil {
 			element.ID = uuid.New()
 		}
-		// Presentation is the definition's to declare, not the source file's.
 		element.Options = defined.Options
 		elements = append(elements, element)
 	}
 	return elements, nil
 }
 
-// take finds the one unplaced element matching a catalog slot, or -1 for none.
-// The definition has one place for it, so a second is refused rather than dropped.
 func (d Definition) take(defined DefinedElement, tagged []Element, placed []bool) (int, error) {
 	found := -1
 	for i, candidate := range tagged {
@@ -120,8 +107,6 @@ func (d Definition) take(defined DefinedElement, tagged []Element, placed []bool
 	return found, nil
 }
 
-// Pinned reports whether an element in this block can be neither removed nor
-// moved. It is read from the catalog rather than from the row.
 func (b Block) Pinned(role Role, kind string) bool {
 	definition, ok := b.Definition.Definition(kind)
 	if !ok {

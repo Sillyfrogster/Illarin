@@ -32,7 +32,6 @@ const (
 	cleanupBatch     = 100
 )
 
-// PollDelayError carries the device client's next polling interval.
 type PollDelayError struct {
 	After time.Duration
 }
@@ -40,7 +39,6 @@ type PollDelayError struct {
 func (e *PollDelayError) Error() string { return ErrPollTooSoon.Error() }
 func (e *PollDelayError) Unwrap() error { return ErrPollTooSoon }
 
-// RateLimitError gives the earliest useful retry time for a source limit.
 type RateLimitError struct {
 	After time.Duration
 }
@@ -48,7 +46,6 @@ type RateLimitError struct {
 func (e *RateLimitError) Error() string { return ErrTooManyRequests.Error() }
 func (e *RateLimitError) Unwrap() error { return ErrTooManyRequests }
 
-// Service links instances and authenticates their tokens.
 type Service struct {
 	pool          *pgxpool.Pool
 	siteURL       string
@@ -68,10 +65,8 @@ func NewService(pool *pgxpool.Pool, siteURL string, hmacKey []byte) *Service {
 	}
 }
 
-// BrowserOrigin is the only origin allowed to mutate a browser-reviewed link.
 func (s *Service) BrowserOrigin() string { return s.browserOrigin }
 
-// Start opens a manual device authorization request.
 func (s *Service) Start(ctx context.Context, source string, input StartInput) (Request, error) {
 	in, err := validateStart(input)
 	if err != nil {
@@ -124,7 +119,6 @@ func (s *Service) Start(ctx context.Context, source string, input StartInput) (R
 	return Request{}, errors.New("could not allocate a link code")
 }
 
-// StartAuthorization opens same-device loopback authorization.
 func (s *Service) StartAuthorization(
 	ctx context.Context,
 	source string,
@@ -172,7 +166,6 @@ func (s *Service) StartAuthorization(
 	return Authorization{}, errors.New("could not allocate an authorization request")
 }
 
-// Pending reviews a manually entered user code.
 func (s *Service) Pending(ctx context.Context, userID uuid.UUID, rawCode string) (Pending, error) {
 	if err := s.takeRate(ctx, "user-code", userID.String(), codeAttemptLimit, time.Hour); err != nil {
 		return Pending{}, ErrTooManyCodes
@@ -194,7 +187,6 @@ func (s *Service) Pending(ctx context.Context, userID uuid.UUID, rawCode string)
 	return pendingFromDeviceReview(row, s.deviceApprovalProof(userID, code)), nil
 }
 
-// Approve approves one reviewed device request.
 func (s *Service) Approve(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -219,7 +211,6 @@ func (s *Service) Approve(
 	return pendingFromDeviceApproval(row), nil
 }
 
-// Deny denies one reviewed device request.
 func (s *Service) Deny(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -244,7 +235,6 @@ func (s *Service) Deny(
 	return nil
 }
 
-// PendingAuthorization reviews a browser authorization.
 func (s *Service) PendingAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -272,7 +262,6 @@ func (s *Service) PendingAuthorization(
 	}, nil
 }
 
-// ApproveAuthorization approves once and creates a one-use code.
 func (s *Service) ApproveAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -303,7 +292,6 @@ func (s *Service) ApproveAuthorization(
 	return Redirect{URL: destination}, nil
 }
 
-// DenyAuthorization denies once and creates an error redirect.
 func (s *Service) DenyAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -329,7 +317,6 @@ func (s *Service) DenyAuthorization(
 	return Redirect{URL: destination}, nil
 }
 
-// Poll checks one device request and returns tokens after approval.
 func (s *Service) Poll(
 	ctx context.Context,
 	source string,
@@ -407,7 +394,6 @@ func (s *Service) Poll(
 	return grant, true, nil
 }
 
-// Exchange trades an approved browser code for the first token pair.
 func (s *Service) Exchange(
 	ctx context.Context,
 	source string,
@@ -463,7 +449,6 @@ func (s *Service) Exchange(
 	return grant, nil
 }
 
-// List returns every instance for one creator.
 func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
 	rows, err := db.New(s.pool).ListLinkedInstances(ctx, uuidValue(userID))
 	if err != nil {
@@ -485,7 +470,6 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Instance, error
 	return instances, nil
 }
 
-// Revoke cuts off one instance without affecting the creator's other links.
 func (s *Service) Revoke(ctx context.Context, userID, instanceID uuid.UUID) error {
 	revoked, err := db.New(s.pool).RevokeLinkedInstance(ctx, db.RevokeLinkedInstanceParams{
 		InstanceID: uuidValue(instanceID), UserID: uuidValue(userID),
@@ -499,7 +483,6 @@ func (s *Service) Revoke(ctx context.Context, userID, instanceID uuid.UUID) erro
 	return nil
 }
 
-// UpdateDeclaration replaces non-authoritative interoperability metadata.
 func (s *Service) UpdateDeclaration(
 	ctx context.Context,
 	instanceID uuid.UUID,
@@ -634,7 +617,6 @@ func (s *Service) deviceApprovalProofHash(
 	return hash, true
 }
 
-// PollInterval is the initial device polling interval.
 func PollInterval() time.Duration { return pollInterval }
 
 func isUniqueViolation(err error) bool {

@@ -3,7 +3,6 @@ import type { RecordedVersion } from "@/lib/api/query";
 import { VersionEntry } from "./VersionEntry";
 import { VersionSpine } from "./VersionSpine";
 
-/** Every version an asset has recorded, newest first, with a way into each of them. */
 export function UpdateHistory({
   assetId,
   kind,
@@ -13,7 +12,6 @@ export function UpdateHistory({
   assetId: string;
   kind: string;
   versions: RecordedVersion[];
-  /** The control that takes the version readers have, which older versions have no equivalent of. */
   download: ReactNode;
 }) {
   if (versions.length === 0) {

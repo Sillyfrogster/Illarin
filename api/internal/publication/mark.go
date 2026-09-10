@@ -11,10 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// markVariant is the one size a mark is published at.
 const markVariant = "grid"
 
-// markOwner is a table whose mark_media_id column points into publication_media.
 type markOwner string
 
 const (
@@ -22,7 +20,6 @@ const (
 	appMarks         markOwner = "publication_apps"
 )
 
-// Mark is the Illarin-hosted image a badge or an app is shown with.
 type Mark struct {
 	MediaID           uuid.UUID
 	Width             int
@@ -30,12 +27,10 @@ type Mark struct {
 	DerivativeVersion uint32
 }
 
-// MarkURL addresses one mark on the byte path every image shares.
 func MarkURL(mediaID uuid.UUID, version uint32) string {
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, markVariant, version)
 }
 
-// replaceMark points one row at a newly stored image and drops the one it had.
 func (s *Service) replaceMark(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -74,7 +69,6 @@ func (s *Service) replaceMark(
 	return nil
 }
 
-// dropMark takes the mark off one row and deletes the image it pointed at.
 func (s *Service) dropMark(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -106,7 +100,6 @@ func (s *Service) dropMark(
 	return nil
 }
 
-// MarkVariant serves one size of a mark. Every mark is public.
 func (s *Service) MarkVariant(
 	ctx context.Context,
 	mediaID uuid.UUID,

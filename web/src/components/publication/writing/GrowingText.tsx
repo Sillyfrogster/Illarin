@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-/** A field as tall as what has been typed into it, so a title reads as a title. */
 export function GrowingText({
   className,
   id,
@@ -17,7 +16,6 @@ export function GrowingText({
   maxLength: number;
   onChange: (value: string) => void;
   placeholder?: string;
-  /** A hidden field measures nothing, so it is measured again on the way back. */
   shown?: boolean;
   value: string;
 }) {

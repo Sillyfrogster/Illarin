@@ -1,4 +1,3 @@
-/** What a replacement preview calls one part of an asset, in the words the page uses. */
 export function replacementSubjectLabel(subject: string): string {
   if (subject === "images") return "Pictures";
   if (subject === "opaque_data") return "Preserved data";
@@ -6,7 +5,6 @@ export function replacementSubjectLabel(subject: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** One part of the asset and what an uploaded file does to it. */
 export type ReplacementSummary = {
   subject: string;
   label: string;
@@ -20,7 +18,6 @@ const KINDS = [
   { kind: "removal", one: "Removed", many: "removed" },
 ];
 
-/** Counts a preview's changes into one line for each part of the asset. */
 export function summariseReplacement(
   changes: { kind: string; subject: string }[],
 ): ReplacementSummary[] {

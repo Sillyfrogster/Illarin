@@ -35,7 +35,6 @@ import { nothingIn } from "@/lib/publication-register";
 import { moved } from "@/lib/reorder";
 import { DestinationChoice } from "./choices";
 
-/** Every project Illarin publishes official updates for, in the order a writer sees them. */
 export function AppRows({
   apps,
   onFailure,
@@ -174,7 +173,6 @@ export function AppRows({
   );
 }
 
-/** Says where an app's posts go by default. */
 function announces(app: PublicationApp): string {
   const many = app.destinations.length;
   if (many === 0) return "Announces nowhere";
@@ -183,7 +181,6 @@ function announces(app: PublicationApp): string {
     : `Announces to ${many} destinations`;
 }
 
-/** Adding a project, or changing the one a contributor publishes for. */
 export function AppStep({
   destinations,
   existing,

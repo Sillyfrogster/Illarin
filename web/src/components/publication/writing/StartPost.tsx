@@ -10,7 +10,6 @@ import { Select } from "@/components/ui/select";
 import { startPost } from "@/lib/api/posts";
 import type { PublicationWorkspace } from "@/lib/api/query";
 
-/** Starting a post: its name, where it belongs, and whose name goes on it. */
 export function StartPost({
   onFailure,
   workspace,

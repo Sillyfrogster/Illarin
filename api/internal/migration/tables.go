@@ -1,6 +1,5 @@
 package migration
 
-// TableDisposition is what one v1 table becomes, declared so nothing lost silently is checkable against the whole database.
 type TableDisposition struct {
 	Table   string
 	Becomes TableOutcome
@@ -16,7 +15,6 @@ const (
 	TableDropped   TableOutcome = "dropped"
 )
 
-// v1Tables accounts for every table in the v1 database.
 func v1Tables() []TableDisposition {
 	return []TableDisposition{
 		{"characters", TableMapped, "character assets"},
@@ -47,7 +45,6 @@ func v1Tables() []TableDisposition {
 	}
 }
 
-// preservedTables names the v1 tables kept as records with no asset content of their own.
 func preservedTables() []string {
 	return []string{"favorites", "comments"}
 }

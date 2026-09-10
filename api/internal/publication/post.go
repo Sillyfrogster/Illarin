@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ReleaseCategory is the one category whose posts carry release metadata.
 const ReleaseCategory = "release"
 
 const (
@@ -34,7 +33,6 @@ var (
 	ErrSlugLocked    = errors.New("the address of a published post is fixed")
 )
 
-// Stale says the working copy moved on since the editor last read it.
 type Stale struct {
 	Version   int
 	UpdatedAt time.Time
@@ -42,9 +40,6 @@ type Stale struct {
 
 func (Stale) Error() string { return "the working copy has already moved on" }
 
-// Editor is the credential acting on a post and how far it may reach. A session
-// leaves Grant empty. A publication token fills it in and can never reach past
-// the one grant it was issued under.
 type Editor struct {
 	ID    uuid.UUID
 	Admin bool
@@ -52,7 +47,6 @@ type Editor struct {
 	Token *uuid.UUID
 }
 
-// Credential names the kind of credential the editor is acting through.
 func (e Editor) Credential() string {
 	if e.Token != nil {
 		return CredentialToken
@@ -60,8 +54,6 @@ func (e Editor) Credential() string {
 	return CredentialSession
 }
 
-// writesAs answers the grant a new post belongs to, refusing a credential
-// bound to one grant that named another.
 func (e Editor) writesAs(named *uuid.UUID) (*uuid.UUID, error) {
 	if e.Grant == nil {
 		return named, nil
@@ -72,20 +64,17 @@ func (e Editor) writesAs(named *uuid.UUID) (*uuid.UUID, error) {
 	return e.Grant, nil
 }
 
-// Author names the account a post belongs to.
 type Author struct {
 	ID     uuid.UUID
 	Handle string
 }
 
-// Release is the metadata a release post carries and no other category does.
 type Release struct {
 	App     App
 	Version string
 	Address string
 }
 
-// Post is one entry's working copy together with what its public state adds.
 type Post struct {
 	ID              uuid.UUID
 	Author          Author
@@ -115,14 +104,12 @@ type Post struct {
 	UpdatedAt       time.Time
 }
 
-// PostEdit is what starting a post needs.
 type PostEdit struct {
 	GrantID    *uuid.UUID
 	CategoryID uuid.UUID
 	Title      string
 }
 
-// PostSave is the whole working copy an autosave replaces.
 type PostSave struct {
 	Version       int
 	CategoryID    uuid.UUID
@@ -135,36 +122,28 @@ type PostSave struct {
 	SocialMediaID *uuid.UUID
 }
 
-// HeaderEdit is the picture an article opens with as a request supplied it.
 type HeaderEdit struct {
 	MediaID uuid.UUID
 	Alt     string
 	Caption string
 }
 
-// ReleaseEdit is the release metadata a request supplied.
 type ReleaseEdit struct {
 	AppID   uuid.UUID
 	Version string
 	Address string
 }
 
-// Posts answers every post the editor may manage and has not deleted, newest first.
 func (s *Service) Posts(ctx context.Context, editor Editor) ([]Post, error) {
 	return s.postsFor(ctx, editor,
 		`post.deleted_at is null`, `order by post.created_at desc`)
 }
 
-// DeletedPosts answers the posts the editor may still recover, the ones
-// closest to their deadline first.
 func (s *Service) DeletedPosts(ctx context.Context, editor Editor) ([]Post, error) {
 	return s.postsFor(ctx, editor,
 		`post.deleted_at is not null`, `order by post.recoverable_until`)
 }
 
-// postsFor answers one standing of the posts this editor reaches. A token
-// reaches its own grant, an admin reaches everything, and anybody else reaches
-// the posts under the approvals they hold.
 func (s *Service) postsFor(
 	ctx context.Context,
 	editor Editor,
@@ -183,7 +162,6 @@ func (s *Service) postsFor(
 	`+orderClause, editor.ID)
 }
 
-// Post answers one working copy to the account allowed to manage it.
 func (s *Service) Post(ctx context.Context, editor Editor, id uuid.UUID) (Post, error) {
 	found, err := s.post(ctx, id)
 	if err != nil {
@@ -195,7 +173,6 @@ func (s *Service) Post(ctx context.Context, editor Editor, id uuid.UUID) (Post, 
 	return found, nil
 }
 
-// CreatePost starts a draft under the identity its author is allowed to use.
 func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (Post, error) {
 	category, err := s.category(ctx, in.CategoryID)
 	if err != nil {
@@ -248,8 +225,6 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 	return s.post(ctx, id)
 }
 
-// SavePost replaces the working copy, refusing an editor that began from an
-// edition someone has already moved past.
 func (s *Service) SavePost(
 	ctx context.Context,
 	editor Editor,
@@ -314,14 +289,11 @@ func (s *Service) SavePost(
 	return s.post(ctx, id)
 }
 
-// PostImport is the Markdown to convert and the working copy it replaces.
 type PostImport struct {
 	Version  int
 	Markdown string
 }
 
-// ImportPost converts constrained Markdown into the working copy's document,
-// leaving everything else about the post as it stands.
 func (s *Service) ImportPost(
 	ctx context.Context,
 	editor Editor,
@@ -349,8 +321,6 @@ func (s *Service) ImportPost(
 	return saved, notes, nil
 }
 
-// importRefusal names the field the caller sent, not a path inside the document
-// the conversion was building.
 func importRefusal(err error) error {
 	var problem postdoc.Problem
 	if errors.As(err, &problem) {
@@ -359,7 +329,6 @@ func importRefusal(err error) error {
 	return err
 }
 
-// carrying answers this working copy as a save with a different document in it.
 func (p Post) carrying(document []byte) PostSave {
 	save := PostSave{
 		Version:       p.Version,
@@ -387,7 +356,6 @@ func (p Post) carrying(document []byte) PostSave {
 	return save
 }
 
-// edition is one checked working copy on its way into the database.
 type edition struct {
 	categoryID     uuid.UUID
 	title          string
@@ -462,7 +430,6 @@ func (s *Service) checkWorkingCopy(
 	}, nil
 }
 
-// refuseTakenAddress keeps a post off an address another post holds or ever held.
 func (s *Service) refuseTakenAddress(ctx context.Context, postID uuid.UUID, slug string) error {
 	taken, err := addressTaken(ctx, s.pool, postID, slug)
 	if err != nil {
@@ -474,7 +441,6 @@ func (s *Service) refuseTakenAddress(ctx context.Context, postID uuid.UUID, slug
 	return nil
 }
 
-// releaseFields is the release metadata after it has been checked.
 type releaseFields struct {
 	appID   *uuid.UUID
 	version string
@@ -523,8 +489,6 @@ func (s *Service) checkRelease(
 	return releaseFields{appID: &app.ID, version: version, address: address}, nil
 }
 
-// mayWriteAs answers whether this editor may publish under this grant and
-// category. An admin writes as Illarin unless they name a grant of their own.
 func (s *Service) mayWriteAs(
 	ctx context.Context,
 	editor Editor,
@@ -590,7 +554,6 @@ func checkTitle(candidate string) (string, error) {
 	return title, nil
 }
 
-// documentRefusal turns a document problem into the field refusal a client reads.
 func documentRefusal(err error) error {
 	var problem postdoc.Problem
 	if errors.As(err, &problem) {
@@ -599,8 +562,6 @@ func documentRefusal(err error) error {
 	return err
 }
 
-// freeSlug answers the first unused address near the candidate, so starting two
-// posts with the same title does not fail before either has been written.
 func freeSlug(ctx context.Context, tx pgx.Tx, candidate string) *string {
 	if candidate == "" || reservedSlugs[candidate] {
 		return nil
@@ -717,7 +678,6 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	return found, nil
 }
 
-// attachWithdrawals tells each post still out of public view why it came down.
 func (s *Service) attachWithdrawals(ctx context.Context, posts []Post) error {
 	ids := make([]uuid.UUID, 0, len(posts))
 	for index := range posts {
@@ -741,7 +701,6 @@ func (s *Service) attachWithdrawals(ctx context.Context, posts []Post) error {
 	return nil
 }
 
-// attachAttribution gives each post the byline it carries and the addresses it has left behind.
 func (s *Service) attachAttribution(ctx context.Context, posts []Post) error {
 	if len(posts) == 0 {
 		return nil
@@ -771,7 +730,6 @@ func (s *Service) attachAttribution(ctx context.Context, posts []Post) error {
 	return nil
 }
 
-// formerAddresses answers the addresses each post published under and has since left, newest first.
 func (s *Service) formerAddresses(
 	ctx context.Context,
 	ids []uuid.UUID,
@@ -802,7 +760,6 @@ func (s *Service) formerAddresses(
 	return left, nil
 }
 
-// attachWorkingMedia gives each working copy the pictures it refers to.
 func (s *Service) attachWorkingMedia(ctx context.Context, posts []Post) error {
 	if len(posts) == 0 {
 		return nil

@@ -9,7 +9,6 @@ export type ProfileAddress = {
   handle: string;
 };
 
-/** Which profile address a root segment is. `@handle` serves, a bare handle is v1's and only redirects. */
 export function readProfileAddress(segment: string): ProfileAddress | null {
   const isCanonical = segment.startsWith("@");
   const handle = (isCanonical ? segment.slice(1) : segment).toLowerCase();
@@ -17,7 +16,6 @@ export function readProfileAddress(segment: string): ProfileAddress | null {
   return { form: isCanonical ? "canonical" : "legacy", handle };
 }
 
-/** The whole address a profile answers to, so the blog can link one from its own origin. */
 export function profileAddress(handle: string): string {
   return new URL(`/@${encodeURI(handle)}`, siteUrl).href;
 }

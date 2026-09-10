@@ -15,7 +15,6 @@ import {
 import { cn } from "@/lib/cn";
 import { VersionChanges } from "./VersionChanges";
 
-/** One recorded version, what Illarin computed for it, and how to take it. */
 export function VersionEntry({
   assetId,
   kind,
@@ -28,7 +27,6 @@ export function VersionEntry({
   kind: string;
   version: RecordedVersion;
   versions: RecordedVersion[];
-  /** Whether this is the version readers get when they take the asset now. */
   current: boolean;
   download: ReactNode;
 }) {
@@ -107,7 +105,6 @@ export function VersionEntry({
   );
 }
 
-/** The version this one is measured against, which a reader may move to any earlier one. */
 function Baseline({
   earlier,
   chosen,
@@ -140,7 +137,6 @@ function Baseline({
   );
 }
 
-/** A creator's longer note, folded until a reader asks for the rest of it. */
 function Note({ notes }: { notes: string }) {
   const foldable = isLongNote(notes);
   const [shown, setShown] = useState(!foldable);

@@ -10,7 +10,6 @@ const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
-/** The surface a menu opens onto, sized to its longest entry */
 function DropdownMenuContent({
   className,
   sideOffset = 10,
@@ -32,7 +31,6 @@ function DropdownMenuContent({
   );
 }
 
-/** One row a pointer or the keyboard can land on */
 function DropdownMenuItem({
   className,
   ...props
@@ -49,7 +47,6 @@ function DropdownMenuItem({
   );
 }
 
-/** One choice in a set where exactly one is in force */
 function DropdownMenuRadioItem({
   className,
   children,

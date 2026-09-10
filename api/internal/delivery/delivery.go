@@ -1,4 +1,3 @@
-// Package delivery queues an asset for a linked instance and mirrors what it installed.
 package delivery
 
 import (
@@ -9,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// State is where one queued delivery has got to.
 type State string
 
 const (
@@ -18,7 +16,6 @@ const (
 	StateFailed   State = "failed"
 )
 
-// Reason says why a delivery stopped, and stands only on a failed one.
 type Reason string
 
 const (
@@ -42,7 +39,6 @@ var (
 	ErrAcknowledgement   = errors.New("the acknowledgement list is not valid")
 )
 
-// Delivery is one queued send, as the asset page shows it.
 type Delivery struct {
 	ID         uuid.UUID
 	InstanceID uuid.UUID
@@ -53,7 +49,6 @@ type Delivery struct {
 	ExpiresAt  time.Time
 }
 
-// Work is one released delivery naming what to fetch, never the bytes, so a large file is retryable.
 type Work struct {
 	ID                uuid.UUID
 	AssetID           uuid.UUID
@@ -67,7 +62,6 @@ type Work struct {
 	Artifacts         []Artifact
 }
 
-// Artifact is one file behind one short-lived signed URL.
 type Artifact struct {
 	Kind    string
 	URL     string
@@ -76,13 +70,11 @@ type Artifact struct {
 	IsCover bool
 }
 
-// Artifact kinds are the asset written in the chosen format and the pictures beside it.
 const (
 	ArtifactExport  = "export"
 	ArtifactPicture = "picture"
 )
 
-// InstanceState is one of a creator's instances as it stands for one asset.
 type InstanceState struct {
 	InstanceID          uuid.UUID
 	ApplicationName     string
@@ -95,39 +87,33 @@ type InstanceState struct {
 	UpdateAvailable     bool
 }
 
-// AssetInstances is every instance one asset could be sent to, and what each already has.
 type AssetInstances struct {
 	ContentGeneration int
 	Items             []InstanceState
 }
 
-// LibraryCounts is how much of one instance's mirror is behind the catalog.
 type LibraryCounts struct {
 	Installed        int
 	UpdatesAvailable int
 }
 
-// LibraryReport is what an instance says it has installed.
 type LibraryReport struct {
 	Snapshot bool
 	Entries  []LibraryEntry
 	Removed  []uuid.UUID
 }
 
-// LibraryEntry is one installed asset, and no generation means current rather than stale (ADR-0023).
 type LibraryEntry struct {
 	AssetID           uuid.UUID
 	ContentGeneration *int
 }
 
-// LibraryResult counts what a report changed without naming any asset back.
 type LibraryResult struct {
 	Accepted int
 	Removed  int
 	Ignored  int
 }
 
-// chooseTarget takes the first accepted format Illarin offers, so a declared but unoffered one selects nothing.
 func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal bool) (string, string, bool) {
 	byID := make(map[string]asset.DeliveryTarget, len(offered))
 	for _, target := range offered {

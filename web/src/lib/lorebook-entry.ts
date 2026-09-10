@@ -19,21 +19,16 @@ type ReadableEntry = {
   text: string;
 };
 
-/** Where an entry's name came from, since plenty of books write none. */
 export type EntryNaming = "written" | "key" | "opening" | "position";
 
 export type EntryPresentation = {
   id: string;
-  /** Its place in the book, counted from one. */
   position: number;
   name: string;
   named: EntryNaming;
   keys: ChipItem[];
-  /** Keys the entry needs on top of the first set. */
   secondaryKeys: ChipItem[];
-  /** What decides whether this entry fires. */
   firing: string[];
-  /** What the index row says beside the name. */
   note: string;
   isOff: boolean;
   text: string;
@@ -42,21 +37,17 @@ export type EntryPresentation = {
 export type EntrySort = "book" | "name";
 
 export type LorebookView = {
-  /** Matched against entry names and against every key. */
   search: string;
   sort: EntrySort;
   includeOff: boolean;
 };
 
 export type LorebookIndex = {
-  /** Every entry the book holds, whatever the view shows. */
   total: number;
   off: number;
-  /** The entries the view shows, in the order it shows them. */
   entries: EntryPresentation[];
 };
 
-/** A whole book, read for the page and narrowed to what the view asks for. */
 export function readLorebook(
   entries: readonly ReadableEntry[],
   view: LorebookView,
@@ -78,7 +69,6 @@ type BookContext = {
   showsOrder: boolean;
 };
 
-/** What one entry shows of itself. */
 export function readEntry(
   entry: ReadableEntry,
   position: number,
@@ -105,7 +95,6 @@ export function readEntry(
   };
 }
 
-/** What to call an entry, since plenty of books name none of theirs. */
 function nameFor(
   entry: ReadableEntry,
   position: number,
@@ -149,7 +138,6 @@ function indexNote(
   return keyCount === 1 ? "1 key" : `${keyCount} keys`;
 }
 
-/** What switches an entry on, in the same words the block sheet uses. */
 function firingRules(
   entry: ReadableEntry,
   keyCount: number,
@@ -182,7 +170,6 @@ function firingRules(
   return rules;
 }
 
-/** An order every entry shares says nothing about any of them. */
 function ordersDiffer(entries: readonly ReadableEntry[]): boolean {
   const orders = new Set(entries.map((entry) => entry.order));
   return orders.size > 1;

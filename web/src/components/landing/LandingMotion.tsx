@@ -117,9 +117,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     setFallback(false);
     try {
       localStorage.setItem(PREFERENCE, next);
-    } catch {
-      // The presentation still works when storage is unavailable.
-    }
+    } catch {}
   }, [live, rememberPosition]);
   const value = useMemo(
     () => ({ live, reduced, ready, fallback, toggle, showStill }),

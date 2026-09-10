@@ -10,7 +10,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// ListPreservedNamespaces lists the preserved data visible to an asset owner.
 func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID) {
 	owner, ok := h.verifiedAccount(c, "reading preserved data")
 	if !ok {
@@ -33,7 +32,6 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID
 	}
 }
 
-// DeletePreservedNamespace removes one namespace for good.
 func (h *Handlers) DeletePreservedNamespace(
 	c *gin.Context,
 	id openapi_types.UUID,
@@ -60,7 +58,6 @@ func (h *Handlers) DeletePreservedNamespace(
 	}
 }
 
-// ExportSealedContent hands an owner the content their v1 preset kept sealed, so the preserved set stays live data rather than a backup nobody has ever opened.
 func (h *Handlers) ExportSealedContent(c *gin.Context, id openapi_types.UUID) {
 	owner, ok := h.verifiedAccount(c, "reading sealed content")
 	if !ok {

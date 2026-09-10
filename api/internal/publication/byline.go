@@ -12,12 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Byline is the public attribution one post carries. It is copied when the post
-// first goes public and is not rewritten by later profile changes.
-//
-// The avatar is held as the media record the profile wore at the time. Replacing
-// an avatar deletes the record it replaced, so an old byline falls back to the
-// handle rather than showing a portrait the person has since changed.
 type Byline struct {
 	AccountID    *uuid.UUID
 	Handle       string
@@ -29,7 +23,6 @@ type Byline struct {
 	App          *App
 }
 
-// Portrait is the avatar a byline wore when its post went public.
 type Portrait struct {
 	MediaID           uuid.UUID
 	Width             int
@@ -37,7 +30,6 @@ type Portrait struct {
 	DerivativeVersion uint32
 }
 
-// snapshot is one person's public identity as a post will carry it for good.
 type snapshot struct {
 	AccountID    uuid.UUID
 	Handle       string
@@ -51,7 +43,6 @@ type snapshot struct {
 	AppName      *string
 }
 
-// takeSnapshot reads one person's approved public identity and the app their grant publishes for, inside the caller's transaction.
 func takeSnapshot(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -102,7 +93,6 @@ func takeSnapshot(
 	return taken, nil
 }
 
-// captureByline copies one person's public identity onto a post once, leaving a post that already carries a byline alone.
 func captureByline(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -116,7 +106,6 @@ func captureByline(
 	return writeByline(ctx, tx, postID, taken, `on conflict (post_id) do nothing`)
 }
 
-// replaceByline puts a corrected attribution on a post that already went public.
 func replaceByline(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -159,7 +148,6 @@ func writeByline(
 	return nil
 }
 
-// grantApp answers the app a grant publishes for, or nothing for an Illarin post.
 func grantApp(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -182,7 +170,6 @@ func grantApp(
 	return &id, &slug, &name, nil
 }
 
-// shownNames answers the positions and the bounded showcase a visitor sees.
 func shownNames(ctx context.Context, tx pgx.Tx, accountID uuid.UUID) ([]string, []string, error) {
 	rows, err := tx.Query(ctx, `
 		select definition.form, definition.name
@@ -235,7 +222,6 @@ func readByline(ctx context.Context, pool queryRower, postID uuid.UUID) (Byline,
 	return found, err
 }
 
-// bylinesFor answers the attribution each of these posts carries, if any has one.
 func bylinesFor(
 	ctx context.Context,
 	pool rowQuerier,
@@ -306,23 +292,18 @@ func scanPortrait(mediaID *uuid.UUID, width, height *int) *Portrait {
 	}
 }
 
-// queryRower is the little a byline read needs, so it works on a pool or inside
-// the transaction that just wrote one.
 type queryRower interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// execer is the little an address reservation needs of whatever writes it.
 type execer interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-// rowQuerier is the little a batched attribution read needs of a pool.
 type rowQuerier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
-// rowScanner is what a single row and a row in a set have in common.
 type rowScanner interface {
 	Scan(into ...any) error
 }

@@ -18,7 +18,6 @@ const (
 	showcaseLimit               = 6
 )
 
-// SourceManual is the assignment source for an award the authority made by hand.
 const SourceManual = "manual"
 
 type Form string
@@ -29,7 +28,6 @@ const (
 	FormBadge    Form = "badge"
 )
 
-// Distinction is one defined position, title or badge.
 type Distinction struct {
 	ID          uuid.UUID
 	Form        Form
@@ -40,7 +38,6 @@ type Distinction struct {
 	Retired     bool
 }
 
-// Assignment is the record that one account holds one distinction.
 type Assignment struct {
 	ID          uuid.UUID
 	Distinction Distinction
@@ -51,28 +48,24 @@ type Assignment struct {
 	Position    int
 }
 
-// Showcase is the distinction set a profile shows a visitor.
 type Showcase struct {
 	Positions []Distinction
 	Titles    []Distinction
 	Badges    []Distinction
 }
 
-// DistinctionEdit is the definition text the authority supplies.
 type DistinctionEdit struct {
 	Form        Form
 	Name        string
 	Explanation string
 }
 
-// DistinctionUpdate carries only the parts of a definition a request named.
 type DistinctionUpdate struct {
 	Name        *string
 	Explanation *string
 	Retired     *bool
 }
 
-// Distinctions answers every definition, retired ones included.
 func (s *Service) Distinctions(ctx context.Context) ([]Distinction, error) {
 	rows, err := s.pool.Query(ctx, selectDistinctions+` order by form, definition.position, definition.created_at`)
 	if err != nil {
@@ -82,7 +75,6 @@ func (s *Service) Distinctions(ctx context.Context) ([]Distinction, error) {
 	return collectDistinctions(rows)
 }
 
-// Define records a new distinction below the ones its form already has.
 func (s *Service) Define(ctx context.Context, actor uuid.UUID, in DistinctionEdit) (Distinction, error) {
 	edit, err := validateDistinction(in)
 	if err != nil {
@@ -112,7 +104,6 @@ func (s *Service) Define(ctx context.Context, actor uuid.UUID, in DistinctionEdi
 	return s.distinction(ctx, id)
 }
 
-// Update changes what one distinction says and whether it is still current.
 func (s *Service) Update(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -163,7 +154,6 @@ func (s *Service) Update(
 	return s.distinction(ctx, id)
 }
 
-// Order puts one form's definitions in the order it is given them.
 func (s *Service) Order(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -208,7 +198,6 @@ func (s *Service) Order(
 	return s.Distinctions(ctx)
 }
 
-// SetMark gives a recognition an Illarin-hosted mark, which makes it a badge.
 func (s *Service) SetMark(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -247,7 +236,6 @@ func (s *Service) SetMark(
 	return s.distinction(ctx, id)
 }
 
-// ClearMark takes a badge's mark away, which leaves it a title.
 func (s *Service) ClearMark(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -280,7 +268,6 @@ func (s *Service) ClearMark(
 	return s.distinction(ctx, id)
 }
 
-// setForm moves one recognition between the two presentations it may take, and only a badge may hold a mark, so it runs before a mark is attached and after one is taken away.
 func setForm(ctx context.Context, tx pgx.Tx, id uuid.UUID, form Form) error {
 	_, err := tx.Exec(ctx, `
 		update profile_distinctions set form = $2, updated_at = now() where id = $1
@@ -291,7 +278,6 @@ func setForm(ctx context.Context, tx pgx.Tx, id uuid.UUID, form Form) error {
 	return nil
 }
 
-// earned answers whether a form is recognition rather than a job.
 func earned(form Form) bool {
 	return form == FormTitle || form == FormBadge
 }

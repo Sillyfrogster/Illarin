@@ -72,8 +72,6 @@ func run() error {
 	svc := asset.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
-	// Changing what a format declares or what the facet catalog holds is a
-	// deploy, so the deploy is what recomputes the projections it invalidated.
 	recomputed, err := svc.RecomputeStaleExportProjections(runtimeContext)
 	if err != nil {
 		return fmt.Errorf("export projections: %w", err)

@@ -4,7 +4,6 @@
 @source "../components";
 @source "../lib";
 
-/* The theme is a data attribute with a system default, so Tailwind's dark variant has to read both */
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;
@@ -16,7 +15,6 @@
   }
 }
 
-/* Clearing the defaults keeps the palette closed, so only these steps compile */
 @theme {
   --color-*: initial;
   --font-*: initial;
@@ -97,7 +95,6 @@
       opacity: 0.45;
     }
   }
-  /* The bar travels its track rather than filling it, because ingest reports no measurable progress */
   @keyframes sweep {
     from {
       transform: translateX(-110%);
@@ -133,7 +130,6 @@
 :root {
   color-scheme: light dark;
 
-  /* The first value of each pair is light */
   --v-field: light-dark(#ffffff, #090909);
   --v-plane: light-dark(#ffffff, #171717);
   --v-deep: light-dark(#f0f0f0, #262626);
@@ -151,7 +147,6 @@
   --v-over: #ffffff;
   --v-over-mute: #d5dbe2;
 
-  /* Creator media stands on the same dark ground in both themes, so its colours read true */
   --v-media: #050505;
   --v-on-media: #f5f5f2;
 
@@ -160,12 +155,10 @@
   --header-height: 72px;
   --header-bay-height: 96px;
 
-  /* The rails start where the page's content column starts, so the nav lines up with the page */
   --rail-inset: calc(max(0px, (100% - var(--shell)) / 2) + var(--gutter));
 
   --ease-wipe: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Spring curves, so arrivals overshoot and settle instead of easing flat */
   --spring-smooth: linear(
     0,
     0.004,
@@ -269,7 +262,6 @@ textarea {
   font-family: inherit;
 }
 
-/* A browser draws its own groove around a fieldset, which is the etched hairline this design does not use */
 fieldset {
   border: 0;
 }

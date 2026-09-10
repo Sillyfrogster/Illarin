@@ -12,7 +12,6 @@ import { KIND_LABELS } from "@/lib/kinds";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
 import { KindMark } from "./KindMark";
 
-/** How large the name is set when the plate has to carry it alone. */
 const SETTING: Record<TypeSetting, string> = {
   grand: "text-[clamp(1.9rem,2.9vw,2.6rem)] leading-[1.02]",
   large: "text-[clamp(1.5rem,2.1vw,1.95rem)] leading-[1.07]",
@@ -23,7 +22,6 @@ const SETTING: Record<TypeSetting, string> = {
 const PLATE =
   "overflow-hidden rounded-plate transition duration-500 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none";
 
-/** Three plate grounds, so a wall of titled plates has rhythm rather than one flat colour. */
 const GROUNDS = [
   {
     plate: "bg-media dark:bg-plane",
@@ -33,7 +31,6 @@ const GROUNDS = [
   { plate: "bg-deep", title: "text-ink group-hover:text-accent" },
 ];
 
-/** Spread over the grounds by the asset's own id, the way a handle picks an avatar tone. */
 function groundFor(id: string) {
   let hash = 0;
   for (const character of id) {
@@ -42,12 +39,6 @@ function groundFor(id: string) {
   return GROUNDS[hash % GROUNDS.length];
 }
 
-/**
- * One result in the catalog. A creator who gave their work a picture gets a
- * picture; a creator who did not gets their title set across the whole plate,
- * because a catalog of prompts and worlds is mostly words, and a work's own
- * name says more about it than an empty frame does.
- */
 export function CatalogPoster({
   asset,
   eager = false,

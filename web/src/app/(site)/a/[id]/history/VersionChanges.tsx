@@ -23,7 +23,6 @@ const MARK_TONES: Record<VersionChange["kind"], string> = {
   change: "text-mute",
 };
 
-/** What Illarin computed between two recorded versions, apart from anything the creator wrote. */
 export function VersionChanges({
   assetId,
   kind,
@@ -81,18 +80,13 @@ export function VersionChanges({
   );
 }
 
-/** One subject the comparison found changes in, such as the greetings or the pictures. */
 function ChangeGroup({ group }: { group: VersionChangeGroup }) {
   return (
     <section>
       <h4 className="text-meta font-medium text-mute">{group.label}</h4>
       <ul className="mt-1 grid list-none divide-y divide-rule border-rule border-t">
         {group.changes.map((change, index) => (
-          <li
-            className="py-2.5"
-            // Two changes can carry the same name, so their place in the group is the key.
-            key={`${group.subject}-${index}`}
-          >
+          <li className="py-2.5" key={`${group.subject}-${index}`}>
             <ChangeRow change={change} subject={group.label} />
           </li>
         ))}
@@ -101,7 +95,6 @@ function ChangeGroup({ group }: { group: VersionChangeGroup }) {
   );
 }
 
-/** One addition, removal or edit, with its detail behind a disclosure. */
 function ChangeRow({
   change,
   subject,
@@ -149,7 +142,6 @@ function ChangeRow({
   );
 }
 
-/** The picture a change replaced, beside the one it put there. */
 function Pictures({ before, after }: { before?: string; after?: string }) {
   return (
     <div className="mt-3 flex flex-wrap gap-4">
@@ -175,12 +167,10 @@ function Picture({ address, words }: { address: string; words: string }) {
   );
 }
 
-/** One text change, with the words an update took out and the words it put in. */
 function Wording({ before, after }: { before: string; after: string }) {
   return (
     <p className="mt-2 overflow-x-auto font-prose text-prose break-words whitespace-pre-wrap text-ink">
       {wordDiff(before, after).map((piece, index) => {
-        // The pieces have no identity of their own, so their place in the text is the key.
         const key = `${index}-${piece.kind}`;
         if (piece.kind === "removed") {
           return (
@@ -208,7 +198,6 @@ function Wording({ before, after }: { before: string; after: string }) {
   );
 }
 
-/** Why a comparison cannot be shown, in place of the changes rather than beside them. */
 function Refusal({ children }: { children: string }) {
   return (
     <p className="mt-4 max-w-[60ch] text-meta text-stop" role="alert">
@@ -217,7 +206,6 @@ function Refusal({ children }: { children: string }) {
   );
 }
 
-/** The shape of a comparison while Illarin is still reading it. */
 function ComparisonSkeleton() {
   return (
     <div className="mt-4" aria-live="polite">

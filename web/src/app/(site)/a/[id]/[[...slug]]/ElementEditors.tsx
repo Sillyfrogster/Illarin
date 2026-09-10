@@ -23,7 +23,6 @@ import { Field, InlineItem, Note, TextField } from "./workspace/fields";
 
 type ImageItem = { mediaId: string; name?: string };
 
-/** Every element's own editor, chosen by what the element holds. */
 export function ElementFields({
   assetId,
   chosen,
@@ -365,7 +364,6 @@ function movesFor<T>(
   };
 }
 
-/** What an element's structure means, for a creator who is meeting it for the first time. */
 export function elementHint(type: AssetElement["type"]): string {
   switch (type) {
     case "prose":

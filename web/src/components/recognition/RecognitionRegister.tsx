@@ -19,12 +19,10 @@ import {
 import { AccountRows, GiveStep, type LookedUpAccount } from "./AccountRows";
 import { DefinitionRows, DefinitionStep } from "./DefinitionRows";
 
-/** What the rail beside the register is open on, and which thing it is about. */
 type Step =
   | { existing: Distinction | null; what: "definition" }
   | { what: "give" };
 
-/** Everything Illarin gives out, one register at a time, with edits in the rail. */
 export function RecognitionRegister() {
   const [definitions, setDefinitions] = useState<Distinction[] | null>(null);
   const [register, setRegister] = useState<Register>("titles");
@@ -183,7 +181,6 @@ export function RecognitionRegister() {
   );
 }
 
-/** Keeps a step's typed input while the register behind it changes. */
 function stepKey(step: Step): string {
   if (step.what === "give") return "give";
   return `definition-${step.existing?.id ?? ""}`;

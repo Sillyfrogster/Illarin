@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// RestorePreserved restores card, extension, book, and entry fields without
-// overwriting current content. Deleted entries stay deleted.
 func RestorePreserved(
 	body map[string]json.RawMessage,
 	entries []block.Entry,
@@ -65,8 +63,6 @@ func RestorePreserved(
 	return nil
 }
 
-// readWrittenBook takes apart the book the writer put in the body, so
-// preserved keys can go back into it and into its entries.
 func readWrittenBook(
 	body map[string]json.RawMessage,
 ) (map[string]json.RawMessage, []map[string]json.RawMessage, error) {

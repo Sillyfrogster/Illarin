@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { PostSummary } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 
-/** The few other posts an article points a reader at when they reach its end. */
 export function FurtherReading({ posts }: { posts: PostSummary[] }) {
   if (posts.length === 0) return null;
   return (

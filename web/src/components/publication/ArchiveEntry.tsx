@@ -14,7 +14,6 @@ const LEAD_TITLE = {
   long: "max-w-[28ch] text-[clamp(1.7rem,2.4vw,2.2rem)]",
 } as const;
 
-/** The newest post, given the width and the picture the rest of the archive does not get. */
 export function ArchiveLead({
   cover,
   post,
@@ -85,7 +84,6 @@ export function ArchiveLead({
   );
 }
 
-/** One post in the chronology, without the facts its archive already states. */
 export function ArchiveRow({
   narrowed,
   post,

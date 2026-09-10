@@ -15,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 )
 
-// activeFor is one destination proven and subscribed to the events named.
 func (s destinationStack) activeFor(t *testing.T, name string, events []string) addedDestination {
 	t.Helper()
 	s.to.answers(echoesTheChallenge)
@@ -43,12 +42,10 @@ func (s destinationStack) activeFor(t *testing.T, name string, events []string) 
 	return made
 }
 
-// answersWith makes the receiver give the same status to everything.
 func (s destinationStack) answersWith(status int) {
 	s.to.answers(func(arrived) (int, string) { return status, "" })
 }
 
-// rotate draws a new signing secret for one destination.
 func (s destinationStack) rotate(
 	t *testing.T,
 	session *http.Cookie,
@@ -60,7 +57,6 @@ func (s destinationStack) rotate(
 	), session))
 }
 
-// rotated draws a new signing secret and reads back what the authority is shown.
 func (s destinationStack) rotated(t *testing.T, id string) struct {
 	Destination destination `json:"destination"`
 	Secret      string      `json:"secret"`
@@ -82,7 +78,6 @@ func (s destinationStack) rotated(t *testing.T, id string) struct {
 	return shown
 }
 
-// allDeliveries reads the delivery work the authority is diagnosing.
 func (s destinationStack) allDeliveries(
 	t *testing.T,
 	session *http.Cookie,
@@ -133,7 +128,6 @@ func (s destinationStack) attempts(t *testing.T, session *http.Cookie, id string
 	return listed
 }
 
-// onlyDelivery is the one piece of work a post produced.
 func (s destinationStack) onlyDelivery(t *testing.T, postID string) postDelivery {
 	t.Helper()
 	listed := s.deliveries(t, s.editor, postID)
@@ -577,8 +571,6 @@ func TestAnInterruptedAttemptIsTakenOverWithoutSpendingItsPlace(t *testing.T) {
 	}
 }
 
-// interrupt leaves a delivery held by an attempt that never came back, which is
-// what a worker losing its process leaves behind.
 func interrupt(t *testing.T, stack destinationStack, deliveryID string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
@@ -592,7 +584,6 @@ func interrupt(t *testing.T, stack destinationStack, deliveryID string) {
 	}
 }
 
-// spendTheRun makes every attempt one run holds, at instants of its choosing.
 func spendTheRun(t *testing.T, stack destinationStack, postID string) {
 	t.Helper()
 	at := time.Now().UTC()
@@ -604,7 +595,6 @@ func spendTheRun(t *testing.T, stack destinationStack, postID string) {
 	}
 }
 
-// stampOf reads the instant one arrival was signed at.
 func stampOf(t *testing.T, one arrived) time.Time {
 	t.Helper()
 	var unix int64

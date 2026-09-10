@@ -4,7 +4,6 @@ const UNITS = [
   { scale: 1024, suffix: "KB" },
 ];
 
-/** How heavy a file is, in the words a person uses for it rather than a byte count. */
 export function fileWeight(bytes: number): string {
   for (const unit of UNITS) {
     if (bytes < unit.scale) continue;

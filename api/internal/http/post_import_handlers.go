@@ -11,7 +11,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// maxImportBytes bounds an import, which is the Markdown and the JSON it rides in.
 const maxImportBytes = 1 << 20
 
 func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPostMarkdownParams) {
@@ -32,7 +31,6 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPos
 	c.JSON(http.StatusOK, PostImport{Post: h.toAPIPost(saved), Warnings: toAPINotes(notes)})
 }
 
-// importError names the lines that stopped an import, or refuses as usual.
 func (h *Handlers) importError(c *gin.Context, err error) {
 	var refused postdoc.Refused
 	if !errors.As(err, &refused) {

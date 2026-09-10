@@ -53,14 +53,11 @@ var variants = []Variant{
 	{Name: "thumb_blurred", MaxWidth: 160, MaxHeight: 160, Blurred: true},
 }
 
-// socialPreviews are composed on a canvas, not resized, so they sit outside
-// the ordinary variant set.
 var socialPreviews = []Variant{
 	{Name: "og", MaxWidth: 1200, MaxHeight: 630},
 	{Name: "og_blurred", MaxWidth: 1200, MaxHeight: 630, Blurred: true},
 }
 
-// previewField is the carbon every Illarin link preview sits on.
 var previewField = color.RGBA{R: 0x05, G: 0x05, B: 0x05, A: 0xff}
 
 func SocialPreviewByName(name string) (Variant, bool) {

@@ -11,8 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// worldInfo is what SillyTavern's own export writes: entries keyed by their
-// position in the list, each carrying the names SillyTavern uses.
 const worldInfo = `{
 	"entries": {
 		"0": {
@@ -49,9 +47,6 @@ const worldInfo = `{
 	}
 }`
 
-// SillyTavern's export is told apart from the book a character card carries by
-// the one thing that differs at the top level: its entries are keyed rather
-// than listed. Neither file matches the other's module.
 func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
 	registry := testRegistry(t)
 
@@ -72,9 +67,6 @@ func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
 	}
 }
 
-// The keys are the whole point of an entry. SillyTavern spells them `key` and
-// names the entry `comment`, and a book whose keys did not arrive is a book
-// that never fires.
 func TestSillyTavernEntriesKeepTheirKeysAndTheirNames(t *testing.T) {
 	table := onlyEntryTable(t, parse(t, worldInfo).Elements)
 	if len(table.Entries) != 2 {
@@ -105,9 +97,6 @@ func TestSillyTavernEntriesKeepTheirKeysAndTheirNames(t *testing.T) {
 	}
 }
 
-// SillyTavern switches an entry off and the card formats switch one on, so the
-// two spellings mean the opposite of each other. Reading one as the other
-// would publish a book with every switched-off entry live.
 func TestSillyTavernDisableIsReadAsTheOppositeOfEnabled(t *testing.T) {
 	table := onlyEntryTable(t, parse(t, worldInfo).Elements)
 	if !table.Entries[0].Enabled {
@@ -123,9 +112,6 @@ func TestSillyTavernDisableIsReadAsTheOppositeOfEnabled(t *testing.T) {
 	}
 }
 
-// Illarin models before and after the character and nothing else. A placement
-// it has no wording for is left unset and travels back out untouched rather
-// than being rounded to the nearest one it does have.
 func TestASillyTavernPlacementIllarinHasNoWordingForIsLeftAlone(t *testing.T) {
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
@@ -143,8 +129,6 @@ func TestASillyTavernPlacementIllarinHasNoWordingForIsLeftAlone(t *testing.T) {
 	}
 }
 
-// What SillyTavern carries that the entry table has no place for is preserved
-// against the entry it came from, so a download puts it back where it was.
 func TestWhatSillyTavernCarriesBeyondTheEntryTableIsPreserved(t *testing.T) {
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
@@ -162,9 +146,6 @@ func TestWhatSillyTavernCarriesBeyondTheEntryTableIsPreserved(t *testing.T) {
 	}
 }
 
-// A book that goes out in the format it came in comes back the same. The
-// entries are keyed the way SillyTavern keys them, the names are its own, and
-// everything Illarin never modelled is back on the entry it came from.
 func TestARoundTripThroughSillyTavernComesBackTheSame(t *testing.T) {
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)

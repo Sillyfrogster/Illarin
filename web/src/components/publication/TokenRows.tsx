@@ -5,7 +5,6 @@ import { revokeToken } from "@/lib/api/publication";
 import type { PublicationToken } from "@/lib/api/query";
 import { tokenEnded, tokenStanding } from "@/lib/publication-register";
 
-/** Every token on one approval, and the one thing that can be done to a live one. */
 export function TokenRows({
   onFailure,
   onRevoked,

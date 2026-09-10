@@ -6,13 +6,10 @@ import (
 	"strconv"
 )
 
-// writer builds the one canonical form of a document.
 type writer struct {
 	out bytes.Buffer
 }
 
-// MarshalJSON writes the one canonical form of a document, so a round trip
-// through any client leaves the stored bytes comparable.
 func (d Document) MarshalJSON() ([]byte, error) {
 	var w writer
 	w.out.WriteString(`{"version":`)
@@ -187,7 +184,6 @@ func (g Gallery) writeJSON(w *writer) {
 	w.out.WriteString(`]}`)
 }
 
-// picture writes the fields an image carries and closes the node.
 func (w *writer) picture(image Image) {
 	w.text("mediaId", image.MediaID)
 	w.text("alt", image.Alt)
@@ -236,7 +232,6 @@ func (s Span) writeJSON(w *writer) {
 	w.out.WriteString(`]}`)
 }
 
-// marks answers the marks on a span in the one order the canonical form uses.
 func (s Span) marks() []string {
 	ordered := make([]string, 0, 5)
 	if s.Bold {

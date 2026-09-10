@@ -11,13 +11,11 @@ import {
 } from "@/lib/legal-documents";
 import { LegalContents } from "./LegalContents";
 
-/** One numbered part of a document, as the document itself is written. */
 export type LegalClause = {
   body: ReactNode;
   heading: string;
 };
 
-/** How a legal document reads, in its own words and one measure. */
 const READING = [
   "font-prose text-article text-ink",
   "[&_p]:mt-4 [&_p]:text-pretty",
@@ -29,10 +27,6 @@ const READING = [
   "[&_a]:underline [&_a]:decoration-accent/55 [&_a]:underline-offset-[3px] hover:[&_a]:decoration-accent",
 ].join(" ");
 
-/**
- * A legal document, with the other three and this one's own clauses in the
- * margin beside it, so a reader can see where they are in a long agreement.
- */
 export function LegalPage({
   clauses,
   href,

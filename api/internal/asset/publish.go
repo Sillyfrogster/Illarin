@@ -10,15 +10,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ErrPublishFloor is a draft that does not yet carry what its kind asks for.
-// The unmet items come back with it, so a refusal reads as a checklist.
 var ErrPublishFloor = errors.New("the draft is not ready to publish")
 
-// ErrAlreadyPublished is a second publish of the same asset. Publishing is
-// one-way and nothing returns an asset to draft.
 var ErrAlreadyPublished = errors.New("the asset is already published")
 
-// The requirements every kind shares. The rest come from the kind catalog.
 const (
 	nameRequirement         = "name"
 	adultContentRequirement = "adult_content"
@@ -27,19 +22,14 @@ const (
 	uploadRequirement       = "upload"
 )
 
-// ReadinessItem is one thing publication waits on, and whether the asset
-// carries it. A creator reads the whole list rather than the first refusal.
 type ReadinessItem struct {
-	ID     string
-	Label  string
-	Detail string
-	Met    bool
-	// BlockID is the block a creator fills the item in, and is nil for a
-	// header field.
+	ID      string
+	Label   string
+	Detail  string
+	Met     bool
 	BlockID *uuid.UUID
 }
 
-// Ready reports whether every item in a readiness list is met.
 func Ready(items []ReadinessItem) bool {
 	for _, item := range items {
 		if !item.Met {
@@ -49,8 +39,6 @@ func Ready(items []ReadinessItem) bool {
 	return true
 }
 
-// readiness is the publish floor for one asset. Every kind asks for a name and
-// an answered adult content question, and the kind catalog adds the rest.
 func readiness(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
 	items := []ReadinessItem{
 		{
@@ -75,7 +63,6 @@ func readiness(kind, name string, isNSFW *bool, blocks []block.Block) []Readines
 	return items
 }
 
-// candidateReadiness is the kind's floor and the three things the whole candidate has to have settled.
 func (s *Service) candidateReadiness(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -118,7 +105,6 @@ func (s *Service) candidateReadiness(
 	return items, nil
 }
 
-// picturesReady reports whether every picture the page points at belongs to this asset and still has its bytes.
 func picturesReady(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
 	var ready bool
 	err := tx.QueryRow(ctx, `
@@ -143,7 +129,6 @@ func picturesReady(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, err
 	return ready, nil
 }
 
-// uploadReviewed reports whether the asset has no replacement upload still waiting on a decision.
 func uploadReviewed(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
 	var reviewed bool
 	err := tx.QueryRow(ctx, `
@@ -157,8 +142,6 @@ func uploadReviewed(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, er
 	return reviewed, nil
 }
 
-// Publish makes a draft public, once. It answers with the readiness list
-// either way, so a refusal names every missing item rather than the first.
 func (s *Service) Publish(
 	ctx context.Context,
 	ownerID uuid.UUID,

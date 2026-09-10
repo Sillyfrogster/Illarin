@@ -19,9 +19,6 @@ func readLinkJSON(c *gin.Context, destination any) bool {
 	return readBoundedJSON(c, destination, maxLinkBodyBytes, "The link request is too large.")
 }
 
-// readBoundedJSON refuses anything past its limit before parsing it, so an
-// oversized body costs the process the bytes it takes to notice rather than the
-// memory to hold it.
 func readBoundedJSON(c *gin.Context, destination any, limit int64, tooLargeMessage string) bool {
 	mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
 	if err != nil || mediaType != "application/json" {
@@ -83,8 +80,6 @@ func noStoreLink(c *gin.Context) {
 	c.Header("Pragma", "no-cache")
 }
 
-// noStoreCredentialResponses keeps a response that carries or turns on a
-// credential out of every cache between Illarin and the caller.
 func noStoreCredentialResponses() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.FullPath()

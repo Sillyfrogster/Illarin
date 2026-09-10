@@ -4,7 +4,6 @@ import type { LucideIcon } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { cn } from "@/lib/cn";
 
-/** A form in the rail, with its one commit under the fields. */
 export function StepForm({
   busy,
   children,
@@ -18,7 +17,6 @@ export function StepForm({
   commit: string;
   onCommit: () => void;
   ready?: boolean;
-  /** Anything that follows the commit, such as a way to undo the thing entirely. */
   under?: ReactNode;
 }) {
   function send(event: FormEvent) {
@@ -42,7 +40,6 @@ export function StepForm({
   );
 }
 
-/** A quiet standing inside the rail, such as what a destination is doing now. */
 export function StepNote({
   children,
   tone = "quiet",
@@ -62,7 +59,6 @@ export function StepNote({
   );
 }
 
-/** A second action in the rail that is not the commit, such as verifying. */
 export function StepAction({
   busy,
   children,
@@ -96,7 +92,6 @@ export function StepAction({
   );
 }
 
-/** An irreversible action that states its consequence and asks a second time. */
 export function Consequence({
   action,
   busy,
@@ -106,7 +101,6 @@ export function Consequence({
 }: {
   action: string;
   busy?: boolean;
-  /** What this does that cannot be undone, said before it is done. */
   children: ReactNode;
   confirm: string;
   onConfirm: () => void;

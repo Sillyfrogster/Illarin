@@ -8,7 +8,6 @@ import type {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 
-/** The spring the site's disclosures settle on, so a panel whose contents change stays still */
 const MORPH = { type: "spring", stiffness: 500, damping: 40 } as const;
 
 const VISIBILITY: { value: NsfwVisibility; label: string; note: string }[] = [
@@ -17,10 +16,6 @@ const VISIBILITY: { value: NsfwVisibility; label: string; note: string }[] = [
   { value: "shown", label: "Show", note: "Adult covers arrive as published." },
 ];
 
-/**
- * Everything a reader narrows by after the kind. It belongs to the page header
- * rather than a rail beside the results, so the catalog keeps the whole width.
- */
 export function RefinePanel({
   account,
   filters,

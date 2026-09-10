@@ -30,7 +30,6 @@ func assetToInsertParams(a Asset, ownerID uuid.UUID, madeAt *time.Time) db.Inser
 	}
 }
 
-// insertAsset returns the made date the row was given, or the time it was written.
 func insertAsset(ctx context.Context, tx pgx.Tx, a Asset, ownerID uuid.UUID, madeAt *time.Time) (time.Time, error) {
 	queries := db.New(tx)
 	params := assetToInsertParams(a, ownerID, madeAt)

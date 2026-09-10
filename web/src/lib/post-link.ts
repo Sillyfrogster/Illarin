@@ -1,11 +1,9 @@
 import { blogUrl, siteUrl } from "./site-metadata";
 
-/** The whole address of anything the blog publishes, on the blog's own origin. */
 export function blogAddress(path: string): string {
   return new URL(path, blogUrl).href;
 }
 
-/** The only schemes a post link may use. Go refuses every other one. */
 export function isSafeAddress(href: string): boolean {
   const address = href.trim();
   for (const letter of address) {
@@ -18,7 +16,6 @@ export function isSafeAddress(href: string): boolean {
   );
 }
 
-/** Whether a link in a post leaves Illarin, which decides how it opens. */
 export function leavesIllarin(href: string): boolean {
   if (!href.startsWith("https://")) return false;
   try {
@@ -30,7 +27,6 @@ export function leavesIllarin(href: string): boolean {
   }
 }
 
-/** The address form Go stores, so an editor can preview it before saving. */
 export function normalizedSlug(candidate: string): string {
   return candidate
     .toLowerCase()
@@ -40,7 +36,6 @@ export function normalizedSlug(candidate: string): string {
     .replace(/-+$/, "");
 }
 
-/** The whole address a post answers to, which is what sharing hands to someone else. */
 export function postPermalink(slug: string): string {
   return blogAddress(`/blog/${encodeURI(slug)}`);
 }

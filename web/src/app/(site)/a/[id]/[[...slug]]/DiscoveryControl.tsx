@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import type { AssetDetail } from "@/lib/api/query";
 import { saveAssetDiscovery } from "@/lib/api/query";
 
-/** Whether a published asset appears in the catalog. */
 export function DiscoveryControl({
   assetId,
   initialDiscovery,

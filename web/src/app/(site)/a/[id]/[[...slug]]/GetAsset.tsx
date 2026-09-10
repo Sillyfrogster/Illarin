@@ -38,7 +38,6 @@ import {
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 
-// A delivery is collected within one long-poll, so the page checks back a few times and stops.
 const WATCH_INTERVAL_MS = 8000;
 const WATCH_LIMIT = 20;
 
@@ -59,10 +58,6 @@ function arrivalDate(when: string): string {
   });
 }
 
-/**
- * The one place an asset leaves Illarin. Formats and linked applications are
- * two choices inside a single control rather than a card each.
- */
 export function GetAsset({
   assetId,
   kindLabel,
@@ -78,7 +73,6 @@ export function GetAsset({
   downloads: DownloadTarget[];
   original: OriginalUpload | null;
   images: AssetImage[];
-  /** Whether the asset holds no content, so a format carries a shell of one. */
   holdsNothing: boolean;
   isOwner: boolean;
   linkedInstallOnly: boolean;
@@ -390,7 +384,6 @@ function Sample({
   return (
     <ul className="mt-2 list-none space-y-1">
       {texts.map((text, index) => (
-        // Two greetings may open with the same words, so position is the key.
         <li
           className="truncate text-meta text-mute italic"
           key={`${index}-${text}`}

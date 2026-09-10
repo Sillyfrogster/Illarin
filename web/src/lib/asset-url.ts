@@ -3,19 +3,12 @@ const SLUG_LIMIT = 60;
 const ASSET_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Segments under an asset that Illarin owns, so a name can never claim one.
 const RESERVED = new Set(["history"]);
 
-/** Whether a path segment could be an asset id, so a lookup only runs when it could answer. */
 export function isAssetId(segment: string): boolean {
   return ASSET_ID.test(segment);
 }
 
-/**
- * The decorative half of an asset's address. Nothing resolves by it, so a
- * rename cannot break a link and a collision costs nothing. A name that
- * normalizes to nothing, or to a segment Illarin owns, has no slug.
- */
 export function assetSlug(name: string): string {
   const normalized = name
     .normalize("NFKD")
@@ -32,21 +25,15 @@ export function assetSlug(name: string): string {
   return boundary > 0 ? capped.slice(0, boundary) : capped;
 }
 
-/** The canonical address of an asset. */
 export function assetHref(id: string, name: string): string {
   const slug = assetSlug(name);
   return slug ? `/a/${id}/${slug}` : `/a/${id}`;
 }
 
-/** Where an asset's recorded versions are read. */
 export function assetHistoryHref(id: string): string {
   return `/a/${id}/history`;
 }
 
-/**
- * Where an address should send a reader, or null when they are already at the
- * canonical one. The redirect is temporary because a rename moves it.
- */
 export function assetRedirect(
   visited: { id: string; slug?: string[] },
   asset: { id: string; name: string },

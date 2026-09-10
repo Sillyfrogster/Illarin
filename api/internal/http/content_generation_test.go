@@ -56,8 +56,6 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 		t.Fatalf("content generation = %d, want %d after a reorder and a width change", got, edited)
 	}
 
-	// The adult content answer is what a page tells a reader, not what a file
-	// carries, so it moves nothing either.
 	request := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity",
 		strings.NewReader(`{"name":"","isNsfw":true}`))
 	request.Header.Set("Content-Type", "application/json")

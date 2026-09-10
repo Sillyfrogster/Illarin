@@ -25,7 +25,6 @@ const CHOICES = [
   { value: "dark", label: "Dark", Icon: Moon },
 ] as const;
 
-/** The appearance choice, in one control that keeps all three states */
 export function AppearanceMenu({
   className,
   labelled = false,

@@ -3,9 +3,7 @@ import type { components } from "@/lib/api/schema";
 export type Scope = components["schemas"]["Scope"];
 
 export type ScopeCopy = {
-  /** What the instance may do, as a creator would say it. */
   title: string;
-  /** The limit that makes granting it reasonable. */
   detail: string;
 };
 
@@ -22,10 +20,6 @@ const SCOPES: Record<Scope, ScopeCopy> = {
   },
 };
 
-/**
- * Describes one scope. An unrecognised scope is shown as it was named rather
- * than hidden, so a creator is never asked to approve something unexplained.
- */
 export function describeScope(scope: Scope): ScopeCopy {
   return (
     SCOPES[scope] ?? {

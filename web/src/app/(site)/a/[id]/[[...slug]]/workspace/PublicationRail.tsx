@@ -25,7 +25,6 @@ import { useWorkspace } from "./state";
 
 type Step = "home" | "replace" | "review" | "confirm";
 
-/** Everything a creator does to reach readers, as one step of the rail at a time. */
 export function PublicationRail({
   kind,
   onGo,
@@ -173,7 +172,6 @@ export function PublicationRail({
   );
 }
 
-/** The publish floor of a draft, and the one-way step that makes it a page anyone can open. */
 function DraftPublication({
   confirming,
   kind,
@@ -285,7 +283,6 @@ function DraftPublication({
   );
 }
 
-/** One way of reaching readers, named with what it does to the page. */
 function Path({
   detail,
   disabled,

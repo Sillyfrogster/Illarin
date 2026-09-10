@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Assignments answers everything one account has ever been given.
 func (s *Service) Assignments(ctx context.Context, handle string) ([]Assignment, error) {
 	accountID, err := s.accountByHandle(ctx, handle)
 	if err != nil {
@@ -18,7 +17,6 @@ func (s *Service) Assignments(ctx context.Context, handle string) ([]Assignment,
 	return s.assignmentsFor(ctx, accountID, false)
 }
 
-// Assign gives one account a distinction it does not already hold.
 func (s *Service) Assign(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -78,7 +76,6 @@ func (s *Service) Assign(
 	return Assignment{}, ErrNotFound
 }
 
-// Withdraw stops an assignment appearing publicly and keeps its record.
 func (s *Service) Withdraw(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -117,7 +114,6 @@ func (s *Service) Withdraw(
 	return nil
 }
 
-// OrderAssignments puts one account's active assignments in the given order.
 func (s *Service) OrderAssignments(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -164,7 +160,6 @@ func (s *Service) OrderAssignments(
 	return s.assignmentsFor(ctx, accountID, false)
 }
 
-// Showcase answers the distinctions one profile shows a visitor.
 func (s *Service) Showcase(ctx context.Context, accountID uuid.UUID) (Showcase, error) {
 	held, err := s.assignmentsFor(ctx, accountID, true)
 	if err != nil {
@@ -192,7 +187,6 @@ func (s *Service) Showcase(ctx context.Context, accountID uuid.UUID) (Showcase, 
 	return shown, nil
 }
 
-// assignmentsFor orders positions the authority's way and the rest the account's
 func (s *Service) assignmentsFor(
 	ctx context.Context,
 	accountID uuid.UUID,

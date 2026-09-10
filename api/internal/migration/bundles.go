@@ -12,7 +12,6 @@ import (
 
 const bundleExtension = ".lumitheme"
 
-// attachThemeBundles claims each theme's bundle by stored id then by a creation time only it shares, and a theme left without one is fatal because its fonts exist nowhere else.
 func attachThemeBundles(themes []v1.Row, backup *FileBackup) ([]string, error) {
 	wanted := newBackupIndex()
 	byCreation := make(map[int64][]int, len(themes))
@@ -71,7 +70,6 @@ func attachThemeBundles(themes []v1.Row, backup *FileBackup) ([]string, error) {
 	return claimed, nil
 }
 
-// claimRemainingBundle pairs the last theme with the last unclaimed bundle, which is a pairing rather than a guess.
 func claimRemainingBundle(
 	themes []v1.Row,
 	backup *FileBackup,

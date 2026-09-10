@@ -9,8 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
-// The two flat SillyTavern files are told apart by required keys they do not
-// share. The theme's are the colour and blur it always carries.
 func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 	themeKeys := []string{"main_text_color", "blur_strength"}
 	recognition := (SillyTavernModule{}).Declaration().Recognition
@@ -26,16 +24,12 @@ func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 			t.Errorf("the preset signature requires %q, which is a theme's key", key)
 		}
 	}
-	// A theme is not claimed by the preset module.
 	theme := document(t, `{"name":"Glimmer","main_text_color":"rgba(1,1,1,1)","blur_strength":8}`)
 	if _, claimed := (SillyTavernModule{}).Claim(theme); claimed {
 		t.Error("the preset module claimed a SillyTavern theme")
 	}
 }
 
-// Ordering is the difference the two modules each answer in their own code.
-// SillyTavern holds it in a structure keyed by character, so the list's own
-// order is not the order the file sends.
 func TestTheSillyTavernOrderDecidesTheFragmentsAndTheirSwitches(t *testing.T) {
 	parsed := parse(t, sillyTavernPreset)
 	if parsed.Format != SillyTavernID {
@@ -70,7 +64,6 @@ func TestTheSillyTavernOrderDecidesTheFragmentsAndTheirSwitches(t *testing.T) {
 		t.Errorf("marker = %q, want what the file holds a place for", marker.Marker)
 	}
 
-	// The other character's order is somebody else's copy and stays whole.
 	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, sillyTavernNamespace)
 	var others []map[string]any
 	if err := json.Unmarshal(body["prompt_order"], &others); err != nil {

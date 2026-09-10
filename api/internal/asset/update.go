@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// MaxSummaryRunes and MaxNotesRunes bound the text an update carries, and MaxVersionLabelRunes bounds its label.
 const (
 	MaxSummaryRunes      = 200
 	MaxNotesRunes        = 4000
@@ -25,15 +24,11 @@ const (
 )
 
 var (
-	// ErrSummaryRequired is a publication that wrote no summary of what changed.
-	ErrSummaryRequired = errors.New("an update needs a summary")
-	// ErrSummaryTooLong is a summary past MaxSummaryRunes, or notes or a label past their own limits.
-	ErrSummaryTooLong = errors.New("the update text is too long")
-	// ErrNothingToPublish is a working copy that matches the published asset in every way an update records.
+	ErrSummaryRequired  = errors.New("an update needs a summary")
+	ErrSummaryTooLong   = errors.New("the update text is too long")
 	ErrNothingToPublish = errors.New("nothing has changed since the last update")
 )
 
-// UpdateRequest is one publication of the reviewed working copy, whose version label is free text a creator may repeat and which keeps the asset's own version where it is empty.
 type UpdateRequest struct {
 	OwnerID      uuid.UUID
 	AssetID      uuid.UUID
@@ -42,7 +37,6 @@ type UpdateRequest struct {
 	VersionLabel string
 }
 
-// Update is one recorded version of an asset, and its ContentChanged says whether publishing it moved the content generation linked apps compare.
 type Update struct {
 	ID                uuid.UUID
 	AssetID           uuid.UUID
@@ -55,15 +49,12 @@ type Update struct {
 	ContentChanged    bool
 }
 
-// AnnounceUpdate queues the delivery work for a published update inside the transaction that published it.
 type AnnounceUpdate func(ctx context.Context, tx pgx.Tx, published Update) error
 
-// OnUpdatePublished names what queues delivery work each time an update is published.
 func (s *Service) OnUpdatePublished(announce AnnounceUpdate) {
 	s.announce = announce
 }
 
-// PublishUpdate makes the reviewed working copy the asset's next public version.
 func (s *Service) PublishUpdate(
 	ctx context.Context,
 	in UpdateRequest,
@@ -142,7 +133,6 @@ func (s *Service) PublishUpdate(
 	return recorded, items, nil
 }
 
-// recordUpdate moves the content generation where the file changed and records the version that carries it.
 func (s *Service) recordUpdate(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -185,13 +175,11 @@ func (s *Service) recordUpdate(
 	return recorded, nil
 }
 
-// versionDigest is what one version of an asset holds, split into the file readers download and everything else an update records.
 type versionDigest struct {
 	content string
 	whole   string
 }
 
-// publishedDigest measures the version readers have now, which is the recorded snapshot rather than the working copy.
 func (s *Service) publishedDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (versionDigest, error) {
 	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
 		return versionDigest{}, err
@@ -203,7 +191,6 @@ func (s *Service) publishedDigest(ctx context.Context, tx pgx.Tx, assetID uuid.U
 	return measured, err
 }
 
-// assetDigest reads one asset through whichever tables the search path points at.
 func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (versionDigest, error) {
 	content, err := s.contentFingerprint(ctx, tx, assetID)
 	if err != nil {
@@ -229,7 +216,6 @@ func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID)
 	return versionDigest{content: content, whole: hex.EncodeToString(whole.Sum(nil))}, nil
 }
 
-// digestCatalog covers the fields that describe an asset in the catalog rather than in the file it exports.
 func digestCatalog(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, into hash.Hash) error {
 	var name, blurb string
 	var tags []string

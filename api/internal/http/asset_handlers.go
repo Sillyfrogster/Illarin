@@ -192,8 +192,6 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 	})
 }
 
-// CreateAsset brings a file in, or starts an asset from nothing when the body
-// is JSON naming a kind. Both paths land on the same page.
 func (h *Handlers) CreateAsset(c *gin.Context) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
@@ -299,7 +297,6 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAss
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-// GetAssetReplacement answers the replacement this asset is still deciding about.
 func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
@@ -472,7 +469,6 @@ func (h *Handlers) AddMedia(c *gin.Context, id types.UUID, params AddMediaParams
 	c.JSON(http.StatusCreated, toAPIMedia(added))
 }
 
-// readerVisibility returns the request override or the account preference.
 func (h *Handlers) readerVisibility(
 	c *gin.Context,
 	requested *string,
@@ -491,9 +487,6 @@ func (h *Handlers) readerVisibility(
 	return asset.ContentVisibility(preference), true
 }
 
-// GetAsset answers an asset's own page. For anyone but the owner, withheld,
-// deleted and never-existed all leave through the same 404, so no response says
-// which.
 func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
@@ -611,7 +604,6 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	}, nil
 }
 
-// toAPILatestUpdate carries the newest recorded version, or nothing where a draft has recorded none.
 func toAPILatestUpdate(recorded *asset.Version) *RecordedVersion {
 	if recorded == nil {
 		return nil
@@ -636,7 +628,6 @@ func apiEligibleApps(apps []string) []AssetDetailEligibleApps {
 	return result
 }
 
-// toAPIDownloads builds the available download choices.
 func toAPIDownloads(targets []format.Target) []DownloadTarget {
 	downloads := make([]DownloadTarget, 0, len(targets))
 	for _, target := range targets {
@@ -690,8 +681,6 @@ func textOrNil(value string) *string {
 	return &value
 }
 
-// toAPIAddableBlocks serves the add tray's catalog. Only the owner can add a
-// block, so nobody else is handed the list.
 func toAPIAddableBlocks(kind string, isOwner bool) *[]AddableBlock {
 	if !isOwner {
 		return nil
@@ -800,8 +789,6 @@ func ingestAsset(a *asset.Asset) *Asset {
 	return &converted
 }
 
-// ResolveLegacyAsset answers for a v1 public address. The lookup happens before
-// any redirect, so the answer never confirms an asset a visitor may not see.
 func (h *Handlers) ResolveLegacyAsset(c *gin.Context, author string, name string) {
 	found, err := h.assets.ResolveLegacyAddress(c.Request.Context(), author+"/"+name)
 	if errors.Is(err, asset.ErrNotFound) {
@@ -845,7 +832,6 @@ func toAPI(a asset.Asset) Asset {
 	}
 }
 
-// countOrAbsent leaves the field out where there is nothing to count, because a zero would read as an answer this reader is not entitled to.
 func countOrAbsent(count int) *int {
 	if count == 0 {
 		return nil

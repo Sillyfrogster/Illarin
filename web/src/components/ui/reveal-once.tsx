@@ -3,7 +3,6 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
-/** A secret Illarin can only show once, with the one chance to take it. */
 export function RevealOnce({
   carry,
   copied,

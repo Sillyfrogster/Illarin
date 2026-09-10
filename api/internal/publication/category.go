@@ -10,7 +10,6 @@ import (
 
 const categoryLabelLimit = 48
 
-// Category is one kind of post the publication sorts its writing into.
 type Category struct {
 	ID       uuid.UUID
 	Slug     string
@@ -19,13 +18,11 @@ type Category struct {
 	Retired  bool
 }
 
-// CategoryUpdate carries only the parts of a category a request named.
 type CategoryUpdate struct {
 	Label   *string
 	Retired *bool
 }
 
-// Categories answers every seeded category, retired ones included.
 func (s *Service) Categories(ctx context.Context) ([]Category, error) {
 	rows, err := s.pool.Query(ctx, selectCategories+` order by category.position, category.created_at`)
 	if err != nil {
@@ -35,7 +32,6 @@ func (s *Service) Categories(ctx context.Context) ([]Category, error) {
 	return collectCategories(rows)
 }
 
-// UpdateCategory changes a category's label and whether it is still current.
 func (s *Service) UpdateCategory(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -85,7 +81,6 @@ func (s *Service) UpdateCategory(
 	return s.category(ctx, id)
 }
 
-// OrderCategories puts the categories in the order it is given them.
 func (s *Service) OrderCategories(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -162,7 +157,6 @@ func collectCategories(rows pgx.Rows) ([]Category, error) {
 	return found, nil
 }
 
-// WritableCategories answers the categories one account may start a post in.
 func (s *Service) WritableCategories(
 	ctx context.Context,
 	held []Grant,

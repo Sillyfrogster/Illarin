@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-// How far down the window a mark has to pass before a rail calls its section the one being read.
 const READING_LINE = 0.18;
 
-/** The last of these elements to have passed the reading line, so a rail can say where a reader is. */
 export function useReadingMark(anchors: string[]): string {
   const [here, setHere] = useState("");
-  // The anchors are rebuilt on every render, so the effect watches their text rather than the array.
   const identity = anchors.join(" ");
 
   useEffect(() => {

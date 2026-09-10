@@ -22,7 +22,6 @@ import {
 
 const KEY_PREVIEW_LIMIT = 6;
 
-/** A book as an index of its entries and the one a reader picked open. */
 export function Lorebook({ entries }: { entries: LorebookEntry[] }) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<EntrySort>("book");
@@ -68,7 +67,6 @@ export function Lorebook({ entries }: { entries: LorebookEntry[] }) {
   );
 }
 
-/** Every entry as one tab stop, with the arrow keys moving between them. */
 function Index({
   entries,
   names,
@@ -234,8 +232,7 @@ function Controls({
   );
 }
 
-// biome-ignore-start lint/a11y/noNoninteractiveTabindex: The panel holds
-// nothing focusable, so it has to be reachable itself.
+// biome-ignore-start lint/a11y/noNoninteractiveTabindex: The panel scrolls by keyboard.
 function Entry({
   entry,
   labelledBy,
@@ -273,7 +270,7 @@ function Entry({
     </div>
   );
 }
-// biome-ignore-end lint/a11y/noNoninteractiveTabindex: The panel ends here.
+// biome-ignore-end lint/a11y/noNoninteractiveTabindex: End panel exception.
 
 function nextRow(key: string, from: number, rows: number): number | null {
   if (rows === 0) return null;

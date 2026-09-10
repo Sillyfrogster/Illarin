@@ -5,7 +5,6 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/** How the work stands with the server, which is what the light says without words. */
 export type DockState =
   | "failed"
   | "unsaved"
@@ -22,7 +21,6 @@ const QUIET_ACTION =
 const STRONG_ACTION =
   "inline-flex min-h-11 shrink-0 items-center rounded-control bg-field px-5 text-ui font-medium text-ink outline-offset-3 hover:opacity-90 disabled:opacity-35";
 
-/** Private work is a ring and published work a filled dot, so the two never read alike. */
 export function StatusLight({ state }: { state: DockState }) {
   const reduced = useReducedMotion();
   return (
@@ -48,7 +46,6 @@ export function StatusLight({ state }: { state: DockState }) {
   );
 }
 
-/** One of the ways the dock opens something beside the page. */
 export function DockTool({
   active,
   icon: Icon,
@@ -74,7 +71,6 @@ export function DockTool({
   );
 }
 
-/** A dock action that gives way to the one beside it. */
 export function DockAction({
   children,
   disabled,
@@ -98,11 +94,6 @@ export function DockAction({
   );
 }
 
-/**
- * One bar at the foot of a workspace carrying how the work stands, the ways to
- * open what sits beside the page, and the action that reaches readers. It moves
- * clear of the rail on a wide screen and steps out from under it on a narrow one.
- */
 export function Dock({
   actions,
   detail,

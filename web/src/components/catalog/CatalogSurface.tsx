@@ -32,11 +32,6 @@ const PAGE = 24;
 const GRID =
   "m-0 grid list-none grid-cols-2 items-stretch gap-x-5 gap-y-10 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
-/**
- * The catalog itself: what is in it, what it has been narrowed to, and the way
- * to narrow it further. Browse and a creator's page are the same surface over
- * different scopes.
- */
 export function CatalogSurface({
   basePath = "/browse",
   creator,
@@ -50,7 +45,6 @@ export function CatalogSurface({
   filters: BrowseFilters;
   heading: string;
   initialPage: BrowsePage | null;
-  /** A creator's page carries its own search; Browse asks in its header instead. */
   search?: { label: string; placeholder: string };
 }) {
   const queryClient = useQueryClient();

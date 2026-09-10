@@ -46,7 +46,6 @@ export type WorkspaceSurfacesProps = {
   withheld: boolean;
 };
 
-/** The dock, the rail and the palette: everything the workspace puts beside the page. */
 export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const workspace = useWorkspace();
   const { account } = useAuth();
@@ -55,7 +54,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const canWithhold = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.withheld,
   );
-  /** Leaving the workspace for the reader's view keeps a way back where the creator stands. */
   const _previewing =
     workspace.isOwner && !workspace.editing && workspace.sweep > 0;
 
@@ -331,7 +329,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   );
 }
 
-/** The rail remembers which item of a collection is open, so closing it does not lose the creator's place. */
 function Fields({
   assetId,
   blockId,
@@ -358,7 +355,6 @@ function Fields({
   );
 }
 
-/** The light that crosses the page when writing begins. */
 function ActivationSweep() {
   const workspace = useWorkspace();
   const reduced = useReducedMotion();

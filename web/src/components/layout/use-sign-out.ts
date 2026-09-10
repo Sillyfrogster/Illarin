@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/auth";
 export const SIGN_OUT_FAILURE =
   "Could not sign out. Check your connection and try again.";
 
-/** Signing out, with the two states the shell has to show while it happens */
 export function useSignOut(onSignedOut: () => void) {
   const { signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);

@@ -1,12 +1,3 @@
-/**
- * What a post looks like while it is being written. Tiptap builds this DOM
- * itself, so the rules reach it as variants on the surface rather than as
- * classes on elements. Every decision here matches `PostBody`, which is what a
- * reader gets, plus the marks only a writer needs: the placeholder, the
- * selected node, and a picture still missing its description.
- */
-
-/** The column itself: the reading measure, the reading type, and the space between blocks. */
 const FLOW =
   "min-h-[26rem] font-prose text-article break-words text-ink outline-none [&>*+*]:mt-5";
 
@@ -50,7 +41,6 @@ const CALLOUT = [
   "[&_div[data-kind]]:my-8 [&_div[data-kind]]:rounded-plate [&_div[data-kind]]:bg-deep [&_div[data-kind]]:p-5",
   "[&_div[data-kind]>*+*]:mt-3 [&_div[data-kind]>*]:text-prose",
   "[&_div[data-kind=important]]:bg-accent-wash [&_div[data-kind=warning]]:bg-stop-wash",
-  // The kind is drawn from its own attribute, so a callout names itself the way the reader's does.
   "[&_div[data-kind]]:before:mb-2 [&_div[data-kind]]:before:block [&_div[data-kind]]:before:font-ui [&_div[data-kind]]:before:text-meta [&_div[data-kind]]:before:font-semibold [&_div[data-kind]]:before:tracking-[0.02em] [&_div[data-kind]]:before:capitalize [&_div[data-kind]]:before:content-[attr(data-kind)]",
   "[&_div[data-kind=important]]:before:text-accent [&_div[data-kind=warning]]:before:text-stop",
 ].join(" ");
@@ -62,15 +52,12 @@ const MARKS = [
 ].join(" ");
 
 const WRITING_MARKS = [
-  // Tiptap's placeholder is an attribute on the first empty paragraph.
   "[&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-mute [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]",
   "[&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-accent",
   "[&_.ProseMirror-selectednode_img]:outline-2 [&_.ProseMirror-selectednode_img]:outline-offset-2 [&_.ProseMirror-selectednode_img]:outline-accent",
-  // A picture with no description cannot be saved, so it is marked where it sits.
   "[&_img[alt='']]:outline-2 [&_img[alt='']]:outline-offset-2 [&_img[alt='']]:outline-stop",
 ].join(" ");
 
-/** Everything the editable column wears. Tiptap puts this on the ProseMirror element. */
 export const WRITING_SURFACE = [
   FLOW,
   HEADINGS,
@@ -84,13 +71,10 @@ export const WRITING_SURFACE = [
   WRITING_MARKS,
 ].join(" ");
 
-/** A picture on its own, drawn by the picture node rather than by React. */
 export const WRITING_PICTURE =
   "my-9 [&>img]:h-auto [&>img]:w-full [&>img]:rounded-plate [&>img]:bg-deep [&>figcaption]:mt-3 [&>figcaption]:font-prose [&>figcaption]:text-meta [&>figcaption]:leading-6 [&>figcaption]:text-mute";
 
-/** A run of pictures the writer put in an order. */
 export const WRITING_GALLERY = "my-9 grid w-full grid-cols-2 gap-3 sm:gap-4";
 
-/** One picture inside a gallery, cropped to the shape the reader's gallery uses. */
 export const WRITING_GALLERY_PICTURE =
   "min-w-0 [&>img]:aspect-[4/3] [&>img]:h-auto [&>img]:w-full [&>img]:rounded-plate [&>img]:bg-deep [&>img]:object-contain [&>figcaption]:mt-2 [&>figcaption]:font-prose [&>figcaption]:text-meta [&>figcaption]:leading-6 [&>figcaption]:text-mute";

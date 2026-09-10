@@ -2,7 +2,6 @@ import type { ReactElement } from "react";
 import { MARK_BLADE, MARK_CORE } from "@/components/brand/BrandMark";
 import { CARD_SIZE } from "@/lib/publication-metadata";
 
-/** What the card draws: an optional plate on the right and an optional app under the title. */
 export type CardSubject = {
   title: string;
   app: { name: string; mark: string | null } | null;
@@ -15,20 +14,17 @@ const INK = "#f5f5f2";
 
 const PLATE_WIDTH = 480;
 
-/** How long a title runs before it needs a smaller size to stay inside the card. */
 const TITLE_STEPS = [
   { upTo: 52, size: 74 },
   { upTo: 92, size: 58 },
   { upTo: Number.POSITIVE_INFINITY, size: 46 },
 ];
 
-/** The size a title is set at, chosen so the longest one Illarin accepts still fits. */
 export function cardTitleSize(title: string): number {
   const step = TITLE_STEPS.find(({ upTo }) => title.length <= upTo);
   return (step ?? TITLE_STEPS[TITLE_STEPS.length - 1]).size;
 }
 
-/** The Illarin mark as bytes a server-side renderer can draw without a stylesheet. */
 export function markImage(fill: string): string {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">` +
@@ -37,7 +33,6 @@ export function markImage(fill: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-/** The card a link preview shows for one post. */
 export function PostCard({ title, app, plate }: CardSubject): ReactElement {
   return (
     <div

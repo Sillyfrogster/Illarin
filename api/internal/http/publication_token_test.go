@@ -37,7 +37,6 @@ type publicationCredential struct {
 	Grant publicationGrant `json:"grant"`
 }
 
-// contributor is one approved account, its session and the grant it publishes under.
 type contributor struct {
 	handle  string
 	session *http.Cookie

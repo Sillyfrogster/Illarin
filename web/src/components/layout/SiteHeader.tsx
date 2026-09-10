@@ -18,7 +18,6 @@ import { isCurrentPage, NAV, publishAction } from "./destinations";
 import { MobileNav } from "./MobileNav";
 import { Notch } from "./Notch";
 
-/** The one header every page above the blog shares */
 export function SiteHeader() {
   const pathname = usePathname();
   const { account } = useAuth();

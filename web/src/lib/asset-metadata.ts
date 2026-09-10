@@ -5,12 +5,6 @@ import { assetHref } from "./asset-url";
 import { KIND_LABELS } from "./kinds";
 import { SITE_CARD, siteOpenGraph, siteTwitter } from "./site-metadata";
 
-/**
- * The tags a chat window reads when somebody pastes an asset's address. An
- * unlisted asset asks not to be indexed, which reduces discovery and is not a
- * boundary, so it still invites a crawler to follow its links. Without an image
- * of its own it falls back to the site card.
- */
 export function assetMetadata(asset: AssetDetail): Metadata {
   const name = assetDisplayName(asset.name);
   const title = `${name} · ${KIND_LABELS[asset.kind]}`;

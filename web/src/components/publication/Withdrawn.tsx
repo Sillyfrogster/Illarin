@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { WITHDRAWAL_MESSAGE } from "@/lib/publication-withdrawal";
 
-/** The whole of a withdrawn address: what happened, anything Illarin chose to say, and the way on. */
 export function Withdrawn({ explanation }: { explanation: string }) {
   return (
     <section className="mx-auto grid min-h-[calc(100svh-var(--header-height))] w-full max-w-[76rem] content-center justify-items-start px-[var(--gutter)] py-section">

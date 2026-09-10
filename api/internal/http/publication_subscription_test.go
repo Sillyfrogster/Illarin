@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// eventNames reads the Publication events one post has on record, oldest first.
 func (s destinationStack) eventNames(t *testing.T, postID string) []string {
 	t.Helper()
 	rows, err := s.pool.Query(context.Background(), `
@@ -33,7 +32,6 @@ func (s destinationStack) eventNames(t *testing.T, postID string) []string {
 	return held
 }
 
-// sentTo answers the event types this post delivered to one destination.
 func (s destinationStack) sentTo(t *testing.T, postID, name string) []string {
 	t.Helper()
 	held := make([]string, 0, 4)
@@ -45,7 +43,6 @@ func (s destinationStack) sentTo(t *testing.T, postID, name string) []string {
 	return held
 }
 
-// quietlyPublished publishes one post to nowhere and answers what it became.
 func (s destinationStack) quietlyPublished(t *testing.T, ready blogPost) blogPost {
 	t.Helper()
 	response := s.publishTo(t, s.editor, ready.ID, ready.Version, fmt.Sprintf(
@@ -57,7 +54,6 @@ func (s destinationStack) quietlyPublished(t *testing.T, ready blogPost) blogPos
 	return decodePost(t, response)
 }
 
-// withdrawalsAmong keeps the arrivals that carry a withdrawal event.
 func withdrawalsAmong(held []arrived) []arrived {
 	kept := make([]arrived, 0, len(held))
 	for _, one := range held {

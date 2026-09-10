@@ -24,7 +24,6 @@ type publicationRefusal struct {
 	Version *int   `json:"version"`
 }
 
-// tooling is one approved contributor and the token their own tool holds.
 type tooling struct {
 	who   contributor
 	value string
@@ -36,8 +35,6 @@ func (s distinctionStack) tooling(t *testing.T, email, handle string) tooling {
 	return tooling{who: who, value: s.issued(t, who, "Release robot").Value}
 }
 
-// sent makes a request the way approved tooling makes one, with its token and
-// none of a browser's headers.
 func (s distinctionStack) sent(
 	t *testing.T,
 	value string,
@@ -121,8 +118,6 @@ func refusalOf(t *testing.T, response *httptest.ResponseRecorder) publicationRef
 	return refused
 }
 
-// newPacedDistinctionStack is the usual stack with a publication pace low
-// enough to reach in a test.
 func newPacedDistinctionStack(t *testing.T, rates publication.Rates) distinctionStack {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -528,7 +523,6 @@ func TestEveryPublicationRefusalNamesItselfAndNobodyElse(t *testing.T) {
 	}
 }
 
-// expireToken moves a token's expiry into the past without waiting for it.
 func expireToken(t *testing.T, stack distinctionStack, id string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
@@ -541,7 +535,6 @@ func expireToken(t *testing.T, stack distinctionStack, id string) {
 	}
 }
 
-// dropGrant revokes a grant the way the authority route does.
 func dropGrant(t *testing.T, stack distinctionStack, id string) {
 	t.Helper()
 	response := send(t, stack.router, authorized(httptest.NewRequest(
@@ -606,7 +599,6 @@ func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
 	}
 }
 
-// claimOnly takes an idempotency key the way a request that never finished would.
 func claimOnly(t *testing.T, stack distinctionStack, kit tooling, operation, key string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
@@ -622,7 +614,6 @@ func claimOnly(t *testing.T, stack distinctionStack, kit tooling, operation, key
 	}
 }
 
-// ageEveryKey moves every stored key past the window its outcome is kept for.
 func ageEveryKey(t *testing.T, stack distinctionStack) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `

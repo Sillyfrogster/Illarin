@@ -11,10 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// EventWithdrawn is the immutable record of a post leaving public view.
 const EventWithdrawn = "publication.post.withdrawn.v1"
 
-// StatusWithdrawn is a post readers can no longer read and Illarin still holds.
 const StatusWithdrawn = "withdrawn"
 
 const withdrawalTextLimit = 500
@@ -25,8 +23,6 @@ var (
 	ErrPostWithdrawn    = errors.New("the post is out of public view")
 )
 
-// Withdrawal is one removal of a post from public view. The reason is private
-// to Illarin and the explanation is the only part a reader ever sees.
 type Withdrawal struct {
 	Reason      string
 	Explanation string
@@ -34,15 +30,11 @@ type Withdrawal struct {
 	At          time.Time
 }
 
-// Tombstone is the whole of what a withdrawn address answers with. It carries
-// no title, no body and nobody's name.
 type Tombstone struct {
 	Slug        string
 	Explanation string
 }
 
-// WithdrawPost takes a published post out of public view and keeps everything
-// it was, so a correction can put the same post back at the same address.
 func (s *Service) WithdrawPost(
 	ctx context.Context,
 	editor Editor,
@@ -127,8 +119,6 @@ func (s *Service) WithdrawPost(
 	return s.post(ctx, id)
 }
 
-// RepublishPost puts a withdrawn post back at the address and under the date it
-// already had, showing whichever edition the author names.
 func (s *Service) RepublishPost(
 	ctx context.Context,
 	editor Editor,
@@ -205,8 +195,6 @@ func (s *Service) RepublishPost(
 	return s.post(ctx, id)
 }
 
-// WithdrawnPost answers the tombstone behind one address, current or former,
-// and always names the address the tombstone itself lives at.
 func (s *Service) WithdrawnPost(ctx context.Context, slug string) (Tombstone, error) {
 	var found Tombstone
 	err := s.pool.QueryRow(ctx, `
@@ -228,7 +216,6 @@ func (s *Service) WithdrawnPost(ctx context.Context, slug string) (Tombstone, er
 	return found, nil
 }
 
-// said is a checked withdrawal, with the private half and the public half apart.
 type said struct {
 	reason      string
 	explanation string
@@ -263,14 +250,10 @@ func checkWithdrawal(reason, explanation string) (said, error) {
 	return held, nil
 }
 
-// oneParagraph answers what somebody typed as a single run of prose, so a
-// tombstone never carries the shape of the box it was written in.
 func oneParagraph(written string) string {
 	return strings.Join(strings.Fields(written), " ")
 }
 
-// publicRevision reads the edition a post is showing readers inside the
-// transaction that is about to change it.
 func publicRevision(ctx context.Context, tx pgx.Tx, id uuid.UUID) (uuid.UUID, error) {
 	var revisionID *uuid.UUID
 	err := tx.QueryRow(ctx, `select public_revision_id from posts where id = $1`, id).
@@ -284,8 +267,6 @@ func publicRevision(ctx context.Context, tx pgx.Tx, id uuid.UUID) (uuid.UUID, er
 	return *revisionID, nil
 }
 
-// withdrawalsFor reads the newest withdrawal each named post has, which is the
-// one a post still out of public view is under.
 func (s *Service) withdrawalsFor(
 	ctx context.Context,
 	ids []uuid.UUID,

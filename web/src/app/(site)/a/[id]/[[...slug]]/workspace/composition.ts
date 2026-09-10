@@ -6,13 +6,10 @@ import type {
 } from "@/lib/api/query";
 import { type BlockLayout, LAYOUTS } from "@/lib/page-arrangement";
 
-/** One place a block can go, named by the block it would land beside. */
 export type BlockDestination = { position: number; label: string };
 
-/** One entry in the add catalog, and whether this page can still take it. */
 export type BlockOffer = { addable: AddableBlock; alreadyOn: boolean };
 
-/** The catalog's entries under the heading that says where their content ends up. */
 export type OfferGroup = { key: string; title: string; offers: BlockOffer[] };
 
 export function moveBlock(
@@ -47,7 +44,6 @@ export function blockDestinations(
     }));
 }
 
-/** An element's slot is its place in its block's layout. */
 export function seatElements(
   layout: BlockLayout,
   elements: AssetElement[],
@@ -128,7 +124,6 @@ export function offerGroups(
   return [...groups.values()];
 }
 
-/** The page order to save, taking each width from the saved copy rather than the draft. */
 export function arrangementRequest(
   order: AssetBlock[],
   saved: AssetBlock[],

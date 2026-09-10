@@ -15,8 +15,6 @@ const (
 	MaxItemBytes       = 8 << 20
 )
 
-// ValidateContentLimits applies the catalog ceiling on every route that saves
-// element content, including import and hand editing.
 func ValidateContentLimits(elements []Element) error {
 	for _, element := range elements {
 		items := elementItems(element.Content)
@@ -52,9 +50,6 @@ func ValidateContentLimits(elements []Element) error {
 	return nil
 }
 
-// validateItemIDs refuses an element whose items have no id of their own.
-// Preserved data keys against these ids, so two items sharing one id would be
-// one owner and an item with none could never own anything.
 func validateItemIDs(element Element, name string) error {
 	seen := make(map[uuid.UUID]struct{})
 	for index, id := range ItemIDs(element.Content) {
@@ -71,9 +66,6 @@ func validateItemIDs(element Element, name string) error {
 	return nil
 }
 
-// elementItems returns everything inside one element that a limit is measured
-// against. It is the one place the item types are listed, so a count and the
-// items themselves can never disagree.
 func elementItems(content Content) []any {
 	var items []any
 	switch value := content.(type) {
@@ -141,7 +133,6 @@ func elementItems(content Content) []any {
 	return items
 }
 
-// ValidateStructure checks whether a block can be read without special cases.
 func ValidateStructure(holder Block) error {
 	if err := ValidateContentLimits(holder.Elements); err != nil {
 		return err
@@ -225,7 +216,6 @@ func ValidateStructure(holder Block) error {
 	return nil
 }
 
-// ValidateBuilderConstraints checks the kind catalog's rules across an asset.
 func ValidateBuilderConstraints(kind string, before []Block, after []Block) error {
 	beforeByID := make(map[uuid.UUID]Block, len(before))
 	for _, holder := range before {
@@ -364,8 +354,6 @@ func pinnedElementPresent(blocks []Block, blockID uuid.UUID, original Element) b
 	return false
 }
 
-// elementName is what a refusal calls one element. The position stands in only
-// where the element type is not one Illarin knows.
 func elementName(element Element, index int) string {
 	if name := element.Label(); name != "" {
 		return name
@@ -382,8 +370,6 @@ func joinItemSizes() string {
 	return joinWithOr(names)
 }
 
-// joinWithOr writes a closed vocabulary the way a refusal reads it, so a
-// creator is told every value they may choose instead.
 func joinWithOr(names []string) string {
 	switch len(names) {
 	case 0:

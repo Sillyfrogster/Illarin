@@ -2,7 +2,6 @@ package migration
 
 import "github.com/Sillyfrogster/Illarin/api/internal/format"
 
-// accountColumns accounts for every column of v1's users table.
 func accountColumns() []format.ColumnDisposition {
 	return []format.ColumnDisposition{
 		format.MappedColumn("users", "id", "account id"),
@@ -27,7 +26,6 @@ func accountColumns() []format.ColumnDisposition {
 	}
 }
 
-// accountAnomalies classifies everything the accounts migration can meet, ahead of the run.
 func accountAnomalies() []format.AnomalyDeclaration {
 	return []format.AnomalyDeclaration{
 		{

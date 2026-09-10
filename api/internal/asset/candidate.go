@@ -11,13 +11,11 @@ import (
 
 var ErrVersionRequired = errors.New("a reviewed working-copy version is required")
 
-// Candidate binds a write to the reviewed version and reports its committed version.
 type Candidate struct {
 	Version      int64
 	SavedVersion int64
 }
 
-// VersionConflict contains no candidate content or access details.
 type VersionConflict struct {
 	CurrentVersion int64
 }
@@ -26,7 +24,6 @@ func (e *VersionConflict) Error() string {
 	return "This asset changed since you opened it. Keep your edits and reload the working copy to reconcile them."
 }
 
-// Lock checks current ownership, access and the reviewed version under the asset lock.
 func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) (string, error) {
 	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
 	if err != nil {

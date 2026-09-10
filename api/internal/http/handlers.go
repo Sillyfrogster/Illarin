@@ -8,7 +8,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 )
 
-// Handlers turns HTTP requests into catalog calls.
 type Handlers struct {
 	assets         *asset.Service
 	accounts       *account.Service

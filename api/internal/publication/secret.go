@@ -11,20 +11,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// SecretOverlap is how long a rotated secret stays acceptable alongside the new
-// one, which is the window a receiver has to change over in.
 const SecretOverlap = 24 * time.Hour
 
-// RotatedSecret is a destination's new signing secret and the one showing it
-// ever gets, alongside how long the old one keeps working.
 type RotatedSecret struct {
 	Destination Destination
 	Secret      string
 	OldUntil    time.Time
 }
 
-// RotateSecret draws a new signing secret and keeps the old one acceptable for
-// a bounded overlap, so a receiver changes over without dropping an event.
 func (s *Service) RotateSecret(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -78,8 +72,6 @@ func (s *Service) RotateSecret(
 	return RotatedSecret{Destination: found, Secret: secret, OldUntil: until}, nil
 }
 
-// ForgetOldSecrets removes every rotated secret whose overlap has run out, so
-// nothing keeps an encrypted value it will not sign with again.
 func (s *Service) ForgetOldSecrets(ctx context.Context, now time.Time) (int64, error) {
 	command, err := s.pool.Exec(ctx, `
 		update publication_destinations
@@ -92,9 +84,6 @@ func (s *Service) ForgetOldSecrets(ctx context.Context, now time.Time) (int64, e
 	return command.RowsAffected(), nil
 }
 
-// endpointOf opens the address one destination was configured with and every
-// secret a request to it is still signed under. They leave this package only
-// as a request already made.
 func (s *Service) endpointOf(ctx context.Context, id uuid.UUID) (string, []string, error) {
 	var sealedAddress, sealedSecret, sealedOld []byte
 	var until *time.Time
@@ -127,8 +116,6 @@ func (s *Service) endpointOf(ctx context.Context, id uuid.UUID) (string, []strin
 	return string(address), secrets, nil
 }
 
-// retireDestination stops sending to an endpoint that says it is gone, and
-// stops the work already waiting on it.
 func (s *Service) retireDestination(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

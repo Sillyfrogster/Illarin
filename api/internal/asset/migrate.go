@@ -14,14 +14,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// StagedImage is one picture already on disk and measured, waiting for the transaction that gives it an asset.
 type StagedImage struct {
 	BlobID uuid.UUID
 	Width  int
 	Height int
 }
 
-// MigratedImage is one staged picture placed on a migrated asset.
 type MigratedImage struct {
 	ID     uuid.UUID
 	BlobID uuid.UUID
@@ -30,7 +28,6 @@ type MigratedImage struct {
 	Height int
 }
 
-// MigratedAsset is one v1 row ready to become asset rows, carrying no revision because the row is the source.
 type MigratedAsset struct {
 	ID        uuid.UUID
 	OwnerID   uuid.UUID
@@ -47,7 +44,6 @@ type MigratedAsset struct {
 	CoverID   *uuid.UUID
 }
 
-// StageImage stores one image and renders its variants, writing nothing to the asset tables.
 func (s *Service) StageImage(ctx context.Context, body io.Reader) (StagedImage, error) {
 	stored, err := s.store.Put(ctx, body)
 	if err != nil {
@@ -60,7 +56,6 @@ func (s *Service) StageImage(ctx context.Context, body io.Reader) (StagedImage, 
 	return StagedImage{BlobID: stored.ID, Width: prepared.Width, Height: prepared.Height}, nil
 }
 
-// WriteMigratedAsset turns one read v1 row into the rows an upload writes, published whatever today's floor would have said.
 func (s *Service) WriteMigratedAsset(ctx context.Context, tx pgx.Tx, one MigratedAsset) error {
 	isNSFW := one.IsNSFW
 	origin := one.Origin
@@ -106,7 +101,6 @@ func (s *Service) WriteMigratedAsset(ctx context.Context, tx pgx.Tx, one Migrate
 	return nil
 }
 
-// MigratedShortfall reports what an asset still needs to clear today's publish floor, and nothing where it clears it.
 func MigratedShortfall(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
 	items := readiness(kind, name, isNSFW, blocks)
 	if Ready(items) {
@@ -115,13 +109,11 @@ func MigratedShortfall(kind, name string, isNSFW *bool, blocks []block.Block) []
 	return items
 }
 
-// LegacyAsset is what a v1 public address resolves to.
 type LegacyAsset struct {
 	ID   uuid.UUID
 	Name string
 }
 
-// ResolveLegacyAddress runs the real lookup rather than rewriting the path, so a withheld, deleted or never-existed address is a plain miss.
 func (s *Service) ResolveLegacyAddress(ctx context.Context, address string) (LegacyAsset, error) {
 	tx, err := s.beginReadSnapshot(ctx)
 	if err != nil {

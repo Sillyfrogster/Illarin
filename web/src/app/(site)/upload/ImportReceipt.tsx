@@ -15,7 +15,6 @@ import type { ImportedAsset } from "@/lib/import-stage";
 import { KIND_LABELS } from "@/lib/kinds";
 import { describePreservedNamespaces } from "@/lib/preserved";
 
-/** What arrived and where it went, saying what Illarin can edit and what it holds untouched. */
 export function ImportReceipt({
   asset,
   headingRef,

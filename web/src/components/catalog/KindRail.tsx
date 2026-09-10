@@ -17,11 +17,6 @@ const KINDS: { key: string; kind?: BrowseKind; label: string }[] = [
   { key: "pack", kind: "pack", label: "Packs" },
 ];
 
-/**
- * The one narrowing a reader reaches for first, so it stays on the page rather
- * than inside a panel. A kind carries its own facets, so choosing one drops the
- * facets the previous kind offered.
- */
 export function KindRail({
   basePath,
   filters,

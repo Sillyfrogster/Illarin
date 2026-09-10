@@ -5,10 +5,6 @@ import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import { cn } from "@/lib/cn";
 import { STANDINGS, type Standing, standingName } from "@/lib/post-standing";
 
-/**
- * The one narrowing a writer reaches for, carrying what each standing holds so
- * the count is answered before the standing is opened.
- */
 export function StandingRail({
   chosen,
   counts,

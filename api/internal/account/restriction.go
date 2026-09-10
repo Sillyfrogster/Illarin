@@ -18,14 +18,12 @@ var (
 	ErrNotRestricted     = errors.New("profile is not restricted")
 )
 
-// Restriction is the private record only an admin may read.
 type Restriction struct {
 	Reason       string
 	RestrictedBy string
 	RestrictedAt time.Time
 }
 
-// ProfileRestriction answers why one profile is hidden.
 func (s *Service) ProfileRestriction(ctx context.Context, handle string) (Restriction, error) {
 	var found Restriction
 	var actor *string
@@ -48,7 +46,6 @@ func (s *Service) ProfileRestriction(ctx context.Context, handle string) (Restri
 	return found, nil
 }
 
-// RestrictProfile hides one account's added identity until an admin restores it.
 func (s *Service) RestrictProfile(
 	ctx context.Context,
 	admin Account,
@@ -90,7 +87,6 @@ func (s *Service) RestrictProfile(
 	return s.ProfileRestriction(ctx, handle)
 }
 
-// RestoreProfile gives a restricted profile its retained fields back.
 func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -117,7 +113,6 @@ func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle stri
 	return nil
 }
 
-// refuseWhileRestricted turns an avatar upload away before its bytes are stored.
 func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
 	var restricted bool
 	err := s.pool.QueryRow(ctx, `

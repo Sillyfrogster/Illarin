@@ -9,8 +9,6 @@ alter table publication_destinations add constraint publication_destinations_eve
         'publication.post.withdrawn.v1'
     ]::text[]);
 
--- The old secret stays acceptable for a bounded overlap, so a receiver can
--- change over without dropping an event, and is then forgotten.
 alter table publication_destinations add column previous_secret bytea;
 alter table publication_destinations add column previous_secret_until timestamptz;
 alter table publication_destinations
@@ -19,8 +17,6 @@ alter table publication_destinations
 alter table publication_destinations add constraint publication_destinations_overlap_check
     check ((previous_secret is null) = (previous_secret_until is null));
 
--- A replay opens a new run on the same delivery. Attempt numbers keep climbing
--- across runs, so nothing already recorded is overwritten or rewritten.
 alter table publication_deliveries add column run integer not null default 1;
 alter table publication_deliveries add column settled_reason text;
 alter table publication_delivery_attempts add column run integer not null default 1;

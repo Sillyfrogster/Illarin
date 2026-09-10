@@ -1,7 +1,6 @@
 import { highlightCode, LANGUAGE_LABELS } from "@/lib/code-highlight";
 import type { PostLanguage } from "@/lib/post-document";
 
-/** Structure carries the reading, not colour, so the runs differ only in weight and tone. */
 const RUN: Record<string, string> = {
   comment: "text-mute italic",
   keyword: "font-semibold",

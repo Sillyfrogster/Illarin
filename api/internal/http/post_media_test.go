@@ -66,7 +66,6 @@ func (s distinctionStack) uploaded(
 	return picture
 }
 
-// bodyWithPicture is a post body of one sentence and one placed picture.
 func bodyWithPicture(mediaID, alt string) json.RawMessage {
 	return json.RawMessage(fmt.Sprintf(
 		`{"version":2,"content":[`+

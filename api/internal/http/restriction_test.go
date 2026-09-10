@@ -320,7 +320,6 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	}
 }
 
-// accountFacts flattens a session reading so two of them compare by value.
 type accountFacts struct {
 	Handle        string
 	Email         string

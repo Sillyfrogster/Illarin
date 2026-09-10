@@ -1,7 +1,5 @@
-/** The document version this build writes. Go refuses anything else. */
 export const POST_DOCUMENT_VERSION = 2;
 
-/** Every language a code block may be labelled with. Go holds the same list. */
 export const POST_LANGUAGES = [
   "plain",
   "bash",
@@ -20,7 +18,6 @@ export const POST_LANGUAGES = [
   "yaml",
 ] as const;
 
-/** Every kind of aside a callout may be. Go holds the same list. */
 export const POST_CALLOUT_KINDS = [
   "note",
   "tip",
@@ -91,7 +88,6 @@ export function emptyPostDocument(): PostDocument {
   return { version: POST_DOCUMENT_VERSION, content: [] };
 }
 
-/** Whether a document holds anything a reader would see. */
 export function isWritten(document: PostDocument): boolean {
   return textLength(document.content) > 0;
 }
@@ -104,13 +100,10 @@ export function isPostCalloutKind(kind: string): kind is PostCalloutKind {
   return (POST_CALLOUT_KINDS as readonly string[]).includes(kind);
 }
 
-/** How many pictures a gallery holds. Go holds the same bound. */
 export const POST_GALLERY_LIMIT = 12;
 
-/** How long alt text and a caption may be. Go holds the same bound. */
 export const POST_PICTURE_TEXT_LIMIT = 300;
 
-/** The one shape a heading address takes. Go writes and validates the same one. */
 export function isPostAnchor(anchor: string): boolean {
   return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(anchor) && anchor.length <= 80;
 }
@@ -151,7 +144,6 @@ function textLength(blocks: PostBlock[]): number {
   return total;
 }
 
-/** Go validated the stored body, so the reader takes it at its word. */
 export function asPostDocument(value: {
   version: number;
   content: Record<string, unknown>[];

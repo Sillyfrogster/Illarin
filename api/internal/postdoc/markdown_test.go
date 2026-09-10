@@ -10,7 +10,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
 )
 
-// importCase is one synthetic import Go converts and the site reads back.
 type importCase struct {
 	Note     string          `json:"note"`
 	Markdown string          `json:"markdown"`
@@ -19,7 +18,6 @@ type importCase struct {
 	Refusals []expectedNote  `json:"refusals"`
 }
 
-// expectedNote is the line an import speaks about and part of what it says.
 type expectedNote struct {
 	Line int    `json:"line"`
 	Says string `json:"says"`

@@ -14,14 +14,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The kinds of destination Illarin sends to. A webhook receives the signed
-// event; Discord receives an announcement Illarin composed.
 const (
 	KindWebhook = "webhook"
 	KindDiscord = "discord"
 )
 
-// The states a destination passes through. Only an active one receives an event.
 const (
 	DestinationUnverified = "unverified"
 	DestinationActive     = "active"
@@ -30,14 +27,10 @@ const (
 
 const destinationNameLimit = 48
 
-// PostEvents are the Publication events a generic destination may subscribe to.
 var PostEvents = []string{EventPublished, EventUpdated, EventWithdrawn}
 
-// ErrEventUnknown says a subscription named something Illarin does not send.
 var ErrEventUnknown = errors.New("no such publication event")
 
-// ErrNotWebhook says an operation meant for a generic endpoint was aimed at a
-// Discord channel, which Illarin configures and signs differently.
 var ErrNotWebhook = errors.New("the destination is a Discord channel")
 
 var (
@@ -46,8 +39,6 @@ var (
 	ErrDestinationInactive = errors.New("the destination has not been verified")
 )
 
-// Destination is one endpoint the authority has configured. Nothing outside
-// this package ever sees the address it stands for or the secret it signs with.
 type Destination struct {
 	ID          uuid.UUID
 	Kind        string
@@ -64,8 +55,6 @@ type Destination struct {
 	CreatedAt   time.Time
 }
 
-// Channel is the safe identity behind a Discord destination: where Discord
-// says the announcements land, and the one role an author may ask for.
 type Channel struct {
 	GuildID   string
 	ChannelID string
@@ -74,29 +63,23 @@ type Channel struct {
 	RoleName  string
 }
 
-// DestinationEdit is what the authority supplies to add one endpoint. An
-// absent subscription takes the published event and nothing else.
 type DestinationEdit struct {
 	Name    string
 	Address string
 	Events  *[]string
 }
 
-// DestinationUpdate carries only the parts of a destination a request named.
 type DestinationUpdate struct {
 	Name    *string
 	Address *string
 	Events  *[]string
 }
 
-// AddedDestination is a destination and the one showing its secret ever gets.
 type AddedDestination struct {
 	Destination Destination
 	Secret      string
 }
 
-// Choice is one safe destination identity a contributor may pick from. It
-// carries no address and no secret, which is the whole point of it.
 type Choice struct {
 	ID        uuid.UUID
 	Name      string
@@ -107,7 +90,6 @@ type Choice struct {
 	ByDefault bool
 }
 
-// Destinations answers every configured destination, masked.
 func (s *Service) Destinations(ctx context.Context) ([]Destination, error) {
 	rows, err := s.pool.Query(ctx, selectDestinations+` order by held.name, held.created_at`)
 	if err != nil {
@@ -116,8 +98,6 @@ func (s *Service) Destinations(ctx context.Context) ([]Destination, error) {
 	return collectDestinations(rows)
 }
 
-// AddDestination records one endpoint and hands back the secret it will sign
-// with. Illarin keeps a sealed copy and shows the value nowhere else.
 func (s *Service) AddDestination(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -173,9 +153,6 @@ func (s *Service) AddDestination(
 	return AddedDestination{Destination: found, Secret: secret}, nil
 }
 
-// UpdateDestination renames an endpoint or points it somewhere else. A new
-// address takes the destination back to unverified, because control of the old
-// one proves nothing about the new one.
 func (s *Service) UpdateDestination(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -254,8 +231,6 @@ func (s *Service) UpdateDestination(
 	return s.Destination(ctx, id)
 }
 
-// DisableDestination stops an endpoint receiving anything further. What it has
-// already received stays where it is.
 func (s *Service) DisableDestination(
 	ctx context.Context,
 	actor uuid.UUID,
@@ -292,8 +267,6 @@ func (s *Service) DisableDestination(
 	return s.Destination(ctx, id)
 }
 
-// RemoveDestination takes an endpoint out of the configuration. Every delivery
-// it already holds keeps the name it was sent under.
 func (s *Service) RemoveDestination(ctx context.Context, actor uuid.UUID, id uuid.UUID) error {
 	if _, err := s.Destination(ctx, id); err != nil {
 		return err
@@ -323,7 +296,6 @@ func (s *Service) RemoveDestination(ctx context.Context, actor uuid.UUID, id uui
 	return nil
 }
 
-// Destination answers one configured endpoint, masked.
 func (s *Service) Destination(ctx context.Context, id uuid.UUID) (Destination, error) {
 	rows, err := s.pool.Query(ctx, selectDestinations+` where held.id = $1`, id)
 	if err != nil {
@@ -339,7 +311,6 @@ func (s *Service) Destination(ctx context.Context, id uuid.UUID) (Destination, e
 	return found[0], nil
 }
 
-// checkDestination refuses a name or address before anything is sealed.
 func (s *Service) checkDestination(name, address string) (string, string, string, error) {
 	checked := checkDestinationName(name)
 	if checked == "" {
@@ -354,8 +325,6 @@ func (s *Service) checkDestination(name, address string) (string, string, string
 	return checked, address, host, nil
 }
 
-// checkEvents answers the subscription a request named, in the order Illarin
-// lists events and with nothing repeated. An absent one takes the default.
 func checkEvents(named *[]string) ([]string, error) {
 	if named == nil {
 		return []string{EventPublished}, nil
@@ -395,8 +364,6 @@ func capitalize(sentence string) string {
 	return strings.ToUpper(sentence[:1]) + sentence[1:]
 }
 
-// maskAddress is the whole of what any reader is told about an endpoint: which
-// host it is, and nothing that would let them send to it.
 func maskAddress(host string) string {
 	return outbound.Scheme + "://" + host + "/…"
 }

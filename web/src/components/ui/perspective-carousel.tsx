@@ -14,12 +14,10 @@ export type CarouselPicture = {
   name?: string;
 };
 
-/** How far the neighbouring pictures turn away from the one being looked at */
 const ROTATION_STEP = 34;
 
 const DEFAULT_SLIDE_WIDTH_PX = 224;
 
-/** A row of pictures turned in space, with the chosen one facing the reader */
 export function PerspectiveCarousel({
   pictures,
   label,

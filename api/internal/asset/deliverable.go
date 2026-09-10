@@ -14,16 +14,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ErrNotDeliverable is an asset a linked instance may not be handed.
 var ErrNotDeliverable = errors.New("that asset cannot be sent to an instance")
 
-// DeliveryTarget is one format an asset is offered in, as delivery reads it.
 type DeliveryTarget struct {
 	Format string
 	Label  string
 }
 
-// DeliveryPicture is one of an asset's images behind a short-lived signed URL.
 type DeliveryPicture struct {
 	MediaID uuid.UUID
 	Role    string
@@ -31,7 +28,6 @@ type DeliveryPicture struct {
 	URL     string
 }
 
-// Deliverable is what delivery reads of an asset, with its formats and its pictures.
 type Deliverable struct {
 	Kind              string
 	Name              string
@@ -41,7 +37,6 @@ type Deliverable struct {
 	Pictures          []DeliveryPicture
 }
 
-// DeliverableAsset reads one sendable asset through the connection the caller already holds.
 func (s *Service) DeliverableAsset(
 	ctx context.Context,
 	q db.DBTX,
@@ -105,7 +100,6 @@ func (s *Service) DeliverableAsset(
 	return found, nil
 }
 
-// deliveryTargets reads the same projection a download reads, so both offer the same formats.
 func deliveryTargets(
 	ctx context.Context,
 	q db.DBTX,
@@ -132,7 +126,6 @@ func deliveryTargets(
 	return targets, nil
 }
 
-// deliveryPictures lists every current image, because no format carries all of them.
 func (s *Service) deliveryPictures(
 	ctx context.Context,
 	q db.DBTX,
@@ -164,17 +157,14 @@ func (s *Service) deliveryPictures(
 	return pictures, rows.Err()
 }
 
-// SignedURL stamps a private path with a short-lived signature and makes it absolute.
 func (s *Service) SignedURL(path string) string {
 	return s.siteURL + s.signer.Sign(path, s.now())
 }
 
-// ValidSignature reports whether a request carries a live signature written for this path.
 func (s *Service) ValidSignature(path, expires, signature string) bool {
 	return s.signer.Valid(path, expires, signature, s.now())
 }
 
-// DownloadSourceForLinkedInstance prepares the creator's own file for a raw delivery.
 func (s *Service) DownloadSourceForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,

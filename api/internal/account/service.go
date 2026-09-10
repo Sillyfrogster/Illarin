@@ -463,7 +463,6 @@ func (s *Service) RenameHandle(ctx context.Context, token, handle string) (Accou
 	}), nil
 }
 
-// CreatorListing answers what a handle's asset listing needs and nothing public.
 func (s *Service) CreatorListing(ctx context.Context, handle string) (CreatorListing, error) {
 	row, err := db.New(s.pool).ProfileByHandle(ctx, handle)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -478,7 +477,6 @@ func (s *Service) CreatorListing(ctx context.Context, handle string) (CreatorLis
 	}, nil
 }
 
-// PublicProfileByDiscordSubject finds the profile a Discord identity belongs to
 func (s *Service) PublicProfileByDiscordSubject(ctx context.Context, subject string) (PublicProfile, error) {
 	row, err := db.New(s.pool).ProfileByDiscordSubject(ctx, subject)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -768,7 +766,6 @@ func credentialHash(token string) ([]byte, bool) {
 	return hash[:], true
 }
 
-// bcrypt accepts at most 72 bytes. Hashing first keeps longer passwords distinct.
 func passwordMaterial(password string) []byte {
 	digest := sha256.Sum256([]byte(password))
 	return digest[:]
