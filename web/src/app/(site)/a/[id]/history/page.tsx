@@ -16,6 +16,7 @@ import { assetHoldsNothing } from "@/lib/asset-page-content";
 import { assetHistoryHref, assetHref, isAssetId } from "@/lib/asset-url";
 import { KIND_LABELS } from "@/lib/kinds";
 import { protectedAppLabel } from "@/lib/protected-apps";
+import { readableForMetadata } from "@/lib/site-metadata";
 import { GetAsset } from "../[[...slug]]/GetAsset";
 import { WithholdNotice } from "../[[...slug]]/WithholdNotice";
 import { UpdateHistory } from "./UpdateHistory";
@@ -31,7 +32,7 @@ const loadAsset = cache(async (id: string): Promise<AssetDetail | null> => {
 export async function generateMetadata({
   params,
 }: PageProps<"/a/[id]/history">): Promise<Metadata> {
-  const asset = await loadAsset((await params).id);
+  const asset = await readableForMetadata(loadAsset((await params).id));
   if (!asset) return { title: "Not found" };
   const name = assetDisplayName(asset.name);
   return {

@@ -285,7 +285,10 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                 />
               ) : null}
               {canWithhold ? (
-                <WithholdControl assetId={workspace.assetId} />
+                <WithholdControl
+                  assetId={workspace.assetId}
+                  creator={props.creator}
+                />
               ) : null}
             </div>
           </WorkspaceRail>

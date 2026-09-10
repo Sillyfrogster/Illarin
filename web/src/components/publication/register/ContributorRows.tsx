@@ -4,6 +4,16 @@ import { UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { CreatorPortrait } from "@/components/media/CreatorPortrait";
+import {
+  Nothing,
+  PanelHead,
+  Past,
+  PastRow,
+  Row,
+  Rows,
+  StartAction,
+} from "@/components/register/RowParts";
+import { Consequence, StepForm } from "@/components/register/StepParts";
 import { Field, TextInput } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import {
@@ -22,16 +32,6 @@ import { readableDate } from "@/lib/dates";
 import { grantAllowance, nothingIn } from "@/lib/publication-register";
 import { GrantTokens } from "../GrantTokens";
 import { CategoryChoice, DestinationChoice } from "./choices";
-import {
-  Nothing,
-  PanelHead,
-  Past,
-  PastRow,
-  Row,
-  Rows,
-  StartAction,
-} from "./RowParts";
-import { Consequence, StepForm } from "./StepParts";
 
 /** Everyone Illarin has approved to publish, and what each approval covers. */
 export function ContributorRows({

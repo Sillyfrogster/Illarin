@@ -10,6 +10,23 @@ import {
   SatelliteDish,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Mark,
+  Nothing,
+  PanelHead,
+  Row,
+  RowAction,
+  RowMark,
+  Rows,
+  StartAction,
+  type Tone,
+} from "@/components/register/RowParts";
+import {
+  Consequence,
+  StepAction,
+  StepForm,
+  StepNote,
+} from "@/components/register/StepParts";
 import { Field, TextInput } from "@/components/ui/field";
 import {
   addChannel,
@@ -33,19 +50,7 @@ import {
   nothingIn,
 } from "@/lib/publication-register";
 import { DestinationKind, EventChoice } from "./choices";
-import {
-  Mark,
-  Nothing,
-  PanelHead,
-  Row,
-  RowAction,
-  RowMark,
-  Rows,
-  StartAction,
-  type Tone,
-} from "./RowParts";
 import { TakeTheSecret } from "./SecretStep";
-import { Consequence, StepAction, StepForm, StepNote } from "./StepParts";
 
 const STATE_MARKS: Record<
   PublicationDestination["state"],

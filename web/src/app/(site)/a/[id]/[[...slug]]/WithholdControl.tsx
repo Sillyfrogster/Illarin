@@ -8,23 +8,35 @@ import { withholdAsset } from "@/lib/api/query";
 import { Field, TextAreaField } from "./workspace/fields";
 
 /** The staff action that takes public access away without touching the creator's file. */
-export function WithholdControl({ assetId }: { assetId: string }) {
+export function WithholdControl({
+  assetId,
+  creator,
+}: {
+  assetId: string;
+  creator: string;
+}) {
   const router = useRouter();
   const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function ask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const decision = reason.trim();
-    if (!decision || pending) return;
+    if (!reason.trim() || pending) return;
+    setMessage("");
+    setConfirming(true);
+  }
+
+  async function withhold() {
     setPending(true);
     setMessage("");
     try {
-      await withholdAsset(assetId, decision);
+      await withholdAsset(assetId, reason.trim());
       router.replace("/browse");
     } catch {
-      setMessage("The asset could not be withheld. Try again.");
+      setMessage("The asset could not be withheld. Your reason is still here.");
+      setConfirming(false);
       setPending(false);
     }
   }
@@ -37,13 +49,15 @@ export function WithholdControl({ assetId }: { assetId: string }) {
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div>
           <h3 className="text-ui font-medium text-ink" id="withhold-heading">
-            Staff action
+            Withhold this asset
           </h3>
           <p className="mt-1 text-meta text-mute">
-            Remove public access without deleting the creator’s file.
+            It leaves the catalog and answers as missing to everyone but @
+            {creator}, who keeps reading and downloading their own file but
+            cannot edit it, relist it or delete it.
           </p>
         </div>
-        <form className="flex flex-col gap-3" onSubmit={submit}>
+        <form className="flex flex-col gap-3" onSubmit={ask}>
           <Field label="Reason shown to the creator">
             <TextAreaField
               disabled={pending}
@@ -58,15 +72,34 @@ export function WithholdControl({ assetId }: { assetId: string }) {
               {message}
             </p>
           ) : null}
-          <Button
-            className="self-start"
-            disabled={!reason.trim()}
-            loading={pending}
-            type="submit"
-            variant="stop"
-          >
-            Withhold asset
-          </Button>
+          {confirming ? (
+            <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
+              <p className="text-ui text-ink">
+                Withhold it? This page closes for you too, because a withheld
+                asset answers to nobody but its creator.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button loading={pending} onClick={withhold} variant="stop">
+                  Yes, withhold it
+                </Button>
+                <Button
+                  disabled={pending}
+                  onClick={() => setConfirming(false)}
+                  variant="ghost"
+                >
+                  Leave it alone
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              className="self-start"
+              disabled={!reason.trim()}
+              type="submit"
+            >
+              Withhold asset
+            </Button>
+          )}
         </form>
       </div>
     </section>

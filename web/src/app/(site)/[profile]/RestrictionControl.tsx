@@ -4,6 +4,7 @@ import { ShieldMinus, ShieldPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, TextArea, Trouble } from "@/components/ui/field";
 import {
   fetchProfileRestriction,
   type ProfileRestriction,
@@ -30,6 +31,7 @@ export function RestrictionControl({
   const { account } = useAuth();
   const isAdmin = account?.role === "admin";
   const [inForce, setInForce] = useState<ProfileRestriction | null>(null);
+  const [reading, setReading] = useState(false);
   const [composing, setComposing] = useState(false);
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
@@ -42,8 +44,11 @@ export function RestrictionControl({
       return;
     }
     let current = true;
+    setReading(true);
     void fetchProfileRestriction(handle).then((found) => {
-      if (current) setInForce(found);
+      if (!current) return;
+      setInForce(found);
+      setReading(false);
     });
     return () => {
       current = false;
@@ -86,9 +91,9 @@ export function RestrictionControl({
   }
 
   const failure = message ? (
-    <p className="mt-3 font-ui text-meta text-stop" role="alert">
-      {message}
-    </p>
+    <div className="mt-4">
+      <Trouble>{message}</Trouble>
+    </div>
   ) : null;
 
   if (restricted) {
@@ -116,7 +121,13 @@ export function RestrictionControl({
               {inForce.reason}
             </p>
           </>
-        ) : null}
+        ) : (
+          <p className="mt-3 max-w-[70ch] font-ui text-meta text-mute">
+            {reading
+              ? "Reading the reason…"
+              : "The reason could not be read. Reload the page to see it."}
+          </p>
+        )}
         <div className="mt-5">
           {confirmingRestore ? (
             <>
@@ -181,28 +192,33 @@ export function RestrictionControl({
         The handle and the published work below stay. Everything the creator
         added to the profile is hidden until an admin restores it.
       </p>
-      <label
-        className="mt-4 block font-ui text-meta font-medium text-ink"
-        htmlFor="restriction-reason"
-      >
-        Reason
-      </label>
-      <textarea
-        className="mt-2 w-full max-w-[70ch] rounded-control bg-plane p-3 font-prose text-ui text-ink inset-ring inset-ring-rule outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-accent"
-        disabled={pending}
-        id="restriction-reason"
-        maxLength={REASON_LIMIT}
-        onChange={(event) => setReason(event.target.value)}
-        required
-        rows={3}
-        value={reason}
-      />
-      <p className="mt-2 flex max-w-[70ch] flex-wrap justify-between gap-x-4 font-ui text-meta text-mute">
-        <span>Only admins read this. It is kept in the audit record.</span>
-        <span className={cn("tabular-nums", remaining <= 60 && "text-stop")}>
-          {remaining} left
-        </span>
-      </p>
+      <div className="mt-5 max-w-[70ch]">
+        <Field
+          hint="Only admins read this. It is kept in the audit record."
+          htmlFor="restriction-reason"
+          label="Reason"
+          trailing={
+            <span
+              className={cn(
+                "font-ui text-meta tabular-nums",
+                remaining <= 60 ? "text-stop" : "text-mute",
+              )}
+            >
+              {remaining} left
+            </span>
+          }
+        >
+          <TextArea
+            disabled={pending}
+            id="restriction-reason"
+            maxLength={REASON_LIMIT}
+            onChange={(event) => setReason(event.target.value)}
+            required
+            rows={3}
+            value={reason}
+          />
+        </Field>
+      </div>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button
           disabled={!reason.trim()}

@@ -3,64 +3,65 @@
 import { useState } from "react";
 import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import { cn } from "@/lib/cn";
-import {
-  REGISTERS,
-  type Register,
-  type RegisterStanding,
-  registerName,
-} from "@/lib/publication-register";
+
+/** One cell of the rail, naming a register and what it carries. */
+export type RegisterCell<Id extends string> = {
+  /** True when the count is something to look at rather than a size. */
+  attention?: boolean;
+  count: number | null;
+  id: Id;
+  name: string;
+};
 
 /** Chooses which register the page shows, with a count on each. */
-export function RegisterRail({
+export function RegisterRail<Id extends string>({
+  cells,
   chosen,
+  label,
   onChoose,
-  standings,
 }: {
-  chosen: Register;
-  onChoose: (register: Register) => void;
-  standings: Record<Register, RegisterStanding>;
+  cells: RegisterCell<Id>[];
+  chosen: Id;
+  label: string;
+  onChoose: (id: Id) => void;
 }) {
   const [lit, setLit] = useState<string>(chosen);
 
   return (
-    <nav
-      aria-label="What the publication keeps"
-      className="-mx-[var(--gutter)] min-w-0"
-    >
+    <nav aria-label={label} className="-mx-[var(--gutter)] min-w-0">
       <div className="overflow-x-auto px-[var(--gutter)] pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <TravellingHighlight
           chosen={chosen}
           className="flex w-max gap-1"
           onLit={setLit}
         >
-          {REGISTERS.map((register) => {
-            const standing = standings[register];
-            const on = lit === register;
+          {cells.map((cell) => {
+            const on = lit === cell.id;
             return (
               <button
-                aria-current={chosen === register ? "true" : undefined}
+                aria-current={chosen === cell.id ? "true" : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-control px-4 font-ui text-ui font-medium whitespace-nowrap outline-offset-2 transition-colors duration-200 motion-reduce:transition-none",
                   on ? "text-on-accent" : "text-mute",
                 )}
-                data-cell={register}
-                key={register}
-                onClick={() => onChoose(register)}
+                data-cell={cell.id}
+                key={cell.id}
+                onClick={() => onChoose(cell.id)}
                 type="button"
               >
-                {registerName(register)}
-                {standing.count === null ? null : (
+                {cell.name}
+                {cell.count === null ? null : (
                   <span
                     className={cn(
                       "font-prose text-meta tabular-nums",
                       on
                         ? "opacity-70"
-                        : standing.attention
+                        : cell.attention
                           ? "rounded-control bg-stop-wash px-1.5 text-stop opacity-100"
                           : "opacity-60",
                     )}
                   >
-                    {standing.count}
+                    {cell.count}
                   </span>
                 )}
               </button>

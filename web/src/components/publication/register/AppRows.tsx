@@ -10,6 +10,18 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
+import {
+  Nothing,
+  PanelHead,
+  Past,
+  PastRow,
+  Row,
+  RowMark,
+  RowMove,
+  Rows,
+  StartAction,
+} from "@/components/register/RowParts";
+import { Consequence, StepForm } from "@/components/register/StepParts";
 import { Field, TextInput } from "@/components/ui/field";
 import {
   configureApp,
@@ -22,18 +34,6 @@ import type { PublicationApp, PublicationDestination } from "@/lib/api/query";
 import { nothingIn } from "@/lib/publication-register";
 import { moved } from "@/lib/reorder";
 import { DestinationChoice } from "./choices";
-import {
-  Nothing,
-  PanelHead,
-  Past,
-  PastRow,
-  Row,
-  RowMark,
-  RowMove,
-  Rows,
-  StartAction,
-} from "./RowParts";
-import { Consequence, StepForm } from "./StepParts";
 
 /** Every project Illarin publishes official updates for, in the order a writer sees them. */
 export function AppRows({

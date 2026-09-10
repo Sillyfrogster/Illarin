@@ -2,9 +2,9 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { RevealOnce } from "@/components/console/RevealOnce";
 import { Field, TextInput, Trouble } from "@/components/ui/field";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import { RevealOnce } from "@/components/ui/reveal-once";
 import { issueToken } from "@/lib/api/publication";
 import type { IssuedPublicationToken, PublicationGrant } from "@/lib/api/query";
 import { TokenRows } from "./TokenRows";

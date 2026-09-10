@@ -5,7 +5,7 @@ import { cache } from "react";
 import { fetchAssets, fetchDeletedAssets, fetchProfile } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
 import { readProfileAddress } from "@/lib/profile-address";
-import { pageMetadata } from "@/lib/site-metadata";
+import { pageMetadata, readableForMetadata } from "@/lib/site-metadata";
 import { ProfileListing } from "./ProfileListing";
 
 const loadProfile = cache(async (segment: string) => {
@@ -20,7 +20,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ profile: string }>;
 }): Promise<Metadata> {
-  const found = await loadProfile((await params).profile);
+  const found = await readableForMetadata(loadProfile((await params).profile));
   if (!found?.profile) return { title: "Not found" };
 
   const { profile } = found;

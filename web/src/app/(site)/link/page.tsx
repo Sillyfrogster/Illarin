@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { LinkApproval } from "@/components/linking/LinkApproval";
+import { Waiting } from "@/components/ui/waiting";
 import { pageMetadata } from "@/lib/site-metadata";
 
 /** She is cut by the page rather than by a frame, so her lower edge dissolves into it */
@@ -27,9 +28,7 @@ export default function LinkPage() {
           width={1254}
         />
         <div className="max-w-[42rem]">
-          <Suspense
-            fallback={<p className="font-ui text-ui text-mute">Opening…</p>}
-          >
+          <Suspense fallback={<Waiting>Opening…</Waiting>}>
             <LinkApproval />
           </Suspense>
           <p className="mt-12 border-t border-rule pt-5 font-ui text-meta text-mute">

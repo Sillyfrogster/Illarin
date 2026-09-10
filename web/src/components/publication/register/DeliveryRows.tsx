@@ -8,6 +8,14 @@ import {
   Clock,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Nothing,
+  PanelHead,
+  Row,
+  RowAction,
+  RowMark,
+  Rows,
+} from "@/components/register/RowParts";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { Select } from "@/components/ui/select";
 import { readDeliveryAttempts, replayDelivery } from "@/lib/api/publication";
@@ -25,7 +33,6 @@ import {
   eventWord,
 } from "@/lib/publication-delivery";
 import { canReplay, nothingDelivered } from "@/lib/publication-register";
-import { Nothing, PanelHead, Row, RowAction, RowMark, Rows } from "./RowParts";
 
 /** The views the authority narrows announcement work to. */
 export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =

@@ -47,3 +47,14 @@ export function pageMetadata(title: string, description: string): Metadata {
     twitter: { ...siteTwitter(), title, description },
   };
 }
+
+/**
+ * What a page's metadata could read. Metadata runs before the page and outside
+ * its error boundary, so a fault here has to answer as nothing and leave the
+ * page itself to report it.
+ */
+export function readableForMetadata<T>(
+  reading: Promise<T | null>,
+): Promise<T | null> {
+  return reading.catch(() => null);
+}

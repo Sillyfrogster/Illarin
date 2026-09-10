@@ -2,14 +2,14 @@
 
 import { KeyRound } from "lucide-react";
 import { useState } from "react";
-import { RevealOnce } from "@/components/console/RevealOnce";
+import { StepForm, StepNote } from "@/components/register/StepParts";
+import { RevealOnce } from "@/components/ui/reveal-once";
 import { rotateDestinationSecret } from "@/lib/api/publication";
 import type {
   PublicationDestination,
   RotatedPublicationSecret,
 } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
-import { StepForm, StepNote } from "./StepParts";
 
 /** A new signing secret, and the window the old one keeps working in. */
 export function SecretStep({

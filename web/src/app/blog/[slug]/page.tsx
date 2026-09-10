@@ -8,6 +8,7 @@ import {
   postMetadata,
   postStructuredData,
 } from "@/lib/publication-metadata";
+import { readableForMetadata } from "@/lib/site-metadata";
 
 const loadPost = cache(async (slug: string) =>
   fetchPublishedPost(decodeURIComponent(slug)),
@@ -16,7 +17,7 @@ const loadPost = cache(async (slug: string) =>
 export async function generateMetadata({
   params,
 }: PageProps<"/blog/[slug]">): Promise<Metadata> {
-  const post = await loadPost((await params).slug);
+  const post = await readableForMetadata(loadPost((await params).slug));
   return post ? postMetadata(post) : { title: "Not found" };
 }
 

@@ -1,5 +1,5 @@
-import { AuthorityConsole } from "@/components/console/AuthorityConsole";
-import { RecognitionConsole } from "@/components/recognition/RecognitionConsole";
+import { RecognitionRegister } from "@/components/recognition/RecognitionRegister";
+import { AuthorityPage } from "@/components/register/AuthorityPage";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
@@ -9,11 +9,11 @@ export const metadata = pageMetadata(
 
 export default function RecognitionPage() {
   return (
-    <AuthorityConsole
+    <AuthorityPage
       heading="Profile badges"
       hint="The jobs, titles and badges you put on someone's profile. None of them lets anyone do anything on Illarin."
     >
-      <RecognitionConsole />
-    </AuthorityConsole>
+      <RecognitionRegister />
+    </AuthorityPage>
   );
 }

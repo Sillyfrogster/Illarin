@@ -717,10 +717,10 @@ export async function fetchPostArchive(query: {
   return data;
 }
 
+/** The blog masthead reads these, so an unreachable API leaves it bare rather than taking the page down with it. */
 export async function fetchPostCategories(): Promise<PublicationCategory[]> {
-  const { data, error } = await api.GET("/v1/post-categories", {});
-  if (error || !data) return [];
-  return data.categories;
+  const answer = await api.GET("/v1/post-categories", {}).catch(() => null);
+  return answer?.data?.categories ?? [];
 }
 
 export async function fetchPostApps(): Promise<PublicationApp[]> {

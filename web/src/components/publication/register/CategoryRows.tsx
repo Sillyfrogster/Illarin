@@ -2,11 +2,6 @@
 
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useState } from "react";
-import { Field, TextInput } from "@/components/ui/field";
-import { orderCategories, updateCategory } from "@/lib/api/publication";
-import type { PublicationCategory } from "@/lib/api/query";
-import { nothingIn } from "@/lib/publication-register";
-import { moved } from "@/lib/reorder";
 import {
   Nothing,
   PanelHead,
@@ -15,8 +10,13 @@ import {
   Row,
   RowMove,
   Rows,
-} from "./RowParts";
-import { Consequence, StepForm } from "./StepParts";
+} from "@/components/register/RowParts";
+import { Consequence, StepForm } from "@/components/register/StepParts";
+import { Field, TextInput } from "@/components/ui/field";
+import { orderCategories, updateCategory } from "@/lib/api/publication";
+import type { PublicationCategory } from "@/lib/api/query";
+import { nothingIn } from "@/lib/publication-register";
+import { moved } from "@/lib/reorder";
 
 /** What a post can be filed as, in the order readers meet on the blog. */
 export function CategoryRows({

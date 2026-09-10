@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gate } from "@/components/ui/gate";
+import { PageWaiting } from "@/components/ui/waiting";
 import {
   Dock,
   DockAction,
@@ -191,7 +192,7 @@ export function PostWriter({ id }: { id: string }) {
   }
 
   if (account === undefined) {
-    return <Waiting>Checking your account…</Waiting>;
+    return <PageWaiting>Checking your account…</PageWaiting>;
   }
 
   if (!account) {
@@ -208,7 +209,7 @@ export function PostWriter({ id }: { id: string }) {
   }
 
   if (!post || !draft) {
-    return <Waiting>{failure || "Opening the post…"}</Waiting>;
+    return <PageWaiting>{failure || "Opening the post…"}</PageWaiting>;
   }
 
   const category =
@@ -472,17 +473,6 @@ export function PostWriter({ id }: { id: string }) {
         ) : null}
       </AnimatePresence>
     </div>
-  );
-}
-
-function Waiting({ children }: { children: string }) {
-  return (
-    <p
-      aria-live="polite"
-      className="mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)] py-16 font-ui text-ui text-mute"
-    >
-      {children}
-    </p>
   );
 }
 

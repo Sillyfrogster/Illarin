@@ -2,7 +2,9 @@
 
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RegisterRail } from "@/components/register/RegisterRail";
 import { Trouble } from "@/components/ui/field";
+import { Waiting } from "@/components/ui/waiting";
 import { RailBack, WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   readApps,
@@ -21,13 +23,17 @@ import type {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { deliveryState } from "@/lib/publication-delivery";
-import { type Register, registerStandings } from "@/lib/publication-register";
+import {
+  REGISTERS,
+  type Register,
+  registerName,
+  registerStandings,
+} from "@/lib/publication-register";
 import { AppRows, AppStep } from "./AppRows";
 import { CategoryRows, CategoryStep } from "./CategoryRows";
 import { ContributorRows, ContributorStep } from "./ContributorRows";
 import { DeliveryRows } from "./DeliveryRows";
 import { DestinationRows, DestinationStep } from "./DestinationRows";
-import { RegisterRail } from "./RegisterRail";
 import { SecretStep } from "./SecretStep";
 
 /** What the rail beside the register is open on, and which thing it is about. */
@@ -152,22 +158,24 @@ export function PublicationRegister() {
   }
 
   if (!apps) {
-    return (
-      <p aria-live="polite" className="font-ui text-ui text-mute">
-        {failure || "Reading the publication…"}
-      </p>
-    );
+    return <Waiting>{failure || "Reading the publication…"}</Waiting>;
   }
 
   return (
     <>
       <RegisterRail
+        cells={REGISTERS.map((one) => ({
+          attention: standings[one].attention,
+          count: standings[one].count,
+          id: one,
+          name: registerName(one),
+        }))}
         chosen={register}
+        label="What the publication keeps"
         onChoose={(next) => {
           setRegister(next);
           close();
         }}
-        standings={standings}
       />
 
       <section

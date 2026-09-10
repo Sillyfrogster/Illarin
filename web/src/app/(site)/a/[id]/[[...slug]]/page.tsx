@@ -7,6 +7,7 @@ import { assetMetadata } from "@/lib/asset-metadata";
 import { assetHoldsNothing } from "@/lib/asset-page-content";
 import { assetRedirect, isAssetId } from "@/lib/asset-url";
 import { KIND_LABELS } from "@/lib/kinds";
+import { readableForMetadata } from "@/lib/site-metadata";
 import { WorkingCopyProvider } from "@/lib/working-copy";
 import { AssetBlocks } from "./AssetBlocks";
 import { AssetHeader } from "./AssetHeader";
@@ -24,7 +25,7 @@ const SHELL = "mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]";
 export async function generateMetadata({
   params,
 }: PageProps<"/a/[id]/[[...slug]]">): Promise<Metadata> {
-  const asset = await loadAsset((await params).id);
+  const asset = await readableForMetadata(loadAsset((await params).id));
   return asset ? assetMetadata(asset) : { title: "Not found" };
 }
 

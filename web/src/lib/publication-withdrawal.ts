@@ -36,14 +36,18 @@ export function movedTo(
   return `${POST_ADDRESS}${encodeURI(withdrawn.slug)}`;
 }
 
-/** The tombstone behind one address, current or former, or nothing if it has none. */
+/**
+ * The tombstone behind one address, current or former, or nothing if it has
+ * none. A lookup Illarin cannot make is nothing too, because this runs in the
+ * proxy, where a throw takes the page down before it can say what broke.
+ */
 export async function fetchWithdrawnPost(
   slug: string,
 ): Promise<WithdrawnPost | null> {
-  const { error, response } = await api.GET("/v1/posts/{slug}", {
-    params: { path: { slug } },
-  });
-  if (response.status !== 410) return null;
-  const withdrawn = error as WithdrawnPost | undefined;
+  const answer = await api
+    .GET("/v1/posts/{slug}", { params: { path: { slug } } })
+    .catch(() => null);
+  if (!answer || answer.response.status !== 410) return null;
+  const withdrawn = answer.error as WithdrawnPost | undefined;
   return withdrawn?.slug ? withdrawn : null;
 }
