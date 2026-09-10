@@ -1725,6 +1725,7 @@ components:
         - allowedApps
         - eligibleApps
         - downloads
+        - appTargets
         - original
         - createdAt
         - blocks
@@ -1818,6 +1819,14 @@ components:
             capability report.
           items:
             $ref: '#/components/schemas/DownloadTarget'
+        appTargets:
+          type: array
+          description: >-
+            One entry per application that reads a format this asset is offered
+            in, naming the format that lands most of the asset in it. An
+            application no offered format reaches is absent.
+          items:
+            $ref: '#/components/schemas/AppTarget'
         original:
           description: >-
             The creator's own upload. Null for an asset built from nothing,
@@ -1884,6 +1893,23 @@ components:
           $ref: '#/components/schemas/RecordedVersion'
         withhold:
           $ref: '#/components/schemas/AssetWithhold'
+    AppTarget:
+      type: object
+      required:
+        - id
+        - label
+        - format
+      properties:
+        id:
+          type: string
+          description: The application id, matching the ids allowedApps uses.
+        label:
+          type: string
+        format:
+          type: string
+          description: >-
+            The offered format Illarin writes for this application, chosen by
+            what reaches it rather than by how many applications read it.
     DownloadTarget:
       type: object
       required:
@@ -1934,7 +1960,16 @@ components:
           description: >-
             One plain sentence for content that lands somewhere other than the
             format's standard home for it, saying what a reader gets. Independent
-            of how much survives, so it rides on a carried verdict too.
+            of how much survives, so it rides on a carried verdict too. Names no
+            application: shownBy carries that.
+        shownBy:
+          type: array
+          description: >-
+            The applications that show what the destination writes. Present only
+            beside a destination, and the rest of the named applications receive
+            the file without that content reaching them.
+          items:
+            type: string
         sample:
           $ref: '#/components/schemas/DownloadSample'
     DownloadSample:

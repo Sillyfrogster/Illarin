@@ -106,8 +106,8 @@ func declaration(id string) format.Declaration {
 	}
 	if id == V3 {
 		gallery := roles[block.RoleGallery]
-		gallery.Write.Destination = "Written into the card itself. " +
-			"RisuAI unpacks them; SillyTavern and Lumiverse do not."
+		gallery.Write.Destination = "Written into the card itself."
+		gallery.Write.ShownBy = []string{"risu"}
 		roles[block.RoleGallery] = gallery
 	}
 	consumedKeys := []string{

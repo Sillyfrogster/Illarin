@@ -56,7 +56,16 @@ type RoleLoss struct {
 	Verdict     Verdict      `json:"verdict"`
 	Reason      string       `json:"reason,omitempty"`
 	Destination string       `json:"destination,omitempty"`
+	ShownBy     []string     `json:"shownBy,omitempty"`
 	Sample      block.Sample `json:"sample"`
+}
+
+// reaches says whether what this role wrote arrives in the named app.
+func (l RoleLoss) reaches(app string) bool {
+	if l.Lossy() {
+		return false
+	}
+	return l.Destination == "" || slices.Contains(l.ShownBy, app)
 }
 
 func (l RoleLoss) Lossy() bool { return l.Verdict != Carried }
@@ -76,6 +85,17 @@ func (t Target) Losses() []RoleLoss {
 		}
 	}
 	return losses
+}
+
+// LossesFor counts what this target leaves out of the named app.
+func (t Target) LossesFor(app string) int {
+	lost := 0
+	for _, role := range t.Roles {
+		if !role.reaches(app) {
+			lost++
+		}
+	}
+	return lost
 }
 
 // Notes counts the roles this target carries somewhere only some apps read.
@@ -156,12 +176,14 @@ func lossReport(declaration Declaration, subject CapabilitySubject) ([]RoleLoss,
 		support := declaration.Roles[role].Write
 		loss := RoleLoss{
 			Role: role, Label: role.Label(), Verdict: Carried,
-			Destination: support.Destination, Sample: block.TakeSample(written),
+			Destination: support.Destination, ShownBy: support.ShownBy,
+			Sample: block.TakeSample(written),
 		}
 		switch {
 		case support.Grade == SupportNone || matchesAny(support.DropWhen, written):
 			loss.Verdict = Dropped
 			loss.Destination = ""
+			loss.ShownBy = nil
 		case support.Grade == SupportPartial && matchesAny(support.Condition, written):
 			loss.Verdict = Reduced
 			loss.Reason = support.Condition.Description
@@ -263,8 +285,9 @@ func (r *Registry) CapabilityStamp() string {
 			if support.Condition != nil {
 				condition = support.Condition.Description
 			}
-			fmt.Fprintf(digest, "role\x00%s\x00%s\x00%s\x00%s\n",
-				role, support.Grade, condition, support.Destination)
+			fmt.Fprintf(digest, "role\x00%s\x00%s\x00%s\x00%s\x00%s\n",
+				role, support.Grade, condition, support.Destination,
+				strings.Join(support.ShownBy, ","))
 		}
 	}
 	return hex.EncodeToString(digest.Sum(nil))[:16]

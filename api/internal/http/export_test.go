@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -307,4 +308,55 @@ func projectionComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time
 
 func containsBytes(haystack, needle []byte) bool {
 	return bytes.Contains(haystack, needle)
+}
+
+func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
+	r, session, assets := newCharacterIngestRouter(t)
+	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	givePictures(t, r, session, assetID, "gallery", "gallery")
+
+	offered := appTargetsFor(t, r, session, assetID)
+	if len(offered) == 0 {
+		t.Fatal("no application was offered a format")
+	}
+	for _, app := range offered {
+		if app.Format != "charx" {
+			t.Errorf("%s = %q, want the format whose gallery it shows", app.ID, app.Format)
+		}
+	}
+}
+
+func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
+	r, session, assets := newCharacterIngestRouter(t)
+	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	givePictures(t, r, session, assetID, "gallery", "gallery")
+
+	menu := downloadMenu(t, r, session, assetID)
+	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
+	if inline.Destination == "" {
+		t.Fatal("the inline gallery lost its destination note")
+	}
+	if !slices.Equal(inline.ShownBy, []string{"risu"}) {
+		t.Fatalf("shownBy = %v, want the one app that unpacks it", inline.ShownBy)
+	}
+	archived := roleVerdictNamed(t, targetLine(t, menu, "charx"), "gallery")
+	if len(archived.ShownBy) != 0 {
+		t.Fatalf("shownBy = %v, want nothing beside a gallery every app reads", archived.ShownBy)
+	}
+}
+
+func appTargetsFor(
+	t *testing.T, r http.Handler, session *http.Cookie, assetID string,
+) []appTarget {
+	t.Helper()
+	request := authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session)
+	response := send(t, r, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
+	}
+	var page startedAsset
+	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode the asset: %v", err)
+	}
+	return page.AppTargets
 }

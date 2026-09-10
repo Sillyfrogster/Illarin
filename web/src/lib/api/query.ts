@@ -53,6 +53,7 @@ export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
 export type ReplacementDecision =
   components["schemas"]["ReplacementAcceptance"]["unrepresentable"];
 export type DownloadTarget = components["schemas"]["DownloadTarget"];
+export type AppTarget = components["schemas"]["AppTarget"];
 export type OriginalUpload = components["schemas"]["OriginalUpload"];
 export type AssetInstance = components["schemas"]["AssetInstance"];
 export type AssetInstanceList = components["schemas"]["AssetInstanceList"];

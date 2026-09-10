@@ -7,6 +7,7 @@ import type {
   DownloadTarget,
 } from "@/lib/api/query";
 import {
+  appLabel,
   deliveryDestinations,
   deliveryFailureLine,
   downloadBytes,
@@ -29,7 +30,7 @@ function target(
 function role(
   name: string,
   verdict: "carried" | "reduced" | "dropped",
-  extra: { reason?: string; destination?: string } = {},
+  extra: { reason?: string; destination?: string; shownBy?: string[] } = {},
 ): DownloadTarget["roles"][number] {
   return {
     role: name,
@@ -343,4 +344,89 @@ test("a format that drops the gallery says so, so the chooser can stop offering 
 
   expect(drops.carriesGallery).toBe(false);
   expect(carries.carriesGallery).toBe(true);
+});
+
+const inlineGallery = role("gallery", "carried", {
+  destination: "Written into the card itself.",
+  shownBy: ["risu"],
+});
+
+test("an app that shows a destination is told the content reaches it", () => {
+  const [choice] = formatChoices({
+    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    holdsNothing: false,
+    app: "risu",
+    apps: [{ id: "risu", label: "RisuAI", format: "ccv3" }],
+  });
+  expect(choice.cost).toBe("Includes everything");
+  expect(choice.carriesGallery).toBe(true);
+  expect(choice.gallery?.line).toBe("");
+});
+
+test("an app that shows no destination is told the content is left out", () => {
+  const [choice] = formatChoices({
+    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    holdsNothing: false,
+    app: "sillytavern",
+    apps: [{ id: "sillytavern", label: "SillyTavern", format: "ccv3" }],
+  });
+  expect(choice.cost).toBe("1 thing left out");
+  expect(choice.carriesGallery).toBe(false);
+  expect(choice.gallery?.line).toBe("SillyTavern does not show these.");
+});
+
+test("with no app chosen a destination stays a note rather than a loss", () => {
+  const [choice] = formatChoices({
+    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    holdsNothing: false,
+  });
+  expect(choice.cost).toBe("1 thing some apps will not show");
+  expect(choice.carriesGallery).toBe(true);
+});
+
+test("a destination names the apps that show it and the apps that do not", () => {
+  const [choice] = formatChoices({
+    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    holdsNothing: false,
+    apps: [
+      { id: "sillytavern", label: "SillyTavern", format: "ccv3" },
+      { id: "risu", label: "RisuAI", format: "ccv3" },
+      { id: "lumiverse", label: "Lumiverse", format: "ccv3" },
+    ],
+  });
+  expect(choice.gallery?.line).toBe(
+    "Written into the card itself. RisuAI shows these; SillyTavern and Lumiverse do not.",
+  );
+});
+
+test("a destination no listed app shows says so without naming one", () => {
+  const [choice] = formatChoices({
+    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    holdsNothing: false,
+    apps: [{ id: "sillytavern", label: "SillyTavern", format: "ccv3" }],
+  });
+  expect(choice.gallery?.line).toBe(
+    "Written into the card itself. SillyTavern does not show these.",
+  );
+});
+
+test("the format an app is offered leads the list while that app is chosen", () => {
+  const choices = formatChoices({
+    downloads: [
+      target("ccv3", "Character Card V3", true, [inlineGallery]),
+      target("charx", "CharX", false, [role("gallery", "carried")]),
+    ],
+    holdsNothing: false,
+    app: "sillytavern",
+    apps: [{ id: "sillytavern", label: "SillyTavern", format: "charx" }],
+  });
+  expect(choices.map((choice) => choice.format)).toEqual(["charx", "ccv3"]);
+  expect(choices[0].recommended).toBe(true);
+});
+
+test("an app is named by its own label rather than its id", () => {
+  expect(
+    appLabel([{ id: "risu", label: "RisuAI", format: "charx" }], "risu"),
+  ).toBe("RisuAI");
+  expect(appLabel([], "risu")).toBe("");
 });

@@ -8,6 +8,7 @@ import {
   FileDown,
   Images,
   Send,
+  SlidersHorizontal,
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +21,7 @@ import {
 import { Select } from "@/components/ui/select";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type {
+  AppTarget,
   AssetBlock,
   AssetImage,
   AssetInstance,
@@ -28,6 +30,7 @@ import type {
   OriginalUpload,
 } from "@/lib/api/query";
 import {
+  appLabel,
   DOWNLOAD_DESTINATION,
   deliveryDestinations,
   deliveryFailureLine,
@@ -70,6 +73,7 @@ export function GetAsset({
   kindLabel,
   blocks,
   downloads,
+  appTargets,
   original,
   images,
   holdsNothing,
@@ -80,6 +84,7 @@ export function GetAsset({
   kindLabel: string;
   blocks: AssetBlock[];
   downloads: DownloadTarget[];
+  appTargets: AppTarget[];
   original: OriginalUpload | null;
   images: AssetImage[];
   holdsNothing: boolean;
@@ -89,6 +94,8 @@ export function GetAsset({
   const { account } = useAuth();
   const [instances, setInstances] = useState<AssetInstance[]>([]);
   const [format, setFormat] = useState("");
+  const [app, setApp] = useState(appTargets[0]?.id ?? "");
+  const [openFormats, setOpenFormats] = useState(false);
   const [destination, setDestination] = useState(DOWNLOAD_DESTINATION);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
@@ -120,9 +127,15 @@ export function GetAsset({
     void read();
   }, [account, read]);
 
-  const choices = formatChoices({ downloads, holdsNothing });
+  const choices = formatChoices({
+    downloads,
+    holdsNothing,
+    app,
+    apps: appTargets,
+  });
   const chosen =
     choices.find((choice) => choice.format === format) ?? choices[0];
+  const goingToAnApp = Boolean(app);
   const destinations = deliveryDestinations(instances).filter(
     (one) => one.id !== DOWNLOAD_DESTINATION || !linkedInstallOnly,
   );
@@ -206,22 +219,52 @@ export function GetAsset({
       </PopoverTrigger>
       <PopoverContent align="start" aria-label={`Get this ${kindLabel}`}>
         {choices.length > 0 && !linkedInstallOnly ? (
-          <fieldset className="min-w-0 border-0 p-0">
-            <legend className="mb-2 text-meta font-medium text-ink">
-              Format
-            </legend>
-            <div className="space-y-0.5">
-              {choices.map((choice) => (
-                <FormatRow
-                  chosen={choice.format === chosen?.format}
-                  choice={choice}
-                  images={images}
-                  key={choice.format}
-                  onChoose={() => setFormat(choice.format)}
-                />
-              ))}
-            </div>
-          </fieldset>
+          <>
+            {appTargets.length === 0 ? (
+              <fieldset className="min-w-0 border-0 p-0">
+                <legend className="mb-2 text-meta font-medium text-ink">
+                  Format
+                </legend>
+                <div className="space-y-0.5">
+                  {choices.map((choice) => (
+                    <FormatRow
+                      chosen={choice.format === chosen?.format}
+                      choice={choice}
+                      key={choice.format}
+                      onChoose={() => setFormat(choice.format)}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            ) : appTargets.length > 1 ? (
+              <fieldset className="min-w-0 border-0 p-0">
+                <legend className="mb-2 text-meta font-medium text-ink">
+                  Where is it going?
+                </legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {appTargets.map((one) => (
+                    <AppChip
+                      chosen={goingToAnApp && one.id === app}
+                      key={one.id}
+                      label={one.label}
+                      onChoose={() => {
+                        setApp(one.id);
+                        setFormat("");
+                      }}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
+
+            {chosen ? (
+              <WhatTravels
+                choice={chosen}
+                images={images}
+                named={goingToAnApp ? appLabel(appTargets, app) : ""}
+              />
+            ) : null}
+          </>
         ) : null}
 
         {gallery.length > 0 && !linkedInstallOnly ? (
@@ -286,7 +329,10 @@ export function GetAsset({
             {oversized ? (
               <>
                 <Download aria-hidden="true" />
-                Download {chosen?.label}
+                {downloadLabel(
+                  chosen,
+                  goingToAnApp ? appLabel(appTargets, app) : "",
+                )}
               </>
             ) : (
               <a
@@ -299,7 +345,10 @@ export function GetAsset({
                 })}
               >
                 <Download aria-hidden="true" />
-                Download {chosen?.label}
+                {downloadLabel(
+                  chosen,
+                  goingToAnApp ? appLabel(appTargets, app) : "",
+                )}
               </a>
             )}
           </Button>
@@ -343,6 +392,40 @@ export function GetAsset({
           </output>
         ) : null}
 
+        {choices.length > 1 && !linkedInstallOnly && appTargets.length > 0 ? (
+          <div className="mt-4 border-rule border-t pt-3">
+            {openFormats ? (
+              <fieldset className="min-w-0 border-0 p-0">
+                <legend className="mb-2 text-meta font-medium text-ink">
+                  Format
+                </legend>
+                <div className="space-y-0.5">
+                  {choices.map((choice) => (
+                    <FormatRow
+                      chosen={choice.format === chosen?.format}
+                      choice={choice}
+                      key={choice.format}
+                      onChoose={() => {
+                        setFormat(choice.format);
+                        setApp("");
+                      }}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <button
+                className="inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-meta font-medium text-ink outline-offset-3 hover:bg-deep"
+                onClick={() => setOpenFormats(true)}
+                type="button"
+              >
+                <SlidersHorizontal aria-hidden="true" size={15} />
+                Choose the format yourself
+              </button>
+            )}
+          </div>
+        ) : null}
+
         {original && isOwner ? (
           <div className="mt-5 border-rule border-t pt-4">
             <p className="text-meta font-medium text-ink">
@@ -364,6 +447,14 @@ export function GetAsset({
       </PopoverContent>
     </Popover>
   );
+}
+
+function downloadLabel(
+  choice: FormatChoice | undefined,
+  named: string,
+): string {
+  if (named) return `Download for ${named}`;
+  return `Download ${choice?.label ?? ""}`;
 }
 
 /** downloadAddress names the reader's images only where they differ from the creator's. */
@@ -498,37 +589,51 @@ function GalleryChoice({
   );
 }
 
-function FormatRow({
-  choice,
+function AppChip({
   chosen,
-  images,
+  label,
   onChoose,
 }: {
-  choice: FormatChoice;
   chosen: boolean;
-  images: AssetImage[];
+  label: string;
   onChoose: () => void;
 }) {
   return (
-    <div className={cn("rounded-control", chosen && "bg-accent-wash")}>
-      <label className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2">
-        <input
-          checked={chosen}
-          className="size-4 shrink-0 accent-[var(--v-action)]"
-          name="asset-format"
-          onChange={onChoose}
-          type="radio"
-        />
-        <span className="min-w-0 text-ui text-ink">
-          {choice.label}
-          <span className="block text-meta text-mute">
-            {choice.recommended ? "Recommended · " : ""}
-            {choice.cost}
-          </span>
-        </span>
-      </label>
-      {chosen && choice.losses.length > 0 ? (
-        <ul className="list-none space-y-3.5 px-3 pb-3">
+    <button
+      aria-pressed={chosen}
+      className={cn(
+        "min-h-11 rounded-control px-3 text-ui outline-offset-3",
+        chosen
+          ? "bg-accent-wash font-medium text-ink"
+          : "text-mute hover:bg-deep hover:text-ink",
+      )}
+      onClick={onChoose}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** WhatTravels says what reaches the reader, in the named app's terms where one is chosen. */
+function WhatTravels({
+  choice,
+  images,
+  named,
+}: {
+  choice: FormatChoice;
+  images: AssetImage[];
+  named: string;
+}) {
+  return (
+    <div className="mt-3">
+      {named ? (
+        <p className="text-meta text-mute">
+          {choice.cost} · {choice.label}
+        </p>
+      ) : null}
+      {choice.losses.length > 0 ? (
+        <ul className="mt-3 list-none space-y-3.5">
           {choice.losses.map((loss) => (
             <li key={loss.role}>
               <div className="flex items-baseline justify-between gap-3">
@@ -543,6 +648,34 @@ function FormatRow({
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+function FormatRow({
+  choice,
+  chosen,
+  onChoose,
+}: {
+  choice: FormatChoice;
+  chosen: boolean;
+  onChoose: () => void;
+}) {
+  return (
+    <div className={cn("rounded-control", chosen && "bg-accent-wash")}>
+      <label className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2">
+        <input
+          checked={chosen}
+          className="size-4 shrink-0 accent-[var(--v-action)]"
+          name="asset-format"
+          onChange={onChoose}
+          type="radio"
+        />
+        <span className="min-w-0 text-ui text-ink">
+          {choice.label}
+          <span className="block text-meta text-mute">{choice.cost}</span>
+        </span>
+      </label>
     </div>
   );
 }

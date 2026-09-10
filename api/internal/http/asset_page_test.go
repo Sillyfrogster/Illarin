@@ -168,7 +168,8 @@ func TestAssetPageShowsNoTotals(t *testing.T) {
 		"id": true, "kind": true, "name": true, "blurb": true, "tags": true,
 		"creator": true, "isNsfw": true, "discovery": true, "createdAt": true,
 		"lifecycle": true, "isOwner": true, "downloads": true, "original": true,
-		"blocks": true, "media": true, "preview": true, "visibility": true,
+		"appTargets": true,
+		"blocks":     true, "media": true, "preview": true, "visibility": true,
 		"linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestUpdate": true,
 	}

@@ -78,6 +78,7 @@ export default async function AssetHistoryPage({
                   assetId={asset.id}
                   blocks={asset.blocks}
                   downloads={asset.downloads}
+                  appTargets={asset.appTargets}
                   holdsNothing={assetHoldsNothing(asset.blocks)}
                   images={asset.media}
                   isOwner={asset.isOwner}

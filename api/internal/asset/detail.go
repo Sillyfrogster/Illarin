@@ -45,6 +45,7 @@ type Detail struct {
 	Lifecycle          Lifecycle
 	IsOwner            bool
 	Downloads          []format.Target
+	AppTargets         []format.AppTarget
 	Original           *OriginalUpload
 	CreatedAt          time.Time
 	Blocks             []block.Block
@@ -207,8 +208,10 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		offered[i] = target.Format
 	}
 	found.EligibleApps = protected.EligibleApps(found.Kind, offered)
+	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {
 		found.Downloads = []format.Target{}
+		found.AppTargets = []format.AppTarget{}
 	}
 	if draft || working {
 		return found, nil

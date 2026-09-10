@@ -228,6 +228,7 @@ export function AssetHeader({
                 assetId={asset.id}
                 blocks={asset.blocks}
                 downloads={asset.downloads}
+                appTargets={asset.appTargets}
                 holdsNothing={holdsNothing}
                 images={asset.media}
                 isOwner={asset.isOwner}

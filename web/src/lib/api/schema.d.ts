@@ -3177,6 +3177,8 @@ export interface components {
       eligibleApps: "lumiverse"[];
       /** @description The formats this asset is offered in, read from its projection. A format Illarin cannot produce for the asset is absent rather than listed as unavailable, so this is a list of choices and not a capability report. */
       downloads: components["schemas"]["DownloadTarget"][];
+      /** @description One entry per application that reads a format this asset is offered in, naming the format that lands most of the asset in it. An application no offered format reaches is absent. */
+      appTargets: components["schemas"]["AppTarget"][];
       /** @description The creator's own upload. Null for an asset built from nothing, which gets no group saying so. */
       original: components["schemas"]["OriginalUpload"] | null;
       /** Format: date-time */
@@ -3215,8 +3217,10 @@ export interface components {
       verdict: "carried" | "reduced" | "dropped";
       /** @description What went, on a reduced verdict. */
       reason?: string;
-      /** @description One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. */
+      /** @description One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. Names no application: shownBy carries that. */
       destination?: string;
+      /** @description The applications that show what the destination writes. Present only beside a destination, and the rest of the named applications receive the file without that content reaching them. */
+      shownBy?: string[];
       sample: components["schemas"]["DownloadSample"];
     };
     DownloadSample: {
@@ -4019,6 +4023,13 @@ export interface components {
       total: number;
       category?: components["schemas"]["PublicationCategory"] | null;
       app?: components["schemas"]["PublicationApp"] | null;
+    };
+    AppTarget: {
+      /** @description The application id, matching the ids allowedApps uses. */
+      id: string;
+      label: string;
+      /** @description The offered format Illarin writes for this application, chosen by what reaches it rather than by how many applications read it. */
+      format: string;
     };
     LegacyAsset: {
       /** Format: uuid */

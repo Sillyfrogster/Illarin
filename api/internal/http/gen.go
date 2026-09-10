@@ -1976,6 +1976,16 @@ type AddedPublicationDestination struct {
 	Secret string `json:"secret"`
 }
 
+// AppTarget defines model for AppTarget.
+type AppTarget struct {
+	// Format The offered format Illarin writes for this application, chosen by what reaches it rather than by how many applications read it.
+	Format string `json:"format"`
+
+	// Id The application id, matching the ids allowedApps uses.
+	Id    string `json:"id"`
+	Label string `json:"label"`
+}
+
 // ApplicationName A self-asserted, unverified application name.
 type ApplicationName = string
 
@@ -2051,6 +2061,9 @@ type AssetDetail struct {
 
 	// AllowedApps The applications the creator allows to receive protected content.
 	AllowedApps []AssetDetailAllowedApps `json:"allowedApps"`
+
+	// AppTargets One entry per application that reads a format this asset is offered in, naming the format that lands most of the asset in it. An application no offered format reaches is absent.
+	AppTargets []AppTarget `json:"appTargets"`
 
 	// Blocks The asset's blocks in page order.
 	Blocks []AssetBlock `json:"blocks"`
@@ -2555,14 +2568,17 @@ type DistinctionMark struct {
 
 // DownloadRoleVerdict defines model for DownloadRoleVerdict.
 type DownloadRoleVerdict struct {
-	// Destination One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too.
+	// Destination One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. Names no application: shownBy carries that.
 	Destination *string `json:"destination,omitempty"`
 	Label       string  `json:"label"`
 
 	// Reason What went, on a reduced verdict.
-	Reason  *string                    `json:"reason,omitempty"`
-	Role    string                     `json:"role"`
-	Sample  DownloadSample             `json:"sample"`
+	Reason *string        `json:"reason,omitempty"`
+	Role   string         `json:"role"`
+	Sample DownloadSample `json:"sample"`
+
+	// ShownBy The applications that show what the destination writes. Present only beside a destination, and the rest of the named applications receive the file without that content reaching them.
+	ShownBy *[]string                  `json:"shownBy,omitempty"`
 	Verdict DownloadRoleVerdictVerdict `json:"verdict"`
 }
 

@@ -591,6 +591,7 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 		AllowedApps:        apiAllowedApps(found.AllowedApps),
 		EligibleApps:       apiEligibleApps(found.EligibleApps),
 		Downloads:          toAPIDownloads(found.Downloads),
+		AppTargets:         toAPIAppTargets(found.AppTargets),
 		Original:           toAPIOriginalUpload(found.Original),
 		CreatedAt:          found.CreatedAt,
 		Blocks:             blocks,
@@ -639,6 +640,7 @@ func toAPIDownloads(targets []format.Target) []DownloadTarget {
 				Verdict:     DownloadRoleVerdictVerdict(role.Verdict),
 				Reason:      textOrNil(role.Reason),
 				Destination: textOrNil(role.Destination),
+				ShownBy:     listOrNil(role.ShownBy),
 				Sample:      toAPIDownloadSample(role.Sample),
 			})
 		}
@@ -648,6 +650,14 @@ func toAPIDownloads(targets []format.Target) []DownloadTarget {
 		})
 	}
 	return downloads
+}
+
+func toAPIAppTargets(apps []format.AppTarget) []AppTarget {
+	targets := make([]AppTarget, 0, len(apps))
+	for _, app := range apps {
+		targets = append(targets, AppTarget{Id: app.ID, Label: app.Label, Format: app.Format})
+	}
+	return targets
 }
 
 func toAPIDownloadSample(sample block.Sample) DownloadSample {
@@ -673,6 +683,13 @@ func toAPIOriginalUpload(found *asset.OriginalUpload) *OriginalUpload {
 	return &OriginalUpload{
 		Label: found.Label, MediaType: found.MediaType, ArrivedAt: found.ArrivedAt,
 	}
+}
+
+func listOrNil(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return &values
 }
 
 func textOrNil(value string) *string {

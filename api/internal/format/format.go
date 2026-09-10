@@ -281,6 +281,7 @@ type RoleSupport struct {
 	Condition   *ContentCondition
 	DropWhen    *ContentCondition
 	Destination string
+	ShownBy     []string
 }
 
 type DirectionalRoleSupport struct {
@@ -593,6 +594,28 @@ func validateStorageContract(d Declaration) error {
 	for _, origin := range d.PreservesOrigins {
 		if !slices.Contains(d.TestedOrigins, origin) {
 			return fmt.Errorf("preserved origin %q has not been tested", origin)
+		}
+	}
+	return validateDestinations(d)
+}
+
+func validateDestinations(d Declaration) error {
+	known := make([]string, 0, len(Apps()))
+	for _, app := range Apps() {
+		known = append(known, app.ID)
+	}
+	for role, support := range d.Roles {
+		write := support.Write
+		if len(write.ShownBy) == 0 {
+			continue
+		}
+		if write.Destination == "" {
+			return fmt.Errorf("%s names the apps that show it but no destination", role)
+		}
+		for _, app := range write.ShownBy {
+			if !slices.Contains(known, app) {
+				return fmt.Errorf("%s names %q, which is no application Illarin knows", role, app)
+			}
 		}
 	}
 	return nil

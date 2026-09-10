@@ -1,4 +1,5 @@
 import type {
+  AppTarget,
   AssetBlock,
   AssetImage,
   AssetInstance,
@@ -60,11 +61,15 @@ function costs(role: RoleVerdict): boolean {
 
 const GALLERY_ROLE = "gallery";
 
-function asLoss(role: RoleVerdict): FormatLoss {
+function asLoss(
+  role: RoleVerdict,
+  app: AppNaming,
+  apps: AppTarget[],
+): FormatLoss {
   return {
     role: role.role,
     label: role.label,
-    line: verdictLine(role),
+    line: verdictLine(role, app, apps),
     sample: role.sample,
   };
 }
@@ -73,19 +78,60 @@ function landsElsewhere(role: RoleVerdict): boolean {
   return !costs(role) && Boolean(role.destination);
 }
 
-function verdictLine(role: RoleVerdict): string {
+/** reaches says whether what a role wrote arrives in the named app. */
+function reaches(role: RoleVerdict, app: string): boolean {
+  if (costs(role)) return false;
+  if (!role.destination) return true;
+  return (role.shownBy ?? []).includes(app);
+}
+
+function verdictLine(
+  role: RoleVerdict,
+  app: AppNaming,
+  apps: AppTarget[],
+): string {
   if (role.verdict === "dropped") return "Not included.";
   if (role.verdict === "reduced") {
     return role.reason
       ? `Included, without ${role.reason}.`
       : "Included, but not in full.";
   }
-  return role.destination ?? "";
+  if (!role.destination) return "";
+  if (app.id && app.label) {
+    return reaches(role, app.id) ? "" : `${app.label} does not show these.`;
+  }
+  const named = whoShows(role, apps);
+  return named ? `${role.destination} ${named}` : role.destination;
 }
 
-function costLine(target: DownloadTarget, holdsNothing: boolean): string {
-  const lost = target.roles.filter(costs).length;
-  const elsewhere = target.roles.filter(landsElsewhere).length;
+/** whoShows names the listed apps a destination reaches and the ones it does not. */
+function whoShows(role: RoleVerdict, apps: AppTarget[]): string {
+  const shows = apps.filter((app) => (role.shownBy ?? []).includes(app.id));
+  const blind = apps.filter((app) => !(role.shownBy ?? []).includes(app.id));
+  if (blind.length === 0) return "";
+  const does = blind.length === 1 ? "does" : "do";
+  if (shows.length === 0) {
+    return `${nameList(blind)} ${does} not show these.`;
+  }
+  const verb = shows.length === 1 ? "shows" : "show";
+  return `${nameList(shows)} ${verb} these; ${nameList(blind)} ${does} not.`;
+}
+
+function nameList(apps: AppTarget[]): string {
+  const names = apps.map((app) => app.label);
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+function costLine(
+  target: DownloadTarget,
+  holdsNothing: boolean,
+  app: AppNaming,
+): string {
+  const lost = app.id
+    ? target.roles.filter((role) => !reaches(role, app.id)).length
+    : target.roles.filter(costs).length;
+  const elsewhere = app.id ? 0 : target.roles.filter(landsElsewhere).length;
   if (holdsNothing && lost === 0) return "There is nothing in it yet";
   if (lost > 0) {
     return lost === 1 ? "1 thing left out" : `${lost} things left out`;
@@ -98,31 +144,50 @@ function costLine(target: DownloadTarget, holdsNothing: boolean): string {
   return "Includes everything";
 }
 
+type AppNaming = { id: string; label: string };
+
+/** appLabel names an app the way the API labelled it. */
+export function appLabel(apps: AppTarget[], id: string): string {
+  return apps.find((app) => app.id === id)?.label ?? "";
+}
+
 export function formatChoices({
   downloads,
   holdsNothing,
+  app = "",
+  apps = [],
 }: {
   downloads: DownloadTarget[];
   holdsNothing: boolean;
+  app?: string;
+  apps?: AppTarget[];
 }): FormatChoice[] {
+  const naming = { id: app, label: appLabel(apps, app) };
+  const pick = app
+    ? (apps.find((one) => one.id === app)?.format ?? "")
+    : downloads.find((target) => target.recommended)?.format;
   const ordered = [
-    ...downloads.filter((target) => target.recommended),
-    ...downloads.filter((target) => !target.recommended),
+    ...downloads.filter((target) => target.format === pick),
+    ...downloads.filter((target) => target.format !== pick),
   ];
 
   return ordered.map((target) => {
     const noted = [
       ...target.roles.filter(costs),
       ...target.roles.filter((role) => !costs(role) && role.destination),
-    ].map(asLoss);
+    ].map((role) => asLoss(role, naming, apps));
     const gallery = target.roles.find((role) => role.role === GALLERY_ROLE);
     return {
       format: target.format,
       label: target.label,
-      recommended: target.recommended,
-      cost: costLine(target, holdsNothing),
-      carriesGallery: gallery?.verdict !== "dropped",
-      gallery: gallery ? asLoss(gallery) : null,
+      recommended: target.format === pick,
+      cost: costLine(target, holdsNothing, naming),
+      carriesGallery: gallery
+        ? naming.id
+          ? reaches(gallery, naming.id)
+          : gallery.verdict !== "dropped"
+        : false,
+      gallery: gallery ? asLoss(gallery, naming, apps) : null,
       losses: noted.filter((loss) => loss.role !== GALLERY_ROLE),
     };
   });
