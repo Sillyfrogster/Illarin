@@ -89,8 +89,8 @@
 
 .iconButton {
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
@@ -112,7 +112,7 @@
 
 .textButton {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 44px;
   align-items: center;
   padding-inline: 12px;
   border-radius: var(--radius-sm);

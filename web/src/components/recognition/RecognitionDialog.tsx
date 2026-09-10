@@ -3,8 +3,8 @@
 import { ImageUp, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
+import { Field, TextInput } from "@/components/ui/field";
 import {
   clearMark,
   defineDistinction,
@@ -130,7 +130,7 @@ export function RecognitionDialog({
       }
     >
       <Field label="Name" htmlFor="recognition-name">
-        <input
+        <TextInput
           id="recognition-name"
           value={name}
           maxLength={NAME_LIMIT}
@@ -144,7 +144,7 @@ export function RecognitionDialog({
         htmlFor="recognition-earned"
         hint="Written for the person reading a profile. Say what someone did to get it."
       >
-        <input
+        <TextInput
           id="recognition-earned"
           value={earned}
           maxLength={EARNED_LIMIT}

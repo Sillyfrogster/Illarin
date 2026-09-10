@@ -10,7 +10,6 @@ export const metadata = pageMetadata(
 export default function RecognitionPage() {
   return (
     <AuthorityConsole
-      eyebrow="Profile badges"
       heading="Profile badges"
       hint="The jobs, titles and badges you put on someone's profile. None of them lets anyone do anything on Illarin."
     >

@@ -1,37 +1,35 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Gate } from "@/components/ui/gate";
 import { useAuth } from "@/lib/auth";
-import { ConsoleGate } from "./ConsoleGate";
 import { ConsolePage } from "./ConsolePage";
-import styles from "./ConsolePage.module.css";
 
+/** An administration page behind the one account that runs Illarin's publication. */
 export function AuthorityConsole({
-  eyebrow,
+  children,
   heading,
   hint,
-  children,
 }: {
-  eyebrow: string;
+  children: ReactNode;
   heading: string;
   hint: string;
-  children: ReactNode;
 }) {
   const { account, publicationAuthority } = useAuth();
 
   return (
-    <ConsolePage eyebrow={eyebrow} heading={heading} hint={hint}>
+    <ConsolePage heading={heading} hint={hint}>
       {account === undefined ? (
-        <p className={styles.loading} aria-live="polite">
+        <p aria-live="polite" className="font-ui text-ui text-mute">
           Checking your account…
         </p>
       ) : null}
       {account !== undefined && (!account || !publicationAuthority) ? (
-        <ConsoleGate
-          heading="One recorded account manages this"
-          line="Being an admin or a moderator does not carry it."
-          href={account ? "/" : "/sign-in"}
+        <Gate
           action={account ? "Back to Illarin" : "Sign in"}
+          heading="One recorded account manages this"
+          href={account ? "/" : "/sign-in"}
+          line="Being an admin or a moderator does not carry it."
         />
       ) : null}
       {account && publicationAuthority ? children : null}

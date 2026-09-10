@@ -1,43 +1,51 @@
 import type { ReactNode } from "react";
-import styles from "./Section.module.css";
+import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 
+/** One group of an administration page, with what it holds and what can be started from it. */
 export function Section({
-  id,
-  lead,
-  title,
-  count,
   action,
   children,
+  count,
+  id,
+  lead,
   retired,
   retiredLabel,
-  wide,
+  title,
 }: {
-  id?: string;
-  lead?: ReactNode;
-  title: string;
-  count?: number;
   action?: ReactNode;
   children: ReactNode;
+  count?: number;
+  id?: string;
+  /** Anything before the title, such as a mark for the thing this section is about. */
+  lead?: ReactNode;
   retired?: ReactNode;
   retiredLabel?: string;
-  wide?: boolean;
+  title: string;
 }) {
   return (
-    <section className={styles.section} data-wide={wide || undefined} id={id}>
-      <header className={styles.heading}>
-        {lead}
-        <h2>{title}</h2>
-        {count === undefined ? null : (
-          <span className={styles.count}>{count}</span>
-        )}
-        {action ? <div className={styles.action}>{action}</div> : null}
-      </header>
-      {children}
+    <section className="min-w-0" id={id}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="flex min-w-0 items-center gap-3 font-display text-section font-medium tracking-tight text-ink">
+          {lead}
+          <span className="min-w-0 wrap-anywhere">{title}</span>
+          {count === undefined ? null : (
+            <span className="font-prose text-meta text-mute tabular-nums">
+              {count}
+            </span>
+          )}
+        </h2>
+        {action}
+      </div>
+      <div className="mt-5 min-w-0">{children}</div>
       {retired && retiredLabel ? (
-        <details className={styles.retired}>
-          <summary>{retiredLabel}</summary>
-          {retired}
-        </details>
+        <div className="mt-6">
+          <MorphingDisclosure
+            className="rounded-plate bg-deep px-5 py-4"
+            summary={retiredLabel}
+          >
+            <div className="mt-4">{retired}</div>
+          </MorphingDisclosure>
+        </div>
       ) : null}
     </section>
   );

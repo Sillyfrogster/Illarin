@@ -420,6 +420,11 @@ textarea {
   font-family: inherit;
 }
 
+/* A browser draws its own groove around a fieldset, which is the etched hairline this design does not use */
+fieldset {
+  border: 0;
+}
+
 img {
   display: block;
   max-width: 100%;

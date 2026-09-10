@@ -43,7 +43,7 @@ export function accountDestinations(
     { label: "Account settings", href: "/settings" },
     ...(publicationAuthority
       ? [
-          { label: "Writers", href: "/publication" },
+          { label: "The publication", href: "/publication" },
           { label: "Profile badges", href: "/recognition" },
         ]
       : []),

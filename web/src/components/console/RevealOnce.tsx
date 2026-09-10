@@ -2,19 +2,18 @@
 
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import styles from "./RevealOnce.module.css";
 
 /** A secret Illarin can only show once, with the one chance to take it. */
 export function RevealOnce({
-  value,
   carry,
   copied,
   onCopied,
+  value,
 }: {
-  value: string;
   carry: string;
   copied: boolean;
   onCopied: (copied: boolean) => void;
+  value: string;
 }) {
   const [trouble, setTrouble] = useState("");
 
@@ -28,22 +27,27 @@ export function RevealOnce({
   }
 
   return (
-    <div className={styles.reveal}>
-      <code className={styles.value}>{value}</code>
+    <div className="flex flex-col gap-3 rounded-plate bg-deep p-4">
+      <code className="block rounded-control bg-plane px-3.5 py-3 font-mono text-meta break-all text-ink select-all">
+        {value}
+      </code>
       <button
-        type="button"
-        className={styles.copy}
-        onClick={copy}
         aria-live="polite"
+        className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-control bg-action px-5 font-ui text-ui font-medium text-on-accent outline-offset-3 hover:opacity-90"
+        onClick={copy}
+        type="button"
       >
         {copied ? (
-          <Check size={15} strokeWidth={2} aria-hidden="true" />
+          <Check aria-hidden="true" className="size-4" strokeWidth={2} />
         ) : (
-          <Copy size={15} strokeWidth={1.8} aria-hidden="true" />
+          <Copy aria-hidden="true" className="size-4" strokeWidth={1.8} />
         )}
         {copied ? "Copied" : "Copy"}
       </button>
-      <p className={styles.carry} aria-live="polite">
+      <p
+        aria-live="polite"
+        className="max-w-[52ch] font-prose text-meta text-mute"
+      >
         {trouble || carry}
       </p>
     </div>

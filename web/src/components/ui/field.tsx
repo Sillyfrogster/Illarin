@@ -44,7 +44,8 @@ export function Field({
   /** A field is as wide as what goes in it, so this is where its measure is set. */
   className?: string;
   hint?: ReactNode;
-  htmlFor: string;
+  /** The control this labels, absent when the label names a group rather than one box. */
+  htmlFor?: string;
   label: ReactNode;
   /** A second control on the label's own line, such as a way to recover. */
   trailing?: ReactNode;
@@ -53,19 +54,29 @@ export function Field({
   return (
     <div className={cn("grid min-w-0 gap-2", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <label className="font-ui text-ui text-ink" htmlFor={htmlFor}>
-          {label}
-        </label>
+        {htmlFor ? (
+          <label className="font-ui text-ui text-ink" htmlFor={htmlFor}>
+            {label}
+          </label>
+        ) : (
+          <span className="font-ui text-ui text-ink">{label}</span>
+        )}
         {trailing}
       </div>
       {children}
       {trouble ? (
-        <p className="font-ui text-meta text-stop" id={`${htmlFor}-trouble`}>
+        <p
+          className="font-ui text-meta text-stop"
+          id={htmlFor ? `${htmlFor}-trouble` : undefined}
+        >
           {trouble}
         </p>
       ) : null}
       {hint ? (
-        <div className="font-ui text-meta text-mute" id={`${htmlFor}-hint`}>
+        <div
+          className="font-ui text-meta text-mute"
+          id={htmlFor ? `${htmlFor}-hint` : undefined}
+        >
           {hint}
         </div>
       ) : null}

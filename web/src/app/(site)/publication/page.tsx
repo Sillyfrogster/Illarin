@@ -1,20 +1,19 @@
 import { AuthorityConsole } from "@/components/console/AuthorityConsole";
-import { PublicationHub } from "@/components/publication/PublicationHub";
+import { PublicationRegister } from "@/components/publication/register/PublicationRegister";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Writers",
-  "Who may write for the Illarin blog, for which project, and what kind of post they may write.",
+  "The publication",
+  "Who writes for the Illarin blog, what they may publish, and where an announcement goes.",
 );
 
 export default function PublicationPage() {
   return (
     <AuthorityConsole
-      eyebrow="Writers"
-      heading="Writers"
-      hint="Who may write for the Illarin blog, for which project, and what kind of post they may write."
+      heading="The publication"
+      hint="Who writes for the Illarin blog, what they may publish, and where an announcement goes."
     >
-      <PublicationHub />
+      <PublicationRegister />
     </AuthorityConsole>
   );
 }

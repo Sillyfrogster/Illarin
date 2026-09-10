@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Field } from "@/components/console/Field";
 import { FormDialog } from "@/components/console/FormDialog";
+import { Field, TextInput } from "@/components/ui/field";
 import { defineDistinction, updateDistinction } from "@/lib/api/distinctions";
 import type { Distinction } from "@/lib/api/query";
 import styles from "./RecognitionDialog.module.css";
@@ -75,7 +75,7 @@ export function PositionDialog({
       }
     >
       <Field label="Name" htmlFor="position-name">
-        <input
+        <TextInput
           id="position-name"
           value={name}
           maxLength={NAME_LIMIT}

@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { revokeToken } from "@/lib/api/publication";
 import type { PublicationToken } from "@/lib/api/query";
-import { readableDate } from "@/lib/dates";
-import styles from "./TokenRows.module.css";
+import { tokenEnded, tokenStanding } from "@/lib/publication-register";
 
+/** Every token on one approval, and the one thing that can be done to a live one. */
 export function TokenRows({
-  tokens,
-  revocable,
-  onRevoked,
   onFailure,
+  onRevoked,
+  revocable,
+  tokens,
 }: {
-  tokens: PublicationToken[];
-  revocable: boolean;
-  onRevoked: (id: string) => void;
   onFailure: (message: string) => void;
+  onRevoked: (id: string) => void;
+  revocable: boolean;
+  tokens: PublicationToken[];
 }) {
   const [confirming, setConfirming] = useState("");
   const [revoking, setRevoking] = useState("");
@@ -33,42 +33,43 @@ export function TokenRows({
   }
 
   return (
-    <ol className={styles.tokens}>
+    <ol className="flex list-none flex-col">
       {tokens.map((token) => {
         const asking = confirming === token.id;
         return (
           <li
-            className={styles.token}
-            data-spent={token.active ? undefined : "true"}
+            className="flex flex-col gap-1 border-rule/45 py-3 not-first:border-t"
             key={token.id}
           >
-            <span className={styles.name}>
-              {token.name} <span className={styles.prefix}>{token.prefix}</span>
-            </span>
-            <span className={styles.detail}>{describe(token)}</span>
-            <span className={styles.actions}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="min-w-0 font-ui text-ui text-ink wrap-anywhere">
+                {token.name}{" "}
+                <span className="font-mono text-label text-mute">
+                  {token.prefix}
+                </span>
+              </span>
               {token.active && revocable ? (
-                <>
+                <span className="flex shrink-0 items-center gap-1">
                   {asking ? (
                     <button
-                      type="button"
-                      className={styles.stand}
+                      className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-meta font-medium text-mute outline-offset-3 hover:text-ink"
                       onClick={() => setConfirming("")}
+                      type="button"
                     >
                       Keep it
                     </button>
                   ) : null}
                   <button
-                    type="button"
-                    className={asking ? styles.confirm : styles.revoke}
-                    disabled={Boolean(revoking)}
-                    aria-expanded={asking}
                     aria-describedby={
                       asking ? `${token.id}-consequence` : undefined
                     }
+                    aria-expanded={asking}
+                    className="inline-flex min-h-11 items-center rounded-control bg-stop-wash px-3 font-ui text-meta font-medium text-stop outline-offset-3 hover:opacity-85 disabled:opacity-45"
+                    disabled={Boolean(revoking)}
                     onClick={() =>
                       asking ? revoke(token.id) : setConfirming(token.id)
                     }
+                    type="button"
                   >
                     {revoking === token.id
                       ? "Revoking…"
@@ -76,13 +77,21 @@ export function TokenRows({
                         ? "Revoke for good"
                         : "Revoke"}
                   </button>
-                </>
+                </span>
               ) : (
-                <span className={styles.spent}>{ended(token)}</span>
+                <span className="shrink-0 font-prose text-meta text-mute">
+                  {tokenEnded(token)}
+                </span>
               )}
+            </div>
+            <span className="font-prose text-meta text-mute">
+              {tokenStanding(token)}
             </span>
             {asking ? (
-              <p className={styles.consequence} id={`${token.id}-consequence`}>
+              <p
+                className="max-w-[52ch] font-prose text-meta text-stop"
+                id={`${token.id}-consequence`}
+              >
                 Anything carrying it stops publishing at once. Your other tokens
                 and your approval are untouched.
               </p>
@@ -92,23 +101,4 @@ export function TokenRows({
       })}
     </ol>
   );
-}
-
-function describe(token: PublicationToken) {
-  const said = [`Made ${readableDate(token.createdAt)}`];
-  said.push(
-    token.lastUsedAt
-      ? `last used ${readableDate(token.lastUsedAt)}`
-      : "never used",
-  );
-  if (token.expiresAt && token.active) {
-    said.push(`expires ${readableDate(token.expiresAt)}`);
-  }
-  return said.join(" · ");
-}
-
-function ended(token: PublicationToken) {
-  if (token.revokedAt) return `Revoked ${readableDate(token.revokedAt)}`;
-  if (token.expiresAt) return `Expired ${readableDate(token.expiresAt)}`;
-  return "Spent";
 }

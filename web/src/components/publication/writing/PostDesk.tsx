@@ -57,10 +57,7 @@ export function PostDesk() {
   return (
     <Shell className="pt-10 pb-chapter lg:pt-14">
       <header className="max-w-[52ch]">
-        <p className="font-ui text-meta font-medium tracking-[0.14em] text-accent uppercase">
-          Publication
-        </p>
-        <h1 className="mt-3 font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+        <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
           Your posts
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
