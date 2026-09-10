@@ -1,32 +1,9 @@
 import type { components } from "@/lib/api/schema";
+import { isStringArray } from "./answer";
 
 export type PendingLink = components["schemas"]["PendingLink"];
 export type PendingDeviceLink = components["schemas"]["PendingDeviceLink"];
 export type LinkRedirect = components["schemas"]["LinkRedirect"];
-
-/** Reads the body of an answer that may carry nothing at all. */
-export async function readJSON(response: Response): Promise<unknown> {
-  if (response.status === 204) return null;
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
-/** Prefers Illarin's own reason for a refusal over the one the page would guess. */
-export function refusalMessage(value: unknown, fallback: string) {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "error" in value &&
-    typeof value.error === "string" &&
-    value.error.trim()
-  ) {
-    return value.error;
-  }
-  return fallback;
-}
 
 /** A link request is only shown once every field the decision rests on is present. */
 export function isPendingLink(value: unknown): value is PendingLink {
@@ -99,10 +76,4 @@ export function readableExpiry(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return (
-    Array.isArray(value) && value.every((item) => typeof item === "string")
-  );
 }

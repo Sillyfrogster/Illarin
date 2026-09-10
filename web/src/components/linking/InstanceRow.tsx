@@ -12,6 +12,7 @@ import {
   seenAt,
 } from "@/lib/instance-standing";
 import { describeScope } from "@/lib/scopes";
+import { DeclaredValues } from "./DeclaredValues";
 
 /**
  * One installation, as much as it takes to tell it from another. What it
@@ -132,15 +133,18 @@ export function InstanceRow({
         >
           <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
             {instance.applicationVersion ? (
-              <Declared
+              <DeclaredValues
                 label="Version"
                 values={[instance.applicationVersion]}
               />
             ) : null}
-            <Declared label="Targets" values={instance.acceptedTargets} />
-            <Declared label="Capabilities" values={instance.capabilities} />
+            <DeclaredValues label="Targets" values={instance.acceptedTargets} />
+            <DeclaredValues
+              label="Capabilities"
+              values={instance.capabilities}
+            />
             {instance.protocolVersion !== null ? (
-              <Declared
+              <DeclaredValues
                 label="Protocol"
                 values={[`Version ${instance.protocolVersion}`]}
               />
@@ -160,29 +164,5 @@ export function InstanceRow({
         </MorphingDisclosure>
       )}
     </li>
-  );
-}
-
-function Declared({ label, values }: { label: string; values: string[] }) {
-  return (
-    <div className="min-w-0">
-      <dt className="font-ui text-meta text-mute">{label}</dt>
-      <dd className="mt-1">
-        {values.length > 0 ? (
-          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-            {values.map((value) => (
-              <li
-                className="rounded-control bg-deep px-2.5 py-1 font-mono text-meta text-ink"
-                key={value}
-              >
-                {value}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <span className="font-ui text-ui text-mute">None declared</span>
-        )}
-      </dd>
-    </div>
   );
 }

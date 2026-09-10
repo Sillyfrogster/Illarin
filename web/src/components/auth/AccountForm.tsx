@@ -11,12 +11,11 @@ import {
   TextInput,
   Trouble,
 } from "@/components/ui/field";
+import type { Refusal } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-
-type Refusal = { error?: string; field?: string };
 
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
@@ -107,8 +106,8 @@ export function AccountForm({
           <div
             className={cn(
               controlClasses,
-              "flex items-center gap-0.5 px-0 py-0 focus-within:inset-ring-accent",
-              failed("handle") && "inset-ring-stop",
+              "flex items-center gap-0.5 px-0 py-0",
+              failed("handle") && "inset-ring-2 inset-ring-stop",
             )}
           >
             <span
@@ -122,7 +121,7 @@ export function AccountForm({
               aria-invalid={failed("handle") || undefined}
               autoCapitalize="none"
               autoComplete="username"
-              className="min-h-11 w-full min-w-0 bg-transparent pr-3.5 font-ui text-ui text-ink outline-none"
+              className="min-h-11 w-full min-w-0 rounded-control bg-transparent pr-3.5 font-ui text-ui text-ink outline-offset-2"
               id="account-handle"
               maxLength={32}
               minLength={3}

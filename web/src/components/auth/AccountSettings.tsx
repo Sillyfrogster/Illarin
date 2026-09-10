@@ -12,12 +12,11 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Said, TextInput } from "@/components/ui/field";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
+import { type Refusal, refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-
-type Refusal = { error?: string };
 
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
@@ -87,7 +86,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
       });
       const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setSaid(answer.error ?? "The password could not be saved.");
+        setSaid(refusalMessage(answer, "The password could not be saved."));
         return;
       }
       setAccount(answer);
@@ -110,7 +109,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
       });
       const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setSaid(answer.error ?? "Discord could not be detached.");
+        setSaid(refusalMessage(answer, "Discord could not be detached."));
         return;
       }
       setAccount(answer);

@@ -6,9 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, TextInput, Trouble } from "@/components/ui/field";
+import { refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 
-type Refusal = { error?: string };
 type Result = { ok: true } | { ok: false; error: string };
 
 const UNREACHABLE =
@@ -26,8 +26,10 @@ async function post(
       method: "POST",
     });
     if (response.ok) return { ok: true };
-    const answer = (await response.json()) as Refusal;
-    return { error: answer.error ?? fallback, ok: false };
+    return {
+      error: refusalMessage(await response.json(), fallback),
+      ok: false,
+    };
   } catch {
     return { error: UNREACHABLE, ok: false };
   }

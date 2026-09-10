@@ -13,6 +13,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
+import { readJSON, refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -22,8 +23,6 @@ import {
   isPendingLink,
   isSafeLoopbackRedirect,
   type PendingLink,
-  readJSON,
-  refusalMessage,
 } from "@/lib/link-request";
 import { type Decision, LinkDecision } from "./LinkDecision";
 

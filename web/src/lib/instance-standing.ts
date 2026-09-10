@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api/schema";
+import { isStringArray } from "./answer";
 import { readableDate } from "./dates";
 
 export type ManagedInstance = components["schemas"]["ManagedInstance"];
@@ -75,11 +76,5 @@ function isInstance(value: unknown): value is ManagedInstance {
     typeof instance.linkedAt === "string" &&
     (instance.lastSeenAt === null || typeof instance.lastSeenAt === "string") &&
     (instance.revokedAt === null || typeof instance.revokedAt === "string")
-  );
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return (
-    Array.isArray(value) && value.every((item) => typeof item === "string")
   );
 }

@@ -4,7 +4,6 @@ import {
   isPendingDeviceLink,
   isPendingLink,
   isSafeLoopbackRedirect,
-  refusalMessage,
 } from "./link-request";
 
 const pending = {
@@ -82,16 +81,4 @@ test("refuses a callback carrying credentials, a fragment or no port", () => {
 test("refuses anything that is not a callback address at all", () => {
   expect(isSafeLoopbackRedirect("javascript:alert(1)")).toBe(false);
   expect(isSafeLoopbackRedirect("")).toBe(false);
-});
-
-test("repeats the reason Illarin gave for a refusal", () => {
-  expect(refusalMessage({ error: "That code has expired." }, "fallback")).toBe(
-    "That code has expired.",
-  );
-});
-
-test("falls back when Illarin gave no reason", () => {
-  expect(refusalMessage({ error: "  " }, "fallback")).toBe("fallback");
-  expect(refusalMessage({}, "fallback")).toBe("fallback");
-  expect(refusalMessage(null, "fallback")).toBe("fallback");
 });

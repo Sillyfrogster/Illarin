@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Said, Trouble } from "@/components/ui/field";
+import { readJSON, refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import { useAuth } from "@/lib/auth";
 import {
@@ -12,7 +13,6 @@ import {
   type ManagedInstance,
   revoked,
 } from "@/lib/instance-standing";
-import { readJSON, refusalMessage } from "@/lib/link-request";
 import { InstanceRow } from "./InstanceRow";
 
 type Notice = { kind: "said" | "trouble"; message: string };
