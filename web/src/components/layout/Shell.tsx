@@ -1,16 +1,23 @@
-import type { ElementType, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import styles from "./Shell.module.css";
 
-type ShellProps = {
+type ShellProps = ComponentPropsWithoutRef<"div"> & {
   children: ReactNode;
   as?: ElementType;
-  className?: string;
 };
 
 /** Holds page content to a fixed width */
-export function Shell({ children, as: Tag = "div", className }: ShellProps) {
+export function Shell({
+  children,
+  as: Tag = "div",
+  className,
+  ...rest
+}: ShellProps) {
   return (
-    <Tag className={className ? `${styles.shell} ${className}` : styles.shell}>
+    <Tag
+      className={className ? `${styles.shell} ${className}` : styles.shell}
+      {...rest}
+    >
       {children}
     </Tag>
   );

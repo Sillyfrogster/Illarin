@@ -47,12 +47,20 @@ replaces the source's clickable div and text plus sign with a button that report
 `aria-expanded` and names its panel, gives the panel a lucide chevron, and holds
 the layout still under reduced motion.
 
+`ui/travelling-highlight.tsx` adapts Vengeance UI's highlight grid, keeping the
+one plate that glides between cells and the sheen laid over it. It replaces the
+source's cycled rainbow palette with the site's one action colour, tracks a
+chosen cell as well as the pointed one so the plate returns to where you are
+when the pointer leaves, follows keyboard focus, re-seats itself when the row
+resizes, and skips the slide on its first placement.
+
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/notch-navbar.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/line-hover-link.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/perspective-carousel.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/fullscreen-preview.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/copy-button.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/morphing-disclosure.json
+- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/highlight-grid.json
 - https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE
 
 Both sources use the MIT license. Copyright shadcn and Ashutoshx7 respectively.

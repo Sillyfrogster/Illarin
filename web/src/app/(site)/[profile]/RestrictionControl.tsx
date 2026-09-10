@@ -3,6 +3,7 @@
 import { ShieldMinus, ShieldPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   fetchProfileRestriction,
   type ProfileRestriction,
@@ -10,10 +11,14 @@ import {
   restrictProfile,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
-import styles from "./RestrictionControl.module.css";
+import { cn } from "@/lib/cn";
 
 const REASON_LIMIT = 500;
 
+const PANEL = "mt-8 rounded-plate bg-deep p-5 sm:p-6";
+const HEADING = "flex items-center gap-2 font-ui text-ui font-medium text-ink";
+
+/** Illarin's own control over a profile, which only an admin ever sees. */
 export function RestrictionControl({
   handle,
   restricted,
@@ -80,16 +85,26 @@ export function RestrictionControl({
     }
   }
 
+  const failure = message ? (
+    <p className="mt-3 font-ui text-meta text-stop" role="alert">
+      {message}
+    </p>
+  ) : null;
+
   if (restricted) {
     return (
-      <section className={styles.staff} aria-labelledby="restriction-heading">
-        <h2 className={styles.heading} id="restriction-heading">
-          <ShieldMinus size={15} strokeWidth={1.7} aria-hidden="true" />
+      <section aria-labelledby="restriction-heading" className={PANEL}>
+        <h2 className={HEADING} id="restriction-heading">
+          <ShieldMinus
+            aria-hidden="true"
+            className="size-4 text-stop"
+            strokeWidth={1.7}
+          />
           Restricted
         </h2>
         {inForce ? (
           <>
-            <p className={styles.note}>
+            <p className="mt-2 font-ui text-meta text-mute">
               {new Date(inForce.restrictedAt).toLocaleDateString(undefined, {
                 day: "numeric",
                 month: "long",
@@ -97,120 +112,117 @@ export function RestrictionControl({
               })}
               {inForce.restrictedBy ? ` by @${inForce.restrictedBy}` : null}
             </p>
-            <p className={styles.reason}>{inForce.reason}</p>
+            <p className="mt-3 max-w-[70ch] font-prose text-ui text-ink">
+              {inForce.reason}
+            </p>
           </>
         ) : null}
-        {confirmingRestore ? (
-          <div className={styles.confirm}>
-            <p className={styles.note}>
-              Restore it? Everything the creator added becomes public again.
-            </p>
-            <div className={styles.commit}>
-              <button
-                type="button"
-                className={styles.action}
-                onClick={restore}
-                disabled={pending}
-              >
-                {pending ? "Restoring…" : "Restore"}
-              </button>
-              <button
-                type="button"
-                className={styles.quiet}
-                onClick={() => setConfirmingRestore(false)}
-              >
-                Keep hidden
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => setConfirmingRestore(true)}
-            disabled={pending}
-          >
-            Restore profile
-          </button>
-        )}
-        {message ? (
-          <p className={styles.failure} role="alert">
-            {message}
-          </p>
-        ) : null}
+        <div className="mt-5">
+          {confirmingRestore ? (
+            <>
+              <p className="font-ui text-meta text-mute">
+                Restore it? Everything the creator added becomes public again.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Button loading={pending} onClick={restore} variant="primary">
+                  Restore
+                </Button>
+                <Button
+                  onClick={() => setConfirmingRestore(false)}
+                  variant="ghost"
+                >
+                  Keep hidden
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button
+              disabled={pending}
+              onClick={() => setConfirmingRestore(true)}
+              variant="outline"
+            >
+              Restore profile
+            </Button>
+          )}
+        </div>
+        {failure}
       </section>
+    );
+  }
+
+  if (!composing) {
+    return (
+      <div className="mt-8">
+        <Button onClick={() => setComposing(true)} variant="ghost">
+          <ShieldPlus aria-hidden="true" />
+          Restrict profile
+        </Button>
+      </div>
     );
   }
 
   const remaining = REASON_LIMIT - reason.length;
 
-  if (!composing) {
-    return (
-      <button
-        type="button"
-        className={styles.open}
-        onClick={() => setComposing(true)}
-      >
-        <ShieldPlus size={15} strokeWidth={1.7} aria-hidden="true" />
-        Restrict profile
-      </button>
-    );
-  }
-
   return (
     <form
-      className={styles.staff}
-      onSubmit={restrict}
       aria-labelledby="restriction-heading"
+      className={PANEL}
+      onSubmit={restrict}
     >
-      <h2 className={styles.heading} id="restriction-heading">
-        <ShieldPlus size={15} strokeWidth={1.7} aria-hidden="true" />
+      <h2 className={HEADING} id="restriction-heading">
+        <ShieldPlus
+          aria-hidden="true"
+          className="size-4 text-stop"
+          strokeWidth={1.7}
+        />
         Restrict this profile
       </h2>
-      <p className={styles.note}>
+      <p className="mt-2 max-w-[70ch] font-prose text-meta text-mute">
         The handle and the published work below stay. Everything the creator
         added to the profile is hidden until an admin restores it.
       </p>
-      <label htmlFor="restriction-reason">Reason</label>
+      <label
+        className="mt-4 block font-ui text-meta font-medium text-ink"
+        htmlFor="restriction-reason"
+      >
+        Reason
+      </label>
       <textarea
-        id="restriction-reason"
-        rows={3}
-        maxLength={REASON_LIMIT}
-        value={reason}
+        className="mt-2 w-full max-w-[70ch] rounded-control bg-plane p-3 font-prose text-ui text-ink inset-ring inset-ring-rule outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-accent"
         disabled={pending}
+        id="restriction-reason"
+        maxLength={REASON_LIMIT}
         onChange={(event) => setReason(event.target.value)}
         required
+        rows={3}
+        value={reason}
       />
-      <p className={styles.note}>
+      <p className="mt-2 flex max-w-[70ch] flex-wrap justify-between gap-x-4 font-ui text-meta text-mute">
         <span>Only admins read this. It is kept in the audit record.</span>
-        <span className={styles.count} data-low={remaining <= 60 || undefined}>
+        <span className={cn("tabular-nums", remaining <= 60 && "text-stop")}>
           {remaining} left
         </span>
       </p>
-      <div className={styles.commit}>
-        <button
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button
+          disabled={!reason.trim()}
+          loading={pending}
           type="submit"
-          className={styles.critical}
-          disabled={pending || !reason.trim()}
+          variant="stop"
         >
-          {pending ? "Restricting…" : "Restrict profile"}
-        </button>
-        <button
-          type="button"
-          className={styles.quiet}
+          Restrict profile
+        </Button>
+        <Button
           onClick={() => {
             setComposing(false);
             setMessage("");
           }}
+          variant="ghost"
         >
           Cancel
-        </button>
+        </Button>
       </div>
-      {message ? (
-        <p className={styles.failure} role="alert">
-          {message}
-        </p>
-      ) : null}
+      {failure}
     </form>
   );
 }

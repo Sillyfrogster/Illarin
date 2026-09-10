@@ -13,10 +13,13 @@ export function MorphingDisclosure({
   summary,
   children,
   className,
+  lead,
 }: {
   summary: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Content that shares the summary's row without being part of its control. */
+  lead?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const still = useReducedMotion();
@@ -28,24 +31,27 @@ export function MorphingDisclosure({
       layout={still ? false : "size"}
       transition={MORPH}
     >
-      <button
-        aria-controls={panel}
-        aria-expanded={open}
-        className="group inline-flex min-h-11 items-center gap-2 text-ui font-medium text-ink outline-offset-3"
-        onClick={() => setOpen(!open)}
-        type="button"
-      >
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            "size-4 text-accent transition-transform duration-200 motion-reduce:transition-none",
-            open ? "rotate-0" : "-rotate-90",
-          )}
-        />
-        <span className="underline decoration-transparent decoration-1 underline-offset-4 transition-colors group-hover:decoration-accent motion-reduce:transition-none">
-          {summary}
-        </span>
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
+        {lead}
+        <button
+          aria-controls={panel}
+          aria-expanded={open}
+          className="group inline-flex min-h-11 items-center gap-2 text-ui font-medium text-ink outline-offset-3"
+          onClick={() => setOpen(!open)}
+          type="button"
+        >
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-4 text-accent transition-transform duration-200 motion-reduce:transition-none",
+              open ? "rotate-0" : "-rotate-90",
+            )}
+          />
+          <span className="underline decoration-transparent decoration-1 underline-offset-4 transition-colors group-hover:decoration-accent motion-reduce:transition-none">
+            {summary}
+          </span>
+        </button>
+      </div>
 
       <AnimatePresence initial={false}>
         {open ? (

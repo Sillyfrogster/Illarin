@@ -3,13 +3,13 @@
 import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { KindMark } from "@/components/catalog/KindMark";
 import { Shell } from "@/components/layout/Shell";
-import type { DeletedAsset } from "@/lib/api/query";
-import { restoreAsset } from "@/lib/api/query";
+import { Button } from "@/components/ui/button";
+import { type DeletedAsset, restoreAsset } from "@/lib/api/query";
 import { assetDisplayName } from "@/lib/asset-name";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
 import { KIND_LABELS } from "@/lib/kinds";
-import styles from "./DeletedAssets.module.css";
 
 function restoreDeadline(value: string) {
   return new Date(value).toLocaleDateString("en-GB", {
@@ -19,6 +19,7 @@ function restoreDeadline(value: string) {
   });
 }
 
+/** What the creator deleted, for as long as Illarin can still give it back. */
 export function DeletedAssets({
   initialItems,
 }: {
@@ -50,60 +51,75 @@ export function DeletedAssets({
   }
 
   return (
-    <section
-      id="deleted"
-      className={styles.section}
+    <Shell
       aria-labelledby="deleted-heading"
+      as="section"
+      className="scroll-mt-28 pb-chapter"
+      id="deleted"
     >
-      <Shell>
-        <div className={styles.heading}>
-          <div>
-            <h2 id="deleted-heading">Deleted</h2>
-            <p>
-              These creations stay here briefly before their files are cleared.
-            </p>
-          </div>
-          <RotateCcw size={21} aria-hidden="true" />
-        </div>
+      <div className="border-t border-rule pt-10">
+        <h2
+          className="font-display text-title font-medium tracking-[-0.02em]"
+          id="deleted-heading"
+        >
+          Deleted
+        </h2>
+        <p className="mt-2 max-w-[56ch] font-prose text-ui text-mute">
+          These creations stay here briefly before their files are cleared.
+        </p>
 
         {message ? (
-          <p className={styles.error} role="alert">
+          <p className="mt-4 font-ui text-meta text-stop" role="alert">
             {message}
           </p>
         ) : null}
 
         {items.length > 0 ? (
-          <ul className={styles.list}>
+          <ul className="mt-6 flex list-none flex-col gap-2 p-0">
             {items.map((item) => (
-              <li key={item.id}>
-                <div className={styles.identity}>
-                  <span>{KIND_LABELS[item.kind]}</span>
-                  <h3>{assetDisplayName(item.name)}</h3>
+              <li
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-plate bg-deep px-5 py-4"
+                key={item.id}
+              >
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display text-section font-medium tracking-[-0.02em] [overflow-wrap:anywhere]">
+                    {assetDisplayName(item.name)}
+                  </h3>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute">
+                    <KindMark
+                      className="size-3.5 text-accent"
+                      kind={item.kind}
+                    />
+                    {KIND_LABELS[item.kind]}
+                    <span aria-hidden="true">·</span>
+                    <span suppressHydrationWarning>
+                      {remainingDeletionWindow(item.recoverableUntil)}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    Restorable until{" "}
+                    <time dateTime={item.recoverableUntil}>
+                      {restoreDeadline(item.recoverableUntil)}
+                    </time>
+                  </p>
                 </div>
-                <p>
-                  <span suppressHydrationWarning>
-                    {remainingDeletionWindow(item.recoverableUntil)}
-                  </span>{" "}
-                  · Restorable until{" "}
-                  <time dateTime={item.recoverableUntil}>
-                    {restoreDeadline(item.recoverableUntil)}
-                  </time>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => restore(item)}
+                <Button
                   disabled={pending !== null}
+                  loading={pending === item.id}
+                  onClick={() => restore(item)}
+                  variant="outline"
                 >
-                  <RotateCcw size={15} aria-hidden="true" />
-                  {pending === item.id ? "Restoring…" : "Restore"}
-                </button>
+                  <RotateCcw aria-hidden="true" />
+                  Restore
+                </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className={styles.empty}>Nothing is waiting to be restored.</p>
+          <p className="mt-6 rounded-plate bg-deep px-5 py-8 text-center font-ui text-ui text-mute">
+            Nothing is waiting to be restored.
+          </p>
         )}
-      </Shell>
-    </section>
+      </div>
+    </Shell>
   );
 }

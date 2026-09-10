@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { CatalogSurface } from "@/components/catalog/CatalogSurface";
 import { fetchAssets } from "@/lib/api/query";
 import { readBrowseFilters } from "@/lib/browse-url";
 import { KIND_LABELS } from "@/lib/kinds";
 import { pageMetadata } from "@/lib/site-metadata";
-import { CatalogListing } from "./CatalogListing";
+import { BrowseThreshold } from "./BrowseThreshold";
 
 export async function generateMetadata({
   searchParams,
@@ -16,7 +17,7 @@ export async function generateMetadata({
 
   if (filters.q) {
     return pageMetadata(
-      `${filters.q} \u00b7 Browse`,
+      `${filters.q} · Browse`,
       `Illarin ${subject} matching ${filters.q}.`,
     );
   }
@@ -34,11 +35,13 @@ export default async function BrowsePage({
   ).catch(() => null);
 
   return (
-    <CatalogListing
-      title="Browse"
-      introduction="Find characters, lorebooks, presets, themes, and packs. Narrow by kind, the app you use, or what the asset includes."
-      filters={filters}
-      initialPage={initialPage}
-    />
+    <>
+      <BrowseThreshold filters={filters} />
+      <CatalogSurface
+        filters={filters}
+        heading="The catalog"
+        initialPage={initialPage}
+      />
+    </>
   );
 }

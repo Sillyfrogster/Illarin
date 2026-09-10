@@ -1,64 +1,49 @@
-import Link from "next/link";
-import { Shell } from "@/components/layout/Shell";
+import { CatalogSurface } from "@/components/catalog/CatalogSurface";
 import type {
   BrowseFilters,
   BrowsePage,
   DeletedAsset,
   Profile,
 } from "@/lib/api/query";
-import { BrowseResults } from "../browse/BrowseResults";
 import { DeletedAssets } from "./DeletedAssets";
-import { ProfileIdentity } from "./ProfileIdentity";
-import styles from "./ProfileListing.module.css";
+import { ProfileBanner } from "./ProfileBanner";
 
+/** A creator's page: who they are, then everything of theirs the catalog holds. */
 export function ProfileListing({
-  profile,
+  deletedAssets,
   filters,
   initialPage,
-  deletedAssets,
+  profile,
 }: {
-  profile: Profile;
+  deletedAssets: DeletedAsset[] | null;
   filters: BrowseFilters;
   initialPage: BrowsePage | null;
-  deletedAssets: DeletedAsset[] | null;
+  profile: Profile;
 }) {
-  const basePath = `/@${profile.handle}`;
   const isOwner = deletedAssets !== null;
+  const name = profile.displayName || `@${profile.handle}`;
 
   return (
-    <div className={styles.page}>
-      <ProfileIdentity profile={profile} isOwner={isOwner} />
-
+    <>
+      <ProfileBanner
+        deletedCount={deletedAssets?.length ?? null}
+        isOwner={isOwner}
+        profile={profile}
+      />
+      <CatalogSurface
+        basePath={`/@${profile.handle}`}
+        creator={profile.handle}
+        filters={filters}
+        heading={isOwner ? "Your creations" : `Published by ${name}`}
+        initialPage={initialPage}
+        search={{
+          label: `Search @${profile.handle}'s creations`,
+          placeholder: "Search their creations",
+        }}
+      />
       {deletedAssets !== null ? (
-        <div className={styles.sectionBar}>
-          <Shell>
-            <nav className={styles.sections} aria-label="Profile sections">
-              <Link href={basePath} aria-current="page">
-                Creations
-              </Link>
-              <Link href="#deleted">
-                Deleted
-                <span>{deletedAssets.length}</span>
-              </Link>
-            </nav>
-          </Shell>
-        </div>
+        <DeletedAssets initialItems={deletedAssets} />
       ) : null}
-
-      <div className={styles.work}>
-        <BrowseResults
-          filters={filters}
-          initialPage={initialPage}
-          creator={profile.handle}
-          basePath={basePath}
-          heading={isOwner ? "Your creations" : "Published work"}
-        />
-      </div>
-      {deletedAssets !== null ? (
-        <div className={styles.deletedRegion}>
-          <DeletedAssets initialItems={deletedAssets} />
-        </div>
-      ) : null}
-    </div>
+    </>
   );
 }
