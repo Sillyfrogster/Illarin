@@ -3,204 +3,233 @@
 import { Check, KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, TextInput, Trouble } from "@/components/ui/field";
 import { browserFetch } from "@/lib/api/browser-mutation";
-import formStyles from "./AuthForm.module.css";
-import styles from "./PasswordResetPanel.module.css";
 
-type ErrorAnswer = { error?: string };
-type SubmissionResult = { ok: true } | { ok: false; error: string };
+type Refusal = { error?: string };
+type Result = { ok: true } | { ok: false; error: string };
 
-const connectionError =
+const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-async function postJSON(
+async function post(
   endpoint: string,
   body: Record<string, string>,
-  fallbackError: string,
-): Promise<SubmissionResult> {
+  fallback: string,
+): Promise<Result> {
   try {
     const response = await browserFetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     if (response.ok) return { ok: true };
-    const answer = (await response.json()) as ErrorAnswer;
-    return { ok: false, error: answer.error ?? fallbackError };
+    const answer = (await response.json()) as Refusal;
+    return { error: answer.error ?? fallback, ok: false };
   } catch {
-    return { ok: false, error: connectionError };
+    return { error: UNREACHABLE, ok: false };
   }
 }
 
+/** Where a recovery step has landed, said once and acted on once. */
+function Landing({
+  action,
+  body,
+  mark,
+  spoken = false,
+  title,
+}: {
+  action: ReactNode;
+  body: string;
+  mark: ReactNode;
+  spoken?: boolean;
+  title: string;
+}) {
+  return (
+    <section
+      aria-live={spoken ? "polite" : undefined}
+      className="max-w-[30rem]"
+    >
+      {mark}
+      <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
+        {title}
+      </h2>
+      <p className="mt-3 font-prose text-prose text-mute">{body}</p>
+      <div className="mt-7">{action}</div>
+    </section>
+  );
+}
+
+function Mark({ children }: { children: ReactNode }) {
+  return (
+    <span className="grid size-12 place-items-center rounded-plate bg-accent-wash text-accent">
+      {children}
+    </span>
+  );
+}
+
+/** Asks where to send a one-use link, and never says whether the address was found. */
 export function PasswordResetRequestPanel() {
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
+  const [trouble, setTrouble] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
-    setError("");
+    setTrouble("");
     const form = new FormData(event.currentTarget);
 
-    const result = await postJSON(
+    const result = await post(
       "/api/v1/auth/password-reset",
       { email: String(form.get("email") ?? "") },
       "The reset request could not be sent.",
     );
-    if (result.ok) {
-      setSent(true);
-    } else {
-      setError(result.error);
-    }
+    if (result.ok) setSent(true);
+    else setTrouble(result.error);
     setPending(false);
   }
 
   if (sent) {
     return (
-      <section className={styles.confirmation} aria-live="polite">
-        <Mail size={25} strokeWidth={1.4} aria-hidden="true" />
-        <h2>Check your email</h2>
-        <p>
-          If that verified address belongs to an account, a one-use password
-          link is on its way.
-        </p>
-        <Link
-          className={`${formStyles.submit} ${styles.confirmationAction}`}
-          href="/sign-in"
-        >
-          Return to sign in
-        </Link>
-      </section>
+      <Landing
+        action={
+          <Button asChild size="large" variant="primary">
+            <Link href="/sign-in">Return to sign in</Link>
+          </Button>
+        }
+        body="If that verified address belongs to an account, a one-use password link is on its way."
+        mark={
+          <Mark>
+            <Mail aria-hidden="true" className="size-6" strokeWidth={1.5} />
+          </Mark>
+        }
+        spoken
+        title="Check your email"
+      />
     );
   }
 
   return (
-    <form className={formStyles.form} onSubmit={submit} noValidate>
-      <div className={`${formStyles.headingGroup} ${styles.headingGroup}`}>
-        <KeyRound size={24} strokeWidth={1.35} aria-hidden="true" />
-        <h2>Find your account</h2>
-        <p>
-          This also works if Discord has been your only way into Illarin until
-          now.
-        </p>
-      </div>
-      <div className={formStyles.field}>
-        <label htmlFor="reset-email">Verified email address</label>
-        <input
+    <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
+      <Field
+        hint="This also works if Discord has been your only way into Illarin until now."
+        htmlFor="reset-email"
+        label="Verified email address"
+      >
+        <TextInput
+          aria-describedby="reset-email-hint"
+          autoCapitalize="none"
+          autoComplete="email"
           id="reset-email"
           name="email"
-          type="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          spellCheck={false}
           required
+          spellCheck={false}
+          type="email"
         />
+      </Field>
+
+      {trouble ? <Trouble>{trouble}</Trouble> : null}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button loading={pending} size="large" type="submit" variant="primary">
+          {pending ? "Sending a reset link" : "Send reset link"}
+        </Button>
+        <Button asChild variant="ghost">
+          <Link href="/sign-in">Return to sign in</Link>
+        </Button>
       </div>
-      {error ? (
-        <p className={formStyles.error} role="alert">
-          {error}
-        </p>
-      ) : null}
-      <button className={formStyles.submit} type="submit" disabled={pending}>
-        {pending ? "Sending a reset link…" : "Send reset link"}
-      </button>
-      <Link className={styles.secondary} href="/sign-in">
-        Return to sign in
-      </Link>
     </form>
   );
 }
 
+/** Takes the new password the one-use link opened the door for. */
 export function PasswordResetCompletionPanel() {
-  const search = useSearchParams();
-  const token = search.get("token");
+  const token = useSearchParams().get("token");
   const [pending, setPending] = useState(false);
   const [complete, setComplete] = useState(false);
-  const [error, setError] = useState("");
+  const [trouble, setTrouble] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) return;
     setPending(true);
-    setError("");
+    setTrouble("");
     const form = new FormData(event.currentTarget);
 
-    const result = await postJSON(
+    const result = await post(
       "/api/v1/auth/password-reset/complete",
-      { token, password: String(form.get("password") ?? "") },
+      { password: String(form.get("password") ?? ""), token },
       "This password reset link could not be used.",
     );
-    if (result.ok) {
-      setComplete(true);
-    } else {
-      setError(result.error);
-    }
+    if (result.ok) setComplete(true);
+    else setTrouble(result.error);
     setPending(false);
   }
 
   if (complete) {
     return (
-      <section className={styles.confirmation} aria-live="polite">
-        <span className={styles.successMark}>
-          <Check size={23} strokeWidth={1.8} aria-hidden="true" />
-        </span>
-        <h2>Your password is ready</h2>
-        <p>
-          You can now return with your verified email, even without Discord.
-        </p>
-        <Link
-          className={`${formStyles.submit} ${styles.confirmationAction}`}
-          href="/sign-in"
-        >
-          Sign in with email
-        </Link>
-      </section>
+      <Landing
+        action={
+          <Button asChild size="large" variant="primary">
+            <Link href="/sign-in">Sign in with email</Link>
+          </Button>
+        }
+        body="You can now return with your verified email, even without Discord."
+        mark={
+          <Mark>
+            <Check aria-hidden="true" className="size-6" strokeWidth={2} />
+          </Mark>
+        }
+        spoken
+        title="Your password is ready"
+      />
     );
   }
 
   if (!token) {
     return (
-      <section className={styles.confirmation}>
-        <KeyRound size={25} strokeWidth={1.35} aria-hidden="true" />
-        <h2>This link is incomplete</h2>
-        <p>Request a fresh password link and open it from your email.</p>
-        <Link
-          className={`${formStyles.submit} ${styles.confirmationAction}`}
-          href="/forgot-password"
-        >
-          Request another link
-        </Link>
-      </section>
+      <Landing
+        action={
+          <Button asChild size="large" variant="primary">
+            <Link href="/forgot-password">Request another link</Link>
+          </Button>
+        }
+        body="Request a fresh password link and open it from your email."
+        mark={
+          <Mark>
+            <KeyRound aria-hidden="true" className="size-6" strokeWidth={1.5} />
+          </Mark>
+        }
+        title="This link is incomplete"
+      />
     );
   }
 
   return (
-    <form className={formStyles.form} onSubmit={submit} noValidate>
-      <div className={`${formStyles.headingGroup} ${styles.headingGroup}`}>
-        <KeyRound size={24} strokeWidth={1.35} aria-hidden="true" />
-        <h2>Choose a new password</h2>
-        <p>The link can be used once. Your new password may be any length.</p>
-      </div>
-      <div className={formStyles.field}>
-        <label htmlFor="reset-password">New password</label>
-        <input
+    <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
+      <Field
+        hint="The link can be used once. Your new password may be any length."
+        htmlFor="reset-password"
+        label="New password"
+      >
+        <TextInput
+          aria-describedby="reset-password-hint"
+          autoComplete="new-password"
           id="reset-password"
           name="password"
-          type="password"
-          autoComplete="new-password"
           required
+          type="password"
         />
-      </div>
-      {error ? (
-        <p className={formStyles.error} role="alert">
-          {error}
-        </p>
-      ) : null}
-      <button className={formStyles.submit} type="submit" disabled={pending}>
-        {pending ? "Setting your password…" : "Set password"}
-      </button>
+      </Field>
+
+      {trouble ? <Trouble>{trouble}</Trouble> : null}
+
+      <Button loading={pending} size="large" type="submit" variant="primary">
+        {pending ? "Setting your password" : "Set password"}
+      </Button>
     </form>
   );
 }

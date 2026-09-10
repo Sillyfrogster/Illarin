@@ -4,182 +4,199 @@ import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  controlClasses,
+  Field,
+  TextInput,
+  Trouble,
+} from "@/components/ui/field";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
-import styles from "./AccountForm.module.css";
-import formStyles from "./AuthForm.module.css";
+import { cn } from "@/lib/cn";
 
-type ErrorAnswer = { error?: string; field?: string };
+type Refusal = { error?: string; field?: string };
 
+const UNREACHABLE =
+  "We could not reach Illarin. Check your connection and try again.";
+
+/** Signing in and creating an account are one form, because they ask the same things. */
 export function AccountForm({
-  mode,
   discordError,
+  mode,
   returnTo,
 }: {
-  mode: "sign-in" | "sign-up";
   discordError?: string;
+  mode: "sign-in" | "sign-up";
   returnTo?: string;
 }) {
   const router = useRouter();
   const { setAccount } = useAuth();
-  const [error, setError] = useState<ErrorAnswer | null>(null);
+  const [refused, setRefused] = useState<Refusal | null>(null);
   const [pending, setPending] = useState(false);
+
+  const signUp = mode === "sign-up";
+  const carry = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
-    setError(null);
+    setRefused(null);
 
     const form = new FormData(event.currentTarget);
     const body: Record<string, string> = {
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
     };
-    if (mode === "sign-up") body.handle = String(form.get("handle") ?? "");
+    if (signUp) body.handle = String(form.get("handle") ?? "");
 
     try {
       const response = await browserFetch(
-        mode === "sign-up" ? "/api/v1/auth/sign-up" : "/api/v1/auth/sign-in",
+        signUp ? "/api/v1/auth/sign-up" : "/api/v1/auth/sign-in",
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(body),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         },
       );
-      const answer = (await response.json()) as SignedInAccount & ErrorAnswer;
+      const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setError(answer);
+        setRefused(answer);
         return;
       }
       setAccount(answer);
-      if (mode === "sign-up") {
-        router.push(
-          returnTo
-            ? `/verify-email?returnTo=${encodeURIComponent(returnTo)}`
-            : "/verify-email",
-        );
-      } else {
-        router.push(returnTo ?? "/browse");
-      }
+      router.push(signUp ? `/verify-email${carry}` : (returnTo ?? "/browse"));
     } catch {
-      setError({
-        error:
-          "We could not reach Illarin. Check your connection and try again.",
-      });
+      setRefused({ error: UNREACHABLE });
     } finally {
       setPending(false);
     }
   }
 
-  const signUp = mode === "sign-up";
-  const alternativeHref = `${signUp ? "/sign-in" : "/sign-up"}${
-    returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-  }`;
+  const failed = (field: string) => refused?.field === field;
 
   return (
-    <form className={formStyles.form} onSubmit={submit} noValidate>
-      <a
-        className={styles.discord}
-        href={`/api/v1/auth/discord${
-          returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-        }`}
+    <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
+      <Button asChild size="large" variant="outline">
+        <a href={`/api/v1/auth/discord${carry}`}>
+          <MessageCircle aria-hidden="true" />
+          Continue with Discord
+        </a>
+      </Button>
+
+      {discordError ? <Trouble>{discordError}</Trouble> : null}
+
+      <p
+        aria-hidden="true"
+        className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 font-ui text-meta text-mute"
       >
-        <MessageCircle size={18} strokeWidth={1.7} aria-hidden="true" />
-        Continue with Discord
-      </a>
-
-      {discordError ? (
-        <p className={formStyles.error} role="alert">
-          {discordError}
-        </p>
-      ) : null}
-
-      <div className={styles.divider} aria-hidden="true">
-        <span />
-        <p>or use email</p>
-        <span />
-      </div>
+        <span className="h-px bg-rule" />
+        or use email
+        <span className="h-px bg-rule" />
+      </p>
 
       {signUp ? (
-        <div className={formStyles.field}>
-          <label htmlFor="account-handle">Handle</label>
+        <Field
+          hint="3–32 lowercase letters, numbers, dots or underscores."
+          htmlFor="account-handle"
+          label="Handle"
+          trouble={failed("handle") ? refused?.error : undefined}
+        >
           <div
-            className={styles.handleField}
-            data-error={error?.field === "handle" ? "true" : undefined}
+            className={cn(
+              controlClasses,
+              "flex items-center gap-0.5 px-0 py-0 focus-within:inset-ring-accent",
+              failed("handle") && "inset-ring-stop",
+            )}
           >
-            <span aria-hidden="true">@</span>
+            <span
+              aria-hidden="true"
+              className="pl-3.5 font-display text-lede text-mute"
+            >
+              @
+            </span>
             <input
-              id="account-handle"
-              name="handle"
-              type="text"
-              minLength={3}
-              maxLength={32}
-              autoComplete="username"
+              aria-describedby="account-handle-hint"
+              aria-invalid={failed("handle") || undefined}
               autoCapitalize="none"
-              spellCheck={false}
-              aria-describedby="handle-hint"
-              aria-invalid={error?.field === "handle" || undefined}
+              autoComplete="username"
+              className="min-h-11 w-full min-w-0 bg-transparent pr-3.5 font-ui text-ui text-ink outline-none"
+              id="account-handle"
+              maxLength={32}
+              minLength={3}
+              name="handle"
               required
+              spellCheck={false}
+              type="text"
             />
           </div>
-          <p id="handle-hint" className={styles.hint}>
-            3–32 lowercase letters, numbers, dots or underscores.
-          </p>
-        </div>
+        </Field>
       ) : null}
 
-      <div className={formStyles.field}>
-        <label htmlFor="account-email">Email address</label>
-        <input
+      <Field
+        htmlFor="account-email"
+        label="Email address"
+        trouble={failed("email") ? refused?.error : undefined}
+      >
+        <TextInput
+          aria-invalid={failed("email") || undefined}
+          autoCapitalize="none"
+          autoComplete="email"
           id="account-email"
           name="email"
-          type="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          aria-invalid={error?.field === "email" || undefined}
           required
+          spellCheck={false}
+          type="email"
         />
-      </div>
+      </Field>
 
-      <div className={formStyles.field}>
-        <div className={styles.fieldLabel}>
-          <label htmlFor="account-password">Password</label>
-          {!signUp ? (
-            <Link href="/forgot-password">Forgot password?</Link>
-          ) : null}
-        </div>
-        <input
+      <Field
+        htmlFor="account-password"
+        label="Password"
+        trailing={
+          signUp ? null : (
+            <Link
+              className="-mx-1 inline-flex min-h-11 items-center px-1 font-ui text-meta font-medium text-accent underline-offset-4 hover:underline"
+              href="/forgot-password"
+            >
+              Forgot password?
+            </Link>
+          )
+        }
+        trouble={failed("password") ? refused?.error : undefined}
+      >
+        <TextInput
+          aria-invalid={failed("password") || undefined}
+          autoComplete={signUp ? "new-password" : "current-password"}
           id="account-password"
           name="password"
-          type="password"
-          autoComplete={signUp ? "new-password" : "current-password"}
-          aria-invalid={error?.field === "password" || undefined}
           required
+          type="password"
         />
-      </div>
+      </Field>
 
-      {error?.error ? (
-        <p className={formStyles.error} role="alert">
-          {error.error}
-        </p>
+      {refused?.error && !refused.field ? (
+        <Trouble>{refused.error}</Trouble>
       ) : null}
 
-      <button className={formStyles.submit} type="submit" disabled={pending}>
+      <Button loading={pending} size="large" type="submit" variant="primary">
         {pending
           ? signUp
-            ? "Creating your account…"
-            : "Signing you in…"
+            ? "Creating your account"
+            : "Signing you in"
           : signUp
             ? "Create account"
             : "Sign in"}
-      </button>
+      </Button>
 
-      <p className={styles.alternative}>
-        {signUp ? "Already have an account?" : "New to Illarin?"}{" "}
-        <Link href={alternativeHref}>
+      <p className="flex flex-wrap items-center gap-x-1.5 font-ui text-ui text-mute">
+        {signUp ? "Already have an account?" : "New to Illarin?"}
+        <Link
+          className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-accent underline-offset-4 hover:underline"
+          href={`${signUp ? "/sign-in" : "/sign-up"}${carry}`}
+        >
           {signUp ? "Sign in" : "Create an account"}
         </Link>
       </p>

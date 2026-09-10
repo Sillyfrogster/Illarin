@@ -4,13 +4,18 @@ import { Check, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import { useAuth } from "@/lib/auth";
 import { safeInternalReturnPath } from "@/lib/internal-return";
-import styles from "./VerificationPanel.module.css";
 
-type VerificationState = "checking" | "waiting" | "verified" | "error";
+type Standing = "checking" | "waiting" | "verified" | "refused";
 
+const UNREACHABLE =
+  "We could not reach Illarin. Check your connection and try again.";
+
+/** Opens a verification link, or waits for one and corrects the address it went to. */
 export function VerificationPanel() {
   const search = useSearchParams();
   const router = useRouter();
@@ -21,10 +26,10 @@ export function VerificationPanel() {
     ? "Return to linking"
     : "Browse Illarin";
   const started = useRef(false);
-  const [state, setState] = useState<VerificationState>(
+  const [standing, setStanding] = useState<Standing>(
     token ? "checking" : "waiting",
   );
-  const [message, setMessage] = useState("");
+  const [said, setSaid] = useState("");
   const [changing, setChanging] = useState(false);
 
   useEffect(() => {
@@ -34,30 +39,28 @@ export function VerificationPanel() {
     async function verify() {
       try {
         const response = await browserFetch("/api/v1/auth/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
         const answer = (await response.json()) as { error?: string };
         if (!response.ok) {
-          setMessage(
-            answer.error ?? "This verification link could not be used.",
-          );
-          setState("error");
+          setSaid(answer.error ?? "This verification link could not be used.");
+          setStanding("refused");
           return;
         }
         await refresh();
-        setState("verified");
+        setStanding("verified");
         router.replace(
           returnTo === "/browse"
             ? "/verify-email?verified=1"
             : `/verify-email?verified=1&returnTo=${encodeURIComponent(returnTo)}`,
         );
       } catch {
-        setMessage(
+        setSaid(
           "We could not reach Illarin. Check your connection and try the link again.",
         );
-        setState("error");
+        setStanding("refused");
       }
     }
 
@@ -66,107 +69,136 @@ export function VerificationPanel() {
 
   async function changeEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setChanging(true);
-    setMessage("");
-    const form = new FormData(event.currentTarget);
+    setSaid("");
 
     try {
       const response = await browserFetch("/api/v1/account/email", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: String(new FormData(form).get("email") ?? ""),
+        }),
         credentials: "same-origin",
-        body: JSON.stringify({ email: String(form.get("email") ?? "") }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
       const answer = (await response.json()) as { error?: string };
       if (!response.ok) {
-        setMessage(answer.error ?? "The email address could not be changed.");
+        setSaid(answer.error ?? "The email address could not be changed.");
         return;
       }
       await refresh();
-      event.currentTarget.reset();
-      setMessage("A fresh verification link is on its way.");
+      form.reset();
+      setSaid("A fresh verification link is on its way.");
     } catch {
-      setMessage(
-        "We could not reach Illarin. Check your connection and try again.",
-      );
+      setSaid(UNREACHABLE);
     } finally {
       setChanging(false);
     }
   }
 
-  if (state === "checking") {
+  if (standing === "checking") {
     return (
-      <section className={styles.panel} aria-live="polite">
-        <Mail size={25} strokeWidth={1.3} />
-        <h2>Verifying your address…</h2>
-        <p>The page will settle in just a moment.</p>
-      </section>
-    );
-  }
-
-  if (state === "verified" || (!token && account?.emailVerified)) {
-    return (
-      <section className={styles.panel}>
-        <span className={styles.successMark}>
-          <Check size={24} strokeWidth={1.8} />
+      <section aria-busy="true" aria-live="polite" className="max-w-[30rem]">
+        <span className="grid size-12 place-items-center rounded-plate bg-accent-wash text-accent">
+          <Mail aria-hidden="true" className="size-6" strokeWidth={1.5} />
         </span>
-        <h2>Your address is verified</h2>
-        <p>Your handle is yours, and you can now publish work under it.</p>
-        <Link className={styles.primaryLink} href={returnTo}>
-          {returnLabel}
-        </Link>
+        <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
+          Verifying your address
+        </h2>
+        <p className="mt-3 font-prose text-prose text-mute">
+          The page will settle in just a moment.
+        </p>
       </section>
     );
   }
 
-  if (state === "error") {
+  if (standing === "verified" || (!token && account?.emailVerified)) {
     return (
-      <section className={styles.panel}>
-        <Mail size={25} strokeWidth={1.3} />
-        <h2>This link did not open</h2>
-        <p className={styles.error} role="alert">
-          {message}
+      <section aria-live="polite" className="max-w-[30rem]">
+        <span className="grid size-12 place-items-center rounded-plate bg-accent-wash text-accent">
+          <Check aria-hidden="true" className="size-6" strokeWidth={2} />
+        </span>
+        <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
+          Your address is verified
+        </h2>
+        <p className="mt-3 font-prose text-prose text-mute">
+          Your handle is yours, and you can now publish work under it.
         </p>
-        <Link className={styles.primaryLink} href="/sign-in">
-          Return to sign in
-        </Link>
+        <div className="mt-7">
+          <Button asChild size="large" variant="primary">
+            <Link href={returnTo}>{returnLabel}</Link>
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  if (standing === "refused") {
+    return (
+      <section className="grid max-w-[30rem] gap-5">
+        <div>
+          <span className="grid size-12 place-items-center rounded-plate bg-stop-wash text-stop">
+            <Mail aria-hidden="true" className="size-6" strokeWidth={1.5} />
+          </span>
+          <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
+            This link did not open
+          </h2>
+        </div>
+        <Trouble>{said}</Trouble>
+        <div>
+          <Button asChild size="large" variant="primary">
+            <Link href="/sign-in">Return to sign in</Link>
+          </Button>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className={styles.panel}>
-      <Mail size={25} strokeWidth={1.3} />
-      <h2>Check your email</h2>
-      <p>
-        We sent a verification link
-        {account?.email ? ` to ${account.email}` : " to your address"}. You can
-        keep browsing while you wait.
-      </p>
+    <section className="grid max-w-[30rem] gap-6">
+      <div>
+        <span className="grid size-12 place-items-center rounded-plate bg-accent-wash text-accent">
+          <Mail aria-hidden="true" className="size-6" strokeWidth={1.5} />
+        </span>
+        <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
+          Check your email
+        </h2>
+        <p className="mt-3 font-prose text-prose text-mute">
+          We sent a verification link
+          {account?.email ? ` to ${account.email}` : " to your address"}. You
+          can keep browsing while you wait.
+        </p>
+      </div>
 
       {account && !account.emailVerified ? (
-        <form className={styles.changeForm} onSubmit={changeEmail}>
-          <label htmlFor="corrected-email">Mistyped the address?</label>
-          <div className={styles.changeRow}>
-            <input
-              id="corrected-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="Correct email address"
-              required
-            />
-            <button type="submit" disabled={changing}>
-              {changing ? "Sending…" : "Send a new link"}
-            </button>
-          </div>
+        <form className="grid gap-3" onSubmit={changeEmail}>
+          <Field htmlFor="corrected-email" label="Mistyped the address?">
+            <div className="flex flex-wrap items-center gap-3">
+              <TextInput
+                autoComplete="email"
+                className="min-w-0 flex-1 basis-56"
+                id="corrected-email"
+                name="email"
+                placeholder="Correct email address"
+                required
+                type="email"
+              />
+              <Button loading={changing} type="submit" variant="secondary">
+                {changing ? "Sending" : "Send a new link"}
+              </Button>
+            </div>
+          </Field>
         </form>
       ) : null}
 
-      {message ? <output className={styles.message}>{message}</output> : null}
-      <Link className={styles.secondaryLink} href="/browse">
-        Browse while you wait
-      </Link>
+      {said ? <Said>{said}</Said> : null}
+
+      <div>
+        <Button asChild variant="ghost">
+          <Link href="/browse">Browse while you wait</Link>
+        </Button>
+      </div>
     </section>
   );
 }
