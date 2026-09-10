@@ -540,3 +540,89 @@ func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
 	}
 	return file
 }
+
+func TestCharXGivesEveryBundledImageAHomeAndKeepsGalleryNamesInOrder(t *testing.T) {
+	file := charxCard(t, `{
+		"spec":"chara_card_v3","spec_version":"3.0",
+		"data":{"name":"Ana","assets":[
+			{"type":"icon","uri":"embeded://assets/icon/main.png","name":"main","ext":"png"},
+			{"type":"x_gallery","uri":"embeded://assets/other/first.png","name":"At the door","ext":"png"},
+			{"type":"emotion","uri":"embeded://assets/emotion/happy.png","name":"happy","ext":"png"},
+			{"type":"x_gallery","uri":"embeded://assets/other/second.png","name":"On the stair","ext":"png"},
+			{"type":"user_icon","uri":"embeded://assets/user/you.png","name":"you","ext":"png"}
+		]}
+	}`, []string{
+		"assets/icon/main.png",
+		"assets/other/first.png",
+		"assets/emotion/happy.png",
+		"assets/other/second.png",
+		"assets/user/you.png",
+		"assets/loose/unnamed.png",
+	})
+
+	parsed := resolveAndParse(t, file)
+	want := []struct {
+		role  media.Role
+		name  string
+		place block.Role
+	}{
+		{media.Avatar, "main", ""},
+		{media.Gallery, "At the door", block.RoleGallery},
+		{media.Expression, "happy", block.RoleExpressions},
+		{media.Gallery, "On the stair", block.RoleGallery},
+		{media.Gallery, "", block.RoleGallery},
+	}
+	if len(parsed.Media) != len(want) {
+		t.Fatalf("media = %+v, want %d pictures", parsed.Media, len(want))
+	}
+	for i, expected := range want {
+		got := parsed.Media[i]
+		if got.Role != expected.role || got.Name != expected.name ||
+			got.ElementRole != expected.place {
+			t.Errorf("media %d = role %q name %q element %q, want %q %q %q",
+				i, got.Role, got.Name, got.ElementRole,
+				expected.role, expected.name, expected.place)
+		}
+	}
+}
+
+func TestCharXLeavesAPersonaIconOutRatherThanCallingItGallery(t *testing.T) {
+	file := charxCard(t, `{
+		"spec":"chara_card_v3","spec_version":"3.0",
+		"data":{"name":"Ana","assets":[
+			{"type":"user_icon","uri":"embeded://assets/user/you.png","name":"you","ext":"png"}
+		]}
+	}`, []string{"assets/user/you.png"})
+
+	if parsed := resolveAndParse(t, file); len(parsed.Media) != 0 {
+		t.Fatalf("media = %+v, want the persona icon left alone", parsed.Media)
+	}
+}
+
+func TestACharXThatNamesNoAssetsIsReadFromItsArchiveLayout(t *testing.T) {
+	file := charxCard(t, `{
+		"spec":"chara_card_v3","spec_version":"3.0",
+		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello"}
+	}`, []string{
+		"assets/icon/image/main.png",
+		"assets/emotion/image/happy.png",
+		"assets/other/image/one.png",
+		"assets/other/image/two.png",
+	})
+
+	parsed := resolveAndParse(t, file)
+	want := []media.Role{
+		media.Avatar, media.Expression, media.Gallery, media.Gallery,
+	}
+	if len(parsed.Media) != len(want) {
+		t.Fatalf("media = %+v, want every bundled image", parsed.Media)
+	}
+	for i, role := range want {
+		if parsed.Media[i].Role != role {
+			t.Errorf("media %d role = %q, want %q", i, parsed.Media[i].Role, role)
+		}
+	}
+	if parsed.Media[2].ElementRole != block.RoleGallery {
+		t.Errorf("an image under assets/other went to %q", parsed.Media[2].ElementRole)
+	}
+}

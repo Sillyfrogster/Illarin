@@ -44,12 +44,14 @@ type cardAsset struct {
 	Ext  string `json:"ext"`
 }
 
+// archivedImages routes every bundled image, naming the ones the card names.
 func archivedImages(read card, file probe.Inspection) []format.Media {
 	var assets []cardAsset
 	if raw, ok := read.fields["assets"]; ok {
 		_ = json.Unmarshal(raw, &assets)
 	}
-	var found []format.Media
+	named := make(map[uint32]bool)
+	found := make([]format.Media, 0, len(file.Images))
 	hasAvatar := false
 	for _, asset := range assets {
 		path, embedded := strings.CutPrefix(asset.URI, embeddedPrefix)
@@ -57,9 +59,10 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 			continue
 		}
 		image, located := archivedImage(file, path)
-		if !located {
+		if !located || named[image] {
 			continue
 		}
+		named[image] = true
 		role, wanted := assetRole(asset, hasAvatar)
 		if !wanted {
 			continue
@@ -67,17 +70,50 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 		if role == media.Avatar {
 			hasAvatar = true
 		}
-		elementRole := block.Role("")
-		if role == media.Expression {
-			elementRole = block.RoleExpressions
-		} else if role == media.Gallery {
-			elementRole = block.RoleGallery
+		found = append(found, format.Media{
+			Role: role, ImageID: image, ElementRole: elementRole(role), Name: asset.Name,
+		})
+	}
+	for _, image := range file.Images {
+		if image.Locator.Container != probe.ZIP || named[image.ID] {
+			continue
+		}
+		role := archivedRole(image.Locator.Name, hasAvatar)
+		if role == media.Avatar {
+			hasAvatar = true
 		}
 		found = append(found, format.Media{
-			Role: role, ImageID: image, ElementRole: elementRole, Name: asset.Name,
+			Role: role, ImageID: image.ID, ElementRole: elementRole(role),
 		})
 	}
 	return found
+}
+
+// archivedRole reads the layout the spec recommends, and guesses nothing beyond it.
+func archivedRole(name string, hasAvatar bool) media.Role {
+	folder := strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "./")
+	switch {
+	case strings.HasPrefix(folder, "assets/icon/"):
+		if hasAvatar {
+			return media.AvatarAlt
+		}
+		return media.Avatar
+	case strings.HasPrefix(folder, "assets/emotion/"):
+		return media.Expression
+	default:
+		return media.Gallery
+	}
+}
+
+func elementRole(role media.Role) block.Role {
+	switch role {
+	case media.Expression:
+		return block.RoleExpressions
+	case media.Gallery:
+		return block.RoleGallery
+	default:
+		return ""
+	}
 }
 
 func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
