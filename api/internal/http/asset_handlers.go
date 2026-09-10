@@ -566,6 +566,7 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 			ThumbUrl:  image.ThumbURL,
 			Width:     image.Width,
 			Height:    image.Height,
+			Bytes:     int(image.Bytes),
 		})
 	}
 	blocks, err := toAPIBlocks(found.Kind, found.Blocks)

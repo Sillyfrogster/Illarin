@@ -352,8 +352,9 @@ components:
       required:
         - images
       description: >-
-        An ordered list of images. An item carries its image and one optional
-        free-text name, and its position is where it sits in the list.
+        An ordered list of images. An item carries its image, one optional
+        free-text name and, in a gallery, whether it travels in downloads. Its
+        position is where it sits in the list.
       properties:
         images:
           type: array
@@ -374,6 +375,13 @@ components:
                 format: uuid
               name:
                 type: string
+              omitFromDownloads:
+                type: boolean
+                description: >-
+                  The creator's own choice to keep this image out of downloads.
+                  A reader can put it back for their own copy without changing
+                  it. Only a gallery image carries the choice; it is refused on
+                  an expression set, whose images an application indexes by name.
     FieldListContent:
       type: object
       required:

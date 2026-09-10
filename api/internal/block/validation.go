@@ -50,6 +50,26 @@ func ValidateContentLimits(elements []Element) error {
 	return nil
 }
 
+// validateDownloadChoice keeps the gallery's export choice off the roles that have none.
+func validateDownloadChoice(element Element, name string) error {
+	if element.Role == RoleGallery {
+		return nil
+	}
+	set, isSet := element.Content.(ImageSet)
+	if !isSet {
+		return nil
+	}
+	for index, image := range set.Images {
+		if image.OmitFromDownloads {
+			return fmt.Errorf(
+				"%s image %d was told to stay out of downloads, which only a gallery image chooses",
+				name, index+1,
+			)
+		}
+	}
+	return nil
+}
+
 func validateItemIDs(element Element, name string) error {
 	seen := make(map[uuid.UUID]struct{})
 	for index, id := range ItemIDs(element.Content) {
@@ -192,6 +212,9 @@ func ValidateStructure(holder Block) error {
 					"%s draws its images at %q. Choose %s before saving",
 					name, element.Options.ItemSize, joinItemSizes(),
 				)
+			}
+			if err := validateDownloadChoice(element, name); err != nil {
+				return err
 			}
 		} else if element.Options.ItemSize != "" {
 			return fmt.Errorf(

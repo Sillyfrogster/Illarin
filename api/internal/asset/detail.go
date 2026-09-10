@@ -28,6 +28,7 @@ type DetailImage struct {
 	ThumbURL  string
 	Width     int
 	Height    int
+	Bytes     int64
 }
 
 type Detail struct {
@@ -176,6 +177,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft || working),
 			Width:     int(image.Width.Int32),
 			Height:    int(image.Height.Int32),
+			Bytes:     image.ByteSize,
 		})
 	}
 	if found.IsOwner {

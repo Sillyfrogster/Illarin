@@ -405,10 +405,11 @@ func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPage
 }
 
 const assetPageMedia = `-- name: AssetPageMedia :many
-select media.id, media.role, media.width, media.height,
+select media.id, media.role, media.width, media.height, blob.byte_size,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
   from assets a
   join asset_media media on media.asset_id = a.id
+  join blobs blob on blob.id = media.blob_id
  where a.id = $1
    and media.is_current
    and media.width is not null
@@ -427,11 +428,12 @@ select media.id, media.role, media.width, media.height,
 `
 
 type AssetPageMediaRow struct {
-	ID      pgtype.UUID
-	Role    string
-	Width   pgtype.Int4
-	Height  pgtype.Int4
-	IsCover bool
+	ID       pgtype.UUID
+	Role     string
+	Width    pgtype.Int4
+	Height   pgtype.Int4
+	ByteSize int64
+	IsCover  bool
 }
 
 func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPageMediaRow, error) {
@@ -448,6 +450,7 @@ func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPa
 			&i.Role,
 			&i.Width,
 			&i.Height,
+			&i.ByteSize,
 			&i.IsCover,
 		); err != nil {
 			return nil, err

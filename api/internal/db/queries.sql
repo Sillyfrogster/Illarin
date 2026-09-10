@@ -230,10 +230,11 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: AssetPageMedia :many
-select media.id, media.role, media.width, media.height,
+select media.id, media.role, media.width, media.height, blob.byte_size,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
   from assets a
   join asset_media media on media.asset_id = a.id
+  join blobs blob on blob.id = media.blob_id
  where a.id = $1
    and media.is_current
    and media.width is not null

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,6 +22,22 @@ import (
 var ErrTargetNotOffered = errors.New("that download is not offered for this asset")
 
 var ErrLinkedInstallOnly = errors.New("this asset is linked-install-only")
+
+var ErrExportTooLarge = errors.New("that choice of images makes a file too large to produce")
+
+var ErrExportImageUnreadable = errors.New("an image this download needs could not be read")
+
+// MaxExportBytes is the largest file a download may produce.
+const MaxExportBytes = 64 << 20
+
+// GallerySelection is one reader's choice of gallery images for one download.
+type GallerySelection struct {
+	Images []uuid.UUID
+}
+
+func (g *GallerySelection) holds(mediaID uuid.UUID) bool {
+	return slices.Contains(g.Images, mediaID)
+}
 
 type Export struct {
 	Body      []byte
@@ -40,6 +57,7 @@ type exportSubject struct {
 	ownerID    *uuid.UUID
 	lifecycle  Lifecycle
 	revisionID *uuid.UUID
+	gallery    *GallerySelection
 }
 
 func (s *Service) OpenExport(
@@ -47,6 +65,7 @@ func (s *Service) OpenExport(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	target string,
+	gallery *GallerySelection,
 ) (Export, error) {
 	tx, err := s.beginReadSnapshot(ctx)
 	if err != nil {
@@ -58,6 +77,7 @@ func (s *Service) OpenExport(
 	if err != nil {
 		return Export{}, err
 	}
+	subject.gallery = gallery
 	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
 		return Export{}, err
 	}
@@ -179,10 +199,11 @@ func (s *Service) writeExport(
 	subject exportSubject,
 	writer format.Writer,
 ) (format.Artifact, error) {
+	travelling := subject.travellingElements()
 	asset := format.ExportAsset{
-		Kind: subject.kind, Header: subject.header, Elements: subject.elements(),
+		Kind: subject.kind, Header: subject.header, Elements: travelling,
 	}
-	cover, images, err := s.exportImages(ctx, q, subject)
+	cover, images, err := s.exportImages(ctx, q, subject, travelling)
 	if err != nil {
 		return format.Artifact{}, err
 	}
@@ -195,6 +216,9 @@ func (s *Service) writeExport(
 	if err != nil {
 		return format.Artifact{}, fmt.Errorf("write %s: %w", writer.ID(), err)
 	}
+	if len(written.Body) > MaxExportBytes {
+		return format.Artifact{}, ErrExportTooLarge
+	}
 	return written, nil
 }
 
@@ -204,6 +228,35 @@ func (subject exportSubject) elements() []block.Element {
 		elements = append(elements, holder.Elements...)
 	}
 	return elements
+}
+
+// travellingElements drops the gallery images this download leaves behind.
+func (subject exportSubject) travellingElements() []block.Element {
+	elements := subject.elements()
+	for i, element := range elements {
+		if element.Role != block.RoleGallery {
+			continue
+		}
+		set, isSet := element.Content.(block.ImageSet)
+		if !isSet {
+			continue
+		}
+		travelling := make([]block.ImageItem, 0, len(set.Images))
+		for _, image := range set.Images {
+			if subject.carries(image) {
+				travelling = append(travelling, image)
+			}
+		}
+		elements[i].Content = block.ImageSet{Images: travelling}
+	}
+	return elements
+}
+
+func (subject exportSubject) carries(image block.ImageItem) bool {
+	if subject.gallery == nil {
+		return !image.OmitFromDownloads
+	}
+	return subject.gallery.holds(image.MediaID)
 }
 
 func (subject exportSubject) capability() format.CapabilitySubject {
@@ -300,9 +353,10 @@ func (s *Service) exportImages(
 	ctx context.Context,
 	q db.DBTX,
 	subject exportSubject,
+	travelling []block.Element,
 ) (*format.ExportMedia, map[uuid.UUID]format.ExportMedia, error) {
 	wanted := make([]uuid.UUID, 0)
-	for _, element := range subject.elements() {
+	for _, element := range travelling {
 		switch content := element.Content.(type) {
 		case block.ImageSet:
 			for _, image := range content.Images {
@@ -331,23 +385,31 @@ func (s *Service) exportImages(
 	}
 
 	rows, err := q.Query(ctx, `
-		select id, blob_id from asset_media
-		 where asset_id = $1 and is_current and id = any($2)
+		select media.id, media.blob_id, blob.byte_size
+		  from asset_media media
+		  join blobs blob on blob.id = media.blob_id
+		 where media.asset_id = $1 and media.is_current and media.id = any($2)
 	`, subject.assetID, wanted)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
 	}
 	defer rows.Close()
 	blobs := make(map[uuid.UUID]uuid.UUID)
+	var total int64
 	for rows.Next() {
 		var mediaID, blobID uuid.UUID
-		if err := rows.Scan(&mediaID, &blobID); err != nil {
+		var size int64
+		if err := rows.Scan(&mediaID, &blobID, &size); err != nil {
 			return nil, nil, fmt.Errorf("read a picture to export: %w", err)
 		}
 		blobs[mediaID] = blobID
+		total += size
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
+	}
+	if total > MaxExportBytes {
+		return nil, nil, ErrExportTooLarge
 	}
 
 	images := make(map[uuid.UUID]format.ExportMedia, len(blobs))
@@ -355,7 +417,7 @@ func (s *Service) exportImages(
 	for mediaID, blobID := range blobs {
 		picture, err := s.readBlob(ctx, blobID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("read picture %s: %w", mediaID, err)
+			return nil, nil, fmt.Errorf("%w: picture %s: %w", ErrExportImageUnreadable, mediaID, err)
 		}
 		picture.URL = s.exportMediaURL(mediaID, private)
 		images[mediaID] = picture

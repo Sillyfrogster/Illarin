@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
@@ -132,6 +133,11 @@ func (s *Service) deliveryPictures(
 	assetID uuid.UUID,
 	coverID *uuid.UUID,
 ) ([]DeliveryPicture, error) {
+	blocks, err := readPublishedBlocks(ctx, q, assetID)
+	if err != nil {
+		return nil, fmt.Errorf("read the blocks to deliver: %w", err)
+	}
+	withheld := galleryImagesLeftBehind(blocks)
 	rows, err := q.Query(ctx, `
 		select id, role
 		  from asset_public.asset_media
@@ -150,11 +156,33 @@ func (s *Service) deliveryPictures(
 		if err := rows.Scan(&picture.MediaID, &picture.Role); err != nil {
 			return nil, fmt.Errorf("read a picture to deliver: %w", err)
 		}
+		if withheld[picture.MediaID] {
+			continue
+		}
 		picture.IsCover = coverID != nil && *coverID == picture.MediaID
 		picture.URL = s.exportMediaURL(picture.MediaID, true)
 		pictures = append(pictures, picture)
 	}
 	return pictures, rows.Err()
+}
+
+// galleryImagesLeftBehind names the gallery images the creator keeps out of downloads.
+func galleryImagesLeftBehind(blocks []block.Block) map[uuid.UUID]bool {
+	withheld := make(map[uuid.UUID]bool)
+	for _, holder := range blocks {
+		for _, element := range holder.Elements {
+			set, isSet := element.Content.(block.ImageSet)
+			if !isSet || element.Role != block.RoleGallery {
+				continue
+			}
+			for _, image := range set.Images {
+				if image.OmitFromDownloads {
+					withheld[image.MediaID] = true
+				}
+			}
+		}
+	}
+	return withheld
 }
 
 func (s *Service) SignedURL(path string) string {

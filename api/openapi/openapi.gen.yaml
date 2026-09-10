@@ -4663,6 +4663,19 @@ paths:
             list was never a choice and is refused.
           schema:
             type: string
+        - name: images
+          in: query
+          required: false
+          description: >-
+            The gallery images this one download carries, as a comma-separated
+            list of media ids. Leave the parameter off to take the creator's own
+            choice, and send it empty to take no gallery images at all. It
+            changes nothing stored and nothing another reader sees. Cover and
+            expression images are not chosen here: a cover is the card's own
+            picture and an expression set an application indexes by name, so
+            both travel whole.
+          schema:
+            type: string
       responses:
         '200':
           description: >-
@@ -4704,6 +4717,14 @@ paths:
                 format: binary
         '404':
           description: No such asset
+        '413':
+          description: >-
+            The chosen images make a file larger than Illarin will produce. The
+            whole selection is refused and nothing is left out of it.
+        '503':
+          description: >-
+            An image this download needs could not be read, so no file was
+            produced. Nothing partial is handed over.
   /v1/assets/{id}/media:
     get:
       operationId: listMedia
@@ -7127,8 +7148,9 @@ components:
       required:
         - images
       description: >-
-        An ordered list of images. An item carries its image and one optional
-        free-text name, and its position is where it sits in the list.
+        An ordered list of images. An item carries its image, one optional
+        free-text name and, in a gallery, whether it travels in downloads. Its
+        position is where it sits in the list.
       properties:
         images:
           type: array
@@ -7149,6 +7171,14 @@ components:
                 format: uuid
               name:
                 type: string
+              omitFromDownloads:
+                type: boolean
+                description: >-
+                  The creator's own choice to keep this image out of downloads.
+                  A reader can put it back for their own copy without changing
+                  it. Only a gallery image carries the choice; it is refused on
+                  an expression set, whose images an application indexes by
+                  name.
     FieldListContent:
       type: object
       required:
@@ -8023,9 +8053,10 @@ components:
         destination:
           type: string
           description: >-
-            Where the content lands when that is not the format's standard home
-            for it. Independent of how much survives, so it rides on a carried
-            verdict too.
+            One plain sentence for content that lands somewhere other than the
+            format's standard home for it, saying what a reader gets.
+            Independent of how much survives, so it rides on a carried verdict
+            too.
         sample:
           $ref: '#/components/schemas/DownloadSample'
     DownloadSample:
@@ -8220,6 +8251,7 @@ components:
         - thumbUrl
         - width
         - height
+        - bytes
       properties:
         id:
           type: string
@@ -8245,6 +8277,12 @@ components:
         height:
           type: integer
           minimum: 1
+        bytes:
+          type: integer
+          minimum: 0
+          description: >-
+            The stored file's size, which is what the download chooser adds up
+            to say how large a file a choice of images will make.
     AssetList:
       type: object
       required:

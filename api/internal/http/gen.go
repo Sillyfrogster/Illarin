@@ -2174,6 +2174,8 @@ type AssetIdentityRequest struct {
 
 // AssetImage defines model for AssetImage.
 type AssetImage struct {
+	// Bytes The stored file's size, which is what the download chooser adds up to say how large a file a choice of images will make.
+	Bytes     int                `json:"bytes"`
 	DetailUrl string             `json:"detailUrl"`
 	Height    int                `json:"height"`
 	Id        openapi_types.UUID `json:"id"`
@@ -2553,7 +2555,7 @@ type DistinctionMark struct {
 
 // DownloadRoleVerdict defines model for DownloadRoleVerdict.
 type DownloadRoleVerdict struct {
-	// Destination Where the content lands when that is not the format's standard home for it. Independent of how much survives, so it rides on a carried verdict too.
+	// Destination One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too.
 	Destination *string `json:"destination,omitempty"`
 	Label       string  `json:"label"`
 
@@ -2644,13 +2646,16 @@ type FieldListContent struct {
 	} `json:"fields"`
 }
 
-// ImageSetContent An ordered list of images. An item carries its image and one optional free-text name, and its position is where it sits in the list.
+// ImageSetContent An ordered list of images. An item carries its image, one optional free-text name and, in a gallery, whether it travels in downloads. Its position is where it sits in the list.
 type ImageSetContent struct {
 	Images []struct {
 		// Id Illarin's own id for this item, minted when the item is created. Preserved data keys against it, so send it back unchanged; an item with no id is a new one.
 		Id      *openapi_types.UUID `json:"id,omitempty"`
 		MediaId openapi_types.UUID  `json:"mediaId"`
 		Name    *string             `json:"name,omitempty"`
+
+		// OmitFromDownloads The creator's own choice to keep this image out of downloads. A reader can put it back for their own copy without changing it. Only a gallery image carries the choice; it is refused on an expression set, whose images an application indexes by name.
+		OmitFromDownloads *bool `json:"omitFromDownloads,omitempty"`
 	} `json:"images"`
 }
 
@@ -4408,6 +4413,12 @@ type DownloadDeliveryExportParams struct {
 	Signature string `form:"signature" json:"signature"`
 }
 
+// DownloadExportParams defines parameters for DownloadExport.
+type DownloadExportParams struct {
+	// Images The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole.
+	Images *string `form:"images,omitempty" json:"images,omitempty"`
+}
+
 // GetMediaVariantParams defines parameters for GetMediaVariant.
 type GetMediaVariantParams struct {
 	// Expires When the signature runs out. A draft's images are served against a short-lived signature at the same address they keep once published.
@@ -5268,7 +5279,7 @@ type ServerInterface interface {
 	DownloadSource(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /download/{id}/{target})
-	DownloadExport(c *gin.Context, id openapi_types.UUID, target string)
+	DownloadExport(c *gin.Context, id openapi_types.UUID, target string, params DownloadExportParams)
 
 	// (GET /media/{media_id}/{variant}/{derivative_version})
 	GetMediaVariant(c *gin.Context, mediaId openapi_types.UUID, variant GetMediaVariantParamsVariant, derivativeVersion int, params GetMediaVariantParams)
@@ -5799,6 +5810,17 @@ func (siw *ServerInterfaceWrapper) DownloadExport(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadExportParams
+
+	// ------------- Optional query parameter "images" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "images", c.Request.URL.Query(), &params.Images, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter images: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -5806,7 +5828,7 @@ func (siw *ServerInterfaceWrapper) DownloadExport(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.DownloadExport(c, id, target)
+	siw.Handler.DownloadExport(c, id, target, params)
 }
 
 // GetMediaVariant operation middleware

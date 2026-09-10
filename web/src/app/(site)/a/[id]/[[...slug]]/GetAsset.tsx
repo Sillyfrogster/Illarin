@@ -6,10 +6,11 @@ import {
   Clock,
   Download,
   FileDown,
+  Images,
   Send,
 } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -19,6 +20,7 @@ import {
 import { Select } from "@/components/ui/select";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type {
+  AssetBlock,
   AssetImage,
   AssetInstance,
   AssetInstanceList,
@@ -29,11 +31,16 @@ import {
   DOWNLOAD_DESTINATION,
   deliveryDestinations,
   deliveryFailureLine,
+  downloadBytes,
   type FormatChoice,
+  type FormatLoss,
+  fileSize,
   formatChoices,
   instanceStanding,
-  itemCount,
+  MAX_DOWNLOAD_BYTES,
   sendActionLabel,
+  type TravellingImage,
+  travellingGallery,
 } from "@/lib/asset-delivery";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -61,6 +68,7 @@ function arrivalDate(when: string): string {
 export function GetAsset({
   assetId,
   kindLabel,
+  blocks,
   downloads,
   original,
   images,
@@ -70,6 +78,7 @@ export function GetAsset({
 }: {
   assetId: string;
   kindLabel: string;
+  blocks: AssetBlock[];
   downloads: DownloadTarget[];
   original: OriginalUpload | null;
   images: AssetImage[];
@@ -83,6 +92,11 @@ export function GetAsset({
   const [destination, setDestination] = useState(DOWNLOAD_DESTINATION);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
+  const gallery = useMemo(
+    () => travellingGallery({ blocks, images }),
+    [blocks, images],
+  );
+  const [taken, setTaken] = useState<string[] | null>(null);
   const watched = useRef(0);
 
   const read = useCallback(async () => {
@@ -120,6 +134,17 @@ export function GetAsset({
   const pending = Boolean(
     instance?.delivery && instance.delivery.state !== "failed",
   );
+  const carriesGallery = chosen?.carriesGallery ?? false;
+  const included =
+    taken ?? gallery.filter((one) => one.chosen).map((one) => one.mediaId);
+  const bytes = downloadBytes({
+    format: chosen?.format ?? "",
+    blocks,
+    images,
+    chosen: included,
+    carries: carriesGallery,
+  });
+  const oversized = bytes > MAX_DOWNLOAD_BYTES;
 
   useEffect(() => {
     if (!pending) {
@@ -199,6 +224,18 @@ export function GetAsset({
           </fieldset>
         ) : null}
 
+        {gallery.length > 0 && !linkedInstallOnly ? (
+          <GalleryChoice
+            bytes={bytes}
+            carried={carriesGallery}
+            gallery={gallery}
+            included={included}
+            onChange={setTaken}
+            oversized={oversized}
+            verdict={chosen?.gallery ?? null}
+          />
+        ) : null}
+
         {destinations.length > 1 ? (
           <>
             <label
@@ -228,12 +265,43 @@ export function GetAsset({
 
         {instance ? <InstanceStanding instance={instance} /> : null}
 
+        {toAFile && oversized ? (
+          <p className="mt-4 flex items-start gap-2 text-meta text-stop">
+            <CircleAlert
+              aria-hidden="true"
+              className="mt-0.5 size-3.5 shrink-0"
+            />
+            Illarin writes files up to {fileSize(MAX_DOWNLOAD_BYTES)}. Leave
+            some images out and the download opens again.
+          </p>
+        ) : null}
+
         {toAFile ? (
-          <Button asChild className="mt-4 w-full" variant="primary">
-            <a href={`/download/${assetId}/${chosen?.format}`}>
-              <Download aria-hidden="true" />
-              Download {chosen?.label}
-            </a>
+          <Button
+            asChild={!oversized}
+            className="mt-4 w-full"
+            disabled={oversized}
+            variant="primary"
+          >
+            {oversized ? (
+              <>
+                <Download aria-hidden="true" />
+                Download {chosen?.label}
+              </>
+            ) : (
+              <a
+                href={downloadAddress({
+                  assetId,
+                  format: chosen?.format ?? "",
+                  carried: carriesGallery,
+                  gallery,
+                  included,
+                })}
+              >
+                <Download aria-hidden="true" />
+                Download {chosen?.label}
+              </a>
+            )}
           </Button>
         ) : instance ? (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -298,6 +366,138 @@ export function GetAsset({
   );
 }
 
+/** downloadAddress names the reader's images only where they differ from the creator's. */
+function downloadAddress({
+  assetId,
+  format,
+  carried,
+  gallery,
+  included,
+}: {
+  assetId: string;
+  format: string;
+  carried: boolean;
+  gallery: TravellingImage[];
+  included: string[];
+}): string {
+  const address = `/download/${assetId}/${format}`;
+  if (!carried) return address;
+  const byDefault = gallery
+    .filter((one) => one.chosen)
+    .map((one) => one.mediaId);
+  if (
+    byDefault.length === included.length &&
+    byDefault.every((mediaId) => included.includes(mediaId))
+  ) {
+    return address;
+  }
+  return `${address}?images=${included.join(",")}`;
+}
+
+function GalleryChoice({
+  bytes,
+  carried,
+  gallery,
+  included,
+  onChange,
+  oversized,
+  verdict,
+}: {
+  bytes: number;
+  carried: boolean;
+  gallery: TravellingImage[];
+  included: string[];
+  onChange: (images: string[]) => void;
+  oversized: boolean;
+  verdict: FormatLoss | null;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <fieldset className="mt-5 min-w-0 border-0 p-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <legend className="text-meta font-medium text-ink">Images</legend>
+        <p
+          className={cn(
+            "shrink-0 text-meta tabular-nums",
+            oversized ? "text-stop" : "text-mute",
+          )}
+        >
+          {carried ? `${included.length} of ${gallery.length}` : gallery.length}
+        </p>
+      </div>
+      {verdict?.line ? (
+        <p className="mt-0.5 text-meta text-mute">{verdict.line}</p>
+      ) : null}
+      {carried ? (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <p className={cn("text-meta", oversized ? "text-stop" : "text-mute")}>
+            About {fileSize(bytes)}
+          </p>
+          <button
+            aria-expanded={open}
+            className="inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-meta font-medium text-ink outline-offset-3 hover:bg-deep"
+            onClick={() => setOpen((shown) => !shown)}
+            type="button"
+          >
+            <Images aria-hidden="true" size={15} />
+            {open ? "Done choosing" : "Choose images"}
+          </button>
+        </div>
+      ) : null}
+      {carried && open ? (
+        <>
+          <ul className="mt-2 flex list-none flex-wrap gap-2">
+            {gallery.map((picture) => {
+              const taken = included.includes(picture.mediaId);
+              return (
+                <li key={picture.mediaId}>
+                  <label
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center gap-2 rounded-control px-2 py-1.5",
+                      taken ? "bg-accent-wash" : "hover:bg-deep",
+                    )}
+                  >
+                    <input
+                      checked={taken}
+                      className="size-4 shrink-0 accent-[var(--v-action)]"
+                      onChange={() =>
+                        onChange(
+                          taken
+                            ? included.filter((one) => one !== picture.mediaId)
+                            : [...included, picture.mediaId],
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    {picture.thumbUrl ? (
+                      <Image
+                        alt=""
+                        className="size-8 rounded-control object-cover"
+                        height={32}
+                        src={picture.thumbUrl}
+                        unoptimized
+                        width={32}
+                      />
+                    ) : null}
+                    <span className="max-w-40 truncate text-meta text-ink">
+                      {picture.name}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-meta text-mute">
+            This is your copy only. The cover and any expression images travel
+            whole either way.
+          </p>
+        </>
+      ) : null}
+    </fieldset>
+  );
+}
+
 function FormatRow({
   choice,
   chosen,
@@ -328,17 +528,16 @@ function FormatRow({
         </span>
       </label>
       {chosen && choice.losses.length > 0 ? (
-        <ul className="space-y-3 px-3 pb-3">
+        <ul className="list-none space-y-3.5 px-3 pb-3">
           {choice.losses.map((loss) => (
             <li key={loss.role}>
-              <p className="text-meta font-medium text-ink">
-                {loss.label}
-                <span className="font-normal text-mute">
-                  {" "}
-                  — {itemCount(loss.sample.count)}
-                </span>
-              </p>
-              <p className="text-meta text-mute">{loss.line}</p>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-meta font-medium text-ink">{loss.label}</p>
+                <p className="shrink-0 text-meta text-mute tabular-nums">
+                  {loss.sample.count}
+                </p>
+              </div>
+              <p className="mt-0.5 text-meta text-mute">{loss.line}</p>
               <Sample images={images} sample={loss.sample} />
             </li>
           ))}

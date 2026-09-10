@@ -461,7 +461,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)

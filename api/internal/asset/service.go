@@ -557,8 +557,9 @@ func (s *Service) DownloadExport(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	target string,
+	gallery *GallerySelection,
 ) (Export, error) {
-	return s.OpenExport(ctx, assetID, viewerID, target)
+	return s.OpenExport(ctx, assetID, viewerID, target, gallery)
 }
 
 func (s *Service) DownloadExportForLinkedInstance(

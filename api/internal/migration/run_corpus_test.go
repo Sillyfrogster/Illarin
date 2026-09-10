@@ -529,7 +529,7 @@ func assertReturningPresetActivated(
 		t.Errorf("initial allowed apps = %v, want Lumiverse", reader.AllowedApps)
 	}
 	if _, err := assets.OpenExport(
-		context.Background(), assetID, nil, "preset_lumiverse",
+		context.Background(), assetID, nil, "preset_lumiverse", nil,
 	); !errors.Is(err, asset.ErrLinkedInstallOnly) {
 		t.Errorf("ordinary export error = %v, want linked-install-only", err)
 	}

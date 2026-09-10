@@ -2815,7 +2815,7 @@ export interface components {
         text: string;
       }[];
     };
-    /** @description An ordered list of images. An item carries its image and one optional free-text name, and its position is where it sits in the list. */
+    /** @description An ordered list of images. An item carries its image, one optional free-text name and, in a gallery, whether it travels in downloads. Its position is where it sits in the list. */
     ImageSetContent: {
       images: {
         /**
@@ -2826,6 +2826,8 @@ export interface components {
         /** Format: uuid */
         mediaId: string;
         name?: string;
+        /** @description The creator's own choice to keep this image out of downloads. A reader can put it back for their own copy without changing it. Only a gallery image carries the choice; it is refused on an expression set, whose images an application indexes by name. */
+        omitFromDownloads?: boolean;
       }[];
     };
     FieldListContent: {
@@ -3213,7 +3215,7 @@ export interface components {
       verdict: "carried" | "reduced" | "dropped";
       /** @description What went, on a reduced verdict. */
       reason?: string;
-      /** @description Where the content lands when that is not the format's standard home for it. Independent of how much survives, so it rides on a carried verdict too. */
+      /** @description One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. */
       destination?: string;
       sample: components["schemas"]["DownloadSample"];
     };
@@ -3310,6 +3312,8 @@ export interface components {
       thumbUrl: string;
       width: number;
       height: number;
+      /** @description The stored file's size, which is what the download chooser adds up to say how large a file a choice of images will make. */
+      bytes: number;
     };
     AssetList: {
       items: components["schemas"]["BrowseAsset"][];
@@ -10490,7 +10494,10 @@ export interface operations {
   };
   downloadExport: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole. */
+        images?: string;
+      };
       header?: never;
       path: {
         id: string;
@@ -10518,6 +10525,20 @@ export interface operations {
       };
       /** @description No such asset */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The chosen images make a file larger than Illarin will produce. The whole selection is refused and nothing is left out of it. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description An image this download needs could not be read, so no file was produced. Nothing partial is handed over. */
+      503: {
         headers: {
           [name: string]: unknown;
         };

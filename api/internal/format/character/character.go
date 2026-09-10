@@ -104,10 +104,10 @@ func declaration(id string) format.Declaration {
 			}
 		}
 	}
-	if id != V2 {
+	if id == V3 {
 		gallery := roles[block.RoleGallery]
-		gallery.Write.Destination = "an " + galleryAssetType +
-			" asset, which only a client that knows the type will show"
+		gallery.Write.Destination = "Written into the card itself. " +
+			"RisuAI unpacks them; SillyTavern and Lumiverse do not."
 		roles[block.RoleGallery] = gallery
 	}
 	consumedKeys := []string{

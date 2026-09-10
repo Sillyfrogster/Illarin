@@ -66,7 +66,7 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	if err != nil || len(listed.Items) != 0 {
 		t.Fatalf("private name in browse = %+v, error = %v", listed, err)
 	}
-	exported, err := svc.OpenExport(ctx, id, nil, "chara_card_v2")
+	exported, err := svc.OpenExport(ctx, id, nil, "chara_card_v2", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

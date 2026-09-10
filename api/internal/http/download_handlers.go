@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
@@ -27,12 +28,22 @@ func (h *Handlers) DownloadSource(c *gin.Context, id types.UUID) {
 	h.handOffDownload(c, download)
 }
 
-func (h *Handlers) DownloadExport(c *gin.Context, id types.UUID, target string) {
+func (h *Handlers) DownloadExport(
+	c *gin.Context,
+	id types.UUID,
+	target string,
+	params DownloadExportParams,
+) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
 	}
-	download, err := h.assets.DownloadExport(c.Request.Context(), id, viewerID, target)
+	gallery, ok := chosenGallery(params.Images)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+		return
+	}
+	download, err := h.assets.DownloadExport(c.Request.Context(), id, viewerID, target, gallery)
 	if err != nil {
 		h.downloadError(c, err)
 		return
@@ -40,13 +51,45 @@ func (h *Handlers) DownloadExport(c *gin.Context, id types.UUID, target string) 
 	h.handOffExport(c, download)
 }
 
-func (h *Handlers) downloadError(c *gin.Context, err error) {
-	if errors.Is(err, asset.ErrNotFound) || errors.Is(err, asset.ErrTargetNotOffered) || errors.Is(err, asset.ErrLinkedInstallOnly) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
-		return
+func chosenGallery(images *string) (*asset.GallerySelection, bool) {
+	if images == nil {
+		return nil, true
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
+	chosen := asset.GallerySelection{Images: []uuid.UUID{}}
+	for _, written := range strings.Split(*images, ",") {
+		written = strings.TrimSpace(written)
+		if written == "" {
+			continue
+		}
+		mediaID, err := uuid.Parse(written)
+		if err != nil {
+			return nil, false
+		}
+		chosen.Images = append(chosen.Images, mediaID)
+	}
+	return &chosen, true
 }
+
+func (h *Handlers) downloadError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, asset.ErrNotFound), errors.Is(err, asset.ErrTargetNotOffered),
+		errors.Is(err, asset.ErrLinkedInstallOnly):
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+	case errors.Is(err, asset.ErrExportTooLarge):
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": oversizedDownload})
+	case errors.Is(err, asset.ErrExportImageUnreadable):
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": unreadableDownloadImage})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
+	}
+}
+
+const (
+	oversizedDownload = "Those images make a file larger than Illarin will produce. " +
+		"Leave some of them out and try again."
+	unreadableDownloadImage = "One of this asset's images could not be read, " +
+		"so Illarin made no file rather than one missing a picture. Try again in a moment."
+)
 
 func (h *Handlers) handOffExport(c *gin.Context, download asset.Export) {
 	if download.Event != nil {

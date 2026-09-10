@@ -226,6 +226,7 @@ export function AssetHeader({
             <div className="mt-7">
               <GetAsset
                 assetId={asset.id}
+                blocks={asset.blocks}
                 downloads={asset.downloads}
                 holdsNothing={holdsNothing}
                 images={asset.media}

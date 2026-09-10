@@ -18,23 +18,6 @@ func aBookOf(entries int) json.RawMessage {
 	return json.RawMessage(`{"entries":[` + strings.Join(written, ",") + `]}`)
 }
 
-func uploadedImageID(t *testing.T, r http.Handler, session *http.Cookie, assetID string) string {
-	t.Helper()
-	response := send(t, r, authorized(mediaUploadRequest(
-		t, assetID, "expression", httpTestPNG(t, 200, 200),
-	), session))
-	if response.Code != http.StatusCreated {
-		t.Fatalf("add an image: status = %d, want 201: %s", response.Code, response.Body.String())
-	}
-	var added struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(response.Body.Bytes(), &added); err != nil {
-		t.Fatalf("decode the added image: %v", err)
-	}
-	return added.ID
-}
-
 func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
@@ -129,7 +112,7 @@ func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
 	if added.Elements[0].Role != "expressions" {
 		t.Fatalf("the expression set carries role %q", added.Elements[0].Role)
 	}
-	mediaID := uploadedImageID(t, r, session, started.ID)
+	mediaID := uploadedImageID(t, r, session, started.ID, "expression", httpTestPNG(t, 200, 200))
 
 	body := editableBlock(added)
 	body.Elements[0].Content = json.RawMessage(

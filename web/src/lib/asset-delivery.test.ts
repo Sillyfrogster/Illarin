@@ -1,11 +1,20 @@
 import { expect, test } from "bun:test";
-import type { AssetInstance, DownloadTarget } from "@/lib/api/query";
+import type {
+  AssetBlock,
+  AssetElement,
+  AssetImage,
+  AssetInstance,
+  DownloadTarget,
+} from "@/lib/api/query";
 import {
   deliveryDestinations,
   deliveryFailureLine,
+  downloadBytes,
+  fileSize,
   formatChoices,
   instanceStanding,
   sendActionLabel,
+  travellingGallery,
 } from "@/lib/asset-delivery";
 
 function target(
@@ -93,18 +102,20 @@ test("a format names what it leaves behind and how much of it there was", () => 
   ]);
 });
 
-test("a carried role that lands somewhere unusual is worth a note, not a loss", () => {
+test("a carried role that lands somewhere unusual is a note, and not everything travels", () => {
   const [choice] = formatChoices({
     downloads: [
       target("card", "Card", true, [
-        role("scenario", "carried", { destination: "the description" }),
+        role("scenario", "carried", {
+          destination: "It goes into the description instead.",
+        }),
       ]),
     ],
     holdsNothing: false,
   });
-  expect(choice.cost).toBe("Includes everything");
+  expect(choice.cost).toBe("1 thing some apps will not show");
   expect(choice.losses.map((loss) => loss.line)).toEqual([
-    "Included as the description.",
+    "It goes into the description instead.",
   ]);
 });
 
@@ -182,4 +193,154 @@ test("a delivery that failed says why in words a reader can act on", () => {
     "The application kept taking this delivery without installing it.",
   );
   expect(deliveryFailureLine(null)).toBe("This delivery did not arrive.");
+});
+
+function galleryBlock(
+  images: { mediaId: string; name?: string; omitFromDownloads?: boolean }[],
+): AssetBlock {
+  return {
+    id: "block-gallery",
+    definition: "gallery",
+    title: "Gallery",
+    position: 1,
+    hidden: false,
+    layout: "single",
+    width: "full",
+    required: false,
+    hideable: true,
+    elements: [
+      {
+        id: "element-gallery",
+        type: "image_set",
+        role: "gallery",
+        slot: "main",
+        isEmpty: images.length === 0,
+        content: { images },
+      } as AssetElement,
+    ],
+  } as AssetBlock;
+}
+
+function image(
+  id: string,
+  bytes: number,
+  role: AssetImage["role"],
+): AssetImage {
+  return {
+    id,
+    role,
+    isCover: role === "avatar",
+    detailUrl: `/media/${id}`,
+    thumbUrl: `/media/${id}/thumb`,
+    width: 100,
+    height: 100,
+    bytes,
+  };
+}
+
+test("the creator's own choice is what a download carries when nobody changed it", () => {
+  const gallery = travellingGallery({
+    blocks: [
+      galleryBlock([
+        { mediaId: "a" },
+        { mediaId: "b", omitFromDownloads: true },
+      ]),
+    ],
+    images: [image("a", 10, "gallery"), image("b", 20, "gallery")],
+  });
+
+  expect(gallery.map((one) => one.mediaId)).toEqual(["a", "b"]);
+  expect(gallery.map((one) => one.chosen)).toEqual([true, false]);
+});
+
+test("an archive carries the images as they are and a card base64s them", () => {
+  const blocks = [galleryBlock([{ mediaId: "a" }])];
+  const images = [
+    image("a", 3_000_000, "gallery"),
+    image("c", 1_000_000, "avatar"),
+  ];
+
+  const archive = downloadBytes({
+    format: "charx",
+    blocks,
+    images,
+    chosen: ["a"],
+  });
+  const card = downloadBytes({
+    format: "chara_card_v3",
+    blocks,
+    images,
+    chosen: ["a"],
+  });
+
+  expect(archive).toBe(4_000_000);
+  expect(card).toBeGreaterThan(archive);
+});
+
+test("leaving an image out takes its weight off the download", () => {
+  const blocks = [galleryBlock([{ mediaId: "a" }, { mediaId: "b" }])];
+  const images = [
+    image("a", 1_000_000, "gallery"),
+    image("b", 2_000_000, "gallery"),
+  ];
+
+  expect(
+    downloadBytes({ format: "charx", blocks, images, chosen: ["a", "b"] }),
+  ).toBe(3_000_000);
+  expect(
+    downloadBytes({ format: "charx", blocks, images, chosen: ["a"] }),
+  ).toBe(1_000_000);
+});
+
+test("a format that drops the gallery counts none of it", () => {
+  const blocks = [galleryBlock([{ mediaId: "a" }])];
+  const images = [image("a", 1_000_000, "gallery")];
+
+  expect(
+    downloadBytes({
+      format: "chara_card_v2",
+      blocks,
+      images,
+      chosen: ["a"],
+      carries: false,
+    }),
+  ).toBe(0);
+});
+
+test("a file size reads in the unit a person would say it in", () => {
+  expect(fileSize(0)).toBe("0 KB");
+  expect(fileSize(4096)).toBe("4 KB");
+  expect(fileSize(4_600_000)).toBe("4.4 MB");
+});
+
+test("a format that lands content somewhere apps ignore does not claim everything travels", () => {
+  const [elsewhere, everything] = formatChoices({
+    downloads: [
+      target("charx", "CharX", false, [role("gallery", "carried")]),
+      target("chara_card_v3", "Character Card V3", true, [
+        role("gallery", "carried", {
+          destination: "In the file, but only some apps show them.",
+        }),
+      ]),
+    ],
+    holdsNothing: false,
+  });
+
+  expect(everything.cost).toBe("Includes everything");
+  expect(elsewhere.cost).toBe("1 thing some apps will not show");
+});
+
+test("a format that drops the gallery says so, so the chooser can stop offering it", () => {
+  const [drops, carries] = formatChoices({
+    downloads: [
+      target("chara_card_v2", "Character Card V2", true, [
+        role("gallery", "dropped"),
+      ]),
+      target("charx", "CharX", false, [role("gallery", "carried")]),
+    ],
+    holdsNothing: false,
+  });
+
+  expect(drops.carriesGallery).toBe(false);
+  expect(carries.carriesGallery).toBe(true);
 });

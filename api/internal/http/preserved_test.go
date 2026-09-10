@@ -347,7 +347,7 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export the card: %v", err)

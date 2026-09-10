@@ -19,9 +19,13 @@ import {
 } from "./PresetEditors";
 import { ColorSetEditor, StylesheetSetEditor } from "./ThemeEditors";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import { Field, InlineItem, Note, TextField } from "./workspace/fields";
+import { Field, InlineItem, Note, Switch, TextField } from "./workspace/fields";
 
-type ImageItem = { mediaId: string; name?: string };
+type ImageItem = {
+  mediaId: string;
+  name?: string;
+  omitFromDownloads?: boolean;
+};
 
 export function ElementFields({
   assetId,
@@ -47,6 +51,7 @@ export function ElementFields({
       <ImageEditor
         assetId={assetId}
         images={images}
+        isGallery={element.role === "gallery"}
         items={element.content.images}
         mediaRole={element.role === "expressions" ? "expression" : "gallery"}
         onAdded={onImageAdded}
@@ -220,6 +225,7 @@ export function ElementFields({
 function ImageEditor({
   assetId,
   images,
+  isGallery,
   items,
   mediaRole,
   onAdded,
@@ -228,6 +234,7 @@ function ImageEditor({
 }: {
   assetId: string;
   images: AssetImage[];
+  isGallery: boolean;
   items: ImageItem[];
   mediaRole: "expression" | "gallery";
   onAdded: () => void;
@@ -308,7 +315,7 @@ function ImageEditor({
                         </span>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-1 flex-col gap-4">
                       <Field hint="optional" label="Name">
                         <TextField
                           disabled={pending}
@@ -322,6 +329,21 @@ function ImageEditor({
                           value={item.name ?? ""}
                         />
                       </Field>
+                      {isGallery ? (
+                        <Switch
+                          checked={item.omitFromDownloads !== true}
+                          hint="Readers can change this for their own copy."
+                          label="Include in downloads"
+                          onChange={(included) =>
+                            onChange(
+                              replaceAt(items, index, {
+                                omitFromDownloads: included ? undefined : true,
+                              }),
+                            )
+                          }
+                          pending={pending}
+                        />
+                      ) : null}
                     </div>
                   </div>
                 </InlineItem>

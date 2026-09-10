@@ -186,9 +186,10 @@ type ImageSet struct {
 }
 
 type ImageItem struct {
-	ID      uuid.UUID `json:"id"`
-	MediaID uuid.UUID `json:"mediaId"`
-	Name    string    `json:"name,omitempty"`
+	ID                uuid.UUID `json:"id"`
+	MediaID           uuid.UUID `json:"mediaId"`
+	Name              string    `json:"name,omitempty"`
+	OmitFromDownloads bool      `json:"omitFromDownloads,omitempty"`
 }
 
 func (s ImageSet) Empty() bool { return len(s.Images) == 0 }

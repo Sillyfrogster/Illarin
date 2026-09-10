@@ -76,6 +76,7 @@ export default async function AssetHistoryPage({
               <>
                 <GetAsset
                   assetId={asset.id}
+                  blocks={asset.blocks}
                   downloads={asset.downloads}
                   holdsNothing={assetHoldsNothing(asset.blocks)}
                   images={asset.media}

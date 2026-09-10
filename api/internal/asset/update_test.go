@@ -77,7 +77,7 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 	if core.Elements[0].Content.(block.Prose).Text != "Second description" {
 		t.Fatal("readers still have the earlier description")
 	}
-	exported, err := svc.OpenExport(ctx, id, nil, "test_opaque")
+	exported, err := svc.OpenExport(ctx, id, nil, "test_opaque", nil)
 	if err != nil || !strings.Contains(string(exported.Body), "Second description") {
 		t.Fatalf("published download = %q, error = %v", exported.Body, err)
 	}
