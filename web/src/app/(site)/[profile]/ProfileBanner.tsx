@@ -1,7 +1,7 @@
 import { ArrowUpRight, Mail, ShieldOff, SquarePen, Trash2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
+import { CreatorPortrait } from "@/components/media/CreatorPortrait";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { LineLink } from "@/components/ui/line-link";
@@ -10,50 +10,14 @@ import { siteUrl } from "@/lib/site-metadata";
 import { ProfileRecognition } from "./ProfileRecognition";
 import { RestrictionControl } from "./RestrictionControl";
 
-const PORTRAIT =
-  "block size-24 shrink-0 overflow-hidden rounded-plate bg-deep sm:size-32 lg:size-40";
-
-/** Spreads handles across the tonal steps without storing a value. */
-function shadeOf(handle: string) {
-  let hash = 0;
-  for (const character of handle) {
-    hash = (hash * 31 + (character.codePointAt(0) ?? 0)) % 100000;
-  }
-  return hash % 4;
-}
-
-const GROUNDS = [
-  "bg-accent-wash text-accent",
-  "bg-deep text-ink",
-  "bg-media text-on-media",
-  "bg-rule/50 text-ink",
-];
-
 function Portrait({ profile }: { profile: Profile }) {
-  if (profile.avatar && !profile.restricted) {
-    return (
-      <span className={PORTRAIT}>
-        <Image
-          alt=""
-          className="size-full object-cover"
-          height={profile.avatar.height}
-          priority
-          src={profile.avatar.url}
-          unoptimized
-          width={profile.avatar.width}
-        />
-      </span>
-    );
-  }
   return (
-    <span
-      aria-hidden="true"
-      className={`${PORTRAIT} grid place-items-center ${GROUNDS[shadeOf(profile.handle)]}`}
-    >
-      <span className="font-display text-[clamp(2rem,5vw,3.25rem)] font-medium">
-        {profile.handle.slice(0, 1).toUpperCase()}
-      </span>
-    </span>
+    <CreatorPortrait
+      handle={profile.handle}
+      picture={profile.restricted ? null : profile.avatar}
+      priority
+      size="lg"
+    />
   );
 }
 
@@ -110,7 +74,7 @@ export function ProfileBanner({
           ) : (
             <>
               {profile.biography ? (
-                <p className="max-w-[62ch] font-prose text-lede text-ink">
+                <p className="max-w-[62ch] font-prose text-lede text-ink [overflow-wrap:anywhere]">
                   {profile.biography}
                 </p>
               ) : null}
