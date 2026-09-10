@@ -19,14 +19,14 @@ type App struct {
 func Apps() []App {
 	return []App{
 		{ID: "sillytavern", Label: "SillyTavern", Reads: []string{
-			"chara_card_v2", "chara_card_v3",
+			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook_sillytavern", "preset_sillytavern", "theme_sillytavern",
 		}},
 		{ID: "risu", Label: "RisuAI", Reads: []string{
 			"chara_card_v2", "chara_card_v3", "charx", "lorebook_sillytavern",
 		}},
 		{ID: "lumiverse", Label: "Lumiverse", Reads: []string{
-			"chara_card_v2", "chara_card_v3",
+			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook", "preset_lumiverse", "theme_lumiverse", "pack_lumiverse",
 		}},
 	}
@@ -76,6 +76,17 @@ func (t Target) Losses() []RoleLoss {
 		}
 	}
 	return losses
+}
+
+// Notes counts the roles this target carries somewhere only some apps read.
+func (t Target) Notes() int {
+	notes := 0
+	for _, role := range t.Roles {
+		if !role.Lossy() && role.Destination != "" {
+			notes++
+		}
+	}
+	return notes
 }
 
 type CapabilitySubject struct {
@@ -202,6 +213,7 @@ func outranks(candidate, holder Target, r *Registry) bool {
 	for _, comparison := range []int{
 		reach(candidate.Format) - reach(holder.Format),
 		len(holder.Losses()) - len(candidate.Losses()),
+		holder.Notes() - candidate.Notes(),
 		writableRoles(r, candidate.Format) - writableRoles(r, holder.Format),
 		strings.Compare(holder.Format, candidate.Format),
 	} {

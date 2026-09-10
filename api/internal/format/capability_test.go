@@ -256,7 +256,7 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 	wide.Roles[block.RoleGallery] = DirectionalRoleSupport{
 		Read: RoleSupport{Grade: SupportNone}, Write: RoleSupport{Grade: SupportNone},
 	}
-	narrow := writerDeclaration("charx", fullCharacterGrades())
+	narrow := writerDeclaration("byaf", fullCharacterGrades())
 	registry := registryOf(t, wide, narrow)
 
 	gallery := block.Element{
@@ -275,7 +275,7 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 			lossiest = target.Format
 		}
 	}
-	if lossiest != "charx" {
+	if lossiest != "byaf" {
 		t.Fatalf("the narrow target lost something; the rules do not disagree here")
 	}
 	if recommended != "chara_card_v3" {
@@ -329,5 +329,27 @@ func TestTheCapabilityStampMovesWithADeclaration(t *testing.T) {
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
 	).CapabilityStamp() {
 		t.Fatal("the stamp is not stable for one contract")
+	}
+}
+
+func TestTheRecommendationPrefersTheFormatWhoseContentActuallyArrives(t *testing.T) {
+	noted := writerDeclaration("chara_card_v3", fullCharacterGrades())
+	gallerySupport := noted.Roles[block.RoleGallery]
+	gallerySupport.Write.Destination = "Only one app unpacks them."
+	noted.Roles[block.RoleGallery] = gallerySupport
+	plain := writerDeclaration("charx", fullCharacterGrades())
+	registry := registryOf(t, noted, plain)
+
+	gallery := block.Element{
+		ID: uuid.New(), Type: block.TypeImageSet, Role: block.RoleGallery,
+		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
+	}
+	targets := registry.OfferedTargets(CapabilitySubject{
+		Kind: "character", Elements: filledCharacter(gallery),
+	})
+	for _, target := range targets {
+		if target.Recommended && target.Format != "charx" {
+			t.Fatalf("recommended %s, want the one that needs no note", target.Format)
+		}
 	}
 }

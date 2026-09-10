@@ -87,7 +87,7 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	}
 }
 
-func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
+func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -100,16 +100,20 @@ func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
 			recommended = target.Format
 		}
 	}
-	if recommended != "chara_card_v3" {
-		t.Fatalf("recommended = %q, want the format most apps can open", recommended)
+	if recommended != "charx" {
+		t.Fatalf("recommended = %q, want the format whose images every app reads", recommended)
 	}
 	if len(losses(targetLine(t, menu, "charx"))) >
 		len(losses(targetLine(t, menu, "chara_card_v3"))) {
 		t.Fatal("CharX lost more here, so least loss would have chosen CCv3 anyway")
 	}
-	gallery := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
-	if gallery.Verdict != "carried" || gallery.Destination == "" {
-		t.Fatalf("gallery verdict = %+v, want carried with a destination note", gallery)
+	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
+	if inline.Verdict != "carried" || inline.Destination == "" {
+		t.Fatalf("gallery verdict = %+v, want carried with a destination note", inline)
+	}
+	archived := roleVerdictNamed(t, targetLine(t, menu, "charx"), "gallery")
+	if archived.Verdict != "carried" || archived.Destination != "" {
+		t.Fatalf("gallery verdict = %+v, want carried with nothing to warn about", archived)
 	}
 }
 
@@ -233,7 +237,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
@@ -255,22 +259,11 @@ func givePictures(
 	assetID, mediaRole, definition string,
 ) {
 	t.Helper()
-	added := send(t, r, authorized(mediaUploadRequest(
-		t, assetID, mediaRole, httpTestPNG(t, 64, 64),
-	), session))
-	if added.Code != http.StatusCreated {
-		t.Fatalf("add an expression: %d %s", added.Code, added.Body.String())
-	}
-	var picture struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(added.Body.Bytes(), &picture); err != nil {
-		t.Fatalf("decode the added picture: %v", err)
-	}
+	mediaID := uploadedImageID(t, r, session, assetID, mediaRole, httpTestPNG(t, 64, 64))
 	block := addedBlock(t, addBlock(t, r, session, assetID, definition, "image_set"))
 	body := editableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
-		`{"images":[{"mediaId":"` + picture.ID + `","name":"happy"}]}`,
+		`{"images":[{"mediaId":"` + mediaID + `","name":"happy"}]}`,
 	)
 	if saved := saveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the %s block: %d %s", definition, saved.Code, saved.Body.String())
