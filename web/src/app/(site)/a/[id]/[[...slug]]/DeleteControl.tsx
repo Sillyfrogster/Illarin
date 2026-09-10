@@ -3,10 +3,10 @@
 import { LockKeyhole, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { deleteAsset } from "@/lib/api/query";
-import { useAuth } from "@/lib/auth";
-import styles from "./DeleteControl.module.css";
 
+/** Moving an asset to Deleted, and the confirmation that asks first. */
 export function DeleteControl({
   assetId,
   creator,
@@ -21,12 +21,10 @@ export function DeleteControl({
   frozen: boolean;
 }) {
   const router = useRouter();
-  const { account } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-
-  if (!account || account.handle !== creator) return null;
+  const noun = isDraft ? "draft" : "asset";
 
   async function remove() {
     if (pending || frozen) return;
@@ -43,58 +41,60 @@ export function DeleteControl({
   }
 
   return (
-    <section className={styles.control} aria-labelledby="delete-heading">
-      <div className={styles.icon} aria-hidden="true">
+    <section aria-labelledby="delete-heading" className="flex gap-3">
+      <span aria-hidden="true" className="mt-0.5 shrink-0 text-mute">
         {frozen ? <LockKeyhole size={18} /> : <Trash2 size={18} />}
-      </div>
-      <div className={styles.copy}>
-        <h2 id="delete-heading">
-          {isDraft ? "Delete this draft" : "Delete this asset"}
-        </h2>
-        <p>
-          {frozen
-            ? "A withheld asset cannot be deleted."
-            : isDraft
-              ? "Every block and image goes with it. You can restore it from your profile for 30 days."
-              : "Its page and downloads stop now. You can restore it from your profile for 30 days."}
-        </p>
-        {isDraft && !frozen ? (
-          <p>
-            A {kind} stays a {kind}. If you picked the wrong kind, delete this
-            draft and start the one you meant.
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div>
+          <h3 className="text-ui font-medium text-ink" id="delete-heading">
+            Delete this {noun}
+          </h3>
+          <p className="mt-1 text-meta text-mute">
+            {frozen
+              ? "A withheld asset cannot be deleted."
+              : isDraft
+                ? "Every block and image goes with it. You can restore it from your profile for 30 days."
+                : "Its page and downloads stop now. You can restore it from your profile for 30 days."}
           </p>
-        ) : null}
-        {confirming && !frozen ? (
-          <div className={styles.confirmation}>
-            <p>Move this {isDraft ? "draft" : "asset"} to Deleted?</p>
-            <button type="button" onClick={remove} disabled={pending}>
-              {pending ? "Deleting…" : "Yes, delete it"}
-            </button>
-            <button
-              type="button"
-              className={styles.cancel}
-              onClick={() => setConfirming(false)}
-              disabled={pending}
-            >
-              Keep it
-            </button>
-          </div>
-        ) : null}
+          {isDraft && !frozen ? (
+            <p className="mt-1 text-meta text-mute">
+              A {kind} stays a {kind}. If you picked the wrong kind, delete this
+              draft and start the one you meant.
+            </p>
+          ) : null}
+        </div>
         {message ? (
-          <p className={styles.error} role="alert">
+          <p className="text-meta text-stop" role="alert">
             {message}
           </p>
         ) : null}
+        {confirming && !frozen ? (
+          <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
+            <p className="text-ui text-ink">Move this {noun} to Deleted?</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button loading={pending} onClick={remove} variant="stop">
+                Yes, delete it
+              </Button>
+              <Button
+                disabled={pending}
+                onClick={() => setConfirming(false)}
+                variant="ghost"
+              >
+                Keep it
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            className="self-start"
+            disabled={frozen}
+            onClick={() => setConfirming(true)}
+          >
+            {frozen ? "Deletion locked" : "Move to Deleted"}
+          </Button>
+        )}
       </div>
-      {!confirming ? (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={frozen}
-        >
-          {frozen ? "Deletion locked" : "Move to Deleted"}
-        </button>
-      ) : null}
     </section>
   );
 }

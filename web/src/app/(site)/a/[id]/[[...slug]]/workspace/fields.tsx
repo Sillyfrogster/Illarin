@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
@@ -10,6 +10,26 @@ const MOVE =
 
 const CONTROL =
   "w-full rounded-control border-0 bg-deep px-3 text-ui text-ink outline-offset-3 placeholder:text-mute disabled:opacity-60";
+
+/** The control that returns from a step to the list or the home it opened from. */
+export function RailBack({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="-ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-control pr-3 pl-1 text-meta font-medium text-accent outline-offset-3 hover:underline"
+      onClick={onClick}
+      type="button"
+    >
+      <ChevronLeft aria-hidden="true" size={16} />
+      {children}
+    </button>
+  );
+}
 
 /** One labelled control, with its label above it and an optional aside on the same line. */
 export function Field({

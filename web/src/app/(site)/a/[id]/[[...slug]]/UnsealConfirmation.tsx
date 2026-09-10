@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import type { AssetElement } from "@/lib/api/query";
-import styles from "./UnsealConfirmation.module.css";
 
 /** The sealed prompts this edit turns public, named as the creator wrote them. */
 export function unsealedPrompts(
@@ -47,33 +47,30 @@ export function UnsealConfirmation({
 
   return (
     <dialog
-      ref={dialog}
-      className={styles.dialog}
+      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-plate bg-plane p-0 text-ink backdrop:bg-black/60"
       onCancel={(event) => {
         event.preventDefault();
         onKeepSealed();
       }}
+      ref={dialog}
     >
-      <div className={styles.body}>
-        <h2>Make this prompt public?</h2>
-        <p>
+      <div className="p-6">
+        <h2 className="font-display text-section font-medium text-ink">
+          Make this prompt public?
+        </h2>
+        <p className="mt-3 text-ui text-mute">
           Saving puts the text of {namePrompts(prompts)} in front of every
           reader, in this version and in every recorded one.
           {keepsASeal ? "" : " Ordinary downloads come back with it."}
         </p>
       </div>
-      <footer className={styles.footer}>
-        <button type="button" disabled={pending} onClick={onKeepSealed}>
+      <footer className="flex flex-wrap justify-end gap-2 border-rule border-t p-4">
+        <Button disabled={pending} onClick={onKeepSealed} variant="ghost">
           Keep sealed
-        </button>
-        <button
-          type="button"
-          className={styles.expose}
-          disabled={pending}
-          onClick={onExpose}
-        >
+        </Button>
+        <Button loading={pending} onClick={onExpose} variant="stop">
           Make prompt public
-        </button>
+        </Button>
       </footer>
     </dialog>
   );

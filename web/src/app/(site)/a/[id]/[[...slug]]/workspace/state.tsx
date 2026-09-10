@@ -148,7 +148,11 @@ export function AssetWorkspace({
   }, [saved]);
 
   useEffect(() => {
-    const stale = () => setPane({ kind: "conflict" });
+    // The publication rail reports its own refusal, and taking the pane would drop what was typed.
+    const stale = () =>
+      setPane((open) =>
+        open?.kind === "publication" ? open : { kind: "conflict" },
+      );
     window.addEventListener(WORKING_COPY_STALE, stale);
     return () => window.removeEventListener(WORKING_COPY_STALE, stale);
   }, []);

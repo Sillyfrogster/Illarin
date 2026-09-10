@@ -34,6 +34,7 @@ export function EditableText({
   active,
   activate,
   done,
+  id,
   live,
   label,
   placeholder,
@@ -46,6 +47,7 @@ export function EditableText({
   active: boolean;
   activate: () => void;
   done: () => void;
+  id?: string;
   live: boolean;
   label: string;
   placeholder?: string;
@@ -83,6 +85,7 @@ export function EditableText({
           "m-0 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-ink caret-accent shadow-none outline-none! placeholder:text-mute placeholder:italic",
           className,
         )}
+        id={id}
         onBlur={done}
         onChange={(event) => {
           growToFit(event.currentTarget);
@@ -119,6 +122,7 @@ export function EditableText({
         className,
         empty && "text-mute italic",
       )}
+      id={id}
       onKeyDown={
         live
           ? (event: KeyboardEvent<HTMLElement>) => {

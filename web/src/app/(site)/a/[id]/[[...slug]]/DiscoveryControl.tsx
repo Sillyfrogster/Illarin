@@ -3,29 +3,24 @@
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { AssetDetail } from "@/lib/api/query";
 import { saveAssetDiscovery } from "@/lib/api/query";
-import { useAuth } from "@/lib/auth";
-import styles from "./DiscoveryControl.module.css";
 
+/** Whether a published asset appears in the catalog. */
 export function DiscoveryControl({
   assetId,
-  creator,
   initialDiscovery,
   frozen,
 }: {
   assetId: string;
-  creator: string;
   initialDiscovery: AssetDetail["discovery"];
   frozen: boolean;
 }) {
   const router = useRouter();
-  const { account } = useAuth();
   const [discovery, setDiscovery] = useState(initialDiscovery);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-
-  if (!account || account.handle !== creator) return null;
 
   const listed = discovery === "listed";
   const next = listed ? "unlisted" : "listed";
@@ -46,8 +41,8 @@ export function DiscoveryControl({
   }
 
   return (
-    <section className={styles.control} aria-labelledby="discovery-heading">
-      <div className={styles.icon} aria-hidden="true">
+    <section aria-labelledby="discovery-heading" className="flex gap-3">
+      <span aria-hidden="true" className="mt-0.5 shrink-0 text-mute">
         {frozen ? (
           <LockKeyhole size={18} />
         ) : listed ? (
@@ -55,35 +50,38 @@ export function DiscoveryControl({
         ) : (
           <EyeOff size={18} />
         )}
-      </div>
-      <div className={styles.copy}>
-        <h2 id="discovery-heading">Catalog discovery</h2>
-        <p>
-          {frozen
-            ? "Locked while this asset is withheld. Only an admin can remove the withhold."
-            : listed
-              ? "Listed in the catalog and on your public profile."
-              : "Unlisted from discovery. Anyone with the link can still view and download it."}
-        </p>
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div>
+          <h3 className="text-ui font-medium text-ink" id="discovery-heading">
+            Catalog discovery
+          </h3>
+          <p className="mt-1 text-meta text-mute">
+            {frozen
+              ? "Locked while this asset is withheld. Only an admin can remove the withhold."
+              : listed
+                ? "Listed in the catalog and on your public profile."
+                : "Unlisted from discovery. Anyone with the link can still view and download it."}
+          </p>
+        </div>
         {message ? (
-          <p className={styles.error} role="alert">
+          <p className="text-meta text-stop" role="alert">
             {message}
           </p>
         ) : null}
-      </div>
-      <button
-        type="button"
-        onClick={changeDiscovery}
-        disabled={pending || frozen}
-      >
-        {frozen
-          ? "Discovery locked"
-          : pending
-            ? "Saving…"
+        <Button
+          className="self-start"
+          disabled={frozen}
+          loading={pending}
+          onClick={changeDiscovery}
+        >
+          {frozen
+            ? "Discovery locked"
             : listed
               ? "Make unlisted"
               : "List in catalog"}
-      </button>
+        </Button>
+      </div>
     </section>
   );
 }

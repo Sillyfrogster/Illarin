@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
@@ -15,6 +15,7 @@ import {
   AddAction,
   ItemMoveActions,
   Note,
+  RailBack,
   RemoveAction,
   TextField,
 } from "./fields";
@@ -67,14 +68,9 @@ export function CollectionStep({
     return (
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-meta font-medium text-accent outline-offset-3 hover:underline"
-            onClick={() => onChoose(null)}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" size={16} />
+          <RailBack onClick={() => onChoose(null)}>
             All {rows.length} {nouns}
-          </button>
+          </RailBack>
           <p className="text-label text-mute">
             {index + 1} of {rows.length}
           </p>

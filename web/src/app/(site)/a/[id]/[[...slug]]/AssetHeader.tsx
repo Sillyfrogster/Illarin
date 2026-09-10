@@ -101,6 +101,7 @@ export function AssetHeader({
               asset.name ? "text-ink" : "text-mute italic",
             )}
             done={() => workspace.setCursor(null)}
+            id="asset-name"
             label="Name"
             live={writing}
             onChange={(name) =>
@@ -134,7 +135,10 @@ export function AssetHeader({
             ) : null}
           </p>
           {writing ? (
-            <fieldset className="mt-4 min-w-0 border-0 p-0">
+            <fieldset
+              className="mt-4 min-w-0 border-0 p-0"
+              id="adult-content-answer"
+            >
               <legend className="text-label text-mute">Adult content</legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {ratings.map((rating) => (

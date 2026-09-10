@@ -10,11 +10,11 @@ import type {
   ReadinessItem,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import type { PageTarget } from "@/lib/readiness";
 import { DeleteControl } from "../DeleteControl";
 import { DiscoveryControl } from "../DiscoveryControl";
 import { ElementFields, elementHint } from "../ElementEditors";
 import { PreservedPanel } from "../PreservedPanel";
-import { PublishPanel } from "../PublishPanel";
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { SealedPanel } from "../SealedPanel";
 import {
@@ -22,12 +22,11 @@ import {
   NO_ALLOWED_APP,
   SealedPolicy,
 } from "../SealedPolicy";
-import { ShortfallPanel } from "../ShortfallPanel";
 import { UnsealConfirmation } from "../UnsealConfirmation";
-import { UpdatePanel } from "../UpdatePanel";
 import { WithholdControl } from "../WithholdControl";
 import { BlockCatalog } from "./BlockCatalog";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
+import { PublicationRail } from "./PublicationRail";
 import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
@@ -95,6 +94,20 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       elementId: element.id,
       kind: "element",
     });
+  }
+
+  function goToPage(target: PageTarget) {
+    workspace.closePane();
+    if (target.where === "block") {
+      go({ blockId: target.blockId, id: target.blockId, label: "", where: "" });
+      return;
+    }
+    document
+      .getElementById(
+        target.where === "name" ? "asset-name" : "adult-content-answer",
+      )
+      ?.scrollIntoView({ block: "center" });
+    if (target.where === "name") workspace.setCursor("identity:name");
   }
 
   const pane = workspace.pane;
@@ -226,34 +239,12 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             onClose={workspace.closePane}
             title="Publication"
           >
-            <div className="flex flex-col gap-7">
-              {workspace.isDraft && props.readiness ? (
-                <PublishPanel
-                  assetId={workspace.assetId}
-                  kind={props.kind}
-                  onNavigateToBlock={(blockId) =>
-                    go({ blockId, id: blockId, label: "", where: "" })
-                  }
-                  readiness={props.readiness}
-                />
-              ) : null}
-              {!workspace.isDraft && props.readiness ? (
-                <ShortfallPanel
-                  kind={props.kind}
-                  onNavigateToBlock={(blockId) =>
-                    go({ blockId, id: blockId, label: "", where: "" })
-                  }
-                  readiness={props.readiness}
-                />
-              ) : null}
-              {workspace.isDraft ? null : (
-                <UpdatePanel
-                  assetId={workspace.assetId}
-                  kind={props.kind}
-                  unpublishedChanges={props.unpublishedChanges}
-                />
-              )}
-            </div>
+            <PublicationRail
+              kind={props.kind}
+              onGo={goToPage}
+              readiness={props.readiness}
+              unpublishedChanges={props.unpublishedChanges}
+            />
           </WorkspaceRail>
         ) : null}
 
@@ -268,7 +259,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
               {workspace.isOwner && !workspace.isDraft ? (
                 <DiscoveryControl
                   assetId={workspace.assetId}
-                  creator={props.creator}
                   frozen={props.withheld}
                   initialDiscovery={props.discovery}
                 />
