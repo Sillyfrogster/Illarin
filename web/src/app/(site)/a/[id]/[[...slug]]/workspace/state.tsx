@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import {
+  type AddableBlock,
   type AssetBlock,
   type AssetElement,
   saveAssetBlock,
@@ -24,6 +25,8 @@ import {
   NO_ALLOWED_APP,
 } from "../SealedPolicy";
 import { unsealedPrompts } from "../UnsealConfirmation";
+import { type Arrangement, useArrangement } from "./arrangement";
+import { seatElements } from "./composition";
 import {
   blockSaveRequest,
   changedBlockIds,
@@ -44,6 +47,8 @@ export type Pane =
   | { kind: "access" }
   | { kind: "publication" }
   | { kind: "conflict" }
+  | { kind: "catalog" }
+  | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
 type Unsealing = { prompts: string[]; keepsASeal: boolean };
@@ -55,6 +60,8 @@ type Workspace = {
   editing: boolean;
   sweep: number;
   blocks: AssetBlock[];
+  addableBlocks: AddableBlock[];
+  arrangement: Arrangement;
   identity: Identity;
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
@@ -71,6 +78,7 @@ type Workspace = {
   setCursor: (cursor: string | null) => void;
   chooseItem: (elementId: string, key: string | null) => void;
   setBlocks: (blocks: AssetBlock[]) => void;
+  writeBlock: (block: AssetBlock) => void;
   applyServerBlocks: (blocks: AssetBlock[]) => void;
   editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
   writeElement: (blockId: string, element: AssetElement) => void;
@@ -93,6 +101,7 @@ export function useWorkspace() {
 }
 
 export function AssetWorkspace({
+  addableBlocks,
   assetId,
   isOwner,
   isDraft,
@@ -103,6 +112,7 @@ export function AssetWorkspace({
   unpublishedChanges,
   children,
 }: {
+  addableBlocks: AddableBlock[];
   assetId: string;
   isOwner: boolean;
   isDraft: boolean;
@@ -284,9 +294,10 @@ export function AssetWorkspace({
     setDraft((current) => {
       const changed = new Set(changedBlockIds(current, savedBlocks.current));
       const held = new Map(current.map((block) => [block.id, block]));
+      const before = new Map(savedBlocks.current.map((one) => [one.id, one]));
       return incoming.map((block) => {
         const mine = changed.has(block.id) ? held.get(block.id) : undefined;
-        return mine ? { ...block, elements: mine.elements } : block;
+        return mine ? keepWriting(block, mine, before.get(block.id)) : block;
       });
     });
     setSaved(incoming);
@@ -311,7 +322,24 @@ export function AssetWorkspace({
     [],
   );
 
+  const draftBlocks = useRef(draft);
+  useEffect(() => {
+    draftBlocks.current = draft;
+  }, [draft]);
+
+  const arrangement = useArrangement({
+    applyServerBlocks,
+    assetId,
+    blocks: draftBlocks,
+    candidate,
+    editBlockList,
+    savedBlocks,
+    say: setMessage,
+  });
+
   const value: Workspace = {
+    addableBlocks,
+    arrangement,
     assetId,
     isOwner,
     isDraft,
@@ -350,6 +378,10 @@ export function AssetWorkspace({
         return { ...current, [elementId]: key };
       }),
     setBlocks: setDraft,
+    writeBlock: (written) =>
+      setDraft((current) =>
+        current.map((block) => (block.id === written.id ? written : block)),
+      ),
     applyServerBlocks,
     editBlockList,
     writeElement: (blockId, element) =>
@@ -380,4 +412,24 @@ export function AssetWorkspace({
       {children}
     </WorkspaceContext.Provider>
   );
+}
+
+// A block the server has just rearranged, still holding what the creator wrote.
+function keepWriting(
+  server: AssetBlock,
+  draft: AssetBlock,
+  saved: AssetBlock | undefined,
+): AssetBlock {
+  const known = new Set(
+    [...draft.elements, ...(saved?.elements ?? [])].map((one) => one.id),
+  );
+  const arrived = server.elements.filter((one) => !known.has(one.id));
+  return {
+    ...server,
+    elements: seatElements(draft.layout, [...draft.elements, ...arrived]),
+    layout: draft.layout,
+    title: draft.title,
+    titleIsDefault: draft.titleIsDefault,
+    width: draft.width,
+  };
 }

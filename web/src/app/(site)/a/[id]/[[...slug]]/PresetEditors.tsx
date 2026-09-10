@@ -216,14 +216,14 @@ function GroupEditor({
           : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`
       }
     >
-      <div className="space-y-3 pt-3">
+      <div className="flex flex-col gap-3 pt-3">
         {groups.length === 0 ? (
           <Note>
             Fragments run in one list until you add a heading to group them
             under.
           </Note>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {groups.map((group, index) => (
               <li className="flex items-center gap-1" key={group.id ?? index}>
                 <TextField
@@ -291,7 +291,7 @@ function FragmentFields({
 }) {
   const isMarker = (fragment.marker ?? "") !== "";
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
         <TextField
           disabled={pending}
@@ -430,7 +430,7 @@ export function SettingGroupEditor({
   settings: PresetSetting[];
 }) {
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {settings.length === 0 ? (
         <Note>
           This group has no settings yet. Add the names your app reads.
@@ -467,7 +467,7 @@ function SettingRow({
   const supplied = setting.value != null;
   const slot = nameSlot(setting.name);
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
         <span
           className={cn(
@@ -732,7 +732,7 @@ function VariableFields({
     variable.widget === "select" || variable.widget === "multiselect";
   const numeric = variable.widget === "number" || variable.widget === "slider";
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <Field hint="what the fragments refer to it by" label="Name">
         <TextField
           disabled={pending}
@@ -971,7 +971,7 @@ function ScriptFields({
   const targets = script.targets ?? [];
   const affects = script.affects ?? [];
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <Field hint="optional" label="Name">
         <TextField
           disabled={pending}

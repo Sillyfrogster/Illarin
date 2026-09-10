@@ -54,6 +54,7 @@ export default async function AssetPage({
   return (
     <WorkingCopyProvider key={asset.id} version={asset.workingCopyVersion}>
       <AssetWorkspace
+        addableBlocks={asset.addableBlocks ?? []}
         allowedApps={asset.allowedApps}
         assetId={asset.id}
         blocks={asset.blocks}
@@ -73,8 +74,6 @@ export default async function AssetPage({
               shellClassName={SHELL}
             />
             <AssetBlocks
-              addableBlocks={asset.addableBlocks ?? []}
-              assetId={asset.id}
               images={asset.media}
               isOwner={asset.isOwner}
               kind={asset.kind}

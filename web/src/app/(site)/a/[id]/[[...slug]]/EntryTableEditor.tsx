@@ -86,7 +86,7 @@ function EntryFields({
 }) {
   const recursion = entry.recursion ?? {};
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
         <TextField
           disabled={pending}

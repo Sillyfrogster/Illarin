@@ -8,6 +8,7 @@ import { elementLabel } from "@/lib/element-label";
 import { ElementBody } from "../ElementBody";
 import { ITEM_NAME, RUNG, STACK } from "../element-runs";
 import { EditableText } from "./EditableText";
+import { ElementTools } from "./ElementTools";
 import { isEmptyContent, writesInPlace } from "./save";
 import { useWorkspace } from "./state";
 
@@ -38,7 +39,7 @@ export function EditableElementSection({
   markEmpty: boolean;
   onReadMore: () => void;
 }) {
-  const workspace = useWorkspace();
+  const tools = <ElementTools block={block} element={element} />;
 
   if (!writesInPlace(element)) {
     return (
@@ -49,14 +50,8 @@ export function EditableElementSection({
         images={images}
         isOwner
         markEmpty={markEmpty}
-        onExpand={() =>
-          workspace.openPane({
-            blockId: block.id,
-            elementId: element.id,
-            kind: "element",
-          })
-        }
         onReadMore={onReadMore}
+        tools={tools}
       />
     );
   }
@@ -66,10 +61,15 @@ export function EditableElementSection({
     title: block.title,
   });
   return (
-    <section className="flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size]">
-      {label ? (
-        <h3 className="font-prose text-label text-mute">{label}</h3>
-      ) : null}
+    <section className="group/element flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size]">
+      <div className="flex items-start justify-between gap-4">
+        {label ? (
+          <h3 className="font-prose text-label text-mute">{label}</h3>
+        ) : (
+          <span />
+        )}
+        {tools}
+      </div>
       <EditableElement blockId={block.id} element={element} />
     </section>
   );

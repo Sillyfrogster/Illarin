@@ -39,7 +39,7 @@ export function ColorSetEditor({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       {content.modes.map((mode, modeIndex) => (
         <FieldGroup
           key={mode.name || modeIndex}
@@ -105,7 +105,7 @@ function ColorRows({
   pending: boolean;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {colors.length === 0 ? (
         <Note>This mode names no colours yet.</Note>
       ) : null}
@@ -200,7 +200,7 @@ export function StylesheetSetEditor({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <Field label="Main stylesheet">
         <TextAreaField
           className="font-mono text-meta"
@@ -278,7 +278,7 @@ export function StylesheetSetEditor({
           bundle.
         </Note>
         {files.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {files.map((file, index) => (
               <li
                 className="flex flex-wrap items-center gap-x-3 gap-y-1"
@@ -342,7 +342,7 @@ function ComponentSheet({
   sheet: ThemeStylesheet;
 }) {
   return (
-    <div className={cn("space-y-3", !sheet.enabled && "opacity-70")}>
+    <div className={cn("flex flex-col gap-3", !sheet.enabled && "opacity-70")}>
       <Field label={`Component ${position + 1}`}>
         <TextField
           disabled={pending}

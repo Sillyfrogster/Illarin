@@ -1,35 +1,27 @@
 "use client";
 
-import { ListTree, Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AssetBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { useWorkspace } from "./workspace/state";
 
 type ContentsBlock = Pick<AssetBlock, "id" | "title">;
 
 const TOOL =
   "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
 
-/** The blocks a page holds, and the tools its creator arranges them with. */
+/** The blocks a page holds, and the one way to put another on it. */
 export function ContentsBar({
-  adding,
-  arranging,
   blocks,
-  canAdd,
-  onToggleAdd,
-  onToggleArrange,
   shellClassName,
   writing,
 }: {
-  adding: boolean;
-  arranging: boolean;
   blocks: ContentsBlock[];
-  canAdd: boolean;
-  onToggleAdd: () => void;
-  onToggleArrange: () => void;
   shellClassName: string;
   writing: boolean;
 }) {
+  const workspace = useWorkspace();
   const bar = useRef<HTMLDivElement>(null);
   const [activeBlockId, setActiveBlockId] = useState(blocks[0]?.id ?? null);
 
@@ -92,11 +84,7 @@ export function ContentsBar({
           "flex items-center justify-between gap-4 py-1",
         )}
       >
-        {arranging ? (
-          <p className="shrink-0 py-3 text-meta text-mute">
-            Arrangement outline
-          </p>
-        ) : blocks.length > 0 ? (
+        {blocks.length > 0 ? (
           <nav
             aria-label="Contents"
             className="flex min-w-0 flex-1 items-center gap-6"
@@ -125,41 +113,16 @@ export function ContentsBar({
           <p className="shrink-0 py-3 text-meta text-mute">Start this page</p>
         )}
 
-        {writing ? (
-          <div
-            aria-label="Page tools"
-            className="flex shrink-0 items-center gap-1"
-            role="toolbar"
+        {writing && workspace.addableBlocks.length > 0 ? (
+          <button
+            aria-expanded={workspace.pane?.kind === "catalog"}
+            className={cn(TOOL, "shrink-0")}
+            onClick={() => workspace.openPane({ kind: "catalog" })}
+            type="button"
           >
-            <button
-              aria-expanded={arranging}
-              className={TOOL}
-              onClick={onToggleArrange}
-              type="button"
-            >
-              {arranging ? (
-                <X aria-hidden="true" size={17} />
-              ) : (
-                <ListTree aria-hidden="true" size={17} />
-              )}
-              <span>{arranging ? "Close outline" : "Arrange"}</span>
-            </button>
-            {canAdd ? (
-              <button
-                aria-expanded={adding}
-                className={TOOL}
-                onClick={onToggleAdd}
-                type="button"
-              >
-                {adding ? (
-                  <X aria-hidden="true" size={17} />
-                ) : (
-                  <Plus aria-hidden="true" size={17} />
-                )}
-                <span>{adding ? "Close add" : "Add block"}</span>
-              </button>
-            ) : null}
-          </div>
+            <Plus aria-hidden="true" size={17} />
+            <span>Add block</span>
+          </button>
         ) : null}
       </div>
     </div>

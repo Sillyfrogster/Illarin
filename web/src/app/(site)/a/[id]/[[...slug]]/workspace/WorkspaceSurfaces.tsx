@@ -26,7 +26,9 @@ import { ShortfallPanel } from "../ShortfallPanel";
 import { UnsealConfirmation } from "../UnsealConfirmation";
 import { UpdatePanel } from "../UpdatePanel";
 import { WithholdControl } from "../WithholdControl";
+import { BlockCatalog } from "./BlockCatalog";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
+import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
 import { WorkspaceDock } from "./WorkspaceDock";
@@ -103,6 +105,10 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const element = edited?.elements.find(
     (item) => pane?.kind === "element" && item.id === pane.elementId,
   );
+  const removed =
+    pane?.kind === "remove"
+      ? workspace.blocks.find((block) => block.id === pane.blockId)
+      : undefined;
 
   return (
     <>
@@ -135,7 +141,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             title="A newer working copy exists"
             tone="stop"
           >
-            <div className="space-y-5">
+            <div className="flex flex-col gap-5">
               <p className="text-ui text-mute">
                 This asset was saved somewhere else, so nothing here can be
                 saved until you catch up.
@@ -160,7 +166,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             onClose={workspace.closePane}
             title={element.label || edited.title}
           >
-            <div className="space-y-5">
+            <div className="flex flex-col gap-5">
               {workspace.message === NO_ALLOWED_APP ? (
                 <p
                   className="rounded-control bg-stop-wash p-3 text-meta text-ink"
@@ -190,6 +196,29 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
+        {pane?.kind === "catalog" ? (
+          <WorkspaceRail
+            description="Blocks are grouped by where their content ends up. Nothing here is a decision you have to make now."
+            key="catalog"
+            onClose={workspace.closePane}
+            title="Add a block"
+          >
+            <BlockCatalog />
+          </WorkspaceRail>
+        ) : null}
+
+        {pane?.kind === "remove" && removed ? (
+          <WorkspaceRail
+            description="Removing a block deletes what it holds. Nothing else on the page changes."
+            key="remove"
+            onClose={workspace.closePane}
+            title={`Remove “${removed.title}”?`}
+            tone="stop"
+          >
+            <RemoveBlock block={removed} />
+          </WorkspaceRail>
+        ) : null}
+
         {pane?.kind === "publication" ? (
           <WorkspaceRail
             description="Nothing here reaches readers until you publish. Content and notes stay private in the meantime."
@@ -197,7 +226,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             onClose={workspace.closePane}
             title="Publication"
           >
-            <div className="space-y-7">
+            <div className="flex flex-col gap-7">
               {workspace.isDraft && props.readiness ? (
                 <PublishPanel
                   assetId={workspace.assetId}
@@ -235,7 +264,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             onClose={workspace.closePane}
             title="Access and published state"
           >
-            <div className="space-y-7">
+            <div className="flex flex-col gap-7">
               {workspace.isOwner && !workspace.isDraft ? (
                 <DiscoveryControl
                   assetId={workspace.assetId}

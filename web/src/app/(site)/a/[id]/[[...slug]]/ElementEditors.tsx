@@ -275,11 +275,11 @@ function ImageEditor({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {items.length === 0 ? (
         <Note>No images are in this block yet.</Note>
       ) : (
-        <ol className="space-y-7">
+        <ol className="flex flex-col gap-7">
           {items.map((item, index) => {
             const stored = imagesById.get(item.mediaId);
             const source = previews[item.mediaId] ?? stored?.thumbUrl;

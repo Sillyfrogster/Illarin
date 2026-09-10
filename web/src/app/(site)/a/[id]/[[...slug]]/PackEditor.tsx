@@ -130,7 +130,7 @@ function LumiaFields({
   record: LumiaRecord;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <AvatarField
         assetId={assetId}
         images={images}
@@ -295,7 +295,7 @@ function AvatarField({
           <UserRound aria-hidden="true" size={34} strokeWidth={1.35} />
         )}
       </div>
-      <div className="min-w-0 flex-1 space-y-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         <p className="text-label font-medium text-mute">Avatar</p>
         <p className="text-meta text-mute">
           {missing

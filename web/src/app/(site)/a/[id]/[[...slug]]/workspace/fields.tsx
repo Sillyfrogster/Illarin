@@ -46,7 +46,7 @@ export function FieldGroup({
       <legend className="mb-3 font-display text-ui font-medium text-ink">
         {legend}
       </legend>
-      <div className="space-y-4">{children}</div>
+      <div className="flex flex-col gap-4">{children}</div>
     </fieldset>
   );
 }
@@ -191,7 +191,7 @@ export function InlineItem({
   removeLabel: string;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <p className="font-display text-ui font-medium text-ink">{name}</p>
       {children}
       <div className="flex flex-wrap items-center gap-1">

@@ -65,7 +65,7 @@ export function CollectionStep({
 
   if (open && index !== -1) {
     return (
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-meta font-medium text-accent outline-offset-3 hover:underline"
@@ -116,7 +116,7 @@ export function CollectionStep({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       {above}
       <CollectionList
         emptyMessage={emptyMessage}
@@ -172,7 +172,7 @@ function CollectionList({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {rows.length > 6 ? (
         <div className="relative">
           <label className="sr-only" htmlFor={searchId}>
@@ -209,7 +209,7 @@ function CollectionList({
       )}
 
       {matching.length > 0 ? (
-        <ol className="-mx-2 list-none space-y-0.5">
+        <ol className="-mx-2 flex list-none flex-col gap-0.5">
           {matching.map(({ index, row }) => (
             <li key={keys[index]}>
               <button

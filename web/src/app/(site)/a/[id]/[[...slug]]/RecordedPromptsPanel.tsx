@@ -106,7 +106,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
           ) : (
             <ul
               className={
-                "mt-3 list-none space-y-5 [&_h3]:text-ui [&_h3]:font-medium [&_h3]:text-ink"
+                "mt-3 flex list-none flex-col gap-5 [&_h3]:text-ui [&_h3]:font-medium [&_h3]:text-ink"
               }
             >
               {versions.map((version) => (

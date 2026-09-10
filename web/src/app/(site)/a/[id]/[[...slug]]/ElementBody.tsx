@@ -1,10 +1,11 @@
 "use client";
 
-import { SquarePen, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import Image from "next/image";
 import {
   type CSSProperties,
   Fragment,
+  type ReactNode,
   useEffect,
   useRef,
   useState,
@@ -19,11 +20,7 @@ import type {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
-import {
-  contentItemCount,
-  editsInTheRail,
-  excerptDefinition,
-} from "@/lib/page-arrangement";
+import { contentItemCount, excerptDefinition } from "@/lib/page-arrangement";
 import { nameSlot } from "@/lib/preset-slots";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
 import { CODE, ITEM_NAME, RUNG, STACK } from "./element-runs";
@@ -46,8 +43,8 @@ export function ElementBody({
   blockTitle,
   blockElements = 2,
   markEmpty = true,
-  onExpand,
   onReadMore,
+  tools,
 }: {
   element: AssetElement;
   isOwner: boolean;
@@ -60,8 +57,9 @@ export function ElementBody({
    * it once at the top instead, so the marker does not run down every label.
    */
   markEmpty?: boolean;
-  onExpand?: () => void;
   onReadMore?: () => void;
+  /** The owner's controls for this element, where the page is being written. */
+  tools?: ReactNode;
 }) {
   if (element.isEmpty && !isOwner) return null;
 
@@ -69,29 +67,16 @@ export function ElementBody({
     elements: blockElements,
     title: blockTitle,
   });
-  const expandable = isOwner && onExpand && editsInTheRail(element.type);
-
   return (
-    <section className="flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size] [&_p]:text-prose">
-      {label || expandable ? (
-        <div className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-2.5">
+    <section className="group/element flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size] [&_p]:text-prose">
+      {label || tools ? (
+        <div className="flex items-start justify-between gap-4">
           {label ? (
             <h3 className="font-prose text-label text-mute">{label}</h3>
           ) : (
             <span />
           )}
-          {expandable ? (
-            <button
-              aria-label={`Edit ${element.label || "this content"}`}
-              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink"
-              data-measurement-ignore
-              onClick={onExpand}
-              type="button"
-            >
-              <SquarePen aria-hidden="true" size={14} />
-              Edit
-            </button>
-          ) : null}
+          {tools}
         </div>
       ) : null}
       {element.isEmpty && markEmpty ? (
