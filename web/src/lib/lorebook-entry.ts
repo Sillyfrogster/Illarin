@@ -34,35 +34,12 @@ export type EntryPresentation = {
   text: string;
 };
 
-export type EntrySort = "book" | "name";
-
-export type LorebookView = {
-  search: string;
-  sort: EntrySort;
-  includeOff: boolean;
-};
-
-export type LorebookIndex = {
-  total: number;
-  off: number;
-  entries: EntryPresentation[];
-};
-
-export function readLorebook(
+/** readEntries reads a whole book, so each entry knows whether order matters. */
+export function readEntries(
   entries: readonly ReadableEntry[],
-  view: LorebookView,
-): LorebookIndex {
+): EntryPresentation[] {
   const book = { showsOrder: ordersDiffer(entries) };
-  const read = entries.map((entry, index) => readEntry(entry, index + 1, book));
-  const wanted = read.filter(
-    (entry) => (view.includeOff || !entry.isOff) && matches(entry, view.search),
-  );
-
-  return {
-    total: entries.length,
-    off: read.filter((entry) => entry.isOff).length,
-    entries: view.sort === "name" ? byName(wanted) : wanted,
-  };
+  return entries.map((entry, index) => readEntry(entry, index + 1, book));
 }
 
 type BookContext = {
@@ -173,20 +150,4 @@ function firingRules(
 function ordersDiffer(entries: readonly ReadableEntry[]): boolean {
   const orders = new Set(entries.map((entry) => entry.order));
   return orders.size > 1;
-}
-
-function matches(entry: EntryPresentation, search: string): boolean {
-  const wanted = search.trim().toLocaleLowerCase();
-  if (wanted === "") return true;
-  if (entry.name.toLocaleLowerCase().includes(wanted)) return true;
-  return [...entry.keys, ...entry.secondaryKeys].some((key) =>
-    key.label.toLocaleLowerCase().includes(wanted),
-  );
-}
-
-function byName(entries: readonly EntryPresentation[]): EntryPresentation[] {
-  return [...entries].sort(
-    (one, other) =>
-      one.name.localeCompare(other.name) || one.position - other.position,
-  );
 }

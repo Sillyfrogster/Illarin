@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Maximize2 } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
@@ -100,6 +100,31 @@ export function Unfold({
           {open ? "Show less" : more}
         </button>
       ) : null}
+    </>
+  );
+}
+
+/** Browse shows a run's opening rows and hands the rest to a roomier surface. */
+export function Browse({
+  children,
+  label,
+  onOpen,
+}: {
+  children: ReactNode;
+  label: string;
+  onOpen: () => void;
+}) {
+  return (
+    <>
+      <div className="min-w-0">{children}</div>
+      <button className={CONTROL} onClick={onOpen} type="button">
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 -z-1 origin-left scale-x-0 bg-accent-wash transition-transform duration-300 ease-[var(--ease-wipe)] group-hover/unfold:scale-x-100 group-focus-visible/unfold:scale-x-100 motion-reduce:transition-none"
+        />
+        <Maximize2 aria-hidden="true" className="size-4 text-accent" />
+        {label}
+      </button>
     </>
   );
 }

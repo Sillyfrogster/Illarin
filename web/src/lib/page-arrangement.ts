@@ -233,15 +233,14 @@ export function editsInTheRail(type: string): boolean {
 
 export type ExcerptDefinition =
   | { unit: "lines"; limit: number }
-  | { unit: "items"; limit: number }
-  | { unit: "self" };
+  | { unit: "items"; limit: number };
 
 export const EXCERPT_DEFINITIONS = {
   prose: { unit: "lines", limit: 12 },
   text_set: { unit: "items", limit: 3 },
   field_list: { unit: "items", limit: 6 },
   dialogue_sample: { unit: "items", limit: 3 },
-  entry_table: { unit: "self" },
+  entry_table: { unit: "items", limit: 6 },
   image_set: { unit: "items", limit: 3 },
   link_list: { unit: "items", limit: 4 },
   prompt_list: { unit: "items", limit: 3 },

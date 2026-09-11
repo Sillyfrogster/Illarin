@@ -7,23 +7,27 @@ import {
   type ReactNode,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { CollectionBrowser } from "@/components/collection/CollectionBrowser";
 import { Mosaic } from "@/components/media/Mosaic";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
-import { Run, RunItem } from "@/components/ui/run";
+import { Run, RunItem, RunOpenContext } from "@/components/ui/run";
 import type {
   AssetElement,
   AssetImage,
   RecordListContent,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { browsable, type CollectionItem } from "@/lib/collection";
 import { elementLabel } from "@/lib/element-label";
 import { contentItemCount, excerptDefinition } from "@/lib/page-arrangement";
 import { nameSlot } from "@/lib/preset-slots";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
+import { collectionItems } from "./collection-items";
 import {
   CODE,
   ELEMENT_NAME,
@@ -35,7 +39,7 @@ import {
   PASSAGE_NAME,
   PROSE,
 } from "./element-runs";
-import { Lorebook } from "./Lorebook";
+import { LorebookEntries } from "./Lorebook";
 import {
   PromptList,
   ScriptList,
@@ -43,7 +47,7 @@ import {
   VariableSchema,
 } from "./PresetElements";
 import { ThemePalette, ThemeStyles } from "./ThemeElements";
-import { Unfold } from "./Unfold";
+import { Browse, Unfold } from "./Unfold";
 
 const ROW_HEIGHTS = { small: 132, medium: 190, large: 260 };
 
@@ -97,6 +101,7 @@ export function ElementBody({
       {element.isEmpty ? null : (
         <>
           <ExcerptedElementContent
+            blockTitle={blockTitle}
             element={element}
             images={images}
             isOwner={isOwner}
@@ -111,6 +116,99 @@ export function ElementBody({
 }
 
 function ExcerptedElementContent({
+  blockTitle,
+  element,
+  images,
+  isOwner,
+}: {
+  blockTitle?: string;
+  element: AssetElement;
+  images: AssetImage[];
+  isOwner: boolean;
+}) {
+  const items = useMemo(
+    () => collectionItems(element, isOwner),
+    [element, isOwner],
+  );
+  if (browsable(items)) {
+    return (
+      <BrowsedElementContent
+        element={element}
+        images={images}
+        isOwner={isOwner}
+        items={items}
+        title={element.label.trim() || blockTitle || "Contents"}
+      />
+    );
+  }
+  return (
+    <UnfoldedElementContent
+      element={element}
+      images={images}
+      isOwner={isOwner}
+    />
+  );
+}
+
+/** A long run shows its opening rows and opens the rest in a browser. */
+function BrowsedElementContent({
+  element,
+  images,
+  isOwner,
+  items,
+  title,
+}: {
+  element: AssetElement;
+  images: AssetImage[];
+  isOwner: boolean;
+  items: CollectionItem[];
+  title: string;
+}) {
+  const definition = excerptDefinition(element.type);
+  const [open, setOpen] = useState(false);
+  const [start, setStart] = useState<string | null>(null);
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
+  const noun = excerptNoun(element);
+  const total = `${items.length} ${noun}`;
+  const off = items.filter((item) => item.off).length;
+  const count =
+    off > 0 ? `${total} · ${items.length - off} switched on` : total;
+
+  function openAt(key: string | null) {
+    setOpener(
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null,
+    );
+    setStart(key);
+    setOpen(true);
+  }
+
+  return (
+    <RunOpenContext.Provider value={openAt}>
+      <Browse label={`Browse all ${total}`} onOpen={() => openAt(null)}>
+        <ElementContent
+          element={element}
+          images={images}
+          isOwner={isOwner}
+          itemLimit={definition.unit === "items" ? definition.limit : undefined}
+        />
+      </Browse>
+      <CollectionBrowser
+        count={count}
+        items={items}
+        noun={noun}
+        onOpenChange={setOpen}
+        open={open}
+        returnTo={opener}
+        start={start}
+        title={title}
+      />
+    </RunOpenContext.Provider>
+  );
+}
+
+function UnfoldedElementContent({
   element,
   images,
   isOwner,
@@ -142,7 +240,7 @@ function ExcerptedElementContent({
     return () => observer.disconnect();
   }, [definition.unit, open]);
 
-  if (definition.unit === "self" || element.type === "image_set") {
+  if (element.type === "image_set") {
     return (
       <ElementContent element={element} images={images} isOwner={isOwner} />
     );
@@ -227,6 +325,8 @@ function excerptNoun(element: AssetElement): string {
         : "fields";
     case "dialogue_sample":
       return "turns";
+    case "entry_table":
+      return "entries";
     case "image_set":
       return element.role === "expressions" ? "expressions" : "images";
     case "link_list":
@@ -361,7 +461,7 @@ export function ElementContent({
   }
 
   if (element.type === "entry_table" && "entries" in content) {
-    return <Lorebook entries={content.entries} />;
+    return <LorebookEntries entries={content.entries} itemLimit={itemLimit} />;
   }
 
   if (

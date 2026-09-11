@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { Maximize2 } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -17,6 +18,11 @@ const RunContext = createContext<{
   lit: string | null;
   light: (key: string | null) => void;
 } | null>(null);
+
+/** RunOpenContext lets each row open itself somewhere roomier than the run. */
+export const RunOpenContext = createContext<((key: string) => void) | null>(
+  null,
+);
 
 /** Run is a list of items under one plate that glides to the one you are reading. */
 export function Run({
@@ -82,12 +88,14 @@ export function RunItem({
   itemKey: string;
 }) {
   const run = useContext(RunContext);
+  const open = useContext(RunOpenContext);
   const still = useReducedMotion();
 
   return (
     <Tag
       className={cn(
-        "relative isolate flex min-w-0 flex-col gap-1.5 px-4 py-3.5 not-first:border-rule/45 not-first:border-t",
+        "group/row relative isolate flex min-w-0 flex-col gap-1.5 px-4 py-3.5 not-first:border-rule/45 not-first:border-t",
+        open && "pr-14",
         className,
       )}
       onFocus={() => run?.light(itemKey)}
@@ -102,6 +110,16 @@ export function RunItem({
         />
       ) : null}
       {children}
+      {open ? (
+        <button
+          aria-label="Open in the browser"
+          className="absolute top-2.5 right-2.5 inline-flex size-9 items-center justify-center rounded-control text-mute opacity-0 outline-offset-2 transition-[opacity,background-color,color] duration-200 group-hover/row:opacity-100 hover:bg-accent-wash hover:text-accent focus-visible:opacity-100 motion-reduce:transition-none"
+          onClick={() => open(itemKey)}
+          type="button"
+        >
+          <Maximize2 aria-hidden="true" className="size-4" />
+        </button>
+      ) : null}
     </Tag>
   );
 }
