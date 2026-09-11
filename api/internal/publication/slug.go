@@ -31,6 +31,7 @@ var reservedSlugs = map[string]bool{
 	"feed-json": true,
 	"feed-xml":  true,
 	"feeds":     true,
+	"media":     true,
 	"page":      true,
 	"preview":   true,
 	"robots":    true,

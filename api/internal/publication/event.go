@@ -152,11 +152,11 @@ func (s *Service) sentByline(ctx context.Context, postID uuid.UUID) (sentByline,
 }
 
 func (s *Service) postAddress(slug string) string {
-	return s.blogAddress("/blog/" + url.PathEscape(slug))
+	return s.blogAddress("/" + url.PathEscape(slug))
 }
 
 func (s *Service) appAddress(slug string) string {
-	return s.blogAddress("/blog/app/" + url.PathEscape(slug))
+	return s.blogAddress("/app/" + url.PathEscape(slug))
 }
 
 func (s *Service) profileAddress(handle string) string {

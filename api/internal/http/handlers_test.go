@@ -227,7 +227,7 @@ func testPublishing(to publication.Sender) publication.Publishing {
 		Sealing: testSealingKey(),
 		Sender:  to,
 		Site:    "http://localhost:3000",
-		Blog:    "http://localhost:3000",
+		Blog:    "http://blog.localhost:3000",
 	}
 }
 

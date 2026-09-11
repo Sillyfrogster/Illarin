@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -89,10 +90,14 @@ func Load() (Config, error) {
 	for name, value := range map[string]string{
 		"DATABASE_URL": databaseURL,
 		"UPLOADS_DIR":  cfg.UploadsDir,
+		"BLOG_URL":     cfg.BlogURL,
 	} {
 		if value == "" {
 			return Config{}, fmt.Errorf("%s is required", name)
 		}
+	}
+	if err := checkOrigin("BLOG_URL", cfg.BlogURL); err != nil {
+		return Config{}, err
 	}
 
 	max, err := bytesOrDefault("MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
@@ -131,9 +136,6 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
 	}
 	cfg.PublicationSecretKey = publicationKey
-	if cfg.BlogURL == "" {
-		cfg.BlogURL = cfg.SiteURL
-	}
 	limits := probe.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {
@@ -205,6 +207,17 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// checkOrigin accepts only a bare http or https origin, because blog paths are appended to it
+func checkOrigin(key, value string) error {
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
+		parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") ||
+		parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("%s must be an http or https origin with no path, got %q", key, value)
+	}
+	return nil
 }
 
 func intOrDefault(key string, fallback int) (int, error) {

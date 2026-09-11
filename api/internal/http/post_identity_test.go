@@ -84,6 +84,7 @@ func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
 
 	for _, candidate := range []string{
 		"category", "app", "page", "feed", "feed.xml", "feed.json", "rss", "sitemap", "atom",
+		"media", "withdrawn",
 	} {
 		response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 			"slug": candidate,

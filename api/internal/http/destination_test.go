@@ -624,7 +624,7 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 		`"title":"Illarin keeps its own writing now"`,
 		`"summary":"What Illarin changed this week."`,
 		`"note":"Read it in ten minutes."`,
-		`"url":"http://localhost:3000/blog/`,
+		`"url":"http://blog.localhost:3000/`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the event does not carry %s: %s", want, body)
