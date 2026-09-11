@@ -136,11 +136,14 @@ func (r Reaching) At(ctx context.Context, host, port string) (string, error) {
 		return "", fmt.Errorf("look up %s: %w", host, err)
 	}
 	for _, at := range found {
-		if Public(at) {
-			return net.JoinHostPort(at.String(), port), nil
+		if !Public(at) {
+			return "", ErrNotPublic
 		}
 	}
-	return "", ErrNotPublic
+	if len(found) == 0 {
+		return "", ErrNotPublic
+	}
+	return net.JoinHostPort(found[0].String(), port), nil
 }
 
 func lookup(ctx context.Context, host string) ([]netip.Addr, error) {

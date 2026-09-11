@@ -143,21 +143,18 @@ func TestAHostResolvingNowhereIsRefused(t *testing.T) {
 	}
 }
 
-func TestOnePublicResultAmongPrivateOnesIsDialed(t *testing.T) {
+func TestOnePrivateResultAmongPublicOnesIsRefused(t *testing.T) {
 	reaching := Reaching{Resolve: func(context.Context, string) ([]netip.Addr, error) {
 		return []netip.Addr{
-			netip.MustParseAddr("127.0.0.1"),
 			netip.MustParseAddr("93.184.216.34"),
+			netip.MustParseAddr("127.0.0.1"),
 		}, nil
 	}}
 
 	at, err := reaching.At(context.Background(), "hooks.example.com", "443")
 
-	if err != nil {
-		t.Fatalf("at: %v", err)
-	}
-	if at != "93.184.216.34:443" {
-		t.Errorf("at = %q, want the public result", at)
+	if !errors.Is(err, ErrNotPublic) || at != "" {
+		t.Errorf("mixed DNS answer = %q, %v, want a refusal", at, err)
 	}
 }
 
