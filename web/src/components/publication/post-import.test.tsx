@@ -7,6 +7,7 @@ import {
   toEditor,
 } from "@/components/publication/writing/tiptap-document";
 import type { PostMedia } from "@/lib/api/query";
+import { OriginsProvider } from "@/lib/origins";
 import { POST_DOCUMENT_VERSION, type PostDocument } from "@/lib/post-document";
 import { PostBody } from "./PostBody";
 
@@ -51,7 +52,12 @@ for (const [name, one] of CARRIED) {
 
   test(`${name} renders without stored markup`, () => {
     const html = renderToStaticMarkup(
-      <PostBody document={one.document} media={HELD} />,
+      <OriginsProvider
+        blog="https://blog.illarin.test"
+        site="https://illarin.test"
+      >
+        <PostBody document={one.document} media={HELD} />
+      </OriginsProvider>,
     );
     expect(html).not.toContain("&lt;");
     for (const mark of ["## ", "**", "~~", "](media:"]) {

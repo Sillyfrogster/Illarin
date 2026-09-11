@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import type { PostSummary } from "@/lib/api/query";
-import { blogAddress, postPermalink } from "@/lib/post-link";
-import { pageAddress } from "@/lib/publication-metadata";
+import { blogAddress, postPermalink } from "@/lib/blog-address";
+import { pageAddress } from "@/lib/blog-paths";
 
 export type CrawlableArchive = {
   address: string;

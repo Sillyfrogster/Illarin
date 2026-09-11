@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { BLOG_HOME } from "@/lib/blog-paths";
 import { WITHDRAWAL_MESSAGE } from "@/lib/publication-withdrawal";
 
 export function Withdrawn({ explanation }: { explanation: string }) {
@@ -17,7 +18,7 @@ export function Withdrawn({ explanation }: { explanation: string }) {
         </p>
       ) : null}
       <Button asChild className="mt-10" size="large" variant="primary">
-        <Link href="/blog">All posts</Link>
+        <Link href={BLOG_HOME}>All posts</Link>
       </Button>
     </section>
   );

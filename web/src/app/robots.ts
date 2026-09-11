@@ -1,6 +1,4 @@
 import type { MetadataRoute } from "next";
-import { blogAddress } from "@/lib/post-link";
-import { BLOG_HOME } from "@/lib/publication-metadata";
 import { siteUrl } from "@/lib/site-metadata";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +21,7 @@ export function buildRobots(origin: string): MetadataRoute.Robots {
         "/reset-password",
       ],
     },
-    sitemap: [
-      new URL("/sitemap.xml", origin).href,
-      blogAddress(`${BLOG_HOME}/sitemap.xml`),
-    ],
+    sitemap: new URL("/sitemap.xml", origin).href,
   };
 }
 

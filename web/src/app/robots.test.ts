@@ -1,15 +1,19 @@
 import { expect, test } from "bun:test";
+import { blogRobots } from "./blog/robots.txt/route";
 import { buildRobots } from "./robots";
 
 const robots = buildRobots("https://illarin.xyz");
 const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
 const disallowed = [rules.disallow ?? []].flat();
 
-test("points crawlers at the catalog and the publication sitemaps", () => {
-  expect(robots.sitemap).toEqual([
-    "https://illarin.xyz/sitemap.xml",
-    "http://localhost:8000/blog/sitemap.xml",
-  ]);
+test("points crawlers at the catalog sitemap", () => {
+  expect(robots.sitemap).toBe("https://illarin.xyz/sitemap.xml");
+});
+
+test("the blog origin points crawlers at its own sitemap and nothing else", () => {
+  expect(blogRobots()).toBe(
+    "User-Agent: *\nAllow: /\nSitemap: http://blog.localhost:8000/sitemap.xml\n",
+  );
 });
 
 test("keeps crawlers off the API, downloads and the link handover", () => {

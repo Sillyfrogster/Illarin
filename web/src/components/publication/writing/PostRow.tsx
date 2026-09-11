@@ -1,9 +1,13 @@
+"use client";
+
 import { Clock, Eye, EyeOff, PenLine, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { Post } from "@/lib/api/query";
+import { postPath } from "@/lib/blog-paths";
 import { cn } from "@/lib/cn";
 import { readableDate, shortMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
+import { useOrigins } from "@/lib/origins";
 import {
   goingLiveAt,
   type Lifecycle,
@@ -24,6 +28,7 @@ const TAG =
   "inline-flex min-h-7 items-center gap-1.5 rounded-control px-2.5 font-ui text-label font-medium whitespace-nowrap";
 
 export function PostRow({ post }: { post: Post }) {
+  const { blog } = useOrigins();
   const state = lifecycleOf(post);
   const Mark = MARKS[state];
   const going = goingLiveAt(post);
@@ -70,12 +75,12 @@ export function PostRow({ post }: { post: Post }) {
           ) : null}
           {post.deletion ? <Deadline until={post.deletion.until} /> : null}
           {state === "published" ? (
-            <Link
+            <a
               className="inline-flex min-h-11 items-center font-ui text-label font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
-              href={`/blog/${post.slug}`}
+              href={new URL(postPath(post.slug), blog).href}
             >
               Read it on the blog
-            </Link>
+            </a>
           ) : null}
         </p>
       ) : null}

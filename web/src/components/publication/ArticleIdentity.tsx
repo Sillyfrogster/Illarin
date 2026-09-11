@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PostByline, PostMedia, PostRelease } from "@/lib/api/query";
+import { archivePath } from "@/lib/blog-paths";
 import { readableDate } from "@/lib/dates";
 import { ArticleHeader, type Header } from "./ArticleHeader";
 import { Byline } from "./Byline";
@@ -52,7 +53,7 @@ export function ArticleIdentity({
         {categorySlug ? (
           <Link
             className="font-medium text-accent hover:text-ink"
-            href={`/blog/category/${categorySlug}`}
+            href={archivePath("category", categorySlug)}
           >
             {category}
           </Link>
@@ -68,7 +69,7 @@ export function ArticleIdentity({
         {release ? (
           <Link
             className="text-ink hover:text-accent"
-            href={`/blog/app/${release.app.slug}`}
+            href={archivePath("app", release.app.slug)}
           >
             {release.app.name} {release.version}
           </Link>

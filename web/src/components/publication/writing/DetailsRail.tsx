@@ -10,6 +10,7 @@ import type {
   PublicationApp,
   PublicationCategory,
 } from "@/lib/api/query";
+import { useBlogHost } from "@/lib/origins";
 import { normalizedSlug } from "@/lib/post-link";
 import type { Draft } from "@/lib/post-writing";
 import { PicturePicker } from "./PicturePicker";
@@ -43,6 +44,7 @@ export function DetailsRail({
     file: File,
   ) => Promise<PostMedia | null>;
 }) {
+  const blogHost = useBlogHost();
   const category = categories.find((one) => one.id === draft.categoryId);
   const releasing = category?.slug === "release";
 
@@ -70,7 +72,7 @@ export function DetailsRail({
 
       {locked ? null : (
         <Field
-          hint={`blog.illarin.xyz/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
+          hint={`${blogHost}/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
           htmlFor="post-slug"
           label="Address"
         >

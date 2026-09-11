@@ -7,27 +7,21 @@ export const WITHDRAWAL_MESSAGE = "Illarin took this post out of public view.";
 
 export const WITHDRAWN_HEADER = "x-withdrawn-post";
 
-export const WITHDRAWN_ROUTE = "/blog/withdrawn";
+/** Where the blog's route tree lives inside the application. The proxy maps the blog origin's root onto it. */
+export const BLOG_TREE = "/blog";
 
-export const POST_ADDRESS = "/blog/";
+export const WITHDRAWN_ROUTE = `${BLOG_TREE}/withdrawn`;
 
+/** The slug a path under the blog tree asks for, when it asks for one post and nothing beneath it. */
 export function postAddressIn(pathname: string): string | null {
-  if (!pathname.startsWith(POST_ADDRESS)) return null;
-  const asked = pathname.slice(POST_ADDRESS.length);
+  if (!pathname.startsWith(`${BLOG_TREE}/`)) return null;
+  const asked = pathname.slice(BLOG_TREE.length + 1);
   if (asked === "" || asked.includes("/") || asked.includes(".")) return null;
   try {
     return decodeURIComponent(asked);
   } catch {
     return null;
   }
-}
-
-export function movedTo(
-  asked: string,
-  withdrawn: WithdrawnPost,
-): string | null {
-  if (asked === withdrawn.slug) return null;
-  return `${POST_ADDRESS}${encodeURI(withdrawn.slug)}`;
 }
 
 export async function fetchWithdrawnPost(

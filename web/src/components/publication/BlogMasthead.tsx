@@ -11,8 +11,8 @@ import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { LineLink } from "@/components/ui/line-link";
 import type { PublicationCategory } from "@/lib/api/query";
-import { BLOG_HOME } from "@/lib/publication-metadata";
-import { siteAddress } from "@/lib/site-address";
+import { archivePath, BLOG_HOME } from "@/lib/blog-paths";
+import { useOrigins } from "@/lib/origins";
 
 export function BlogMasthead({
   categories,
@@ -20,8 +20,8 @@ export function BlogMasthead({
   categories: PublicationCategory[];
 }) {
   const pathname = usePathname();
-  const onArchive =
-    pathname === BLOG_HOME || pathname.startsWith(`${BLOG_HOME}/page/`);
+  const { site } = useOrigins();
+  const onArchive = pathname === BLOG_HOME || pathname.startsWith("/page/");
   const { scrollY } = useScroll();
   const depth = useTransform(scrollY, [0, 40], [0.1, 0.28], { clamp: true });
   const lift = useMotionTemplate`drop-shadow(0 6px 12px rgb(0 0 0 / ${depth}))`;
@@ -36,7 +36,7 @@ export function BlogMasthead({
           <a
             aria-label="Illarin home"
             className="flex min-h-11 shrink-0 items-center gap-2 text-ink"
-            href={siteAddress("/")}
+            href={site}
           >
             <BrandMark size={22} tone="accent" />
             <span className="font-display text-[1.375rem] leading-none font-medium tracking-[-0.03em]">
@@ -60,7 +60,7 @@ export function BlogMasthead({
               All posts
             </LineLink>
             {categories.map((category) => {
-              const address = `${BLOG_HOME}/category/${category.slug}`;
+              const address = archivePath("category", category.slug);
               return (
                 <LineLink
                   current={

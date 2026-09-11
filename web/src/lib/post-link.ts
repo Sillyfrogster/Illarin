@@ -1,9 +1,3 @@
-import { blogUrl, siteUrl } from "./site-metadata";
-
-export function blogAddress(path: string): string {
-  return new URL(path, blogUrl).href;
-}
-
 export function isSafeAddress(href: string): boolean {
   const address = href.trim();
   for (const letter of address) {
@@ -16,11 +10,12 @@ export function isSafeAddress(href: string): boolean {
   );
 }
 
-export function leavesIllarin(href: string): boolean {
+/** Whether a link leaves Illarin, given the main site's own address. */
+export function leavesIllarin(href: string, site: string): boolean {
   if (!href.startsWith("https://")) return false;
   try {
     const going = new URL(href).hostname.toLowerCase();
-    const here = new URL(siteUrl).hostname.toLowerCase();
+    const here = new URL(site).hostname.toLowerCase();
     return going !== here && !going.endsWith(`.${here}`);
   } catch {
     return true;
@@ -34,8 +29,4 @@ export function normalizedSlug(candidate: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80)
     .replace(/-+$/, "");
-}
-
-export function postPermalink(slug: string): string {
-  return blogAddress(`/blog/${encodeURI(slug)}`);
 }

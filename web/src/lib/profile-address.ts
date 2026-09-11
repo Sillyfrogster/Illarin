@@ -1,5 +1,3 @@
-import { siteUrl } from "./site-metadata";
-
 const HANDLE = /^[a-z0-9._]{3,32}$/;
 
 const PUNCTUATION_ONLY = /^[._]+$/;
@@ -16,6 +14,6 @@ export function readProfileAddress(segment: string): ProfileAddress | null {
   return { form: isCanonical ? "canonical" : "legacy", handle };
 }
 
-export function profileAddress(handle: string): string {
-  return new URL(`/@${encodeURI(handle)}`, siteUrl).href;
+export function profilePath(handle: string): string {
+  return `/@${encodeURI(handle)}`;
 }

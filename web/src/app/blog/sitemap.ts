@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { fetchPostApps, fetchPostCategories } from "@/lib/api/query";
-import { BLOG_HOME } from "@/lib/publication-metadata";
+import { archivePath, BLOG_HOME } from "@/lib/blog-paths";
 import { readPublication } from "@/lib/publication-record";
 import {
   type CrawlableArchive,
@@ -33,5 +33,5 @@ async function scoped(
 ): Promise<CrawlableArchive | null> {
   const record = await readPublication({ [scope]: slug }, 0);
   if (!record) return null;
-  return { address: `${BLOG_HOME}/${scope}/${slug}`, pages: record.pages };
+  return { address: archivePath(scope, slug), pages: record.pages };
 }

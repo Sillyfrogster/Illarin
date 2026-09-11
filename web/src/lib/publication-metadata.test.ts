@@ -2,32 +2,10 @@ import { expect, test } from "bun:test";
 import type { PublicPost } from "@/lib/api/query";
 import {
   archiveDescription,
-  archivePage,
   blogMetadata,
   postMetadata,
   postStructuredData,
 } from "./publication-metadata";
-
-test("an archive address with no page segment is page one", () => {
-  expect(archivePage(undefined)).toBe(1);
-  expect(archivePage([])).toBe(1);
-});
-
-test("a numbered archive address reads its page", () => {
-  expect(archivePage(["page", "2"])).toBe(2);
-  expect(archivePage(["page", "40"])).toBe(40);
-});
-
-test("anything but a whole page number counting from one is refused", () => {
-  expect(archivePage(["page"])).toBeNull();
-  expect(archivePage(["page", "0"])).toBeNull();
-  expect(archivePage(["page", "-1"])).toBeNull();
-  expect(archivePage(["page", "01"])).toBeNull();
-  expect(archivePage(["page", "2.5"])).toBeNull();
-  expect(archivePage(["page", "two"])).toBeNull();
-  expect(archivePage(["archive", "2"])).toBeNull();
-  expect(archivePage(["page", "2", "3"])).toBeNull();
-});
 
 const POST: PublicPost = {
   id: "8ec131f9-96c4-437c-9cae-4db8ed28cc65",
@@ -69,9 +47,9 @@ const OVERRIDE = {
 test("a post is canonical at its own address on the blog origin", () => {
   const metadata = postMetadata(POST);
   expect(metadata.alternates?.canonical).toBe(
-    "http://localhost:8000/blog/first-post",
+    "http://blog.localhost:8000/first-post",
   );
-  expect(metadata.openGraph?.url).toBe("http://localhost:8000/blog/first-post");
+  expect(metadata.openGraph?.url).toBe("http://blog.localhost:8000/first-post");
 });
 
 test("a preview carries the title, the hand-written summary and the dates stored", () => {
@@ -105,14 +83,14 @@ test("a post with no override gets the card Illarin composes for it", () => {
   const metadata = postMetadata(POST);
   expect(metadata.openGraph?.images).toEqual([
     {
-      url: "http://localhost:8000/blog/first-post/card.png",
+      url: "http://blog.localhost:8000/first-post/card.png",
       width: 1200,
       height: 630,
       alt: "Illarin keeps its own writing",
     },
   ]);
   expect(metadata.twitter?.images).toEqual([
-    "http://localhost:8000/blog/first-post/card.png",
+    "http://blog.localhost:8000/first-post/card.png",
   ]);
 });
 
@@ -120,7 +98,7 @@ test("an uploaded override is the preview instead", () => {
   const metadata = postMetadata({ ...POST, socialImage: OVERRIDE });
   expect(metadata.openGraph?.images).toEqual([
     {
-      url: "http://localhost:8000/media/5d31391b-cf7e-478f-814b-c6b28639e5a3/og/1",
+      url: "http://blog.localhost:8000/media/5d31391b-cf7e-478f-814b-c6b28639e5a3/og/1",
       width: 1200,
       height: 630,
       alt: "Illarin keeps its own writing",
@@ -132,7 +110,7 @@ test("the article data a search engine reads invents no author or date", () => {
   const article = JSON.parse(postStructuredData(POST));
   expect(article["@type"]).toBe("Article");
   expect(article.headline).toBe("Illarin keeps its own writing");
-  expect(article.url).toBe("http://localhost:8000/blog/first-post");
+  expect(article.url).toBe("http://blog.localhost:8000/first-post");
   expect(article.datePublished).toBe("2026-08-29T10:33:48Z");
   expect(article.dateModified).toBeUndefined();
   expect(article.author).toEqual({
@@ -152,24 +130,24 @@ test("the article data carries the update it has and nothing more", () => {
     postStructuredData({ ...POST, updatedAt: "2026-09-02T11:15:00Z" }),
   );
   expect(article.dateModified).toBe("2026-09-02T11:15:00Z");
-  expect(article.image).toBe("http://localhost:8000/blog/first-post/card.png");
+  expect(article.image).toBe("http://blog.localhost:8000/first-post/card.png");
 });
 
 test("a narrowed archive is canonical on the blog origin and offers its own feeds", () => {
   const metadata = blogMetadata(
     "Release",
     archiveDescription("category", "Release"),
-    "/blog/category/release/page/2",
-    "/blog/category/release",
+    "/category/release/page/2",
+    "/category/release",
   );
   expect(metadata.alternates?.canonical).toBe(
-    "http://localhost:8000/blog/category/release/page/2",
+    "http://blog.localhost:8000/category/release/page/2",
   );
   expect(metadata.alternates?.types).toEqual({
     "application/rss+xml":
-      "http://localhost:8000/blog/category/release/feed.xml",
+      "http://blog.localhost:8000/category/release/feed.xml",
     "application/feed+json":
-      "http://localhost:8000/blog/category/release/feed.json",
+      "http://blog.localhost:8000/category/release/feed.json",
   });
 });
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import type { PublicPost } from "@/lib/api/query";
-import { bylineName, bylineProfile } from "@/lib/byline";
-import { blogAddress, postPermalink } from "@/lib/post-link";
+import { blogAddress, postPermalink } from "@/lib/blog-address";
+import { BLOG_HOME, feedAddresses, postPath } from "@/lib/blog-paths";
+import { bylineName } from "@/lib/byline";
+import { bylineProfile } from "@/lib/site-address";
 import { pageMetadata, SITE_NAME, siteUrl } from "@/lib/site-metadata";
-
-export const BLOG_HOME = "/blog";
 
 export const CARD_SIZE = { width: 1200, height: 630 } as const;
 
@@ -17,12 +17,6 @@ export const BLOG_HEADING = "Illarin Blog";
 export const BLOG_DESCRIPTION =
   "Official announcements, releases and articles from Illarin and the projects it publishes for.";
 
-export function feedAddresses(archive: string): { rss: string; json: string } {
-  return { rss: `${archive}/feed.xml`, json: `${archive}/feed.json` };
-}
-
-export const PUBLICATION_FEEDS = feedAddresses(BLOG_HOME);
-
 export function archiveDescription(
   scope: "category" | "app",
   name: string,
@@ -30,17 +24,6 @@ export function archiveDescription(
   return scope === "category"
     ? `Everything Illarin has published under ${name}.`
     : `Everything Illarin has published about ${name}.`;
-}
-
-export function archivePage(paging: string[] | undefined): number | null {
-  if (!paging || paging.length === 0) return 1;
-  if (paging.length !== 2 || paging[0] !== "page") return null;
-  if (!/^[1-9][0-9]*$/.test(paging[1])) return null;
-  return Number(paging[1]);
-}
-
-export function pageAddress(address: string, page: number): string {
-  return page === 1 ? address : `${address}/page/${page}`;
 }
 
 export function blogMetadata(
@@ -137,7 +120,7 @@ export function socialCard(post: PublicPost): {
   return {
     url: override
       ? blogAddress(override.url)
-      : blogAddress(`${BLOG_HOME}/${encodeURI(post.slug)}/card.png`),
+      : blogAddress(`${postPath(post.slug)}/card.png`),
     width: override?.width ?? CARD_SIZE.width,
     height: override?.height ?? CARD_SIZE.height,
     alt: post.title,

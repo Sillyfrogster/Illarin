@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PostSummary } from "@/lib/api/query";
 import { type ArchiveNarrowing, entryFacts } from "@/lib/archive-entry";
+import { archivePath, postPath } from "@/lib/blog-paths";
 import { readableDate } from "@/lib/dates";
 import type { PostCover } from "@/lib/post-cover";
 import { Byline, BylineText } from "./Byline";
@@ -21,7 +22,7 @@ export function ArchiveLead({
   cover: PostCover | null;
   post: PostSummary;
 }) {
-  const address = `/blog/${post.slug}`;
+  const address = postPath(post.slug);
   return (
     <article className="grid items-center gap-x-12 gap-y-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {cover ? (
@@ -58,7 +59,7 @@ export function ArchiveLead({
         <p className="mt-4 flex flex-wrap items-baseline gap-x-3 text-meta text-mute">
           <Link
             className="font-medium text-accent hover:text-ink"
-            href={`/blog/category/${post.category.slug}`}
+            href={archivePath("category", post.category.slug)}
           >
             {post.category.label}
           </Link>
@@ -95,7 +96,7 @@ export function ArchiveRow({
   return (
     <Link
       className="relative grid items-start gap-x-8 gap-y-3 py-6 sm:grid-cols-[8.5rem_minmax(0,1fr)_1.25rem]"
-      href={`/blog/${post.slug}`}
+      href={postPath(post.slug)}
     >
       <span className="text-meta text-mute">
         <time dateTime={post.publishedAt}>

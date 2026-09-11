@@ -1,16 +1,16 @@
 import { BrandMark } from "@/components/brand/BrandMark";
 import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
+import { blogAddress } from "@/lib/blog-address";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
-import { NAV } from "./destinations";
-
-const DESTINATIONS = [
-  ...NAV,
-  { label: "Publish", href: "/upload" },
-  { label: "Account settings", href: "/settings" },
-];
+import { primaryDestinations } from "./destinations";
 
 export function SiteFooter() {
+  const destinations = [
+    ...primaryDestinations(blogAddress("/")),
+    { label: "Publish", href: "/upload" },
+    { label: "Account settings", href: "/settings" },
+  ];
   return (
     <footer className="mt-chapter bg-field pb-16">
       <div className={shellClasses}>
@@ -33,7 +33,7 @@ export function SiteFooter() {
           <nav aria-label="Site">
             <h2 className="text-meta text-mute">Site</h2>
             <ul className="mt-1 grid list-none">
-              {DESTINATIONS.map((item) => (
+              {destinations.map((item) => (
                 <li key={item.href}>
                   <LineLink href={item.href} className="text-ink">
                     {item.label}

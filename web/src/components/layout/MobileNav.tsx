@@ -14,12 +14,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
+import { useOrigins } from "@/lib/origins";
 import { AppearanceMenu } from "./AppearanceMenu";
 import { DestinationIcon } from "./DestinationIcon";
 import {
   accountDestinations,
   isCurrentPage,
-  NAV,
+  primaryDestinations,
   publishAction,
 } from "./destinations";
 import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
@@ -30,6 +31,7 @@ const ROW =
 export function MobileNav() {
   const pathname = usePathname();
   const { account, publicationAuthority } = useAuth();
+  const { blog } = useOrigins();
   const [open, setOpen] = useState(false);
   const { signingOut, failed, signOut } = useSignOut(() => setOpen(false));
   const publish = publishAction(account);
@@ -67,7 +69,7 @@ export function MobileNav() {
         </SheetDescription>
 
         <nav className="grid px-[calc(var(--gutter)-0.75rem)] pt-3">
-          {NAV.map((item) => (
+          {primaryDestinations(blog).map((item) => (
             <Link
               key={item.href}
               href={item.href}

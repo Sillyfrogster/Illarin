@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PostMedia } from "@/lib/api/query";
+import { OriginsProvider } from "@/lib/origins";
 import type { PostBlock, PostDocument } from "@/lib/post-document";
 import { POST_DOCUMENT_VERSION } from "@/lib/post-document";
 import { PostBody } from "./PostBody";
@@ -20,7 +21,14 @@ const HELD: PostMedia[] = [PLACED, SECOND].map((id) => ({
 
 function render(...content: PostBlock[]): string {
   const document: PostDocument = { version: POST_DOCUMENT_VERSION, content };
-  return renderToStaticMarkup(<PostBody document={document} media={HELD} />);
+  return renderToStaticMarkup(
+    <OriginsProvider
+      blog="https://blog.illarin.test"
+      site="https://illarin.test"
+    >
+      <PostBody document={document} media={HELD} />
+    </OriginsProvider>,
+  );
 }
 
 test("a heading renders at its level and answers to its address", () => {
@@ -72,7 +80,7 @@ test("a link that stays on Illarin opens in the same tab", () => {
       {
         type: "text",
         text: "Here",
-        marks: [{ type: "link", href: "http://localhost:8000/browse" }],
+        marks: [{ type: "link", href: "https://illarin.test/browse" }],
       },
     ],
   });

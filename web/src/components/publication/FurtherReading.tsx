@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { PostSummary } from "@/lib/api/query";
+import { postPath } from "@/lib/blog-paths";
 import { readableDate } from "@/lib/dates";
 
 export function FurtherReading({ posts }: { posts: PostSummary[] }) {
@@ -18,7 +19,7 @@ export function FurtherReading({ posts }: { posts: PostSummary[] }) {
           <li key={post.id}>
             <Link
               className="group -mx-4 flex min-h-14 flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-plate px-4 py-3 transition-colors hover:bg-deep"
-              href={`/blog/${post.slug}`}
+              href={postPath(post.slug)}
             >
               <span className="min-w-0">
                 <span className="block max-w-[52ch] font-display text-ui font-medium text-ink">

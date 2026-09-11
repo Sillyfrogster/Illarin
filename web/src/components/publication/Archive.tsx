@@ -3,13 +3,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { PostArchive } from "@/lib/api/query";
 import type { ArchiveNarrowing } from "@/lib/archive-entry";
+import { BLOG_HOME, feedAddresses } from "@/lib/blog-paths";
 import type { PostCover } from "@/lib/post-cover";
-import {
-  BLOG_DESCRIPTION,
-  BLOG_HEADING,
-  BLOG_HOME,
-  feedAddresses,
-} from "@/lib/publication-metadata";
+import { BLOG_DESCRIPTION, BLOG_HEADING } from "@/lib/publication-metadata";
 import { ArchiveLead } from "./ArchiveEntry";
 import { ArchiveList } from "./ArchiveList";
 import { ArchivePages } from "./ArchivePages";

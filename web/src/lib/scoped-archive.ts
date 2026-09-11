@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { fetchPostArchive, type PostArchive } from "@/lib/api/query";
-import { archivePage, pageAddress } from "@/lib/publication-metadata";
+import { archivePage, archivePath, pageAddress } from "@/lib/blog-paths";
 
 type Narrowing = "category" | "app";
 
@@ -22,7 +22,7 @@ export async function scopedArchive<Scope extends Narrowing>(
 }> {
   const page = archivePage(paging);
   if (page === null) notFound();
-  const address = `/blog/${scope}/${slug}`;
+  const address = archivePath(scope, slug);
   if (paging?.length === 2 && page === 1) permanentRedirect(address);
   const archive = await loadArchive(scope, slug, page);
   const found = archive?.[scope];

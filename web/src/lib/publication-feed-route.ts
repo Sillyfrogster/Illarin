@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { PostSummary } from "@/lib/api/query";
+import { archivePath } from "@/lib/blog-paths";
 import {
   FEED_LENGTH,
   type FeedScope,
@@ -40,7 +41,7 @@ export async function scopedFeedResponse(
     {
       name,
       description: archiveDescription(scope, name),
-      archive: `/blog/${scope}/${slug}`,
+      archive: archivePath(scope, slug),
     },
     record.posts,
   );

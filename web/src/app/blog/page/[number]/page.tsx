@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ScopedArchive } from "@/components/publication/Archive";
 import { fetchPostArchive } from "@/lib/api/query";
+import { BLOG_HOME, pageAddress } from "@/lib/blog-paths";
 import {
   BLOG_DESCRIPTION,
   BLOG_HEADING,
-  BLOG_HOME,
   blogMetadata,
-  pageAddress,
 } from "@/lib/publication-metadata";
 
 export async function generateMetadata({

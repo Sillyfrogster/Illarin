@@ -1,11 +1,9 @@
 import { Rss } from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
+import { PUBLICATION_FEEDS } from "@/lib/blog-paths";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
-import {
-  BLOG_DESCRIPTION,
-  PUBLICATION_FEEDS,
-} from "@/lib/publication-metadata";
+import { BLOG_DESCRIPTION } from "@/lib/publication-metadata";
 import { siteAddress } from "@/lib/site-address";
 
 export function BlogFooter() {

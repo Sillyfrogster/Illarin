@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DeadEnd } from "@/components/ui/dead-end";
-import { BLOG_HOME } from "@/lib/publication-metadata";
+import { BLOG_HOME } from "@/lib/blog-paths";
 
 export default function BlogNotFound() {
   return (

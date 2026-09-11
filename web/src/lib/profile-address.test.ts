@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { profileAddress, readProfileAddress } from "./profile-address";
+import { profilePath, readProfileAddress } from "./profile-address";
 
 test("reads the canonical address", () => {
   expect(readProfileAddress("@garden.keeper")).toEqual({
@@ -36,8 +36,6 @@ test("is no address at all when the handle could not exist", () => {
   expect(readProfileAddress("...")).toBe(null);
 });
 
-test("a profile address is on the main origin, wherever it is linked from", () => {
-  expect(profileAddress("garden.keeper")).toBe(
-    "http://localhost:8000/@garden.keeper",
-  );
+test("a profile lives at its handle", () => {
+  expect(profilePath("garden.keeper")).toBe("/@garden.keeper");
 });

@@ -13,14 +13,20 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
+import { useOrigins } from "@/lib/origins";
 import { AccountMenu } from "./AccountMenu";
-import { isCurrentPage, NAV, publishAction } from "./destinations";
+import {
+  isCurrentPage,
+  primaryDestinations,
+  publishAction,
+} from "./destinations";
 import { MobileNav } from "./MobileNav";
 import { Notch } from "./Notch";
 
 export function SiteHeader() {
   const pathname = usePathname();
   const { account } = useAuth();
+  const { blog } = useOrigins();
   const publish = publishAction(account);
   const { scrollY } = useScroll();
   const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
@@ -39,7 +45,7 @@ export function SiteHeader() {
               className="hidden items-center gap-2 md:flex"
               aria-label="Primary"
             >
-              {NAV.map((item) => (
+              {primaryDestinations(blog).map((item) => (
                 <LineLink
                   key={item.href}
                   href={item.href}

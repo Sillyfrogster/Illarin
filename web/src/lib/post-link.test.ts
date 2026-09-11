@@ -1,29 +1,28 @@
 import { expect, test } from "bun:test";
-import {
-  isSafeAddress,
-  leavesIllarin,
-  normalizedSlug,
-  postPermalink,
-} from "./post-link";
+import { isSafeAddress, leavesIllarin, normalizedSlug } from "./post-link";
+
+const SITE = "https://illarin.test";
 
 test("an address on another site leaves Illarin", () => {
-  expect(leavesIllarin("https://example.com/notes")).toBe(true);
+  expect(leavesIllarin("https://example.com/notes", SITE)).toBe(true);
 });
 
 test("an address on Illarin's own hostname stays", () => {
-  expect(leavesIllarin("https://localhost:8000/browse")).toBe(false);
+  expect(leavesIllarin("https://illarin.test/browse", SITE)).toBe(false);
 });
 
 test("an address on one of Illarin's other hostnames stays", () => {
-  expect(leavesIllarin("https://blog.localhost/first-post")).toBe(false);
+  expect(leavesIllarin("https://blog.illarin.test/first-post", SITE)).toBe(
+    false,
+  );
 });
 
 test("a mailto address is not opened away", () => {
-  expect(leavesIllarin("mailto:someone@example.com")).toBe(false);
+  expect(leavesIllarin("mailto:someone@example.com", SITE)).toBe(false);
 });
 
 test("an address that cannot be read is treated as leaving", () => {
-  expect(leavesIllarin("https://")).toBe(true);
+  expect(leavesIllarin("https://", SITE)).toBe(true);
 });
 
 test("only an https or mailto address is safe", () => {
@@ -52,16 +51,4 @@ test("a preview never runs past the address limit", () => {
   const long = normalizedSlug("a".repeat(120));
   expect(long.length).toBe(80);
   expect(normalizedSlug(`${"b".repeat(79)} tail`).endsWith("-")).toBe(false);
-});
-
-test("a permalink is the whole address a reader can hand to someone", () => {
-  expect(postPermalink("first-post")).toBe(
-    "http://localhost:8000/blog/first-post",
-  );
-});
-
-test("a permalink escapes an address that needs it", () => {
-  expect(postPermalink("café notes")).toBe(
-    "http://localhost:8000/blog/caf%C3%A9%20notes",
-  );
 });

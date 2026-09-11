@@ -1,11 +1,17 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { PostByline } from "@/lib/api/query";
-import { bylineName, bylineProfile } from "@/lib/byline";
+import { archivePath } from "@/lib/blog-paths";
+import { bylineName, bylineProfilePath } from "@/lib/byline";
+import { useOrigins } from "@/lib/origins";
 
 export function Byline({ byline }: { byline: PostByline }) {
+  const { site } = useOrigins();
   const name = bylineName(byline);
-  const profile = bylineProfile(byline);
+  const path = bylineProfilePath(byline);
+  const profile = path ? new URL(path, site).href : null;
   return (
     <div className="flex min-w-0 items-center gap-3">
       <span
@@ -43,7 +49,7 @@ export function Byline({ byline }: { byline: PostByline }) {
             <>
               <Link
                 className="truncate text-ink hover:text-accent"
-                href={`/blog/app/${byline.app.slug}`}
+                href={archivePath("app", byline.app.slug)}
               >
                 {byline.app.name}
               </Link>

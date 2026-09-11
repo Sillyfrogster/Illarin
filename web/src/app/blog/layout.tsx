@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { BlogFooter } from "@/components/publication/BlogFooter";
 import { BlogMasthead } from "@/components/publication/BlogMasthead";
 import { fetchPostCategories } from "@/lib/api/query";
-import { BLOG_HOME, BLOG_TITLE, feedTypes } from "@/lib/publication-metadata";
+import { BLOG_HOME } from "@/lib/blog-paths";
+import { BLOG_TITLE, feedTypes } from "@/lib/publication-metadata";
 
 export const metadata: Metadata = {
   title: { default: BLOG_TITLE, template: `%s · ${BLOG_TITLE}` },

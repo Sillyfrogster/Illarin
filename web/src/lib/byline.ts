@@ -1,10 +1,10 @@
 import type { PostByline } from "@/lib/api/query";
-import { profileAddress } from "@/lib/profile-address";
+import { profilePath } from "@/lib/profile-address";
 
 export function bylineName(byline: PostByline): string {
   return byline.displayName || `@${byline.handle}`;
 }
 
-export function bylineProfile(byline: PostByline): string | null {
-  return byline.historical ? null : profileAddress(byline.handle);
+export function bylineProfilePath(byline: PostByline): string | null {
+  return byline.historical ? null : profilePath(byline.handle);
 }

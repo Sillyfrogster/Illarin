@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicationFront } from "@/components/publication/Archive";
 import { fetchPostArchive, fetchPublishedPost } from "@/lib/api/query";
+import { blogAddress } from "@/lib/blog-address";
+import { BLOG_HOME } from "@/lib/blog-paths";
 import { postCover } from "@/lib/post-cover";
-import { blogAddress } from "@/lib/post-link";
 import {
   BLOG_DESCRIPTION,
-  BLOG_HOME,
   BLOG_TITLE,
   feedTypes,
 } from "@/lib/publication-metadata";

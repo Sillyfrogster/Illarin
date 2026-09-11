@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
 import { correctPostAddress, correctPostByline } from "@/lib/api/posts";
 import type { Post } from "@/lib/api/query";
+import { useBlogHost } from "@/lib/origins";
 
 type Part = "address" | "name";
 
@@ -18,6 +19,7 @@ export function PublishedIdentity({
   post: Post;
   onCorrected: (post: Post) => void;
 }) {
+  const blogHost = useBlogHost();
   const [changing, setChanging] = useState<Part | null>(null);
   const [failure, setFailure] = useState("");
   const [changed, setChanged] = useState("");
@@ -57,7 +59,7 @@ export function PublishedIdentity({
       <div className="flex flex-col gap-2">
         <p className="font-ui text-label font-medium text-mute">Address</p>
         <p className="font-prose text-meta text-ink wrap-anywhere">
-          <span className="text-mute">blog.illarin.xyz/</span>
+          <span className="text-mute">{blogHost}/</span>
           {post.slug}
         </p>
         {post.formerAddresses.length > 0 ? (
@@ -66,7 +68,7 @@ export function PublishedIdentity({
             <ul className="mt-1 list-none">
               {post.formerAddresses.map((address) => (
                 <li className="wrap-anywhere" key={address}>
-                  <span className="opacity-70">blog.illarin.xyz/</span>
+                  <span className="opacity-70">{blogHost}/</span>
                   {address}
                 </li>
               ))}
@@ -175,6 +177,7 @@ function ChangeAddress({
   onDone: (post: Post, said: string) => void;
   onFailure: (message: string) => void;
 }) {
+  const blogHost = useBlogHost();
   const [slug, setSlug] = useState(post.slug);
   const [busy, setBusy] = useState(false);
   const field = useOpenedField();
@@ -192,7 +195,7 @@ function ChangeAddress({
     }
     onDone(
       answer.value,
-      `The post is now at blog.illarin.xyz/${answer.value.slug}.`,
+      `The post is now at ${blogHost}/${answer.value.slug}.`,
     );
   }
 

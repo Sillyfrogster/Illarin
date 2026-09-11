@@ -2,12 +2,15 @@ import type { SignedInAccount } from "@/lib/auth";
 
 const UPLOAD_RETURN = encodeURIComponent("/upload");
 
-export const NAV = [
-  { label: "Browse", href: "/browse" },
-  { label: "Blog", href: "/blog" },
-] as const;
-
 export type Destination = { label: string; href: string };
+
+/** The primary places to go. The blog is its own origin, so its entry is a full address. */
+export function primaryDestinations(blog: string): Destination[] {
+  return [
+    { label: "Browse", href: "/browse" },
+    { label: "Blog", href: blog },
+  ];
+}
 export type AccountDestination = Destination & {
   id:
     | "profile"

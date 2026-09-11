@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { ArtFilters } from "@/components/art/ArtFilters";
 import { StoredTheme } from "@/components/layout/StoredTheme";
+import { blogAddress } from "@/lib/blog-address";
 import { FONT_VARIABLES } from "@/lib/fonts";
+import { siteAddress } from "@/lib/site-address";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -48,7 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <StoredTheme />
         <ArtFilters />
-        <Providers>{children}</Providers>
+        <Providers origins={{ site: siteAddress("/"), blog: blogAddress("/") }}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

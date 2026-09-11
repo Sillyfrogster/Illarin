@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { archiveSteps } from "@/lib/archive-pages";
-import { pageAddress } from "@/lib/publication-metadata";
+import { pageAddress } from "@/lib/blog-paths";
 
 const STEP =
   "flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-3 text-ui";

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 
 export const siteUrl = process.env.SITE_URL ?? "http://localhost:8000";
 
-export const blogUrl = process.env.BLOG_URL ?? siteUrl;
+/** The blog's own origin. Its root is the publication's front page, so a post lives at BLOG_URL/<slug>. */
+export const blogUrl = process.env.BLOG_URL ?? "http://blog.localhost:8000";
 
 export const mediaUrl = process.env.MEDIA_URL ?? siteUrl;
 

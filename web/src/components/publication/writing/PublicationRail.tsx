@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
 import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
+import { useBlogHost } from "@/lib/origins";
 import {
   type PublicationAction,
   publicationActions,
@@ -150,6 +151,7 @@ function Home({
   refusal: string;
   stamp: number;
 }) {
+  const blogHost = useBlogHost();
   const schedule = post.schedule;
   const waiting =
     schedule &&
@@ -166,7 +168,7 @@ function Home({
           {readersHave(post)}
         </p>
         <p className="font-prose text-meta text-mute wrap-anywhere">
-          blog.illarin.xyz/{post.slug}
+          {blogHost}/{post.slug}
         </p>
         {post.deletion ? (
           <p

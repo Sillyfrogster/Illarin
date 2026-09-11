@@ -6,10 +6,10 @@ import { ArticleIdentity } from "@/components/publication/ArticleIdentity";
 import { PostBody } from "@/components/publication/PostBody";
 import { ShareArticle } from "@/components/publication/ShareArticle";
 import type { PublicPost } from "@/lib/api/query";
+import { postPermalink } from "@/lib/blog-address";
+import { BLOG_HOME, PUBLICATION_FEEDS } from "@/lib/blog-paths";
 import { postContents } from "@/lib/post-contents";
 import { asPostDocument } from "@/lib/post-document";
-import { postPermalink } from "@/lib/post-link";
-import { BLOG_HOME, PUBLICATION_FEEDS } from "@/lib/publication-metadata";
 import { FurtherReading } from "./FurtherReading";
 
 export function Article({ post }: { post: PublicPost }) {

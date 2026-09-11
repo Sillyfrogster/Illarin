@@ -3,11 +3,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { Article } from "@/components/publication/Article";
 import { fetchPublishedPost } from "@/lib/api/query";
-import {
-  BLOG_HOME,
-  postMetadata,
-  postStructuredData,
-} from "@/lib/publication-metadata";
+import { postPath } from "@/lib/blog-paths";
+import { postMetadata, postStructuredData } from "@/lib/publication-metadata";
 import { readableForMetadata } from "@/lib/site-metadata";
 
 const loadPost = cache(async (slug: string) =>
@@ -26,7 +23,7 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
   const post = await loadPost(requested);
   if (!post) notFound();
   if (decodeURIComponent(requested) !== post.slug) {
-    permanentRedirect(`${BLOG_HOME}/${post.slug}`);
+    permanentRedirect(postPath(post.slug));
   }
   return (
     <>

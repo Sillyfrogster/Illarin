@@ -1,5 +1,5 @@
 import type { PostSpan } from "@/lib/post-document";
-import { isSafeAddress, leavesIllarin } from "@/lib/post-link";
+import { PostLink } from "./PostLink";
 
 export function PostSpans({ spans }: { spans: PostSpan[] }) {
   return (
@@ -33,25 +33,9 @@ function Span({ span }: { span: PostSpan }) {
         rendered = <strong>{rendered}</strong>;
         break;
       case "link":
-        rendered = <Away href={mark.href}>{rendered}</Away>;
+        rendered = <PostLink href={mark.href}>{rendered}</PostLink>;
         break;
     }
   }
   return rendered;
-}
-
-function Away({ href, children }: { href: string; children: React.ReactNode }) {
-  if (!isSafeAddress(href)) return <>{children}</>;
-  const away = leavesIllarin(href);
-  return (
-    <a
-      className="text-ink underline decoration-accent/55 underline-offset-[3px] transition-colors hover:decoration-accent"
-      href={href}
-      rel="noreferrer nofollow"
-      target={away ? "_blank" : undefined}
-    >
-      {children}
-      {away ? <span className="sr-only"> (opens in a new tab)</span> : null}
-    </a>
-  );
 }

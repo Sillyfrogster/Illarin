@@ -1,12 +1,9 @@
 import type { PostSummary } from "@/lib/api/query";
-import { bylineName, bylineProfile } from "@/lib/byline";
-import { blogAddress, postPermalink } from "@/lib/post-link";
-import {
-  BLOG_DESCRIPTION,
-  BLOG_HOME,
-  BLOG_TITLE,
-  feedAddresses,
-} from "@/lib/publication-metadata";
+import { blogAddress, postPermalink } from "@/lib/blog-address";
+import { BLOG_HOME, feedAddresses } from "@/lib/blog-paths";
+import { bylineName } from "@/lib/byline";
+import { BLOG_DESCRIPTION, BLOG_TITLE } from "@/lib/publication-metadata";
+import { bylineProfile } from "@/lib/site-address";
 
 export const FEED_LENGTH = 20;
 
