@@ -89,6 +89,7 @@ services:
       GIN_MODE: release
       PORT: "8080"
       SITE_URL: "${SITE_URL:?Set SITE_URL}"
+      BLOG_URL: "${BLOG_URL:?Set BLOG_URL}"
       DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL}"
       UPLOADS_DIR: /data/uploads
       STORAGE_FREE_SPACE_RESERVE_BYTES: "${STORAGE_FREE_SPACE_RESERVE_BYTES:-5368709120}"
@@ -136,6 +137,7 @@ services:
       API_URL: http://api:8080
       MEDIA_URL: http://gateway:8080
       SITE_URL: "${SITE_URL:?Set SITE_URL}"
+      BLOG_URL: "${BLOG_URL:?Set BLOG_URL}"
       DD_ENV: production
       DD_SERVICE: illarin-web
       DD_VERSION: "${ILLARIN_VERSION:?Set ILLARIN_VERSION}"

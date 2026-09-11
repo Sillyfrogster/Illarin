@@ -38,6 +38,11 @@ compose() {
   docker compose "${files[@]}" "$@"
 }
 
+host_of() {
+  local address="${1#*://}"
+  printf '%s\n' "${address%%/*}"
+}
+
 require_release() {
   if [[ ! "${ILLARIN_VERSION:-}" =~ ^[0-9a-f]{40}$ ]]; then
     echo "ILLARIN_VERSION must be a full lowercase Git commit SHA." >&2
