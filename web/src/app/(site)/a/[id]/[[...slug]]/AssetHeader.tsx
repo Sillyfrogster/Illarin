@@ -3,6 +3,7 @@
 import { ArrowLeft, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { ChipSet } from "@/components/ui/Chip";
+import { Field, TextArea } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import type { AssetDetail } from "@/lib/api/query";
 import { assetDisplayName } from "@/lib/asset-name";
@@ -14,6 +15,11 @@ import { GetAsset } from "./GetAsset";
 import { LatestUpdate } from "./LatestUpdate";
 import { WithholdNotice } from "./WithholdNotice";
 import { EditableText } from "./workspace/EditableText";
+import {
+  BLURB_LIMIT,
+  blurbCharacterCount,
+  blurbLimitMessage,
+} from "./workspace/identity";
 import { useWorkspace } from "./workspace/state";
 
 const TAG_PREVIEW_LIMIT = 8;
@@ -53,6 +59,8 @@ export function AssetHeader({
   const ratings = isDraft
     ? RATINGS
     : RATINGS.filter((rating) => rating.value !== null);
+  const blurbCount = blurbCharacterCount(workspace.identity.blurb);
+  const blurbTrouble = blurbLimitMessage(workspace.identity.blurb);
 
   return (
     <div className={shellClassName}>
@@ -196,10 +204,47 @@ export function AssetHeader({
         ) : null}
 
         <div className="min-w-0 md:col-start-1 lg:col-start-auto">
-          {asset.blurb ? (
+          {writing ? (
+            <Field
+              hint="Shown here in the asset header and on catalog cards. Search uses it too."
+              htmlFor="asset-blurb"
+              label="Blurb"
+              trailing={
+                <span
+                  className={
+                    blurbTrouble
+                      ? "text-meta tabular-nums text-stop"
+                      : "text-meta tabular-nums text-mute"
+                  }
+                >
+                  {blurbCount} / {BLURB_LIMIT} characters
+                </span>
+              }
+              trouble={blurbTrouble || undefined}
+            >
+              <TextArea
+                aria-describedby={
+                  blurbTrouble
+                    ? "asset-blurb-trouble asset-blurb-hint"
+                    : "asset-blurb-hint"
+                }
+                aria-invalid={Boolean(blurbTrouble) || undefined}
+                id="asset-blurb"
+                onChange={(event) =>
+                  workspace.writeIdentity({
+                    ...workspace.identity,
+                    blurb: event.target.value,
+                  })
+                }
+                placeholder="Give readers a short reason to open this page"
+                rows={5}
+                value={workspace.identity.blurb}
+              />
+            </Field>
+          ) : workspace.identity.blurb ? (
             <div className="max-w-[42ch] font-prose text-lede text-ink">
-              <RichText text={asset.blurb} />
-              {formattingWasRemoved([asset.blurb]) ? (
+              <RichText text={workspace.identity.blurb} />
+              {formattingWasRemoved([workspace.identity.blurb]) ? (
                 <FormattingNotice />
               ) : null}
             </div>

@@ -53,7 +53,7 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created Asse
 	}
 	nsfw := false
 	if err := svc.SetIdentity(context.Background(), Identity{
-		OwnerID: ownerID, AssetID: created.ID, Name: name, IsNSFW: &nsfw,
+		OwnerID: ownerID, AssetID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetIdentity imported asset: %v", err)
 	}

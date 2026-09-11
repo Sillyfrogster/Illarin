@@ -266,7 +266,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 	saveDescription(t, svc, owner, id, pool, "Third description")
 	adult := false
 	if err := svc.SetIdentity(ctx, Identity{
-		OwnerID: owner, AssetID: id, Name: "Renamed", IsNSFW: &adult,
+		OwnerID: owner, AssetID: id, Name: "Renamed", Blurb: "A changed pitch", IsNSFW: &adult,
 	}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
@@ -285,8 +285,9 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 		t.Fatalf("changes = %+v", changes)
 	}
 	renamed := changesUnder(t, latest.Groups, metadataSubject)
-	if len(renamed) != 1 || renamed[0].Name != "Name" ||
-		renamed[0].Before != "Published name" || renamed[0].After != "Renamed" {
+	if len(renamed) != 2 || renamed[0].Name != "Name" ||
+		renamed[0].Before != "Published name" || renamed[0].After != "Renamed" ||
+		renamed[1].Name != "Blurb" || renamed[1].Before != "" || renamed[1].After != "A changed pitch" {
 		t.Fatalf("metadata changes = %+v", renamed)
 	}
 	chosen, err := svc.Compare(ctx, ComparisonRequest{AssetID: id, From: 1, To: 3, Access: open})

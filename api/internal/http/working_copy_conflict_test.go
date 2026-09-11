@@ -61,9 +61,9 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			r, session := newVerifiedTestRouter(t)
 			started := startCharacter(t, r, session)
 			writeCharacterFloor(t, r, session, started)
-			first := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"First editor","isNsfw":false}`)), session)
+			first := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"First editor","blurb":"First pitch","isNsfw":false}`)), session)
 			withReviewedVersion(t, r, first)
-			second := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Second editor","isNsfw":false}`)), session)
+			second := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Second editor","blurb":"Second pitch","isNsfw":false}`)), session)
 			if publish {
 				second = authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/publish", nil), session)
 			}
@@ -97,14 +97,17 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			}
 			page := fetchStartedAsset(t, r, session, started.ID)
 			wantName := "First editor"
+			wantBlurb := "First pitch"
 			if winner == 1 {
 				wantName = "Second editor"
+				wantBlurb = "Second pitch"
 				if publish {
 					wantName = "Ilse of the west shelf"
+					wantBlurb = ""
 				}
 			}
-			if page.Name != wantName {
-				t.Fatalf("saved name = %q, want %q", page.Name, wantName)
+			if page.Name != wantName || page.Blurb != wantBlurb {
+				t.Fatalf("saved identity = %q / %q, want %q / %q", page.Name, page.Blurb, wantName, wantBlurb)
 			}
 			wantLifecycle := "draft"
 			if publish && winner == 1 {

@@ -4226,9 +4226,10 @@ paths:
     put:
       operationId: setAssetIdentity
       description: >-
-        Save the header fields that sit above an asset's blocks. The adult
+        Save the catalog fields that sit above an asset's blocks. The adult
         content answer may be null only while the asset is a draft, so nothing
-        answers it on the creator's behalf. An edit is live when it saves.
+        answers it on the creator's behalf. An edit stays private in a published
+        asset's working copy until the creator publishes the update.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -4256,8 +4257,25 @@ paths:
                 type: integer
                 format: int64
         '400':
-          description: The name is too long
-          or a published asset was sent no adult content answer: null
+          description: >-
+            The name or blurb is too long, or a published asset was sent no
+            adult content answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                  field:
+                    description: The field a creator can correct, when one applies.
+                    type: string
+                    enum:
+                      - name
+                      - blurb
+                      - isNsfw
         '401':
           description: No account is signed in
         '403':
@@ -8137,10 +8155,15 @@ components:
       additionalProperties: false
       required:
         - name
+        - blurb
         - isNsfw
       properties:
         name:
           type: string
+        blurb:
+          description: The catalog pitch written for a person. An empty value clears it.
+          type: string
+          maxLength: 400
         isNsfw:
           description: Null is the unanswered state, which only a draft may be in.
           type:

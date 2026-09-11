@@ -26,7 +26,7 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	saveDescription(t, svc, owner, id, pool, "Published description")
 	saveGreeting(t, svc, owner, id, pool, "Published greeting")
 	adult := false
-	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Published name", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
+	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Published name", Blurb: "Published pitch", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Publish(ctx, owner, id, currentCandidate(t, svc, id)); err != nil {
@@ -34,7 +34,7 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	}
 	generation := contentGeneration(t, pool, id)
 	saveDescription(t, svc, owner, id, pool, "Private description")
-	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Private name", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
+	if err := svc.SetIdentity(ctx, Identity{OwnerID: owner, AssetID: id, Name: "Private name", Blurb: "Private pitch", IsNSFW: &adult}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	page, err := svc.Detail(ctx, id, nil, ContentShown)
@@ -42,15 +42,15 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	core := blockFor(t, page.Blocks, "character_core")
-	if page.Name != "Published name" || core.Elements[0].Content.(block.Prose).Text != "Published description" {
+	if page.Name != "Published name" || page.Blurb != "Published pitch" || core.Elements[0].Content.(block.Prose).Text != "Published description" {
 		t.Fatal("private edits reached the published page")
 	}
 	if got := contentGeneration(t, pool, id); got != generation {
 		t.Fatalf("private save advanced generation from %d to %d", generation, got)
 	}
 	working, err := svc.WorkingCopy(ctx, id, &owner, ContentShown)
-	if err != nil || working.Name != "Private name" {
-		t.Fatalf("owner working copy name = %q, error = %v", working.Name, err)
+	if err != nil || working.Name != "Private name" || working.Blurb != "Private pitch" {
+		t.Fatalf("owner working copy identity = %q / %q, error = %v", working.Name, working.Blurb, err)
 	}
 	other := uuid.New()
 	for _, viewer := range []*uuid.UUID{nil, &other} {
@@ -65,6 +65,14 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 	listed, err := svc.Browse(ctx, ListFilter{Query: "Private name"}, ContentShown)
 	if err != nil || len(listed.Items) != 0 {
 		t.Fatalf("private name in browse = %+v, error = %v", listed, err)
+	}
+	listed, err = svc.Browse(ctx, ListFilter{Query: "Private pitch"}, ContentShown)
+	if err != nil || len(listed.Items) != 0 {
+		t.Fatalf("private blurb in browse = %+v, error = %v", listed, err)
+	}
+	listed, err = svc.Browse(ctx, ListFilter{Query: "Published pitch"}, ContentShown)
+	if err != nil || len(listed.Items) != 1 {
+		t.Fatalf("published blurb in browse = %+v, error = %v", listed, err)
 	}
 	exported, err := svc.OpenExport(ctx, id, nil, "chara_card_v2", nil)
 	if err != nil {

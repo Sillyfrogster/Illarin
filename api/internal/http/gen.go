@@ -1785,6 +1785,27 @@ func (e SendAssetToInstanceParamsXIllarinRequest) Valid() bool {
 	}
 }
 
+// Defines values for SetAssetIdentity400JSONResponseBodyField.
+const (
+	Blurb  SetAssetIdentity400JSONResponseBodyField = "blurb"
+	IsNsfw SetAssetIdentity400JSONResponseBodyField = "isNsfw"
+	Name   SetAssetIdentity400JSONResponseBodyField = "name"
+)
+
+// Valid indicates whether the value is a known member of the SetAssetIdentity400JSONResponseBodyField enum.
+func (e SetAssetIdentity400JSONResponseBodyField) Valid() bool {
+	switch e {
+	case Blurb:
+		return true
+	case IsNsfw:
+		return true
+	case Name:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BeginDiscordParamsIntent.
 const (
 	Attach BeginDiscordParamsIntent = "attach"
@@ -2180,6 +2201,9 @@ type AssetElementDisplay string
 
 // AssetIdentityRequest defines model for AssetIdentityRequest.
 type AssetIdentityRequest struct {
+	// Blurb The catalog pitch written for a person. An empty value clears it.
+	Blurb string `json:"blurb"`
+
 	// IsNsfw Null is the unanswered state, which only a draft may be in.
 	IsNsfw *bool  `json:"isNsfw"`
 	Name   string `json:"name"`
@@ -4545,6 +4569,9 @@ type SetAssetIdentityParams struct {
 	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
 	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
+
+// SetAssetIdentity400JSONResponseBodyField defines parameters for SetAssetIdentity.
+type SetAssetIdentity400JSONResponseBodyField string
 
 // AddMediaMultipartBody defines parameters for AddMedia.
 type AddMediaMultipartBody struct {

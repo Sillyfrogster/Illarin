@@ -25,7 +25,7 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAss
 	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	err := h.assets.SetIdentity(c.Request.Context(), asset.Identity{
 		OwnerID: owner.ID, AssetID: uuid.UUID(id),
-		Name: request.Name, IsNSFW: request.IsNsfw,
+		Name: request.Name, Blurb: request.Blurb, IsNSFW: request.IsNsfw,
 	}, candidate)
 	if candidateResult(c, candidate, err) {
 		return
@@ -35,6 +35,10 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAss
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
 	case errors.Is(err, asset.ErrNameTooLong):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "The name is too long."})
+	case errors.Is(err, asset.ErrBlurbTooLong):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "The blurb must be 400 characters or fewer.", "field": "blurb",
+		})
 	case errors.Is(err, asset.ErrRatingUnanswerable):
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "A published asset needs an adult content answer.",

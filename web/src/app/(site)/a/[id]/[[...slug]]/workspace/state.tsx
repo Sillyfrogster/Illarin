@@ -15,6 +15,7 @@ import {
   type AddableBlock,
   type AssetBlock,
   type AssetElement,
+  type AssetIdentityRequest,
   saveAssetBlock,
   saveAssetIdentity,
 } from "@/lib/api/query";
@@ -34,7 +35,7 @@ import {
   replaceElement,
 } from "./save";
 
-export type Identity = { name: string; isNsfw: boolean | null };
+export type Identity = AssetIdentityRequest;
 
 export type SaveState =
   | "saving"
@@ -165,6 +166,7 @@ export function AssetWorkspace({
   const changed = useMemo(() => changedBlockIds(draft, saved), [draft, saved]);
   const identityChanged =
     draftIdentity.name !== savedIdentity.name ||
+    draftIdentity.blurb !== savedIdentity.blurb ||
     draftIdentity.isNsfw !== savedIdentity.isNsfw;
   const dirty = changed.length > 0 || identityChanged;
 
@@ -309,10 +311,14 @@ export function AssetWorkspace({
   }, [applyServerBlocks, blocks]);
 
   useEffect(() => {
-    const answer = { isNsfw: identity.isNsfw, name: identity.name };
+    const answer = {
+      blurb: identity.blurb,
+      isNsfw: identity.isNsfw,
+      name: identity.name,
+    };
     setDraftIdentity(answer);
     setSavedIdentity(answer);
-  }, [identity.isNsfw, identity.name]);
+  }, [identity.blurb, identity.isNsfw, identity.name]);
 
   const editBlockList = useCallback(
     (change: (blocks: AssetBlock[]) => AssetBlock[]) => {

@@ -59,7 +59,11 @@ export default async function AssetPage({
         assetId={asset.id}
         blocks={asset.blocks}
         eligibleApps={asset.eligibleApps}
-        identity={{ isNsfw: asset.isNsfw, name: asset.name }}
+        identity={{
+          blurb: asset.blurb,
+          isNsfw: asset.isNsfw,
+          name: asset.name,
+        }}
         isDraft={isDraft}
         isOwner={asset.isOwner}
         unpublishedChanges={Boolean(asset.unpublishedChanges)}

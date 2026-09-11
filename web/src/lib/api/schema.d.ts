@@ -1713,7 +1713,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Save the header fields that sit above an asset's blocks. The adult content answer may be null only while the asset is a draft, so nothing answers it on the creator's behalf. An edit is live when it saves. */
+    /** @description Save the catalog fields that sit above an asset's blocks. The adult content answer may be null only while the asset is a draft, so nothing answers it on the creator's behalf. An edit stays private in a published asset's working copy until the creator publishes the update. */
     put: operations["setAssetIdentity"];
     post?: never;
     delete?: never;
@@ -3249,6 +3249,8 @@ export interface components {
     };
     AssetIdentityRequest: {
       name: string;
+      /** @description The catalog pitch written for a person. An empty value clears it. */
+      blurb: string;
       /** @description Null is the unanswered state, which only a draft may be in. */
       isNsfw: boolean | null;
     };
@@ -9959,12 +9961,21 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The name is too long */
+      /** @description The name or blurb is too long, or a published asset was sent no adult content answer */
       400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": {
+            error: string;
+            /**
+             * @description The field a creator can correct, when one applies.
+             * @enum {string}
+             */
+            field?: "name" | "blurb" | "isNsfw";
+          };
+        };
       };
       /** @description No account is signed in */
       401: {

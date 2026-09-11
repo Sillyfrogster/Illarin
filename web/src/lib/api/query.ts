@@ -9,6 +9,8 @@ import { api } from "./client";
 import type { components, paths } from "./schema";
 
 export type AssetDetail = components["schemas"]["AssetDetail"];
+export type AssetIdentityRequest =
+  components["schemas"]["AssetIdentityRequest"];
 export type AssetImage = components["schemas"]["AssetImage"];
 export type AssetBlock = components["schemas"]["AssetBlock"];
 export type AssetElement = components["schemas"]["AssetElement"];
@@ -398,7 +400,7 @@ export async function moveAssetBlockContent(
 export async function saveAssetIdentity(
   candidate: Candidate,
   id: string,
-  identity: { name: string; isNsfw: boolean | null },
+  identity: AssetIdentityRequest,
 ) {
   const { error, response } = await api.PUT("/v1/assets/{id}/identity", {
     params: {

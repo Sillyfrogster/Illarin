@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
@@ -14,6 +15,7 @@ const MaxNameRunes = 200
 
 var (
 	ErrNameTooLong        = errors.New("the name is too long")
+	ErrBlurbTooLong       = errors.New("the blurb is too long")
 	ErrRatingUnanswerable = errors.New("a published asset needs an adult content answer")
 )
 
@@ -21,6 +23,7 @@ type Identity struct {
 	OwnerID uuid.UUID
 	AssetID uuid.UUID
 	Name    string
+	Blurb   string
 	IsNSFW  *bool
 }
 
@@ -29,6 +32,10 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candi
 	if utf8.RuneCountInString(name) > MaxNameRunes {
 		return fmt.Errorf("%w: %d characters is past %d", ErrNameTooLong,
 			utf8.RuneCountInString(name), MaxNameRunes)
+	}
+	if utf8.RuneCountInString(in.Blurb) > format.MaxBlurbRunes {
+		return fmt.Errorf("%w: %d characters is past %d", ErrBlurbTooLong,
+			utf8.RuneCountInString(in.Blurb), format.MaxBlurbRunes)
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -54,9 +61,9 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candi
 	}
 
 	if _, err := tx.Exec(ctx, `
-		update assets set name = $2, is_nsfw = $3, updated_at = now()
+		update assets set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
 		 where id = $1
-	`, in.AssetID, name, in.IsNSFW); err != nil {
+	`, in.AssetID, name, in.Blurb, in.IsNSFW); err != nil {
 		return fmt.Errorf("save asset header: %w", err)
 	}
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
