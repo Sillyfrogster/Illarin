@@ -22,7 +22,7 @@ import type {
   PublicationGrant,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { deliveryState } from "@/lib/publication-delivery";
+import { deliveryState } from "@/lib/delivery-standing";
 import {
   REGISTERS,
   type Register,

@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PostDelivery } from "@/lib/api/query";
+import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 import {
-  deliveryStanding,
-  deliveryState,
   EVENT_WORDS,
   eventWord,
   transitionEvent,

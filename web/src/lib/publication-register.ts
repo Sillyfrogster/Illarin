@@ -7,7 +7,8 @@ import type {
   PublicationToken,
 } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
-import { deliveryState, EVENT_WORDS } from "@/lib/publication-delivery";
+import { deliveryState } from "@/lib/delivery-standing";
+import { EVENT_WORDS } from "@/lib/publication-delivery";
 
 export type Register =
   | "contributors"

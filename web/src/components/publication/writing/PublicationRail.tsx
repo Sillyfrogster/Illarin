@@ -11,16 +11,13 @@ import type { Post, PostDelivery } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
+import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 import {
   type PublicationAction,
   publicationActions,
   writerStanding,
 } from "@/lib/post-writing";
-import {
-  deliveryStanding,
-  deliveryState,
-  eventWord,
-} from "@/lib/publication-delivery";
+import { eventWord } from "@/lib/publication-delivery";
 import { howSoon } from "@/lib/schedule-time";
 import {
   DeleteStep,

@@ -30,8 +30,8 @@ import {
   type DeliveryState,
   deliveryStanding,
   deliveryState,
-  eventWord,
-} from "@/lib/publication-delivery";
+} from "@/lib/delivery-standing";
+import { eventWord } from "@/lib/publication-delivery";
 import { canReplay, nothingDelivered } from "@/lib/publication-register";
 
 export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =
