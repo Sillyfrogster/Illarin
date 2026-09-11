@@ -7,9 +7,12 @@ export const PASSAGE = "flex list-none flex-col gap-7";
 export const PASSAGE_NAME =
   "mb-2 font-ui text-meta font-semibold tracking-[0.01em] text-ink";
 
-/** An element is named at the size between a block and its items. */
+/** Illarin names a field quietly, so the creator's own headings stay the loudest. */
 export const ELEMENT_NAME =
-  "font-display text-article leading-snug font-medium text-ink [overflow-wrap:anywhere]";
+  "flex min-w-0 flex-1 basis-60 items-center gap-3 font-ui text-meta font-semibold tracking-[0.09em] text-mute uppercase [overflow-wrap:anywhere]";
+
+/** A hairline that marks the label as Illarin's rather than the creator's. */
+export const ELEMENT_RULE = "h-px min-w-4 flex-1 bg-rule/70";
 
 export const ITEM_NAME =
   "font-ui text-ui font-medium text-ink [overflow-wrap:anywhere]";

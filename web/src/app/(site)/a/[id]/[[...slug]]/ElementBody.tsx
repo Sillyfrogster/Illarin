@@ -27,6 +27,7 @@ import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
 import {
   CODE,
   ELEMENT_NAME,
+  ELEMENT_RULE,
   ITEM_BODY,
   ITEM_META,
   ITEM_NAME,
@@ -73,12 +74,13 @@ export function ElementBody({
   return (
     <section className="group/element flex min-w-0 flex-col gap-3 [container-name:element] [container-type:inline-size]">
       {label || tools ? (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
           {label ? (
             <h3 className={ELEMENT_NAME}>
-              {label}
+              <span className="min-w-0">{label}</span>
+              <span aria-hidden="true" className={ELEMENT_RULE} />
               {facts ? (
-                <span className="ml-2.5 font-ui text-meta font-normal text-mute">
+                <span className="shrink-0 font-ui text-meta font-normal text-mute">
                   {facts}
                 </span>
               ) : null}
@@ -208,8 +210,11 @@ function visibleItemCount(element: AssetElement): number {
 }
 
 function excerptControlLabel(element: AssetElement, itemCount: number): string {
-  if (element.type === "prose") return "Read the rest";
-  return `Show all ${itemCount} ${excerptNoun(element)}`;
+  if (element.type !== "prose") {
+    return `Show all ${itemCount} ${excerptNoun(element)}`;
+  }
+  const named = element.label.trim().toLocaleLowerCase();
+  return named ? `Read the rest of the ${named}` : "Read the rest";
 }
 
 function excerptNoun(element: AssetElement): string {

@@ -6,7 +6,7 @@ import type { AssetBlock, AssetElement, AssetImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
 import { ElementBody } from "../ElementBody";
-import { ELEMENT_NAME, ITEM_NAME } from "../element-runs";
+import { ELEMENT_NAME, ELEMENT_RULE, ITEM_NAME } from "../element-runs";
 import { EditableText } from "./EditableText";
 import { ElementTools } from "./ElementTools";
 import { isEmptyContent, writesInPlace } from "./save";
@@ -61,8 +61,15 @@ export function EditableElementSection({
   });
   return (
     <section className="group/element flex min-w-0 flex-col gap-3 [container-name:element] [container-type:inline-size]">
-      <div className="flex items-start justify-between gap-4">
-        {label ? <h3 className={ELEMENT_NAME}>{label}</h3> : <span />}
+      <div className="flex items-center justify-between gap-4">
+        {label ? (
+          <h3 className={ELEMENT_NAME}>
+            <span className="min-w-0">{label}</span>
+            <span aria-hidden="true" className={ELEMENT_RULE} />
+          </h3>
+        ) : (
+          <span />
+        )}
         {tools}
       </div>
       <EditableElement blockId={block.id} element={element} />
