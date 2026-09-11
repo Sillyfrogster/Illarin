@@ -24,6 +24,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/announcements": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description What this asset's updates have sent, newest update first, for its owner alone. Each row is one update on its way to one destination, with its state, its attempts and the last thing the destination said. It never carries addresses, credentials or request bodies. */
+    get: operations["listAssetUpdateAnnouncements"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/update-destinations": {
     parameters: {
       query?: never;
@@ -2155,6 +2174,23 @@ export interface webhooks {
     patch?: never;
     trace?: never;
   };
+  "asset.update.published.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to each of the creator's destinations chosen for one asset update when the update is published. It summarizes the update and links to the asset's history; the content itself lives only on Illarin. A first publication, a private save, a correction to published notes and the recording of an existing asset's history send nothing. */
+    post: operations["assetUpdatePublished"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export interface components {
   schemas: {
@@ -3732,6 +3768,84 @@ export interface components {
     AssetUpdateDestinationDefaultsRequest: {
       destinationIds: string[];
     };
+    /**
+     * @description Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+     * @enum {string}
+     */
+    AssetUpdateAnnouncementState:
+      | "pending"
+      | "sending"
+      | "delivered"
+      | "failed"
+      | "unconfirmed";
+    /**
+     * @description Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+     * @enum {string}
+     */
+    AssetUpdateAnnouncementSettledReason:
+      | "arrived"
+      | "exhausted"
+      | "refused"
+      | "gone"
+      | "removed"
+      | "disabled"
+      | "moved"
+      | "unconfirmed"
+      | "withheld"
+      | "withdrawn"
+      | "unlisted"
+      | "deleted";
+    /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
+    AssetUpdateAnnouncementAttempt: {
+      run: number;
+      number: number;
+      /** @enum {string} */
+      outcome: "delivered" | "refused" | "unreachable" | "unconfirmed";
+      /** @description The HTTP status the destination answered, absent when it never answered. */
+      status?: number;
+      detail: string;
+      tookMs: number;
+      /** Format: date-time */
+      attemptedAt: string;
+    };
+    /** @description One update announcement on its way to one destination. */
+    AssetUpdateAnnouncement: {
+      /**
+       * Format: uuid
+       * @description The delivery, which is also the webhook-id every attempt carries.
+       */
+      id: string;
+      /** Format: uuid */
+      eventId: string;
+      /** Format: uuid */
+      updateId: string;
+      updateNumber: number;
+      /** @description The name the destination carried when the update was published. */
+      destination: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      /** @description Whether the destination behind this announcement is gone. */
+      removed: boolean;
+      state: components["schemas"]["AssetUpdateAnnouncementState"];
+      settledReason?: components["schemas"]["AssetUpdateAnnouncementSettledReason"];
+      /** @description The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed. */
+      messageId: string;
+      run: number;
+      attempts: number;
+      /** Format: date-time */
+      occurredAt: string;
+      /**
+       * Format: date-time
+       * @description When the next attempt is due, in the past once it has settled.
+       */
+      dueAt: string;
+      /** Format: date-time */
+      settledAt?: string | null;
+      /** @description The most recent attempt, absent until one has been made. */
+      last?: components["schemas"]["AssetUpdateAnnouncementAttempt"];
+    };
+    AssetUpdateAnnouncementList: {
+      announcements: components["schemas"]["AssetUpdateAnnouncement"][];
+    };
     AssetUpdateChannel: {
       guildId: string;
       channelId: string;
@@ -4297,6 +4411,10 @@ export interface components {
       notes?: string;
       /** @description Free text a creator may repeat, keeping the asset's own version where it is empty */
       versionLabel?: string;
+      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule. */
+      destinationIds?: string[];
+      /** @description Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one. */
+      announceUnlisted?: boolean;
     };
     AssetUpdate: {
       /** Format: uuid */
@@ -4395,6 +4513,57 @@ export interface components {
       /** @description One line the publisher wrote for this transition alone. It is never part of the post and is absent when nothing was written. */
       note?: string;
       post: components["schemas"]["PublicationPostSummary"];
+    };
+    AssetUpdateEventAsset: {
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** @description The asset's name at the moment of publication. */
+      name: string;
+      /**
+       * Format: uri
+       * @description The asset's page on Illarin.
+       */
+      url: string;
+    };
+    AssetUpdateEventUpdate: {
+      /**
+       * Format: uuid
+       * @description The recorded version this update published.
+       */
+      id: string;
+      /** @description The update's number in the asset's history, rising by one each time. */
+      number: number;
+      /** @description The creator's free-text version label, absent when none was written. */
+      versionLabel?: string;
+      /** @description The creator's one-line summary as published. A later correction does not resend it. */
+      summary: string;
+      /** Format: date-time */
+      recordedAt: string;
+      /** @description Whether the exported file changed, as opposed to the page or catalog entry alone. */
+      contentChanged: boolean;
+      /**
+       * Format: uri
+       * @description The asset's update history, opened at this update.
+       */
+      historyUrl: string;
+    };
+    /** @description One published asset update, as a summary. The same delivery keeps its webhook-id across every attempt, so deduplicate on that header. Illarin promises no global ordering between events; compare `occurredAt` and `update.number` so an event that arrives after a newer one can be discarded rather than applied. The body never carries the changes themselves, prompt text or anything from a private working copy. */
+    AssetUpdateEvent: {
+      /**
+       * Format: uuid
+       * @description The event, stable across every attempt.
+       */
+      id: string;
+      /** @enum {string} */
+      type: "asset.update.published.v1";
+      /**
+       * Format: date-time
+       * @description When the update was published, which is what orders two events.
+       */
+      occurredAt: string;
+      asset: components["schemas"]["AssetUpdateEventAsset"];
+      update: components["schemas"]["AssetUpdateEventUpdate"];
     };
   };
   responses: {
@@ -4554,6 +4723,42 @@ export interface operations {
       };
       /** @description This asset is frozen */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listAssetUpdateAnnouncements: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The announcements and where each stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateAnnouncementList"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -11807,6 +12012,35 @@ export interface operations {
     };
     responses: {
       /** @description Handled the same way as a published event. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  assetUpdatePublished: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateEvent"];
+      };
+    };
+    responses: {
+      /** @description Any 2xx counts as delivered. A redirect is never followed and counts as a wrong address. 410 stops Illarin sending to the endpoint again. 429 is honored, including its Retry-After. A network failure, 408, 425 or any 5xx is retried on the schedule of immediate, 5 seconds, 5 minutes, 30 minutes, 2 hours, 5 hours, 10 hours, 14 hours, 20 hours and 24 hours. Any other 4xx ends the attempts. Before every attempt Illarin checks that the asset is still published and the update still stands, and cancels the announcement otherwise. */
       "2xx": {
         headers: {
           [name: string]: unknown;

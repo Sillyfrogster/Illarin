@@ -14,9 +14,13 @@ webhooks:
     $ref: ./publication-events.yaml#/webhooks/publication.post.updated.v1
   publication.post.withdrawn.v1:
     $ref: ./publication-events.yaml#/webhooks/publication.post.withdrawn.v1
+  asset.update.published.v1:
+    $ref: ./asset-events.yaml#/webhooks/asset.update.published.v1
 paths:
   /v1/assets/{id}/update-destinations:
     $ref: ./asset-destinations.yaml#/paths/~1v1~1assets~1{id}~1update-destinations
+  /v1/assets/{id}/announcements:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1assets~1{id}~1announcements
   /v1/account/update-destinations:
     $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations
   /v1/account/update-destinations/{id}:

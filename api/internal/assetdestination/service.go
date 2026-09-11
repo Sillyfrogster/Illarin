@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 	"github.com/google/uuid"
@@ -43,10 +44,20 @@ type Service struct {
 	pool    *pgxpool.Pool
 	sealing secrets.Key
 	sender  Sender
+	site    string
+	ledger  outbox.Ledger
+	now     func() time.Time
 }
 
-func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender) *Service {
-	return &Service{pool: pool, sealing: sealing, sender: sender}
+var deliveryTables = outbox.Tables{
+	Deliveries: "asset_update_deliveries", Attempts: "asset_update_delivery_attempts",
+}
+
+func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender, site string) *Service {
+	return &Service{
+		pool: pool, sealing: sealing, sender: sender, site: strings.TrimRight(site, "/"),
+		ledger: outbox.NewLedger(pool, deliveryTables), now: time.Now,
+	}
 }
 
 type Destination struct {

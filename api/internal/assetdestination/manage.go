@@ -2,12 +2,15 @@ package assetdestination
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Service) Update(ctx context.Context, owner, id uuid.UUID, name, address *string) (Destination, error) {
@@ -29,7 +32,12 @@ func (s *Service) Update(ctx context.Context, owner, id uuid.UUID, name, address
 		}
 		held.Host = prepared.host
 	}
-	result, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Destination{}, err
+	}
+	defer tx.Rollback(ctx)
+	result, err := tx.Exec(ctx, `
 		update asset_update_destinations
 		   set name = $4, host = $5, address = coalesce($6, address),
 		       state = case when $6::bytea is null then state else $7 end,
@@ -46,11 +54,24 @@ func (s *Service) Update(ctx context.Context, owner, id uuid.UUID, name, address
 	if result.RowsAffected() != 1 {
 		return Destination{}, ErrChanged
 	}
+	if address != nil {
+		if err := s.ledger.StopTo(ctx, tx, id, outbox.Stopped(outbox.Moved)); err != nil {
+			return Destination{}, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Destination{}, err
+	}
 	return s.Get(ctx, owner, id)
 }
 
 func (s *Service) Disable(ctx context.Context, owner, id uuid.UUID) (Destination, error) {
-	result, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Destination{}, err
+	}
+	defer tx.Rollback(ctx)
+	result, err := tx.Exec(ctx, `
 		update asset_update_destinations
 		   set state = 'disabled', disabled_at = now(), version = version+1, updated_at = now()
 		 where owner_id = $1 and id = $2
@@ -61,18 +82,38 @@ func (s *Service) Disable(ctx context.Context, owner, id uuid.UUID) (Destination
 	if result.RowsAffected() != 1 {
 		return Destination{}, ErrNotFound
 	}
+	if err := s.ledger.StopTo(ctx, tx, id, outbox.Stopped(outbox.Disabled)); err != nil {
+		return Destination{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Destination{}, err
+	}
 	return s.Get(ctx, owner, id)
 }
 
 func (s *Service) Remove(ctx context.Context, owner, id uuid.UUID) error {
-	result, err := s.pool.Exec(ctx, `delete from asset_update_destinations where owner_id = $1 and id = $2`, owner, id)
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	if result.RowsAffected() != 1 {
+	defer tx.Rollback(ctx)
+	var held bool
+	err = tx.QueryRow(ctx, `
+		select true from asset_update_destinations where owner_id = $1 and id = $2 for update
+	`, owner, id).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	if err := s.ledger.StopTo(ctx, tx, id, outbox.Stopped(outbox.Removed)); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `delete from asset_update_destinations where id = $1`, id); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *Service) RotateSecret(ctx context.Context, owner, id uuid.UUID) (Added, error) {

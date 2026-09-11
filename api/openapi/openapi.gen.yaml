@@ -76,6 +76,36 @@ webhooks:
       responses:
         2xx:
           description: Handled the same way as a published event.
+  asset.update.published.v1:
+    post:
+      operationId: assetUpdatePublished
+      description: >-
+        Sent to each of the creator's destinations chosen for one asset update
+        when the update is published. It summarizes the update and links to the
+        asset's history; the content itself lives only on Illarin. A first
+        publication, a private save, a correction to published notes and the
+        recording of an existing asset's history send nothing.
+      parameters:
+        - $ref: '#/components/parameters/WebhookId'
+        - $ref: '#/components/parameters/WebhookTimestamp'
+        - $ref: '#/components/parameters/WebhookSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateEvent'
+      responses:
+        2xx:
+          description: >-
+            Any 2xx counts as delivered. A redirect is never followed and counts
+            as a wrong address. 410 stops Illarin sending to the endpoint again.
+            429 is honored, including its Retry-After. A network failure, 408,
+            425 or any 5xx is retried on the schedule of immediate, 5 seconds, 5
+            minutes, 30 minutes, 2 hours, 5 hours, 10 hours, 14 hours, 20 hours
+            and 24 hours. Any other 4xx ends the attempts. Before every attempt
+            Illarin checks that the asset is still published and the update
+            still stands, and cancels the announcement otherwise.
 paths:
   /v1/assets/{id}/update-destinations:
     parameters:
@@ -130,6 +160,34 @@ paths:
           description: No asset belonging to this creator
         '409':
           description: This asset is frozen
+  /v1/assets/{id}/announcements:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listAssetUpdateAnnouncements
+      description: >-
+        What this asset's updates have sent, newest update first, for its owner
+        alone. Each row is one update on its way to one destination, with its
+        state, its attempts and the last thing the destination said. It never
+        carries addresses, credentials or request bodies.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The announcements and where each stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateAnnouncementList'
+        '401':
+          description: Sign in first
+        '404':
+          description: No asset belonging to this creator
   /v1/account/update-destinations:
     get:
       operationId: listAssetUpdateDestinations
@@ -9360,6 +9418,153 @@ components:
           items:
             type: string
             format: uuid
+    AssetUpdateAnnouncementState:
+      type: string
+      description: >-
+        Where one announcement stands. No settled state changes the published
+        update. An unconfirmed announcement was accepted without Discord saying
+        which message it made, so it is neither delivered nor safe to send
+        again.
+      enum:
+        - pending
+        - sending
+        - delivered
+        - failed
+        - unconfirmed
+    AssetUpdateAnnouncementSettledReason:
+      type: string
+      description: >-
+        Why an announcement stopped, absent while it is still going. The last
+        four are Illarin cancelling its own work because the asset was withheld,
+        the update withdrawn, the asset unlisted without consent to send its
+        link, or the asset no longer published.
+      enum:
+        - arrived
+        - exhausted
+        - refused
+        - gone
+        - removed
+        - disabled
+        - moved
+        - unconfirmed
+        - withheld
+        - withdrawn
+        - unlisted
+        - deleted
+    AssetUpdateAnnouncementAttempt:
+      type: object
+      description: >-
+        The safe record of one request. It holds no body, in either direction,
+        and no header Illarin signed it with.
+      additionalProperties: false
+      required:
+        - run
+        - number
+        - outcome
+        - detail
+        - tookMs
+        - attemptedAt
+      properties:
+        run:
+          type: integer
+        number:
+          type: integer
+        outcome:
+          type: string
+          enum:
+            - delivered
+            - refused
+            - unreachable
+            - unconfirmed
+        status:
+          type: integer
+          description: >-
+            The HTTP status the destination answered, absent when it never
+            answered.
+        detail:
+          type: string
+        tookMs:
+          type: integer
+        attemptedAt:
+          type: string
+          format: date-time
+    AssetUpdateAnnouncement:
+      type: object
+      description: One update announcement on its way to one destination.
+      additionalProperties: false
+      required:
+        - id
+        - eventId
+        - updateId
+        - updateNumber
+        - destination
+        - kind
+        - removed
+        - state
+        - messageId
+        - run
+        - attempts
+        - occurredAt
+        - dueAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The delivery, which is also the webhook-id every attempt carries.
+        eventId:
+          type: string
+          format: uuid
+        updateId:
+          type: string
+          format: uuid
+        updateNumber:
+          type: integer
+        destination:
+          type: string
+          description: The name the destination carried when the update was published.
+        kind:
+          $ref: '#/components/schemas/AssetUpdateDestinationKind'
+        removed:
+          type: boolean
+          description: Whether the destination behind this announcement is gone.
+        state:
+          $ref: '#/components/schemas/AssetUpdateAnnouncementState'
+        settledReason:
+          $ref: '#/components/schemas/AssetUpdateAnnouncementSettledReason'
+        messageId:
+          type: string
+          description: >-
+            The Discord message this announcement made, empty for a generic
+            webhook and for an announcement Discord never confirmed.
+        run:
+          type: integer
+        attempts:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+          description: When the next attempt is due, in the past once it has settled.
+        settledAt:
+          type: string
+          format: date-time
+          nullable: true
+        last:
+          allOf:
+            - $ref: '#/components/schemas/AssetUpdateAnnouncementAttempt'
+          description: The most recent attempt, absent until one has been made.
+    AssetUpdateAnnouncementList:
+      type: object
+      additionalProperties: false
+      required:
+        - announcements
+      properties:
+        announcements:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetUpdateAnnouncement'
     AssetUpdateChannel:
       type: object
       additionalProperties: false
@@ -10666,6 +10871,24 @@ components:
             where it is empty
           type: string
           maxLength: 60
+        destinationIds:
+          description: >-
+            The creator's own active destinations this update is announced to.
+            Absent, a listed asset uses the destinations remembered for it and
+            an unlisted asset announces nowhere. Present, the list is remembered
+            for the next update, and an empty list publishes quietly. Nothing is
+            sent inside this request; delivery follows on its own schedule.
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        announceUnlisted:
+          description: >-
+            Consent to send an unlisted asset's direct link. Required whenever
+            destinationIds names anything for an unlisted asset; ignored for a
+            listed one.
+          type: boolean
     AssetUpdate:
       type: object
       required:
@@ -10893,6 +11116,95 @@ components:
             part of the post and is absent when nothing was written.
         post:
           $ref: '#/components/schemas/PublicationPostSummary'
+    AssetUpdateEventAsset:
+      type: object
+      required:
+        - id
+        - kind
+        - name
+        - url
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        name:
+          type: string
+          description: The asset's name at the moment of publication.
+        url:
+          type: string
+          format: uri
+          description: The asset's page on Illarin.
+    AssetUpdateEventUpdate:
+      type: object
+      required:
+        - id
+        - number
+        - summary
+        - recordedAt
+        - contentChanged
+        - historyUrl
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The recorded version this update published.
+        number:
+          type: integer
+          description: The update's number in the asset's history, rising by one each time.
+        versionLabel:
+          type: string
+          description: The creator's free-text version label, absent when none was written.
+        summary:
+          type: string
+          description: >-
+            The creator's one-line summary as published. A later correction does
+            not resend it.
+        recordedAt:
+          type: string
+          format: date-time
+        contentChanged:
+          type: boolean
+          description: >-
+            Whether the exported file changed, as opposed to the page or catalog
+            entry alone.
+        historyUrl:
+          type: string
+          format: uri
+          description: The asset's update history, opened at this update.
+    AssetUpdateEvent:
+      type: object
+      description: >-
+        One published asset update, as a summary. The same delivery keeps its
+        webhook-id across every attempt, so deduplicate on that header. Illarin
+        promises no global ordering between events; compare `occurredAt` and
+        `update.number` so an event that arrives after a newer one can be
+        discarded rather than applied. The body never carries the changes
+        themselves, prompt text or anything from a private working copy.
+      required:
+        - id
+        - type
+        - occurredAt
+        - asset
+        - update
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The event, stable across every attempt.
+        type:
+          type: string
+          enum:
+            - asset.update.published.v1
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the update was published, which is what orders two events.
+        asset:
+          $ref: '#/components/schemas/AssetUpdateEventAsset'
+        update:
+          $ref: '#/components/schemas/AssetUpdateEventUpdate'
   responses:
     PublicationInvalid:
       description: A field, the post document or the request itself is not valid

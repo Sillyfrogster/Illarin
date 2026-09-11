@@ -21,7 +21,10 @@ const (
 const (
 	CategoryHeading = "Category"
 	VersionHeading  = "Version"
+	UpdateHeading   = "Update"
 )
+
+const Site = "Illarin"
 
 type Author struct {
 	Name string
@@ -34,11 +37,13 @@ type Announcement struct {
 	URL      string
 	Image    string
 	Category string
+	Update   string
 	Version  string
 	Note     string
 	Role     string
 	Author   Author
 	At       time.Time
+	Footer   string
 }
 
 func (a Announcement) Body() ([]byte, error) {
@@ -75,8 +80,18 @@ func (a Announcement) embed() embed {
 		URL:         a.URL,
 		Color:       Stripe,
 		Timestamp:   a.At.UTC().Format(time.RFC3339),
-		Fields:      []field{{Name: CategoryHeading, Value: cut(a.Category, FieldLimit), Inline: true}},
-		Footer:      footer{Text: Publication},
+		Fields:      []field{},
+		Footer:      footer{Text: a.footer()},
+	}
+	if a.Category != "" {
+		shown.Fields = append(shown.Fields, field{
+			Name: CategoryHeading, Value: cut(a.Category, FieldLimit), Inline: true,
+		})
+	}
+	if a.Update != "" {
+		shown.Fields = append(shown.Fields, field{
+			Name: UpdateHeading, Value: cut(a.Update, FieldLimit), Inline: true,
+		})
 	}
 	if a.Version != "" {
 		shown.Fields = append(shown.Fields, field{
@@ -90,6 +105,13 @@ func (a Announcement) embed() embed {
 		shown.Image = &picture{URL: a.Image}
 	}
 	return shown
+}
+
+func (a Announcement) footer() string {
+	if a.Footer == "" {
+		return Publication
+	}
+	return a.Footer
 }
 
 func cut(said string, limit int) string {

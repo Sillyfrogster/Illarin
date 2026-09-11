@@ -213,6 +213,37 @@ type AssetSnapshotPromptMatch struct {
 	ResolvedAt         pgtype.Timestamptz
 }
 
+type AssetUpdateDelivery struct {
+	ID              pgtype.UUID
+	EventID         pgtype.UUID
+	DestinationID   pgtype.UUID
+	DestinationName string
+	DestinationKind string
+	State           string
+	SettledReason   pgtype.Text
+	MessageID       pgtype.Text
+	Run             int32
+	Attempts        int32
+	LeaseToken      pgtype.UUID
+	LeaseExpiresAt  pgtype.Timestamptz
+	DueAt           pgtype.Timestamptz
+	SettledAt       pgtype.Timestamptz
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type AssetUpdateDeliveryAttempt struct {
+	ID          pgtype.UUID
+	DeliveryID  pgtype.UUID
+	Run         int32
+	Number      int32
+	Outcome     string
+	Status      pgtype.Int4
+	Detail      string
+	TookMs      int32
+	AttemptedAt pgtype.Timestamptz
+}
+
 type AssetUpdateDestination struct {
 	ID                  pgtype.UUID
 	OwnerID             pgtype.UUID
@@ -237,6 +268,16 @@ type AssetUpdateDestination struct {
 type AssetUpdateDestinationDefault struct {
 	AssetID       pgtype.UUID
 	DestinationID pgtype.UUID
+}
+
+type AssetUpdateEvent struct {
+	ID              pgtype.UUID
+	AssetID         pgtype.UUID
+	SnapshotID      pgtype.UUID
+	Type            string
+	OccurredAt      pgtype.Timestamptz
+	UnlistedConsent bool
+	Payload         []byte
 }
 
 type Blob struct {

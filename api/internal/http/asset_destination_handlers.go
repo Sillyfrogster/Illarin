@@ -200,3 +200,43 @@ func toAssetUpdateDestination(d assetdestination.Destination) AssetUpdateDestina
 	}
 	return answer
 }
+
+func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context, id types.UUID) {
+	owner, ok := h.signedInAccount(c, "reading what an asset announced")
+	if !ok {
+		return
+	}
+	sent, err := h.updateDestinations.Announcements(c.Request.Context(), owner.ID, id)
+	if err != nil {
+		h.assetDestinationError(c, err)
+		return
+	}
+	listed := make([]AssetUpdateAnnouncement, 0, len(sent))
+	for _, one := range sent {
+		listed = append(listed, toAssetUpdateAnnouncement(one))
+	}
+	c.JSON(http.StatusOK, AssetUpdateAnnouncementList{Announcements: listed})
+}
+
+func toAssetUpdateAnnouncement(one assetdestination.Announcement) AssetUpdateAnnouncement {
+	shown := AssetUpdateAnnouncement{
+		Id: one.ID, EventId: one.EventID, UpdateId: one.UpdateID, UpdateNumber: one.UpdateNumber,
+		Destination: one.Destination, Kind: AssetUpdateDestinationKind(one.Kind),
+		Removed: one.Removed, State: AssetUpdateAnnouncementState(one.State),
+		MessageId: one.MessageID, Run: one.Run, Attempts: one.Attempts,
+		OccurredAt: one.OccurredAt, DueAt: one.DueAt, SettledAt: one.SettledAt,
+	}
+	if one.SettledReason != "" {
+		reason := AssetUpdateAnnouncementSettledReason(one.SettledReason)
+		shown.SettledReason = &reason
+	}
+	if one.Last != nil {
+		shown.Last = &AssetUpdateAnnouncementAttempt{
+			Run: one.Last.Run, Number: one.Last.Number,
+			Outcome: AssetUpdateAnnouncementAttemptOutcome(one.Last.Outcome),
+			Status:  one.Last.Status, Detail: one.Last.Detail,
+			TookMs: int(one.Last.Took.Milliseconds()), AttemptedAt: one.Last.Attempted,
+		}
+	}
+	return shown
+}

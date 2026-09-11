@@ -48,6 +48,34 @@ paths:
           description: No asset belonging to this creator
         '409':
           description: This asset is frozen
+  /v1/assets/{id}/announcements:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listAssetUpdateAnnouncements
+      description: >-
+        What this asset's updates have sent, newest update first, for its owner
+        alone. Each row is one update on its way to one destination, with its
+        state, its attempts and the last thing the destination said. It never
+        carries addresses, credentials or request bodies.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The announcements and where each stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateAnnouncementList'
+        '401':
+          description: Sign in first
+        '404':
+          description: No asset belonging to this creator
   /v1/account/update-destinations:
     get:
       operationId: listAssetUpdateDestinations
@@ -250,6 +278,134 @@ paths:
           description: The destination changed; inspect it before trying again
 components:
   schemas:
+    AssetUpdateAnnouncementState:
+      type: string
+      description: >-
+        Where one announcement stands. No settled state changes the published
+        update. An unconfirmed announcement was accepted without Discord saying
+        which message it made, so it is neither delivered nor safe to send again.
+      enum: [pending, sending, delivered, failed, unconfirmed]
+    AssetUpdateAnnouncementSettledReason:
+      type: string
+      description: >-
+        Why an announcement stopped, absent while it is still going. The last
+        four are Illarin cancelling its own work because the asset was
+        withheld, the update withdrawn, the asset unlisted without consent to
+        send its link, or the asset no longer published.
+      enum:
+        - arrived
+        - exhausted
+        - refused
+        - gone
+        - removed
+        - disabled
+        - moved
+        - unconfirmed
+        - withheld
+        - withdrawn
+        - unlisted
+        - deleted
+    AssetUpdateAnnouncementAttempt:
+      type: object
+      description: >-
+        The safe record of one request. It holds no body, in either direction,
+        and no header Illarin signed it with.
+      additionalProperties: false
+      required: [run, number, outcome, detail, tookMs, attemptedAt]
+      properties:
+        run:
+          type: integer
+        number:
+          type: integer
+        outcome:
+          type: string
+          enum: [delivered, refused, unreachable, unconfirmed]
+        status:
+          type: integer
+          description: The HTTP status the destination answered, absent when it never answered.
+        detail:
+          type: string
+        tookMs:
+          type: integer
+        attemptedAt:
+          type: string
+          format: date-time
+    AssetUpdateAnnouncement:
+      type: object
+      description: One update announcement on its way to one destination.
+      additionalProperties: false
+      required:
+        - id
+        - eventId
+        - updateId
+        - updateNumber
+        - destination
+        - kind
+        - removed
+        - state
+        - messageId
+        - run
+        - attempts
+        - occurredAt
+        - dueAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The delivery, which is also the webhook-id every attempt carries.
+        eventId:
+          type: string
+          format: uuid
+        updateId:
+          type: string
+          format: uuid
+        updateNumber:
+          type: integer
+        destination:
+          type: string
+          description: The name the destination carried when the update was published.
+        kind:
+          $ref: '#/components/schemas/AssetUpdateDestinationKind'
+        removed:
+          type: boolean
+          description: Whether the destination behind this announcement is gone.
+        state:
+          $ref: '#/components/schemas/AssetUpdateAnnouncementState'
+        settledReason:
+          $ref: '#/components/schemas/AssetUpdateAnnouncementSettledReason'
+        messageId:
+          type: string
+          description: >-
+            The Discord message this announcement made, empty for a generic
+            webhook and for an announcement Discord never confirmed.
+        run:
+          type: integer
+        attempts:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+          description: When the next attempt is due, in the past once it has settled.
+        settledAt:
+          type: string
+          format: date-time
+          nullable: true
+        last:
+          allOf:
+            - $ref: '#/components/schemas/AssetUpdateAnnouncementAttempt'
+          description: The most recent attempt, absent until one has been made.
+    AssetUpdateAnnouncementList:
+      type: object
+      additionalProperties: false
+      required: [announcements]
+      properties:
+        announcements:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetUpdateAnnouncement'
     AssetUpdateDestinationChoice:
       type: object
       additionalProperties: false

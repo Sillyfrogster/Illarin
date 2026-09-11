@@ -2340,6 +2340,24 @@ components:
           description: Free text a creator may repeat, keeping the asset's own version where it is empty
           type: string
           maxLength: 60
+        destinationIds:
+          description: >-
+            The creator's own active destinations this update is announced to.
+            Absent, a listed asset uses the destinations remembered for it and an
+            unlisted asset announces nowhere. Present, the list is remembered for
+            the next update, and an empty list publishes quietly. Nothing is sent
+            inside this request; delivery follows on its own schedule.
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        announceUnlisted:
+          description: >-
+            Consent to send an unlisted asset's direct link. Required whenever
+            destinationIds names anything for an unlisted asset; ignored for a
+            listed one.
+          type: boolean
     AssetVersionNotesRequest:
       type: object
       additionalProperties: false

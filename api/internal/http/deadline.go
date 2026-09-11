@@ -36,6 +36,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 	}
 	limits := map[string]time.Duration{
 		routeKey(http.MethodGet, "/v1/assets/:id/update-destinations"):                       d.JSON,
+		routeKey(http.MethodGet, "/v1/assets/:id/announcements"):                             d.JSON,
 		routeKey(http.MethodPut, "/v1/assets/:id/update-destinations"):                       d.JSON,
 		routeKey(http.MethodPatch, "/v1/account/update-destinations/:id"):                    d.Verify,
 		routeKey(http.MethodDelete, "/v1/account/update-destinations/:id"):                   d.JSON,

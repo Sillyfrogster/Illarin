@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/oapi-codegen/runtime/types"
@@ -146,11 +147,19 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params Publ
 	recorded, items, err := h.assets.PublishUpdate(c.Request.Context(), asset.UpdateRequest{
 		OwnerID: owner.ID, AssetID: uuid.UUID(id), Summary: request.Summary,
 		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
+		Announcement: announcementChoice(request),
 	}, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
 	switch {
+	case errors.Is(err, assetdestination.ErrUnlistedConsentRequired):
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.",
+			"announceUnlisted")
+	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"Choose only your own verified, active destinations.", "destinationIds")
 	case errors.Is(err, asset.ErrSummaryRequired):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Say what changed in this update."})
 	case errors.Is(err, asset.ErrSummaryTooLong):
@@ -182,4 +191,16 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params Publ
 			ContentChanged:    recorded.ContentChanged,
 		})
 	}
+}
+
+func announcementChoice(request AssetUpdateRequest) asset.UpdateAnnouncement {
+	choice := asset.UpdateAnnouncement{}
+	if request.DestinationIds != nil {
+		chosen := readIDs(request.DestinationIds)
+		choice.DestinationIDs = &chosen
+	}
+	if request.AnnounceUnlisted != nil {
+		choice.AnnounceUnlisted = *request.AnnounceUnlisted
+	}
+	return choice
 }

@@ -441,6 +441,105 @@ func (e AssetListVisibility) Valid() bool {
 	}
 }
 
+// Defines values for AssetUpdateAnnouncementAttemptOutcome.
+const (
+	AssetUpdateAnnouncementAttemptOutcomeDelivered   AssetUpdateAnnouncementAttemptOutcome = "delivered"
+	AssetUpdateAnnouncementAttemptOutcomeRefused     AssetUpdateAnnouncementAttemptOutcome = "refused"
+	AssetUpdateAnnouncementAttemptOutcomeUnconfirmed AssetUpdateAnnouncementAttemptOutcome = "unconfirmed"
+	AssetUpdateAnnouncementAttemptOutcomeUnreachable AssetUpdateAnnouncementAttemptOutcome = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementAttemptOutcome enum.
+func (e AssetUpdateAnnouncementAttemptOutcome) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementAttemptOutcomeDelivered:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeRefused:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeUnconfirmed:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateAnnouncementSettledReason.
+const (
+	AssetUpdateAnnouncementSettledReasonArrived     AssetUpdateAnnouncementSettledReason = "arrived"
+	AssetUpdateAnnouncementSettledReasonDeleted     AssetUpdateAnnouncementSettledReason = "deleted"
+	AssetUpdateAnnouncementSettledReasonDisabled    AssetUpdateAnnouncementSettledReason = "disabled"
+	AssetUpdateAnnouncementSettledReasonExhausted   AssetUpdateAnnouncementSettledReason = "exhausted"
+	AssetUpdateAnnouncementSettledReasonGone        AssetUpdateAnnouncementSettledReason = "gone"
+	AssetUpdateAnnouncementSettledReasonMoved       AssetUpdateAnnouncementSettledReason = "moved"
+	AssetUpdateAnnouncementSettledReasonRefused     AssetUpdateAnnouncementSettledReason = "refused"
+	AssetUpdateAnnouncementSettledReasonRemoved     AssetUpdateAnnouncementSettledReason = "removed"
+	AssetUpdateAnnouncementSettledReasonUnconfirmed AssetUpdateAnnouncementSettledReason = "unconfirmed"
+	AssetUpdateAnnouncementSettledReasonUnlisted    AssetUpdateAnnouncementSettledReason = "unlisted"
+	AssetUpdateAnnouncementSettledReasonWithdrawn   AssetUpdateAnnouncementSettledReason = "withdrawn"
+	AssetUpdateAnnouncementSettledReasonWithheld    AssetUpdateAnnouncementSettledReason = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementSettledReason enum.
+func (e AssetUpdateAnnouncementSettledReason) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementSettledReasonArrived:
+		return true
+	case AssetUpdateAnnouncementSettledReasonDeleted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonDisabled:
+		return true
+	case AssetUpdateAnnouncementSettledReasonExhausted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonGone:
+		return true
+	case AssetUpdateAnnouncementSettledReasonMoved:
+		return true
+	case AssetUpdateAnnouncementSettledReasonRefused:
+		return true
+	case AssetUpdateAnnouncementSettledReasonRemoved:
+		return true
+	case AssetUpdateAnnouncementSettledReasonUnconfirmed:
+		return true
+	case AssetUpdateAnnouncementSettledReasonUnlisted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonWithdrawn:
+		return true
+	case AssetUpdateAnnouncementSettledReasonWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateAnnouncementState.
+const (
+	AssetUpdateAnnouncementStateDelivered   AssetUpdateAnnouncementState = "delivered"
+	AssetUpdateAnnouncementStateFailed      AssetUpdateAnnouncementState = "failed"
+	AssetUpdateAnnouncementStatePending     AssetUpdateAnnouncementState = "pending"
+	AssetUpdateAnnouncementStateSending     AssetUpdateAnnouncementState = "sending"
+	AssetUpdateAnnouncementStateUnconfirmed AssetUpdateAnnouncementState = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementState enum.
+func (e AssetUpdateAnnouncementState) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementStateDelivered:
+		return true
+	case AssetUpdateAnnouncementStateFailed:
+		return true
+	case AssetUpdateAnnouncementStatePending:
+		return true
+	case AssetUpdateAnnouncementStateSending:
+		return true
+	case AssetUpdateAnnouncementStateUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssetUpdateDestinationState.
 const (
 	AssetUpdateDestinationStateActive     AssetUpdateDestinationState = "active"
@@ -474,6 +573,21 @@ func (e AssetUpdateDestinationKind) Valid() bool {
 	case AssetUpdateDestinationKindDiscord:
 		return true
 	case AssetUpdateDestinationKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateEventType.
+const (
+	AssetUpdatePublishedV1 AssetUpdateEventType = "asset.update.published.v1"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateEventType enum.
+func (e AssetUpdateEventType) Valid() bool {
+	switch e {
+	case AssetUpdatePublishedV1:
 		return true
 	default:
 		return false
@@ -2377,6 +2491,69 @@ type AssetUpdate struct {
 	VersionLabel      string             `json:"versionLabel"`
 }
 
+// AssetUpdateAnnouncement One update announcement on its way to one destination.
+type AssetUpdateAnnouncement struct {
+	Attempts int `json:"attempts"`
+
+	// Destination The name the destination carried when the update was published.
+	Destination string `json:"destination"`
+
+	// DueAt When the next attempt is due, in the past once it has settled.
+	DueAt   time.Time          `json:"dueAt"`
+	EventId openapi_types.UUID `json:"eventId"`
+
+	// Id The delivery, which is also the webhook-id every attempt carries.
+	Id   openapi_types.UUID         `json:"id"`
+	Kind AssetUpdateDestinationKind `json:"kind"`
+
+	// Last The most recent attempt, absent until one has been made.
+	Last *AssetUpdateAnnouncementAttempt `json:"last,omitempty"`
+
+	// MessageId The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed.
+	MessageId  string    `json:"messageId"`
+	OccurredAt time.Time `json:"occurredAt"`
+
+	// Removed Whether the destination behind this announcement is gone.
+	Removed   bool       `json:"removed"`
+	Run       int        `json:"run"`
+	SettledAt *time.Time `json:"settledAt,omitempty"`
+
+	// SettledReason Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+	SettledReason *AssetUpdateAnnouncementSettledReason `json:"settledReason,omitempty"`
+
+	// State Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+	State        AssetUpdateAnnouncementState `json:"state"`
+	UpdateId     openapi_types.UUID           `json:"updateId"`
+	UpdateNumber int                          `json:"updateNumber"`
+}
+
+// AssetUpdateAnnouncementAttempt The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with.
+type AssetUpdateAnnouncementAttempt struct {
+	AttemptedAt time.Time                             `json:"attemptedAt"`
+	Detail      string                                `json:"detail"`
+	Number      int                                   `json:"number"`
+	Outcome     AssetUpdateAnnouncementAttemptOutcome `json:"outcome"`
+	Run         int                                   `json:"run"`
+
+	// Status The HTTP status the destination answered, absent when it never answered.
+	Status *int `json:"status,omitempty"`
+	TookMs int  `json:"tookMs"`
+}
+
+// AssetUpdateAnnouncementAttemptOutcome defines model for AssetUpdateAnnouncementAttempt.Outcome.
+type AssetUpdateAnnouncementAttemptOutcome string
+
+// AssetUpdateAnnouncementList defines model for AssetUpdateAnnouncementList.
+type AssetUpdateAnnouncementList struct {
+	Announcements []AssetUpdateAnnouncement `json:"announcements"`
+}
+
+// AssetUpdateAnnouncementSettledReason Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+type AssetUpdateAnnouncementSettledReason string
+
+// AssetUpdateAnnouncementState Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+type AssetUpdateAnnouncementState string
+
 // AssetUpdateChannel defines model for AssetUpdateChannel.
 type AssetUpdateChannel struct {
 	ChannelId string `json:"channelId"`
@@ -2429,8 +2606,64 @@ type AssetUpdateDestinationList struct {
 	Destinations []AssetUpdateDestination `json:"destinations"`
 }
 
+// AssetUpdateEvent One published asset update, as a summary. The same delivery keeps its webhook-id across every attempt, so deduplicate on that header. Illarin promises no global ordering between events; compare `occurredAt` and `update.number` so an event that arrives after a newer one can be discarded rather than applied. The body never carries the changes themselves, prompt text or anything from a private working copy.
+type AssetUpdateEvent struct {
+	Asset AssetUpdateEventAsset `json:"asset"`
+
+	// Id The event, stable across every attempt.
+	Id openapi_types.UUID `json:"id"`
+
+	// OccurredAt When the update was published, which is what orders two events.
+	OccurredAt time.Time              `json:"occurredAt"`
+	Type       AssetUpdateEventType   `json:"type"`
+	Update     AssetUpdateEventUpdate `json:"update"`
+}
+
+// AssetUpdateEventType defines model for AssetUpdateEvent.Type.
+type AssetUpdateEventType string
+
+// AssetUpdateEventAsset defines model for AssetUpdateEventAsset.
+type AssetUpdateEventAsset struct {
+	Id   openapi_types.UUID `json:"id"`
+	Kind string             `json:"kind"`
+
+	// Name The asset's name at the moment of publication.
+	Name string `json:"name"`
+
+	// Url The asset's page on Illarin.
+	Url string `json:"url"`
+}
+
+// AssetUpdateEventUpdate defines model for AssetUpdateEventUpdate.
+type AssetUpdateEventUpdate struct {
+	// ContentChanged Whether the exported file changed, as opposed to the page or catalog entry alone.
+	ContentChanged bool `json:"contentChanged"`
+
+	// HistoryUrl The asset's update history, opened at this update.
+	HistoryUrl string `json:"historyUrl"`
+
+	// Id The recorded version this update published.
+	Id openapi_types.UUID `json:"id"`
+
+	// Number The update's number in the asset's history, rising by one each time.
+	Number     int       `json:"number"`
+	RecordedAt time.Time `json:"recordedAt"`
+
+	// Summary The creator's one-line summary as published. A later correction does not resend it.
+	Summary string `json:"summary"`
+
+	// VersionLabel The creator's free-text version label, absent when none was written.
+	VersionLabel *string `json:"versionLabel,omitempty"`
+}
+
 // AssetUpdateRequest defines model for AssetUpdateRequest.
 type AssetUpdateRequest struct {
+	// AnnounceUnlisted Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one.
+	AnnounceUnlisted *bool `json:"announceUnlisted,omitempty"`
+
+	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+
 	// Notes The longer explanation, where the creator writes one
 	Notes *string `json:"notes,omitempty"`
 
@@ -5043,6 +5276,18 @@ type WithdrawPostParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AssetUpdatePublishedParams defines parameters for AssetUpdatePublished.
+type AssetUpdatePublishedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
 // PublicationPostPublishedParams defines parameters for PublicationPostPublished.
 type PublicationPostPublishedParams struct {
 	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
@@ -5312,6 +5557,9 @@ type ReplacePostScheduleJSONRequestBody = ReplacePostScheduleRequest
 
 // WithdrawPostJSONRequestBody defines body for WithdrawPost for application/json ContentType.
 type WithdrawPostJSONRequestBody = WithdrawPostRequest
+
+// AssetUpdatePublishedJSONRequestBody defines body for AssetUpdatePublished for application/json ContentType.
+type AssetUpdatePublishedJSONRequestBody = AssetUpdateEvent
 
 // PublicationPostPublishedJSONRequestBody defines body for PublicationPostPublished for application/json ContentType.
 type PublicationPostPublishedJSONRequestBody = PublicationPostEvent
@@ -5695,6 +5943,9 @@ type ServerInterface interface {
 
 	// (GET /v1/assets/{id})
 	GetAsset(c *gin.Context, id openapi_types.UUID, params GetAssetParams)
+
+	// (GET /v1/assets/{id}/announcements)
+	ListAssetUpdateAnnouncements(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/assets/{id}/blocks)
 	AddAssetBlock(c *gin.Context, id openapi_types.UUID, params AddAssetBlockParams)
@@ -6843,6 +7094,31 @@ func (siw *ServerInterfaceWrapper) GetAsset(c *gin.Context) {
 	}
 
 	siw.Handler.GetAsset(c, id, params)
+}
+
+// ListAssetUpdateAnnouncements operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateAnnouncements(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdateAnnouncements(c, id)
 }
 
 // AddAssetBlock operation middleware
@@ -10813,6 +11089,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.GET(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.ListAssetUpdateDestinationChoices)
 	router.PUT(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.SetAssetUpdateDestinationDefaults)
+	router.GET(options.BaseURL+"/v1/assets/:id/announcements", wrapper.ListAssetUpdateAnnouncements)
 	router.GET(options.BaseURL+"/v1/account/update-destinations", wrapper.ListAssetUpdateDestinations)
 	router.POST(options.BaseURL+"/v1/account/update-destinations", wrapper.AddAssetUpdateDestination)
 	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.RemoveAssetUpdateDestination)
@@ -10979,6 +11256,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // whatever URL path they advertise to senders.
 type WebhookReceiverInterface interface {
 
+	// HandleAssetUpdatePublishedWebhook handles the POST webhook for asset.update.published.v1.
+	HandleAssetUpdatePublishedWebhook(c *gin.Context, params AssetUpdatePublishedParams)
+
 	// HandlePublicationPostPublishedWebhook handles the POST webhook for publication.post.published.v1.
 	HandlePublicationPostPublishedWebhook(c *gin.Context, params PublicationPostPublishedParams)
 
@@ -10987,6 +11267,87 @@ type WebhookReceiverInterface interface {
 
 	// HandlePublicationPostWithdrawnWebhook handles the POST webhook for publication.post.withdrawn.v1.
 	HandlePublicationPostWithdrawnWebhook(c *gin.Context, params PublicationPostWithdrawnParams)
+}
+
+// AssetUpdatePublishedWebhookHandler returns the gin.HandlerFunc for the asset.update.published.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func AssetUpdatePublishedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params AssetUpdatePublishedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandleAssetUpdatePublishedWebhook(c, params)
+	}
 }
 
 // PublicationPostPublishedWebhookHandler returns the gin.HandlerFunc for the publication.post.published.v1 webhook.

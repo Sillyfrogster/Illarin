@@ -149,11 +149,15 @@ func newTestHandlersWithDelivery(
 	accounts := account.NewService(pool, sender, nil, testMediaLibrary(blob), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
+	updateDestinations := assetdestination.NewService(
+		pool, testSealingKey(), testPublishing(to).Sender, "http://localhost:3000",
+	)
+	svc.OnUpdatePublished(updateDestinations.Announce)
 
 	return NewHandlers(
 		svc, accounts, links, deliveries,
 		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
-		assetdestination.NewService(pool, testSealingKey(), testPublishing(to).Sender),
+		updateDestinations,
 		maxUploadBytes,
 	)
 }
@@ -192,9 +196,11 @@ func newDiscordTestStack(
 		pool, outbox, provider, testMediaLibrary(blob), "http://localhost:3000",
 	)
 	links := newTestLinkingService(pool)
+	updateDestinations := newTestUpdateDestinations(pool)
+	assets.OnUpdatePublished(updateDestinations.Announce)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
-		newTestPublicationService(pool, blob), newTestUpdateDestinations(pool), 1<<20,
+		newTestPublicationService(pool, blob), updateDestinations, 1<<20,
 	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
 }
@@ -210,7 +216,7 @@ func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publica
 }
 
 func newTestUpdateDestinations(pool *pgxpool.Pool) *assetdestination.Service {
-	return assetdestination.NewService(pool, testSealingKey(), testPublishing(nil).Sender)
+	return assetdestination.NewService(pool, testSealingKey(), testPublishing(nil).Sender, "http://localhost:3000")
 }
 
 func testPublishing(to publication.Sender) publication.Publishing {

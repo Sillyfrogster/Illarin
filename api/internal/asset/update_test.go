@@ -199,7 +199,7 @@ func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	refused := errors.New("delivery refused this update")
-	svc.OnUpdatePublished(func(context.Context, pgx.Tx, Update) error { return refused })
+	svc.OnUpdatePublished(func(context.Context, pgx.Tx, Update, UpdateAnnouncement) error { return refused })
 	owner, id := publishedAsset(t, svc, pool, "rollback.owner")
 	generation := contentGeneration(t, pool, id)
 	saveDescription(t, svc, owner, id, pool, "Second description")

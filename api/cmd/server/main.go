@@ -146,14 +146,21 @@ func run() error {
 	}
 	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
-	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender)
+	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
+	svc.OnUpdatePublished(updateDestinations.Announce)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(6)
+	background.Add(7)
 	go func() {
 		defer background.Done()
 		updateDestinations.RunSweeper(runtimeContext, func(err error) {
 			log.Printf("asset update destination sweeper: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		updateDestinations.RunAnnouncements(runtimeContext, func(err error) {
+			log.Printf("asset update announcement: %v", err)
 		})
 	}()
 	go func() {
