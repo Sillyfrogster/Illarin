@@ -43,7 +43,14 @@ func (h *Handlers) DownloadExport(
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
 		return
 	}
-	download, err := h.assets.DownloadExport(c.Request.Context(), id, viewerID, target, gallery)
+	var err error
+	var download asset.Export
+	if params.Version == nil {
+		download, err = h.assets.DownloadExport(c.Request.Context(), id, viewerID, target, gallery)
+	} else {
+		download, err = h.assets.DownloadRecordedExport(
+			c.Request.Context(), id, viewerID, *params.Version, target, gallery)
+	}
 	if err != nil {
 		h.downloadError(c, err)
 		return

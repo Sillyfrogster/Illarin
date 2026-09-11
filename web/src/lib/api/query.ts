@@ -47,6 +47,8 @@ export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
 export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
 export type RecordedVersion = components["schemas"]["RecordedVersion"];
+export type RecordedVersionDownloads =
+  components["schemas"]["RecordedVersionDownloads"];
 export type VersionComparison = components["schemas"]["VersionComparison"];
 export type VersionChangeGroup = components["schemas"]["VersionChangeGroup"];
 export type VersionChange = components["schemas"]["VersionChange"];
@@ -579,6 +581,40 @@ export async function fetchAssetUpdates(
     headers: cookie ? { cookie } : undefined,
   });
   return data?.items ?? [];
+}
+
+/** fetchRecordedVersionDownloads reads what a file of one recorded version can carry today. */
+export async function fetchRecordedVersionDownloads(
+  id: string,
+  number: number,
+): Promise<
+  | { offered: RecordedVersionDownloads }
+  | { offered: null; refusal: string; retry: boolean }
+> {
+  const unreadable = {
+    offered: null,
+    refusal: "Illarin could not read what this version can be written as.",
+    retry: true,
+  } as const;
+  let data: RecordedVersionDownloads | undefined;
+  let response: Response;
+  try {
+    ({ data, response } = await api.GET(
+      "/v1/assets/{id}/updates/{number}/downloads",
+      { params: { path: { id, number } } },
+    ));
+  } catch {
+    return unreadable;
+  }
+  if (data) return { offered: data };
+  if (response.status === 404) {
+    return {
+      offered: null,
+      refusal: "This version is not available to download.",
+      retry: false,
+    };
+  }
+  return unreadable;
 }
 
 export async function compareAssetVersions(

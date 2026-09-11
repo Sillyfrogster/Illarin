@@ -70,7 +70,7 @@ func (s *Service) OpenSealedContent(
 	return SealedContent{
 		Body:      body,
 		MediaType: "application/json",
-		Filename:  downloadFilename(name, "sealed", ".json"),
+		Filename:  downloadFilename(name, "", "sealed", ".json"),
 		Blocks:    len(blocks),
 	}, nil
 }

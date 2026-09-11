@@ -1791,6 +1791,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/updates/{number}/downloads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What a file of one recorded version can carry today: the formats the current writers offer for the content it recorded, the pictures it kept, and whether protected content keeps it out of any file. Read under the asset's current access and protection, so a version whose prompts are sealed now, or that recorded a prompt Illarin can no longer line up with a current one, offers no download. */
+    get: operations["getRecordedVersionDownloads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/assets/{id}/updates/{number}/protection": {
     parameters: {
       query?: never;
@@ -4071,6 +4088,20 @@ export interface components {
       contentGeneration: number;
       /** @description Whether this update changed the file linked apps download */
       contentChanged: boolean;
+    };
+    RecordedVersionDownloads: {
+      version: components["schemas"]["RecordedVersion"];
+      /** @enum {string} */
+      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      /** @description Whether protected content keeps this version out of any file. True while the asset installs only through a linked app, and for a version that recorded a sealed prompt the asset no longer carries. */
+      linkedInstallOnly: boolean;
+      /** @description The formats the current writers offer for the content this version recorded, with the loss each one costs it. Empty while linkedInstallOnly is true. */
+      downloads: components["schemas"]["DownloadTarget"][];
+      appTargets: components["schemas"]["AppTarget"][];
+      /** @description The blocks this version recorded, under the asset's current protection, so a reader can choose which of its gallery images a download carries. */
+      blocks: components["schemas"]["AssetBlock"][];
+      /** @description The pictures this version recorded, cover first, addressed under the reader's own adult-content preference. */
+      media: components["schemas"]["AssetImage"][];
     };
     PublicationEventApp: {
       slug: string;
@@ -10238,6 +10269,38 @@ export interface operations {
       };
     };
   };
+  getRecordedVersionDownloads: {
+    parameters: {
+      query?: {
+        nsfw?: "hidden" | "blurred" | "shown";
+      };
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The version's download choices */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecordedVersionDownloads"];
+        };
+      };
+      /** @description The asset or the version is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   resolvePromptCorrespondence: {
     parameters: {
       query?: never;
@@ -10519,6 +10582,8 @@ export interface operations {
       query?: {
         /** @description The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole. */
         images?: string;
+        /** @description The number of a recorded version to write instead of the published one. The file is written now, by the current writer, from the content, pictures and preserved data that version recorded, under the asset's current access and protection. It is not the file the creator uploaded at the time. The filename names the update. */
+        version?: number;
       };
       header?: never;
       path: {
@@ -10545,7 +10610,7 @@ export interface operations {
           "image/png": string;
         };
       };
-      /** @description No such asset */
+      /** @description No such asset, no such recorded version, or a format that version is not offered in */
       404: {
         headers: {
           [name: string]: unknown;

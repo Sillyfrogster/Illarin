@@ -169,6 +169,7 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodGet, "/v1/assets/:id/updates"):                                   d.JSON,
 		routeKey(http.MethodGet, "/v1/assets/:id/updates/comparison"):                        d.JSON,
 		routeKey(http.MethodGet, "/v1/assets/:id/updates/protection"):                        d.JSON,
+		routeKey(http.MethodGet, "/v1/assets/:id/updates/:number/downloads"):                 d.JSON,
 		routeKey(http.MethodPut, "/v1/assets/:id/updates/:number/protection"):                d.JSON,
 		routeKey(http.MethodGet, "/v1/assets/:id/preserved"):                                 d.JSON,
 		routeKey(http.MethodDelete, "/v1/assets/:id/preserved/:namespace"):                   d.JSON,

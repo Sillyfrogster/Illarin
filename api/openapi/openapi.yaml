@@ -226,6 +226,8 @@ paths:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1comparison
   /v1/assets/{id}/updates/protection:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1protection
+  /v1/assets/{id}/updates/{number}/downloads:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1{number}~1downloads
   /v1/assets/{id}/updates/{number}/protection:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1{number}~1protection
   /v1/assets/{id}/discovery:

@@ -556,19 +556,7 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	for _, tag := range found.Tags {
 		tags = append(tags, AssetTag{Label: tag.Label, Value: tag.Value})
 	}
-	media := make([]AssetImage, 0, len(found.Media))
-	for _, image := range found.Media {
-		media = append(media, AssetImage{
-			Id:        types.UUID(image.ID),
-			Role:      AssetImageRole(image.Role),
-			IsCover:   image.IsCover,
-			DetailUrl: image.DetailURL,
-			ThumbUrl:  image.ThumbURL,
-			Width:     image.Width,
-			Height:    image.Height,
-			Bytes:     int(image.Bytes),
-		})
-	}
+	media := toAPIImages(found.Media)
 	blocks, err := toAPIBlocks(found.Kind, found.Blocks)
 	if err != nil {
 		return AssetDetail{}, err
@@ -604,6 +592,23 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 		LatestUpdate:       toAPILatestUpdate(found.LatestUpdate),
 		Withhold:           toAPIWithhold(found.Withhold),
 	}, nil
+}
+
+func toAPIImages(images []asset.DetailImage) []AssetImage {
+	media := make([]AssetImage, 0, len(images))
+	for _, image := range images {
+		media = append(media, AssetImage{
+			Id:        types.UUID(image.ID),
+			Role:      AssetImageRole(image.Role),
+			IsCover:   image.IsCover,
+			DetailUrl: image.DetailURL,
+			ThumbUrl:  image.ThumbURL,
+			Width:     image.Width,
+			Height:    image.Height,
+			Bytes:     int(image.Bytes),
+		})
+	}
+	return media
 }
 
 func toAPILatestUpdate(recorded *asset.Version) *RecordedVersion {

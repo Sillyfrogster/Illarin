@@ -56,6 +56,50 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params Co
 	}
 }
 
+func (h *Handlers) GetRecordedVersionDownloads(
+	c *gin.Context,
+	id types.UUID,
+	number int,
+	params GetRecordedVersionDownloadsParams,
+) {
+	viewerID, ok := h.viewerID(c)
+	if !ok {
+		return
+	}
+	var requested *string
+	if params.Nsfw != nil {
+		value := string(*params.Nsfw)
+		requested = &value
+	}
+	visibility, ok := h.readerVisibility(c, requested)
+	if !ok {
+		return
+	}
+	offered, err := h.assets.RecordedDownloads(c.Request.Context(), uuid.UUID(id), viewerID, number, visibility)
+	if errors.Is(err, asset.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the version's downloads."})
+		return
+	}
+	blocks, err := toAPIBlocks(offered.Kind, offered.Blocks)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the version's downloads."})
+		return
+	}
+	c.JSON(http.StatusOK, RecordedVersionDownloads{
+		Version:           toAPIRecordedVersion(offered.Version),
+		Kind:              RecordedVersionDownloadsKind(offered.Kind),
+		LinkedInstallOnly: offered.LinkedInstallOnly,
+		Downloads:         toAPIDownloads(offered.Downloads),
+		AppTargets:        toAPIAppTargets(offered.AppTargets),
+		Blocks:            blocks,
+		Media:             toAPIImages(offered.Media),
+	})
+}
+
 func (h *Handlers) ListProtectionMismatches(c *gin.Context, id types.UUID) {
 	owner, ok := h.signedInAccount(c, "reading an asset's sealed prompts")
 	if !ok {

@@ -1335,6 +1335,33 @@ func (e RecordListContentSchema) Valid() bool {
 	}
 }
 
+// Defines values for RecordedVersionDownloadsKind.
+const (
+	RecordedVersionDownloadsKindCharacter RecordedVersionDownloadsKind = "character"
+	RecordedVersionDownloadsKindLorebook  RecordedVersionDownloadsKind = "lorebook"
+	RecordedVersionDownloadsKindPack      RecordedVersionDownloadsKind = "pack"
+	RecordedVersionDownloadsKindPreset    RecordedVersionDownloadsKind = "preset"
+	RecordedVersionDownloadsKindTheme     RecordedVersionDownloadsKind = "theme"
+)
+
+// Valid indicates whether the value is a known member of the RecordedVersionDownloadsKind enum.
+func (e RecordedVersionDownloadsKind) Valid() bool {
+	switch e {
+	case RecordedVersionDownloadsKindCharacter:
+		return true
+	case RecordedVersionDownloadsKindLorebook:
+		return true
+	case RecordedVersionDownloadsKindPack:
+		return true
+	case RecordedVersionDownloadsKindPreset:
+		return true
+	case RecordedVersionDownloadsKindTheme:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReplacementAcceptanceUnrepresentable.
 const (
 	Keep   ReplacementAcceptanceUnrepresentable = "keep"
@@ -1800,6 +1827,27 @@ func (e SetAssetIdentity400JSONResponseBodyField) Valid() bool {
 	case IsNsfw:
 		return true
 	case Name:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetRecordedVersionDownloadsParamsNsfw.
+const (
+	GetRecordedVersionDownloadsParamsNsfwBlurred GetRecordedVersionDownloadsParamsNsfw = "blurred"
+	GetRecordedVersionDownloadsParamsNsfwHidden  GetRecordedVersionDownloadsParamsNsfw = "hidden"
+	GetRecordedVersionDownloadsParamsNsfwShown   GetRecordedVersionDownloadsParamsNsfw = "shown"
+)
+
+// Valid indicates whether the value is a known member of the GetRecordedVersionDownloadsParamsNsfw enum.
+func (e GetRecordedVersionDownloadsParamsNsfw) Valid() bool {
+	switch e {
+	case GetRecordedVersionDownloadsParamsNsfwBlurred:
+		return true
+	case GetRecordedVersionDownloadsParamsNsfwHidden:
+		return true
+	case GetRecordedVersionDownloadsParamsNsfwShown:
 		return true
 	default:
 		return false
@@ -3899,6 +3947,28 @@ type RecordedVersion struct {
 	VersionLabel string    `json:"versionLabel"`
 }
 
+// RecordedVersionDownloads defines model for RecordedVersionDownloads.
+type RecordedVersionDownloads struct {
+	AppTargets []AppTarget `json:"appTargets"`
+
+	// Blocks The blocks this version recorded, under the asset's current protection, so a reader can choose which of its gallery images a download carries.
+	Blocks []AssetBlock `json:"blocks"`
+
+	// Downloads The formats the current writers offer for the content this version recorded, with the loss each one costs it. Empty while linkedInstallOnly is true.
+	Downloads []DownloadTarget             `json:"downloads"`
+	Kind      RecordedVersionDownloadsKind `json:"kind"`
+
+	// LinkedInstallOnly Whether protected content keeps this version out of any file. True while the asset installs only through a linked app, and for a version that recorded a sealed prompt the asset no longer carries.
+	LinkedInstallOnly bool `json:"linkedInstallOnly"`
+
+	// Media The pictures this version recorded, cover first, addressed under the reader's own adult-content preference.
+	Media   []AssetImage    `json:"media"`
+	Version RecordedVersion `json:"version"`
+}
+
+// RecordedVersionDownloadsKind defines model for RecordedVersionDownloads.Kind.
+type RecordedVersionDownloadsKind string
+
 // RecordedVersionList defines model for RecordedVersionList.
 type RecordedVersionList struct {
 	Items []RecordedVersion `json:"items"`
@@ -4457,6 +4527,9 @@ type DownloadDeliveryExportParams struct {
 type DownloadExportParams struct {
 	// Images The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole.
 	Images *string `form:"images,omitempty" json:"images,omitempty"`
+
+	// Version The number of a recorded version to write instead of the published one. The file is written now, by the current writer, from the content, pictures and preserved data that version recorded, under the asset's current access and protection. It is not the file the creator uploaded at the time. The filename names the update.
+	Version *int `form:"version,omitempty" json:"version,omitempty"`
 }
 
 // GetMediaVariantParams defines parameters for GetMediaVariant.
@@ -4625,6 +4698,14 @@ type CompareAssetVersionsParams struct {
 	From *int `form:"from,omitempty" json:"from,omitempty"`
 	To   *int `form:"to,omitempty" json:"to,omitempty"`
 }
+
+// GetRecordedVersionDownloadsParams defines parameters for GetRecordedVersionDownloads.
+type GetRecordedVersionDownloadsParams struct {
+	Nsfw *GetRecordedVersionDownloadsParamsNsfw `form:"nsfw,omitempty" json:"nsfw,omitempty"`
+}
+
+// GetRecordedVersionDownloadsParamsNsfw defines parameters for GetRecordedVersionDownloads.
+type GetRecordedVersionDownloadsParamsNsfw string
 
 // BeginDiscordParams defines parameters for BeginDiscord.
 type BeginDiscordParams struct {
@@ -5447,6 +5528,9 @@ type ServerInterface interface {
 	// (GET /v1/assets/{id}/updates/protection)
 	ListProtectionMismatches(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/assets/{id}/updates/{number}/downloads)
+	GetRecordedVersionDownloads(c *gin.Context, id openapi_types.UUID, number int, params GetRecordedVersionDownloadsParams)
+
 	// (PUT /v1/assets/{id}/updates/{number}/protection)
 	ResolvePromptCorrespondence(c *gin.Context, id openapi_types.UUID, number int)
 
@@ -5861,6 +5945,14 @@ func (siw *ServerInterfaceWrapper) DownloadExport(c *gin.Context) {
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "images", c.Request.URL.Query(), &params.Images, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter images: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "version" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "version", c.Request.URL.Query(), &params.Version, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter version: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -7344,6 +7436,51 @@ func (siw *ServerInterfaceWrapper) ListProtectionMismatches(c *gin.Context) {
 	}
 
 	siw.Handler.ListProtectionMismatches(c, id)
+}
+
+// GetRecordedVersionDownloads operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordedVersionDownloads(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetRecordedVersionDownloadsParams
+
+	// ------------- Optional query parameter "nsfw" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "nsfw", c.Request.URL.Query(), &params.Nsfw, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter nsfw: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRecordedVersionDownloads(c, id, number, params)
 }
 
 // ResolvePromptCorrespondence operation middleware
@@ -10198,6 +10335,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/updates", wrapper.PublishAssetUpdate)
 	router.GET(options.BaseURL+"/v1/assets/:id/updates/comparison", wrapper.CompareAssetVersions)
 	router.GET(options.BaseURL+"/v1/assets/:id/updates/protection", wrapper.ListProtectionMismatches)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/:number/downloads", wrapper.GetRecordedVersionDownloads)
 	router.PUT(options.BaseURL+"/v1/assets/:id/updates/:number/protection", wrapper.ResolvePromptCorrespondence)
 	router.PUT(options.BaseURL+"/v1/assets/:id/discovery", wrapper.SetAssetDiscovery)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/deleted", wrapper.ListDeletedAssets)

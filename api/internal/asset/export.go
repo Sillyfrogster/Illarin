@@ -54,10 +54,12 @@ type exportSubject struct {
 	origin     string
 	header     format.Header
 	blocks     []block.Block
+	cover      *uuid.UUID
 	ownerID    *uuid.UUID
 	lifecycle  Lifecycle
 	revisionID *uuid.UUID
 	gallery    *GallerySelection
+	recorded   *recordedVersion
 }
 
 func (s *Service) OpenExport(
@@ -108,15 +110,30 @@ func (s *Service) OpenExport(
 	if err := tx.Commit(ctx); err != nil {
 		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
 	}
+	return subject.export(written, target, declaration.Label, viewerID), nil
+}
+
+func (subject exportSubject) export(
+	written format.Artifact,
+	target, label string,
+	viewerID *uuid.UUID,
+) Export {
 	export := Export{
 		Body: written.Body, MediaType: written.MediaType, Target: target,
-		Filename: downloadFilename(subject.name, declaration.Label, written.Extension),
+		Filename: downloadFilename(subject.name, subject.updateName(), label, written.Extension),
 	}
 	if subject.lifecycle == LifecyclePublished {
-		event := downloadEvent(assetID, subject.revisionID, target, subject.ownerID, viewerID)
+		event := downloadEvent(subject.assetID, subject.revisionID, target, subject.ownerID, viewerID)
 		export.Event = &event
 	}
-	return export, nil
+	return export
+}
+
+func (subject exportSubject) updateName() string {
+	if subject.recorded == nil {
+		return ""
+	}
+	return fmt.Sprintf("update %d", subject.recorded.Number)
 }
 
 func (s *Service) OpenExportForLinkedInstance(
@@ -170,14 +187,9 @@ func (s *Service) OpenExportForLinkedInstance(
 	if err := tx.Commit(ctx); err != nil {
 		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
 	}
-	export := Export{
-		Body: written.Body, MediaType: written.MediaType, Target: target,
-		Filename: downloadFilename(subject.name, module.Declaration().Label, written.Extension),
-	}
-	if subject.lifecycle == LifecyclePublished {
-		event := downloadEvent(assetID, subject.revisionID, target, subject.ownerID, nil)
-		event.AuthorizationClass = AuthorizationLinkedInstance
-		export.Event = &event
+	export := subject.export(written, target, module.Declaration().Label, nil)
+	if export.Event != nil {
+		export.Event.AuthorizationClass = AuthorizationLinkedInstance
 	}
 	return export, nil
 }
@@ -282,11 +294,11 @@ func (s *Service) exportSubject(
 ) (exportSubject, error) {
 	var subject exportSubject
 	var origin pgtype.Text
-	var ownerID, revisionID pgtype.UUID
+	var ownerID, revisionID, cover pgtype.UUID
 	err := q.QueryRow(ctx, `
 		select asset.kind, asset.name, asset.blurb, asset.origin_format, asset.lifecycle,
 		       asset.asset_version, asset.credited_author, asset.nickname,
-		       asset.owner_id, asset.current_revision_id
+		       asset.owner_id, asset.current_revision_id, asset.cover_media_id
 		  from assets asset
 		 where asset.id = $1 and asset.deleted_at is null
 		   and (asset.lifecycle = 'published' or asset.owner_id = $2)
@@ -294,7 +306,7 @@ func (s *Service) exportSubject(
 	`, assetID, viewerID).Scan(
 		&subject.kind, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
 		&subject.header.AssetVersion, &subject.header.CreditedAuthor,
-		&subject.header.Nickname, &ownerID, &revisionID,
+		&subject.header.Nickname, &ownerID, &revisionID, &cover,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, ErrNotFound
@@ -305,6 +317,7 @@ func (s *Service) exportSubject(
 	subject.assetID = assetID
 	subject.header.Name = subject.name
 	subject.origin = origin.String
+	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
 	subject.revisionID = uuidOrNil(revisionID)
 	subject.blocks, err = readBlocks(ctx, q, assetID)
@@ -327,6 +340,9 @@ func (s *Service) travellingPreservedData(
 	written, writes := s.reg.Declaration(target)
 	if !known || !writes || !format.TravelsWithOrigin(origin, written) {
 		return nil, nil
+	}
+	if subject.recorded != nil {
+		return subject.recorded.remainder(), nil
 	}
 	rows, err := q.Query(ctx, `
 		select owner_kind, owner_id, namespace, payload
@@ -370,13 +386,7 @@ func (s *Service) exportImages(
 			}
 		}
 	}
-	var held pgtype.UUID
-	if err := q.QueryRow(ctx,
-		`select cover_media_id from assets where id = $1`, subject.assetID,
-	).Scan(&held); err != nil {
-		return nil, nil, fmt.Errorf("read the cover: %w", err)
-	}
-	coverID := uuidOrNil(held)
+	coverID := subject.cover
 	if coverID != nil {
 		wanted = append(wanted, *coverID)
 	}
@@ -384,12 +394,7 @@ func (s *Service) exportImages(
 		return nil, map[uuid.UUID]format.ExportMedia{}, nil
 	}
 
-	rows, err := q.Query(ctx, `
-		select media.id, media.blob_id, blob.byte_size
-		  from asset_media media
-		  join blobs blob on blob.id = media.blob_id
-		 where media.asset_id = $1 and media.is_current and media.id = any($2)
-	`, subject.assetID, wanted)
+	rows, err := q.Query(ctx, subject.pictureQuery(), subject.assetID, wanted, subject.snapshotID())
 	if err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
 	}
@@ -432,6 +437,31 @@ func (s *Service) exportImages(
 	return cover, images, nil
 }
 
+// pictureQuery lists the pictures a download may carry, published now or kept by a recorded version.
+func (subject exportSubject) pictureQuery() string {
+	if subject.recorded == nil {
+		return `
+			select media.id, media.blob_id, blob.byte_size
+			  from asset_media media
+			  join blobs blob on blob.id = media.blob_id
+			 where media.asset_id = $1 and media.is_current and media.id = any($2)
+			   and $3::uuid is null`
+	}
+	return `
+		select media.id, media.blob_id, blob.byte_size
+		  from public.asset_media media
+		  join public.asset_snapshot_media kept on kept.media_id = media.id
+		  join public.blobs blob on blob.id = media.blob_id
+		 where media.asset_id = $1 and media.id = any($2) and kept.snapshot_id = $3`
+}
+
+func (subject exportSubject) snapshotID() *uuid.UUID {
+	if subject.recorded == nil {
+		return nil
+	}
+	return &subject.recorded.ID
+}
+
 func (s *Service) exportMediaURL(mediaID uuid.UUID, private bool) string {
 	return s.siteURL + s.variantURL(mediaID, "detail", false, private)
 }
@@ -452,9 +482,9 @@ func (s *Service) readBlob(ctx context.Context, blobID uuid.UUID) (format.Export
 	return format.ExportMedia{MediaType: http.DetectContentType(data), Data: data}, nil
 }
 
-func downloadFilename(name, label, extension string) string {
-	parts := make([]string, 0, 2)
-	for _, part := range []string{name, label} {
+func downloadFilename(name, update, label, extension string) string {
+	parts := make([]string, 0, 3)
+	for _, part := range []string{name, update, label} {
 		if slug := filenameSlug(part); slug != "" {
 			parts = append(parts, slug)
 		}

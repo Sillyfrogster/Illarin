@@ -10,6 +10,7 @@ import {
   appLabel,
   deliveryDestinations,
   deliveryFailureLine,
+  downloadAddress,
   downloadBytes,
   fileSize,
   formatChoices,
@@ -429,4 +430,35 @@ test("an app is named by its own label rather than its id", () => {
     appLabel([{ id: "risu", label: "RisuAI", format: "charx" }], "risu"),
   ).toBe("RisuAI");
   expect(appLabel([], "risu")).toBe("");
+});
+
+test("a download names its version, and the reader's images only where they differ", () => {
+  const gallery = [
+    { mediaId: "a", name: "A", chosen: true, bytes: 1, thumbUrl: "" },
+    { mediaId: "b", name: "B", chosen: false, bytes: 1, thumbUrl: "" },
+  ];
+  const address = (included: string[], version?: number) =>
+    downloadAddress({
+      assetId: "asset",
+      format: "charx",
+      carried: true,
+      gallery,
+      included,
+      version,
+    });
+
+  expect(address(["a"])).toBe("/download/asset/charx");
+  expect(address(["a", "b"])).toBe("/download/asset/charx?images=a%2Cb");
+  expect(address(["a"], 3)).toBe("/download/asset/charx?version=3");
+  expect(address([], 3)).toBe("/download/asset/charx?version=3&images=");
+  expect(
+    downloadAddress({
+      assetId: "asset",
+      format: "chara_card_v2",
+      carried: false,
+      gallery,
+      included: [],
+      version: 2,
+    }),
+  ).toBe("/download/asset/chara_card_v2?version=2");
 });

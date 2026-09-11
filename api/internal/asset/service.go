@@ -562,6 +562,17 @@ func (s *Service) DownloadExport(
 	return s.OpenExport(ctx, assetID, viewerID, target, gallery)
 }
 
+func (s *Service) DownloadRecordedExport(
+	ctx context.Context,
+	assetID uuid.UUID,
+	viewerID *uuid.UUID,
+	number int,
+	target string,
+	gallery *GallerySelection,
+) (Export, error) {
+	return s.OpenRecordedExport(ctx, assetID, viewerID, number, target, gallery)
+}
+
 func (s *Service) DownloadExportForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,

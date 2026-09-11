@@ -4470,6 +4470,46 @@ paths:
           description: No account is signed in
         '404':
           description: The asset does not belong to the creator
+  /v1/assets/{id}/updates/{number}/downloads:
+    get:
+      operationId: getRecordedVersionDownloads
+      description: >-
+        What a file of one recorded version can carry today: the formats the
+        current writers offer for the content it recorded, the pictures it kept,
+        and whether protected content keeps it out of any file. Read under the
+        asset's current access and protection, so a version whose prompts are
+        sealed now, or that recorded a prompt Illarin can no longer line up with
+        a current one, offers no download.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: nsfw
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hidden
+              - blurred
+              - shown
+      responses:
+        '200':
+          description: The version's download choices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordedVersionDownloads'
+        '404':
+          description: The asset or the version is not readable
   /v1/assets/{id}/updates/{number}/protection:
     put:
       operationId: resolvePromptCorrespondence
@@ -4694,6 +4734,18 @@ paths:
             both travel whole.
           schema:
             type: string
+        - name: version
+          in: query
+          required: false
+          description: >-
+            The number of a recorded version to write instead of the published
+            one. The file is written now, by the current writer, from the
+            content, pictures and preserved data that version recorded, under
+            the asset's current access and protection. It is not the file the
+            creator uploaded at the time. The filename names the update.
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: >-
@@ -4734,7 +4786,9 @@ paths:
                 type: string
                 format: binary
         '404':
-          description: No such asset
+          description: >-
+            No such asset, no such recorded version, or a format that version is
+            not offered in
         '413':
           description: >-
             The chosen images make a file larger than Illarin will produce. The
@@ -10065,6 +10119,60 @@ components:
         contentChanged:
           description: Whether this update changed the file linked apps download
           type: boolean
+    RecordedVersionDownloads:
+      type: object
+      required:
+        - version
+        - kind
+        - linkedInstallOnly
+        - downloads
+        - appTargets
+        - blocks
+        - media
+      properties:
+        version:
+          $ref: '#/components/schemas/RecordedVersion'
+        kind:
+          type: string
+          enum:
+            - character
+            - lorebook
+            - preset
+            - theme
+            - pack
+        linkedInstallOnly:
+          type: boolean
+          description: >-
+            Whether protected content keeps this version out of any file. True
+            while the asset installs only through a linked app, and for a
+            version that recorded a sealed prompt the asset no longer carries.
+        downloads:
+          type: array
+          description: >-
+            The formats the current writers offer for the content this version
+            recorded, with the loss each one costs it. Empty while
+            linkedInstallOnly is true.
+          items:
+            $ref: '#/components/schemas/DownloadTarget'
+        appTargets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppTarget'
+        blocks:
+          type: array
+          description: >-
+            The blocks this version recorded, under the asset's current
+            protection, so a reader can choose which of its gallery images a
+            download carries.
+          items:
+            $ref: '#/components/schemas/AssetBlock'
+        media:
+          type: array
+          description: >-
+            The pictures this version recorded, cover first, addressed under the
+            reader's own adult-content preference.
+          items:
+            $ref: '#/components/schemas/AssetImage'
     PublicationEventApp:
       type: object
       required:

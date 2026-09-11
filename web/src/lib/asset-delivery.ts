@@ -262,6 +262,36 @@ export function travellingGallery({
   }));
 }
 
+/** downloadAddress names the version where one is chosen, and the reader's images only where they differ from the creator's. */
+export function downloadAddress({
+  assetId,
+  format,
+  carried,
+  gallery,
+  included,
+  version,
+}: {
+  assetId: string;
+  format: string;
+  carried: boolean;
+  gallery: TravellingImage[];
+  included: string[];
+  version?: number;
+}): string {
+  const query = new URLSearchParams();
+  if (version) query.set("version", String(version));
+  const byDefault = gallery
+    .filter((one) => one.chosen)
+    .map((one) => one.mediaId);
+  const asChosen =
+    byDefault.length === included.length &&
+    byDefault.every((mediaId) => included.includes(mediaId));
+  if (carried && !asChosen) query.set("images", included.join(","));
+  const address = `/download/${assetId}/${format}`;
+  const written = query.toString();
+  return written ? `${address}?${written}` : address;
+}
+
 /** downloadBytes estimates the file one choice of images produces. */
 export function downloadBytes({
   format,

@@ -17,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var (
@@ -200,6 +201,8 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to
 type recordedVersion struct {
 	Version
 	kind              string
+	origin            string
+	sourceRevisionID  *uuid.UUID
 	metadata          versionMetadata
 	blocks            []block.Block
 	preserved         []versionPreserved
@@ -227,6 +230,7 @@ type versionPreserved struct {
 type versionPayload struct {
 	versionMetadata
 	Kind      string             `json:"kind"`
+	Origin    string             `json:"origin_format"`
 	Blocks    []block.Block      `json:"blocks"`
 	Preserved []versionPreserved `json:"preserved_data"`
 }
@@ -234,13 +238,14 @@ type versionPayload struct {
 func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (recordedVersion, error) {
 	var recorded recordedVersion
 	var stored []byte
+	var sourceRevision pgtype.UUID
 	err := tx.QueryRow(ctx, `
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
-		       payload, protected_payloads
-		  from asset_snapshots where asset_id = $1 and number = $2
+		       source_revision_id, payload, protected_payloads
+		  from public.asset_snapshots where asset_id = $1 and number = $2
 	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
-		&stored, &recorded.protectedPayloads)
+		&sourceRevision, &stored, &recorded.protectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordedVersion{}, ErrNotFound
 	}
@@ -252,6 +257,8 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 		return recordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
 	recorded.kind = payload.Kind
+	recorded.origin = payload.Origin
+	recorded.sourceRevisionID = uuidOrNil(sourceRevision)
 	recorded.metadata = payload.versionMetadata
 	recorded.blocks = payload.Blocks
 	recorded.preserved = payload.Preserved

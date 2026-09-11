@@ -89,7 +89,7 @@ export default async function AssetHistoryPage({
                 {asset.linkedInstallOnly ? (
                   <p className="max-w-[60ch] text-meta text-mute">
                     This {kind} installs only through a linked app, so Illarin
-                    writes no file of it. Allowed apps:{" "}
+                    writes no file of any version of it. Allowed apps:{" "}
                     {asset.allowedApps.map(protectedAppLabel).join(", ")}.
                   </p>
                 ) : null}
@@ -97,6 +97,7 @@ export default async function AssetHistoryPage({
             ) : null
           }
           kind={kind}
+          olderDownloads={published && !asset.linkedInstallOnly}
           versions={versions}
         />
       </div>
