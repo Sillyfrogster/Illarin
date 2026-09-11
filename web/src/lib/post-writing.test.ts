@@ -66,10 +66,10 @@ const withdrawal = {
 describe("savingWords", () => {
   test("says what the post is when there is nothing to say about the save", () => {
     expect(savingWords("clean", post({ status: "published" }))).toBe(
-      "Readers have this",
+      "Published",
     );
     expect(savingWords("clean", post({ status: "withdrawn" }))).toBe(
-      "Out of public view",
+      "Withdrawn",
     );
     expect(savingWords("clean", post({}))).toBe("Saved privately");
   });
@@ -130,8 +130,10 @@ describe("publicationLabel", () => {
     expect(publicationLabel(post({ status: "published" }))).toBe(
       "Publish changes",
     );
-    expect(publicationLabel(post({ status: "withdrawn" }))).toBe("Put it back");
-    expect(publicationLabel(post({ deletion }))).toBe("Bring it back");
+    expect(publicationLabel(post({ status: "withdrawn" }))).toBe(
+      "Republish post",
+    );
+    expect(publicationLabel(post({ deletion }))).toBe("Restore post");
   });
 });
 
@@ -147,7 +149,7 @@ describe("postNotices", () => {
     expect(said).toHaveLength(1);
     expect(said[0].kind).toBe("deleted");
     expect(said[0].tone).toBe("stop");
-    expect(said[0].record).toBe("Deleted from a takedown.");
+    expect(said[0].record).toBe("Deleted while withdrawn.");
   });
 
   test("a withdrawal carries the record readers never see", () => {

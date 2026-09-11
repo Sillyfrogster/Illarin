@@ -389,21 +389,21 @@ function movesFor<T>(
 export function elementHint(type: AssetElement["type"]): string {
   switch (type) {
     case "prose":
-      return "Write this at full width; it will keep the page’s reading layout.";
+      return "Edit the text shown in this block.";
     case "text_set":
-      return "Each greeting stays in this one ordered collection.";
+      return "Add and reorder greetings.";
     case "dialogue_sample":
       return "Keep each speaker and message together, in reading order.";
     case "image_set":
-      return "Images sit in the order you put them in, and each may carry a name.";
+      return "Add images, then arrange them in display order.";
     case "field_list":
       return "Each row is a short name and the value beside it.";
     case "link_list":
       return "Addresses have to start with http or https.";
     case "entry_table":
-      return "Each entry is switched on by its own keys.";
+      return "Add entries and choose the keys that activate them.";
     case "prompt_list":
-      return "Fragments are sent in the order they sit in, under the headings you give them.";
+      return "Add prompt fragments and set their order, grouping and placement.";
     case "setting_group":
       return "The names are your app's own, and a setting you leave out stays out of the file.";
     case "color_set":
@@ -413,7 +413,7 @@ export function elementHint(type: AssetElement["type"]): string {
     case "variable_schema":
       return "Each variable is one thing a reader chooses before the preset runs.";
     case "script_list":
-      return "Each script finds something and writes something else in its place.";
+      return "Add scripts to find and replace matching text.";
     case "record_list":
       return "Each Lumia keeps its identity, writing, and avatar together in Pack order.";
   }

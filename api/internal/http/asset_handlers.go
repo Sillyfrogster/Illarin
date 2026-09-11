@@ -308,7 +308,7 @@ func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the waiting replacement"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load the replacement file. Try again."})
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))
@@ -342,7 +342,7 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationI
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not accept the replacement"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not apply the replacement file. Try again."})
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))
@@ -359,7 +359,7 @@ func (h *Handlers) CancelAssetRevision(c *gin.Context, id types.UUID, operationI
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not cancel the replacement"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not discard the replacement file. Try again."})
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -545,7 +545,7 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context, id types.UUID) {
 			"error": "Discovery applies once the asset is published.",
 		})
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save discovery."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the catalog listing. Try again."})
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -767,7 +767,7 @@ func (h *Handlers) GetIngest(c *gin.Context, id types.UUID) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the ingest operation"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load import status. Try again."})
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))

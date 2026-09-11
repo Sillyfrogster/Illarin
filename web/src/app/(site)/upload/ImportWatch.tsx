@@ -17,7 +17,7 @@ export function ImportWatch({
   return (
     <section className="mt-10" aria-live="polite">
       <h2 className="font-display text-section font-medium text-ink">
-        {lost ? "Illarin lost sight of your file" : stage.heading}
+        {lost ? "Import status unavailable" : stage.heading}
       </h2>
       <p className="mt-2 text-ui text-mute">
         {lost

@@ -107,7 +107,7 @@ function Index({
       className="flex max-h-67 flex-col gap-px overflow-y-auto overscroll-contain border-rule border-b pr-1 pb-5 [scrollbar-color:var(--v-rule)_transparent] [scrollbar-width:thin] @min-[760px]:sticky @min-[760px]:top-[calc(var(--header-height)+22px)] @min-[760px]:max-h-[min(70dvh,616px)] @min-[760px]:border-b-0 @min-[760px]:pr-3 @min-[760px]:pb-0"
       ref={index}
       role="tablist"
-      aria-label="The entries in this book"
+      aria-label="Lorebook entries"
       aria-orientation="vertical"
     >
       {entries.map((entry, row) => (
@@ -148,16 +148,16 @@ function Nothing({ search, book }: { search: string; book: LorebookIndex }) {
   if (wanted !== "") {
     return (
       <p className="!text-ui text-mute">
-        Nothing here is named <strong className="text-ink">{wanted}</strong>,
-        and no key holds it.
+        No entry name or key matches{" "}
+        <strong className="text-ink">{wanted}</strong>.
       </p>
     );
   }
   return (
     <p className="!text-ui text-mute">
       {book.total === 0
-        ? "This book holds no entries yet."
-        : "Every entry in this book is switched off."}
+        ? "No lorebook entries yet."
+        : "All entries are disabled."}
     </p>
   );
 }
@@ -208,7 +208,7 @@ function Controls({
           value={sort}
           onChange={(event) => onSort(event.target.value as EntrySort)}
         >
-          <option value="book">As the book holds them</option>
+          <option value="book">Entry order</option>
           <option value="name">By name, A to Z</option>
         </select>
       </div>

@@ -154,7 +154,7 @@ export function CategoryChoice({
   }
 
   return (
-    <Choice legend="What they may publish">
+    <Choice legend="Allowed categories">
       <ul className="flex list-none flex-col">
         {offered.map((one) => {
           const on = allowed.includes(one.id);
@@ -269,7 +269,7 @@ export function EventChoice({
   }
 
   return (
-    <Choice legend="What it receives">
+    <Choice legend="Announcement events">
       <ul className="flex list-none flex-col">
         {EVENTS.map((one) => (
           <li key={one}>
@@ -284,8 +284,7 @@ export function EventChoice({
       </ul>
       {chosen.length === 0 ? (
         <p className="mt-2 max-w-[52ch] font-prose text-meta text-stop">
-          It receives nothing. Switch the destination off instead if that is
-          what you mean.
+          Select at least one event, or disable the destination.
         </p>
       ) : null}
     </Choice>
@@ -307,7 +306,7 @@ const KINDS: {
   {
     icon: Webhook,
     kind: "webhook",
-    what: "An endpoint of your own. It receives a signed summary of every transition it asks for.",
+    what: "Your endpoint receives signed summaries of selected publication events.",
     word: "Webhook",
   },
 ];
@@ -320,7 +319,7 @@ export function DestinationKind({
   onChosen: (kind: PublicationDestinationKind) => void;
 }) {
   return (
-    <Choice legend="What it is">
+    <Choice legend="Destination type">
       <div className="flex flex-col gap-2">
         {KINDS.map((one) => (
           <label

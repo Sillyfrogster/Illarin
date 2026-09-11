@@ -33,7 +33,7 @@ export default async function BlogArchivePage({
     <ScopedArchive
       archive={archive}
       scope={{
-        kind: "Publication",
+        kind: "Blog",
         heading: BLOG_HEADING,
         statement: BLOG_DESCRIPTION,
         address: BLOG_HOME,

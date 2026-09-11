@@ -106,7 +106,7 @@ export function VerificationPanel() {
           Verifying your address
         </h2>
         <p className="mt-3 font-prose text-prose text-mute">
-          The page will settle in just a moment.
+          Wait while Illarin checks your verification link.
         </p>
       </section>
     );
@@ -122,7 +122,7 @@ export function VerificationPanel() {
           Your address is verified
         </h2>
         <p className="mt-3 font-prose text-prose text-mute">
-          Your handle is yours, and you can now publish work under it.
+          You can now publish assets and link applications.
         </p>
         <div className="mt-7">
           <Button asChild size="large" variant="primary">
@@ -141,7 +141,7 @@ export function VerificationPanel() {
             <Mail aria-hidden="true" className="size-6" strokeWidth={1.5} />
           </span>
           <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
-            This link did not open
+            Email verification failed
           </h2>
         </div>
         <Trouble>{said}</Trouble>

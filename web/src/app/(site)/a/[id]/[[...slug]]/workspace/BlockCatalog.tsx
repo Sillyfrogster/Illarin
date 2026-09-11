@@ -29,7 +29,7 @@ export function BlockCatalog() {
   }
 
   if (addableBlocks.length === 0) {
-    return <Note>This page already holds every block its kind offers.</Note>;
+    return <Note>All available blocks are already on this page.</Note>;
   }
 
   return (
@@ -98,12 +98,12 @@ export function BlockCatalog() {
                         add(addable.definition, addable.choices[0].type)
                       }
                     >
-                      Add it
+                      Add block
                     </AddAction>
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <p className="mb-2 text-label text-mute">Start it with</p>
+                    <p className="mb-2 text-label text-mute">Initial content</p>
                     <div className="flex flex-wrap gap-1.5">
                       {addable.choices.map((choice) => (
                         <button

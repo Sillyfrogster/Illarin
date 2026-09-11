@@ -20,7 +20,7 @@ function CatalogHeading() {
           id="landing-catalog-title"
           className="font-display text-[clamp(2.7rem,4.8vw,5rem)] leading-[1.05] font-medium tracking-[-.045em]"
         >
-          Look what they made.
+          New in the catalog.
         </h2>
       </div>
       <LineLink href="/browse" className="text-ink">
@@ -114,10 +114,10 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
             <div className="flex min-h-[460px] flex-col items-start justify-center rounded-plate bg-deep p-8 sm:p-12">
               <h3 className="font-display text-title font-medium">
                 {!page
-                  ? "The catalog is taking a moment."
+                  ? "Recent assets could not load."
                   : page.emptyState === "suppressed" || page.suppressed > 0
-                    ? "There’s more beyond your current view."
-                    : "The first story could be yours."}
+                    ? "Recent assets are hidden."
+                    : "No assets published yet."}
               </h3>
               <p
                 className="mt-4 max-w-[580px] text-prose text-mute"
@@ -127,7 +127,7 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
                   ? "We couldn’t load recent creations. Try again, or head into Browse."
                   : page.emptyState === "suppressed" || page.suppressed > 0
                     ? "Published work is outside your content preference. You can change what you see in Browse."
-                    : "There’s no published work in the catalog yet. Bring a character, a world, or something entirely your own."}
+                    : "Import a file or create a draft to publish the first asset."}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 {!page ? <CatalogRetry /> : null}
@@ -139,7 +139,7 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
                   >
                     {page?.emptyState === "catalog"
                       ? "Share your work"
-                      : "Open Browse"}
+                      : "Browse the catalog"}
                     <ArrowUpRight aria-hidden="true" />
                   </Link>
                 </Button>

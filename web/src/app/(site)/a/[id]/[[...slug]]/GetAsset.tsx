@@ -213,11 +213,11 @@ export function GetAsset({
     <Popover onOpenChange={() => setFailure("")}>
       <PopoverTrigger asChild>
         <Button className="min-w-52 justify-between" variant="primary">
-          Get {kindLabel}
+          Download {kindLabel}
           <ChevronDown aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" aria-label={`Get this ${kindLabel}`}>
+      <PopoverContent align="start" aria-label={`Download this ${kindLabel}`}>
         {choices.length > 0 && !linkedInstallOnly ? (
           <>
             {appTargets.length === 0 ? (
@@ -239,7 +239,7 @@ export function GetAsset({
             ) : appTargets.length > 1 ? (
               <fieldset className="min-w-0 border-0 p-0">
                 <legend className="mb-2 text-meta font-medium text-ink">
-                  Where is it going?
+                  Choose an app
                 </legend>
                 <div className="flex flex-wrap gap-1.5">
                   {appTargets.map((one) => (
@@ -314,8 +314,8 @@ export function GetAsset({
               aria-hidden="true"
               className="mt-0.5 size-3.5 shrink-0"
             />
-            Illarin writes files up to {fileSize(MAX_DOWNLOAD_BYTES)}. Leave
-            some images out and the download opens again.
+            Illarin writes files up to {fileSize(MAX_DOWNLOAD_BYTES)}. Select
+            fewer gallery images to reduce the download size.
           </p>
         ) : null}
 
@@ -420,7 +420,7 @@ export function GetAsset({
                 type="button"
               >
                 <SlidersHorizontal aria-hidden="true" size={15} />
-                Choose the format yourself
+                Choose a file format
               </button>
             )}
           </div>
@@ -428,9 +428,7 @@ export function GetAsset({
 
         {original && isOwner ? (
           <div className="mt-5 border-rule border-t pt-4">
-            <p className="text-meta font-medium text-ink">
-              The creator’s own file
-            </p>
+            <p className="text-meta font-medium text-ink">Original upload</p>
             <p className="mt-1 text-meta text-mute">
               {original.label ? `${original.label} · ` : ""}
               {fileWord(original.mediaType)}, uploaded{" "}
@@ -580,8 +578,8 @@ function GalleryChoice({
             })}
           </ul>
           <p className="mt-2 text-meta text-mute">
-            This is your copy only. The cover and any expression images travel
-            whole either way.
+            This selection changes only your download. The cover and expressions
+            are always included.
           </p>
         </>
       ) : null}

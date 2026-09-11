@@ -25,7 +25,7 @@ import { useWorkspace } from "./workspace/state";
 const TAG_PREVIEW_LIMIT = 8;
 
 const RATINGS: { label: string; value: boolean | null }[] = [
-  { label: "Not yet", value: null },
+  { label: "Not answered", value: null },
   { label: "No adult content", value: false },
   { label: "Adult content", value: true },
 ];
@@ -70,7 +70,7 @@ export function AssetHeader({
           href="/browse"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
-          Back to the collection
+          Browse the catalog
         </Link>
         {asset.isOwner && !writing ? (
           <button
@@ -79,14 +79,14 @@ export function AssetHeader({
             type="button"
           >
             <PencilLine aria-hidden="true" size={16} />
-            Edit this page
+            Edit asset
           </button>
         ) : null}
       </div>
 
       {asset.isOwner && writing ? (
         <p className="mt-4 text-meta text-mute">
-          Click any writing on the page to edit it where it sits.
+          Select text to edit it. Use block controls to arrange content.
         </p>
       ) : null}
 
@@ -172,7 +172,7 @@ export function AssetHeader({
               </div>
               {workspace.identity.isNsfw === null ? (
                 <p className="mt-2 text-label text-mute">
-                  Publishing waits on this answer. Nothing answers it for you.
+                  Answer the adult content question before publishing.
                 </p>
               ) : null}
             </fieldset>
@@ -185,7 +185,7 @@ export function AssetHeader({
               {asset.creator}
             </Link>
             <span className="ml-2">
-              {isDraft ? `Started ${sharedDate}` : `Shared ${sharedDate}`}
+              {isDraft ? `Created ${sharedDate}` : `Published ${sharedDate}`}
             </span>
           </p>
         </div>
@@ -206,7 +206,7 @@ export function AssetHeader({
         <div className="min-w-0 md:col-start-1 lg:col-start-auto">
           {writing ? (
             <Field
-              hint="Shown here in the asset header. People can also find the page by searching these words."
+              hint="A short description for readers and catalog search."
               htmlFor="asset-blurb"
               label="Blurb"
               trailing={
@@ -236,7 +236,7 @@ export function AssetHeader({
                     blurb: event.target.value,
                   })
                 }
-                placeholder="Give readers a short reason to open this page"
+                placeholder="Describe this asset in a few words"
                 rows={5}
                 value={workspace.identity.blurb}
               />

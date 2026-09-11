@@ -118,9 +118,7 @@ export function DefinitionRows({
               open={`Edit ${one.name}`}
               standing={
                 unexplained(one) ? (
-                  <span className="text-stop">
-                    Nobody is told what earns this
-                  </span>
+                  <span className="text-stop">No award criteria provided</span>
                 ) : (
                   one.explanation || undefined
                 )
@@ -141,7 +139,7 @@ export function DefinitionRows({
                   onClick={() => bringBack(one)}
                   type="button"
                 >
-                  Bring back
+                  Reactivate
                 </button>
               }
               key={one.id}
@@ -282,7 +280,7 @@ export function DefinitionStep({
           <Consequence
             action="Retire"
             busy={busy}
-            confirm="Retire it"
+            confirm="Retire recognition"
             onConfirm={retire}
           >
             Nobody new gets {existing.name}. Everyone holding it keeps it, and
@@ -314,7 +312,7 @@ export function DefinitionStep({
           <Field
             hint="Written for the person reading a profile. Say what someone did to get it."
             htmlFor="definition-earned"
-            label="What earns it"
+            label="Award criteria"
           >
             <TextInput
               id="definition-earned"
@@ -354,7 +352,7 @@ export function DefinitionStep({
                   className="size-4"
                   strokeWidth={1.9}
                 />
-                {shown ? "Replace" : "Upload one"}
+                {shown ? "Replace" : "Upload image"}
               </button>
               {shown ? (
                 <button

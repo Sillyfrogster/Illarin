@@ -26,7 +26,7 @@ export function BrowseThreshold({ filters }: { filters: BrowseFilters }) {
         />
         <div className="pb-9 sm:max-w-[27rem] sm:pt-12 sm:pb-10 md:max-w-[31rem] lg:max-w-[40rem] lg:pt-16 lg:pb-14 xl:max-w-[44rem]">
           <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-            What are you looking for
+            Browse the catalog
             <span className="text-accent">?</span>
           </h1>
           <div className="mt-6 max-w-[34rem] lg:mt-7">

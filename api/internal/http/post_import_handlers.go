@@ -39,7 +39,7 @@ func (h *Handlers) importError(c *gin.Context, err error) {
 	}
 	lines := toAPINotes(refused.Notes)
 	c.AbortWithStatusJSON(http.StatusBadRequest, PostImportRefusal{
-		Error:    "This Markdown carries things a post cannot hold.",
+		Error:    "This Markdown contains unsupported content. Review the reported lines.",
 		Code:     CodeInvalid,
 		Field:    pointer("markdown"),
 		Refusals: &lines,

@@ -36,7 +36,7 @@ export function ReadinessList({
                   onClick={() => onGo(target)}
                   type="button"
                 >
-                  Take me there
+                  Edit required content
                 </button>
               ) : null}
             </span>

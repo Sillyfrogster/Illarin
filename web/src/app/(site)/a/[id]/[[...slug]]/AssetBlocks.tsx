@@ -227,8 +227,8 @@ export function AssetBlocks({
                     {writing && block.hidden ? (
                       <div className="-mt-1 mb-5 flex flex-col items-stretch justify-between gap-3 rounded-control bg-plane p-3 text-meta text-mute sm:flex-row sm:items-center">
                         <span>
-                          Hidden from the public page. Everything in it is kept,
-                          and it still travels in every download.
+                          Hidden from readers. This content is still included in
+                          downloads.
                         </span>
                         <button
                           className="min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45"
@@ -237,7 +237,7 @@ export function AssetBlocks({
                           }
                           type="button"
                         >
-                          Show it again
+                          Show block
                         </button>
                       </div>
                     ) : null}
@@ -325,7 +325,7 @@ export function AssetBlocks({
           <details className="group mt-section rounded-plate bg-deep/70">
             <summary className="flex min-h-16 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-1 p-5 outline-offset-3 [&::-webkit-details-marker]:hidden">
               <span className="text-ui font-medium text-ink">
-                Model-facing content
+                Model instructions
               </span>
               <span className="text-meta text-mute">
                 System prompt and post-history instructions

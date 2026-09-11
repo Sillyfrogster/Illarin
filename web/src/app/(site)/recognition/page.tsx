@@ -3,15 +3,15 @@ import { AuthorityPage } from "@/components/register/AuthorityPage";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Profile badges",
-  "The jobs, titles and badges you put on someone's profile.",
+  "Profile recognition",
+  "Manage profile positions, titles and badges.",
 );
 
 export default function RecognitionPage() {
   return (
     <AuthorityPage
-      heading="Profile badges"
-      hint="The jobs, titles and badges you put on someone's profile. None of them lets anyone do anything on Illarin."
+      heading="Profile recognition"
+      hint="Manage profile positions, titles and badges. These do not grant account permissions."
     >
       <RecognitionRegister />
     </AuthorityPage>

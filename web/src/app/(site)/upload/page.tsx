@@ -14,11 +14,11 @@ export default function UploadPage() {
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
         <div className="min-w-0 max-w-[38rem]">
           <h1 className="font-display text-display font-medium tracking-[-0.04em] text-ink text-balance">
-            Bring in your work
+            Create an asset
           </h1>
           <p className="mt-4 text-lede text-mute">
-            Import a file you already have, or start one from nothing. Both open
-            a private draft that only you can see until you publish it.
+            Import a file or create an empty draft. Only you can see it until
+            you publish.
           </p>
           <UploadFlow />
         </div>

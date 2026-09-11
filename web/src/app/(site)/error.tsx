@@ -13,8 +13,8 @@ export default function SiteError({
 }) {
   return (
     <DeadEnd
-      heading="Illarin stopped short"
-      line="Something here broke on our side. It is recorded, and trying again is often all it takes."
+      heading="This page could not load"
+      line="Illarin could not load this page. Try again."
       note={error.digest ? `Reference ${error.digest}` : undefined}
     >
       <Button onClick={retry} variant="primary">

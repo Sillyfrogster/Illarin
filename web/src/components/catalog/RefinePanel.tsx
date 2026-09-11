@@ -12,8 +12,8 @@ const MORPH = { type: "spring", stiffness: 500, damping: 40 } as const;
 
 const VISIBILITY: { value: NsfwVisibility; label: string; note: string }[] = [
   { value: "hidden", label: "Hide", note: "Adult work stays out of results." },
-  { value: "blurred", label: "Blur", note: "Adult covers arrive blurred." },
-  { value: "shown", label: "Show", note: "Adult covers arrive as published." },
+  { value: "blurred", label: "Blur", note: "Blur adult cover images." },
+  { value: "shown", label: "Show", note: "Show adult cover images." },
 ];
 
 export function RefinePanel({

@@ -6,7 +6,7 @@ import { BLOG_HOME } from "@/lib/publication-metadata";
 export default function BlogNotFound() {
   return (
     <DeadEnd
-      heading="No post is here"
+      heading="Post not found"
       line="The address may be wrong, or the post may never have been published."
     >
       <Button asChild variant="primary">

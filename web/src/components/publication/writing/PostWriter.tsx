@@ -176,11 +176,13 @@ export function PostWriter({ id }: { id: string }) {
     const answer = await keepPostVersion(id, at);
     setKeeping(false);
     if (answer.error || !answer.value) {
-      setRefusal(answer.error ?? "That version could not be kept.");
+      setRefusal(
+        answer.error ?? "The checkpoint could not be saved. Try again.",
+      );
       return;
     }
     setRefusal("");
-    setSaid(`Kept as edition ${answer.value.number}.`);
+    setSaid(`Saved as revision ${answer.value.number}.`);
     setStamp((count) => count + 1);
   }
 
@@ -195,7 +197,7 @@ export function PostWriter({ id }: { id: string }) {
           action="Sign in"
           heading="Sign in to write"
           href="/sign-in"
-          line="Illarin opens the editor to the accounts it has approved."
+          line="Sign in with an account that has publishing access."
         />
       </div>
     );
@@ -247,8 +249,8 @@ export function PostWriter({ id }: { id: string }) {
               release={post.release ?? null}
               standing={
                 deleted
-                  ? "Deleted. Nobody can read this until you bring it back."
-                  : "A preview. The name goes on when you first publish."
+                  ? "This post is deleted. Restore it to continue editing."
+                  : "Preview. Your byline is added at first publication."
               }
               summary={draft.summary}
               title={draft.title}
@@ -340,7 +342,7 @@ export function PostWriter({ id }: { id: string }) {
               <DockTool
                 active={reading}
                 icon={reading ? PencilLine : BookOpen}
-                label={reading ? "Back to writing" : "Reading view"}
+                label={reading ? "Continue editing" : "Preview"}
                 onClick={() => look(!reading)}
               />
             )}
@@ -420,7 +422,7 @@ export function PostWriter({ id }: { id: string }) {
 
         {rail === "history" && state !== "conflict" ? (
           <WorkspaceRail
-            description="Nothing here reaches readers, and nothing here can change."
+            description="Save checkpoints and restore earlier revisions to your working copy."
             key="history"
             onClose={() => setRail(null)}
             title="Editorial history"
@@ -441,7 +443,7 @@ export function PostWriter({ id }: { id: string }) {
 
         {rail === "publication" && state !== "conflict" ? (
           <WorkspaceRail
-            description="Nothing here changes what you are writing. It changes what readers have."
+            description="Manage publication, scheduling, withdrawal and recovery."
             key="publication"
             onClose={() => setRail(null)}
             title="Publication"
@@ -478,16 +480,18 @@ function lightOf(state: Saving, post: Post): DockState {
 
 function detail(state: Saving, post: Post, refusal: string): string {
   if (state === "conflict") return "Open the newer copy to carry on.";
-  if (state === "refused") return refusal || "Nothing was lost. Try again.";
+  if (state === "refused")
+    return refusal || "Your writing is still on this page. Try saving again.";
   const standing = writerStanding(post);
-  if (standing === "deleted") return "Bring it back to write again.";
-  if (standing === "withdrawn") return "Its address answers nobody.";
+  if (standing === "deleted") return "Restore the post to continue editing.";
+  if (standing === "withdrawn")
+    return "The post is withdrawn from public view.";
   if (standing !== "published") return "Only you can open this post.";
   if (state === "dirty" || state === "saved") {
     return "Readers do not have your changes yet.";
   }
   const at = post.updatedPublicAt ?? post.publishedAt;
-  return at ? `Published ${readableDate(at)}.` : "Every change is with them.";
+  return at ? `Published ${readableDate(at)}.` : "All changes are published.";
 }
 
 function writingUnder(target: EventTarget): HTMLElement | null {

@@ -45,7 +45,7 @@ export function BlogFooter() {
         </nav>
 
         <div className="grid content-start">
-          <h2 className="text-meta text-mute">Read on</h2>
+          <h2 className="text-meta text-mute">Blog</h2>
           <a
             className="mt-1 flex min-h-11 items-center gap-2 text-ui text-ink hover:text-accent"
             href={PUBLICATION_FEEDS.rss}
@@ -57,7 +57,7 @@ export function BlogFooter() {
             className="flex min-h-11 items-center text-ui text-ink hover:text-accent"
             href={siteAddress("/browse")}
           >
-            The collection
+            Browse the catalog
           </a>
           <div className="mt-4">
             <AppearanceMenu labelled />

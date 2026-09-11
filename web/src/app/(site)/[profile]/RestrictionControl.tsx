@@ -123,7 +123,7 @@ export function RestrictionControl({
         ) : (
           <p className="mt-3 max-w-[70ch] font-ui text-meta text-mute">
             {reading
-              ? "Reading the reason…"
+              ? "Loading the restriction reason…"
               : "The reason could not be read. Reload the page to see it."}
           </p>
         )}
@@ -131,11 +131,11 @@ export function RestrictionControl({
           {confirmingRestore ? (
             <>
               <p className="font-ui text-meta text-mute">
-                Restore it? Everything the creator added becomes public again.
+                Restore this profile? Its public details will be visible again.
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <Button loading={pending} onClick={restore} variant="primary">
-                  Restore
+                  Restore profile
                 </Button>
                 <Button
                   onClick={() => setConfirmingRestore(false)}

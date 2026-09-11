@@ -33,24 +33,24 @@ export function noteWords(done: PostAction): string {
       return "started this post";
     case "post.revision.restored":
       return done.revision
-        ? `restored edition ${done.revision}`
-        : "restored an edition";
+        ? `restored revision ${done.revision}`
+        : "restored a revision";
     case "post.address.corrected":
       return "corrected the address";
     case "post.byline.corrected":
       return "corrected the name on the post";
     case "post.checkpointed":
-      return "kept an edition";
+      return "saved a checkpoint";
     case "post.published":
-      return "published an edition";
+      return "published a revision";
     case "post.schedule.replaced":
       return done.revision
-        ? `set edition ${done.revision} to go live instead`
-        : "changed what goes live";
+        ? `scheduled revision ${done.revision} instead`
+        : "changed the scheduled revision";
     case "post.schedule.cancelled":
-      return "stopped this going live";
+      return "cancelled scheduled publication";
     case "post.schedule.stopped":
-      return "could not publish the edition that was waiting";
+      return "could not publish the scheduled revision";
     default:
       return done.action;
   }
@@ -58,6 +58,6 @@ export function noteWords(done: PostAction): string {
 
 export function revisionWords(capturedFor: string): string {
   if (capturedFor === "publication") return "Published";
-  if (capturedFor === "schedule") return "Kept to go live later";
-  return "Kept while writing";
+  if (capturedFor === "schedule") return "Scheduled";
+  return "Checkpoint";
 }

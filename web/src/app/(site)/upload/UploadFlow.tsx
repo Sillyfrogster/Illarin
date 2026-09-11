@@ -63,7 +63,7 @@ export function UploadFlow() {
   if (account === undefined) {
     return (
       <output className="mt-8 block text-ui text-mute">
-        Reading your account…
+        Loading your account…
       </output>
     );
   }
@@ -75,7 +75,7 @@ export function UploadFlow() {
         href="/sign-in"
         heading="Sign in before you publish"
       >
-        Your account keeps every creation tied to the creator who made it.
+        Sign in to import a file or create a draft.
       </Gate>
     );
   }
@@ -87,7 +87,7 @@ export function UploadFlow() {
         href="/verify-email?returnTo=%2Fupload"
         heading="Verify your email before you publish"
       >
-        Verification puts every public file behind an address you control.
+        Verify your email to import a file or create a draft.
       </Gate>
     );
   }

@@ -36,10 +36,10 @@ import { canReplay, nothingDelivered } from "@/lib/publication-register";
 
 export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =
   [
-    { key: "all", word: "Everything" },
-    { key: "failed", state: "failed", word: "Stopped short" },
-    { key: "pending", state: "pending", word: "On the way" },
-    { key: "delivered", state: "delivered", word: "Arrived" },
+    { key: "all", word: "All announcements" },
+    { key: "failed", state: "failed", word: "Failed" },
+    { key: "pending", state: "pending", word: "Pending" },
+    { key: "delivered", state: "delivered", word: "Delivered" },
     { key: "unconfirmed", state: "unconfirmed", word: "Unconfirmed" },
   ];
 
@@ -189,7 +189,7 @@ export function DeliveryRows({
                                     : "text-stop",
                                 )}
                               >
-                                {made.detail || "It took it."}
+                                {made.detail || "Delivery accepted."}
                               </span>
                               <span className="shrink-0 text-mute tabular-nums">
                                 {shortMoment(made.attemptedAt)} · {made.tookMs}
@@ -200,7 +200,7 @@ export function DeliveryRows({
                         </ol>
                       ) : (
                         <p className="mt-3 font-prose text-meta text-mute">
-                          Reading the attempts…
+                          Loading delivery attempts…
                         </p>
                       )}
                     </MorphingDisclosure>

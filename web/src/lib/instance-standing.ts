@@ -20,7 +20,7 @@ export function revoked(
 
 export function installedHere(instance: ManagedInstance): string | null {
   if (!instance.scopes.includes("library:sync")) return null;
-  if (instance.installed === 0) return "Nothing reported installed here yet";
+  if (instance.installed === 0) return "No installed assets reported";
   const held =
     instance.installed === 1
       ? "1 asset installed"

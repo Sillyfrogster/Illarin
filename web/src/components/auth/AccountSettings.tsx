@@ -35,7 +35,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
   if (account === undefined) {
     return (
       <p aria-live="polite" className="font-ui text-ui text-mute">
-        Reading your sign-in methods…
+        Loading your sign-in methods…
       </p>
     );
   }
@@ -46,7 +46,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
         action="Sign in"
         heading="Sign in to open account settings"
         href="/sign-in"
-        line="Sign in to view or change the ways you access your account."
+        line="Manage your sign-in methods after signing in."
       />
     );
   }
@@ -68,12 +68,16 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
       });
       const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setSaid(refusalMessage(answer, "The password could not be saved."));
+        setSaid(
+          refusalMessage(answer, "The password could not be saved. Try again."),
+        );
         return;
       }
       setAccount(answer);
       form.reset();
-      setSaid("Your email can now be used with this password.");
+      setSaid(
+        "Password saved. You can sign in with your verified email address.",
+      );
     } catch {
       setSaid(UNREACHABLE);
     } finally {
@@ -91,11 +95,18 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
       });
       const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setSaid(refusalMessage(answer, "Discord could not be detached."));
+        setSaid(
+          refusalMessage(
+            answer,
+            "Discord could not be disconnected. Try again.",
+          ),
+        );
         return;
       }
       setAccount(answer);
-      setSaid("Discord is detached and free to be used on another account.");
+      setSaid(
+        "Discord disconnected. It can now be connected to another account.",
+      );
     } catch {
       setSaid(UNREACHABLE);
     } finally {
@@ -111,10 +122,10 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
     <div className="grid gap-5">
       <p className="font-ui text-ui text-mute">
         {settled === 0
-          ? "Nothing gets you back into this account yet."
+          ? "No usable sign-in method is available. Verify your email and add a password."
           : settled === 1
-            ? "One way gets you back into this account. A second is worth having."
-            : `${settled} independent ways get you back into this account.`}
+            ? "One sign-in method is available. Add another for backup access."
+            : `${settled} sign-in methods are available.`}
       </p>
 
       {said ? <Said>{said}</Said> : null}
@@ -183,8 +194,8 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
 
       {discord?.settled && !discord.canDetach ? (
         <p className="font-ui text-meta text-mute" id="detach-requirement">
-          Keep at least one verified way in. Verify an email and add a password
-          before detaching Discord.
+          Verify your email and add a password before disconnecting Discord so
+          you can still sign in.
         </p>
       ) : null}
     </div>
@@ -221,7 +232,7 @@ function WayAction({
         onClick={detach}
         variant="secondary"
       >
-        {detachPending ? "Detaching" : "Detach Discord"}
+        {detachPending ? "Disconnecting…" : "Disconnect Discord"}
       </Button>
     ) : (
       <Button asChild disabled={!way.canAttach} variant="secondary">
@@ -232,7 +243,7 @@ function WayAction({
             if (!way.canAttach) event.preventDefault();
           }}
         >
-          Attach Discord
+          Connect Discord
         </a>
       </Button>
     );

@@ -115,7 +115,7 @@ export function PasswordResetRequestPanel() {
   return (
     <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
       <Field
-        hint="This also works if Discord has been your only way into Illarin until now."
+        hint="You can also reset your password if you previously signed in only with Discord."
         htmlFor="reset-email"
         label="Verified email address"
       >
@@ -176,14 +176,14 @@ export function PasswordResetCompletionPanel() {
             <Link href="/sign-in">Sign in with email</Link>
           </Button>
         }
-        body="You can now return with your verified email, even without Discord."
+        body="Sign in with your verified email address and new password."
         mark={
           <Mark>
             <Check aria-hidden="true" className="size-6" strokeWidth={2} />
           </Mark>
         }
         spoken
-        title="Your password is ready"
+        title="Password saved"
       />
     );
   }
@@ -210,7 +210,7 @@ export function PasswordResetCompletionPanel() {
   return (
     <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
       <Field
-        hint="The link can be used once. Your new password may be any length."
+        hint="Choose a password you do not use on another site. This reset link works once."
         htmlFor="reset-password"
         label="New password"
       >

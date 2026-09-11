@@ -91,7 +91,7 @@ export function InstanceRow({
                 className="basis-full font-ui text-meta text-mute sm:basis-auto"
                 id={confirmationId}
               >
-                This cuts off only this installation.
+                This installation will lose access to your account.
               </p>
             ) : null}
             <Button
@@ -105,7 +105,7 @@ export function InstanceRow({
               }}
               variant={confirming ? "stop" : "secondary"}
             >
-              {revoking ? "Revoking" : confirming ? "Confirm revoke" : "Revoke"}
+              {revoking ? "Revoking" : confirming ? "Revoke access" : "Revoke"}
             </Button>
             {confirming ? (
               <Button
@@ -121,10 +121,7 @@ export function InstanceRow({
       </div>
 
       {cut ? null : (
-        <MorphingDisclosure
-          className="mt-3"
-          summary="What this installation says about itself"
-        >
+        <MorphingDisclosure className="mt-3" summary="Installation details">
           <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
             {instance.applicationVersion ? (
               <DeclaredValues

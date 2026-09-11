@@ -186,12 +186,12 @@ export function WritingToolbar({
             <ListTodo aria-hidden="true" className="size-4" strokeWidth={1.7} />
           </Control>
         </Group>
-        <Group label="Structures">
+        <Group label="Insert content">
           <Control
             active={false}
             controls={controls}
             expanded={row === "insert"}
-            label="Insert a structure"
+            label="Insert content"
             press={() => open("insert")}
           >
             <Plus

@@ -8,6 +8,16 @@ export const NAV = [
 ] as const;
 
 export type Destination = { label: string; href: string };
+export type AccountDestination = Destination & {
+  id:
+    | "profile"
+    | "settings"
+    | "publication"
+    | "recognition"
+    | "verify"
+    | "sign-in"
+    | "sign-up";
+};
 
 export function publishAction(
   account: SignedInAccount | null | undefined,
@@ -20,7 +30,7 @@ export function publishAction(
     };
   if (!account.emailVerified)
     return {
-      label: "Verify to publish",
+      label: "Verify email to publish",
       href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
     };
   return { label: "Publish", href: "/upload" };
@@ -29,26 +39,35 @@ export function publishAction(
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
   publicationAuthority: boolean,
-): Destination[] {
+): AccountDestination[] {
   if (!account)
     return [
-      { label: "Sign in", href: "/sign-in" },
-      { label: "Create account", href: "/sign-up" },
+      { id: "sign-in", label: "Sign in", href: "/sign-in" },
+      { id: "sign-up", label: "Create account", href: "/sign-up" },
     ];
 
   return [
-    { label: "View profile", href: `/@${account.handle}` },
-    { label: "Account settings", href: "/settings" },
+    { id: "profile", label: "View profile", href: `/@${account.handle}` },
+    { id: "settings", label: "Account settings", href: "/settings" },
     ...(publicationAuthority
       ? [
-          { label: "The publication", href: "/publication" },
-          { label: "Profile badges", href: "/recognition" },
+          {
+            id: "publication" as const,
+            label: "Blog administration",
+            href: "/publication",
+          },
+          {
+            id: "recognition" as const,
+            label: "Profile recognition",
+            href: "/recognition",
+          },
         ]
       : []),
     ...(account.emailVerified
       ? []
       : [
           {
+            id: "verify" as const,
             label: "Verify email",
             href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
           },

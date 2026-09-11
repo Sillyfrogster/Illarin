@@ -19,7 +19,7 @@ export function ScheduleFields({
     <Field
       hint={`Times are ${zoneLabel()}, the zone this browser is in.`}
       htmlFor={`${id}-date`}
-      label="Goes live"
+      label="Publication date"
     >
       <div className="flex flex-wrap gap-2">
         <input
@@ -31,7 +31,7 @@ export function ScheduleFields({
           value={parts.date}
         />
         <input
-          aria-label="Time it goes live"
+          aria-label="Publication time"
           className={cn(controlClasses, "w-auto flex-[1_1_7rem]")}
           disabled={disabled}
           id={`${id}-time`}

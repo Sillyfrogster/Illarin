@@ -132,14 +132,16 @@ function costLine(
     ? target.roles.filter((role) => !reaches(role, app.id)).length
     : target.roles.filter(costs).length;
   const elsewhere = app.id ? 0 : target.roles.filter(landsElsewhere).length;
-  if (holdsNothing && lost === 0) return "There is nothing in it yet";
+  if (holdsNothing && lost === 0) return "No exportable content yet";
   if (lost > 0) {
-    return lost === 1 ? "1 thing left out" : `${lost} things left out`;
+    return lost === 1
+      ? "1 content type has limited support"
+      : `${lost} content types have limited support`;
   }
   if (elsewhere > 0) {
     return elsewhere === 1
-      ? "1 thing some apps will not show"
-      : `${elsewhere} things some apps will not show`;
+      ? "1 content type unsupported by some apps"
+      : `${elsewhere} content types unsupported by some apps`;
   }
   return "Includes everything";
 }
@@ -224,7 +226,7 @@ export function instanceStanding(instance: AssetInstance): string {
     return "Installed and up to date.";
   }
   if (!instance.reportsLibrary) {
-    return "This installation does not report what it holds, so Illarin cannot say whether you already have it.";
+    return "This application does not report installed assets. Installation status is unavailable.";
   }
   return "Not installed here yet.";
 }

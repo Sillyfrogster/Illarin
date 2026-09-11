@@ -74,7 +74,7 @@ func (h *Handlers) scheduleError(c *gin.Context, err error) {
 			"This post has nothing waiting to publish.")
 	case errors.Is(err, publication.ErrAlreadyScheduled):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
-			Error: "This post already has an edition waiting to publish. Replace it instead.",
+			Error: "This post already has a scheduled revision. Change that revision instead.",
 			Code:  CodeAlreadyScheduled,
 		})
 	default:

@@ -299,8 +299,8 @@ function AvatarField({
         <p className="text-label font-medium text-mute">Avatar</p>
         <p className="text-meta text-mute">
           {missing
-            ? "This Lumia points at a picture the asset no longer holds. Add another to replace it."
-            : "Square images work best. The source Pack is left untouched."}
+            ? "This avatar is missing. Upload an image to replace it."
+            : "Square images work best. Uploading an avatar does not change the original file."}
         </p>
         {message ? (
           <p className="text-meta text-stop" role="alert">

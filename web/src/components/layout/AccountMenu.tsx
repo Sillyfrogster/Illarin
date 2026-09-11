@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  BadgeCheck,
-  ChevronDown,
-  CircleUserRound,
-  LogIn,
-  LogOut,
-  Mail,
-  PenLine,
-  Settings,
-  UserPlus,
-} from "lucide-react";
+import { ChevronDown, CircleUserRound, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -25,18 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { AppearanceMenu } from "./AppearanceMenu";
+import { DestinationIcon } from "./DestinationIcon";
 import { accountDestinations, isCurrentPage } from "./destinations";
 import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
-
-const DESTINATION_ICONS = {
-  "View profile": CircleUserRound,
-  "Account settings": Settings,
-  Writers: PenLine,
-  "Profile badges": BadgeCheck,
-  "Verify email": Mail,
-  "Sign in": LogIn,
-  "Create account": UserPlus,
-};
 
 export function AccountMenu() {
   const pathname = usePathname();
@@ -76,7 +57,7 @@ export function AccountMenu() {
             </span>
             <span className="mt-0.5 block text-meta text-mute">
               {account.emailVerified
-                ? "Verified account"
+                ? "Email verified"
                 : "Email verification needed to publish"}
             </span>
           </DropdownMenuLabel>
@@ -87,10 +68,6 @@ export function AccountMenu() {
         )}
 
         {destinations.map((destination) => {
-          const Icon =
-            DESTINATION_ICONS[
-              destination.label as keyof typeof DESTINATION_ICONS
-            ];
           return (
             <DropdownMenuItem
               key={destination.href}
@@ -105,9 +82,7 @@ export function AccountMenu() {
                   isCurrentPage(pathname, destination.href) ? "page" : undefined
                 }
               >
-                {Icon ? (
-                  <Icon aria-hidden="true" className="text-mute" />
-                ) : null}
+                <DestinationIcon id={destination.id} />
                 {destination.label}
               </Link>
             </DropdownMenuItem>

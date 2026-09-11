@@ -74,7 +74,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
           }
         >
           <strong>Manage file extras</strong>
-          <span>Review what your upload kept for compatible downloads</span>
+          <span>Review extra file data included in compatible downloads</span>
         </span>
         <ChevronRight
           className={cn(
@@ -95,11 +95,11 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
           </p>
           {namespaces === null ? (
             <p className={"mt-3 text-meta text-mute italic"}>
-              Reading the file extras…
+              Loading file extras…
             </p>
           ) : namespaces.length === 0 ? (
             <p className={"mt-3 text-meta text-mute italic"}>
-              Nothing extra is being kept with this upload.
+              No extra file data was found.
             </p>
           ) : (
             <ul
@@ -213,7 +213,7 @@ function DeleteNamespaceDialog({
         }
       >
         <button type="button" onClick={onCancel} disabled={pending}>
-          Keep it
+          Cancel
         </button>
         <button
           type="button"

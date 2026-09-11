@@ -147,21 +147,19 @@ export function MotionControl() {
   return (
     <div className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-full bg-plane p-1 text-meta text-ink shadow-cover sm:right-6 sm:bottom-6">
       <span className="sr-only" aria-live="polite">
-        {fallback ? "Still view for smoother browsing" : "Presentation"}
+        {fallback ? "Animations paused for performance" : "Page animations"}
       </span>
       <Button
         variant="ghost"
         size="compact"
         disabled={!ready || reduced}
         onClick={toggle}
-        aria-label={
-          live ? "Use still presentation" : "Enable live presentation"
-        }
+        aria-label={live ? "Pause page animations" : "Play page animations"}
         aria-pressed={live}
         className="rounded-full text-meta disabled:opacity-100"
       >
         {live ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-        {ready && reduced ? "Reduced motion" : live ? "Live" : "Still"}
+        {ready && reduced ? "Reduced motion" : live ? "Playing" : "Paused"}
       </Button>
     </div>
   );

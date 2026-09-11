@@ -85,7 +85,7 @@ export function PublicProfileEditor() {
   if (account === undefined || (account && !draft)) {
     return (
       <p aria-live="polite" className="font-ui text-ui text-mute">
-        Reading your public profile…
+        Loading your profile…
       </p>
     );
   }
@@ -98,7 +98,7 @@ export function PublicProfileEditor() {
             <Link href="/sign-in">Sign in</Link>
           </Button>
         }
-        body="Your public profile belongs to your account, so it needs a session."
+        body="Sign in to change your public profile."
         title="Sign in to edit your public profile"
       />
     );
@@ -112,7 +112,7 @@ export function PublicProfileEditor() {
             <Link href="/verify-email">Verify email</Link>
           </Button>
         }
-        body="Your handle stays public either way. The rest of the profile opens once an address is verified."
+        body="Verify your email before adding public profile details."
         title="Verify your email to publish a profile"
       />
     );
@@ -127,7 +127,7 @@ export function PublicProfileEditor() {
           strokeWidth={1.4}
         />
         <h2 className="mt-4 font-display text-section font-medium tracking-tight text-ink">
-          Illarin has hidden what you added to your profile
+          Your profile is restricted
         </h2>
         <p className="mt-3 font-prose text-prose text-ink">
           Your display name, picture, biography, contact address and links are
@@ -142,7 +142,7 @@ export function PublicProfileEditor() {
           >
             team@illarin.xyz
           </a>{" "}
-          to have it looked at again.
+          to request a review.
         </p>
       </div>
     );
@@ -218,8 +218,8 @@ export function PublicProfileEditor() {
     <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,36rem)_minmax(0,22rem)] lg:gap-16">
       <form className="min-w-0" noValidate onSubmit={save}>
         <Group
-          note="The face and the name a visitor meets first."
-          title="Who you are"
+          note="Choose the name and picture shown on your profile."
+          title="Name and picture"
         >
           <ProfilePicture
             confirmingRemoval={confirmingRemoval}
@@ -245,7 +245,7 @@ export function PublicProfileEditor() {
 
           <Field
             className="max-w-[22rem]"
-            hint="Clearing it puts your handle back in its place."
+            hint="Leave empty to show your handle."
             htmlFor="profile-display-name"
             label="Display name"
             trouble={failed("displayName") ? fieldTrouble : undefined}
@@ -267,7 +267,7 @@ export function PublicProfileEditor() {
 
         <Group
           note="Up to 400 characters of plain text, under your name."
-          title="What you say"
+          title="Biography"
         >
           <Field
             hint={
@@ -300,8 +300,8 @@ export function PublicProfileEditor() {
         </Group>
 
         <Group
-          note="All of this is public. Your sign-in address is not, and is never copied here."
-          title="Where to find you"
+          note="These contact details are public. Your sign-in email stays private."
+          title="Contact details"
         >
           <Field
             className="max-w-[26rem]"

@@ -55,7 +55,7 @@ export function TokenRows({
                       onClick={() => setConfirming("")}
                       type="button"
                     >
-                      Keep it
+                      Cancel
                     </button>
                   ) : null}
                   <button
@@ -73,7 +73,7 @@ export function TokenRows({
                     {revoking === token.id
                       ? "Revoking…"
                       : asking
-                        ? "Revoke for good"
+                        ? "Revoke token"
                         : "Revoke"}
                   </button>
                 </span>
@@ -91,8 +91,8 @@ export function TokenRows({
                 className="max-w-[52ch] font-prose text-meta text-stop"
                 id={`${token.id}-consequence`}
               >
-                Anything carrying it stops publishing at once. Your other tokens
-                and your approval are untouched.
+                Tools using this token will immediately lose publishing access.
+                Other tokens will keep working.
               </p>
             ) : null}
           </li>

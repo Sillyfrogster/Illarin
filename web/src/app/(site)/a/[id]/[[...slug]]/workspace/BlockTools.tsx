@@ -136,7 +136,7 @@ export function BlockTools({
               Block width
             </strong>
             <span className="mt-1 block text-meta text-mute">
-              Sizes stay exact. A short row keeps its empty space.
+              Choose how much of the page this block occupies.
             </span>
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -183,7 +183,7 @@ export function BlockTools({
                 Content layout
               </strong>
               <span className="mt-1 block text-meta text-mute">
-                Every element keeps its place in reading order.
+                Arrange the content areas inside this block.
               </span>
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup

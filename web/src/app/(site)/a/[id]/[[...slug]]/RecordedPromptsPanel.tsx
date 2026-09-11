@@ -48,7 +48,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "That version could not be settled. Try again.",
+          : "The prompt matches could not be saved. Try again.",
       );
     } finally {
       setPending(0);
@@ -72,9 +72,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
           }
         >
           <strong>Match your sealed prompts to older versions</strong>
-          <span>
-            A version Illarin cannot match shows readers no prompts at all
-          </span>
+          <span>Unmatched versions hide all prompts and block downloads</span>
         </span>
         <ChevronRight
           className={cn(
@@ -95,7 +93,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
           </p>
           {versions === null ? (
             <p className={"mt-3 text-meta text-mute italic"}>
-              Reading the recorded versions…
+              Loading historical versions…
             </p>
           ) : versions.length === 0 ? (
             <p className={"mt-3 text-meta text-mute italic"}>
@@ -153,8 +151,8 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
                     onClick={() => void settle(version)}
                   >
                     {pending === version.version.number
-                      ? "Settling…"
-                      : `Settle update ${version.version.number}`}
+                      ? "Saving matches…"
+                      : `Save matches for update ${version.version.number}`}
                   </button>
                 </li>
               ))}

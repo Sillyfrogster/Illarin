@@ -10,16 +10,16 @@ export const EVENT_WORDS: Record<
   { word: string; what: string }
 > = {
   "publication.post.published.v1": {
-    word: "Publication",
-    what: "A post reaching the blog, and one put back after a takedown.",
+    word: "Published",
+    what: "A post is published or republished.",
   },
   "publication.post.updated.v1": {
-    word: "Changes",
-    what: "A post already on the blog, published again.",
+    word: "Updated",
+    what: "Changes to a published post are published.",
   },
   "publication.post.withdrawn.v1": {
-    word: "Takedown",
-    what: "A post leaving the blog. Its address answers 410 from then on.",
+    word: "Withdrawn",
+    what: "A post is withdrawn from public view.",
   },
 };
 
@@ -68,7 +68,7 @@ export function deliveryState(one: PostDelivery): DeliveryState {
 }
 
 const STOPPED_WORDS: Record<string, string> = {
-  gone: "It answered 410, so nothing goes there again.",
+  gone: "The endpoint returned 410 Gone. Delivery to it has stopped.",
   removed: "The destination was removed.",
   disabled: "The destination was switched off.",
   moved: "The destination moved to another address.",
@@ -76,10 +76,10 @@ const STOPPED_WORDS: Record<string, string> = {
 
 export function deliveryStanding(one: PostDelivery, now = new Date()): string {
   if (one.state === "delivered") {
-    return `Arrived ${shortMoment(one.settledAt ?? one.occurredAt)}`;
+    return `Delivered ${shortMoment(one.settledAt ?? one.occurredAt)}`;
   }
   if (one.state === "unconfirmed") {
-    return "Discord took it but never said which message it made. Look in the channel to see whether it arrived.";
+    return "Discord accepted the request without confirming a message. Check the channel before retrying.";
   }
   if (one.state === "failed") {
     const stopped = STOPPED_WORDS[one.settledReason ?? ""];
@@ -87,11 +87,11 @@ export function deliveryStanding(one: PostDelivery, now = new Date()): string {
     if (one.settledReason === "exhausted") {
       return `Gave up after ${tries(one.attempts)}`;
     }
-    return `Turned away. ${one.last?.detail ?? "It would not take it."}`;
+    return `Delivery rejected. ${one.last?.detail ?? "The destination rejected the announcement."}`;
   }
-  if (one.attempts === 0) return "Waiting to go out";
+  if (one.attempts === 0) return "Queued";
   const waited = new Date(one.dueAt).getTime() - now.getTime();
-  if (waited <= 0) return "Going out now";
+  if (waited <= 0) return "Sending";
   return `Attempt ${one.attempts + 1} ${inWords(waited)}, after ${tries(one.attempts)}`;
 }
 

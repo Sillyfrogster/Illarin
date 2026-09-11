@@ -159,7 +159,7 @@ export function AppRows({
                   onClick={() => bringBack(app)}
                   type="button"
                 >
-                  Bring back
+                  Reactivate app
                 </button>
               }
               key={app.id}
@@ -175,7 +175,7 @@ export function AppRows({
 
 function announces(app: PublicationApp): string {
   const many = app.destinations.length;
-  if (many === 0) return "Announces nowhere";
+  if (many === 0) return "No announcement destinations";
   return many === 1
     ? `Announces to ${app.destinations[0].name}`
     : `Announces to ${many} destinations`;
@@ -284,7 +284,7 @@ export function AppStep({
           <Consequence
             action="Retire"
             busy={busy}
-            confirm="Retire it"
+            confirm="Retire app"
             onConfirm={retire}
           >
             Nobody can be approved for {existing.name} while it is retired.
@@ -295,8 +295,7 @@ export function AppStep({
       }
     >
       <p className="max-w-[52ch] font-prose text-meta text-mute">
-        A project Illarin publishes official updates for. Adding one approves
-        nobody.
+        Add a project to the blog. Approve contributors separately.
       </p>
 
       <Field htmlFor="app-name" label="Name">
@@ -310,7 +309,7 @@ export function AppStep({
       </Field>
 
       <Field
-        hint="What a post references. Renaming the app leaves it alone."
+        hint="Used in the app's blog address. Changing its name does not change this slug."
         htmlFor="app-slug"
         label="Slug"
       >
@@ -324,7 +323,7 @@ export function AppStep({
         />
       </Field>
 
-      <Field htmlFor="app-home" label="Address">
+      <Field htmlFor="app-home" label="Project URL">
         <TextInput
           id="app-home"
           maxLength={300}
@@ -335,7 +334,7 @@ export function AppStep({
         />
       </Field>
 
-      <Field label="Mark">
+      <Field label="App logo">
         <div className="flex items-center gap-3">
           <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-control bg-deep text-mute">
             {shown ? (
@@ -361,7 +360,7 @@ export function AppStep({
             type="button"
           >
             <ImageUp aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            {shown ? "Replace" : "Upload one"}
+            {shown ? "Replace" : "Upload logo"}
           </button>
           <input
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -378,7 +377,7 @@ export function AppStep({
         allowed={allowed}
         defaults={defaults}
         destinations={destinations}
-        legend="Where its posts may announce"
+        legend="Announcement destinations"
         onAllowed={setAllowed}
         onDefaults={setDefaults}
       />

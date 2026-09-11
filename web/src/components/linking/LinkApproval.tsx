@@ -195,7 +195,7 @@ export function LinkApproval() {
                 </Link>
               </Button>
             }
-            body="An application can only be linked by the creator whose account it will reach."
+            body="Sign in to the account you want to link to this application."
             requestPending={reviewingRequest}
             title="Sign in to review this link"
           />
@@ -237,7 +237,7 @@ export function LinkApproval() {
                 <Link href="/settings">See linked applications</Link>
               </Button>
             }
-            body={`Go back to ${stage.link.applicationName}. It can finish with a short-lived access token and a rotating refresh credential. This installation stays independent from every other link.`}
+            body={`Go back to ${stage.link.applicationName}. Linking is approved. The application can now finish connecting.`}
             mark={
               <Mark tone="accent">
                 <Check aria-hidden="true" className="size-6" strokeWidth={2} />
@@ -316,7 +316,7 @@ export function LinkApproval() {
     return (
       <Frame lede="">
         <Panel busy capture={capturePanel}>
-          <p className="font-ui text-ui text-mute">Reading the link request…</p>
+          <p className="font-ui text-ui text-mute">Loading the link request…</p>
         </Panel>
       </Frame>
     );
@@ -373,7 +373,7 @@ export function LinkApproval() {
   }
 
   return (
-    <Frame lede="A desktop application opens this page for you, and you only type a code when the installation cannot open a browser — a server, or a terminal.">
+    <Frame lede="Start linking in your application. If it gives you a code, enter it here.">
       <form
         noValidate
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -419,14 +419,13 @@ export function LinkApproval() {
         ) : null}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
           <Button size="large" type="submit" variant="primary">
-            Continue
+            Review request
           </Button>
           <p
             className="min-w-0 max-w-[34ch] flex-1 font-prose text-meta text-mute"
             id="link-entry-reason"
           >
-            Typing it yourself is what ties the code on your screen to the
-            request being made. You will review the application before deciding.
+            Next, review the application's identity and requested permissions.
           </p>
         </div>
       </form>

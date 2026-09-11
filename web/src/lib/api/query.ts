@@ -177,7 +177,7 @@ export async function fetchAssets(
     params: { query: params },
     headers: cookie ? { cookie } : undefined,
   });
-  if (error) throw new Error("Could not load the collection");
+  if (error) throw new Error("Could not load the catalog");
   return data;
 }
 
@@ -259,7 +259,7 @@ export async function saveAssetDiscovery(
     params: { path: { id } },
     body: { discovery },
   });
-  if (error) throw new Error("Could not save discovery");
+  if (error) throw new Error("Could not save the catalog listing");
 }
 
 export async function saveAssetBlock(
@@ -646,7 +646,7 @@ export async function resolvePromptCorrespondence(
     throw new Error(
       typeof refusal?.error === "string"
         ? refusal.error
-        : "That version could not be settled. Try again.",
+        : "The prompt matches could not be saved. Try again.",
     );
   }
 }
@@ -690,8 +690,7 @@ export async function fetchPostArchive(query: {
     params: { query },
   });
   if (response.status === 404) return null;
-  if (error || !data)
-    throw new Error("Could not read the publication archive.");
+  if (error || !data) throw new Error("Could not load blog posts.");
   return data;
 }
 

@@ -8,7 +8,7 @@ import { useWorkspace } from "./state";
 const STATUS: Record<SaveState, string> = {
   failed: "Not saved",
   private: "Saved privately",
-  published: "Readers have this",
+  published: "Published",
   saving: "Saving",
   unsaved: "Unsaved",
 };
@@ -50,7 +50,7 @@ export function WorkspaceDock({
         <>
           <DockTool
             icon={BookOpen}
-            label="Reading view"
+            label="Preview"
             onClick={workspace.stopEditing}
           />
           <DockTool icon={Command} label="Go to content" onClick={onJump} />

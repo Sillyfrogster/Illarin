@@ -82,7 +82,7 @@ export function LinkDecision({
           className="font-ui text-ui font-medium text-ink"
           id="link-permissions"
         >
-          What it would be able to do
+          Requested permissions
         </h3>
         <ul className="m-0 mt-4 grid list-none gap-4 p-0">
           {link.scopes.map((scope) => {
@@ -128,7 +128,7 @@ export function LinkDecision({
           size="large"
           variant="primary"
         >
-          {deciding === "approve" ? "Approving" : "Approve"}
+          {deciding === "approve" ? "Approving" : "Approve link"}
         </Button>
         <Button
           disabled={busy}
@@ -137,7 +137,7 @@ export function LinkDecision({
           size="large"
           variant="outline"
         >
-          {deciding === "deny" ? "Declining" : "Decline"}
+          {deciding === "deny" ? "Declining" : "Decline link"}
         </Button>
         {onCancel && !busy ? (
           <Button onClick={onCancel} variant="ghost">
@@ -148,7 +148,7 @@ export function LinkDecision({
 
       <MorphingDisclosure
         className="border-t border-rule pt-3"
-        summary="What this application says about itself"
+        summary="Application details"
       >
         <div className="pt-4 pb-2">
           <p className="font-ui text-meta text-mute">

@@ -106,9 +106,7 @@ function ColorRows({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      {colors.length === 0 ? (
-        <Note>This mode names no colours yet.</Note>
-      ) : null}
+      {colors.length === 0 ? <Note>No colours in this mode yet.</Note> : null}
       {colors.map((color, index) => (
         <div className="flex flex-wrap items-end gap-2" key={color.id ?? index}>
           <label
@@ -216,9 +214,7 @@ export function StylesheetSetEditor({
 
       <FieldGroup legend="Component stylesheets">
         {sheets.length === 0 ? (
-          <Note>
-            The main sheet carries the theme until you split part of it out.
-          </Note>
+          <Note>Add a stylesheet for an individual app component.</Note>
         ) : null}
         {sheets.map((sheet, index) => (
           <ComponentSheet
@@ -362,7 +358,7 @@ function ComponentSheet({
       </Field>
       <Switch
         checked={sheet.enabled}
-        hint="A sheet left out stays in the theme and reaches no reader."
+        hint="Disable this stylesheet to keep it out of downloads."
         label="Included"
         onChange={(enabled) => onChange({ enabled })}
         pending={pending}

@@ -60,7 +60,9 @@ export function HistoryRail({
     setBusy(false);
     setChosen(null);
     if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "That edition could not be restored.");
+      onFailure(
+        answer.error ?? "The revision could not be restored. Try again.",
+      );
       return;
     }
     onRestored(answer.value);
@@ -73,19 +75,19 @@ export function HistoryRail({
     <div className="flex flex-col gap-6">
       <Button loading={keeping} onClick={onKeep} variant="primary">
         <BookmarkPlus aria-hidden="true" />
-        Keep this version
+        Save checkpoint
       </Button>
 
       {stream === null ? (
         <p aria-live="polite" className="font-ui text-ui text-mute">
-          Opening the history…
+          Loading revision history…
         </p>
       ) : (
         <>
           {kept ? null : (
             <p className="font-prose text-meta text-mute">
-              Nothing kept yet. Keeping a version puts the writing as it stands
-              beyond reach of your next change. Publishing keeps it too.
+              No revisions yet. Save a checkpoint or publish to record the
+              current writing.
             </p>
           )}
           <ol className="relative flex list-none flex-col gap-5 border-l border-rule/70 pl-5">
@@ -161,9 +163,8 @@ function Edition({
         {chosen ? (
           <div className="mt-3 flex flex-col gap-3 rounded-control bg-plane p-3">
             <p className="font-prose text-meta text-ink">
-              This replaces what you are writing now. Nothing readers have
-              changes, no edition is lost, and you publish afterwards to give it
-              to them.
+              This replaces your working copy with the selected revision. The
+              published post stays unchanged until you publish again.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -172,7 +173,7 @@ function Edition({
                 size="compact"
                 variant="primary"
               >
-                Restore edition {revision.number}
+                Restore revision {revision.number}
               </Button>
               <Button
                 disabled={restoring}

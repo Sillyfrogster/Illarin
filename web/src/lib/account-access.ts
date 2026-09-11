@@ -22,7 +22,7 @@ export function waysIn(account: SignedInAccount): WayIn[] {
       name: "Email address",
       note: emailSettled
         ? "Verified and available for recovery."
-        : "Verify an address before publishing or detaching Discord.",
+        : "Verify your email before publishing or disconnecting Discord.",
       settled: emailSettled,
       standing: account.email ?? "No verified address yet",
     },
@@ -32,17 +32,17 @@ export function waysIn(account: SignedInAccount): WayIn[] {
       id: "discord",
       name: "Discord",
       note: account.discordLinked
-        ? "Return without entering a password."
-        : "Attach Discord without combining this account with another.",
+        ? "Sign in with your Discord account."
+        : "Connect a Discord account to use it for sign-in.",
       settled: account.discordLinked,
-      standing: account.discordLinked ? "Attached" : "Not attached",
+      standing: account.discordLinked ? "Connected" : "Not connected",
     },
     {
       id: "password",
       name: "Password",
       note: passwordSettled
         ? "Use password recovery if you need to replace it."
-        : "An independent way back if Discord is unavailable.",
+        : "Sign in with email if you cannot access Discord.",
       settled: passwordSettled,
       standing: passwordSettled ? "Set" : "Not set",
     },

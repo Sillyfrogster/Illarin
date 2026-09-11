@@ -9,20 +9,20 @@ const TOOLS = [
   {
     kind: "preset",
     label: "Presets",
-    title: "Find your voice.",
-    description: "Prompts and settings that shape how your story unfolds.",
+    title: "Shape the model’s replies.",
+    description: "Prompt fragments and model settings for your roleplay app.",
   },
   {
     kind: "theme",
     label: "Themes",
-    title: "Change the atmosphere.",
-    description: "A different look for the application you call home.",
+    title: "Customise your app.",
+    description: "Colours and styles for supported roleplay apps.",
   },
   {
     kind: "pack",
     label: "Lumia packs",
-    title: "More sides to a Lumia.",
-    description: "Lumia packs made for Lumiverse, ready to explore.",
+    title: "Add Lumia to Lumiverse.",
+    description: "Collections of Lumia personalities, definitions and avatars.",
   },
 ] as const;
 
@@ -39,13 +39,13 @@ export function KindShowcase() {
             id="landing-kinds-title"
             className="max-w-[760px] font-display text-[clamp(2.8rem,5vw,5.3rem)] leading-[1.03] font-medium tracking-[-.045em]"
           >
-            A spark. A stranger.
+            Characters, worlds
             <br />
-            Something you’ll stay for.
+            and roleplay tools.
           </h2>
           <p className="max-w-[370px] text-lede text-mute">
-            For the conversations that go off-script. And the people who make
-            them possible.
+            Find assets for your roleplay app, with previews and compatible
+            downloads.
           </p>
         </Reveal>
         <div className="grid items-start gap-10 md:grid-cols-[1.12fr_1fr] md:gap-8 lg:gap-12">
@@ -70,11 +70,11 @@ export function KindShowcase() {
                 </span>
               </div>
               <h3 className="mt-6 font-display text-[clamp(1.8rem,2.7vw,2.8rem)] leading-tight font-medium tracking-tight group-hover:text-accent">
-                Someone worth meeting.
+                Find a character.
               </h3>
               <p className="mt-3 max-w-[450px] text-prose text-mute">
-                A voice, a personality, a first encounter. Find a character who
-                takes the conversation somewhere unexpected.
+                Preview a character’s description, personality and greetings
+                before downloading.
               </p>
             </Link>
           </Reveal>
@@ -99,11 +99,11 @@ export function KindShowcase() {
                 </span>
               </div>
               <h3 className="mt-6 font-display text-[clamp(1.8rem,2.7vw,2.8rem)] leading-tight font-medium tracking-tight group-hover:text-accent">
-                A world beyond the words.
+                Build your story’s world.
               </h3>
               <p className="mt-3 max-w-[450px] text-prose text-mute">
-                Places with histories. People with secrets. Give a story
-                somewhere to unfold, one lorebook entry at a time.
+                Lorebook entries add context about places, people and events
+                when their keys match a conversation.
               </p>
             </Link>
           </Reveal>
@@ -130,13 +130,13 @@ export function KindShowcase() {
         <Reveal className="mt-16 flex flex-col justify-between gap-6 rounded-plate bg-deep px-7 py-8 sm:flex-row sm:items-center sm:px-10">
           <p className="max-w-[660px] text-prose text-mute">
             <span className="font-medium text-ink">
-              Find it here. Make it yours.
+              Download or send to your app.
             </span>{" "}
             Read a creation, choose an available download format, or send it to
             a compatible linked application.
           </p>
           <LineLink href="/browse" className="min-h-11 shrink-0 text-ink">
-            Find your next creation
+            Browse the catalog
             <ArrowUpRight className="ml-3 size-4" aria-hidden="true" />
           </LineLink>
         </Reveal>

@@ -157,13 +157,11 @@ export function PublicationRail({
       {shortfall.length > 0 ? (
         <section className="flex flex-col gap-4">
           <h3 className="font-display text-ui font-medium text-ink">
-            Worth filling in
+            Missing recommended content
           </h3>
           <Note>
-            Your page is public and stays public. A new {kind} would be asked
-            for
-            {shortfall.length === 1 ? " this" : " these"} before it could be
-            shared.
+            These fields are required when publishing a new {kind}. Your
+            existing page stays public.
           </Note>
           <ReadinessList items={shortfall} onGo={goTo} />
         </section>
@@ -273,7 +271,7 @@ function DraftPublication({
         </Button>
         <Note>
           {missing.length === 0
-            ? "Publishing is one-way. A blurb is never required."
+            ? "Published assets cannot return to draft. A blurb is optional."
             : missing.length === 1
               ? "One thing above is still missing."
               : `${missing.length} things above are still missing.`}

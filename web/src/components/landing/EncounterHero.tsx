@@ -60,7 +60,7 @@ export function EncounterHero() {
             href="#explore"
             className="inline-flex min-h-11 items-center gap-3 self-start font-ui text-meta text-[#ffffff] hover:text-[#d3baff]"
           >
-            Skip to the good stuff{" "}
+            Skip to browse and create{" "}
             <ArrowDown className="size-4" aria-hidden="true" />
           </a>
         </div>
@@ -70,15 +70,15 @@ export function EncounterHero() {
               style={live ? { opacity: introOpacity, y: introY } : undefined}
             >
               <p className="mb-4 font-ui text-ui text-[#d3baff]">
-                For the beautifully curious.
+                Characters, worlds and tools.
               </p>
               <h1
                 id="landing-title"
                 className="max-w-[1200px] font-display text-[clamp(3rem,15vw,3.7rem)] leading-[.96] font-medium tracking-[-.055em] sm:text-[clamp(3.7rem,8.7vw,9.5rem)]"
               >
-                Follow your
+                Explore AI
                 <br />
-                imagination.
+                roleplay.
               </h1>
             </motion.div>
             <motion.p
@@ -86,15 +86,15 @@ export function EncounterHero() {
               style={{ opacity: live ? endOpacity : 0, y: live ? endY : 0 }}
               className="pointer-events-none absolute bottom-0 left-0 font-display text-[clamp(2.7rem,13vw,3.4rem)] leading-[.98] font-medium tracking-[-.05em] sm:text-[clamp(3.4rem,7.5vw,8rem)]"
             >
-              There’s a whole
+              Discover what
               <br />
-              world in here.
+              creators share.
             </motion.p>
           </div>
           <div className="flex flex-col justify-between gap-6 border-t border-[#ffffff]/30 pt-6 lg:flex-row lg:items-end">
             <p className="max-w-[400px] text-prose leading-relaxed text-[#ffffff]/85">
-              Meet a character. Get lost in their world. Discover what other
-              minds have made, and share a little of yours.
+              Browse characters, lorebooks, presets, themes and packs. Download
+              them for your roleplay app, or publish your own.
             </p>
             <div className="flex flex-wrap items-center gap-3 lg:pb-1">
               <Button
@@ -104,7 +104,7 @@ export function EncounterHero() {
                 className="rounded-full px-6"
               >
                 <Link href="/browse">
-                  Explore Illarin <ArrowUpRight aria-hidden="true" />
+                  Browse the catalog <ArrowUpRight aria-hidden="true" />
                 </Link>
               </Button>
               <Button

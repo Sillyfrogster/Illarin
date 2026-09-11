@@ -57,16 +57,16 @@ export function SecretStep({
   return (
     <StepForm
       busy={busy}
-      commit="Draw a new secret"
+      commit="Generate signing secret"
       onCommit={() => void rotate()}
     >
       <StepNote>
-        The old secret keeps producing an accepted signature for a day, then
-        Illarin forgets it.
+        Both secrets work for 24 hours. Update your receiver before the old
+        secret expires.
       </StepNote>
       <ol className="flex list-none flex-col gap-3">
         {[
-          "Illarin draws the new secret and shows it once.",
+          "Illarin generates a new secret and shows it once.",
           "For a day, every request carries a signature from both secrets. A receiver checking either one keeps working.",
           "After that, Illarin forgets the old secret and signs with the new one alone. A receiver still checking the old one stops accepting requests.",
         ].map((step, index) => (
@@ -79,7 +79,7 @@ export function SecretStep({
         ))}
       </ol>
       <StepNote>
-        The current secret was drawn {readableMoment(destination.secretSetAt)}.
+        Current secret created {readableMoment(destination.secretSetAt)}.
       </StepNote>
     </StepForm>
   );
@@ -124,7 +124,7 @@ export function TakeTheSecret({
         onClick={onDone}
         type="button"
       >
-        {copied ? "I have it" : "Close without copying"}
+        {copied ? "Done" : "Close without copying"}
       </button>
     </div>
   );

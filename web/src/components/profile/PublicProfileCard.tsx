@@ -60,7 +60,7 @@ export function PublicProfileCard() {
       </div>
       <Button asChild variant="secondary">
         <Link href="/settings/profile">
-          Edit
+          Edit profile
           <ArrowRight aria-hidden="true" />
         </Link>
       </Button>

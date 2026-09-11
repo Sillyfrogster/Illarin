@@ -33,8 +33,7 @@ export function ProfilePicture({
       <div className="min-w-0 flex-1 basis-64">
         <h2 className="font-ui text-ui font-medium text-ink">Picture</h2>
         <p className="mt-1 max-w-[44ch] font-prose text-ui text-mute">
-          A square PNG, JPEG, WebP or GIF reads best. Illarin serves it back at
-          one size.
+          Upload a PNG, JPEG, WebP or GIF. Square images work best.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button
@@ -44,7 +43,7 @@ export function ProfilePicture({
           >
             <ImageUp aria-hidden="true" />
             {pending
-              ? "Working"
+              ? "Uploading…"
               : profile.avatar
                 ? "Replace image"
                 : "Upload image"}
@@ -64,7 +63,8 @@ export function ProfilePicture({
           {profile.avatar && confirmingRemoval ? (
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-ui text-meta text-mute">
-                Remove it? Your mark takes its place.
+                Remove your profile picture? Your default avatar will appear
+                instead.
               </span>
               <Button disabled={pending} onClick={onRemove} variant="stop">
                 Remove

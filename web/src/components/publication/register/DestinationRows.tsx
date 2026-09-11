@@ -113,7 +113,7 @@ export function DestinationRows({
                       busy={working === one.id}
                       onClick={() => prove(one)}
                     >
-                      {working === one.id ? "Asking…" : "Verify"}
+                      {working === one.id ? "Verifying…" : "Verify"}
                     </RowAction>
                   ) : null
                 }
@@ -260,7 +260,7 @@ export function DestinationStep({
         carry="The receiver checks every request against this with HMAC-SHA256, in the webhook-signature header. Verify the endpoint once you have it in place."
         copied={copied}
         heading="Copy the signing secret now"
-        line="This is the only time Illarin can show it. Nothing here can read it back, so if it gets away from you, point the destination somewhere else and start again."
+        line="Copy this secret now. You cannot view it again. If you lose it, rotate the signing secret."
         onCopied={setCopied}
         onDone={onClose}
         value={made.secret}
@@ -279,7 +279,7 @@ export function DestinationStep({
           <Consequence
             action="Remove"
             busy={busy}
-            confirm="Remove, and stop what is waiting"
+            confirm="Remove destination"
             onConfirm={remove}
           >
             Everything already sent to {existing.name} stays in the record.
@@ -300,7 +300,7 @@ export function DestinationStep({
                 stand("verify", () => verifyDestination(existing.id))
               }
             >
-              {working === "verify" ? "Asking…" : "Verify it is listening"}
+              {working === "verify" ? "Verifying…" : "Verify endpoint"}
             </StepAction>
           ) : null}
           {open.switchOff ? (
@@ -311,12 +311,12 @@ export function DestinationStep({
                 stand("switchOff", () => disableDestination(existing.id))
               }
             >
-              Switch off
+              Disable destination
             </StepAction>
           ) : null}
           {open.rotate ? (
             <StepAction icon={KeyRound} onClick={onRotate}>
-              New signing secret
+              Rotate signing secret
             </StepAction>
           ) : null}
         </div>
@@ -337,14 +337,13 @@ export function DestinationStep({
             </dd>
           </dl>
           <p className="mt-3 font-prose text-meta text-mute">
-            What Discord answered with. Compare them against the channel in
-            Discord to be sure this is the right one.
+            Check these IDs against your Discord server and channel.
           </p>
         </div>
       ) : null}
 
       <Field
-        hint="What a writer picks from. They never see the address."
+        hint="Shown to contributors when choosing announcements. The endpoint URL stays private."
         htmlFor="destination-name"
         label="Name"
       >
@@ -361,7 +360,7 @@ export function DestinationStep({
       <Field
         hint={addressHint(kind, existing)}
         htmlFor="destination-address"
-        label="Address"
+        label="Webhook URL"
       >
         <TextInput
           autoComplete="off"
@@ -397,7 +396,7 @@ export function DestinationStep({
             />
           </Field>
           <Field
-            hint="What a writer sees instead of the id."
+            hint="Shown to contributors instead of the role ID."
             htmlFor="destination-role-name"
             label="Role name"
           >
@@ -425,8 +424,8 @@ function hint(kind: PublicationDestinationKind, editing: boolean): string {
       : "One Discord channel Illarin announces a post's first publication in. Illarin asks Discord what the address points at before saving it.";
   }
   return editing
-    ? "Illarin masks the address after you save it. Changing it needs the new endpoint to prove it is listening before anything is sent there."
-    : "One endpoint Illarin sends published posts to. It receives nothing until it proves it is listening.";
+    ? "The saved URL stays hidden. Verify a replacement endpoint before sending announcements to it."
+    : "An endpoint for blog announcements. Verify it before sending announcements.";
 }
 
 function addressHint(

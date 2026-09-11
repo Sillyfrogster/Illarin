@@ -7,7 +7,7 @@ import { NAV } from "./destinations";
 const DESTINATIONS = [
   ...NAV,
   { label: "Publish", href: "/upload" },
-  { label: "Account", href: "/settings" },
+  { label: "Account settings", href: "/settings" },
 ];
 
 export function SiteFooter() {
@@ -31,7 +31,7 @@ export function SiteFooter() {
           </div>
 
           <nav aria-label="Site">
-            <h2 className="text-meta text-mute">Catalog</h2>
+            <h2 className="text-meta text-mute">Site</h2>
             <ul className="mt-1 grid list-none">
               {DESTINATIONS.map((item) => (
                 <li key={item.href}>

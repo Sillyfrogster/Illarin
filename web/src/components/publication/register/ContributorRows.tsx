@@ -55,7 +55,7 @@ export function ContributorRows({
             icon={UserRoundPlus}
             onClick={() => onOpen(null)}
           >
-            Approve someone
+            Approve contributor
           </StartAction>
         }
         id="register-heading"
@@ -93,7 +93,7 @@ export function ContributorRows({
       )}
 
       {ended.length > 0 ? (
-        <Past summary={`${ended.length} ended`}>
+        <Past summary={`Inactive approvals: ${ended.length}`}>
           {ended.map((grant) => (
             <PastRow key={grant.id}>
               @{grant.holder.handle} for {grant.app.name}
@@ -206,7 +206,7 @@ export function ContributorStep({
           className="mb-5 inline-flex min-h-11 items-center font-ui text-meta font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
           href={`/@${existing.holder.handle}`}
         >
-          Look at their profile
+          View profile
         </Link>
       ) : null}
       <StepForm
@@ -219,7 +219,7 @@ export function ContributorStep({
             <Consequence
               action="Revoke the approval"
               busy={busy}
-              confirm="Revoke, and take the badge back"
+              confirm="Revoke approval and badge"
               onConfirm={revoke}
             >
               Everything @{existing.holder.handle} published stays, under their
@@ -279,7 +279,7 @@ export function ContributorStep({
           defaults={sends}
           destinations={destinations}
           inherit={{ label: appPolicy(existing, apps, appId), on: follows }}
-          legend="Where they may announce"
+          legend="Announcement destinations"
           onAllowed={setReaching}
           onDefaults={setSends}
           onInherit={setFollows}
@@ -301,7 +301,5 @@ function appPolicy(
   appId: string,
 ): string {
   const app = existing?.app ?? apps.find((one) => one.id === appId);
-  return app
-    ? `Send wherever ${app.name} sends`
-    : "Send wherever the app sends";
+  return app ? `Send wherever ${app.name} sends` : "Use app defaults";
 }

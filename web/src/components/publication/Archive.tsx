@@ -15,7 +15,7 @@ import { ArchiveList } from "./ArchiveList";
 import { ArchivePages } from "./ArchivePages";
 import { BackToIllarin } from "./BackToIllarin";
 
-export type ArchiveKind = "Publication" | "Category" | "Publication app";
+export type ArchiveKind = "Blog" | "Category" | "App";
 
 export type ArchiveScope = {
   kind: ArchiveKind;
@@ -26,9 +26,9 @@ export type ArchiveScope = {
 };
 
 const NARROWED: Record<ArchiveKind, ArchiveNarrowing> = {
-  Publication: null,
+  Blog: null,
   Category: "category",
-  "Publication app": "app",
+  App: "app",
 };
 
 export function PublicationFront({
@@ -40,7 +40,7 @@ export function PublicationFront({
 }) {
   const [lead, ...rest] = archive.posts;
   const scope: ArchiveScope = {
-    kind: "Publication",
+    kind: "Blog",
     heading: BLOG_HEADING,
     statement: BLOG_DESCRIPTION,
     address: BLOG_HOME,
@@ -53,7 +53,7 @@ export function PublicationFront({
       {rest.length > 0 ? (
         <section className="mt-14">
           <h2 className="mb-1 font-display text-section font-medium">
-            Earlier
+            Earlier posts
           </h2>
           <ArchiveList narrowed={null} posts={rest} />
         </section>
@@ -75,7 +75,7 @@ export function ScopedArchive({
         <ArchiveList narrowed={NARROWED[scope.kind]} posts={archive.posts} />
       ) : (
         <p className="max-w-[44ch] pb-section font-prose text-lede text-mute">
-          Illarin has not published anything here yet.
+          No posts published here yet.
         </p>
       )}
     </ArchivePage>
@@ -129,7 +129,7 @@ function ArchiveFacts({
       <span className="text-mute">
         {archive.total} {archive.total === 1 ? "post" : "posts"}
       </span>
-      {scope.kind === "Publication" ? null : (
+      {scope.kind === "Blog" ? null : (
         <Link
           className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
           href={BLOG_HOME}
@@ -154,7 +154,7 @@ function ArchiveFacts({
         href={feedAddresses(scope.address).rss}
       >
         <Rss aria-hidden="true" className="size-4" />
-        Follow the feed
+        Subscribe via RSS
       </a>
     </div>
   );

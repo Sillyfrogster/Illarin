@@ -74,7 +74,7 @@ export function ReplacementStep({
           if (next.status !== "pending" && next.status !== "processing") return;
         } catch {
           setMessage(
-            "Illarin lost sight of this file. Your published page is untouched; reopen this to check again.",
+            "Import status is unavailable. Reopen this panel to check again. Your published asset has not changed.",
           );
           return;
         }
@@ -149,8 +149,8 @@ export function ReplacementStep({
         Replace the file
       </h3>
       <Note>
-        The file decides. Everything it carries replaces what is on this page,
-        and what it does not carry stays as it is.
+        Import a replacement file into your working copy. Review its changes
+        before publishing an update.
       </Note>
 
       {reading ? (
@@ -176,9 +176,7 @@ export function ReplacementStep({
             you publish an update.
           </p>
           {staged.preview.changes.length === 0 ? (
-            <Note>
-              This file carries the same content your page already holds.
-            </Note>
+            <Note>This file matches your current content.</Note>
           ) : (
             <ReplacementChanges
               changes={summariseReplacement(staged.preview.changes)}
@@ -190,8 +188,8 @@ export function ReplacementStep({
                 Content this file cannot hold
               </legend>
               <Note>
-                This file has no place for these. Say whether to keep each one
-                on the page or let the file take it away.
+                Choose whether to keep or remove existing content that this
+                format cannot store.
               </Note>
               <div className="mt-4 flex flex-col gap-4">
                 {unrepresentable.map((role) => (
@@ -312,7 +310,7 @@ export function ReplacementChanges({
           </span>
           {part.replacesYourEdit ? (
             <span className="mt-1 inline-block rounded-control bg-stop-wash px-2 py-0.5 text-label font-medium text-ink">
-              Replaces an edit of yours
+              Overwrites an existing edit
             </span>
           ) : null}
         </li>

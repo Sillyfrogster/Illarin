@@ -14,29 +14,28 @@ export const STANDINGS: Standing[] = [
 ];
 
 const STANDING_NAMES: Record<Standing, string> = {
-  everything: "Everything",
+  everything: "All posts",
   draft: "Drafts",
   scheduled: "Scheduled",
   published: "Published",
-  withdrawn: "Out of public view",
+  withdrawn: "Withdrawn",
   deleted: "Deleted",
 };
 
 const LIFECYCLE_NAMES: Record<Lifecycle, string> = {
   draft: "Draft",
   published: "Published",
-  withdrawn: "Out of view",
+  withdrawn: "Withdrawn",
   deleted: "Deleted",
 };
 
 const NOTHING_THERE: Record<Standing, string> = {
-  everything:
-    "Nothing written yet. A post starts as a private draft and stays that way until you publish it.",
-  draft: "Nothing is being written right now.",
-  scheduled: "Nothing is waiting to go live.",
-  published: "Nothing of yours is on the blog yet.",
-  withdrawn: "Nothing has been taken out of public view.",
-  deleted: "Nothing is waiting to be recovered.",
+  everything: "No posts yet. Create a post to start a private draft.",
+  draft: "No draft posts.",
+  scheduled: "No scheduled posts.",
+  published: "No published posts.",
+  withdrawn: "No withdrawn posts.",
+  deleted: "No deleted posts to restore.",
 };
 
 export function standingName(standing: Standing): string {

@@ -56,7 +56,7 @@ export function ImportReceipt({
           size={22}
           strokeWidth={2}
         />
-        Your file is ready to shape
+        Import complete
       </h2>
 
       <p className="mt-4 flex items-center gap-2 text-lede text-ink wrap-anywhere">
@@ -69,18 +69,18 @@ export function ImportReceipt({
 
       <div className="mt-6 rounded-plate bg-deep p-5">
         <h3 className="font-display text-ui font-medium text-ink">
-          What came across
+          Imported content
         </h3>
         <p className="mt-2 text-meta text-mute">
-          Illarin read the parts it knows how to edit. The rest stays with your
-          original and travels back out in downloads for its format.
+          Supported content is ready to edit. Extra file data is preserved for
+          compatible downloads.
         </p>
         <p className="mt-3 text-meta text-ink">
           {preserved === null
-            ? "Reading what your file carried…"
+            ? "Loading import details…"
             : carried
               ? `Your file also carried ${carried}. Illarin keeps those details with the original and sends them back out in compatible downloads.`
-              : "Everything your file carried is ready to edit. Nothing extra needs to be kept."}
+              : "All imported content is editable. No extra file data was found."}
         </p>
       </div>
 

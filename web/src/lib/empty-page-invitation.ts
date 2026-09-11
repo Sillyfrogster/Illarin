@@ -10,15 +10,15 @@ export function emptyPageInvitation({
   const named = namedInSentence(coreBlocks);
 
   if (named) {
-    const fill = `Fill in ${named} to give the page something to show.`;
+    const fill = `Add content to ${named}.`;
     return canAdd
-      ? `${fill} Edit block opens it, and Add block brings in anything else a ${kindLabel} can hold.`
-      : `${fill} Edit block opens it.`;
+      ? `${fill} Select the block to edit it, or choose Add block for more content.`
+      : `${fill} Select the block to edit it.`;
   }
 
   return canAdd
-    ? `Add block brings in the first of what a ${kindLabel} can hold.`
-    : `Illarin has no blocks for a ${kindLabel} yet. The file you uploaded is kept whole, and every download carries it.`;
+    ? `Choose Add block to add content to this ${kindLabel}.`
+    : `No editable blocks are available for this ${kindLabel}.`;
 }
 
 function namedInSentence(titles: readonly string[]): string {

@@ -62,15 +62,14 @@ export function ReviewStep({
         Review this update
       </h3>
       <Note>
-        Readers get the page beside this rail exactly as it stands, working copy{" "}
-        {candidate.version}. The version they have now keeps its place in the
-        history.
+        Publishing makes these changes public. Working copy {candidate.version}.
+        The current published version remains in update history.
       </Note>
 
       {applied && applied.length > 0 ? (
         <section className="flex flex-col gap-3">
           <h4 className="font-display text-ui font-medium text-ink">
-            What the file you applied changed
+            Replacement file changes
           </h4>
           <ReplacementChanges changes={applied} />
         </section>
@@ -108,10 +107,7 @@ export function ReviewStep({
         />
       </Field>
 
-      <Note>
-        Illarin sends this update nowhere. Choosing who hears about an update
-        comes later, and nothing here announces anything.
-      </Note>
+      <Note>Publishing this update sends no announcements.</Note>
 
       {message ? (
         <div

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
 import { correctPostAddress, correctPostByline } from "@/lib/api/posts";
 import type { Post } from "@/lib/api/query";
-import { normalizedSlug } from "@/lib/post-link";
 
 type Part = "address" | "name";
 
@@ -46,28 +45,28 @@ export function PublishedIdentity({
           className="font-display text-ui font-medium text-ink"
           id="published-identity"
         >
-          Fixed when you published
+          Published URL and byline
         </h3>
         <p className="mt-1 font-prose text-meta text-mute">
           {admin
-            ? "Readers already have these. Change one only to fix a mistake."
-            : "Readers already have these. Ask an admin if either one is wrong."}
+            ? "These were saved at first publication. Correct them only if they are wrong."
+            : "These were saved at first publication. Ask an admin to correct any mistakes."}
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
         <p className="font-ui text-label font-medium text-mute">Address</p>
         <p className="font-prose text-meta text-ink wrap-anywhere">
-          <span className="text-mute">illarin.xyz/blog/</span>
+          <span className="text-mute">blog.illarin.xyz/</span>
           {post.slug}
         </p>
         {post.formerAddresses.length > 0 ? (
           <div className="font-prose text-meta text-mute">
-            <p>Still works too:</p>
+            <p>Previous URLs:</p>
             <ul className="mt-1 list-none">
               {post.formerAddresses.map((address) => (
                 <li className="wrap-anywhere" key={address}>
-                  <span className="opacity-70">illarin.xyz/blog/</span>
+                  <span className="opacity-70">blog.illarin.xyz/</span>
                   {address}
                 </li>
               ))}
@@ -87,15 +86,13 @@ export function PublishedIdentity({
             onClick={() => open("address")}
             size="compact"
           >
-            Change the address
+            Correct URL
           </Button>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="font-ui text-label font-medium text-mute">
-          Name on the post
-        </p>
+        <p className="font-ui text-label font-medium text-mute">Byline</p>
         {post.byline ? <Named post={post} /> : null}
         {changing === "name" ? (
           <ChangeName
@@ -110,7 +107,7 @@ export function PublishedIdentity({
             onClick={() => open("name")}
             size="compact"
           >
-            Change the name
+            Correct byline
           </Button>
         ) : null}
       </div>
@@ -195,7 +192,7 @@ function ChangeAddress({
     }
     onDone(
       answer.value,
-      `The post is now at illarin.xyz/blog/${answer.value.slug}.`,
+      `The post is now at blog.illarin.xyz/${answer.value.slug}.`,
     );
   }
 
@@ -218,10 +215,10 @@ function ChangeAddress({
       </Field>
       <Commit
         busy={busy}
-        commit={`Move it to /blog/${normalizedSlug(slug) || "…"}`}
+        commit="Change URL"
         onCancel={onCancel}
         ready={ready}
-        working="Moving…"
+        working="Changing URL…"
       />
     </form>
   );
@@ -262,7 +259,7 @@ function ChangeName({
   return (
     <form className="flex flex-col gap-3" onSubmit={commit}>
       <Field
-        hint="Their name, picture and jobs are copied onto the post again. Nothing else about the post changes."
+        hint="The post's byline will use this account's current name, picture and positions."
         htmlFor="corrected-name"
         label="Handle of the person who wrote it"
       >
@@ -278,7 +275,7 @@ function ChangeName({
       </Field>
       <Commit
         busy={busy}
-        commit={`Put @${handle.trim() || "…"} on it`}
+        commit={`Set byline to @${handle.trim() || "…"}`}
         onCancel={onCancel}
         ready={ready}
         working="Changing…"

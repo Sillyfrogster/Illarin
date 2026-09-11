@@ -70,7 +70,7 @@ export function DetailsRail({
 
       {locked ? null : (
         <Field
-          hint={`illarin.xyz/blog/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
+          hint={`blog.illarin.xyz/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
           htmlFor="post-slug"
           label="Address"
         >
@@ -94,8 +94,8 @@ export function DetailsRail({
       <PicturePicker
         chosen={draft.header}
         describe
-        hint="Optional. Opens the article, above the body."
-        label="Header picture"
+        hint="Optional image shown above the article."
+        label="Header image"
         media={media}
         onChange={(header) => onChange({ header })}
         onUpload={onUpload}
@@ -129,7 +129,7 @@ export function DetailsRail({
         <p className="font-prose text-meta text-mute">
           {post.app
             ? `When you publish, this post takes your name and ${post.app.name}. Illarin stays the publisher.`
-            : "When you publish, this post takes your name, your jobs at Illarin and the Illarin Team line."}
+            : "First publication records your name and Illarin positions in the Illarin Team byline."}
         </p>
       )}
     </div>
@@ -147,7 +147,7 @@ function ReleaseFields({
 }) {
   return (
     <>
-      <Field htmlFor="release-app" label="Project">
+      <Field htmlFor="release-app" label="App">
         <Select
           className="w-full"
           id="release-app"
@@ -177,7 +177,7 @@ function ReleaseFields({
       <Field
         hint="Optional. The canonical page for this release."
         htmlFor="release-address"
-        label="Release notes"
+        label="Release URL"
       >
         <TextInput
           id="release-address"

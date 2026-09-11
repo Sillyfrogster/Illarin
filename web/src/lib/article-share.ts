@@ -6,7 +6,7 @@ const REPORTS: Record<ShareState, ShareReport> = {
   ready: { said: "", reveal: false },
   copied: { said: "Link copied.", reveal: false },
   refused: {
-    said: "Your browser would not let us copy. The link is here to take.",
+    said: "The link could not be copied. Select it below and copy it manually.",
     reveal: true,
   },
 };

@@ -73,14 +73,14 @@ export function DeleteControl({
             <p className="text-ui text-ink">Move this {noun} to Deleted?</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button loading={pending} onClick={remove} variant="stop">
-                Yes, delete it
+                Delete asset
               </Button>
               <Button
                 disabled={pending}
                 onClick={() => setConfirming(false)}
                 variant="ghost"
               >
-                Keep it
+                Cancel
               </Button>
             </div>
           </div>
@@ -90,7 +90,7 @@ export function DeleteControl({
             disabled={frozen}
             onClick={() => setConfirming(true)}
           >
-            {frozen ? "Deletion locked" : "Move to Deleted"}
+            {frozen ? "Deletion locked" : "Delete asset"}
           </Button>
         )}
       </div>

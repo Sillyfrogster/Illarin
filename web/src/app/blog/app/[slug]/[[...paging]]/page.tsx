@@ -29,7 +29,7 @@ export default async function AppArchivePage({
     <ScopedArchive
       archive={archive}
       scope={{
-        kind: "Publication app",
+        kind: "App",
         heading: found.name,
         statement: archiveDescription("app", found.name),
         address,

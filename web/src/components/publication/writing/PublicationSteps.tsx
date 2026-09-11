@@ -136,14 +136,14 @@ export function WithdrawStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="Its editions, pictures and dates stay. You can put it back at the same address."
-        title="Take this post out of public view"
+        line="Hide the post from readers. Its content and history remain available for republication."
+        title="Withdraw this post?"
       />
       <Subject post={post} />
       <Field
         hint="Illarin keeps this with the post. Readers never see it."
         htmlFor="withdrawal-reason"
-        label="Why it is coming down"
+        label="Private withdrawal reason"
       >
         <TextArea
           id="withdrawal-reason"
@@ -156,7 +156,7 @@ export function WithdrawStep({ onFailure, onSettled, post }: StepProps) {
       <Field
         hint="Shown on the post's address. Leave it empty and readers get the general message alone."
         htmlFor="withdrawal-explanation"
-        label="What readers see"
+        label="Public explanation"
       >
         <TextArea
           id="withdrawal-explanation"
@@ -182,7 +182,7 @@ export function WithdrawStep({ onFailure, onSettled, post }: StepProps) {
         onCommit={() => void commit()}
         ready={reason.trim() !== ""}
         tone="stop"
-        word="Take it down"
+        word="Withdraw post"
       />
     </>
   );
@@ -213,15 +213,15 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="It returns to the same address under the date it first published."
-        title="Which edition do readers get?"
+        line="Republish at the same address with the original publication date."
+        title="Choose a revision to republish"
       />
       <Editions
         chosen={chosen}
         name="returning-edition"
         onChoose={setChosen}
         revisions={kept}
-        standingOf={(one) => (one.public ? "Was on the blog" : "")}
+        standingOf={(one) => (one.public ? "Previously published" : "")}
       />
       <AnnouncementChoice
         announced
@@ -238,7 +238,7 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
         busy={busy}
         onCommit={() => void commit()}
         ready={chosen !== ""}
-        word="Put it back"
+        word="Republish post"
       />
     </>
   );
@@ -261,7 +261,7 @@ export function DeleteStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="Illarin holds it for thirty days. After that the writing, the editions and the pictures are gone."
+        line="You can restore this post for 30 days. After that, its content, revisions and images are permanently deleted."
         title="Delete this post?"
       />
       <Subject post={post} />
@@ -273,7 +273,7 @@ export function DeleteStep({ onFailure, onSettled, post }: StepProps) {
         onCommit={() => void commit()}
         ready
         tone="stop"
-        word="Delete it"
+        word="Delete post"
       />
     </>
   );
@@ -288,7 +288,7 @@ export function RecoverStep({ onFailure, onSettled, post }: StepProps) {
     const answer = await recoverPost(post.id, post.version);
     setBusy(false);
     if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "The post could not be brought back.");
+      onFailure(answer.error ?? "The post could not be restored. Try again.");
       return;
     }
     onSettled(answer.value);
@@ -297,8 +297,8 @@ export function RecoverStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="It returns exactly as it was, in the standing it was deleted from."
-        title="Bring this post back"
+        line="Restore the post to its state before deletion."
+        title="Restore this post?"
       />
       {deletion ? (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 font-prose text-meta">
@@ -306,7 +306,7 @@ export function RecoverStep({ onFailure, onSettled, post }: StepProps) {
           <dd className="text-ink">
             {readableMoment(deletion.at)} by @{deletion.by}
           </dd>
-          <dt className="text-mute">Gone for good</dt>
+          <dt className="text-mute">Permanently deleted</dt>
           <dd className="text-ink">{readableMoment(deletion.until)}</dd>
         </dl>
       ) : null}
@@ -314,7 +314,7 @@ export function RecoverStep({ onFailure, onSettled, post }: StepProps) {
         busy={busy}
         onCommit={() => void commit()}
         ready
-        word="Bring it back"
+        word="Restore post"
       />
     </>
   );
@@ -345,8 +345,8 @@ export function RescheduleStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="The edition you leave stays in the history exactly as it is."
-        title="What goes live instead?"
+        line="The previously scheduled revision remains in history."
+        title="Choose a scheduled revision"
       />
       <Editions
         chosen={chosen}
@@ -355,7 +355,7 @@ export function RescheduleStep({ onFailure, onSettled, post }: StepProps) {
         revisions={kept}
         standingOf={(one) =>
           one.id === schedule?.revisionId
-            ? "Waiting now"
+            ? "Currently scheduled"
             : one.public
               ? "On the blog now"
               : ""
@@ -381,7 +381,7 @@ export function UnscheduleStep({ onFailure, onSettled, post }: StepProps) {
     const answer = await cancelPostSchedule(post.id);
     setBusy(false);
     if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "The schedule is still standing.");
+      onFailure(answer.error ?? "The post is still scheduled.");
       return;
     }
     onSettled(answer.value);
@@ -390,15 +390,15 @@ export function UnscheduleStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="The edition stays in the history and you can schedule it again."
-        title="Stop this from going live?"
+        line="The revision stays in history and can be scheduled again."
+        title="Cancel scheduled publication?"
       />
       {schedule ? (
         <p className="font-prose text-meta text-ink">
-          Edition {schedule.revisionNumber}, due {readableMoment(schedule.at)}.{" "}
+          Revision {schedule.revisionNumber}, due {readableMoment(schedule.at)}.{" "}
           <span className="text-mute">
             {post.status === "published"
-              ? "Readers keep the edition on the blog now."
+              ? "Readers keep the currently published revision."
               : "The post stays a private draft."}
           </span>
         </p>
@@ -423,7 +423,7 @@ function useRevisions(
   const load = useCallback(async () => {
     const answer = await readPostRevisions(postId);
     if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "The editions could not be read.");
+      onFailure(answer.error ?? "Revisions could not be loaded. Try again.");
       setKept([]);
       return;
     }
@@ -442,10 +442,10 @@ function publishHint(door: "now" | "later", post: Post): string {
   const waiting =
     schedule?.state === "pending" || schedule?.state === "publishing";
   if (door === "now" && waiting) {
-    return "Publishing now stops the edition waiting to go live.";
+    return "Publishing now cancels the scheduled publication.";
   }
   if (post.status === "published") {
-    return "The version in front of you is captured either way, and later edits do not change it.";
+    return "Publishing or scheduling saves a revision of your current writing. Later edits do not change that revision.";
   }
   return "This fixes the address and puts your name on the post. Only an admin can change either afterwards.";
 }

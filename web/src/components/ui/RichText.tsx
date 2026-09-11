@@ -25,8 +25,8 @@ export function RichText({
 export function FormattingNotice() {
   return (
     <small className="block text-meta opacity-70">
-      The page shows the words, not the formatting written into this text. The
-      download is unchanged.
+      Unsupported formatting is hidden here. The original text is preserved in
+      downloads.
     </small>
   );
 }

@@ -217,7 +217,7 @@ func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountI
 	}
 	if !held {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only Illarin's publication authority can do that.",
+			"error": "Only the account designated to manage blog access can do that.",
 		})
 		return accountIdentity{}, false
 	}
@@ -243,7 +243,7 @@ func (h *Handlers) distinctionError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrRetiredAssigning):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "A retired distinction cannot be assigned."})
 	case errors.Is(err, publication.ErrDistinctionForm):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "A position carries no mark."})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Positions cannot have badge images."})
 	case errors.Is(err, publication.ErrIncompleteOrder):
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Name every one of them exactly once to set the order.",

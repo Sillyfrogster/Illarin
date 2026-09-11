@@ -5,8 +5,8 @@ import { PublicProfileEditor } from "@/components/profile/PublicProfileEditor";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Public profile",
-  "The identity visitors meet at your handle.",
+  "Edit profile",
+  "Change your public name, picture, biography and contact details.",
 );
 
 export default function PublicProfileSettings() {
@@ -22,16 +22,15 @@ export default function PublicProfileSettings() {
             className="size-4"
             strokeWidth={1.8}
           />
-          Your account
+          Account settings
         </Link>
 
         <header className="mt-3 max-w-[58ch]">
           <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-            Public profile
+            Edit profile
           </h1>
           <p className="mt-4 font-prose text-lede text-mute">
-            Everything here is visible to anyone who opens your profile. Your
-            handle stays your address; leave a field empty to show nothing.
+            These details are public. Leave optional fields empty to hide them.
           </p>
         </header>
 

@@ -15,13 +15,13 @@ export default function GlobalError({
   return (
     <html className={FONT_VARIABLES} lang="en" suppressHydrationWarning>
       <head>
-        <title>Illarin stopped short</title>
+        <title>This page could not load</title>
       </head>
       <body>
         <main className="flex min-h-svh flex-col justify-center">
           <DeadEnd
-            heading="Illarin stopped short"
-            line="The whole page stopped, not just the part you asked for. It is recorded, and trying again is often all it takes."
+            heading="This page could not load"
+            line="Illarin could not load this page. Try again."
             note={error.digest ? `Reference ${error.digest}` : undefined}
           >
             <Button onClick={() => retry()} variant="primary">

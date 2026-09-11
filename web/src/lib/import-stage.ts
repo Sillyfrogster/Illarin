@@ -33,7 +33,6 @@ export function importStage(
 
   return {
     at: "reading",
-    heading:
-      operation.status === "pending" ? "Your file is in hand" : STILL_READING,
+    heading: operation.status === "pending" ? "Upload received" : STILL_READING,
   };
 }

@@ -40,15 +40,15 @@ export type PostNotice = {
 };
 
 const STANDING_NAMES = {
-  draft: "a private draft",
-  published: "the blog",
-  withdrawn: "a takedown",
+  draft: "a draft",
+  published: "published",
+  withdrawn: "withdrawn",
 } as const;
 
 const STANDING: Record<Lifecycle, string> = {
   draft: "Saved privately",
-  published: "Readers have this",
-  withdrawn: "Out of public view",
+  published: "Published",
+  withdrawn: "Withdrawn",
   deleted: "Deleted",
 };
 
@@ -75,8 +75,8 @@ export function writerStanding(post: Post): Lifecycle {
 
 export function publicationLabel(post: Post): string {
   const standing = writerStanding(post);
-  if (standing === "deleted") return "Bring it back";
-  if (standing === "withdrawn") return "Put it back";
+  if (standing === "deleted") return "Restore post";
+  if (standing === "withdrawn") return "Republish post";
   return standing === "published" ? "Publish changes" : "Publish";
 }
 
@@ -108,10 +108,10 @@ export function postNotices(post: Post): PostNotice[] {
         kind: "deleted",
         tone: "stop",
         heading: "Deleted",
-        said: `Deleted by @${deletion.by}. Nobody can read this until you bring it back.`,
+        said: `Deleted by @${deletion.by}. Restore the post to continue editing.`,
         meanwhile:
-          "The writing, every edition and every picture go with it when the window closes.",
-        record: `Deleted from ${STANDING_NAMES[standingBeforeDeletion(post)]}.`,
+          "After the recovery deadline, its content, revisions and images are permanently deleted.",
+        record: `Deleted while ${STANDING_NAMES[standingBeforeDeletion(post)]}.`,
       },
     ];
   }
@@ -122,11 +122,11 @@ export function postNotices(post: Post): PostNotice[] {
     notices.push({
       kind: "withdrawn",
       tone: "stop",
-      heading: "Out of public view",
-      said: `Taken down by @${withdrawal.by}.`,
+      heading: "Withdrawn",
+      said: `Withdrawn by @${withdrawal.by}.`,
       meanwhile:
         withdrawal.explanation ||
-        "Readers get the general message. You wrote nothing for them.",
+        "Readers see the default withdrawal message. No public explanation was provided.",
       record: withdrawal.reason,
     });
   }
@@ -144,14 +144,13 @@ export function postNotices(post: Post): PostNotice[] {
       heading: scheduleHeading(schedule.state),
       said:
         schedule.state === "stopped"
-          ? schedule.stoppedBecause ||
-            "Illarin could not publish the edition that was waiting."
-          : `Edition ${schedule.revisionNumber} ${schedule.state === "publishing" ? "is going live now" : "goes live"}`,
+          ? schedule.stoppedBecause || "Scheduled publication failed."
+          : `Revision ${schedule.revisionNumber} ${schedule.state === "publishing" ? "is going live now" : "goes live"}`,
       meanwhile:
         schedule.state === "stopped"
           ? "Nothing was published. Schedule it again when you are ready."
           : post.status === "published"
-            ? "Readers keep the edition on the blog now until then."
+            ? "Readers keep the currently published revision until then."
             : "Readers cannot see this post until then.",
     });
   }
@@ -166,9 +165,9 @@ function standingBeforeDeletion(
 }
 
 function scheduleHeading(state: string): string {
-  if (state === "stopped") return "Illarin stopped this schedule";
-  if (state === "publishing") return "Going live";
-  return "Waiting to go live";
+  if (state === "stopped") return "Scheduled publication failed";
+  if (state === "publishing") return "Publishing";
+  return "Scheduled";
 }
 
 export function draftFromPost(post: Post): Draft {

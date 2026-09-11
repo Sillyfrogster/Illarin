@@ -24,7 +24,7 @@ export function Subject({ post }: { post: Post }) {
         {post.title || "Untitled post"}
       </span>
       <span className="mt-1 block font-prose text-meta text-mute wrap-anywhere">
-        illarin.xyz/blog/{post.slug}
+        blog.illarin.xyz/{post.slug}
       </span>
     </p>
   );
@@ -72,13 +72,13 @@ export function Editions({
   if (revisions === null) {
     return (
       <p aria-live="polite" className="font-ui text-ui text-mute">
-        Reading the editions…
+        Loading revisions…
       </p>
     );
   }
   return (
     <fieldset className="flex flex-col gap-2 border-0">
-      <legend className="mb-1 font-ui text-ui text-ink">Edition</legend>
+      <legend className="mb-1 font-ui text-ui text-ink">Revision</legend>
       {revisions.map((one) => {
         const standing = standingOf(one);
         return (

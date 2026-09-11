@@ -50,11 +50,11 @@ export function StartFromNothing() {
         className="font-display text-section font-medium text-ink"
         id="start-heading"
       >
-        Start from nothing
+        Create an empty draft
       </h2>
       <p className="mt-2 text-ui text-mute">
-        An empty draft, written on its own page. You can bring a file into it
-        later, or never.
+        Choose an asset kind, then add content in the editor. You can import a
+        file later.
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -77,9 +77,8 @@ export function StartFromNothing() {
                 className="w-[min(24rem,calc(100vw-2rem))]"
               >
                 <p className="text-meta text-mute">
-                  Which app is this {KIND_LABELS[kind].toLowerCase()} for? Its
-                  editable fields get that app's names. Nothing else about it
-                  depends on the answer, and you are not asked again.
+                  Which app is this {KIND_LABELS[kind].toLowerCase()} for? This
+                  sets the fields available in the editor.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {APP_CHOICES.map((app) => (

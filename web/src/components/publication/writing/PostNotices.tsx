@@ -114,7 +114,7 @@ function Notice({
         onClick={onOpenPublication}
         type="button"
       >
-        Open publication
+        Open publishing controls
       </button>
     </section>
   );

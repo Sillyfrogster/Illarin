@@ -76,7 +76,7 @@ export function ArchiveLead({
           className="mt-6 inline-flex min-h-11 items-center gap-3 text-ui font-medium text-accent hover:text-ink"
           href={address}
         >
-          Read the story
+          Read post
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { AppearanceMenu } from "./AppearanceMenu";
+import { DestinationIcon } from "./DestinationIcon";
 import {
   accountDestinations,
   isCurrentPage,
@@ -90,7 +91,7 @@ export function MobileNav() {
                   @{account.handle}
                 </span>
                 {account.emailVerified
-                  ? "Verified account"
+                  ? "Email verified"
                   : "Email verification needed"}
               </span>
             </p>
@@ -100,11 +101,12 @@ export function MobileNav() {
             <Link
               key={destination.href}
               href={destination.href}
-              className={ROW}
+              className={`${ROW} gap-2.5`}
               aria-current={
                 isCurrentPage(pathname, destination.href) ? "page" : undefined
               }
             >
+              <DestinationIcon id={destination.id} />
               {destination.label}
             </Link>
           ))}

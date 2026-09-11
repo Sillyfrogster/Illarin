@@ -116,9 +116,8 @@ export function LinkedInstances() {
             Linked applications
           </h2>
           <p className="mt-2 font-prose text-ui text-mute">
-            Each entry is one independent installation with short-lived access
-            tokens and a rotating refresh credential. Revoking one does not
-            affect your other links.
+            Each link connects one application installation to your account.
+            Revoke a link to stop that installation's access.
           </p>
         </div>
         <Button asChild variant="secondary">
@@ -139,7 +138,7 @@ export function LinkedInstances() {
       <div aria-busy={instances === undefined} className="mt-6">
         {instances === undefined ? (
           <p aria-live="polite" className="font-ui text-ui text-mute">
-            Reading your linked applications…
+            Loading your linked applications…
           </p>
         ) : instances === null ? (
           <div className="flex flex-wrap items-center gap-4 rounded-plate bg-stop-wash px-5 py-4">
@@ -163,8 +162,8 @@ export function LinkedInstances() {
               strokeWidth={1.5}
             />
             <p className="min-w-0 flex-1 basis-64 font-prose text-ui text-mute">
-              Nothing is linked yet. Open linking from an application, or enter
-              the device code it gives you.
+              No applications linked. Start linking in your application, or
+              enter the code it gives you.
             </p>
           </div>
         ) : (

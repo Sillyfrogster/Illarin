@@ -24,7 +24,7 @@ export function ProfilePreview({
       aria-label="Profile preview"
       className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+2.5rem)]"
     >
-      <p className="font-ui text-meta text-mute">As visitors see it</p>
+      <p className="font-ui text-meta text-mute">Public profile preview</p>
       <div className="mt-3 rounded-plate bg-deep p-6">
         <CreatorPortrait handle={handle} picture={picture} size="md" />
         <p className="mt-4 font-display text-section font-medium tracking-tight text-ink [overflow-wrap:anywhere]">

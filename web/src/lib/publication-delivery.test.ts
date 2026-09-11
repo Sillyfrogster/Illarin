@@ -53,7 +53,7 @@ describe("what a delivery is doing", () => {
   });
 
   test("says nothing has gone out yet before the first attempt", () => {
-    expect(deliveryStanding(delivery({}), noon)).toBe("Waiting to go out");
+    expect(deliveryStanding(delivery({}), noon)).toBe("Queued");
   });
 
   test("says when the next attempt is due", () => {
@@ -78,7 +78,7 @@ describe("what a delivery is doing", () => {
   test("says a due attempt is going out", () => {
     const due = delivery({ attempts: 1, dueAt: "2026-09-06T11:59:00Z" });
 
-    expect(deliveryStanding(due, noon)).toBe("Going out now");
+    expect(deliveryStanding(due, noon)).toBe("Sending");
   });
 
   test("says when it arrived", () => {
@@ -89,7 +89,7 @@ describe("what a delivery is doing", () => {
       settledAt: "2026-09-06T11:30:00Z",
     });
 
-    expect(deliveryStanding(arrived, noon)).toContain("Arrived");
+    expect(deliveryStanding(arrived, noon)).toContain("Delivered");
   });
 
   test("says how many tries it gave up after", () => {
@@ -120,13 +120,13 @@ describe("what a delivery is doing", () => {
     });
 
     expect(deliveryStanding(turned, noon)).toBe(
-      "Turned away. It answered 404.",
+      "Delivery rejected. It answered 404.",
     );
   });
 
   test("says which configuration change stopped it", () => {
     for (const [reason, said] of [
-      ["gone", "It answered 410, so nothing goes there again."],
+      ["gone", "The endpoint returned 410 Gone. Delivery to it has stopped."],
       ["removed", "The destination was removed."],
       ["disabled", "The destination was switched off."],
       ["moved", "The destination moved to another address."],
@@ -156,7 +156,7 @@ describe("the words for one public transition", () => {
   });
 
   test("reads an event name off the wire", () => {
-    expect(eventWord("publication.post.withdrawn.v1")).toBe("Takedown");
+    expect(eventWord("publication.post.withdrawn.v1")).toBe("Withdrawn");
     expect(eventWord("publication.post.invented.v9")).toBe("Publication");
   });
 

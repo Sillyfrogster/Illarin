@@ -145,7 +145,7 @@ export function PictureRow({
         />
       </Pair>
       <Choice
-        label={replacing ? "Replace" : "Place"}
+        label={replacing ? "Replace" : "Insert image"}
         press={place}
         ready={held !== null && alt.trim().length > 0}
         strong
@@ -211,18 +211,18 @@ export function GalleryPictureRow({
     <Row label="Gallery picture">
       <PictureText controls={controls} editor={editor} node="galleryImage" />
       <Choice
-        label="Move this picture back"
+        label="Move image earlier"
         press={() => editor.chain().focus().movePicture(-1).run()}
         ready={controls.canMoveBack}
-        word="Back"
+        word="Earlier"
       >
         <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
       </Choice>
       <Choice
-        label="Move this picture on"
+        label="Move image later"
         press={() => editor.chain().focus().movePicture(1).run()}
         ready={controls.canMoveOn}
-        word="On"
+        word="Later"
       >
         <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
       </Choice>

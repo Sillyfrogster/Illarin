@@ -51,7 +51,7 @@ export function ProfileRecognition({
           ))}
         </ul>
       }
-      summary="Given by Illarin"
+      summary="Awarded by Illarin"
     >
       <dl className="mt-5 grid gap-x-10 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
         {[...marked, ...spoken].map((one) => (

@@ -156,7 +156,7 @@ export function PublicationRegister() {
   }
 
   if (!apps) {
-    return <Waiting>{failure || "Reading the publication…"}</Waiting>;
+    return <Waiting>{failure || "Loading blog administration…"}</Waiting>;
   }
 
   return (
@@ -169,7 +169,7 @@ export function PublicationRegister() {
           name: registerName(one),
         }))}
         chosen={register}
-        label="What the publication keeps"
+        label="Blog administration"
         onChoose={(next) => {
           setRegister(next);
           close();

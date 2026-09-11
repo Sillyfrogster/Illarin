@@ -16,17 +16,19 @@ const QUIET: Record<Transition, string> = {
   publish:
     "Nothing is sent. The post still appears on the blog and in the feeds.",
   changes: "Nothing is sent. The changes still go live.",
-  withdraw: "Nothing is sent. The post still comes down.",
-  republish: "Nothing is sent. The post still goes back up.",
+  withdraw: "No announcement will be sent. The post will still be withdrawn.",
+  republish:
+    "No announcement will be sent. The post will still be republished.",
 };
 
 const SENT: Record<Transition, string> = {
   publish: "Each one receives a summary and a link, never the article itself.",
   changes:
-    "Each one receives the same summary again, with the new edition's id.",
-  withdraw: "Each one is told the post came down, and nothing about why.",
+    "Each destination receives an update announcement for the new revision.",
+  withdraw:
+    "Each destination receives a withdrawal notice without the private reason.",
   republish:
-    "Each one receives the summary again for the edition going back up.",
+    "Each destination receives an announcement for the republished revision.",
 };
 
 export function AnnouncementChoice({
@@ -89,7 +91,9 @@ export function AnnouncementChoice({
   return (
     <div className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-2 border-0">
-        <legend className="mb-1 font-ui text-ui text-ink">Announce it</legend>
+        <legend className="mb-1 font-ui text-ui text-ink">
+          Send announcement
+        </legend>
         <ul className="flex list-none flex-col gap-1.5">
           {takers.map((one) => (
             <li className="flex flex-col gap-1.5" key={one.id}>
@@ -130,7 +134,7 @@ export function AnnouncementChoice({
             id="announcement-note"
             maxLength={500}
             onChange={(event) => onNote(event.target.value)}
-            placeholder="One line of context every one of them receives."
+            placeholder="Optional context included in each announcement."
             rows={2}
             value={note}
           />

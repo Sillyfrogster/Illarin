@@ -82,7 +82,7 @@ test("an asset holding nothing does not claim a format includes everything", () 
     downloads: [target("card", "Card", true)],
     holdsNothing: true,
   });
-  expect(choice.cost).toBe("There is nothing in it yet");
+  expect(choice.cost).toBe("No exportable content yet");
 });
 
 test("a format names what it leaves behind and how much of it there was", () => {
@@ -96,7 +96,7 @@ test("a format names what it leaves behind and how much of it there was", () => 
     ],
     holdsNothing: false,
   });
-  expect(choice.cost).toBe("2 things left out");
+  expect(choice.cost).toBe("2 content types have limited support");
   expect(choice.losses.map((loss) => loss.line)).toEqual([
     "Not included.",
     "Included, without their names.",
@@ -114,7 +114,7 @@ test("a carried role that lands somewhere unusual is a note, and not everything 
     ],
     holdsNothing: false,
   });
-  expect(choice.cost).toBe("1 thing some apps will not show");
+  expect(choice.cost).toBe("1 content type unsupported by some apps");
   expect(choice.losses.map((loss) => loss.line)).toEqual([
     "It goes into the description instead.",
   ]);
@@ -125,7 +125,7 @@ test("one lost thing is counted in the singular", () => {
     downloads: [target("card", "Card", true, [role("gallery", "dropped")])],
     holdsNothing: false,
   });
-  expect(choice.cost).toBe("1 thing left out");
+  expect(choice.cost).toBe("1 content type has limited support");
 });
 
 test("a file is always a destination and every installation that can receive is another", () => {
@@ -170,7 +170,7 @@ test("the send action says what sending would do this time", () => {
 
 test("an installation that reports nothing does not pretend to know what it holds", () => {
   expect(instanceStanding(instance({ reportsLibrary: false }))).toBe(
-    "This installation does not report what it holds, so Illarin cannot say whether you already have it.",
+    "This application does not report installed assets. Installation status is unavailable.",
   );
   expect(instanceStanding(instance())).toBe("Not installed here yet.");
   expect(instanceStanding(instance({ installedGeneration: 1 }))).toBe(
@@ -328,7 +328,7 @@ test("a format that lands content somewhere apps ignore does not claim everythin
   });
 
   expect(everything.cost).toBe("Includes everything");
-  expect(elsewhere.cost).toBe("1 thing some apps will not show");
+  expect(elsewhere.cost).toBe("1 content type unsupported by some apps");
 });
 
 test("a format that drops the gallery says so, so the chooser can stop offering it", () => {
@@ -370,7 +370,7 @@ test("an app that shows no destination is told the content is left out", () => {
     app: "sillytavern",
     apps: [{ id: "sillytavern", label: "SillyTavern", format: "ccv3" }],
   });
-  expect(choice.cost).toBe("1 thing left out");
+  expect(choice.cost).toBe("1 content type has limited support");
   expect(choice.carriesGallery).toBe(false);
   expect(choice.gallery?.line).toBe("SillyTavern does not show these.");
 });
@@ -380,7 +380,7 @@ test("with no app chosen a destination stays a note rather than a loss", () => {
     downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
   });
-  expect(choice.cost).toBe("1 thing some apps will not show");
+  expect(choice.cost).toBe("1 content type unsupported by some apps");
   expect(choice.carriesGallery).toBe(true);
 });
 

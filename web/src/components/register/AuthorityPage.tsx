@@ -32,9 +32,9 @@ export function AuthorityPage({
         {account !== undefined && (!account || !publicationAuthority) ? (
           <Gate
             action={account ? "Back to Illarin" : "Sign in"}
-            heading="One recorded account manages this"
+            heading="Blog management permission required"
             href={account ? "/" : "/sign-in"}
-            line="Being an admin or a moderator does not carry it."
+            line="Only the account designated to manage blog access can use these controls."
           />
         ) : null}
         {account && publicationAuthority ? children : null}

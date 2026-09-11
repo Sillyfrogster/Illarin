@@ -110,7 +110,7 @@ export function CategoryRows({
                   onClick={() => bringBack(category)}
                   type="button"
                 >
-                  Bring back
+                  Reactivate category
                 </button>
               }
               key={category.id}
@@ -160,7 +160,7 @@ export function CategoryStep({
         <Consequence
           action="Retire"
           busy={busy}
-          confirm="Retire it"
+          confirm="Retire category"
           onConfirm={() => write({ retired: true })}
         >
           No new post can be filed as {category.label}. Posts already filed as

@@ -53,11 +53,11 @@ export function BlogMasthead({
 
         {categories.length > 0 ? (
           <nav
-            aria-label="Publication categories"
+            aria-label="Blog categories"
             className="-mx-1 flex min-w-0 items-center gap-x-4 overflow-x-auto px-1 [scrollbar-width:none] max-sm:w-full [&::-webkit-scrollbar]:hidden"
           >
             <LineLink current={onArchive} href={BLOG_HOME}>
-              Everything
+              All posts
             </LineLink>
             {categories.map((category) => {
               const address = `${BLOG_HOME}/category/${category.slug}`;

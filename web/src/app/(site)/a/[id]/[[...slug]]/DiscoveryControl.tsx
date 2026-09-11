@@ -33,7 +33,7 @@ export function DiscoveryControl({
       router.refresh();
     } catch {
       setDiscovery(discovery);
-      setMessage("Discovery could not be changed. Try again.");
+      setMessage("The catalog listing could not be changed. Try again.");
     } finally {
       setPending(false);
     }
@@ -53,14 +53,14 @@ export function DiscoveryControl({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div>
           <h3 className="text-ui font-medium text-ink" id="discovery-heading">
-            Catalog discovery
+            Catalog listing
           </h3>
           <p className="mt-1 text-meta text-mute">
             {frozen
               ? "Locked while this asset is withheld. Only an admin can remove the withhold."
               : listed
                 ? "Listed in the catalog and on your public profile."
-                : "Unlisted from discovery. Anyone with the link can still view and download it."}
+                : "Not listed in the catalog. Anyone with the link can still view and download it."}
           </p>
         </div>
         {message ? (
@@ -75,7 +75,7 @@ export function DiscoveryControl({
           onClick={changeDiscovery}
         >
           {frozen
-            ? "Discovery locked"
+            ? "Listing locked"
             : listed
               ? "Make unlisted"
               : "List in catalog"}

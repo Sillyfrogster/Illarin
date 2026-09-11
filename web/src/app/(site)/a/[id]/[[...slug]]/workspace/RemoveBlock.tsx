@@ -58,10 +58,7 @@ export function RemoveBlock({ block }: { block: AssetBlock }) {
                 </li>
               ))}
             </ul>
-            <Note>
-              There is nowhere else this content is kept. The block is where it
-              lives.
-            </Note>
+            <Note>Removing this block deletes its content from the asset.</Note>
           </>
         ) : (
           <Note>This block is empty, so nothing is lost.</Note>
@@ -71,7 +68,7 @@ export function RemoveBlock({ block }: { block: AssetBlock }) {
       {block.hideable || canMove ? (
         <section className="flex flex-col gap-8">
           <h3 className="font-display text-ui font-medium text-ink">
-            Or keep it
+            Keep the content
           </h3>
           {block.hideable ? (
             <div className="flex flex-col gap-3">
@@ -97,7 +94,7 @@ export function RemoveBlock({ block }: { block: AssetBlock }) {
               <p className="text-ui text-ink">
                 Move the content somewhere else
               </p>
-              <Field label="The block that keeps it">
+              <Field label="Destination block">
                 <ChoiceField
                   disabled={arrangement.busy}
                   onChange={(event) => setDestination(event.target.value)}
@@ -138,14 +135,14 @@ export function RemoveBlock({ block }: { block: AssetBlock }) {
           }}
           type="button"
         >
-          Remove and delete
+          Delete block and content
         </button>
         <button
           className="inline-flex min-h-11 items-center rounded-control px-4 text-ui font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink"
           onClick={close}
           type="button"
         >
-          Keep it
+          Cancel
         </button>
       </div>
     </div>

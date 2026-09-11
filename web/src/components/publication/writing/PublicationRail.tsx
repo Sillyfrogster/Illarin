@@ -46,30 +46,30 @@ const OFFERS: Record<
   },
   schedule: {
     icon: CalendarClock,
-    label: "Schedule it",
+    label: "Schedule post",
     line: "Illarin publishes this exact version at a time you set.",
   },
   withdraw: {
     icon: EyeOff,
-    label: "Take it down",
-    line: "Its editions, pictures and dates stay. You can put it back at the same address.",
+    label: "Withdraw post",
+    line: "Hide the post from readers. Its content and history remain available for republication.",
     tone: "stop",
   },
   republish: {
     icon: Eye,
-    label: "Put it back",
-    line: "It returns to the same address under the date it first published.",
+    label: "Republish post",
+    line: "Republish at the same address with the original publication date.",
   },
   delete: {
     icon: Trash2,
-    label: "Delete it",
-    line: "Illarin holds it for thirty days. After that the writing, the editions and the pictures are gone.",
+    label: "Delete post",
+    line: "You can restore this post for 30 days. After that, its content, revisions and images are permanently deleted.",
     tone: "stop",
   },
   recover: {
     icon: Undo2,
-    label: "Bring it back",
-    line: "It returns exactly as it was, in the standing it was deleted from.",
+    label: "Restore post",
+    line: "Restore the post to its state before deletion.",
   },
 };
 
@@ -169,14 +169,14 @@ function Home({
           {readersHave(post)}
         </p>
         <p className="font-prose text-meta text-mute wrap-anywhere">
-          illarin.xyz/blog/{post.slug}
+          blog.illarin.xyz/{post.slug}
         </p>
         {post.deletion ? (
           <p
             className="font-prose text-meta text-stop"
             suppressHydrationWarning
           >
-            {remainingDeletionWindow(post.deletion.until)}. Gone for good{" "}
+            {remainingDeletionWindow(post.deletion.until)}. Permanently deleted{" "}
             {readableMoment(post.deletion.until)}.
           </p>
         ) : null}
@@ -185,10 +185,10 @@ function Home({
       {waiting ? (
         <section className="flex flex-col gap-3">
           <h3 className="font-display text-ui font-medium text-ink">
-            Waiting to go live
+            Scheduled
           </h3>
           <p className="font-prose text-meta text-mute">
-            Edition {schedule.revisionNumber}{" "}
+            Revision {schedule.revisionNumber}{" "}
             {schedule.state === "publishing" ? (
               "is going live now."
             ) : (
@@ -204,7 +204,7 @@ function Home({
           {schedule.state === "pending" ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={() => onStep("reschedule")} size="compact">
-                Replace edition
+                Change scheduled revision
               </Button>
               <Button
                 className="text-stop hover:bg-stop-wash hover:text-stop"
@@ -212,7 +212,7 @@ function Home({
                 size="compact"
                 variant="ghost"
               >
-                Cancel
+                Cancel schedule
               </Button>
             </div>
           ) : null}
@@ -261,13 +261,13 @@ function Offer({
 function readersHave(post: Post): string {
   const standing = writerStanding(post);
   if (standing === "deleted") return "Deleted. Nobody can read this.";
-  if (standing === "withdrawn") return "Out of public view.";
+  if (standing === "withdrawn") return "Withdrawn from the blog.";
   if (standing === "published") {
     return post.updatedPublicAt
-      ? `Readers have the edition published ${readableMoment(post.updatedPublicAt)}.`
+      ? `Current revision published ${readableMoment(post.updatedPublicAt)}.`
       : "Readers have this post.";
   }
-  return "A private draft. Nobody else can open it.";
+  return "Private draft. Not visible to readers.";
 }
 
 function Sent({ postId }: { postId: string }) {

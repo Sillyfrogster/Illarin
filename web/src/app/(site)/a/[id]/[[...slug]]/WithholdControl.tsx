@@ -74,19 +74,19 @@ export function WithholdControl({
           {confirming ? (
             <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
               <p className="text-ui text-ink">
-                Withhold it? This page closes for you too, because a withheld
-                asset answers to nobody but its creator.
+                Withhold this asset? Only its creator will be able to open its
+                page.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button loading={pending} onClick={withhold} variant="stop">
-                  Yes, withhold it
+                  Withhold asset
                 </Button>
                 <Button
                   disabled={pending}
                   onClick={() => setConfirming(false)}
                   variant="ghost"
                 >
-                  Leave it alone
+                  Cancel
                 </Button>
               </div>
             </div>

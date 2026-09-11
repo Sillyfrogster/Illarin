@@ -80,7 +80,7 @@ func (h *Handlers) workingVersion(c *gin.Context) (int, bool) {
 	var request PostVersionRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Name the version of the working copy you mean.",
+			"error": "Include the current working-copy version.",
 		})
 		return 0, false
 	}

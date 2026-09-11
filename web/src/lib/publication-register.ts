@@ -68,28 +68,28 @@ export function nothingIn(
   if (register === "contributors") {
     return held.apps.filter((one) => !one.retired).length === 0
       ? "Add an app first. An approval binds one person to one app."
-      : "Nobody is approved to publish. Illarin's own writing still works.";
+      : "No app contributors approved. Team publishing remains available.";
   }
   if (register === "apps") {
-    return "No app is configured, so nobody can be approved yet.";
+    return "No apps configured. Add an app before approving a contributor.";
   }
   if (register === "categories") {
     return "The blog has no categories, so no post can be filed.";
   }
   if (register === "destinations") {
-    return "Nowhere is set up to receive an announcement, so every post publishes quietly.";
+    return "No announcement destinations configured. Posts can still be published.";
   }
-  return "No post has announced anywhere yet.";
+  return "No announcements sent yet.";
 }
 
 export function nothingDelivered(view: string): string {
-  if (view === "failed") return "Nothing has stopped short.";
-  if (view === "pending") return "Nothing is on its way.";
-  if (view === "delivered") return "Nothing has arrived yet.";
+  if (view === "failed") return "No failed announcements.";
+  if (view === "pending") return "No pending announcements.";
+  if (view === "delivered") return "No delivered announcements.";
   if (view === "unconfirmed") {
-    return "Every announcement Discord took, it confirmed.";
+    return "No unconfirmed Discord announcements.";
   }
-  return "No post has announced anywhere yet.";
+  return "No announcements sent yet.";
 }
 
 export function grantAllowance(grant: PublicationGrant): string {
@@ -111,12 +111,12 @@ export function destinationStanding(one: PublicationDestination): string {
     return "Switched off. Verify it again to start sending here.";
   }
   if (one.state !== "active" || !one.verifiedAt) {
-    return "Waiting to prove it is listening. Nothing is sent until it does.";
+    return "Endpoint verification required before sending announcements.";
   }
   if (one.channel) {
     return `Announcing as ${one.channel.webhookName || "the name Discord gives it"}. Discord confirmed the channel on ${readableDate(one.verifiedAt)}.`;
   }
-  return `Receiving. Proved it was listening on ${readableDate(one.verifiedAt)}.`;
+  return `Verified on ${readableDate(one.verifiedAt)}.`;
 }
 
 export function destinationTakes(one: PublicationDestination): string {
@@ -124,7 +124,7 @@ export function destinationTakes(one: PublicationDestination): string {
     const role = one.channel.roleName;
     return role ? `First publication · @${role}` : "First publication";
   }
-  if (one.events.length === 0) return "Takes nothing.";
+  if (one.events.length === 0) return "No events selected.";
   return one.events.map((event) => EVENT_WORDS[event].word).join(" · ");
 }
 
@@ -145,7 +145,7 @@ export function canReplay(one: PostDelivery): boolean {
 }
 
 export function tokenStanding(one: PublicationToken): string {
-  const said = [`Made ${readableDate(one.createdAt)}`];
+  const said = [`Created ${readableDate(one.createdAt)}`];
   said.push(
     one.lastUsedAt ? `last used ${readableDate(one.lastUsedAt)}` : "never used",
   );
@@ -158,5 +158,5 @@ export function tokenStanding(one: PublicationToken): string {
 export function tokenEnded(one: PublicationToken): string {
   if (one.revokedAt) return `Revoked ${readableDate(one.revokedAt)}`;
   if (one.expiresAt) return `Expired ${readableDate(one.expiresAt)}`;
-  return "Spent";
+  return "Inactive";
 }

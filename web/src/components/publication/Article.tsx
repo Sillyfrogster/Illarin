@@ -61,13 +61,13 @@ export function Article({ post }: { post: PublicPost }) {
             </p>
           ) : null}
           <div className="mt-section flex flex-wrap items-center justify-between gap-4 rounded-plate bg-deep p-5">
-            <p className="text-ui">Keep up with Illarin.</p>
+            <p className="text-ui">Subscribe to blog updates.</p>
             <a
               className="flex min-h-11 items-center gap-2 text-ui font-medium text-accent hover:text-ink"
               href={PUBLICATION_FEEDS.rss}
             >
               <Rss aria-hidden="true" className="size-4" />
-              Follow the feed
+              Subscribe via RSS
             </a>
           </div>
           <FurtherReading posts={post.related} />

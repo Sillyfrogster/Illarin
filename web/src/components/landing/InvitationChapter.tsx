@@ -26,22 +26,22 @@ export function InvitationChapter() {
       <Shell className="relative py-24 sm:py-36 lg:py-44">
         <Reveal className="max-w-[760px]">
           <p className="mb-6 font-ui text-ui text-[#d3baff]">
-            Now, it’s your turn.
+            Create and publish
           </p>
           <h2
             id="landing-create-title"
             className="font-display text-[clamp(3.3rem,6.8vw,7rem)] leading-[1.02] font-medium tracking-[-.045em]"
           >
-            Make something
+            Share your
             <br />
-            only you could.
+            roleplay creations.
           </h2>
           <p className="mt-7 max-w-[400px] text-lede text-[#ffffff]/85">
-            That character in your head.
+            Import a file or start a draft.
             <br />
-            That world you keep coming back to.
+            Add your content and images.
             <br />
-            There’s room for it here.
+            Publish when you’re ready.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Button
@@ -51,7 +51,7 @@ export function InvitationChapter() {
               className="rounded-full px-6"
             >
               <Link href="/upload">
-                Create on Illarin <ArrowUpRight aria-hidden="true" />
+                Create an asset <ArrowUpRight aria-hidden="true" />
               </Link>
             </Button>
             <Button
@@ -60,12 +60,11 @@ export function InvitationChapter() {
               size="large"
               className="rounded-full text-[#ffffff] hover:bg-[#ffffff]/10 hover:text-[#ffffff]"
             >
-              <Link href="/browse">Keep exploring</Link>
+              <Link href="/browse">Browse the catalog</Link>
             </Button>
           </div>
           <p className="mt-10 max-w-[390px] text-meta leading-relaxed text-[#ffffff]/75">
-            Start with a file or a new creation. Arrange your content, keep your
-            draft private, and publish when you’re ready.
+            Drafts stay private until you publish.
           </p>
         </Reveal>
       </Shell>

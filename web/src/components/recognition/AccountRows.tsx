@@ -101,7 +101,7 @@ export function AccountRows({
 
   return (
     <>
-      <PanelHead id="register-heading" title="Someone's profile" />
+      <PanelHead id="register-heading" title="Account recognition" />
 
       <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={look}>
         <Field
@@ -149,7 +149,7 @@ export function AccountRows({
               icon={UserRoundCheck}
               onClick={onGive}
             >
-              Give one
+              Assign recognition
             </StartAction>
           </div>
 
@@ -159,7 +159,7 @@ export function AccountRows({
           >
             {held.positions.length === 0 ? (
               <p className="mt-3 font-prose text-meta text-mute">
-                No job here yet.
+                No positions assigned.
               </p>
             ) : (
               <ul className="mt-2 flex list-none flex-col">
@@ -169,9 +169,7 @@ export function AccountRows({
                     lead={<HeldMark one={one.distinction} />}
                     name={one.distinction.name}
                   >
-                    <RowAction onClick={() => takeBack(one)}>
-                      Take back
-                    </RowAction>
+                    <RowAction onClick={() => takeBack(one)}>Revoke</RowAction>
                   </HeldRow>
                 ))}
               </ul>
@@ -184,7 +182,7 @@ export function AccountRows({
           >
             {held.earned.length === 0 ? (
               <p className="mt-3 font-prose text-meta text-mute">
-                Nothing earned yet.
+                No titles or badges awarded.
               </p>
             ) : (
               <ul className="mt-2 flex list-none flex-col">
@@ -207,9 +205,7 @@ export function AccountRows({
                       label={`Move ${one.distinction.name} later`}
                       onClick={() => reorder(one, 1)}
                     />
-                    <RowAction onClick={() => takeBack(one)}>
-                      Take back
-                    </RowAction>
+                    <RowAction onClick={() => takeBack(one)}>Revoke</RowAction>
                   </HeldRow>
                 ))}
               </ul>
@@ -217,7 +213,7 @@ export function AccountRows({
           </HeldGroup>
 
           {held.past.length > 0 ? (
-            <Past summary={`${held.past.length} taken back`}>
+            <Past summary={`${held.past.length} revoked`}>
               {held.past.map((one) => (
                 <PastRow key={one.id}>
                   {one.distinction.name}, given {readableDate(one.assignedAt)}
@@ -353,11 +349,11 @@ export function GiveStep({
               {one.name}
             </p>
             <p className="font-prose text-meta text-mute">
-              {one.form === "position" ? "A job at Illarin" : one.explanation}
+              {one.form === "position" ? "Illarin position" : one.explanation}
             </p>
           </div>
           <RowAction busy={giving === one.id} onClick={() => give(one)}>
-            Give
+            Assign
           </RowAction>
         </li>
       ))}

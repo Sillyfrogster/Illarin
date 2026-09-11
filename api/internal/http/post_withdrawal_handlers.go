@@ -42,7 +42,7 @@ func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID, _ RepublishPostP
 	}
 	var request RepublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name the edition readers get back."})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Choose a revision to republish."})
 		return
 	}
 	back, err := h.publications.RepublishPost(

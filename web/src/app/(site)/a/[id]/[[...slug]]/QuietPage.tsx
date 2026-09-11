@@ -53,7 +53,7 @@ export function EmptyPage({ kind }: { kind: BrowseKind }) {
   const label = KIND_LABELS[kind].toLowerCase();
 
   return (
-    <QuietComposition heading="Nothing is shown here" kind={kind}>
+    <QuietComposition heading="No public content" kind={kind}>
       The creator has put none of this {label} on the page. What the file holds
       is kept, and every download carries it.
     </QuietComposition>

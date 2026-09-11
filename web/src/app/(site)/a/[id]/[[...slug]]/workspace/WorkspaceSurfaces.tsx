@@ -154,8 +154,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           >
             <div className="flex flex-col gap-5">
               <p className="text-ui text-mute">
-                This asset was saved somewhere else, so nothing here can be
-                saved until you catch up.
+                This asset was saved in another session. Copy any unsaved text,
+                then reload to edit the latest version.
               </p>
               <button
                 className="min-h-11 rounded-control bg-action px-5 text-ui font-medium text-on-accent outline-offset-3"
@@ -377,10 +377,11 @@ function detail(
   isDraft: boolean,
   state: string,
 ): string {
-  if (state === "failed") return "Nothing was lost. Try saving again.";
+  if (state === "failed")
+    return "Your edits are still on this page. Try saving again.";
   if (isDraft) return "Only you can open this page.";
   if (props.unpublishedChanges || state === "unsaved") {
     return "Readers do not have your changes yet.";
   }
-  return "Readers have everything on this page.";
+  return "All changes are published.";
 }

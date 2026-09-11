@@ -60,8 +60,8 @@ const PLACEMENTS: {
 
 const WIDGETS: { value: PresetVariable["widget"]; label: string }[] = [
   { value: "switch", label: "Yes or no" },
-  { value: "select", label: "One of a list" },
-  { value: "multiselect", label: "Several of a list" },
+  { value: "select", label: "Single choice" },
+  { value: "multiselect", label: "Multiple choice" },
   { value: "number", label: "A number" },
   { value: "slider", label: "A number on a slider" },
   { value: "text", label: "A line of text" },
@@ -332,7 +332,7 @@ function FragmentFields({
       )}
 
       <FieldGroup legend="How it is sent">
-        <Field label="Speaks as">
+        <Field label="Message role">
           <ChoiceField
             disabled={pending}
             onChange={(event) =>
@@ -345,7 +345,7 @@ function FragmentFields({
             }
             value={fragment.role ?? ""}
           >
-            <option value="">Leave it to whatever reads the preset</option>
+            <option value="">Use app default</option>
             {PROMPT_ROLES.map((role) => (
               <option key={role.value} value={role.value}>
                 {role.label}
@@ -372,13 +372,13 @@ function FragmentFields({
         <Switch
           checked={fragment.enabled}
           hint="A switched-off fragment stays in the preset and reaches no model."
-          label="Switched on"
+          label="Enabled"
           onChange={(enabled) => onChange({ enabled })}
           pending={pending}
         />
       </FieldGroup>
 
-      <FieldGroup legend="Where it goes">
+      <FieldGroup legend="Placement">
         <Field label="Placement">
           <ChoiceField
             disabled={pending}
@@ -392,7 +392,7 @@ function FragmentFields({
             }
             value={fragment.placement ?? ""}
           >
-            <option value="">Leave it to whatever reads the preset</option>
+            <option value="">Use app default</option>
             {PLACEMENTS.map((placement) => (
               <option key={placement.value} value={placement.value}>
                 {placement.label}
@@ -592,9 +592,7 @@ function ValueField({
 }) {
   if (value == null) {
     return (
-      <p className="font-display text-ui text-mute italic">
-        Nobody has filled this in.
-      </p>
+      <p className="font-display text-ui text-mute italic">No value set.</p>
     );
   }
   if (type === "boolean") {
@@ -686,7 +684,7 @@ export function VariableSchemaEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This preset asks a reader for nothing yet."
+      emptyMessage="No variables yet. Add a variable to let readers customise prompt values."
       noun="variable"
       onAdd={() => onChange([...variables, { name: "", widget: "switch" }])}
       onChoose={onChoose}
@@ -741,7 +739,7 @@ function VariableFields({
         />
       </Field>
 
-      <Field label="Filled in with">
+      <Field label="Input type">
         <ChoiceField
           disabled={pending}
           onChange={(event) =>
@@ -779,7 +777,7 @@ function VariableFields({
       </Field>
 
       {listed ? (
-        <FieldGroup legend="What a reader picks from">
+        <FieldGroup legend="Choices">
           {options.map((option, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: Choices stay ordered and hold no local state.
             <div className="flex flex-wrap items-center gap-2" key={index}>
@@ -844,9 +842,9 @@ function VariableFields({
       ) : null}
 
       {numeric ? (
-        <FieldGroup legend="What it accepts">
+        <FieldGroup legend="Allowed values">
           <FieldPair>
-            <Field label="Lowest">
+            <Field label="Minimum">
               <TextField
                 disabled={pending}
                 onChange={(event) =>
@@ -864,7 +862,7 @@ function VariableFields({
                 value={range.min ?? ""}
               />
             </Field>
-            <Field label="Highest">
+            <Field label="Maximum">
               <TextField
                 disabled={pending}
                 onChange={(event) =>
@@ -929,7 +927,7 @@ export function ScriptListEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This preset changes nothing yet."
+      emptyMessage="No scripts yet. Add a script to find and replace text."
       noun="script"
       onAdd={() =>
         onChange([...scripts, { enabled: true, find: "", replace: "" }])
@@ -1003,7 +1001,7 @@ function ScriptFields({
         </Field>
       </FieldPair>
 
-      <Field label="Replace it with">
+      <Field label="Replacement text">
         <TextAreaField
           disabled={pending}
           onChange={(event) => onChange({ replace: event.target.value })}
@@ -1012,7 +1010,7 @@ function ScriptFields({
         />
       </Field>
 
-      <FieldGroup legend="What it runs over">
+      <FieldGroup legend="Input sources">
         {SCRIPT_TARGETS.map((target) => (
           <Switch
             checked={targets.includes(target.value)}
@@ -1026,7 +1024,7 @@ function ScriptFields({
         ))}
       </FieldGroup>
 
-      <FieldGroup legend="What it changes">
+      <FieldGroup legend="Output targets">
         {SCRIPT_EFFECTS.map((effect) => (
           <Switch
             checked={affects.includes(effect.value)}
@@ -1040,7 +1038,7 @@ function ScriptFields({
         ))}
       </FieldGroup>
 
-      <FieldGroup legend="How far back it reaches">
+      <FieldGroup legend="Message range">
         <FieldPair>
           <Field hint="counted from the most recent" label="Nearest message">
             <TextField
@@ -1076,7 +1074,7 @@ function ScriptFields({
         <Switch
           checked={script.enabled}
           hint="A switched-off script stays in the preset and changes nothing."
-          label="Switched on"
+          label="Enabled"
           onChange={(enabled) => onChange({ enabled })}
           pending={pending}
         />

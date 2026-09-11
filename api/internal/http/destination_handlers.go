@@ -381,7 +381,7 @@ func (h *Handlers) destinationError(c *gin.Context, err error) {
 			"This post may not send to that destination.")
 	case errors.Is(err, publication.ErrRoleRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
-			"This post may not ping that destination's role.")
+			"This post may not mention that destination's role.")
 	case errors.Is(err, publication.ErrNotDiscord):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
 			"That destination is a generic webhook.")

@@ -25,7 +25,7 @@ export function GrantTokens({
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <h3 className="font-display text-ui font-medium text-ink">
-          {mine ? "Tokens for the publication API" : "Their tokens"}
+          {mine ? "Publishing API tokens" : "Contributor API tokens"}
           {tokens ? (
             <span className="ml-2 font-prose text-meta text-mute tabular-nums">
               {live.length}
@@ -66,8 +66,8 @@ export function GrantTokens({
       ) : live.length === 0 ? (
         <p className="max-w-[52ch] font-prose text-meta text-mute">
           {mine
-            ? `Nothing carries your approval yet. A token lets a script or an editor of your own publish for ${grant.app.name} without your password.`
-            : "Nothing of theirs can reach the publication API. Only they can make a token; you can stop any of them."}
+            ? `No API tokens yet. Create one to let your tools publish for ${grant.app.name} without your password.`
+            : "This contributor has no API tokens. Only they can create tokens; you can revoke them."}
         </p>
       ) : (
         <TokenRows
@@ -147,9 +147,8 @@ function NewToken({
             Copy it now
           </h4>
           <p className="mt-1 max-w-[52ch] font-prose text-meta text-mute">
-            This is the only time Illarin can show you this token. Nothing here
-            can read it back, so if it gets away from you, revoke it and make
-            another.
+            Copy this token now. You cannot view it again. If you lose it,
+            revoke it and create a replacement.
           </p>
         </div>
         <RevealOnce
@@ -163,7 +162,7 @@ function NewToken({
           onClick={onDone}
           type="button"
         >
-          {copied ? "I have it" : "Close without copying"}
+          {copied ? "Done" : "Close without copying"}
         </button>
       </div>
     );
@@ -184,7 +183,7 @@ function NewToken({
       <Field
         hint="Name the tool or machine that will carry it, so you know which one to revoke later."
         htmlFor="token-name"
-        label="What is it for"
+        label="Token name"
       >
         <TextInput
           autoComplete="off"
@@ -200,7 +199,7 @@ function NewToken({
         className="max-w-[16rem]"
         hint="Leave this empty and it works until you revoke it."
         htmlFor="token-expiry"
-        label="Stops working on"
+        label="Expiry date"
       >
         <TextInput
           className="bg-plane"
@@ -217,7 +216,7 @@ function NewToken({
           disabled={!name.trim() || busy}
           type="submit"
         >
-          {busy ? "Making…" : "Make the token"}
+          {busy ? "Creating…" : "Create token"}
         </button>
         <button
           className="inline-flex min-h-11 items-center justify-center rounded-control px-4 font-ui text-ui font-medium text-mute outline-offset-3 hover:text-ink"

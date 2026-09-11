@@ -60,8 +60,7 @@ export function PostDesk() {
           Your posts
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          Everything you have written for the Illarin blog, and what Illarin
-          approved you to publish.
+          Manage your blog posts and publishing permissions.
         </p>
       </header>
 
@@ -117,7 +116,7 @@ function Inside({
         action="Sign in"
         heading="Sign in to see what you may publish"
         href="/sign-in"
-        line="Illarin opens this page to the accounts it has approved."
+        line="Sign in to manage your posts and publishing permissions."
       />
     );
   }
@@ -125,7 +124,7 @@ function Inside({
   if (!workspace || waiting) {
     return (
       <p aria-live="polite" className="font-ui text-ui text-mute">
-        {failure || "Reading your approvals…"}
+        {failure || "Loading your publishing permissions…"}
       </p>
     );
   }
@@ -134,9 +133,9 @@ function Inside({
     return (
       <Gate
         action="Back to Illarin"
-        heading="Nobody has approved you to publish"
+        heading="Publishing approval required"
         href="/"
-        line="Approval comes from Illarin's publication authority. An admin or a moderator role is not the same thing."
+        line="Ask the account that manages blog access to approve you as a contributor."
       />
     );
   }
@@ -149,7 +148,7 @@ function Inside({
             className="font-display text-section font-medium tracking-tight text-ink"
             id="written"
           >
-            Written
+            Posts
           </h2>
           <StartPost onFailure={onFailure} workspace={workspace} />
         </div>

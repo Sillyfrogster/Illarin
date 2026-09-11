@@ -130,7 +130,7 @@ export function Consequence({
             onClick={() => setAsking(false)}
             type="button"
           >
-            Leave it alone
+            Cancel
           </button>
         ) : null}
       </div>

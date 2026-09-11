@@ -5,17 +5,17 @@ import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import { pageMetadata } from "@/lib/site-metadata";
 
 const DISCORD_NOTICES: Record<string, string> = {
-  attached: "Discord is now another way into this account.",
+  attached: "Discord is connected. You can use it to sign in.",
   claimed:
-    "That Discord identity cannot be attached here. No account details were revealed and nothing was merged.",
+    "That Discord account cannot be connected. Try another Discord account.",
   "email-conflict":
-    "Discord reported an address already verified on another account. Nothing was changed.",
-  failed: "Discord could not be attached. Please try again.",
+    "Discord's email address belongs to another Illarin account. Use a different Discord account.",
+  failed: "Discord could not be connected. Try again.",
 };
 
 export const metadata = pageMetadata(
   "Account settings",
-  "The ways back into your account and the applications that can reach it.",
+  "Manage your sign-in methods and linked applications.",
 );
 
 export default async function SettingsPage({
@@ -32,11 +32,10 @@ export default async function SettingsPage({
     <Shell className="pt-10 pb-chapter lg:pt-14">
       <header className="max-w-[52ch]">
         <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-          Your account
+          Account settings
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          The independent ways back in, and every application allowed to reach
-          your work.
+          Manage your sign-in methods and linked applications.
         </p>
       </header>
 
@@ -45,15 +44,13 @@ export default async function SettingsPage({
           aria-labelledby="ways-in"
           className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:self-start"
         >
+          <PublicProfileCard />
           <h2
-            className="font-display text-section font-medium tracking-tight text-ink"
+            className="mt-8 font-display text-section font-medium tracking-tight text-ink"
             id="ways-in"
           >
-            Ways in
+            Sign-in methods
           </h2>
-          <div className="mt-5">
-            <PublicProfileCard />
-          </div>
           <div className="mt-5">
             <AccountSettings
               discordNotice={discord ? DISCORD_NOTICES[discord] : undefined}

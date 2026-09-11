@@ -15,7 +15,7 @@ export const RECOGNITION_REGISTERS: RecognitionRegister[] = [
 ];
 
 const NAMES: Record<RecognitionRegister, string> = {
-  accounts: "Someone's profile",
+  accounts: "Account recognition",
   positions: "Illarin positions",
   titles: "Titles and badges",
 };
@@ -59,12 +59,12 @@ export function registerHolds(
 
 export function nothingIn(register: RecognitionRegister): string {
   if (register === "titles") {
-    return "Nothing is defined yet. Give one a mark and it shows as a badge; leave the mark off and it shows as a title.";
+    return "No titles or badges defined. Add an image to create a badge, or leave it out to create a title.";
   }
   if (register === "positions") {
-    return "No position is defined. Illarin's own jobs go here, and holding one lets nobody do anything.";
+    return "No positions defined. Add an Illarin position to show a person's role on their profile. It grants no permissions.";
   }
-  return "Look up a handle to see what that account holds.";
+  return "Look up an account to manage its positions, titles and badges.";
 }
 
 export function unexplained(one: Distinction): boolean {
@@ -107,7 +107,7 @@ export function heldBy(assignments: DistinctionAssignment[]): {
 export function whatIsHeld(assignments: DistinctionAssignment[]): string {
   const { earned, positions } = heldBy(assignments);
   if (earned.length === 0 && positions.length === 0) {
-    return "Nothing on their profile yet";
+    return "No recognition assigned";
   }
   const jobs = `${positions.length} ${positions.length === 1 ? "job" : "jobs"}`;
   return `${jobs} · ${earned.length} earned`;

@@ -146,7 +146,7 @@ export function CatalogSurface({
               <span aria-hidden="true"> · </span>Newest first
             </>
           ) : (
-            "Counting the catalog…"
+            "Loading results…"
           )}
         </p>
         {search ? (
@@ -168,7 +168,7 @@ export function CatalogSurface({
           variant="secondary"
         >
           <SlidersHorizontal aria-hidden="true" />
-          Refine
+          Filters
         </Button>
       </div>
 
@@ -232,7 +232,7 @@ export function CatalogSurface({
               onClick={openContentSetting}
               type="button"
             >
-              Review the setting
+              Change content preference
             </button>
             <button
               aria-label="Dismiss the hidden-results notice"
@@ -351,7 +351,7 @@ function Nothing({
   if (state === "catalog") {
     return creator ? (
       <Message
-        body="Nothing they have published is public yet. Their work will appear here when it is."
+        body="This creator has no publicly listed assets."
         title="Nothing published yet."
       />
     ) : (
@@ -372,8 +372,8 @@ function Nothing({
         }
         body={
           suppressed === 1
-            ? "One creation matches, and it is outside your content preference."
-            : `${suppressed} creations match, and they are outside your content preference.`
+            ? "One matching asset is hidden by your adult-content preference."
+            : `${suppressed} matching assets are hidden by your adult-content preference.`
         }
         title="Matching work is hidden."
       />
@@ -387,7 +387,7 @@ function Nothing({
           Clear the filters
         </Button>
       }
-      body="Nothing matches every filter at once. Broaden the search, or start again from everything."
+      body="Try a different search or remove filters."
       title="No matches."
     />
   );

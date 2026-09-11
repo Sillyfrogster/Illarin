@@ -61,10 +61,11 @@ export function DeletedAssets({
           className="font-display text-title font-medium tracking-[-0.02em]"
           id="deleted-heading"
         >
-          Deleted
+          Deleted assets
         </h2>
         <p className="mt-2 max-w-[56ch] font-prose text-ui text-mute">
-          These creations stay here briefly before their files are cleared.
+          Restore deleted assets within 30 days. After that, they are
+          permanently deleted.
         </p>
 
         {message ? (
@@ -115,7 +116,7 @@ export function DeletedAssets({
           </ul>
         ) : (
           <p className="mt-6 rounded-plate bg-deep px-5 py-8 text-center font-ui text-ui text-mute">
-            Nothing is waiting to be restored.
+            No deleted assets to restore.
           </p>
         )}
       </div>

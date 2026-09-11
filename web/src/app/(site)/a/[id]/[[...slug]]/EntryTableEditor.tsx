@@ -106,7 +106,7 @@ function EntryFields({
         />
       </Field>
 
-      <FieldGroup legend="What switches it on">
+      <FieldGroup legend="Activation">
         <Field hint="one per line" label="Keys">
           <TextAreaField
             disabled={pending}
@@ -120,7 +120,7 @@ function EntryFields({
         <Switch
           checked={entry.enabled}
           hint="A switched-off entry stays in the book and reaches no model."
-          label="Switched on"
+          label="Enabled"
           onChange={(enabled) => onChange({ enabled })}
           pending={pending}
         />
@@ -134,7 +134,7 @@ function EntryFields({
         <Switch
           checked={entry.selective ?? false}
           hint="One of the keys below has to turn up too."
-          label="Needs a second key as well"
+          label="Require a secondary key"
           onChange={(selective) => onChange({ selective })}
           pending={pending}
         />
@@ -150,14 +150,14 @@ function EntryFields({
         </Field>
         <Switch
           checked={entry.caseSensitive ?? false}
-          hint="Off, ledger and Ledger both count."
+          hint="When disabled, keys match regardless of letter case."
           label="Match the case of a key"
           onChange={(caseSensitive) => onChange({ caseSensitive })}
           pending={pending}
         />
       </FieldGroup>
 
-      <FieldGroup legend="Where it goes">
+      <FieldGroup legend="Placement">
         <FieldPair>
           <Field hint="among the entries that fired with it" label="Order">
             <TextField
@@ -182,7 +182,7 @@ function EntryFields({
               }
               value={entry.position ?? ""}
             >
-              <option value="">Leave it to whatever reads the book</option>
+              <option value="">Use app default</option>
               <option value="before_character">Before the character</option>
               <option value="after_character">After the character</option>
             </ChoiceField>
@@ -190,7 +190,7 @@ function EntryFields({
         </FieldPair>
       </FieldGroup>
 
-      <FieldGroup legend="Passes after the first">
+      <FieldGroup legend="Recursive activation">
         <Switch
           checked={recursion.exclude ?? false}
           label="Do not let this entry switch others on"

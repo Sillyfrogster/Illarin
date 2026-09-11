@@ -13,9 +13,9 @@ export function updateStanding(
     return "Illarin is reading the file you uploaded. Readers keep the published version while it works.";
   }
   if (changed) {
-    return "You have changes readers do not have. Review them into an update when you are ready.";
+    return "You have unpublished changes. Review them before publishing an update.";
   }
-  return "Readers have everything on this page.";
+  return "All changes are published.";
 }
 
 export function reviewBlockedReason(

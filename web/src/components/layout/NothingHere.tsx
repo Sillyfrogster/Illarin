@@ -5,8 +5,8 @@ import { DeadEnd } from "@/components/ui/dead-end";
 export function NothingHere() {
   return (
     <DeadEnd
-      heading="Nothing is here"
-      line="Illarin answers the same way for work that was taken down, work its creator made private, and an address that never existed."
+      heading="Page not found"
+      line="Check the address, or browse the catalog to find an asset."
     >
       <Button asChild variant="primary">
         <Link href="/browse">Browse the catalog</Link>

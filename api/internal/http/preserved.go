@@ -20,7 +20,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read what this asset preserves."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load extra file data. Try again."})
 	default:
 		served := make([]PreservedNamespace, 0, len(found))
 		for _, namespace := range found {

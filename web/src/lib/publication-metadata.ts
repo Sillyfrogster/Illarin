@@ -12,7 +12,7 @@ export const ILLARIN_APP = "illarin";
 
 export const BLOG_TITLE = "Illarin Blog";
 
-export const BLOG_HEADING = "The blog";
+export const BLOG_HEADING = "Illarin Blog";
 
 export const BLOG_DESCRIPTION =
   "Official announcements, releases and articles from Illarin and the projects it publishes for.";

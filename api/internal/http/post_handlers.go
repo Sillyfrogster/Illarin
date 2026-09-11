@@ -157,7 +157,7 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParam
 	var request PublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Name the version of the working copy you mean.",
+			"error": "Include the current working-copy version.",
 		})
 		return
 	}
@@ -254,7 +254,7 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsP
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication app."})
 		return
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the archive."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load blog posts. Try again."})
 		return
 	}
 	c.JSON(http.StatusOK, toAPIArchive(found))
@@ -315,13 +315,13 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such post.")
 	case errors.Is(err, publication.ErrRevisionNotFound):
 		refusePublication(c, http.StatusNotFound, CodeNotFound,
-			"This post has no such edition.")
+			"This post has no such revision.")
 	case errors.Is(err, publication.ErrDestinationRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"This post may not send to that destination.")
 	case errors.Is(err, publication.ErrRoleRefused):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
-			"This post may not ping that destination's role.")
+			"This post may not mention that destination's role.")
 	case errors.Is(err, publication.ErrNotPostEditor):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")
@@ -336,36 +336,36 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 			"There is nothing to correct until the post is published.")
 	case errors.Is(err, publication.ErrPostNotPublic):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"Only a post readers can see right now can be withdrawn.")
+			"Only a published post can be withdrawn.")
 	case errors.Is(err, publication.ErrPostNotWithdrawn):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"This post is not out of public view.")
+			"This post is not withdrawn.")
 	case errors.Is(err, publication.ErrPostWithdrawn):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"This post is out of public view. Put it back with republish.")
+			"This post is withdrawn. Republish it to make it public again.")
 	case errors.Is(err, publication.ErrPostDeleted):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"This post has been deleted. Recover it before changing it.")
+			"This post is deleted. Restore it before editing.")
 	case errors.Is(err, publication.ErrPostNotDeleted):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
 			"This post has not been deleted.")
 	case errors.Is(err, publication.ErrPostInPublicView):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"Take the post out of public view before deleting it.")
+			"Withdraw the post before deleting it.")
 	case errors.Is(err, publication.ErrRecoveryExpired):
 		refusePublication(c, http.StatusBadRequest, CodeInvalid,
-			"The window for recovering this post has closed.")
+			"The recovery deadline has passed. This post cannot be restored.")
 	case errors.Is(err, publication.ErrDeletePublished):
 		refusePublication(c, http.StatusForbidden, CodeForbidden,
-			"Only an Illarin admin can delete or recover a post that has been published.")
+			"Only an Illarin admin can delete or restore a previously published post.")
 	case errors.Is(err, publication.ErrSchedulePublishing):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
-			Error: "This edition is going live now and can no longer be changed.",
+			Error: "This revision is being published and can no longer be changed.",
 			Code:  CodeScheduleRunning,
 		})
 	case errors.As(err, &stale):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
-			Error:     "Someone saved this post while you were writing. Reload to carry on.",
+			Error:     "This post was saved in another session. Copy any unsaved text, then reload to edit the latest version.",
 			Code:      CodeStaleVersion,
 			Field:     pointer("version"),
 			Version:   &stale.Version,

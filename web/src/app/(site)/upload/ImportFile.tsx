@@ -15,7 +15,7 @@ import { cn } from "@/lib/cn";
 import { fileWeight } from "@/lib/file-weight";
 
 const UNCONFIRMED =
-  "Confirm the catalog details below, then hand the file over.";
+  "Confirm how to import the catalog details below, then upload the file.";
 
 export function ImportFile({
   onAccepted,
@@ -93,8 +93,8 @@ export function ImportFile({
         Import a file
       </h2>
       <p className="mt-2 text-ui text-mute">
-        A character card, lorebook, preset, theme or pack. Illarin works out
-        which, and brings its catalog details across with it.
+        Upload a character card, lorebook, preset, theme or pack. Illarin
+        detects the format and imports its details.
       </p>
 
       <input
@@ -168,7 +168,7 @@ export function ImportFile({
 
           <div className="flex flex-wrap items-center gap-2">
             <Button loading={pending} onClick={upload} variant="primary">
-              {pending ? "Handing the file over…" : "Hand the file over"}
+              {pending ? "Uploading…" : "Upload file"}
             </Button>
             <Button
               disabled={pending}

@@ -91,7 +91,7 @@ export function RecognitionRegister() {
   }
 
   if (!definitions) {
-    return <Waiting>{failure || "Reading what Illarin gives out…"}</Waiting>;
+    return <Waiting>{failure || "Loading profile recognition…"}</Waiting>;
   }
 
   return (
@@ -99,7 +99,7 @@ export function RecognitionRegister() {
       <RegisterRail
         cells={recognitionCells(definitions)}
         chosen={register}
-        label="What Illarin gives out"
+        label="Profile recognition"
         onChoose={(next) => {
           setRegister(next);
           close();
@@ -192,7 +192,9 @@ function stepTitle(
   account: LookedUpAccount | null,
 ): string {
   if (step.what === "give") {
-    return account ? `Give one to @${account.handle}` : "Give one";
+    return account
+      ? `Assign recognition to @${account.handle}`
+      : "Assign recognition";
   }
   if (step.existing) return step.existing.name;
   return register === "titles" ? "Add a title or badge" : "Add a position";
@@ -200,7 +202,7 @@ function stepTitle(
 
 function stepHint(step: Step, register: Register): string | undefined {
   if (step.what === "give") {
-    return "It shows on their profile at once. None of them lets anyone do anything.";
+    return "Assignments appear on the profile immediately. They do not grant account permissions.";
   }
   if (register === "titles") {
     return "A mark makes it a badge. Without one it is a title.";

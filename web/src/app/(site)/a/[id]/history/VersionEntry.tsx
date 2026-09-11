@@ -54,7 +54,7 @@ export function VersionEntry({
         </h2>
         {current ? (
           <span className="rounded-control bg-accent-wash px-2 py-0.5 text-meta font-medium text-accent">
-            Readers have this
+            Published
           </span>
         ) : null}
       </div>
@@ -158,7 +158,7 @@ function Note({ notes }: { notes: string }) {
           onClick={() => setShown(!shown)}
           type="button"
         >
-          {shown ? "Fold the note" : "Read the whole note"}
+          {shown ? "Show less" : "Read full notes"}
         </button>
       ) : null}
     </div>
