@@ -27,6 +27,7 @@
   --color-field: var(--v-field);
   --color-plane: var(--v-plane);
   --color-deep: var(--v-deep);
+  --color-inset: var(--v-inset);
   --color-ink: var(--v-ink);
   --color-mute: var(--v-mute);
   --color-rule: var(--v-rule);
@@ -133,6 +134,7 @@
   --v-field: light-dark(#ffffff, #090909);
   --v-plane: light-dark(#ffffff, #171717);
   --v-deep: light-dark(#f0f0f0, #262626);
+  --v-inset: light-dark(#f5f5f5, #141414);
   --v-ink: light-dark(#000000, #ffffff);
   --v-mute: light-dark(#636363, #a3a3a3);
   --v-rule: light-dark(#d4d4d4, #404040);

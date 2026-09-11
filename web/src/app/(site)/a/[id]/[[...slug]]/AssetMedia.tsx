@@ -14,14 +14,24 @@ import {
   readSessionVisibility,
   writeAssetReveal,
 } from "@/lib/nsfw-visibility";
+import { CoverControl } from "./CoverControl";
 
 interface AssetMediaProps {
   id: string;
   media: AssetImage[];
   kind: BrowseKind;
+  kindLabel: string;
   name: string;
   isNsfw: boolean | null;
   visibility: NsfwVisibility;
+  writing: boolean;
+}
+
+/** The roles the header shows, leaving a gallery in the creator's own block. */
+const COVER_ROLES = new Set(["avatar", "avatar_alt"]);
+
+export function coverMedia(media: AssetImage[]): AssetImage[] {
+  return media.filter((image) => COVER_ROLES.has(image.role));
 }
 
 function clearVariant(url: string) {
@@ -32,23 +42,24 @@ export function AssetMedia({
   id,
   media,
   kind,
+  kindLabel,
   name,
   isNsfw,
   visibility,
+  writing,
 }: AssetMediaProps) {
   const { account } = useAuth();
   const reduced = useReducedMotion();
-  const presentationMedia = media.filter((image) => image.role !== "pack_item");
-  const [chosen, setChosen] = useState<number | null>(() => {
-    const cover = presentationMedia.findIndex((image) => image.isCover);
-    return cover >= 0 ? cover : null;
-  });
+  const presentationMedia = coverMedia(media);
+  const recorded = presentationMedia.findIndex((image) => image.isCover);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const here = chosen ?? (recorded >= 0 ? recorded : null);
   const [failed, setFailed] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [enlarged, setEnlarged] = useState(false);
   const [signedOutVisibility, setSignedOutVisibility] =
     useState<NsfwVisibility>();
-  const shown = chosen === null ? undefined : presentationMedia[chosen];
+  const shown = here === null ? undefined : presentationMedia[here];
   const useFallback = failed || !shown;
   const showClear =
     visibility === "shown" || signedOutVisibility === "shown" || revealed;
@@ -134,17 +145,16 @@ export function AssetMedia({
         ) : null}
       </motion.div>
 
-      {presentationMedia.length > 1 ||
-      (presentationMedia.length === 1 && chosen === null) ? (
+      {presentationMedia.length > 1 ? (
         <ul className="mt-3 grid list-none grid-cols-5 gap-2">
           {presentationMedia.map((image, index) => (
             <li key={image.id}>
               <button
-                aria-current={index === chosen}
+                aria-current={index === here}
                 aria-label={`Picture ${index + 1} of ${presentationMedia.length}`}
                 className={cn(
                   "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-200 motion-reduce:transition-none",
-                  index === chosen
+                  index === here
                     ? "inset-ring-2 inset-ring-accent"
                     : "opacity-70 hover:-translate-y-0.5 hover:opacity-100",
                 )}
@@ -169,6 +179,14 @@ export function AssetMedia({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {writing ? (
+        <CoverControl
+          assetId={id}
+          hasCover={presentationMedia.length > 0}
+          kindLabel={kindLabel}
+        />
       ) : null}
 
       {enlarged && shown ? (

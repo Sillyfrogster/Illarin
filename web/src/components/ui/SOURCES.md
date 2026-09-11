@@ -24,13 +24,6 @@ variant: the rule scales in from the left on hover and keyboard focus and
 retracts to the right. It adds the current-page state and expresses the source's
 stylesheet as utilities on one component.
 
-`ui/perspective-carousel.tsx` adapts Vengeance UI's perspective carousel, which
-turns a row of pictures around a centre slide. It keeps the source's rotation
-and depth, and replaces its fixed square slides with `next/image` under
-`object-contain` at a width the creator picks, so a picture keeps its own
-aspect. It adds a roving tab stop, arrow keys on each slide, 44px controls and
-a `useReducedMotion` path that jumps rather than turns.
-
 `ui/fullscreen-preview.tsx` adapts Vengeance UI's fullscreen preview, keeping
 its portal, its black backdrop, its Escape key and its scroll lock on the body.
 It takes one picture rather than arbitrary children, moves focus to the close
@@ -44,8 +37,9 @@ when the clipboard refuses, and a 44px target.
 its layout spring and the fade-and-rise of the panel, so a region whose contents
 change while it is open settles into the new height rather than jumping. It
 replaces the source's clickable div and text plus sign with a button that reports
-`aria-expanded` and names its panel, gives the panel a lucide chevron, and holds
-the layout still under reduced motion.
+`aria-expanded` and names its panel, gives the panel a lucide chevron, holds
+the layout still under reduced motion, and adds a `trailing` slot so a caller can
+read the name first and the explanation after it.
 
 `ui/travelling-highlight.tsx` adapts Vengeance UI's highlight grid, keeping the
 one plate that glides between cells and the sheen laid over it. It replaces the
@@ -56,7 +50,6 @@ resizes, and skips the slide on its first placement.
 
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/notch-navbar.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/line-hover-link.json
-- https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/perspective-carousel.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/fullscreen-preview.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/copy-button.json
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/morphing-disclosure.json

@@ -1,14 +1,14 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import {
   type CSSProperties,
   useCallback,
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
+import { Arrive } from "@/components/ui/arrive";
+import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type {
   AssetBlock,
   AssetElement,
@@ -34,7 +34,6 @@ import { pageWashVariables } from "@/lib/quiet-page-art";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
 import { ContentsBar } from "./ContentsBar";
 import { ElementBody } from "./ElementBody";
-import { ElementReader } from "./ElementReader";
 import {
   type ArtPlacement,
   EmptyPage,
@@ -66,10 +65,6 @@ export function AssetBlocks({
   shellClassName: string;
 }) {
   const workspace = useWorkspace();
-  const [reading, setReading] = useState<{
-    blockId: string;
-    element: AssetElement;
-  } | null>(null);
   const rowsNode = useRef<HTMLDivElement | null>(null);
   const known = useRef<Set<string> | null>(null);
 
@@ -122,17 +117,6 @@ export function AssetBlocks({
     rows: rowsNode,
   });
 
-  function dismissReader() {
-    const elementId = reading?.element.id;
-    setReading(null);
-    if (!elementId) return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(`read-${elementId}`)?.focus({
-        preventScroll: true,
-      });
-    });
-  }
-
   return (
     <>
       <ContentsBar
@@ -172,130 +156,122 @@ export function AssetBlocks({
                 className="grid grid-cols-1 items-start gap-14 md:grid-cols-12 md:gap-[var(--block-grid-gap)] md:gap-y-[5.5rem]"
                 key={row.map((item) => item.block.id).join(":")}
               >
-                {row.map(({ block, columns, startColumn }) => (
-                  <article
-                    className={cn(
-                      "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
-                      "col-span-full md:[grid-column:var(--block-start)_/_span_var(--block-columns)]",
-                      writing &&
-                        "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-200 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
-                      drag.dragging === block.id && "opacity-45",
-                      drag.over === block.id &&
-                        "after:!opacity-100 after:!ring-2 after:!ring-accent",
-                      writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
-                    )}
-                    data-block-id={block.id}
-                    data-dragging={
-                      drag.dragging === block.id ? true : undefined
-                    }
-                    data-hidden={writing && block.hidden ? true : undefined}
-                    id={`block-${block.id}`}
+                {row.map(({ block, columns, startColumn }, place) => (
+                  <Arrive
+                    className="col-span-full min-w-0 md:[grid-column:var(--block-start)_/_span_var(--block-columns)]"
                     key={block.id}
+                    place={writing ? 0 : place}
                     style={
                       {
                         "--block-columns": columns,
                         "--block-start": startColumn,
                       } as CSSProperties
                     }
-                    {...(writing ? drag.target(block.id, block.position) : {})}
                   >
-                    <header
+                    <article
                       className={cn(
-                        "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
-                        writing && block.hidden ? "opacity-50" : null,
+                        "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
+                        writing &&
+                          "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-200 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
+                        drag.dragging === block.id && "opacity-45",
+                        drag.over === block.id &&
+                          "after:!opacity-100 after:!ring-2 after:!ring-accent",
+                        writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
                       )}
-                    >
-                      <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                        <BlockTitle block={block} />
-                        {writing && block.required ? (
-                          <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
-                            {block.hideable ? "Required" : "Always shown"}
-                          </span>
-                        ) : null}
-                        <BlockCounts elements={block.elements} />
-                      </div>
-                      {writing ? (
-                        <BlockTools
-                          block={block}
-                          grip={drag.grip(block.id)}
-                          position={block.position}
-                          suggestedWidth={suggestedWidths[block.id]}
-                          total={blocks.length}
-                        />
-                      ) : null}
-                    </header>
-                    {writing && block.hidden ? (
-                      <div className="-mt-1 mb-5 flex flex-col items-stretch justify-between gap-3 rounded-control bg-plane p-3 text-meta text-mute sm:flex-row sm:items-center">
-                        <span>
-                          Hidden from readers. This content is still included in
-                          downloads.
-                        </span>
-                        <button
-                          className="min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45"
-                          onClick={() =>
-                            workspace.arrangement.setHidden(block.id, false)
-                          }
-                          type="button"
-                        >
-                          Show block
-                        </button>
-                      </div>
-                    ) : null}
-                    <div
-                      className={cn(
-                        "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
-                        writing && block.hidden ? "opacity-50" : null,
-                      )}
-                      data-block-content
-                      style={
-                        {
-                          "--element-tracks": elementTracks(
-                            block.layout,
-                            block.elements.length,
-                          ),
-                        } as CSSProperties
+                      data-block-id={block.id}
+                      data-dragging={
+                        drag.dragging === block.id ? true : undefined
                       }
+                      data-hidden={writing && block.hidden ? true : undefined}
+                      id={`block-${block.id}`}
+                      {...(writing
+                        ? drag.target(block.id, block.position)
+                        : {})}
                     >
-                      {block.elements.map((element) => (
-                        <div
-                          data-empty={element.isEmpty ? true : undefined}
-                          key={element.id}
-                        >
-                          {writing ? (
-                            <EditableElementSection
-                              block={block}
-                              element={element}
-                              images={images}
-                              markEmpty={!invited}
-                              onReadMore={() =>
-                                setReading({ blockId: block.id, element })
-                              }
-                            />
-                          ) : (
-                            <ElementBody
-                              blockElements={block.elements.length}
-                              blockTitle={block.title}
-                              element={element}
-                              images={images}
-                              isOwner={false}
-                              markEmpty={!invited}
-                              onReadMore={() =>
-                                setReading({ blockId: block.id, element })
-                              }
-                            />
-                          )}
-                          {reading?.blockId === block.id &&
-                          reading.element.id === element.id ? (
-                            <ElementReader
-                              element={reading.element}
-                              images={images}
-                              onDismiss={dismissReader}
-                            />
+                      <header
+                        className={cn(
+                          "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
+                          writing && block.hidden ? "opacity-50" : null,
+                        )}
+                      >
+                        <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                          <BlockTitle block={block} />
+                          {writing && block.required ? (
+                            <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
+                              {block.hideable ? "Required" : "Always shown"}
+                            </span>
                           ) : null}
+                          <BlockCounts elements={block.elements} />
                         </div>
-                      ))}
-                    </div>
-                  </article>
+                        {writing ? (
+                          <BlockTools
+                            block={block}
+                            grip={drag.grip(block.id)}
+                            position={block.position}
+                            suggestedWidth={suggestedWidths[block.id]}
+                            total={blocks.length}
+                          />
+                        ) : null}
+                      </header>
+                      {writing && block.hidden ? (
+                        <div className="-mt-1 mb-5 flex flex-col items-stretch justify-between gap-3 rounded-control bg-plane p-3 text-meta text-mute sm:flex-row sm:items-center">
+                          <span>
+                            Hidden from readers. This content is still included
+                            in downloads.
+                          </span>
+                          <button
+                            className="min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45"
+                            onClick={() =>
+                              workspace.arrangement.setHidden(block.id, false)
+                            }
+                            type="button"
+                          >
+                            Show block
+                          </button>
+                        </div>
+                      ) : null}
+                      <div
+                        className={cn(
+                          "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
+                          writing && block.hidden ? "opacity-50" : null,
+                        )}
+                        data-block-content
+                        style={
+                          {
+                            "--element-tracks": elementTracks(
+                              block.layout,
+                              block.elements.length,
+                            ),
+                          } as CSSProperties
+                        }
+                      >
+                        {block.elements.map((element) => (
+                          <div
+                            data-empty={element.isEmpty ? true : undefined}
+                            key={element.id}
+                          >
+                            {writing ? (
+                              <EditableElementSection
+                                block={block}
+                                element={element}
+                                images={images}
+                                markEmpty={!invited}
+                              />
+                            ) : (
+                              <ElementBody
+                                blockElements={block.elements.length}
+                                blockTitle={block.title}
+                                element={element}
+                                images={images}
+                                isOwner={false}
+                                markEmpty={!invited}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  </Arrive>
                 ))}
                 {ornament?.row === rowIndex ? (
                   <Ornament
@@ -322,42 +298,26 @@ export function AssetBlocks({
           </div>
         )}
         {modelContent.length > 0 ? (
-          <details className="group mt-section rounded-plate bg-deep/70">
-            <summary className="flex min-h-16 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-1 p-5 outline-offset-3 [&::-webkit-details-marker]:hidden">
-              <span className="text-ui font-medium text-ink">
-                Model instructions
+          <MorphingDisclosure
+            className="mt-section rounded-plate bg-deep/70 px-5 py-3"
+            summary="Model instructions"
+            trailing={
+              <span className="font-ui text-meta text-mute">
+                What the creator tells the model, kept out of the reading order
               </span>
-              <span className="text-meta text-mute">
-                System prompt and post-history instructions
-                <ChevronDown
-                  aria-hidden="true"
-                  className="ml-3 inline size-4 align-middle transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+            }
+          >
+            <div className="grid gap-8 pt-5 pb-2">
+              {modelContent.map(({ element }) => (
+                <ElementBody
+                  element={element}
+                  images={images}
+                  isOwner={false}
+                  key={element.id}
                 />
-              </span>
-            </summary>
-            <div className="grid gap-7 px-5 pb-5">
-              {modelContent.map(({ block, element }) => (
-                <div key={element.id}>
-                  <ElementBody
-                    element={element}
-                    images={images}
-                    isOwner={false}
-                    onReadMore={() =>
-                      setReading({ blockId: block.id, element })
-                    }
-                  />
-                  {reading?.blockId === block.id &&
-                  reading.element.id === element.id ? (
-                    <ElementReader
-                      element={reading.element}
-                      images={images}
-                      onDismiss={dismissReader}
-                    />
-                  ) : null}
-                </div>
               ))}
             </div>
-          </details>
+          </MorphingDisclosure>
         ) : null}
       </div>
     </>

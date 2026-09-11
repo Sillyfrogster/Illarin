@@ -6,11 +6,14 @@ import type { AssetBlock, AssetElement, AssetImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
 import { ElementBody } from "../ElementBody";
-import { ITEM_NAME, RUNG, STACK } from "../element-runs";
+import { ELEMENT_NAME, ITEM_NAME } from "../element-runs";
 import { EditableText } from "./EditableText";
 import { ElementTools } from "./ElementTools";
 import { isEmptyContent, writesInPlace } from "./save";
 import { useWorkspace } from "./state";
+
+const EDITABLE_ITEM =
+  "flex min-w-0 flex-col gap-1.5 px-4 py-3.5 not-first:border-rule/45 not-first:border-t";
 
 const ADD =
   "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
@@ -30,13 +33,11 @@ export function EditableElementSection({
   element,
   images,
   markEmpty,
-  onReadMore,
 }: {
   block: AssetBlock;
   element: AssetElement;
   images: AssetImage[];
   markEmpty: boolean;
-  onReadMore: () => void;
 }) {
   const tools = <ElementTools block={block} element={element} />;
 
@@ -49,7 +50,6 @@ export function EditableElementSection({
         images={images}
         isOwner
         markEmpty={markEmpty}
-        onReadMore={onReadMore}
         tools={tools}
       />
     );
@@ -60,13 +60,9 @@ export function EditableElementSection({
     title: block.title,
   });
   return (
-    <section className="group/element flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size]">
+    <section className="group/element flex min-w-0 flex-col gap-3 [container-name:element] [container-type:inline-size]">
       <div className="flex items-start justify-between gap-4">
-        {label ? (
-          <h3 className="font-prose text-label text-mute">{label}</h3>
-        ) : (
-          <span />
-        )}
+        {label ? <h3 className={ELEMENT_NAME}>{label}</h3> : <span />}
         {tools}
       </div>
       <EditableElement blockId={block.id} element={element} />
@@ -118,7 +114,7 @@ export function EditableElement({
       >
         {texts.map((item, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: A key that moved with the writing would take the caret with it.
-          <li className={cn(RUNG, "group/item relative")} key={index}>
+          <li className={cn(EDITABLE_ITEM, "group/item relative")} key={index}>
             <Drop
               label={`Remove ${item.name || `${noun} ${index + 1}`}`}
               onDrop={() =>
@@ -127,7 +123,7 @@ export function EditableElement({
             />
             {field([index, "name"], {
               as: "p",
-              className: cn(ITEM_NAME, "!text-meta"),
+              className: ITEM_NAME,
               label: `Name of ${noun} ${index + 1}`,
               onChange: (name) =>
                 write({ texts: replace(texts, index, { ...item, name }) }),
@@ -158,7 +154,7 @@ export function EditableElement({
       >
         {turns.map((turn, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: A key that moved with the writing would take the caret with it.
-          <li className={cn(RUNG, "group/item relative")} key={index}>
+          <li className={cn(EDITABLE_ITEM, "group/item relative")} key={index}>
             <Drop
               label={`Remove turn ${index + 1}`}
               onDrop={() =>
@@ -167,7 +163,7 @@ export function EditableElement({
             />
             {field([index, "speaker"], {
               as: "p",
-              className: cn(ITEM_NAME, "!text-meta"),
+              className: ITEM_NAME,
               label: `Speaker of turn ${index + 1}`,
               onChange: (speaker) =>
                 write({ turns: replace(turns, index, { ...turn, speaker }) }),
@@ -252,7 +248,7 @@ export function EditableElement({
       >
         {links.map((link, index) => (
           <li
-            className={cn(RUNG, "group/item relative flex flex-col gap-1")}
+            className={cn(EDITABLE_ITEM, "group/item relative")}
             // biome-ignore lint/suspicious/noArrayIndexKey: A key that moved with the writing would take the caret with it.
             key={index}
           >
@@ -336,7 +332,9 @@ function Run({
 }) {
   return (
     <>
-      <List className={STACK}>{children}</List>
+      <List className="flex list-none flex-col rounded-plate bg-inset">
+        {children}
+      </List>
       <Add label={addLabel} onAdd={onAdd} />
     </>
   );

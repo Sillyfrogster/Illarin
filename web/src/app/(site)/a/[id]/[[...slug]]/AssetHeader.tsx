@@ -10,7 +10,7 @@ import { assetDisplayName } from "@/lib/asset-name";
 import { cn } from "@/lib/cn";
 import { protectedAppLabel } from "@/lib/protected-apps";
 import { formattingWasRemoved } from "@/lib/rich-text";
-import { AssetMedia } from "./AssetMedia";
+import { AssetMedia, coverMedia } from "./AssetMedia";
 import { GetAsset } from "./GetAsset";
 import { LatestUpdate } from "./LatestUpdate";
 import { WithholdNotice } from "./WithholdNotice";
@@ -61,6 +61,8 @@ export function AssetHeader({
     : RATINGS.filter((rating) => rating.value !== null);
   const blurbCount = blurbCharacterCount(workspace.identity.blurb);
   const blurbTrouble = blurbLimitMessage(workspace.identity.blurb);
+  const covers = coverMedia(asset.media);
+  const showsMedia = covers.length > 0 || (asset.isOwner && writing);
 
   return (
     <div className={shellClassName}>
@@ -92,10 +94,10 @@ export function AssetHeader({
 
       <div
         className={cn(
-          "grid items-center gap-8 py-8 lg:gap-12 lg:py-14",
-          asset.media.length > 0
-            ? "md:grid-cols-2 lg:grid-cols-[1fr_minmax(260px,0.9fr)_1fr]"
-            : "md:grid-cols-[1.15fr_1fr]",
+          "grid gap-8 py-8 lg:gap-12 lg:py-14",
+          showsMedia
+            ? "items-center md:grid-cols-2 lg:grid-cols-[1fr_minmax(260px,0.9fr)_1fr]"
+            : "items-start md:grid-cols-[1.1fr_1fr]",
         )}
       >
         <div className="min-w-0">
@@ -190,15 +192,17 @@ export function AssetHeader({
           </p>
         </div>
 
-        {asset.media.length > 0 ? (
+        {showsMedia ? (
           <div className="min-w-0 md:row-span-2 lg:row-span-1">
             <AssetMedia
               id={asset.id}
               isNsfw={asset.isNsfw}
               kind={asset.kind}
+              kindLabel={kind.toLowerCase()}
               media={asset.media}
               name={asset.name}
               visibility={asset.visibility}
+              writing={asset.isOwner && writing}
             />
           </div>
         ) : null}

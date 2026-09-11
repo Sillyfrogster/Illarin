@@ -137,6 +137,9 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	}
 	switch in.Role {
 	case MediaAvatar:
+		if err := supersedeCoverMedia(ctx, tx, in.AssetID, id); err != nil {
+			return Media{}, err
+		}
 		if err := setCoverMedia(ctx, tx, in.AssetID, &id); err != nil {
 			return Media{}, err
 		}
@@ -298,6 +301,19 @@ func insertAssetMedia(
 		if err != nil {
 			return fmt.Errorf("record extracted media: %w", err)
 		}
+	}
+	return nil
+}
+
+// supersedeCoverMedia retires the picture a new display picture replaces.
+func supersedeCoverMedia(ctx context.Context, tx pgx.Tx, assetID, keep uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		update asset_media
+		   set is_current = false
+		 where asset_id = $1 and id <> $2 and is_current
+		   and role in ('avatar', 'avatar_alt')
+	`, assetID, keep); err != nil {
+		return fmt.Errorf("supersede cover media: %w", err)
 	}
 	return nil
 }

@@ -155,6 +155,46 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 	}
 }
 
+func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
+	svc, _ := newTestService(t)
+	ownerID := uuid.New()
+	created, err := svc.Create(context.Background(), CreateInput{
+		OwnerID: ownerID, Kind: "lorebook", Filename: "book.bin",
+		File: bytes.NewReader([]byte("book")), Name: "Book",
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	var newest uuid.UUID
+	for range 3 {
+		added, err := svc.AddMedia(context.Background(), AddMediaInput{
+			OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatar,
+			File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
+		}, currentCandidate(t, svc, created.ID))
+		if err != nil {
+			t.Fatalf("Add display picture: %v", err)
+		}
+		newest = added.ID
+	}
+	rows, err := svc.pool.Query(context.Background(),
+		`select id from asset_media where asset_id = $1 and is_current`, created.ID)
+	if err != nil {
+		t.Fatalf("read current media: %v", err)
+	}
+	defer rows.Close()
+	current := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("scan current media: %v", err)
+		}
+		current = append(current, id)
+	}
+	if len(current) != 1 || current[0] != newest {
+		t.Fatalf("current pictures = %v, want the newest one alone (%s)", current, newest)
+	}
+}
+
 func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()

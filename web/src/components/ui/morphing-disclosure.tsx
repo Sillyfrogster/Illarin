@@ -12,11 +12,13 @@ export function MorphingDisclosure({
   children,
   className,
   lead,
+  trailing,
 }: {
   summary: ReactNode;
   children: ReactNode;
   className?: string;
   lead?: ReactNode;
+  trailing?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const still = useReducedMotion();
@@ -48,6 +50,7 @@ export function MorphingDisclosure({
             {summary}
           </span>
         </button>
+        {trailing}
       </div>
 
       <AnimatePresence initial={false}>

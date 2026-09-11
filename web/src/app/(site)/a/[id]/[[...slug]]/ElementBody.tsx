@@ -4,15 +4,16 @@ import { UserRound } from "lucide-react";
 import Image from "next/image";
 import {
   type CSSProperties,
-  Fragment,
   type ReactNode,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
+import { Mosaic } from "@/components/media/Mosaic";
 import { CopyButton } from "@/components/ui/copy-button";
-import { PerspectiveCarousel } from "@/components/ui/perspective-carousel";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
+import { Run, RunItem } from "@/components/ui/run";
 import type {
   AssetElement,
   AssetImage,
@@ -23,7 +24,16 @@ import { elementLabel } from "@/lib/element-label";
 import { contentItemCount, excerptDefinition } from "@/lib/page-arrangement";
 import { nameSlot } from "@/lib/preset-slots";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
-import { CODE, ITEM_NAME, RUNG, STACK } from "./element-runs";
+import {
+  CODE,
+  ELEMENT_NAME,
+  ITEM_BODY,
+  ITEM_META,
+  ITEM_NAME,
+  PASSAGE,
+  PASSAGE_NAME,
+  PROSE,
+} from "./element-runs";
 import { Lorebook } from "./Lorebook";
 import {
   PromptList,
@@ -32,8 +42,9 @@ import {
   VariableSchema,
 } from "./PresetElements";
 import { ThemePalette, ThemeStyles } from "./ThemeElements";
+import { Unfold } from "./Unfold";
 
-const ITEM_WIDTHS = { small: 168, medium: 224, large: 296 };
+const ROW_HEIGHTS = { small: 132, medium: 190, large: 260 };
 
 export function ElementBody({
   element,
@@ -42,7 +53,6 @@ export function ElementBody({
   blockTitle,
   blockElements = 2,
   markEmpty = true,
-  onReadMore,
   tools,
 }: {
   element: AssetElement;
@@ -51,7 +61,6 @@ export function ElementBody({
   blockTitle?: string;
   blockElements?: number;
   markEmpty?: boolean;
-  onReadMore?: () => void;
   tools?: ReactNode;
 }) {
   if (element.isEmpty && !isOwner) return null;
@@ -60,12 +69,20 @@ export function ElementBody({
     elements: blockElements,
     title: blockTitle,
   });
+  const facts = element.isEmpty ? "" : element.facts.join(" · ");
   return (
-    <section className="group/element flex min-w-0 flex-col gap-2.5 text-mute [container-name:element] [container-type:inline-size] [&_p]:text-prose">
+    <section className="group/element flex min-w-0 flex-col gap-3 [container-name:element] [container-type:inline-size]">
       {label || tools ? (
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           {label ? (
-            <h3 className="font-prose text-label text-mute">{label}</h3>
+            <h3 className={ELEMENT_NAME}>
+              {label}
+              {facts ? (
+                <span className="ml-2.5 font-ui text-meta font-normal text-mute">
+                  {facts}
+                </span>
+              ) : null}
+            </h3>
           ) : (
             <span />
           )}
@@ -73,7 +90,7 @@ export function ElementBody({
         </div>
       ) : null}
       {element.isEmpty && markEmpty ? (
-        <p className="!text-label text-mute">Empty</p>
+        <p className="font-ui text-label text-mute">Empty</p>
       ) : null}
       {element.isEmpty ? null : (
         <>
@@ -81,7 +98,6 @@ export function ElementBody({
             element={element}
             images={images}
             isOwner={isOwner}
-            onReadMore={onReadMore}
           />
           {formattingWasRemoved(richTextsOf(element)) ? (
             <FormattingNotice />
@@ -96,22 +112,22 @@ function ExcerptedElementContent({
   element,
   images,
   isOwner,
-  onReadMore,
 }: {
   element: AssetElement;
   images: AssetImage[];
   isOwner: boolean;
-  onReadMore?: () => void;
 }) {
   const definition = excerptDefinition(element.type);
   const excerpt = useRef<HTMLDivElement>(null);
   const [lineCut, setLineCut] = useState(false);
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   const itemCount = visibleItemCount(element);
   const hasItemCut =
     definition.unit === "items" && itemCount > definition.limit;
 
   useEffect(() => {
-    if (definition.unit !== "lines") return;
+    if (definition.unit !== "lines" || open) return;
 
     const node = excerpt.current;
     if (!node) return;
@@ -122,10 +138,7 @@ function ExcerptedElementContent({
     measure();
     observer.observe(node);
     return () => observer.disconnect();
-  }, [definition.unit]);
-
-  const isCut = definition.unit === "lines" ? lineCut : hasItemCut;
-  const itemLimit = definition.unit === "items" ? definition.limit : undefined;
+  }, [definition.unit, open]);
 
   if (definition.unit === "self" || element.type === "image_set") {
     return (
@@ -133,18 +146,41 @@ function ExcerptedElementContent({
     );
   }
 
+  const isCut = definition.unit === "lines" ? lineCut : hasItemCut;
+  const clipped = definition.unit === "lines" && !open;
+  const itemLimit =
+    definition.unit === "items" && !open ? definition.limit : undefined;
+
+  function close() {
+    setOpen(false);
+    window.requestAnimationFrame(() => {
+      const top = excerpt.current?.getBoundingClientRect().top ?? 0;
+      if (top >= 0) return;
+      excerpt.current?.scrollIntoView({ block: "center" });
+    });
+  }
+
   return (
-    <>
+    <Unfold
+      id={`read-${element.id}`}
+      isCut={isCut}
+      more={excerptControlLabel(element, itemCount)}
+      onToggle={() => (open ? close() : setOpen(true))}
+      open={open}
+      panelId={panelId}
+    >
       <div
         className={cn(
           "relative min-w-0",
-          definition.unit === "lines" &&
+          clipped &&
             "max-h-[calc(var(--excerpt-lines)*1.78rem)] overflow-hidden",
-          isCut &&
+          clipped &&
+            isCut &&
             "[mask-image:linear-gradient(to_bottom,#000_calc(100%-62px),transparent)]",
         )}
         data-line-excerpt={definition.unit === "lines" ? true : undefined}
-        data-truncated={isCut ? true : undefined}
+        data-truncated={isCut && !open ? true : undefined}
+        id={panelId}
         ref={excerpt}
         style={
           definition.unit === "lines"
@@ -159,18 +195,7 @@ function ExcerptedElementContent({
           itemLimit={itemLimit}
         />
       </div>
-      {isCut && onReadMore ? (
-        <button
-          className="self-start text-meta font-semibold text-accent underline underline-offset-4 outline-offset-3 hover:text-ink"
-          data-read-more
-          id={`read-${element.id}`}
-          onClick={onReadMore}
-          type="button"
-        >
-          {excerptControlLabel(element, itemCount)}
-        </button>
-      ) : null}
-    </>
+    </Unfold>
   );
 }
 
@@ -183,10 +208,8 @@ function visibleItemCount(element: AssetElement): number {
 }
 
 function excerptControlLabel(element: AssetElement, itemCount: number): string {
-  if (element.type === "prose") {
-    return `the rest of ${element.label.trim().toLocaleLowerCase() || "this text"}`;
-  }
-  return `all ${itemCount} ${excerptNoun(element)}`;
+  if (element.type === "prose") return "Read the rest";
+  return `Show all ${itemCount} ${excerptNoun(element)}`;
 }
 
 function excerptNoun(element: AssetElement): string {
@@ -239,27 +262,32 @@ export function ElementContent({
     return element.display === "verbatim" ? (
       <Verbatim text={content.text} />
     ) : (
-      <RichText className="max-w-[70ch]" text={content.text} />
+      <RichText className={cn(PROSE, "max-w-[70ch]")} text={content.text} />
     );
   }
 
   if (element.type === "text_set" && "texts" in content) {
     const verbatim = element.display === "verbatim";
     const named = element.role === "prompt_nudges";
-    return (
-      <ol className={STACK}>
+    return verbatim ? (
+      <ol className="flex list-none flex-col gap-4">
         {content.texts.slice(0, itemLimit).map((item, index) => (
-          <li className={RUNG} key={`${index}-${item.name ?? ""}`}>
+          <li key={`${index}-${item.name ?? ""}`}>
             {item.name ? (
-              <p className={cn(ITEM_NAME, "!text-meta")}>
+              <p className={cn(ITEM_NAME, "mb-1.5")}>
                 {named ? nameSlot(item.name).name : item.name}
               </p>
             ) : null}
-            {verbatim ? (
-              <Verbatim text={item.text} />
-            ) : (
-              <RichText text={item.text} />
-            )}
+            <Verbatim text={item.text} />
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <ol className={PASSAGE}>
+        {content.texts.slice(0, itemLimit).map((item, index) => (
+          <li className="min-w-0" key={`${index}-${item.name ?? ""}`}>
+            {item.name ? <p className={PASSAGE_NAME}>{item.name}</p> : null}
+            <RichText className={cn(PROSE, "max-w-[70ch]")} text={item.text} />
           </li>
         ))}
       </ol>
@@ -268,11 +296,11 @@ export function ElementContent({
 
   if (element.type === "dialogue_sample" && "turns" in content) {
     return (
-      <ol className={STACK}>
+      <ol className="flex list-none flex-col gap-5">
         {content.turns.slice(0, itemLimit).map((turn, index) => (
-          <li className={RUNG} key={`${index}-${turn.speaker}`}>
-            <p className={cn(ITEM_NAME, "!text-meta")}>{turn.speaker}</p>
-            <RichText text={turn.text} />
+          <li className="min-w-0" key={`${index}-${turn.speaker}`}>
+            <p className={PASSAGE_NAME}>{turn.speaker}</p>
+            <RichText className={cn(PROSE, "max-w-[70ch]")} text={turn.text} />
           </li>
         ))}
       </ol>
@@ -281,31 +309,33 @@ export function ElementContent({
 
   if (element.type === "field_list" && "fields" in content) {
     return (
-      <dl className="grid items-baseline gap-x-5 gap-y-3 [grid-template-columns:fit-content(38%)_minmax(0,1fr)] @max-[330px]:![grid-template-columns:minmax(0,1fr)] @max-[330px]:gap-y-1">
+      <Run as="dl">
         {content.fields.slice(0, itemLimit).map((field, index) => (
-          <Fragment key={`${index}-${field.name ?? ""}`}>
-            <dt className="text-label text-mute [overflow-wrap:anywhere]">
+          <RunItem
+            as="div"
+            className="!flex-row !gap-x-5 @max-[330px]:!flex-col @max-[330px]:!gap-y-0.5"
+            itemKey={`${index}`}
+            key={`${index}-${field.name ?? ""}`}
+          >
+            <dt className={cn(ITEM_META, "basis-[38%] shrink-0")}>
               {field.name || "Unnamed"}
             </dt>
-            <dd className="text-ui text-ink [overflow-wrap:anywhere] [&_p]:!text-ui [&_p]:!leading-normal [&_p]:text-ink">
+            <dd className={cn(ITEM_BODY, "min-w-0 flex-1 text-ink")}>
               <RichText text={field.value} />
             </dd>
-          </Fragment>
+          </RunItem>
         ))}
-      </dl>
+      </Run>
     );
   }
 
   if (element.type === "link_list" && "links" in content) {
     return (
-      <ul className="flex list-none flex-col gap-3">
+      <Run>
         {content.links.slice(0, itemLimit).map((link, index) => (
-          <li
-            className={cn(RUNG, "flex flex-col gap-1")}
-            key={`${index}-${link.url}`}
-          >
+          <RunItem itemKey={`${index}`} key={`${index}-${link.url}`}>
             <a
-              className="text-ui font-medium text-ink underline decoration-accent/55 underline-offset-[3px] [overflow-wrap:anywhere] hover:decoration-accent"
+              className="font-ui text-ui font-medium text-ink underline decoration-accent/55 underline-offset-[3px] [overflow-wrap:anywhere] hover:decoration-accent"
               href={link.url}
               rel="noreferrer nofollow"
               target="_blank"
@@ -313,14 +343,11 @@ export function ElementContent({
               {link.label || link.url}
             </a>
             {link.note ? (
-              <RichText
-                className="[&_p]:!text-meta [&_p]:!leading-normal"
-                text={link.note}
-              />
+              <RichText className={ITEM_BODY} text={link.note} />
             ) : null}
-          </li>
+          </RunItem>
         ))}
-      </ul>
+      </Run>
     );
   }
 
@@ -376,7 +403,7 @@ export function ElementContent({
 function Verbatim({ text }: { text: string }) {
   return (
     <div className="relative">
-      <pre className={cn(CODE, "max-w-[70ch] pr-14")}>{text}</pre>
+      <pre className={cn(CODE, "max-w-[76ch] pr-14 text-ink/90")}>{text}</pre>
       <CopyButton
         className="absolute top-1 right-1"
         label="Copy this text"
@@ -413,33 +440,11 @@ function Gallery({
 
   if (pictures.length === 0) return null;
 
-  if (pictures.length === 1) {
-    const only = pictures[0];
-    return (
-      <figure className="max-w-90">
-        <Image
-          alt={only.name || ""}
-          className="h-auto w-full rounded-plate bg-deep"
-          height={only.height}
-          sizes="360px"
-          src={only.src}
-          unoptimized
-          width={only.width}
-        />
-        {only.name ? (
-          <figcaption className="mt-2 text-label text-mute [overflow-wrap:anywhere]">
-            {only.name}
-          </figcaption>
-        ) : null}
-      </figure>
-    );
-  }
-
   return (
-    <PerspectiveCarousel
+    <Mosaic
       label={element.label || "Gallery"}
       pictures={pictures}
-      slideWidth={ITEM_WIDTHS[element.itemSize ?? "medium"]}
+      rowHeight={ROW_HEIGHTS[element.itemSize ?? "medium"]}
     />
   );
 }
@@ -464,21 +469,22 @@ function PackItems({
 }) {
   const imagesById = new Map(images.map((image) => [image.id, image]));
   return (
-    <ol className="flex list-none flex-col">
+    <Run as="ol">
       {content.records.slice(0, itemLimit).map((record, index) => {
         const avatar = record.avatarUrl
           ? imagesById.get(record.avatarUrl)
           : undefined;
         return (
-          <li
-            className="grid grid-cols-[62px_minmax(0,1fr)] gap-4 py-4 not-first:border-rule not-first:border-t sm:grid-cols-[80px_minmax(0,1fr)]"
+          <RunItem
+            className="!flex-row !gap-x-4 py-4"
+            itemKey={record.id ?? `${index}`}
             key={record.id ?? `${record.lumiaName}-${index}`}
           >
-            <div className="grid aspect-square w-full place-items-center self-start overflow-hidden rounded-plate bg-deep text-mute">
+            <div className="grid aspect-square w-15 shrink-0 place-items-center self-start overflow-hidden rounded-control bg-media text-mute sm:w-20">
               {avatar ? (
                 <Image
                   alt=""
-                  className="size-full object-contain"
+                  className="size-full object-cover"
                   height={avatar.height}
                   sizes="96px"
                   src={avatar.thumbUrl}
@@ -490,26 +496,24 @@ function PackItems({
               )}
             </div>
             <div className="min-w-0">
-              <div className="mb-2 flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
-                <h4 className="font-display text-ui font-medium text-ink [overflow-wrap:anywhere]">
-                  {record.lumiaName || `Lumia ${index + 1}`}
-                </h4>
-                <span className="text-label text-mute [overflow-wrap:anywhere]">
-                  {PACK_PRONOUNS[record.genderIdentity]}
-                  {record.authorName ? ` · by ${record.authorName}` : ""}
-                  {` · v${record.version}`}
-                </span>
-              </div>
+              <h4 className={ITEM_NAME}>
+                {record.lumiaName || `Lumia ${index + 1}`}
+              </h4>
+              <p className={cn(ITEM_META, "mt-0.5")}>
+                {PACK_PRONOUNS[record.genderIdentity]}
+                {record.authorName ? ` · by ${record.authorName}` : ""}
+                {` · v${record.version}`}
+              </p>
               {record.lumiaDefinition ? (
                 <RichText
-                  className="max-w-[70ch] [&_p]:!text-ui [&_p]:!leading-normal"
+                  className={cn(ITEM_BODY, "mt-2 max-w-[70ch]")}
                   text={record.lumiaDefinition}
                 />
               ) : null}
             </div>
-          </li>
+          </RunItem>
         );
       })}
-    </ol>
+    </Run>
   );
 }

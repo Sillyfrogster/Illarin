@@ -1,5 +1,8 @@
+import { Lock } from "lucide-react";
+import { Fragment } from "react";
 import { ChipSet } from "@/components/ui/Chip";
 import { RichText } from "@/components/ui/RichText";
+import { Run, RunHeading, RunItem } from "@/components/ui/run";
 import type {
   PresetSetting,
   PresetVariable,
@@ -10,7 +13,14 @@ import type {
 import { cn } from "@/lib/cn";
 import { type NamedSlot, orderSettings } from "@/lib/preset-slots";
 import { themeAccent } from "@/lib/theme-colors";
-import { ITEM_NAME, RUNG, STACK } from "./element-runs";
+import {
+  ITEM_BODY,
+  ITEM_META,
+  ITEM_NAME,
+  ITEM_VALUE,
+  OFF,
+  TAG,
+} from "./element-runs";
 
 const KEY_PREVIEW_LIMIT = 6;
 
@@ -51,70 +61,82 @@ export function PromptList({
     else runs.push({ group: name, fragments: [fragment] });
   }
   return (
-    <div className="flex flex-col gap-6">
+    <Run as="ol">
       {runs.map((run, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: Runs hold no local state.
-        <section key={index}>
+        <Fragment key={index}>
           {run.group ? (
-            <h4 className="mb-3 border-rule border-b pb-2 font-display text-ui font-medium text-ink">
+            <RunHeading count={countOf(run.fragments.length, "fragment")}>
               {run.group}
-            </h4>
+            </RunHeading>
           ) : null}
-          <Fragments
-            fragments={run.fragments}
-            grouped={Boolean(run.group)}
-            isOwner={isOwner}
-          />
-        </section>
+          {run.fragments.map((fragment, place) => (
+            <PromptFragment
+              fragment={fragment}
+              isOwner={isOwner}
+              // biome-ignore lint/suspicious/noArrayIndexKey: Fragments hold no local state.
+              key={place}
+              place={place}
+              run={index}
+            />
+          ))}
+        </Fragment>
       ))}
-    </div>
+    </Run>
   );
 }
 
-function Fragments({
-  fragments,
-  grouped,
+function countOf(total: number, noun: string): string {
+  return `${total} ${total === 1 ? noun : `${noun}s`}`;
+}
+
+function PromptFragment({
+  fragment,
   isOwner,
+  place,
+  run,
 }: {
-  fragments: PromptListContent["fragments"];
-  grouped: boolean;
+  fragment: PromptListContent["fragments"][number];
   isOwner: boolean;
+  place: number;
+  run: number;
 }) {
+  const sealed = fragment.protected && !isOwner;
   return (
-    <ol className={cn(STACK, grouped && "pl-4.5")}>
-      {fragments.map((fragment, index) => (
-        <li
-          className={cn(RUNG, !fragment.enabled && "border-dashed opacity-60")}
-          // biome-ignore lint/suspicious/noArrayIndexKey: Fragments hold no local state.
-          key={index}
-        >
-          <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className="text-meta font-semibold text-ink [overflow-wrap:anywhere]">
-              {fragment.name?.trim() ||
-                fragment.marker?.trim() ||
-                `Fragment ${index + 1}`}
-            </span>
-            <span className="text-meta text-mute">
-              {fragment.role ? PROMPT_ROLE_LABELS[fragment.role] : null}
-              {fragment.placement
-                ? ` · ${PLACEMENT_LABELS[fragment.placement]}`
-                : null}
-              {fragment.enabled ? null : " · Off"}
-              {fragment.protected ? " · Sealed prompt" : null}
-            </span>
-          </div>
-          {fragment.protected && !isOwner ? (
-            <p className="!text-ui text-mute italic">Sealed prompt</p>
-          ) : fragment.marker ? (
-            <p className="!text-ui text-mute italic">
-              The app splices its own content in here.
-            </p>
-          ) : (
-            <Paragraphs text={fragment.text} />
-          )}
-        </li>
-      ))}
-    </ol>
+    <RunItem
+      className={cn(!fragment.enabled && OFF)}
+      itemKey={`${run}-${place}`}
+    >
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <span className={ITEM_NAME}>
+          {fragment.name?.trim() ||
+            fragment.marker?.trim() ||
+            `Fragment ${place + 1}`}
+        </span>
+        {sealed ? (
+          <span className={cn(TAG, "bg-accent-wash text-accent")}>
+            <Lock aria-hidden="true" className="size-3" />
+            Sealed
+          </span>
+        ) : null}
+        {fragment.enabled ? null : (
+          <span className={cn(TAG, "bg-deep text-mute")}>Off</span>
+        )}
+      </div>
+      <p className={ITEM_META}>
+        {fragment.role ? PROMPT_ROLE_LABELS[fragment.role] : null}
+        {fragment.placement
+          ? ` · ${PLACEMENT_LABELS[fragment.placement]}`
+          : null}
+      </p>
+      {sealed ? null : fragment.marker ? (
+        <p className={cn(ITEM_META, "italic")}>
+          The app splices its own content in here.
+        </p>
+      ) : (
+        <Paragraphs text={fragment.text} />
+      )}
+    </RunItem>
   );
 }
 
@@ -132,57 +154,46 @@ export function SettingGroup({
   const named = shown.filter((setting) => setting.slot.rank !== "unrecognised");
   const raw = shown.filter((setting) => setting.slot.rank === "unrecognised");
   return (
-    <>
-      {named.length > 0 ? <Settings settings={named} /> : null}
-      {raw.length > 0 ? (
-        <>
-          <p className="mt-5 border-rule border-t pt-4 !text-label text-mute">
-            As the file names them
-          </p>
-          <Settings raw settings={raw} />
-        </>
-      ) : null}
-    </>
+    <Run as="dl">
+      {named.map((setting) => (
+        <Setting key={setting.id ?? setting.name} setting={setting} />
+      ))}
+      {raw.length > 0 ? <RunHeading>As the file names them</RunHeading> : null}
+      {raw.map((setting) => (
+        <Setting key={setting.id ?? setting.name} raw setting={setting} />
+      ))}
+    </Run>
   );
 }
 
-function Settings({
-  settings,
+function Setting({
   raw,
+  setting,
 }: {
-  settings: Array<PresetSetting & { slot: NamedSlot }>;
   raw?: boolean;
+  setting: PresetSetting & { slot: NamedSlot };
 }) {
   return (
-    <dl
-      className={cn(
-        "grid items-baseline gap-x-5 gap-y-3 @max-[330px]:![grid-template-columns:minmax(0,1fr)] @max-[330px]:gap-y-1",
-        raw
-          ? "[grid-template-columns:fit-content(62%)_minmax(0,1fr)]"
-          : "[grid-template-columns:fit-content(38%)_minmax(0,1fr)]",
-      )}
-    >
-      {settings.map((setting) => (
-        <div className="contents" key={setting.id ?? setting.name}>
-          <dt
-            className={cn(
-              "text-mute [overflow-wrap:anywhere]",
-              raw ? "font-mono text-meta" : "text-label",
-            )}
-          >
-            {setting.slot.name}
-          </dt>
-          <dd className="text-ui text-ink tabular-nums [overflow-wrap:anywhere]">
-            <SettingValue name={setting.name} value={setting.value} />
-            {setting.slot.note ? (
-              <span className="mt-0.5 block max-w-[46ch] text-meta text-mute text-pretty">
-                {setting.slot.note}
-              </span>
-            ) : null}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <RunItem as="div" itemKey={setting.id ?? setting.name}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-0.5">
+        <dt
+          className={cn(
+            "min-w-0 [overflow-wrap:anywhere]",
+            raw ? "font-mono text-meta text-mute" : ITEM_NAME,
+          )}
+        >
+          {setting.slot.name}
+        </dt>
+        <dd className={ITEM_VALUE}>
+          <SettingValue name={setting.name} value={setting.value} />
+        </dd>
+      </div>
+      {setting.slot.note ? (
+        <p className={cn(ITEM_META, "max-w-[52ch] text-pretty")}>
+          {setting.slot.note}
+        </p>
+      ) : null}
+    </RunItem>
   );
 }
 
@@ -236,16 +247,19 @@ export function VariableSchema({
   itemLimit?: number;
 }) {
   return (
-    <ul className="flex list-none flex-col gap-4">
+    <Run>
       {variables.slice(0, itemLimit).map((variable, index) => (
-        <li className={RUNG} key={variable.id ?? `${index}-${variable.name}`}>
+        <RunItem
+          itemKey={variable.id ?? `${index}`}
+          key={variable.id ?? `${index}-${variable.name}`}
+        >
           <p className={ITEM_NAME}>{variable.label?.trim() || variable.name}</p>
           {variable.description ? (
-            <RichText text={variable.description} />
+            <RichText className={ITEM_BODY} text={variable.description} />
           ) : null}
           {variable.options && variable.options.length > 0 ? (
             <ChipSet
-              className="mt-2"
+              className="mt-1"
               items={variable.options.map((option, position) => ({
                 id: `${position}-${option.value}`,
                 label: option.label || option.value,
@@ -253,9 +267,9 @@ export function VariableSchema({
               limit={KEY_PREVIEW_LIMIT}
             />
           ) : null}
-        </li>
+        </RunItem>
       ))}
-    </ul>
+    </Run>
   );
 }
 
@@ -267,33 +281,36 @@ export function ScriptList({
   itemLimit?: number;
 }) {
   return (
-    <ul className="flex list-none flex-col gap-4">
+    <Run>
       {scripts.slice(0, itemLimit).map((script, index) => (
-        <li
-          className={cn(RUNG, !script.enabled && "border-dashed opacity-60")}
+        <RunItem
+          className={cn(!script.enabled && OFF)}
+          itemKey={script.id ?? `${index}`}
           key={script.id ?? index}
         >
-          <p className={ITEM_NAME}>
-            {script.name?.trim() || `Script ${index + 1}`}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <span className={ITEM_NAME}>
+              {script.name?.trim() || `Script ${index + 1}`}
+            </span>
             {script.enabled ? null : (
-              <span className="font-normal text-mute"> · Off</span>
+              <span className={cn(TAG, "bg-deep text-mute")}>Off</span>
             )}
-          </p>
-          <p className="mt-1 flex flex-wrap items-center gap-2 [&_code]:rounded-control [&_code]:bg-deep [&_code]:px-2 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-meta [&_code]:whitespace-pre-wrap [&_code]:[overflow-wrap:anywhere]">
+          </div>
+          <p className="flex flex-wrap items-center gap-2 font-ui text-meta text-mute [&_code]:rounded-control [&_code]:bg-deep [&_code]:px-2 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-meta [&_code]:text-ink [&_code]:whitespace-pre-wrap [&_code]:[overflow-wrap:anywhere]">
             <code>{script.find}</code>
             <span aria-hidden="true">→</span>
             <code>{script.replace || "nothing"}</code>
           </p>
-        </li>
+        </RunItem>
       ))}
-    </ul>
+    </Run>
   );
 }
 
 function Paragraphs({ text }: { text: string }) {
   const paragraphs = text.split(/\n{2,}/).filter((line) => line.trim() !== "");
   return (
-    <div className="[&>p+p]:mt-[0.85em]">
+    <div className={cn(ITEM_BODY, "max-w-[70ch] [&>p+p]:mt-[0.85em]")}>
       {paragraphs.map((paragraph, index) => (
         <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
       ))}
