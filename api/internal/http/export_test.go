@@ -274,7 +274,7 @@ func givePictures(
 func publishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, assetID,
-		`{"name":"Ana","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {

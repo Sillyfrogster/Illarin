@@ -28,6 +28,7 @@ import {
 import { unsealedPrompts } from "../UnsealConfirmation";
 import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
+import { identityHasChanged } from "./identity";
 import {
   blockSaveRequest,
   changedBlockIds,
@@ -164,11 +165,8 @@ export function AssetWorkspace({
   }, [message]);
 
   const changed = useMemo(() => changedBlockIds(draft, saved), [draft, saved]);
-  const identityChanged =
-    draftIdentity.name !== savedIdentity.name ||
-    draftIdentity.blurb !== savedIdentity.blurb ||
-    draftIdentity.isNsfw !== savedIdentity.isNsfw;
-  const dirty = changed.length > 0 || identityChanged;
+  const hasIdentityChanges = identityHasChanged(draftIdentity, savedIdentity);
+  const dirty = changed.length > 0 || hasIdentityChanges;
 
   const saveState: SaveState = busy
     ? "saving"
@@ -251,7 +249,7 @@ export function AssetWorkspace({
             );
             written = replaceBlock(written, result);
           }
-          if (identityChanged) {
+          if (hasIdentityChanges) {
             await saveAssetIdentity(candidate, assetId, draftIdentity);
             setSavedIdentity(draftIdentity);
           }
@@ -285,7 +283,7 @@ export function AssetWorkspace({
       dirty,
       draft,
       draftIdentity,
-      identityChanged,
+      hasIdentityChanges,
       isDraft,
       openSealedElement,
       router,
@@ -311,13 +309,13 @@ export function AssetWorkspace({
   }, [applyServerBlocks, blocks]);
 
   useEffect(() => {
-    const answer = {
+    const incomingIdentity = {
       blurb: identity.blurb,
       isNsfw: identity.isNsfw,
       name: identity.name,
     };
-    setDraftIdentity(answer);
-    setSavedIdentity(answer);
+    setDraftIdentity(incomingIdentity);
+    setSavedIdentity(incomingIdentity);
   }, [identity.blurb, identity.isNsfw, identity.name]);
 
   const editBlockList = useCallback(

@@ -206,7 +206,7 @@ export function AssetHeader({
         <div className="min-w-0 md:col-start-1 lg:col-start-auto">
           {writing ? (
             <Field
-              hint="Shown here in the asset header and on catalog cards. Search uses it too."
+              hint="Shown here in the asset header. People can also find the page by searching these words."
               htmlFor="asset-blurb"
               label="Blurb"
               trailing={

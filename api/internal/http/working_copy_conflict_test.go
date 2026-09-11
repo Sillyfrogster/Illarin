@@ -41,7 +41,7 @@ func withReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
-	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","isNsfw":false}`))
+	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = authorized(req, session)
 	response := httptest.NewRecorder()

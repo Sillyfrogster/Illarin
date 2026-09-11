@@ -17,7 +17,7 @@ func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	id := publishedCharacter(t, router, session)
 	before := fetchAssetPage(t, router, "/v1/assets/"+id)
 	generation := contentGeneration(t, pool, id)
-	if got := saveIdentity(t, router, session, id, `{"name":"Unpublished name","isNsfw":true}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private header: %d %s", got.Code, got.Body.String())
 	}
 	owner := fetchStartedAsset(t, router, session, id)

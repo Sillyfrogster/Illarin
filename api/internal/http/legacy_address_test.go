@@ -17,7 +17,7 @@ func TestAV1AddressResolvesToTheAssetThatHeldIt(t *testing.T) {
 	assetID := publishedCharacter(t, router, session)
 	storeLegacyAddress(t, pool, "old-author/old-name", assetID)
 	published := fetchAssetPage(t, router, "/v1/assets/"+assetID)
-	if got := saveIdentity(t, router, session, assetID, `{"name":"Private replacement name","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, router, session, assetID, `{"name":"Private replacement name","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private name: %d", got.Code)
 	}
 

@@ -48,7 +48,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
 		t.Fatal("the owner did not receive the restored sealed prompt")
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
@@ -104,7 +104,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 			t.Errorf("owner response does not contain %q: %s", want, ownerContent)
 		}
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {

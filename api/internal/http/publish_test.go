@@ -49,7 +49,7 @@ func publishAsset(
 func writeCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started startedAsset) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse of the west shelf","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse of the west shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -155,7 +155,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse","isNsfw":true}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d: %s", got.Code, got.Body.String())
 	}
 
@@ -209,7 +209,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 		t.Fatalf("readiness on a new draft = %+v, want four items", started.Readiness)
 	}
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse","isNsfw":null}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse","blurb":"","isNsfw":null}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save a name with no answer status = %d: %s", got.Code, got.Body.String())
 	}
 	named := fetchStartedAsset(t, r, session, started.ID)
@@ -388,14 +388,14 @@ func TestAPublishedAssetKeepsItsAdultContentAnswer(t *testing.T) {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
-	unanswered := saveIdentity(t, r, session, started.ID, `{"name":"Ilse","isNsfw":null}`)
+	unanswered := saveIdentity(t, r, session, started.ID, `{"name":"Ilse","blurb":"","isNsfw":null}`)
 	if unanswered.Code != http.StatusBadRequest {
 		t.Errorf("unanswering a published asset status = %d, want 400: %s",
 			unanswered.Code, unanswered.Body.String())
 	}
 
 	long := saveIdentity(t, r, session, started.ID,
-		`{"name":"`+strings.Repeat("a", 201)+`","isNsfw":false}`)
+		`{"name":"`+strings.Repeat("a", 201)+`","blurb":"","isNsfw":false}`)
 	if long.Code != http.StatusBadRequest {
 		t.Errorf("an overlong name status = %d, want 400: %s", long.Code, long.Body.String())
 	}

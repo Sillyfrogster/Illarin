@@ -7,7 +7,9 @@ const baseUrl =
     ? (process.env.API_URL ?? "http://localhost:8080")
     : "/api";
 
-export const api = createClient<paths>({ baseUrl });
+const callFetch = (request: Request) => globalThis.fetch(request);
+
+export const api = createClient<paths>({ baseUrl, fetch: callFetch });
 
 api.use({
   onRequest({ request }) {

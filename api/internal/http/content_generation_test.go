@@ -57,7 +57,7 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 	}
 
 	request := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity",
-		strings.NewReader(`{"name":"","isNsfw":true}`))
+		strings.NewReader(`{"name":"","blurb":"","isNsfw":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	if answered := send(t, r, authorized(request, session)); answered.Code != http.StatusNoContent {
 		t.Fatalf("answer the adult content question: %d %s", answered.Code, answered.Body.String())

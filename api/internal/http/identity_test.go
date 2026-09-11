@@ -100,3 +100,21 @@ func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 		t.Fatalf("saved blurb has %d characters, want the intact 400-character value", len([]rune(saved.Blurb)))
 	}
 }
+
+func TestIdentityRequestMustSayWhetherToKeepOrClearTheBlurb(t *testing.T) {
+	r, session := newVerifiedTestRouter(t)
+	started := startCharacter(t, r, session)
+	if response := saveIdentity(t, r, session, started.ID,
+		`{"name":"Catalog name","blurb":"Keep this pitch","isNsfw":false}`); response.Code != http.StatusNoContent {
+		t.Fatalf("save the starting blurb: %d %s", response.Code, response.Body.String())
+	}
+
+	response := saveIdentity(t, r, session, started.ID,
+		`{"name":"Renamed without the new field","isNsfw":false}`)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("omit the blurb: status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	if saved := fetchStartedAsset(t, r, session, started.ID); saved.Blurb != "Keep this pitch" {
+		t.Fatalf("omitted blurb changed the saved value to %q", saved.Blurb)
+	}
+}

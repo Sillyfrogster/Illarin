@@ -10,22 +10,34 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
+type assetIdentityInput struct {
+	Name   string  `json:"name"`
+	Blurb  *string `json:"blurb"`
+	IsNsfw *bool   `json:"isNsfw"`
+}
+
 func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAssetIdentityParams) {
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
 		return
 	}
-	var request AssetIdentityRequest
+	var request assetIdentityInput
 	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send a name and an adult content answer of true, false or null.",
+			"error": "Send a name, a blurb, and an adult content answer of true, false or null.",
+		})
+		return
+	}
+	if request.Blurb == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Send a blurb. Use an empty string to clear it.", "field": "blurb",
 		})
 		return
 	}
 	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	err := h.assets.SetIdentity(c.Request.Context(), asset.Identity{
 		OwnerID: owner.ID, AssetID: uuid.UUID(id),
-		Name: request.Name, Blurb: request.Blurb, IsNSFW: request.IsNsfw,
+		Name: request.Name, Blurb: *request.Blurb, IsNSFW: request.IsNsfw,
 	}, candidate)
 	if candidateResult(c, candidate, err) {
 		return

@@ -64,7 +64,7 @@ func publishTwoPromptPreset(
 		t.Fatalf("save the sealed prompts: %d %s", got.Code, got.Body.String())
 	}
 	if got := saveIdentity(t, router, session, started.ID,
-		`{"name":"Sealed preset","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save the identity: %d %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
