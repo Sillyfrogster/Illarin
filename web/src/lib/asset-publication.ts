@@ -57,6 +57,12 @@ export function replacementReady(
   return !operation && file !== null;
 }
 
+export function previewConflicts(preview: {
+  conflicts?: string[] | null;
+}): string[] {
+  return preview.conflicts ?? [];
+}
+
 export function unsettledReplacement(
   operation: IngestOperation,
 ): IngestOperation | null {

@@ -808,12 +808,20 @@ func toAPIIngest(operation asset.IngestOperation) gin.H {
 		}
 		response["preview"] = gin.H{
 			"format": operation.Preview.Format, "groups": groups,
-			"conflicts":       operation.Preview.Conflicts,
-			"unrepresentable": operation.Preview.Unrepresentable,
+			"conflicts":       nonNilStrings(operation.Preview.Conflicts),
+			"unrepresentable": nonNilStrings(operation.Preview.Unrepresentable),
+			"missingWording":  nonNilStrings(operation.Preview.MissingWording),
 			"seals":           operation.Preview.Seals,
 		}
 	}
 	return response
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 func ingestAsset(a *asset.Asset) *Asset {

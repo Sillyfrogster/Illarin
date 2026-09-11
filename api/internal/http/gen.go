@@ -4021,6 +4021,9 @@ type ReplacementPreview struct {
 	Format    string               `json:"format"`
 	Groups    []VersionChangeGroup `json:"groups"`
 
+	// MissingWording Sealed prompts whose wording is not in the file or the current asset
+	MissingWording []string `json:"missingWording"`
+
 	// Seals How many prompt fragments the file would seal
 	Seals           int      `json:"seals"`
 	Unrepresentable []string `json:"unrepresentable"`

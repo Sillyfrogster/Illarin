@@ -103,5 +103,6 @@ type ReplacementPreview struct {
 	Groups          []ChangeGroup
 	Conflicts       []string
 	Unrepresentable []string
+	MissingWording  []string
 	Seals           int
 }

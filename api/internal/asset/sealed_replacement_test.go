@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -116,7 +116,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 	}
 }
 
-func TestASealedPlaceholderWithNoWordingAnywhereIsRefusedByName(t *testing.T) {
+func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T) {
 	parsed := promptListParsed(block.PromptFragment{
 		ID: block.NewItemID(), Name: "Setup", Text: "Present", Enabled: true,
 	}, "setup")
@@ -138,14 +138,24 @@ func TestASealedPlaceholderWithNoWordingAnywhereIsRefusedByName(t *testing.T) {
 	parsed = replacement
 
 	operation := stageReplacementFile(t, svc, owner, created.ID)
-	if operation.Status != IngestFailed || operation.Failure == nil {
-		t.Fatalf("staged = %+v, want a failed import", operation)
+	if operation.Status != IngestPreview || operation.Preview == nil {
+		t.Fatalf("staged = %+v, want a replacement preview", operation)
 	}
-	if operation.Failure.Reason != string(format.FailureMalformedInput) {
-		t.Fatalf("failure reason = %q", operation.Failure.Reason)
+	if !slices.Equal(operation.Preview.MissingWording, []string{"Late addition"}) {
+		t.Fatalf("missing wording = %+v", operation.Preview.MissingWording)
 	}
-	if !strings.Contains(operation.Failure.Message, `"Late addition"`) {
-		t.Fatalf("failure message = %q, want the prompt named", operation.Failure.Message)
+	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID,
+		currentCandidate(t, svc, created.ID), nil); err != nil {
+		t.Fatalf("AcceptReplacement: %v", err)
+	}
+
+	working, err := svc.WorkingCopy(context.Background(), created.ID, &owner, ContentShown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fragment := onlyFragment(t, working.Blocks)
+	if !fragment.Protected || fragment.Text != "" {
+		t.Fatalf("fragment = %+v, want a sealed prompt awaiting its wording", fragment)
 	}
 }
 

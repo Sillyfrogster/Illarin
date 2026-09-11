@@ -2768,7 +2768,7 @@ components:
           $ref: '#/components/schemas/ReplacementPreview'
     ReplacementPreview:
       type: object
-      required: [format, groups, conflicts, unrepresentable, seals]
+      required: [format, groups, conflicts, unrepresentable, missingWording, seals]
       properties:
         format:
           type: string
@@ -2784,6 +2784,12 @@ components:
           items:
             type: string
         unrepresentable:
+          type: array
+          items:
+            type: string
+        missingWording:
+          description: >-
+            Sealed prompts whose wording is not in the file or the current asset
           type: array
           items:
             type: string

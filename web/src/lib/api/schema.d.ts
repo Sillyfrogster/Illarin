@@ -3515,6 +3515,8 @@ export interface components {
       /** @description The subjects where the file overwrites an edit made since the asset was last published */
       conflicts: string[];
       unrepresentable: string[];
+      /** @description Sealed prompts whose wording is not in the file or the current asset */
+      missingWording: string[];
       /** @description How many prompt fragments the file would seal */
       seals: number;
     };

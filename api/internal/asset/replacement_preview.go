@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strconv"
-	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -97,9 +95,8 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return ReplacementPreview{}, err
 	}
-	if len(unfillable) > 0 {
-		return ReplacementPreview{}, unfillableRefusal(incoming, unfillable)
-	}
+	missingWording := promptNames(incoming, unfillable)
+	keepMissingPromptsEmpty(prepared.Protected.Prompts, unfillable)
 	arriving := mergeReplacementBlocks(working, prepared.Blocks, prepared.SuppliedRoles, nil)
 	fillSealedPrompts(arriving, carried, prepared.Protected.Prompts)
 
@@ -156,12 +153,12 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	slices.Sort(unsupported)
 	return ReplacementPreview{
 		Format: prepared.Format, Groups: groups, Conflicts: conflicts,
-		Unrepresentable: unsupported, Seals: len(prepared.Protected.Prompts),
+		Unrepresentable: unsupported, MissingWording: missingWording,
+		Seals: len(prepared.Protected.Prompts),
 	}, nil
 }
 
-// unfillableRefusal names the sealed prompts whose wording is nowhere to be found.
-func unfillableRefusal(incoming []block.Block, fragments []uuid.UUID) error {
+func promptNames(incoming []block.Block, fragments []uuid.UUID) []string {
 	wanted := make(map[uuid.UUID]bool, len(fragments))
 	for _, id := range fragments {
 		wanted[id] = true
@@ -181,27 +178,19 @@ func unfillableRefusal(incoming []block.Block, fragments []uuid.UUID) error {
 		}
 	}
 	slices.Sort(names)
-	return format.MalformedInput(fmt.Errorf(
-		"This file holds back the wording of %s, and this asset does not have it either.",
-		listNames(names),
-	))
+	return names
 }
 
-// listNames writes a short list of names the way a sentence would.
-func listNames(names []string) string {
-	quoted := make([]string, len(names))
-	for index, name := range names {
-		quoted[index] = strconv.Quote(name)
+func keepMissingPromptsEmpty(imports []format.ProtectedPrompt, fragments []uuid.UUID) {
+	missing := make(map[uuid.UUID]bool, len(fragments))
+	for _, id := range fragments {
+		missing[id] = true
 	}
-	switch len(quoted) {
-	case 0:
-		return "one of its prompts"
-	case 1:
-		return quoted[0]
-	case 2:
-		return quoted[0] + " and " + quoted[1]
-	default:
-		return strings.Join(quoted[:len(quoted)-1], ", ") + " and " + quoted[len(quoted)-1]
+	for index := range imports {
+		if missing[imports[index].FragmentID] {
+			imports[index].ReuseExisting = false
+			imports[index].Text = ""
+		}
 	}
 }
 

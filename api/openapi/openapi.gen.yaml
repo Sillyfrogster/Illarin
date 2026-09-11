@@ -8794,6 +8794,7 @@ components:
         - groups
         - conflicts
         - unrepresentable
+        - missingWording
         - seals
       properties:
         format:
@@ -8810,6 +8811,11 @@ components:
           items:
             type: string
         unrepresentable:
+          type: array
+          items:
+            type: string
+        missingWording:
+          description: Sealed prompts whose wording is not in the file or the current asset
           type: array
           items:
             type: string

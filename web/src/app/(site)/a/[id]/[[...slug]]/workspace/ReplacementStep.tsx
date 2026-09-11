@@ -22,6 +22,7 @@ import {
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { Note } from "./fields";
+import { ReplacementWarnings } from "./ReplacementWarnings";
 import { useWorkspace } from "./state";
 
 const POLL_MS = 600;
@@ -173,20 +174,7 @@ export function ReplacementStep({
             Read as {staged.preview.format}. Nothing here reaches readers until
             you publish an update.
           </p>
-          {staged.preview.seals > 0 ? (
-            <p className="rounded-control bg-accent-wash p-3 text-meta text-ink">
-              This file keeps the wording of {staged.preview.seals} prompt
-              {staged.preview.seals === 1 ? "" : "s"} back. Applying it means
-              readers can only install this asset through a linked app.
-            </p>
-          ) : null}
-          {staged.preview.conflicts.length > 0 ? (
-            <p className="rounded-control bg-stop-wash p-3 text-meta text-ink">
-              This file overwrites edits you have not published yet:{" "}
-              {staged.preview.conflicts.map(replacementSubjectLabel).join(", ")}
-              .
-            </p>
-          ) : null}
+          <ReplacementWarnings preview={staged.preview} />
           {staged.preview.groups.length === 0 ? (
             <Note>This file matches your current content.</Note>
           ) : (
