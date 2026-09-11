@@ -76,7 +76,7 @@ func (s *Service) WriteMigratedAsset(ctx context.Context, tx pgx.Tx, one Migrate
 	if err := replacePreservedData(ctx, tx, one.ID, one.Remainder); err != nil {
 		return err
 	}
-	if err := importProtectedPrompts(ctx, tx, one.ID, one.Blocks, one.Protected); err != nil {
+	if err := importProtectedPrompts(ctx, tx, one.ID, one.Blocks, nil, one.Protected); err != nil {
 		return err
 	}
 	for _, image := range one.Images {

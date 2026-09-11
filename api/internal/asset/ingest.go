@@ -284,8 +284,8 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 				"The imported file would take this account past its storage cap.",
 			)
 		}
-		if classified, ok := format.FailureOf(err); ok {
-			return true, s.finishIngestFailure(ctx, job, classified, err.Error())
+		if classified, why, ok := format.Explain(err); ok {
+			return true, s.finishIngestFailure(ctx, job, classified, why)
 		}
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
 	}
@@ -529,13 +529,14 @@ func importProtectedPrompts(
 	tx pgx.Tx,
 	assetID uuid.UUID,
 	blocks []block.Block,
+	carried map[uuid.UUID]string,
 	imported format.ProtectedImport,
 ) error {
 	if len(imported.Prompts) == 0 {
 		return nil
 	}
 	if err := protected.ImportPromptFragments(
-		ctx, tx, assetID, blocks, imported.Prompts, imported.Apps,
+		ctx, tx, assetID, blocks, carried, imported.Prompts, imported.Apps,
 	); err != nil {
 		return fmt.Errorf("import protected prompts: %w", err)
 	}
@@ -568,6 +569,10 @@ func (s *Service) writeIngestResultWithDecisions(
 		if err != nil {
 			return uuid.Nil, err
 		}
+		carried, err := carriedPromptText(ctx, tx, job.Target.AssetID, existing, prepared.Remainder)
+		if err != nil {
+			return uuid.Nil, err
+		}
 		blocks = mergeReplacementBlocks(existing, blocks, prepared.SuppliedRoles, decisions)
 		fingerprint, err := s.contentFingerprint(ctx, tx, job.Target.AssetID)
 		if err != nil {
@@ -591,7 +596,7 @@ func (s *Service) writeIngestResultWithDecisions(
 		}
 		if len(prepared.Protected.Prompts) > 0 {
 			if err := importProtectedPrompts(
-				ctx, tx, job.Target.AssetID, blocks, prepared.Protected,
+				ctx, tx, job.Target.AssetID, blocks, carried, prepared.Protected,
 			); err != nil {
 				return uuid.Nil, err
 			}
@@ -638,7 +643,7 @@ func (s *Service) writeIngestResultWithDecisions(
 		return uuid.Nil, err
 	}
 	if err := importProtectedPrompts(
-		ctx, tx, assetID, blocks, prepared.Protected,
+		ctx, tx, assetID, blocks, nil, prepared.Protected,
 	); err != nil {
 		return uuid.Nil, err
 	}

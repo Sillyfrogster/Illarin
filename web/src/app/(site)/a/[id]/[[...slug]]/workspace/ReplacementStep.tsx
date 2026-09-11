@@ -2,6 +2,7 @@
 
 import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
@@ -11,17 +12,14 @@ import {
   type ReplacementDecision,
   readIngestOperation,
   uploadAssetReplacement,
+  type VersionChangeGroup,
 } from "@/lib/api/query";
 import {
   replacementAction,
   replacementReady,
   unsettledReplacement,
 } from "@/lib/asset-publication";
-import {
-  type ReplacementSummary,
-  replacementSubjectLabel,
-  summariseReplacement,
-} from "@/lib/replacement-subject";
+import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { Note } from "./fields";
 import { useWorkspace } from "./state";
@@ -35,7 +33,7 @@ export function ReplacementStep({
   waiting,
   onWaiting,
 }: {
-  onApplied: (changes: ReplacementSummary[]) => void;
+  onApplied: (groups: VersionChangeGroup[]) => void;
   onBack: () => void;
   onDiscarded: () => void;
   waiting: IngestOperation | null;
@@ -122,7 +120,7 @@ export function ReplacementStep({
       return;
     }
     if (staged) {
-      const changes = summariseReplacement(staged.preview.changes);
+      const groups = staged.preview.groups;
       void run(async () => {
         await acceptAssetReplacement(
           candidate,
@@ -130,7 +128,7 @@ export function ReplacementStep({
           staged.id,
           decisions,
         );
-        onApplied(changes);
+        onApplied(groups);
       });
       return;
     }
@@ -175,12 +173,24 @@ export function ReplacementStep({
             Read as {staged.preview.format}. Nothing here reaches readers until
             you publish an update.
           </p>
-          {staged.preview.changes.length === 0 ? (
+          {staged.preview.seals > 0 ? (
+            <p className="rounded-control bg-accent-wash p-3 text-meta text-ink">
+              This file keeps the wording of {staged.preview.seals} prompt
+              {staged.preview.seals === 1 ? "" : "s"} back. Applying it means
+              readers can only install this asset through a linked app.
+            </p>
+          ) : null}
+          {staged.preview.conflicts.length > 0 ? (
+            <p className="rounded-control bg-stop-wash p-3 text-meta text-ink">
+              This file overwrites edits you have not published yet:{" "}
+              {staged.preview.conflicts.map(replacementSubjectLabel).join(", ")}
+              .
+            </p>
+          ) : null}
+          {staged.preview.groups.length === 0 ? (
             <Note>This file matches your current content.</Note>
           ) : (
-            <ReplacementChanges
-              changes={summariseReplacement(staged.preview.changes)}
-            />
+            <ChangeList groups={staged.preview.groups} />
           )}
           {unrepresentable.length > 0 ? (
             <fieldset className="min-w-0 border-0 p-0">
@@ -292,29 +302,5 @@ export function ReplacementStep({
         ) : null}
       </div>
     </div>
-  );
-}
-
-export function ReplacementChanges({
-  changes,
-}: {
-  changes: ReplacementSummary[];
-}) {
-  return (
-    <ul className="flex list-none flex-col gap-3">
-      {changes.map((part) => (
-        <li key={part.subject}>
-          <span className="text-ui font-medium text-ink">{part.label}</span>
-          <span className="mt-0.5 block text-meta text-mute">
-            {part.detail}
-          </span>
-          {part.replacesYourEdit ? (
-            <span className="mt-1 inline-block rounded-control bg-stop-wash px-2 py-0.5 text-label font-medium text-ink">
-              Overwrites an existing edit
-            </span>
-          ) : null}
-        </li>
-      ))}
-    </ul>
   );
 }

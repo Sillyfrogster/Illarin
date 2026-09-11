@@ -208,6 +208,10 @@ func toAPIComparison(compared asset.Comparison) VersionComparison {
 
 func toAPIChange(change asset.Change) VersionChange {
 	served := VersionChange{Kind: VersionChangeKind(change.Kind), Name: change.Name}
+	if change.Note != "" {
+		note := change.Note
+		served.Note = &note
+	}
 	if change.PreviousName != "" {
 		previous := change.PreviousName
 		served.PreviousName = &previous

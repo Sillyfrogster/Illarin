@@ -100,11 +100,8 @@ type IngestFailure struct {
 
 type ReplacementPreview struct {
 	Format          string
-	Changes         []ReplacementChange
+	Groups          []ChangeGroup
+	Conflicts       []string
 	Unrepresentable []string
-}
-
-type ReplacementChange struct {
-	Kind    string
-	Subject string
+	Seals           int
 }

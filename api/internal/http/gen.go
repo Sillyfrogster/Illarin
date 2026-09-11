@@ -1380,30 +1380,6 @@ func (e ReplacementAcceptanceUnrepresentable) Valid() bool {
 	}
 }
 
-// Defines values for ReplacementChangeKind.
-const (
-	ReplacementChangeKindAddition ReplacementChangeKind = "addition"
-	ReplacementChangeKindChange   ReplacementChangeKind = "change"
-	ReplacementChangeKindConflict ReplacementChangeKind = "conflict"
-	ReplacementChangeKindRemoval  ReplacementChangeKind = "removal"
-)
-
-// Valid indicates whether the value is a known member of the ReplacementChangeKind enum.
-func (e ReplacementChangeKind) Valid() bool {
-	switch e {
-	case ReplacementChangeKindAddition:
-		return true
-	case ReplacementChangeKindChange:
-		return true
-	case ReplacementChangeKindConflict:
-		return true
-	case ReplacementChangeKindRemoval:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SaveAssetBlockRequestAllowedApps.
 const (
 	SaveAssetBlockRequestAllowedAppsLumiverse SaveAssetBlockRequestAllowedApps = "lumiverse"
@@ -1658,19 +1634,19 @@ func (e VariableSchemaContentVariablesWidget) Valid() bool {
 
 // Defines values for VersionChangeKind.
 const (
-	VersionChangeKindAddition VersionChangeKind = "addition"
-	VersionChangeKindChange   VersionChangeKind = "change"
-	VersionChangeKindRemoval  VersionChangeKind = "removal"
+	Addition VersionChangeKind = "addition"
+	Change   VersionChangeKind = "change"
+	Removal  VersionChangeKind = "removal"
 )
 
 // Valid indicates whether the value is a known member of the VersionChangeKind enum.
 func (e VersionChangeKind) Valid() bool {
 	switch e {
-	case VersionChangeKindAddition:
+	case Addition:
 		return true
-	case VersionChangeKindChange:
+	case Change:
 		return true
-	case VersionChangeKindRemoval:
+	case Removal:
 		return true
 	default:
 		return false
@@ -4009,20 +3985,16 @@ type ReplacementAcceptance struct {
 // ReplacementAcceptanceUnrepresentable defines model for ReplacementAcceptance.Unrepresentable.
 type ReplacementAcceptanceUnrepresentable string
 
-// ReplacementChange defines model for ReplacementChange.
-type ReplacementChange struct {
-	Kind    ReplacementChangeKind `json:"kind"`
-	Subject string                `json:"subject"`
-}
-
-// ReplacementChangeKind defines model for ReplacementChange.Kind.
-type ReplacementChangeKind string
-
 // ReplacementPreview defines model for ReplacementPreview.
 type ReplacementPreview struct {
-	Changes         []ReplacementChange `json:"changes"`
-	Format          string              `json:"format"`
-	Unrepresentable []string            `json:"unrepresentable"`
+	// Conflicts The subjects where the file overwrites an edit made since the asset was last published
+	Conflicts []string             `json:"conflicts"`
+	Format    string               `json:"format"`
+	Groups    []VersionChangeGroup `json:"groups"`
+
+	// Seals How many prompt fragments the file would seal
+	Seals           int      `json:"seals"`
+	Unrepresentable []string `json:"unrepresentable"`
 }
 
 // RepublishPostRequest defines model for RepublishPostRequest.
@@ -4425,10 +4397,13 @@ type VersionChange struct {
 	Before     *string `json:"before,omitempty"`
 
 	// BeforeImage The address of the picture this change replaced or removed
-	BeforeImage  *string           `json:"beforeImage,omitempty"`
-	Kind         VersionChangeKind `json:"kind"`
-	Name         string            `json:"name"`
-	PreviousName *string           `json:"previousName,omitempty"`
+	BeforeImage *string           `json:"beforeImage,omitempty"`
+	Kind        VersionChangeKind `json:"kind"`
+	Name        string            `json:"name"`
+
+	// Note What changed about an item when there is no wording to show
+	Note         *string `json:"note,omitempty"`
+	PreviousName *string `json:"previousName,omitempty"`
 }
 
 // VersionChangeKind defines model for VersionChange.Kind.

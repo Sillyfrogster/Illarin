@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -78,12 +81,28 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return ReplacementPreview{}, err
 	}
+	if err := protected.RestorePromptFragments(ctx, tx, assetID, working); err != nil {
+		return ReplacementPreview{}, err
+	}
 	public, err := readPublishedBlocks(ctx, tx, assetID)
 	if err != nil {
 		return ReplacementPreview{}, err
 	}
 	incoming := blocksWithSuppliedRoles(prepared.Blocks, prepared.SuppliedRoles)
-	changes := compareReplacementRoles(working, public, incoming)
+	carried, err := carriedPromptText(ctx, tx, assetID, working, prepared.Remainder)
+	if err != nil {
+		return ReplacementPreview{}, err
+	}
+	unfillable, err := protected.UnfillablePrompts(ctx, tx, assetID, carried, prepared.Protected.Prompts)
+	if err != nil {
+		return ReplacementPreview{}, err
+	}
+	if len(unfillable) > 0 {
+		return ReplacementPreview{}, unfillableRefusal(incoming, unfillable)
+	}
+	arriving := mergeReplacementBlocks(working, prepared.Blocks, prepared.SuppliedRoles, nil)
+	fillSealedPrompts(arriving, carried, prepared.Protected.Prompts)
+
 	currentRemainder, err := readRemainder(ctx, tx, "asset_preserved_data", assetID)
 	if err != nil {
 		return ReplacementPreview{}, err
@@ -92,7 +111,6 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return ReplacementPreview{}, err
 	}
-	changes = append(changes, replacementOpaqueChanges(currentRemainder, publicRemainder, prepared.Remainder)...)
 	currentImages, publicImages, err := replacementImages(ctx, tx, assetID)
 	if err != nil {
 		return ReplacementPreview{}, err
@@ -101,22 +119,28 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	for index, media := range prepared.Media {
 		incomingImages[index] = media.BlobID
 	}
-	changes = append(changes, replacementImageChanges(currentImages, publicImages, incomingImages)...)
-	slices.SortFunc(changes, func(a, b ReplacementChange) int {
-		if a.Subject == b.Subject {
-			if a.Kind < b.Kind {
-				return -1
-			}
-			if a.Kind > b.Kind {
-				return 1
-			}
-			return 0
-		}
-		if a.Subject < b.Subject {
-			return -1
-		}
-		return 1
-	})
+
+	names, err := stableItemNames(ctx, tx, assetID, prepared.Remainder)
+	if err != nil {
+		return ReplacementPreview{}, err
+	}
+	groups := compareContentKeyed(working, arriving, names)
+	groups = addGroup(groups, presentationSubject, "Page",
+		comparePresentation(prepared.Kind, working, arriving))
+	groups = addGroup(groups, preservedSubject, "Preserved data",
+		comparePreserved(asVersionPreserved(currentRemainder), asVersionPreserved(prepared.Remainder)))
+	groups = addGroup(groups, picturesSubject, "Pictures",
+		comparePictureSets(currentImages, incomingImages))
+	if err := s.addressPictures(ctx, tx, ComparisonRequest{
+		AssetID: assetID, Visibility: ContentShown,
+	}, groups); err != nil {
+		return ReplacementPreview{}, err
+	}
+
+	conflicts := replacementConflicts(working, public, arriving,
+		currentRemainder, publicRemainder, prepared.Remainder,
+		currentImages, publicImages, incomingImages)
+
 	current := roleContent(working)
 	incomingRoles := roleContent(incoming)
 	unsupported := make([]string, 0)
@@ -130,7 +154,164 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 		}
 	}
 	slices.Sort(unsupported)
-	return ReplacementPreview{Format: prepared.Format, Changes: changes, Unrepresentable: unsupported}, nil
+	return ReplacementPreview{
+		Format: prepared.Format, Groups: groups, Conflicts: conflicts,
+		Unrepresentable: unsupported, Seals: len(prepared.Protected.Prompts),
+	}, nil
+}
+
+// unfillableRefusal names the sealed prompts whose wording is nowhere to be found.
+func unfillableRefusal(incoming []block.Block, fragments []uuid.UUID) error {
+	wanted := make(map[uuid.UUID]bool, len(fragments))
+	for _, id := range fragments {
+		wanted[id] = true
+	}
+	names := make([]string, 0, len(fragments))
+	for _, holder := range incoming {
+		for _, element := range holder.Elements {
+			list, ok := element.Content.(block.PromptList)
+			if !ok {
+				continue
+			}
+			for _, fragment := range list.Fragments {
+				if wanted[fragment.ID] {
+					names = append(names, protected.PromptName(fragment))
+				}
+			}
+		}
+	}
+	slices.Sort(names)
+	return format.MalformedInput(fmt.Errorf(
+		"This file holds back the wording of %s, and this asset does not have it either.",
+		listNames(names),
+	))
+}
+
+// listNames writes a short list of names the way a sentence would.
+func listNames(names []string) string {
+	quoted := make([]string, len(names))
+	for index, name := range names {
+		quoted[index] = strconv.Quote(name)
+	}
+	switch len(quoted) {
+	case 0:
+		return "one of its prompts"
+	case 1:
+		return quoted[0]
+	case 2:
+		return quoted[0] + " and " + quoted[1]
+	default:
+		return strings.Join(quoted[:len(quoted)-1], ", ") + " and " + quoted[len(quoted)-1]
+	}
+}
+
+// fillSealedPrompts puts the wording each sealed fragment will carry back on it.
+func fillSealedPrompts(blocks []block.Block, carried map[uuid.UUID]string, imports []format.ProtectedPrompt) {
+	if len(imports) == 0 {
+		return
+	}
+	text := make(map[uuid.UUID]string, len(imports))
+	for _, imported := range imports {
+		if imported.ReuseExisting {
+			text[imported.FragmentID] = carried[imported.FragmentID]
+			continue
+		}
+		text[imported.FragmentID] = imported.Text
+	}
+	for blockIndex := range blocks {
+		for elementIndex := range blocks[blockIndex].Elements {
+			element := &blocks[blockIndex].Elements[elementIndex]
+			list, ok := element.Content.(block.PromptList)
+			if !ok {
+				continue
+			}
+			fragments := slices.Clone(list.Fragments)
+			for itemIndex := range fragments {
+				if held, sealed := text[fragments[itemIndex].ID]; sealed {
+					fragments[itemIndex].Text = held
+				}
+			}
+			list.Fragments = fragments
+			element.Content = list
+		}
+	}
+}
+
+// asVersionPreserved reads remainder records the way a recorded version holds them.
+func asVersionPreserved(records []format.Remainder) []versionPreserved {
+	held := make([]versionPreserved, len(records))
+	for index, record := range records {
+		held[index] = versionPreserved{
+			Owner: string(record.Owner), OwnerID: record.OwnerID,
+			Namespace: record.Namespace, Payload: string(record.Payload),
+		}
+	}
+	return held
+}
+
+// comparePictureSets reports the pictures a file adds and removes.
+func comparePictureSets(current, incoming []uuid.UUID) []Change {
+	held := make(map[uuid.UUID]bool, len(current))
+	for _, id := range current {
+		held[id] = true
+	}
+	arriving := make(map[uuid.UUID]bool, len(incoming))
+	for _, id := range incoming {
+		arriving[id] = true
+	}
+	changes := make([]Change, 0)
+	for _, id := range incoming {
+		if !held[id] {
+			changes = append(changes, Change{Kind: ChangeAdded, Name: "Picture", AfterMedia: &id})
+		}
+	}
+	for _, id := range current {
+		if !arriving[id] {
+			changes = append(changes, Change{Kind: ChangeRemoved, Name: "Picture", BeforeMedia: &id})
+		}
+	}
+	return changes
+}
+
+// replacementConflicts names the subjects where the file overwrites an unpublished edit.
+func replacementConflicts(
+	working, public, arriving []block.Block,
+	currentRemainder, publicRemainder, incomingRemainder []format.Remainder,
+	currentImages, publicImages, incomingImages []uuid.UUID,
+) []string {
+	current := roleContent(working)
+	baseline := roleContent(public)
+	replacement := roleContent(arriving)
+	roles := make(map[block.Role]struct{}, len(current)+len(replacement))
+	for role := range current {
+		roles[role] = struct{}{}
+	}
+	for role := range replacement {
+		roles[role] = struct{}{}
+	}
+	conflicts := make([]string, 0)
+	for role := range roles {
+		baselineValue, published := baseline[role]
+		if !published {
+			continue
+		}
+		currentValue, edited := current[role]
+		replacementValue, replaced := replacement[role]
+		if sameRoleValue(baselineValue, true, currentValue, edited) ||
+			sameRoleValue(currentValue, edited, replacementValue, replaced) {
+			continue
+		}
+		conflicts = append(conflicts, string(role))
+	}
+	if !reflect.DeepEqual(currentRemainder, incomingRemainder) &&
+		!reflect.DeepEqual(publicRemainder, currentRemainder) {
+		conflicts = append(conflicts, preservedSubject)
+	}
+	if !sameImageSet(publicImages, currentImages) && !sameImageSet(currentImages, incomingImages) {
+		conflicts = append(conflicts, picturesSubject)
+	}
+	slices.Sort(conflicts)
+	return conflicts
 }
 
 func replacementImages(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (current, public []uuid.UUID, err error) {
@@ -174,79 +355,6 @@ func sameImageSet(first, second []uuid.UUID) bool {
 	slices.SortFunc(first, func(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) })
 	slices.SortFunc(second, func(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) })
 	return slices.Equal(first, second)
-}
-
-func replacementImageChanges(current, public, incoming []uuid.UUID) []ReplacementChange {
-	changes := make([]ReplacementChange, 0, 2)
-	switch {
-	case len(current) == 0 && len(incoming) > 0:
-		changes = append(changes, ReplacementChange{Kind: "addition", Subject: "images"})
-	case len(current) > 0 && len(incoming) == 0:
-		changes = append(changes, ReplacementChange{Kind: "removal", Subject: "images"})
-	case !sameImageSet(current, incoming):
-		changes = append(changes, ReplacementChange{Kind: "change", Subject: "images"})
-	}
-	if !sameImageSet(public, current) && !sameImageSet(current, incoming) {
-		changes = append(changes, ReplacementChange{Kind: "conflict", Subject: "images"})
-	}
-	return changes
-}
-
-func replacementOpaqueChanges(current, public, incoming []format.Remainder) []ReplacementChange {
-	if reflect.DeepEqual(current, incoming) {
-		return nil
-	}
-	changes := []ReplacementChange{{Kind: "change", Subject: "opaque_data"}}
-	if !reflect.DeepEqual(public, current) {
-		changes = append(changes, ReplacementChange{Kind: "conflict", Subject: "opaque_data"})
-	}
-	return changes
-}
-
-func compareReplacementRoles(working, public, incoming []block.Block) []ReplacementChange {
-	current := roleContent(working)
-	baseline := roleContent(public)
-	replacement := roleContent(incoming)
-	roles := make(map[block.Role]struct{}, len(current)+len(replacement))
-	for role := range current {
-		roles[role] = struct{}{}
-	}
-	for role := range replacement {
-		roles[role] = struct{}{}
-	}
-	changes := make([]ReplacementChange, 0, len(roles))
-	for role := range roles {
-		currentValue, currentOK := current[role]
-		replacementValue, replacementOK := replacement[role]
-		subject := string(role)
-		switch {
-		case !currentOK && replacementOK:
-			changes = append(changes, ReplacementChange{Kind: "addition", Subject: subject})
-		case currentOK && !replacementOK:
-			changes = append(changes, ReplacementChange{Kind: "removal", Subject: subject})
-		case !bytes.Equal(currentValue.Content, replacementValue.Content):
-			if len(currentValue.Items) > 0 || len(replacementValue.Items) > 0 {
-				removed, added, shared := itemDifferences(currentValue.Items, replacementValue.Items)
-				for range removed {
-					changes = append(changes, ReplacementChange{Kind: "removal", Subject: subject})
-				}
-				for range added {
-					changes = append(changes, ReplacementChange{Kind: "addition", Subject: subject})
-				}
-				if shared {
-					changes = append(changes, ReplacementChange{Kind: "change", Subject: subject})
-				}
-			} else {
-				changes = append(changes, ReplacementChange{Kind: "change", Subject: subject})
-			}
-		}
-		if baselineValue, baselineOK := baseline[role]; baselineOK &&
-			!sameRoleValue(baselineValue, true, currentValue, currentOK) &&
-			!sameRoleValue(currentValue, currentOK, replacementValue, replacementOK) {
-			changes = append(changes, ReplacementChange{Kind: "conflict", Subject: subject})
-		}
-	}
-	return changes
 }
 
 func sameRoleValue(first roleValue, firstOK bool, second roleValue, secondOK bool) bool {

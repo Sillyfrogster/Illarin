@@ -46,6 +46,7 @@ const (
 type Change struct {
 	Kind         ChangeKind
 	Name         string
+	Note         string
 	PreviousName string
 	Before       string
 	After        string
@@ -84,6 +85,7 @@ const (
 	metadataSubject     = "metadata"
 	presentationSubject = "presentation"
 	preservedSubject    = "preserved_data"
+	picturesSubject     = "pictures"
 )
 
 func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison, error) {
@@ -353,6 +355,7 @@ type subjectItems struct {
 type versionItem struct {
 	key   string
 	name  string
+	note  string
 	text  string
 	media uuid.UUID
 	body  string
@@ -366,8 +369,13 @@ func (i versionItem) mediaRef() *uuid.UUID {
 }
 
 func compareContent(earlier, later []block.Block) []ChangeGroup {
-	before := contentSubjects(earlier)
-	after := contentSubjects(later)
+	return compareContentKeyed(earlier, later, nil)
+}
+
+// compareContentKeyed compares content, matching items whose ids changed by a stable name.
+func compareContentKeyed(earlier, later []block.Block, names map[uuid.UUID]string) []ChangeGroup {
+	before := contentSubjects(earlier, names)
+	after := contentSubjects(later, names)
 	groups := make([]ChangeGroup, 0, len(before)+len(after))
 	for _, subject := range subjectOrder(before, after) {
 		label := after[subject].label
@@ -379,7 +387,7 @@ func compareContent(earlier, later []block.Block) []ChangeGroup {
 	return groups
 }
 
-func contentSubjects(blocks []block.Block) map[string]subjectItems {
+func contentSubjects(blocks []block.Block, names map[uuid.UUID]string) map[string]subjectItems {
 	subjects := make(map[string]subjectItems)
 	for _, holder := range blocks {
 		for _, element := range holder.Elements {
@@ -392,7 +400,7 @@ func contentSubjects(blocks []block.Block) map[string]subjectItems {
 			}
 			held := subjects[subject]
 			held.label = element.Label()
-			held.items = append(held.items, elementItems(element)...)
+			held.items = append(held.items, elementItems(element, names)...)
 			subjects[subject] = held
 		}
 	}
@@ -422,77 +430,86 @@ func subjectOrder(before, after map[string]subjectItems) []string {
 	return append(ordered, rest...)
 }
 
-func elementItems(element block.Element) []versionItem {
+func elementItems(element block.Element, names map[uuid.UUID]string) []versionItem {
+	itemKey := func(id uuid.UUID) string {
+		if stable, named := names[id]; named {
+			return stable
+		}
+		return id.String()
+	}
 	switch held := element.Content.(type) {
 	case block.Prose:
 		return []versionItem{{key: proseKey(element), text: held.Text, body: held.Text}}
 	case block.TextSet:
-		return listItems(held.Texts, func(text block.TextItem) versionItem {
-			return versionItem{key: text.ID.String(), name: text.Name, text: text.Text}
+		return listItems(names, held.Texts, func(text block.TextItem) versionItem {
+			return versionItem{key: itemKey(text.ID), name: text.Name, text: text.Text}
 		})
 	case block.DialogueSample:
-		return listItems(held.Turns, func(turn block.DialogueTurn) versionItem {
-			return versionItem{key: turn.ID.String(), name: turn.Speaker, text: turn.Text}
+		return listItems(names, held.Turns, func(turn block.DialogueTurn) versionItem {
+			return versionItem{key: itemKey(turn.ID), name: turn.Speaker, text: turn.Text}
 		})
 	case block.ImageSet:
-		return listItems(held.Images, func(image block.ImageItem) versionItem {
-			return versionItem{key: image.ID.String(), name: image.Name, media: image.MediaID}
+		return listItems(names, held.Images, func(image block.ImageItem) versionItem {
+			return versionItem{key: itemKey(image.ID), name: image.Name, media: image.MediaID}
 		})
 	case block.FieldList:
-		return listItems(held.Fields, func(field block.FieldItem) versionItem {
-			return versionItem{key: field.ID.String(), name: field.Name, text: field.Value}
+		return listItems(names, held.Fields, func(field block.FieldItem) versionItem {
+			return versionItem{key: itemKey(field.ID), name: field.Name, text: field.Value}
 		})
 	case block.LinkList:
-		return listItems(held.Links, func(link block.LinkItem) versionItem {
-			return versionItem{key: link.ID.String(), name: link.Label, text: link.URL}
+		return listItems(names, held.Links, func(link block.LinkItem) versionItem {
+			return versionItem{key: itemKey(link.ID), name: link.Label, text: link.URL}
 		})
 	case block.EntryTable:
-		return listItems(held.Entries, func(entry block.Entry) versionItem {
-			return versionItem{key: entry.ID.String(), name: entry.Name, text: entry.Text}
+		return listItems(names, held.Entries, func(entry block.Entry) versionItem {
+			return versionItem{key: itemKey(entry.ID), name: entry.Name, text: entry.Text}
 		})
 	case block.PromptList:
 		return append(
-			listItems(held.Groups, func(group block.PromptGroup) versionItem {
-				return versionItem{key: group.ID.String(), name: group.Name}
+			listItems(names, held.Groups, func(group block.PromptGroup) versionItem {
+				return versionItem{key: itemKey(group.ID), name: group.Name}
 			}),
-			listItems(held.Fragments, func(fragment block.PromptFragment) versionItem {
-				return versionItem{key: fragment.ID.String(), name: fragment.Name, text: fragment.Text}
+			listItems(names, held.Fragments, func(fragment block.PromptFragment) versionItem {
+				return versionItem{
+					key: itemKey(fragment.ID), name: fragment.Name,
+					note: sealingNote(fragment), text: fragment.Text,
+				}
 			})...)
 	case block.VariableSchema:
-		return listItems(held.Variables, func(variable block.Variable) versionItem {
+		return listItems(names, held.Variables, func(variable block.Variable) versionItem {
 			return versionItem{
-				key: variable.ID.String(), name: preferredName(variable.Label, variable.Name),
+				key: itemKey(variable.ID), name: preferredName(variable.Label, variable.Name),
 				text: settingValue(variable.Value),
 			}
 		})
 	case block.SettingGroup:
-		return listItems(held.Settings, func(setting block.Setting) versionItem {
+		return listItems(names, held.Settings, func(setting block.Setting) versionItem {
 			return versionItem{
-				key: setting.ID.String(), name: preferredName(setting.Label, setting.Name),
+				key: itemKey(setting.ID), name: preferredName(setting.Label, setting.Name),
 				text: settingValue(setting.Value),
 			}
 		})
 	case block.ScriptList:
-		return listItems(held.Scripts, func(script block.Script) versionItem {
-			return versionItem{key: script.ID.String(), name: script.Name, text: script.Find}
+		return listItems(names, held.Scripts, func(script block.Script) versionItem {
+			return versionItem{key: itemKey(script.ID), name: script.Name, text: script.Find}
 		})
 	case block.ColorSet:
 		items := make([]versionItem, 0, len(held.Modes))
 		for _, mode := range held.Modes {
-			items = append(items, listItems(mode.Colors, func(color block.Color) versionItem {
+			items = append(items, listItems(names, mode.Colors, func(color block.Color) versionItem {
 				return versionItem{
-					key: color.ID.String(), name: preferredName(mode.Name+" "+color.Name, color.Name),
+					key: itemKey(color.ID), name: preferredName(mode.Name+" "+color.Name, color.Name),
 					text: color.Value,
 				}
 			})...)
 		}
 		return items
 	case block.StylesheetSet:
-		items := listItems(held.Stylesheets, func(sheet block.Stylesheet) versionItem {
-			return versionItem{key: sheet.ID.String(), name: sheet.Name, text: sheet.CSS}
+		items := listItems(names, held.Stylesheets, func(sheet block.Stylesheet) versionItem {
+			return versionItem{key: itemKey(sheet.ID), name: sheet.Name, text: sheet.CSS}
 		})
-		items = append(items, listItems(held.Assets, func(file block.StylesheetAsset) versionItem {
-			return versionItem{key: file.ID.String(), name: file.Path}
+		items = append(items, listItems(names, held.Assets, func(file block.StylesheetAsset) versionItem {
+			return versionItem{key: itemKey(file.ID), name: file.Path}
 		})...)
 		if held.Global != "" {
 			items = append(items, versionItem{
@@ -502,14 +519,22 @@ func elementItems(element block.Element) []versionItem {
 		}
 		return items
 	case block.RecordList:
-		return listItems(held.Records, func(record block.LumiaRecord) versionItem {
+		return listItems(names, held.Records, func(record block.LumiaRecord) versionItem {
 			return versionItem{
-				key: record.ID.String(), name: record.LumiaName, text: record.LumiaDefinition,
+				key: itemKey(record.ID), name: record.LumiaName, text: record.LumiaDefinition,
 			}
 		})
 	default:
 		return nil
 	}
+}
+
+// sealingNote says when a prompt's wording is kept back for linked apps.
+func sealingNote(fragment block.PromptFragment) string {
+	if fragment.Protected {
+		return "sealed for linked apps"
+	}
+	return ""
 }
 
 func proseKey(element block.Element) string {
@@ -519,31 +544,61 @@ func proseKey(element block.Element) string {
 	return element.ID.String()
 }
 
-func listItems[T any](list []T, describe func(T) versionItem) []versionItem {
+func listItems[T any](names map[uuid.UUID]string, list []T, describe func(T) versionItem) []versionItem {
 	items := make([]versionItem, 0, len(list))
 	for _, entry := range list {
 		item := describe(entry)
-		item.body = itemBody(entry)
+		item.body = itemBody(entry, names)
 		items = append(items, item)
 	}
 	return items
 }
 
-func itemBody(item any) string {
+func itemBody(item any, names map[uuid.UUID]string) string {
 	encoded, err := json.Marshal(item)
 	if err != nil {
 		return ""
 	}
-	var fields map[string]json.RawMessage
+	var fields map[string]any
 	if json.Unmarshal(encoded, &fields) != nil {
 		return string(encoded)
 	}
 	delete(fields, "id")
-	canonical, err := json.Marshal(fields)
+	canonical, err := json.Marshal(steadyIDs(fields, names))
 	if err != nil {
 		return string(encoded)
 	}
 	return string(canonical)
+}
+
+// steadyIDs swaps ids a file mints afresh for the stable names they stand for.
+func steadyIDs(value any, names map[uuid.UUID]string) any {
+	if len(names) == 0 {
+		return value
+	}
+	switch held := value.(type) {
+	case map[string]any:
+		for key, nested := range held {
+			held[key] = steadyIDs(nested, names)
+		}
+		return held
+	case []any:
+		for index, nested := range held {
+			held[index] = steadyIDs(nested, names)
+		}
+		return held
+	case string:
+		id, err := uuid.Parse(held)
+		if err != nil {
+			return held
+		}
+		if stable, named := names[id]; named {
+			return stable
+		}
+		return held
+	default:
+		return value
+	}
 }
 
 func preferredName(preferred, fallback string) string {
@@ -576,11 +631,13 @@ func compareItems(earlier, later []versionItem) []Change {
 	taken := make([]bool, len(earlier))
 	matchItems(earlier, later, taken, partner, func(item versionItem) string { return item.key })
 	matchItems(earlier, later, taken, partner, func(item versionItem) string { return item.body })
+	matchItems(earlier, later, taken, partner, func(item versionItem) string { return item.name })
 	changes := make([]Change, 0, len(later))
 	for index, item := range later {
 		if partner[index] < 0 {
 			changes = append(changes, Change{
-				Kind: ChangeAdded, Name: item.name, After: item.text, AfterMedia: item.mediaRef(),
+				Kind: ChangeAdded, Name: item.name, Note: item.note,
+				After: item.text, AfterMedia: item.mediaRef(),
 			})
 			continue
 		}
@@ -593,7 +650,8 @@ func compareItems(earlier, later []versionItem) []Change {
 	for index, item := range earlier {
 		if !taken[index] {
 			changes = append(changes, Change{
-				Kind: ChangeRemoved, Name: item.name, Before: item.text, BeforeMedia: item.mediaRef(),
+				Kind: ChangeRemoved, Name: item.name, Note: item.note,
+				Before: item.text, BeforeMedia: item.mediaRef(),
 			})
 		}
 	}
@@ -628,6 +686,12 @@ func editedItem(was, now versionItem) Change {
 		}
 	}
 	edited := Change{Kind: ChangeEdited, Name: now.name}
+	if was.note != now.note {
+		edited.Note = now.note
+		if edited.Note == "" {
+			edited.Note = "no longer sealed"
+		}
+	}
 	if was.name != now.name {
 		edited.PreviousName = was.name
 	}

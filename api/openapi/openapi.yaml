@@ -596,8 +596,6 @@ components:
       $ref: ./assets.yaml#/components/schemas/IngestFailure
     ReplacementPreview:
       $ref: ./assets.yaml#/components/schemas/ReplacementPreview
-    ReplacementChange:
-      $ref: ./assets.yaml#/components/schemas/ReplacementChange
     ReplacementAcceptance:
       $ref: ./assets.yaml#/components/schemas/ReplacementAcceptance
     BlockSaveConflict:

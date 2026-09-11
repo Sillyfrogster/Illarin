@@ -204,23 +204,45 @@ func TestReplacementPreviewUsesStableItemIDs(t *testing.T) {
 		Role: block.RoleGreetings, Type: block.TypeTextSet,
 		Content: block.TextSet{Texts: []block.TextItem{{ID: shared, Text: "Updated"}, {ID: added, Text: "New"}}},
 	}}}}
-	changes := compareReplacementRoles(working, working, incoming)
+	groups := compareContent(working, incoming)
 	var additions, removals, updates int
-	for _, change := range changes {
-		if change.Subject != string(block.RoleGreetings) {
+	for _, group := range groups {
+		if group.Subject != string(block.RoleGreetings) {
 			continue
 		}
-		switch change.Kind {
-		case "addition":
-			additions++
-		case "removal":
-			removals++
-		case "change":
-			updates++
+		for _, change := range group.Changes {
+			switch change.Kind {
+			case ChangeAdded:
+				additions++
+			case ChangeRemoved:
+				removals++
+			case ChangeEdited:
+				updates++
+			}
 		}
 	}
 	if additions != 1 || removals != 1 || updates != 1 {
-		t.Fatalf("stable-item changes = %+v", changes)
+		t.Fatalf("stable-item changes = %+v", groups)
+	}
+}
+
+func TestReplacementPreviewShowsTheWordingOnBothSides(t *testing.T) {
+	item := block.NewItemID()
+	working := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: item, Name: "Opening", Text: "Old wording"}}},
+	}}}}
+	incoming := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: item, Name: "Opening", Text: "New wording"}}},
+	}}}}
+	groups := compareContent(working, incoming)
+	if len(groups) != 1 || len(groups[0].Changes) != 1 {
+		t.Fatalf("groups = %+v", groups)
+	}
+	change := groups[0].Changes[0]
+	if change.Kind != ChangeEdited || change.Before != "Old wording" || change.After != "New wording" {
+		t.Fatalf("change = %+v, want the wording on both sides", change)
 	}
 }
 
@@ -245,18 +267,22 @@ func TestReplacementPreviewReportsConflictsWhenEitherSideOmitsContent(t *testing
 	incoming := []block.Block{{Elements: []block.Element{{
 		Role: block.RoleDescription, Type: block.TypeProse, Content: block.Prose{Text: "From file"},
 	}}}}
-	changes := compareReplacementRoles(nil, baseline, incoming)
-	if !slices.Contains(changes, ReplacementChange{Kind: "conflict", Subject: string(block.RoleDescription)}) {
-		t.Fatalf("missing-content conflict = %+v", changes)
+	conflicts := replacementConflicts(nil, baseline, incoming, nil, nil, nil, nil, nil, nil)
+	if !slices.Contains(conflicts, string(block.RoleDescription)) {
+		t.Fatalf("missing-content conflict = %+v", conflicts)
 	}
 }
 
 func TestReplacementPreviewReportsAConflictingImageReplacement(t *testing.T) {
 	public, local, incoming := block.NewItemID(), block.NewItemID(), block.NewItemID()
-	changes := replacementImageChanges([]uuid.UUID{local}, []uuid.UUID{public}, []uuid.UUID{incoming})
-	if !slices.Contains(changes, ReplacementChange{Kind: "change", Subject: "images"}) ||
-		!slices.Contains(changes, ReplacementChange{Kind: "conflict", Subject: "images"}) {
+	changes := comparePictureSets([]uuid.UUID{local}, []uuid.UUID{incoming})
+	if len(changes) != 2 {
 		t.Fatalf("same-count image replacement = %+v", changes)
+	}
+	conflicts := replacementConflicts(nil, nil, nil, nil, nil, nil,
+		[]uuid.UUID{local}, []uuid.UUID{public}, []uuid.UUID{incoming})
+	if !slices.Contains(conflicts, picturesSubject) {
+		t.Fatalf("image conflict = %+v", conflicts)
 	}
 }
 
@@ -264,10 +290,13 @@ func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
 	current := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: uuid.New(), Namespace: "extension", Payload: []byte(`{"local":true}`)}}
 	public := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"published":true}`)}}
 	incoming := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"file":true}`)}}
-	changes := replacementOpaqueChanges(current, public, incoming)
-	if !slices.Contains(changes, ReplacementChange{Kind: "change", Subject: "opaque_data"}) ||
-		!slices.Contains(changes, ReplacementChange{Kind: "conflict", Subject: "opaque_data"}) {
+	changes := comparePreserved(asVersionPreserved(current), asVersionPreserved(incoming))
+	if len(changes) != 1 || changes[0].Kind != ChangeEdited || changes[0].Name != "extension" {
 		t.Fatalf("opaque replacement = %+v", changes)
+	}
+	conflicts := replacementConflicts(nil, nil, nil, current, public, incoming, nil, nil, nil)
+	if !slices.Contains(conflicts, preservedSubject) {
+		t.Fatalf("opaque conflict = %+v", conflicts)
 	}
 }
 

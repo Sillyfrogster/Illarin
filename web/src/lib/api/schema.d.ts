@@ -3460,13 +3460,12 @@ export interface components {
     };
     ReplacementPreview: {
       format: string;
-      changes: components["schemas"]["ReplacementChange"][];
+      groups: components["schemas"]["VersionChangeGroup"][];
+      /** @description The subjects where the file overwrites an edit made since the asset was last published */
+      conflicts: string[];
       unrepresentable: string[];
-    };
-    ReplacementChange: {
-      /** @enum {string} */
-      kind: "addition" | "change" | "removal" | "conflict";
-      subject: string;
+      /** @description How many prompt fragments the file would seal */
+      seals: number;
     };
     ReplacementAcceptance: {
       unrepresentable: {
@@ -3502,6 +3501,8 @@ export interface components {
       /** @enum {string} */
       kind: "addition" | "removal" | "change";
       name: string;
+      /** @description What changed about an item when there is no wording to show */
+      note?: string;
       previousName?: string;
       before?: string;
       after?: string;

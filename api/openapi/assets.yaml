@@ -1686,6 +1686,9 @@ components:
           enum: [addition, removal, change]
         name:
           type: string
+        note:
+          description: What changed about an item when there is no wording to show
+          type: string
         previousName:
           type: string
         before:
@@ -2636,27 +2639,28 @@ components:
           $ref: '#/components/schemas/ReplacementPreview'
     ReplacementPreview:
       type: object
-      required: [format, changes, unrepresentable]
+      required: [format, groups, conflicts, unrepresentable, seals]
       properties:
         format:
           type: string
-        changes:
+        groups:
           type: array
           items:
-            $ref: '#/components/schemas/ReplacementChange'
+            $ref: '#/components/schemas/VersionChangeGroup'
+        conflicts:
+          description: >-
+            The subjects where the file overwrites an edit made since the
+            asset was last published
+          type: array
+          items:
+            type: string
         unrepresentable:
           type: array
           items:
             type: string
-    ReplacementChange:
-      type: object
-      required: [kind, subject]
-      properties:
-        kind:
-          type: string
-          enum: [addition, change, removal, conflict]
-        subject:
-          type: string
+        seals:
+          description: How many prompt fragments the file would seal
+          type: integer
     ReplacementAcceptance:
       type: object
       required: [unrepresentable]

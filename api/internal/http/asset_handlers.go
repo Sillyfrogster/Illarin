@@ -341,6 +341,10 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationI
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
+	if _, why, classified := format.Explain(err); classified {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": why})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not apply the replacement file. Try again."})
 		return
@@ -792,13 +796,21 @@ func toAPIIngest(operation asset.IngestOperation) gin.H {
 		}
 	}
 	if operation.Preview != nil {
-		changes := make([]gin.H, len(operation.Preview.Changes))
-		for index, change := range operation.Preview.Changes {
-			changes[index] = gin.H{"kind": change.Kind, "subject": change.Subject}
+		groups := make([]VersionChangeGroup, 0, len(operation.Preview.Groups))
+		for _, group := range operation.Preview.Groups {
+			changes := make([]VersionChange, 0, len(group.Changes))
+			for _, change := range group.Changes {
+				changes = append(changes, toAPIChange(change))
+			}
+			groups = append(groups, VersionChangeGroup{
+				Subject: group.Subject, Label: group.Label, Changes: changes,
+			})
 		}
 		response["preview"] = gin.H{
-			"format": operation.Preview.Format, "changes": changes,
+			"format": operation.Preview.Format, "groups": groups,
+			"conflicts":       operation.Preview.Conflicts,
 			"unrepresentable": operation.Preview.Unrepresentable,
+			"seals":           operation.Preview.Seals,
 		}
 	}
 	return response

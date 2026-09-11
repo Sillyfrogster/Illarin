@@ -45,6 +45,15 @@ func InternalFailure(err error) error {
 	return failure{reason: FailureInternal, cause: err}
 }
 
+// Explain reports why a classified failure happened, in the words it was given.
+func Explain(err error) (FailureReason, string, bool) {
+	var classified failure
+	if !errors.As(err, &classified) {
+		return "", "", false
+	}
+	return classified.reason, classified.cause.Error(), true
+}
+
 func FailureOf(err error) (FailureReason, bool) {
 	var classified failure
 	if !errors.As(err, &classified) {

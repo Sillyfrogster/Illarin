@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
-import { publishAssetUpdate, type ReadinessItem } from "@/lib/api/query";
+import {
+  publishAssetUpdate,
+  type ReadinessItem,
+  type VersionChangeGroup,
+} from "@/lib/api/query";
 import type { ReadinessTarget } from "@/lib/readiness";
-import type { ReplacementSummary } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { Field, Note, TextAreaField, TextField } from "./fields";
 import { ReadinessList } from "./ReadinessList";
-import { ReplacementChanges } from "./ReplacementStep";
 import { useWorkspace } from "./state";
 
 export function ReviewStep({
@@ -19,7 +22,7 @@ export function ReviewStep({
   onGo,
   onPublished,
 }: {
-  applied: ReplacementSummary[] | null;
+  applied: VersionChangeGroup[] | null;
   kind: string;
   onBack: () => void;
   onGo: (target: ReadinessTarget) => void;
@@ -68,10 +71,8 @@ export function ReviewStep({
 
       {applied && applied.length > 0 ? (
         <section className="flex flex-col gap-3">
-          <h4 className="font-display text-ui font-medium text-ink">
-            Replacement file changes
-          </h4>
-          <ReplacementChanges changes={applied} />
+          <Note>These changes came from the file you applied.</Note>
+          <ChangeList groups={applied} />
         </section>
       ) : null}
 

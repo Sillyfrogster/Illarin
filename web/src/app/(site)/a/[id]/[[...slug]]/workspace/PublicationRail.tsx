@@ -12,10 +12,10 @@ import {
   type IngestOperation,
   publishAsset,
   type ReadinessItem,
+  type VersionChangeGroup,
 } from "@/lib/api/query";
 import { reviewBlockedReason, updateStanding } from "@/lib/asset-publication";
 import type { PageTarget, ReadinessTarget } from "@/lib/readiness";
-import type { ReplacementSummary } from "@/lib/replacement-subject";
 import { useWorkingCopy, WORKING_COPY_SAVED } from "@/lib/working-copy";
 import { Note } from "./fields";
 import { ReadinessList } from "./ReadinessList";
@@ -41,7 +41,7 @@ export function PublicationRail({
   const [step, setStep] = useState<Step>("home");
   const [changed, setChanged] = useState(unpublishedChanges);
   const [waiting, setWaiting] = useState<IngestOperation | null>(null);
-  const [applied, setApplied] = useState<ReplacementSummary[] | null>(null);
+  const [applied, setApplied] = useState<VersionChangeGroup[] | null>(null);
 
   useEffect(() => setChanged(unpublishedChanges), [unpublishedChanges]);
 
