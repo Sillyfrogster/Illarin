@@ -1,28 +1,43 @@
 "use client";
 
-import { Hash, Plus, Webhook } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import {
-  Mark,
-  Nothing,
-  Rows,
-  StartAction,
-} from "@/components/register/RowParts";
+  ChevronRight,
+  CircleCheck,
+  CircleDashed,
+  CircleSlash,
+  Hash,
+  Plus,
+  RefreshCw,
+  SatelliteDish,
+  Webhook,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Mark, type Tone } from "@/components/register/RowParts";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
 import { Gate } from "@/components/ui/gate";
+import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   type AssetUpdateDestination,
   readUpdateDestinations,
 } from "@/lib/api/asset-destinations";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
+import {
+  destinationRotating,
+  destinationStanding,
+  destinationWhere,
+} from "@/lib/update-destinations";
 import { DestinationEditor } from "./DestinationEditor";
 
-export const destinationState = {
-  active: "Ready",
-  unverified: "Needs verification",
-  disabled: "Disabled",
-} as const;
+const STATES: Record<
+  AssetUpdateDestination["state"],
+  { icon: typeof CircleCheck; tone: Tone; word: string }
+> = {
+  active: { icon: CircleCheck, tone: "accent", word: "Ready" },
+  disabled: { icon: CircleSlash, tone: "quiet", word: "Switched off" },
+  unverified: { icon: CircleDashed, tone: "quiet", word: "Not verified" },
+};
 
 export function UpdateDestinationSettings() {
   const { account } = useAuth();
@@ -65,7 +80,6 @@ function DestinationManager() {
     key: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
-  const listHeading = useRef<HTMLHeadingElement>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setError("");
@@ -97,125 +111,224 @@ function DestinationManager() {
   function close() {
     if (busy) return;
     setEditing(null);
-    listHeading.current?.focus();
   }
 
+  const held = destinations ?? [];
+
   return (
-    <div className="mt-12 grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)] lg:gap-16">
-      <section aria-labelledby="your-destinations" className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2
-            className="font-display text-section font-medium tracking-tight text-ink outline-offset-3"
-            id="your-destinations"
-            ref={listHeading}
-            tabIndex={-1}
-          >
-            Connected destinations
-          </h2>
-          <StartAction
-            disabled={busy}
-            icon={Plus}
-            onClick={() => setEditing({ id: null, key: crypto.randomUUID() })}
-          >
-            Add destination
-          </StartAction>
-        </div>
-        {error ? (
-          <div className="mt-6 grid justify-items-start gap-3">
-            <Trouble>{error}</Trouble>
-            <Button onClick={() => void load()} variant="secondary">
-              Try again
+    <>
+      <div
+        className={cn(
+          "mt-12 max-w-[54rem] min-w-0 transition-[padding] duration-500 ease-wipe motion-reduce:transition-none",
+          editing && "lg:max-w-none lg:pr-[30rem]",
+        )}
+      >
+        <section aria-labelledby="your-destinations">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2
+              className="font-display text-section font-medium tracking-tight text-ink"
+              id="your-destinations"
+            >
+              Your destinations
+            </h2>
+            <Button
+              disabled={busy}
+              onClick={() => setEditing({ id: null, key: crypto.randomUUID() })}
+              variant="primary"
+            >
+              <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+              Connect a destination
             </Button>
           </div>
-        ) : destinations === null ? (
-          <output className="mt-6 block text-ui text-mute">
-            Loading your destinations…
-          </output>
-        ) : destinations.length === 0 ? (
-          <Nothing>
-            Connect the channel where your community follows your work, or an
-            endpoint you run. New assets are always published quietly.
-          </Nothing>
-        ) : (
-          <Rows>
-            {destinations.map((destination) => {
-              const Icon = destination.kind === "discord" ? Hash : Webhook;
-              return (
-                <li
-                  className="min-w-0 border-rule not-first:border-t"
-                  key={destination.id}
-                >
-                  <button
-                    aria-pressed={editing?.id === destination.id}
-                    className="flex w-full min-w-0 items-start gap-4 rounded-plate px-4 py-5 text-left outline-offset-3 hover:bg-deep disabled:opacity-50 sm:px-5"
-                    disabled={busy}
-                    onClick={() =>
-                      setEditing({ id: destination.id, key: destination.id })
+
+          <div className="mt-6">
+            {error ? (
+              <div className="flex flex-wrap items-center gap-4 rounded-plate bg-stop-wash px-5 py-4">
+                <p className="min-w-0 flex-1 basis-56 font-ui text-ui text-stop">
+                  {error}
+                </p>
+                <Button onClick={() => void load()} variant="secondary">
+                  Try again
+                </Button>
+              </div>
+            ) : destinations === null ? (
+              <output className="block rounded-plate bg-deep px-6 py-6 text-ui text-mute">
+                Reading your destinations…
+              </output>
+            ) : held.length === 0 ? (
+              <div className="flex flex-wrap items-center gap-4 rounded-plate bg-deep px-6 py-6">
+                <SatelliteDish
+                  aria-hidden="true"
+                  className="size-6 shrink-0 text-mute"
+                  strokeWidth={1.5}
+                />
+                <p className="min-w-0 flex-1 basis-64 font-prose text-ui text-mute">
+                  Nothing connected. Add the Discord channel your readers watch,
+                  or an endpoint you run, and it becomes a choice the next time
+                  you publish an update.
+                </p>
+              </div>
+            ) : (
+              <ul className="m-0 grid list-none gap-2 p-0">
+                {held.map((one) => (
+                  <DestinationRow
+                    key={one.id}
+                    onOpen={() =>
+                      setEditing({ id: one.id, key: `${one.id}-open` })
                     }
-                    type="button"
-                  >
-                    <Icon
-                      aria-hidden="true"
-                      className="mt-1 size-5 shrink-0 text-accent"
-                    />
-                    <span className="grid min-w-0 flex-1 gap-2">
-                      <span className="font-display text-section font-medium text-ink wrap-anywhere">
-                        {destination.name}
-                      </span>
-                      <span className="text-meta text-mute wrap-anywhere">
-                        {destination.kind === "discord"
-                          ? "Discord channel"
-                          : destination.host}
-                      </span>
-                      <span>
-                        <Mark
-                          tone={
-                            destination.state === "active" ? "accent" : "quiet"
-                          }
-                        >
-                          {destinationState[destination.state]}
-                        </Mark>
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </Rows>
-        )}
-      </section>
-      {editing !== null ? (
-        <DestinationEditor
-          busy={busy}
-          existing={destinations?.find((one) => one.id === editing.id) ?? null}
-          key={editing.key}
-          onBusy={setBusy}
-          onClose={close}
-          onRemoved={(id) => {
-            setDestinations(
-              (current) => current?.filter((one) => one.id !== id) ?? [],
-            );
-            setEditing(null);
-            listHeading.current?.focus();
-          }}
-          onSaved={saved}
-        />
-      ) : (
-        <aside className="min-w-0 rounded-plate bg-deep p-6 lg:self-start lg:p-8">
-          <h2 className="font-display text-section font-medium text-ink">
-            One connection, your choice of updates
-          </h2>
-          <p className="mt-3 max-w-[46ch] font-prose text-ui text-mute">
-            Save destinations here, then choose defaults in each asset’s
-            publication workspace. Connecting a destination sends no
-            announcement.
-          </p>
-          <p className="mt-4 max-w-[46ch] font-prose text-ui text-mute">
-            Only you can manage these connections. Webhook addresses and saved
-            credentials stay masked.
-          </p>
-        </aside>
+                    one={one}
+                    open={editing?.id === one.id}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <ReceiverNotes />
+      </div>
+
+      <AnimatePresence>
+        {editing !== null ? (
+          <WorkspaceRail
+            description={
+              editing.id
+                ? "Changes take effect on the next update you publish."
+                : "Connecting a destination sends nothing. You name it when you publish an update."
+            }
+            key={editing.key}
+            onClose={close}
+            title={editing.id ? "Destination" : "Connect a destination"}
+          >
+            <DestinationEditor
+              busy={busy}
+              existing={held.find((one) => one.id === editing.id) ?? null}
+              onBusy={setBusy}
+              onRemoved={(id) => {
+                setDestinations(
+                  (current) => current?.filter((one) => one.id !== id) ?? [],
+                );
+                setEditing(null);
+              }}
+              onSaved={saved}
+            />
+          </WorkspaceRail>
+        ) : null}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function DestinationRow({
+  one,
+  onOpen,
+  open,
+}: {
+  one: AssetUpdateDestination;
+  onOpen: () => void;
+  open: boolean;
+}) {
+  const state = STATES[one.state];
+  const Kind = one.kind === "discord" ? Hash : Webhook;
+
+  return (
+    <li
+      className={cn(
+        "group relative rounded-plate px-5 py-5 transition-colors duration-200 motion-reduce:transition-none",
+        open ? "bg-rule/45" : "bg-deep hover:bg-rule/45",
       )}
-    </div>
+    >
+      <div className="flex flex-wrap items-start gap-x-5 gap-y-4">
+        <span
+          className={cn(
+            "grid size-11 shrink-0 place-items-center rounded-control",
+            one.state === "active"
+              ? "bg-accent-wash text-accent"
+              : "bg-plane text-mute",
+          )}
+        >
+          <Kind aria-hidden="true" className="size-5" strokeWidth={1.6} />
+        </span>
+
+        <div className="min-w-0 flex-1 basis-64">
+          <h3 className="font-ui text-ui font-medium text-ink wrap-anywhere">
+            <button
+              className="text-left outline-offset-3 before:absolute before:inset-0 before:content-[''] hover:text-accent"
+              onClick={onOpen}
+              type="button"
+            >
+              {one.name}
+              <span className="sr-only">. Open this destination</span>
+            </button>
+          </h3>
+          <p className="font-ui text-ui text-mute wrap-anywhere">
+            {destinationWhere(one)}
+          </p>
+          <p className="mt-2 max-w-[54ch] font-prose text-meta text-mute">
+            {destinationStanding(one)}
+          </p>
+        </div>
+
+        <div className="relative flex shrink-0 items-center gap-3">
+          {destinationRotating(one) ? (
+            <Mark icon={RefreshCw}>Rotating</Mark>
+          ) : null}
+          <Mark icon={state.icon} tone={state.tone}>
+            {state.word}
+          </Mark>
+          <ChevronRight
+            aria-hidden="true"
+            className="size-4 text-mute transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+          />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+const NOTES: { said: string; title: string }[] = [
+  {
+    said: "The asset name, the update number or your version label, your one-line summary and a link to the history. Never the changes themselves, your notes or prompt text.",
+    title: "What an announcement carries",
+  },
+  {
+    said: "Only a published update. A first publication, a private save and a correction to published notes send nothing, and an unlisted asset stays quiet unless you say its link may travel.",
+    title: "When one is sent",
+  },
+  {
+    said: "A destination that does not answer is tried again for about three days. Every attempt carries the same webhook-id, so a receiver that has seen that value can drop the repeat.",
+    title: "If a destination is down",
+  },
+  {
+    said: "Two announcements can arrive in either order, so compare occurredAt and the update number rather than the order they land in. A generic endpoint signs with your own secret.",
+    title: "What a receiver should check",
+  },
+];
+
+function ReceiverNotes() {
+  return (
+    <section
+      aria-labelledby="how-announcements-work"
+      className="mt-14 border-t border-rule pt-8"
+    >
+      <h2
+        className="font-display text-section font-medium tracking-tight text-ink"
+        id="how-announcements-work"
+      >
+        How announcements behave
+      </h2>
+      <dl className="mt-6 grid gap-x-12 gap-y-7 sm:grid-cols-2">
+        {NOTES.map((note) => (
+          <div key={note.title}>
+            <dt className="font-ui text-ui font-medium text-ink">
+              {note.title}
+            </dt>
+            <dd className="mt-1.5 max-w-[46ch] font-prose text-meta text-mute">
+              {note.said}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }

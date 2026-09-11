@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AssetDestinationDefaults } from "@/components/updates/AssetDestinationDefaults";
+import { AnnouncementStatus } from "@/components/updates/AnnouncementStatus";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
   AssetDetail,
@@ -242,13 +242,11 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
               kind={props.kind}
               onGo={goToPage}
               readiness={props.readiness}
+              unlisted={props.discovery === "unlisted"}
               unpublishedChanges={props.unpublishedChanges}
             />
-            {workspace.isOwner ? (
-              <AssetDestinationDefaults
-                assetId={workspace.assetId}
-                frozen={props.withheld}
-              />
+            {workspace.isOwner && !workspace.isDraft ? (
+              <AnnouncementStatus assetId={workspace.assetId} />
             ) : null}
           </WorkspaceRail>
         ) : null}

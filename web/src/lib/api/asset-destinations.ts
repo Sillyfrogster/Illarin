@@ -5,6 +5,8 @@ export type AssetUpdateDestination =
   components["schemas"]["AssetUpdateDestination"];
 export type AssetUpdateDestinationChoice =
   components["schemas"]["AssetUpdateDestinationChoice"];
+export type AssetUpdateAnnouncement =
+  components["schemas"]["AssetUpdateAnnouncement"];
 type AddedDestination = components["schemas"]["AddedAssetUpdateDestination"];
 type NewDestination = components["schemas"]["AddAssetUpdateDestinationRequest"];
 type DestinationChange =
@@ -82,17 +84,14 @@ export function readAssetUpdateDestinationChoices(
   );
 }
 
-export function saveAssetUpdateDestinationDefaults(
+export function readAssetUpdateAnnouncements(
   assetId: string,
-  destinationIds: string[],
+  signal?: AbortSignal,
 ) {
-  return ask<null>(
-    `/assets/${assetId}/update-destinations`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destinationIds }),
-    },
-    async () => null,
+  return request<{ announcements: AssetUpdateAnnouncement[] }>(
+    `/assets/${assetId}/announcements`,
+    "GET",
+    undefined,
+    signal,
   );
 }

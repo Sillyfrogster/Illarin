@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
   "Update destinations",
-  "Manage where your asset updates are announced.",
+  "Where Illarin announces the updates you publish.",
 );
 
 export default function UpdateDestinationsPage() {
@@ -22,8 +22,8 @@ export default function UpdateDestinationsPage() {
           Update destinations
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          Connect a Discord channel or webhook for your asset updates. Choose
-          defaults separately for each asset.
+          A Discord channel or an endpoint of your own, ready to name when you
+          publish an update. Connecting one announces nothing by itself.
         </p>
       </header>
       <UpdateDestinationSettings />

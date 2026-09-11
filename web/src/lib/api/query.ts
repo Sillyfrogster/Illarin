@@ -538,6 +538,7 @@ export async function publishAssetUpdate(
       published: false;
       error: string;
       code?: string;
+      field?: string;
       readiness?: ReadinessItem[];
     }
 > {
@@ -552,7 +553,12 @@ export async function publishAssetUpdate(
   if (data) return { published: true, update: data };
   reportStaleWorkingCopy(error);
   const refusal = error as
-    | { error?: unknown; code?: unknown; readiness?: ReadinessItem[] }
+    | {
+        error?: unknown;
+        code?: unknown;
+        field?: unknown;
+        readiness?: ReadinessItem[];
+      }
     | undefined;
   return {
     published: false,
@@ -561,6 +567,7 @@ export async function publishAssetUpdate(
         ? refusal.error
         : "The update could not be published. Try again.",
     code: typeof refusal?.code === "string" ? refusal.code : undefined,
+    field: typeof refusal?.field === "string" ? refusal.field : undefined,
     readiness: refusal?.readiness,
   };
 }

@@ -29,11 +29,13 @@ export function PublicationRail({
   kind,
   onGo,
   readiness,
+  unlisted,
   unpublishedChanges,
 }: {
   kind: string;
   onGo: (target: PageTarget) => void;
   readiness: ReadinessItem[] | undefined;
+  unlisted: boolean;
   unpublishedChanges: boolean;
 }) {
   const workspace = useWorkspace();
@@ -121,6 +123,7 @@ export function PublicationRail({
           setApplied(null);
           settled();
         }}
+        unlisted={unlisted}
       />
     );
   }

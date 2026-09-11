@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
+import {
+  type AnnouncementChoice,
+  NO_CHOICE,
+  UpdateAnnouncementChoice,
+} from "@/components/updates/UpdateAnnouncementChoice";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   publishAssetUpdate,
@@ -21,12 +26,14 @@ export function ReviewStep({
   onBack,
   onGo,
   onPublished,
+  unlisted,
 }: {
   applied: VersionChangeGroup[] | null;
   kind: string;
   onBack: () => void;
   onGo: (target: ReadinessTarget) => void;
   onPublished: () => void;
+  unlisted: boolean;
 }) {
   const workspace = useWorkspace();
   const candidate = useWorkingCopy();
@@ -37,6 +44,13 @@ export function ReviewStep({
   const [message, setMessage] = useState("");
   const [stale, setStale] = useState(false);
   const [missing, setMissing] = useState<ReadinessItem[]>([]);
+  const [announcement, setAnnouncement] =
+    useState<AnnouncementChoice>(NO_CHOICE);
+  const [needsConsent, setNeedsConsent] = useState(false);
+  const chooseAnnouncement = useCallback((choice: AnnouncementChoice) => {
+    setAnnouncement(choice);
+    setNeedsConsent(false);
+  }, []);
 
   async function publish() {
     setBusy(true);
@@ -44,6 +58,8 @@ export function ReviewStep({
     setStale(false);
     setMissing([]);
     const answer = await publishAssetUpdate(candidate, workspace.assetId, {
+      announceUnlisted: announcement.announceUnlisted,
+      destinationIds: announcement.destinationIds ?? undefined,
       notes: notes.trim(),
       summary: summary.trim(),
       versionLabel: label.trim(),
@@ -55,6 +71,7 @@ export function ReviewStep({
     }
     setMessage(answer.error);
     setStale(answer.code === "working_copy_conflict");
+    setNeedsConsent(answer.field === "announceUnlisted");
     setMissing(answer.readiness?.filter((item) => !item.met) ?? []);
   }
 
@@ -108,7 +125,14 @@ export function ReviewStep({
         />
       </Field>
 
-      <Note>Publishing this update sends no announcements.</Note>
+      <UpdateAnnouncementChoice
+        assetId={workspace.assetId}
+        choice={announcement}
+        disabled={busy}
+        needsConsent={needsConsent}
+        onChange={chooseAnnouncement}
+        unlisted={unlisted}
+      />
 
       {message ? (
         <div
