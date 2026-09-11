@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { Shell } from "@/components/layout/Shell";
 import { LinkedInstances } from "@/components/linking/LinkedInstances";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
+import { Button } from "@/components/ui/button";
 import { pageMetadata } from "@/lib/site-metadata";
 
 const DISCORD_NOTICES: Record<string, string> = {
@@ -60,6 +62,26 @@ export default async function SettingsPage({
 
         <div className="min-w-0">
           <LinkedInstances />
+          <section
+            aria-labelledby="update-destinations"
+            className="mt-12 border-t border-rule pt-8"
+          >
+            <h2
+              className="font-display text-section font-medium tracking-tight text-ink"
+              id="update-destinations"
+            >
+              Asset update destinations
+            </h2>
+            <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
+              Connect a Discord channel or webhook, then choose defaults for
+              each asset.
+            </p>
+            <Button asChild className="mt-5" variant="secondary">
+              <Link href="/settings/update-destinations">
+                Manage destinations
+              </Link>
+            </Button>
+          </section>
         </div>
       </div>
     </Shell>
