@@ -5,6 +5,9 @@ import { fetchPostCategories } from "@/lib/api/query";
 import { BLOG_HOME } from "@/lib/blog-paths";
 import { BLOG_TITLE, feedTypes } from "@/lib/publication-metadata";
 
+/** Readers get the blog as it is now, so no blog page is frozen at build time. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { default: BLOG_TITLE, template: `%s · ${BLOG_TITLE}` },
   alternates: { types: feedTypes(BLOG_HOME) },
