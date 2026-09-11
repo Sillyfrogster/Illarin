@@ -15,6 +15,16 @@ webhooks:
   publication.post.withdrawn.v1:
     $ref: ./publication-events.yaml#/webhooks/publication.post.withdrawn.v1
 paths:
+  /v1/assets/{id}/update-destinations:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1assets~1{id}~1update-destinations
+  /v1/account/update-destinations:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations
+  /v1/account/update-destinations/{id}:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations~1{id}
+  /v1/account/update-destinations/{id}/verification:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations~1{id}~1verification
+  /v1/account/update-destinations/{id}/secret:
+    $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations~1{id}~1secret
   /v1/account/discord:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1discord
   /v1/account/email:

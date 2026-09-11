@@ -88,8 +88,10 @@ func noStoreCredentialResponses() gin.HandlerFunc {
 			strings.HasPrefix(path, "/v1/deliveries") ||
 			path == "/v1/library/sync" ||
 			strings.HasPrefix(path, "/v1/publication/token") ||
+			strings.HasPrefix(path, "/v1/account/update-destinations") ||
 			path == "/v1/publication/grants/:id/tokens" ||
 			strings.HasSuffix(path, "/instances") ||
+			strings.HasSuffix(path, "/update-destinations") ||
 			strings.HasSuffix(path, "/deliveries") {
 			noStoreLink(c)
 		}

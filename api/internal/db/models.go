@@ -213,6 +213,32 @@ type AssetSnapshotPromptMatch struct {
 	ResolvedAt         pgtype.Timestamptz
 }
 
+type AssetUpdateDestination struct {
+	ID                  pgtype.UUID
+	OwnerID             pgtype.UUID
+	Kind                string
+	Name                string
+	Host                string
+	Address             []byte
+	SigningSecret       []byte
+	SigningSecretSetAt  pgtype.Timestamptz
+	PreviousSecret      []byte
+	PreviousSecretUntil pgtype.Timestamptz
+	GuildID             pgtype.Text
+	ChannelID           pgtype.Text
+	State               string
+	VerifiedAt          pgtype.Timestamptz
+	DisabledAt          pgtype.Timestamptz
+	Version             int64
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+}
+
+type AssetUpdateDestinationDefault struct {
+	AssetID       pgtype.UUID
+	DestinationID pgtype.UUID
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte

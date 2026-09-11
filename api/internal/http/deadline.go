@@ -35,6 +35,16 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		return fmt.Errorf("readiness check is required")
 	}
 	limits := map[string]time.Duration{
+		routeKey(http.MethodGet, "/v1/assets/:id/update-destinations"):                       d.JSON,
+		routeKey(http.MethodPut, "/v1/assets/:id/update-destinations"):                       d.JSON,
+		routeKey(http.MethodPatch, "/v1/account/update-destinations/:id"):                    d.Verify,
+		routeKey(http.MethodDelete, "/v1/account/update-destinations/:id"):                   d.JSON,
+		routeKey(http.MethodDelete, "/v1/account/update-destinations/:id/verification"):      d.JSON,
+		routeKey(http.MethodPost, "/v1/account/update-destinations/:id/secret"):              d.JSON,
+		routeKey(http.MethodPost, "/v1/account/update-destinations/:id/verification"):        d.Verify,
+		routeKey(http.MethodGet, "/v1/account/update-destinations"):                          d.JSON,
+		routeKey(http.MethodPost, "/v1/account/update-destinations"):                         d.Verify,
+		routeKey(http.MethodGet, "/v1/account/update-destinations/:id"):                      d.JSON,
 		routeKey(http.MethodGet, "/healthz"):                                                 d.JSON,
 		routeKey(http.MethodGet, "/readyz"):                                                  d.JSON,
 		routeKey(http.MethodGet, "/protocol"):                                                d.JSON,

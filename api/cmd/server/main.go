@@ -16,6 +16,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
@@ -143,11 +144,18 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("publication secret key: %w", err)
 	}
-	publications := publication.NewService(pool, images, publication.DefaultRates(),
-		publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL))
+	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
+	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
+	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(5)
+	background.Add(6)
+	go func() {
+		defer background.Done()
+		updateDestinations.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("asset update destination sweeper: %v", err)
+		})
+	}()
 	go func() {
 		defer background.Done()
 		deliveries.RunSweeper(runtimeContext, func(err error) {
@@ -181,7 +189,7 @@ func run() error {
 
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, publications, cfg.MaxUploadBytes)
+	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, publications, updateDestinations, cfg.MaxUploadBytes)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err

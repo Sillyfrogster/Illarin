@@ -4,6 +4,104 @@
  */
 
 export interface paths {
+  "/v1/assets/{id}/update-destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Enumerate only the asset owner's eligible destinations with the defaults remembered for this asset. */
+    get: operations["listAssetUpdateDestinationChoices"];
+    /** @description Remember a selection for this asset. An empty list clears its defaults. This sends no announcement. */
+    put: operations["setAssetUpdateDestinationDefaults"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Read only the signed-in creator's masked asset update destinations. */
+    get: operations["listAssetUpdateDestinations"];
+    put?: never;
+    /** @description Create a creator-owned destination independently of blog permissions. A webhook's signing secret is revealed only in this response. Discord capability addresses are never returned. */
+    post: operations["addAssetUpdateDestination"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Inspect one of the signed-in creator's destinations without revealing credentials. */
+    get: operations["getAssetUpdateDestination"];
+    put?: never;
+    post?: never;
+    /** @description Remove an owned destination and its per-asset defaults. */
+    delete: operations["removeAssetUpdateDestination"];
+    options?: never;
+    head?: never;
+    /** @description Change the name or replace credentials. A new generic endpoint requires verification. */
+    patch: operations["updateAssetUpdateDestination"];
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}/verification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Verify the current endpoint by signed challenge or Discord capability read. */
+    post: operations["verifyAssetUpdateDestination"];
+    /** @description Disable an owned destination immediately. */
+    delete: operations["disableAssetUpdateDestination"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}/secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Reveal a new signing secret once; keep the previous secret for 24 hours. */
+    post: operations["rotateAssetUpdateDestinationSecret"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/discord": {
     parameters: {
       query?: never;
@@ -3619,6 +3717,64 @@ export interface components {
         recorded?: string;
       }[];
     };
+    /** @enum {string} */
+    AssetUpdateDestinationKind: "webhook" | "discord";
+    AssetUpdateDestinationChoice: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      byDefault: boolean;
+    };
+    AssetUpdateDestinationChoices: {
+      destinations: components["schemas"]["AssetUpdateDestinationChoice"][];
+    };
+    AssetUpdateDestinationDefaultsRequest: {
+      destinationIds: string[];
+    };
+    AssetUpdateChannel: {
+      guildId: string;
+      channelId: string;
+    };
+    AssetUpdateDestination: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      host: string;
+      /** @description The scheme and host followed by a masked path; never the capability address. */
+      address: string;
+      /** @enum {string} */
+      state: "unverified" | "active" | "disabled";
+      channel?: components["schemas"]["AssetUpdateChannel"];
+      /** Format: date-time */
+      secretSetAt?: string;
+      /** Format: date-time */
+      previousSecretUntil?: string;
+      /** Format: date-time */
+      verifiedAt?: string;
+      /** Format: date-time */
+      disabledAt?: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    AssetUpdateDestinationList: {
+      destinations: components["schemas"]["AssetUpdateDestination"][];
+    };
+    AddAssetUpdateDestinationRequest: {
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      address: string;
+    };
+    AddedAssetUpdateDestination: {
+      destination: components["schemas"]["AssetUpdateDestination"];
+      /** @description A new webhook signing secret, shown once. Absent for Discord. */
+      secret?: string;
+    };
+    UpdateAssetUpdateDestinationRequest: {
+      name?: string;
+      address?: string;
+    };
     ProfileLink: {
       label: string;
       address: string;
@@ -4242,6 +4398,15 @@ export interface components {
     };
   };
   responses: {
+    /** @description A field, the post document or the request itself is not valid */
+    PublicationInvalid: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
     /** @description The request carries no live credential */
     PublicationUnauthenticated: {
       headers: {
@@ -4265,15 +4430,6 @@ export interface components {
       headers: {
         /** @description Seconds to wait before repeating the request */
         "Retry-After"?: number;
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["PublicationError"];
-      };
-    };
-    /** @description A field, the post document or the request itself is not valid */
-    PublicationInvalid: {
-      headers: {
         [name: string]: unknown;
       };
       content: {
@@ -4310,6 +4466,484 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listAssetUpdateDestinationChoices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe identities of eligible destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestinationChoices"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setAssetUpdateDestinationDefaults: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateDestinationDefaultsRequest"];
+      };
+    };
+    responses: {
+      /** @description Defaults saved */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A destination is not owned, verified and active */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description This asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listAssetUpdateDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The creator's destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestinationList"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddAssetUpdateDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination and any new signing secret */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedAssetUpdateDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe destination configuration */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateAssetUpdateDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  verifyAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The verified destination */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed during verification; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  disableAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  rotateAssetUpdateDestinationSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedAssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   detachDiscord: {
     parameters: {
       query?: never;

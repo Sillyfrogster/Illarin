@@ -240,7 +240,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, blobs), 1<<20,
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
@@ -400,7 +400,7 @@ func newVerifiedIngestRouterWithStoreFactory(
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
-		newTestPublicationService(pool, blobs), 1<<20,
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
 	)
 	setup := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := signUp(t, setup, "verified@example.com", "verified.creator")

@@ -14,6 +14,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
@@ -152,6 +153,7 @@ func newTestHandlersWithDelivery(
 	return NewHandlers(
 		svc, accounts, links, deliveries,
 		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
+		assetdestination.NewService(pool, testSealingKey(), testPublishing(to).Sender),
 		maxUploadBytes,
 	)
 }
@@ -192,7 +194,7 @@ func newDiscordTestStack(
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
-		newTestPublicationService(pool, blob), 1<<20,
+		newTestPublicationService(pool, blob), newTestUpdateDestinations(pool), 1<<20,
 	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
 }
@@ -205,6 +207,10 @@ func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publica
 	return publication.NewService(
 		pool, testMediaLibrary(store), publication.DefaultRates(), testPublishing(nil),
 	)
+}
+
+func newTestUpdateDestinations(pool *pgxpool.Pool) *assetdestination.Service {
+	return assetdestination.NewService(pool, testSealingKey(), testPublishing(nil).Sender)
 }
 
 func testPublishing(to publication.Sender) publication.Publishing {

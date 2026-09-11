@@ -77,6 +77,267 @@ webhooks:
         2xx:
           description: Handled the same way as a published event.
 paths:
+  /v1/assets/{id}/update-destinations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listAssetUpdateDestinationChoices
+      description: >-
+        Enumerate only the asset owner's eligible destinations with the defaults
+        remembered for this asset.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Safe identities of eligible destinations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestinationChoices'
+        '401':
+          description: Sign in first
+        '404':
+          description: No asset belonging to this creator
+    put:
+      operationId: setAssetUpdateDestinationDefaults
+      description: >-
+        Remember a selection for this asset. An empty list clears its defaults.
+        This sends no announcement.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateDestinationDefaultsRequest'
+      responses:
+        '204':
+          description: Defaults saved
+        '400':
+          description: A destination is not owned, verified and active
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No asset belonging to this creator
+        '409':
+          description: This asset is frozen
+  /v1/account/update-destinations:
+    get:
+      operationId: listAssetUpdateDestinations
+      description: Read only the signed-in creator's masked asset update destinations.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The creator's destinations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestinationList'
+        '401':
+          description: Sign in first
+    post:
+      operationId: addAssetUpdateDestination
+      description: >-
+        Create a creator-owned destination independently of blog permissions. A
+        webhook's signing secret is revealed only in this response. Discord
+        capability addresses are never returned.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddAssetUpdateDestinationRequest'
+      responses:
+        '201':
+          description: The destination and any new signing secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedAssetUpdateDestination'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+  /v1/account/update-destinations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAssetUpdateDestination
+      description: >-
+        Inspect one of the signed-in creator's destinations without revealing
+        credentials.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Safe destination configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestination'
+        '401':
+          description: Sign in first
+        '404':
+          description: No destination belonging to this creator
+    patch:
+      operationId: updateAssetUpdateDestination
+      description: >-
+        Change the name or replace credentials. A new generic endpoint requires
+        verification.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssetUpdateDestinationRequest'
+      responses:
+        '200':
+          description: The requested destination change is complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestination'
+        '400':
+          description: Invalid destination configuration
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No destination belonging to this creator
+        '409':
+          description: The destination changed; inspect it before trying again
+    delete:
+      operationId: removeAssetUpdateDestination
+      description: Remove an owned destination and its per-asset defaults.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '204':
+          description: The requested destination change is complete
+        '400':
+          description: Invalid destination configuration
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No destination belonging to this creator
+        '409':
+          description: The destination changed; inspect it before trying again
+  /v1/account/update-destinations/{id}/verification:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: verifyAssetUpdateDestination
+      description: >-
+        Verify the current endpoint by signed challenge or Discord capability
+        read.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '200':
+          description: The verified destination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestination'
+        '400':
+          $ref: '#/components/responses/PublicationInvalid'
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No destination belonging to this creator
+        '409':
+          description: >-
+            The destination changed during verification; inspect it before
+            trying again
+    delete:
+      operationId: disableAssetUpdateDestination
+      description: Disable an owned destination immediately.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '200':
+          description: The requested destination change is complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdateDestination'
+        '400':
+          description: Invalid destination configuration
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No destination belonging to this creator
+        '409':
+          description: The destination changed; inspect it before trying again
+  /v1/account/update-destinations/{id}/secret:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: rotateAssetUpdateDestinationSecret
+      description: Reveal a new signing secret once; keep the previous secret for 24 hours.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '200':
+          description: The requested destination change is complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddedAssetUpdateDestination'
+        '400':
+          description: Invalid destination configuration
+        '401':
+          description: Sign in first
+        '403':
+          description: Verify your account first
+        '404':
+          description: No destination belonging to this creator
+        '409':
+          description: The destination changed; inspect it before trying again
   /v1/account/discord:
     delete:
       operationId: detachDiscord
@@ -9055,6 +9316,159 @@ components:
                   carries none
                 type: string
                 format: uuid
+    AssetUpdateDestinationKind:
+      type: string
+      enum:
+        - webhook
+        - discord
+    AssetUpdateDestinationChoice:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - byDefault
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AssetUpdateDestinationKind'
+        byDefault:
+          type: boolean
+    AssetUpdateDestinationChoices:
+      type: object
+      required:
+        - destinations
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetUpdateDestinationChoice'
+    AssetUpdateDestinationDefaultsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - destinationIds
+      properties:
+        destinationIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+    AssetUpdateChannel:
+      type: object
+      additionalProperties: false
+      required:
+        - guildId
+        - channelId
+      properties:
+        guildId:
+          type: string
+        channelId:
+          type: string
+    AssetUpdateDestination:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - host
+        - address
+        - state
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AssetUpdateDestinationKind'
+        host:
+          type: string
+        address:
+          type: string
+          description: >-
+            The scheme and host followed by a masked path; never the capability
+            address.
+        state:
+          type: string
+          enum:
+            - unverified
+            - active
+            - disabled
+        channel:
+          $ref: '#/components/schemas/AssetUpdateChannel'
+        secretSetAt:
+          type: string
+          format: date-time
+        previousSecretUntil:
+          type: string
+          format: date-time
+        verifiedAt:
+          type: string
+          format: date-time
+        disabledAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    AssetUpdateDestinationList:
+      type: object
+      required:
+        - destinations
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetUpdateDestination'
+    AddAssetUpdateDestinationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - kind
+        - address
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+        kind:
+          $ref: '#/components/schemas/AssetUpdateDestinationKind'
+        address:
+          type: string
+          maxLength: 300
+          writeOnly: true
+    AddedAssetUpdateDestination:
+      type: object
+      required:
+        - destination
+      properties:
+        destination:
+          $ref: '#/components/schemas/AssetUpdateDestination'
+        secret:
+          type: string
+          description: A new webhook signing secret, shown once. Absent for Discord.
+    UpdateAssetUpdateDestinationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+        address:
+          type: string
+          maxLength: 300
+          writeOnly: true
     ProfileLink:
       type: object
       required:
@@ -10480,6 +10894,12 @@ components:
         post:
           $ref: '#/components/schemas/PublicationPostSummary'
   responses:
+    PublicationInvalid:
+      description: A field, the post document or the request itself is not valid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicationError'
     PublicationUnauthenticated:
       description: The request carries no live credential
       content:
@@ -10499,12 +10919,6 @@ components:
           description: Seconds to wait before repeating the request
           schema:
             type: integer
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/PublicationError'
-    PublicationInvalid:
-      description: A field, the post document or the request itself is not valid
       content:
         application/json:
           schema:

@@ -441,6 +441,45 @@ func (e AssetListVisibility) Valid() bool {
 	}
 }
 
+// Defines values for AssetUpdateDestinationState.
+const (
+	AssetUpdateDestinationStateActive     AssetUpdateDestinationState = "active"
+	AssetUpdateDestinationStateDisabled   AssetUpdateDestinationState = "disabled"
+	AssetUpdateDestinationStateUnverified AssetUpdateDestinationState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateDestinationState enum.
+func (e AssetUpdateDestinationState) Valid() bool {
+	switch e {
+	case AssetUpdateDestinationStateActive:
+		return true
+	case AssetUpdateDestinationStateDisabled:
+		return true
+	case AssetUpdateDestinationStateUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateDestinationKind.
+const (
+	AssetUpdateDestinationKindDiscord AssetUpdateDestinationKind = "discord"
+	AssetUpdateDestinationKindWebhook AssetUpdateDestinationKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateDestinationKind enum.
+func (e AssetUpdateDestinationKind) Valid() bool {
+	switch e {
+	case AssetUpdateDestinationKindDiscord:
+		return true
+	case AssetUpdateDestinationKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BrowseAssetKind.
 const (
 	BrowseAssetKindCharacter BrowseAssetKind = "character"
@@ -1981,6 +2020,13 @@ type AddAssetBlockRequest struct {
 	ElementType ElementType `json:"elementType"`
 }
 
+// AddAssetUpdateDestinationRequest defines model for AddAssetUpdateDestinationRequest.
+type AddAssetUpdateDestinationRequest struct {
+	Address *string                    `json:"address,omitempty"`
+	Kind    AssetUpdateDestinationKind `json:"kind"`
+	Name    string                     `json:"name"`
+}
+
 // AddMediaRequest defines model for AddMediaRequest.
 type AddMediaRequest struct {
 	Role AddMediaRequestRole `json:"role"`
@@ -2025,6 +2071,14 @@ type AddableBlockChoice struct {
 
 	// Type What an element's data structure is, from the global vocabulary.
 	Type ElementType `json:"type"`
+}
+
+// AddedAssetUpdateDestination defines model for AddedAssetUpdateDestination.
+type AddedAssetUpdateDestination struct {
+	Destination AssetUpdateDestination `json:"destination"`
+
+	// Secret A new webhook signing secret, shown once. Absent for Discord.
+	Secret *string `json:"secret,omitempty"`
 }
 
 // AddedPublicationDestination A new destination and the one showing its signing secret ever gets.
@@ -2321,6 +2375,58 @@ type AssetUpdate struct {
 	RecordedAt        time.Time          `json:"recordedAt"`
 	Summary           string             `json:"summary"`
 	VersionLabel      string             `json:"versionLabel"`
+}
+
+// AssetUpdateChannel defines model for AssetUpdateChannel.
+type AssetUpdateChannel struct {
+	ChannelId string `json:"channelId"`
+	GuildId   string `json:"guildId"`
+}
+
+// AssetUpdateDestination defines model for AssetUpdateDestination.
+type AssetUpdateDestination struct {
+	// Address The scheme and host followed by a masked path; never the capability address.
+	Address             string                      `json:"address"`
+	Channel             *AssetUpdateChannel         `json:"channel,omitempty"`
+	CreatedAt           time.Time                   `json:"createdAt"`
+	DisabledAt          *time.Time                  `json:"disabledAt,omitempty"`
+	Host                string                      `json:"host"`
+	Id                  openapi_types.UUID          `json:"id"`
+	Kind                AssetUpdateDestinationKind  `json:"kind"`
+	Name                string                      `json:"name"`
+	PreviousSecretUntil *time.Time                  `json:"previousSecretUntil,omitempty"`
+	SecretSetAt         *time.Time                  `json:"secretSetAt,omitempty"`
+	State               AssetUpdateDestinationState `json:"state"`
+	VerifiedAt          *time.Time                  `json:"verifiedAt,omitempty"`
+}
+
+// AssetUpdateDestinationState defines model for AssetUpdateDestination.State.
+type AssetUpdateDestinationState string
+
+// AssetUpdateDestinationChoice defines model for AssetUpdateDestinationChoice.
+type AssetUpdateDestinationChoice struct {
+	ByDefault bool                       `json:"byDefault"`
+	Id        openapi_types.UUID         `json:"id"`
+	Kind      AssetUpdateDestinationKind `json:"kind"`
+	Name      string                     `json:"name"`
+}
+
+// AssetUpdateDestinationChoices defines model for AssetUpdateDestinationChoices.
+type AssetUpdateDestinationChoices struct {
+	Destinations []AssetUpdateDestinationChoice `json:"destinations"`
+}
+
+// AssetUpdateDestinationDefaultsRequest defines model for AssetUpdateDestinationDefaultsRequest.
+type AssetUpdateDestinationDefaultsRequest struct {
+	DestinationIds []openapi_types.UUID `json:"destinationIds"`
+}
+
+// AssetUpdateDestinationKind defines model for AssetUpdateDestinationKind.
+type AssetUpdateDestinationKind string
+
+// AssetUpdateDestinationList defines model for AssetUpdateDestinationList.
+type AssetUpdateDestinationList struct {
+	Destinations []AssetUpdateDestination `json:"destinations"`
 }
 
 // AssetUpdateRequest defines model for AssetUpdateRequest.
@@ -4341,6 +4447,12 @@ type TypedValue struct {
 	Text    *string   `json:"text,omitempty"`
 }
 
+// UpdateAssetUpdateDestinationRequest defines model for UpdateAssetUpdateDestinationRequest.
+type UpdateAssetUpdateDestinationRequest struct {
+	Address *string `json:"address,omitempty"`
+	Name    *string `json:"name,omitempty"`
+}
+
 // UpdateDistinctionRequest defines model for UpdateDistinctionRequest.
 type UpdateDistinctionRequest struct {
 	Explanation *string `json:"explanation,omitempty"`
@@ -4985,6 +5097,12 @@ type SavePublicProfileJSONRequestBody = SaveProfileRequest
 // SetProfileAvatarMultipartRequestBody defines body for SetProfileAvatar for multipart/form-data ContentType.
 type SetProfileAvatarMultipartRequestBody SetProfileAvatarMultipartBody
 
+// AddAssetUpdateDestinationJSONRequestBody defines body for AddAssetUpdateDestination for application/json ContentType.
+type AddAssetUpdateDestinationJSONRequestBody = AddAssetUpdateDestinationRequest
+
+// UpdateAssetUpdateDestinationJSONRequestBody defines body for UpdateAssetUpdateDestination for application/json ContentType.
+type UpdateAssetUpdateDestinationJSONRequestBody = UpdateAssetUpdateDestinationRequest
+
 // AssignDistinctionJSONRequestBody defines body for AssignDistinction for application/json ContentType.
 type AssignDistinctionJSONRequestBody = AssignDistinctionRequest
 
@@ -5026,6 +5144,9 @@ type AddAssetRevisionMultipartRequestBody AddAssetRevisionMultipartBody
 
 // AcceptAssetRevisionJSONRequestBody defines body for AcceptAssetRevision for application/json ContentType.
 type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
+
+// SetAssetUpdateDestinationDefaultsJSONRequestBody defines body for SetAssetUpdateDestinationDefaults for application/json ContentType.
+type SetAssetUpdateDestinationDefaultsJSONRequestBody = AssetUpdateDestinationDefaultsRequest
 
 // PublishAssetUpdateJSONRequestBody defines body for PublishAssetUpdate for application/json ContentType.
 type PublishAssetUpdateJSONRequestBody = AssetUpdateRequest
@@ -5527,6 +5648,30 @@ type ServerInterface interface {
 	// (PUT /v1/account/profile/avatar)
 	SetProfileAvatar(c *gin.Context)
 
+	// (GET /v1/account/update-destinations)
+	ListAssetUpdateDestinations(c *gin.Context)
+
+	// (POST /v1/account/update-destinations)
+	AddAssetUpdateDestination(c *gin.Context)
+
+	// (DELETE /v1/account/update-destinations/{id})
+	RemoveAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/account/update-destinations/{id})
+	GetAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/account/update-destinations/{id})
+	UpdateAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/account/update-destinations/{id}/secret)
+	RotateAssetUpdateDestinationSecret(c *gin.Context, id openapi_types.UUID)
+
+	// (DELETE /v1/account/update-destinations/{id}/verification)
+	DisableAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/account/update-destinations/{id}/verification)
+	VerifyAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
 	// (GET /v1/accounts/{handle}/distinctions)
 	ListAccountDistinctions(c *gin.Context, handle string)
 
@@ -5610,6 +5755,12 @@ type ServerInterface interface {
 
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/assets/{id}/update-destinations)
+	ListAssetUpdateDestinationChoices(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/assets/{id}/update-destinations)
+	SetAssetUpdateDestinationDefaults(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/assets/{id}/updates)
 	ListAssetUpdates(c *gin.Context, id openapi_types.UUID)
@@ -6234,6 +6385,182 @@ func (siw *ServerInterfaceWrapper) SetProfileAvatar(c *gin.Context) {
 	}
 
 	siw.Handler.SetProfileAvatar(c)
+}
+
+// ListAssetUpdateDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateDestinations(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdateDestinations(c)
+}
+
+// AddAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) AddAssetUpdateDestination(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddAssetUpdateDestination(c)
+}
+
+// RemoveAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) RemoveAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveAssetUpdateDestination(c, id)
+}
+
+// GetAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) GetAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAssetUpdateDestination(c, id)
+}
+
+// UpdateAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateAssetUpdateDestination(c, id)
+}
+
+// RotateAssetUpdateDestinationSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotateAssetUpdateDestinationSecret(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RotateAssetUpdateDestinationSecret(c, id)
+}
+
+// DisableAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) DisableAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DisableAssetUpdateDestination(c, id)
+}
+
+// VerifyAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) VerifyAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.VerifyAssetUpdateDestination(c, id)
 }
 
 // ListAccountDistinctions operation middleware
@@ -7394,6 +7721,56 @@ func (siw *ServerInterfaceWrapper) ExportSealedContent(c *gin.Context) {
 	}
 
 	siw.Handler.ExportSealedContent(c, id)
+}
+
+// ListAssetUpdateDestinationChoices operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateDestinationChoices(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdateDestinationChoices(c, id)
+}
+
+// SetAssetUpdateDestinationDefaults operation middleware
+func (siw *ServerInterfaceWrapper) SetAssetUpdateDestinationDefaults(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetAssetUpdateDestinationDefaults(c, id)
 }
 
 // ListAssetUpdates operation middleware
@@ -10434,6 +10811,16 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.GET(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.ListAssetUpdateDestinationChoices)
+	router.PUT(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.SetAssetUpdateDestinationDefaults)
+	router.GET(options.BaseURL+"/v1/account/update-destinations", wrapper.ListAssetUpdateDestinations)
+	router.POST(options.BaseURL+"/v1/account/update-destinations", wrapper.AddAssetUpdateDestination)
+	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.RemoveAssetUpdateDestination)
+	router.GET(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.GetAssetUpdateDestination)
+	router.PATCH(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.UpdateAssetUpdateDestination)
+	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.DisableAssetUpdateDestination)
+	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.VerifyAssetUpdateDestination)
+	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/secret", wrapper.RotateAssetUpdateDestinationSecret)
 	router.DELETE(options.BaseURL+"/v1/account/discord", wrapper.DetachDiscord)
 	router.PATCH(options.BaseURL+"/v1/account/email", wrapper.ChangeUnverifiedEmail)
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)

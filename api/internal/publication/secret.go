@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const SecretOverlap = 24 * time.Hour
+const SecretOverlap = webhook.SecretOverlap
 
 type RotatedSecret struct {
 	Destination Destination

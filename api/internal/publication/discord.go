@@ -187,45 +187,13 @@ func (s *Service) askDiscord(
 	ctx context.Context,
 	address string,
 ) (discord.Capability, discord.Webhook, error) {
-	capability, err := discord.ReadCapability(address)
+	capability, found, err := discord.VerifyCapability(ctx, s.sender, address)
 	if err != nil {
 		return discord.Capability{}, discord.Webhook{}, FieldError{
-			Field: "address", Message: capitalize(err.Error()) + ".", cause: err,
-		}
-	}
-	answer, err := s.sender.Get(ctx, capability.URL)
-	if err != nil {
-		return discord.Capability{}, discord.Webhook{}, FieldError{
-			Field: "address", Message: "Illarin could not reach Discord.", cause: err,
-		}
-	}
-	if answer.Status != http.StatusOK {
-		return discord.Capability{}, discord.Webhook{}, FieldError{
-			Field: "address", Message: whyDiscordRefused(answer.Status),
-			cause: discord.ErrNotAWebhook,
-		}
-	}
-	found, err := discord.ReadWebhook(answer.Body)
-	if err != nil {
-		return discord.Capability{}, discord.Webhook{}, FieldError{
-			Field:   "address",
-			Message: "That address is not a webhook on a Discord channel.",
-			cause:   err,
+			Field: "address", Message: capitalize(strings.TrimSuffix(err.Error(), ".")) + ".", cause: err,
 		}
 	}
 	return capability, found, nil
-}
-
-func whyDiscordRefused(status int) string {
-	switch status {
-	case http.StatusNotFound:
-		return "Discord does not recognize that webhook. " +
-			"Check it still exists and that the whole address was copied."
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return "Discord turned that address away. Its token is no longer good."
-	default:
-		return fmt.Sprintf("Discord answered %d for that webhook.", status)
-	}
 }
 
 type approved struct {

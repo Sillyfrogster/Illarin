@@ -2,14 +2,7 @@ package publication
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 	"github.com/google/uuid"
@@ -17,18 +10,7 @@ import (
 
 const EventVerification = "publication.endpoint.verification.v1"
 
-const challengeBytes = 24
-
-const maxChallengeReply = 1 << 10
-
-var ErrNotProven = errors.New("the endpoint did not return the challenge")
-
-type verification struct {
-	ID        uuid.UUID `json:"id"`
-	Type      string    `json:"type"`
-	Challenge string    `json:"challenge"`
-	SentAt    time.Time `json:"sentAt"`
-}
+var ErrNotProven = webhook.ErrNotProven
 
 func (s *Service) VerifyDestination(
 	ctx context.Context,
@@ -46,39 +28,9 @@ func (s *Service) VerifyDestination(
 	if err != nil {
 		return Destination{}, err
 	}
-	challenge, err := newChallenge()
-	if err != nil {
-		return Destination{}, err
-	}
-	sent := s.now().UTC()
-	body, err := json.Marshal(verification{
-		ID: uuid.New(), Type: EventVerification, Challenge: challenge, SentAt: sent,
-	})
-	if err != nil {
-		return Destination{}, fmt.Errorf("write the verification event: %w", err)
-	}
-	headers, err := webhook.Headers(secrets, uuid.New().String(), sent, body)
-	if err != nil {
-		return Destination{}, err
-	}
-	answer, err := s.sender.Post(ctx, address, headers, body)
-	if err != nil {
+	if err := webhook.VerifyEndpoint(ctx, s.sender, EventVerification, address, secrets, s.now().UTC()); err != nil {
 		return Destination{}, FieldError{
-			Field: "address", Message: "Illarin could not reach that endpoint.", cause: err,
-		}
-	}
-	if answer.Status < http.StatusOK || answer.Status >= http.StatusMultipleChoices {
-		return Destination{}, FieldError{
-			Field:   "address",
-			Message: fmt.Sprintf("The endpoint answered %d instead of the challenge.", answer.Status),
-			cause:   ErrNotProven,
-		}
-	}
-	if !proves(answer.Body, challenge) {
-		return Destination{}, FieldError{
-			Field:   "address",
-			Message: "The endpoint did not return the challenge it was sent.",
-			cause:   ErrNotProven,
+			Field: "address", Message: capitalize(err.Error()), cause: err,
 		}
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -104,28 +56,4 @@ func (s *Service) VerifyDestination(
 		return Destination{}, fmt.Errorf("commit destination verification: %w", err)
 	}
 	return s.Destination(ctx, id)
-}
-
-func proves(reply []byte, challenge string) bool {
-	if len(reply) > maxChallengeReply {
-		return false
-	}
-	if strings.TrimSpace(string(reply)) == challenge {
-		return true
-	}
-	var wrapped struct {
-		Challenge string `json:"challenge"`
-	}
-	if err := json.Unmarshal(reply, &wrapped); err != nil {
-		return false
-	}
-	return wrapped.Challenge == challenge
-}
-
-func newChallenge() (string, error) {
-	body := make([]byte, challengeBytes)
-	if _, err := rand.Read(body); err != nil {
-		return "", fmt.Errorf("make a challenge: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(body), nil
 }

@@ -203,7 +203,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, limited), 1<<20,
+		newTestPublicationService(pool, limited), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
@@ -246,7 +246,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, blobs), 1<<20,
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
