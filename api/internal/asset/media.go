@@ -337,8 +337,10 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	err := s.pool.QueryRow(ctx, `
 		select media.blob_id, blob.sha256,
 		       asset.lifecycle = 'draft' or not exists (
-		           select 1 from asset_snapshot_media r
-		           where r.asset_id = asset.id and r.media_id = media.id
+		           select 1 from asset_snapshot_media recorded
+		           join asset_snapshots snapshot on snapshot.id = recorded.snapshot_id
+		           where recorded.asset_id = asset.id and recorded.media_id = media.id
+		             and snapshot.withdrawn_at is null
 		       ), coalesce(asset.owner_id = $2, false), asset.lifecycle = 'draft'
 		  from asset_media media
 		  join assets asset on asset.id = media.asset_id

@@ -547,7 +547,7 @@ func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []bl
 	queries := db.New(tx)
 	for _, b := range blocks {
 		if err := block.ValidateStructure(b); err != nil {
-			return fmt.Errorf("validate %s block: %w", b.Definition, err)
+			return fmt.Errorf("validate %s block: %w: %v", b.Definition, ErrInvalidBlock, err)
 		}
 		elements, err := json.Marshal(b.Elements)
 		if err != nil {

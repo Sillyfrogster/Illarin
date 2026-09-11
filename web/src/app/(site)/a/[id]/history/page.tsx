@@ -49,7 +49,9 @@ export default async function AssetHistoryPage({
   const asset = await loadAsset(id);
   if (!asset) notFound();
 
-  const versions = await fetchAssetUpdates(id, (await cookies()).toString());
+  const cookie = (await cookies()).toString();
+  const versions = await fetchAssetUpdates(id, cookie);
+  const working = asset.isOwner ? await fetchAsset(id, cookie, true) : null;
   const kind = KIND_LABELS[asset.kind].toLowerCase();
   const published = asset.lifecycle !== "draft";
 
@@ -98,6 +100,12 @@ export default async function AssetHistoryPage({
           }
           kind={kind}
           olderDownloads={published && !asset.linkedInstallOnly}
+          owner={{
+            assetName: asset.name,
+            canManage: Boolean(asset.isOwner && !asset.withhold),
+            isOwner: asset.isOwner,
+            workingCopyVersion: working?.workingCopyVersion ?? 0,
+          }}
           versions={versions}
         />
       </div>

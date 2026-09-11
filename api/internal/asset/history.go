@@ -14,11 +14,13 @@ func (s *Service) VersionHistory(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 ) ([]Version, error) {
-	if _, err := s.readerRole(ctx, assetID, viewerID); err != nil {
+	owner, err := s.readerRole(ctx, assetID, viewerID)
+	if err != nil {
 		return nil, err
 	}
 	rows, err := s.pool.Query(ctx, `
-		select id, number, recorded_at, initial_recorded, version_label, summary, notes
+		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
+		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, '')
 		  from asset_snapshots where asset_id = $1 order by number desc
 	`, assetID)
 	if err != nil {
@@ -30,8 +32,12 @@ func (s *Service) VersionHistory(
 		var recorded Version
 		if err := rows.Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 			&recorded.Initial, &recorded.VersionLabel, &recorded.Summary,
-			&recorded.Notes); err != nil {
+			&recorded.Notes, &recorded.NotesEditedAt, &recorded.WithdrawnAt,
+			&recorded.WithdrawalExplanation); err != nil {
 			return nil, fmt.Errorf("read a recorded version: %w", err)
+		}
+		if recorded.WithdrawnAt != nil && !owner {
+			redactWithdrawnVersion(&recorded)
 		}
 		history = append(history, recorded)
 	}
@@ -51,7 +57,12 @@ func (s *Service) CompareVersions(
 	}
 	return s.Compare(ctx, ComparisonRequest{
 		AssetID: assetID, From: from, To: to, AsOwner: owner, Visibility: visibility,
-		Access: func(Version) string { return "" },
+		Access: func(version Version) string {
+			if version.WithdrawnAt != nil && !owner {
+				return "This version was withdrawn."
+			}
+			return ""
+		},
 	})
 }
 

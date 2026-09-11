@@ -175,6 +175,9 @@ func (s *Service) recordedExportSubject(
 	if err != nil {
 		return exportSubject{}, false, err
 	}
+	if recorded.WithdrawnAt != nil && (viewerID == nil || ownerID == nil || *viewerID != *ownerID) {
+		return exportSubject{}, false, ErrNotFound
+	}
 	if err := protected.RestoreRecordedPrompts(recorded.protectedPayloads, recorded.blocks); err != nil {
 		return exportSubject{}, false, err
 	}

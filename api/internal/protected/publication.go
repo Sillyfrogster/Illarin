@@ -29,6 +29,25 @@ func ApplyRecordedPolicy(
 	snapshotID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
+	uncertain, err := markCurrentProtection(ctx, q, assetID, snapshotID, blocks)
+	if err != nil {
+		return false, err
+	}
+	forEachFragment(blocks, func(fragment *block.PromptFragment) {
+		if fragment.Protected {
+			fragment.Text = ""
+		}
+	})
+	return uncertain, nil
+}
+
+func markCurrentProtection(
+	ctx context.Context,
+	q Querier,
+	assetID uuid.UUID,
+	snapshotID *uuid.UUID,
+	blocks []block.Block,
+) (bool, error) {
 	current, err := currentPrompts(ctx, q, assetID)
 	if err != nil {
 		return false, err
@@ -53,9 +72,6 @@ func ApplyRecordedPolicy(
 			prompt, matched = current[stands], true
 		}
 		fragment.Protected = uncertain || prompt.sealed || (!matched && fragment.Protected)
-		if fragment.Protected {
-			fragment.Text = ""
-		}
 	})
 	return uncertain, nil
 }
@@ -88,6 +104,35 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 		}
 	})
 	return nil
+}
+
+// PrepareRestoration applies today's prompt protection to historical content without changing allowed apps.
+func PrepareRestoration(
+	ctx context.Context,
+	tx pgx.Tx,
+	assetID uuid.UUID,
+	snapshotID uuid.UUID,
+	payloads []byte,
+	blocks []block.Block,
+) error {
+	if err := RestoreRecordedPrompts(payloads, blocks); err != nil {
+		return err
+	}
+	if _, err := markCurrentProtection(ctx, tx, assetID, &snapshotID, blocks); err != nil {
+		return err
+	}
+	sealed := map[uuid.UUID]promptValue{}
+	forEachFragment(blocks, func(fragment *block.PromptFragment) {
+		if fragment.Protected {
+			sealed[fragment.ID] = promptValue{text: fragment.Text}
+			fragment.Text = ""
+		}
+	})
+	if len(sealed) == 0 {
+		_, err := tx.Exec(ctx, `delete from protected_content where asset_id = $1`, assetID)
+		return err
+	}
+	return replacePromptPayloads(ctx, tx, assetID, sealed)
 }
 
 func UnsealedFragments(

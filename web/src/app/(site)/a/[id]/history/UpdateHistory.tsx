@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { RecordedVersion } from "@/lib/api/query";
 import { VersionDownload } from "./VersionDownload";
-import { VersionEntry } from "./VersionEntry";
+import { type HistoryOwner, VersionEntry } from "./VersionEntry";
 import { VersionSpine } from "./VersionSpine";
 
 export function UpdateHistory({
@@ -10,12 +10,14 @@ export function UpdateHistory({
   versions,
   download,
   olderDownloads,
+  owner,
 }: {
   assetId: string;
   kind: string;
   versions: RecordedVersion[];
   download: ReactNode;
   olderDownloads: boolean;
+  owner: HistoryOwner;
 }) {
   if (versions.length === 0) {
     return (
@@ -47,8 +49,9 @@ export function UpdateHistory({
                 />
               ) : null
             }
-            key={version.id}
+            key={version.number}
             kind={kind}
+            owner={owner}
             version={version}
             versions={versions}
           />

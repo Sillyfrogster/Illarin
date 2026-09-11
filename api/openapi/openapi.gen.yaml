@@ -4443,6 +4443,135 @@ paths:
           description: The asset, or one of the versions, is not readable
         '409':
           description: The chosen version is the first one recorded
+  /v1/assets/{id}/updates/{number}/restore:
+    post:
+      operationId: restoreAssetVersion
+      description: >-
+        Copy one recorded version into the private working copy. The public
+        version and every recorded snapshot stay unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: The version is now the private working copy
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset or version does not belong to the creator
+        '409':
+          description: >-
+            The working copy changed, the asset is frozen or the recorded
+            content is no longer structurally valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreConflict'
+  /v1/assets/{id}/updates/{number}/notes:
+    patch:
+      operationId: correctAssetVersionNotes
+      description: >-
+        Correct the creator-written notes on a recorded version without changing
+        or announcing its snapshot.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetVersionNotesRequest'
+      responses:
+        '204':
+          description: The corrected notes are visible with an edited marker
+        '400':
+          description: The summary is empty or the corrected text is too long
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset or version does not belong to the creator
+        '409':
+          description: The asset is frozen
+  /v1/assets/{id}/updates/{number}/withdraw:
+    post:
+      operationId: withdrawAssetVersion
+      description: >-
+        Withdraw an older recorded version while retaining a public number, date
+        and explanation.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetVersionWithdrawalRequest'
+      responses:
+        '204':
+          description: The older version is withdrawn
+        '400':
+          description: The explanation is empty or too long
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset or version does not belong to the creator
+        '409':
+          description: The version is current
+          already withdrawn or the asset is frozen: null
   /v1/assets/{id}/updates/protection:
     get:
       operationId: listProtectionMismatches
@@ -8751,6 +8880,14 @@ components:
           type: string
         notes:
           type: string
+        notesEditedAt:
+          type: string
+          format: date-time
+        withdrawnAt:
+          type: string
+          format: date-time
+        withdrawalExplanation:
+          type: string
     RecordedVersionList:
       type: object
       required:
@@ -8760,6 +8897,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecordedVersion'
+    AssetVersionNotesRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - summary
+      properties:
+        summary:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 4000
+    AssetVersionWithdrawalRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - explanation
+      properties:
+        explanation:
+          type: string
+          maxLength: 1000
     VersionChange:
       type: object
       required:
@@ -10119,6 +10277,20 @@ components:
         contentChanged:
           description: Whether this update changed the file linked apps download
           type: boolean
+    RestoreConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - type: object
+          required:
+            - error
+            - code
+          properties:
+            error:
+              type: string
+            code:
+              type: string
+              enum:
+                - invalid_recorded_version
     RecordedVersionDownloads:
       type: object
       required:

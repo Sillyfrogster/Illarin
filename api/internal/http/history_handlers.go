@@ -31,6 +31,90 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
 
+func (h *Handlers) RestoreAssetVersion(c *gin.Context, id types.UUID, number int, params RestoreAssetVersionParams) {
+	owner, ok := h.verifiedAccount(c, "restoring an asset version")
+	if !ok {
+		return
+	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	err := h.assets.RestoreVersion(c.Request.Context(), owner.ID, uuid.UUID(id), number, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, asset.ErrInvalidBlock):
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "This version no longer forms a valid working copy.",
+			"code":  "invalid_recorded_version",
+		})
+	case errors.Is(err, asset.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not restore the version."})
+	default:
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context, id types.UUID, number int) {
+	owner, ok := h.verifiedAccount(c, "correcting asset update notes")
+	if !ok {
+		return
+	}
+	var request AssetVersionNotesRequest
+	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the corrected summary and notes."})
+		return
+	}
+	err := h.assets.CorrectVersionNotes(c.Request.Context(), owner.ID, uuid.UUID(id), number,
+		request.Summary, valueOrEmpty(request.Notes))
+	switch {
+	case errors.Is(err, asset.ErrSummaryRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Keep a summary for this update."})
+	case errors.Is(err, asset.ErrSummaryTooLong):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "The summary or notes are too long."})
+	case errors.Is(err, asset.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+	case errors.Is(err, asset.ErrAssetFrozen):
+		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not correct the notes."})
+	default:
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func (h *Handlers) WithdrawAssetVersion(c *gin.Context, id types.UUID, number int) {
+	owner, ok := h.verifiedAccount(c, "withdrawing an asset version")
+	if !ok {
+		return
+	}
+	var request AssetVersionWithdrawalRequest
+	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send a public withdrawal explanation."})
+		return
+	}
+	err := h.assets.WithdrawVersion(c.Request.Context(), owner.ID, uuid.UUID(id), number, request.Explanation)
+	switch {
+	case errors.Is(err, asset.ErrWithdrawalExplanationRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Explain why this version was withdrawn."})
+	case errors.Is(err, asset.ErrWithdrawalExplanationTooLong):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Keep the explanation under 1,000 characters."})
+	case errors.Is(err, asset.ErrCurrentVersionWithdrawal):
+		c.JSON(http.StatusConflict, gin.H{"error": "Publish a replacement before withdrawing the current version."})
+	case errors.Is(err, asset.ErrVersionAlreadyWithdrawn):
+		c.JSON(http.StatusConflict, gin.H{"error": "This version is already withdrawn."})
+	case errors.Is(err, asset.ErrAssetFrozen):
+		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
+	case errors.Is(err, asset.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not withdraw the version."})
+	default:
+		c.Status(http.StatusNoContent)
+	}
+}
+
 func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params CompareAssetVersionsParams) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
@@ -173,6 +257,9 @@ func toAPIRecordedVersion(recorded asset.Version) RecordedVersion {
 		RecordedAt: recorded.RecordedAt, Initial: recorded.Initial,
 		VersionLabel: recorded.VersionLabel,
 		Summary:      recorded.Summary, Notes: recorded.Notes,
+		NotesEditedAt:         recorded.NotesEditedAt,
+		WithdrawnAt:           recorded.WithdrawnAt,
+		WithdrawalExplanation: textOrNil(recorded.WithdrawalExplanation),
 	}
 }
 

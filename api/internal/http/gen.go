@@ -1380,6 +1380,21 @@ func (e ReplacementAcceptanceUnrepresentable) Valid() bool {
 	}
 }
 
+// Defines values for RestoreConflict1Code.
+const (
+	InvalidRecordedVersion RestoreConflict1Code = "invalid_recorded_version"
+)
+
+// Valid indicates whether the value is a known member of the RestoreConflict1Code enum.
+func (e RestoreConflict1Code) Valid() bool {
+	switch e {
+	case InvalidRecordedVersion:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SaveAssetBlockRequestAllowedApps.
 const (
 	SaveAssetBlockRequestAllowedAppsLumiverse SaveAssetBlockRequestAllowedApps = "lumiverse"
@@ -2318,6 +2333,17 @@ type AssetUpdateRequest struct {
 
 	// VersionLabel Free text a creator may repeat, keeping the asset's own version where it is empty
 	VersionLabel *string `json:"versionLabel,omitempty"`
+}
+
+// AssetVersionNotesRequest defines model for AssetVersionNotesRequest.
+type AssetVersionNotesRequest struct {
+	Notes   *string `json:"notes,omitempty"`
+	Summary string  `json:"summary"`
+}
+
+// AssetVersionWithdrawalRequest defines model for AssetVersionWithdrawalRequest.
+type AssetVersionWithdrawalRequest struct {
+	Explanation string `json:"explanation"`
 }
 
 // AssetWithhold defines model for AssetWithhold.
@@ -3915,12 +3941,15 @@ type RecordedVersion struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// Initial Whether this version was captured from what the asset already was, rather than published as an update.
-	Initial      bool      `json:"initial"`
-	Notes        string    `json:"notes"`
-	Number       int       `json:"number"`
-	RecordedAt   time.Time `json:"recordedAt"`
-	Summary      string    `json:"summary"`
-	VersionLabel string    `json:"versionLabel"`
+	Initial               bool       `json:"initial"`
+	Notes                 string     `json:"notes"`
+	NotesEditedAt         *time.Time `json:"notesEditedAt,omitempty"`
+	Number                int        `json:"number"`
+	RecordedAt            time.Time  `json:"recordedAt"`
+	Summary               string     `json:"summary"`
+	VersionLabel          string     `json:"versionLabel"`
+	WithdrawalExplanation *string    `json:"withdrawalExplanation,omitempty"`
+	WithdrawnAt           *time.Time `json:"withdrawnAt,omitempty"`
 }
 
 // RecordedVersionDownloads defines model for RecordedVersionDownloads.
@@ -4012,6 +4041,20 @@ type RepublishPostRequest struct {
 
 // RequestCode defines model for RequestCode.
 type RequestCode = string
+
+// RestoreConflict defines model for RestoreConflict.
+type RestoreConflict struct {
+	union json.RawMessage
+}
+
+// RestoreConflict1 defines model for RestoreConflict.1.
+type RestoreConflict1 struct {
+	Code  RestoreConflict1Code `json:"code"`
+	Error string               `json:"error"`
+}
+
+// RestoreConflict1Code defines model for RestoreConflict.1.Code.
+type RestoreConflict1Code string
 
 // RestrictProfileRequest defines model for RestrictProfileRequest.
 type RestrictProfileRequest struct {
@@ -4682,6 +4725,12 @@ type GetRecordedVersionDownloadsParams struct {
 // GetRecordedVersionDownloadsParamsNsfw defines parameters for GetRecordedVersionDownloads.
 type GetRecordedVersionDownloadsParamsNsfw string
 
+// RestoreAssetVersionParams defines parameters for RestoreAssetVersion.
+type RestoreAssetVersionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // BeginDiscordParams defines parameters for BeginDiscord.
 type BeginDiscordParams struct {
 	Intent *BeginDiscordParamsIntent `form:"intent,omitempty" json:"intent,omitempty"`
@@ -4978,8 +5027,14 @@ type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
 // PublishAssetUpdateJSONRequestBody defines body for PublishAssetUpdate for application/json ContentType.
 type PublishAssetUpdateJSONRequestBody = AssetUpdateRequest
 
+// CorrectAssetVersionNotesJSONRequestBody defines body for CorrectAssetVersionNotes for application/json ContentType.
+type CorrectAssetVersionNotesJSONRequestBody = AssetVersionNotesRequest
+
 // ResolvePromptCorrespondenceJSONRequestBody defines body for ResolvePromptCorrespondence for application/json ContentType.
 type ResolvePromptCorrespondenceJSONRequestBody = PromptCorrespondenceRequest
+
+// WithdrawAssetVersionJSONRequestBody defines body for WithdrawAssetVersion for application/json ContentType.
+type WithdrawAssetVersionJSONRequestBody = AssetVersionWithdrawalRequest
 
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
@@ -5368,6 +5423,68 @@ func (t *PublishConflict) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsCandidateConflict returns the union data inside the RestoreConflict as a CandidateConflict
+func (t RestoreConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the RestoreConflict as the provided CandidateConflict
+func (t *RestoreConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the RestoreConflict, using the provided CandidateConflict
+func (t *RestoreConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRestoreConflict1 returns the union data inside the RestoreConflict as a RestoreConflict1
+func (t RestoreConflict) AsRestoreConflict1() (RestoreConflict1, error) {
+	var body RestoreConflict1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRestoreConflict1 overwrites any union data inside the RestoreConflict as the provided RestoreConflict1
+func (t *RestoreConflict) FromRestoreConflict1(v RestoreConflict1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRestoreConflict1 performs a merge with any union data inside the RestoreConflict, using the provided RestoreConflict1
+func (t *RestoreConflict) MergeRestoreConflict1(v RestoreConflict1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RestoreConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RestoreConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -5506,8 +5623,17 @@ type ServerInterface interface {
 	// (GET /v1/assets/{id}/updates/{number}/downloads)
 	GetRecordedVersionDownloads(c *gin.Context, id openapi_types.UUID, number int, params GetRecordedVersionDownloadsParams)
 
+	// (PATCH /v1/assets/{id}/updates/{number}/notes)
+	CorrectAssetVersionNotes(c *gin.Context, id openapi_types.UUID, number int)
+
 	// (PUT /v1/assets/{id}/updates/{number}/protection)
 	ResolvePromptCorrespondence(c *gin.Context, id openapi_types.UUID, number int)
+
+	// (POST /v1/assets/{id}/updates/{number}/restore)
+	RestoreAssetVersion(c *gin.Context, id openapi_types.UUID, number int, params RestoreAssetVersionParams)
+
+	// (POST /v1/assets/{id}/updates/{number}/withdraw)
+	WithdrawAssetVersion(c *gin.Context, id openapi_types.UUID, number int)
 
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
@@ -7458,6 +7584,40 @@ func (siw *ServerInterfaceWrapper) GetRecordedVersionDownloads(c *gin.Context) {
 	siw.Handler.GetRecordedVersionDownloads(c, id, number, params)
 }
 
+// CorrectAssetVersionNotes operation middleware
+func (siw *ServerInterfaceWrapper) CorrectAssetVersionNotes(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectAssetVersionNotes(c, id, number)
+}
+
 // ResolvePromptCorrespondence operation middleware
 func (siw *ServerInterfaceWrapper) ResolvePromptCorrespondence(c *gin.Context) {
 
@@ -7490,6 +7650,101 @@ func (siw *ServerInterfaceWrapper) ResolvePromptCorrespondence(c *gin.Context) {
 	}
 
 	siw.Handler.ResolvePromptCorrespondence(c, id, number)
+}
+
+// RestoreAssetVersion operation middleware
+func (siw *ServerInterfaceWrapper) RestoreAssetVersion(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreAssetVersionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestoreAssetVersion(c, id, number, params)
+}
+
+// WithdrawAssetVersion operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawAssetVersion(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WithdrawAssetVersion(c, id, number)
 }
 
 // ClearAssetWithhold operation middleware
@@ -10309,6 +10564,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/assets/:id/updates", wrapper.ListAssetUpdates)
 	router.POST(options.BaseURL+"/v1/assets/:id/updates", wrapper.PublishAssetUpdate)
 	router.GET(options.BaseURL+"/v1/assets/:id/updates/comparison", wrapper.CompareAssetVersions)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates/:number/restore", wrapper.RestoreAssetVersion)
+	router.PATCH(options.BaseURL+"/v1/assets/:id/updates/:number/notes", wrapper.CorrectAssetVersionNotes)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates/:number/withdraw", wrapper.WithdrawAssetVersion)
 	router.GET(options.BaseURL+"/v1/assets/:id/updates/protection", wrapper.ListProtectionMismatches)
 	router.GET(options.BaseURL+"/v1/assets/:id/updates/:number/downloads", wrapper.GetRecordedVersionDownloads)
 	router.PUT(options.BaseURL+"/v1/assets/:id/updates/:number/protection", wrapper.ResolvePromptCorrespondence)

@@ -1774,6 +1774,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/updates/{number}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Copy one recorded version into the private working copy. The public version and every recorded snapshot stay unchanged. */
+    post: operations["restoreAssetVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Correct the creator-written notes on a recorded version without changing or announcing its snapshot. */
+    patch: operations["correctAssetVersionNotes"];
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Withdraw an older recorded version while retaining a public number, date and explanation. */
+    post: operations["withdrawAssetVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/assets/{id}/updates/protection": {
     parameters: {
       query?: never;
@@ -3493,9 +3544,21 @@ export interface components {
       versionLabel: string;
       summary: string;
       notes: string;
+      /** Format: date-time */
+      notesEditedAt?: string;
+      /** Format: date-time */
+      withdrawnAt?: string;
+      withdrawalExplanation?: string;
     };
     RecordedVersionList: {
       items: components["schemas"]["RecordedVersion"][];
+    };
+    AssetVersionNotesRequest: {
+      summary: string;
+      notes?: string;
+    };
+    AssetVersionWithdrawalRequest: {
+      explanation: string;
     };
     VersionChange: {
       /** @enum {string} */
@@ -4090,6 +4153,13 @@ export interface components {
       /** @description Whether this update changed the file linked apps download */
       contentChanged: boolean;
     };
+    RestoreConflict:
+      | components["schemas"]["CandidateConflict"]
+      | {
+          error: string;
+          /** @enum {string} */
+          code: "invalid_recorded_version";
+        };
     RecordedVersionDownloads: {
       version: components["schemas"]["RecordedVersion"];
       /** @enum {string} */
@@ -10226,6 +10296,182 @@ export interface operations {
         content?: never;
       };
       /** @description The chosen version is the first one recorded */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restoreAssetVersion: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The version is now the private working copy */
+      204: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed, the asset is frozen or the recorded content is no longer structurally valid */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RestoreConflict"];
+        };
+      };
+    };
+  };
+  correctAssetVersionNotes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetVersionNotesRequest"];
+      };
+    };
+    responses: {
+      /** @description The corrected notes are visible with an edited marker */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The summary is empty or the corrected text is too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  withdrawAssetVersion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetVersionWithdrawalRequest"];
+      };
+    };
+    responses: {
+      /** @description The older version is withdrawn */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The explanation is empty or too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The version is current */
       409: {
         headers: {
           [name: string]: unknown;

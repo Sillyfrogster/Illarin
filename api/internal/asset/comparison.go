@@ -26,13 +26,16 @@ var (
 )
 
 type Version struct {
-	ID           uuid.UUID
-	Number       int
-	RecordedAt   time.Time
-	Initial      bool
-	VersionLabel string
-	Summary      string
-	Notes        string
+	ID                    uuid.UUID
+	Number                int
+	RecordedAt            time.Time
+	Initial               bool
+	VersionLabel          string
+	Summary               string
+	Notes                 string
+	NotesEditedAt         *time.Time
+	WithdrawnAt           *time.Time
+	WithdrawalExplanation string
 }
 
 type ChangeKind string
@@ -113,6 +116,10 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 	for _, version := range []recordedVersion{earlier, later} {
 		if refusal := in.Access(version.Version); refusal != "" {
 			compared.Unavailable = refusal
+			if !in.AsOwner {
+				redactWithdrawnVersion(&compared.From)
+				redactWithdrawnVersion(&compared.To)
+			}
 			return compared, nil
 		}
 	}
@@ -128,6 +135,19 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		return Comparison{}, err
 	}
 	return compared, nil
+}
+
+func redactWithdrawnVersion(version *Version) {
+	if version.WithdrawnAt == nil {
+		return
+	}
+	version.ID = uuid.Nil
+	version.Initial = false
+	version.VersionLabel = ""
+	version.Summary = ""
+	version.Notes = ""
+	version.NotesEditedAt = nil
+	version.WithdrawnAt = nil
 }
 
 func (s *Service) addressPictures(
@@ -223,6 +243,7 @@ type versionMetadata struct {
 }
 
 type versionPreserved struct {
+	ID        uuid.UUID `json:"id"`
 	Owner     string    `json:"owner_kind"`
 	OwnerID   uuid.UUID `json:"owner_id"`
 	Namespace string    `json:"namespace"`
@@ -243,10 +264,12 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	var sourceRevision pgtype.UUID
 	err := tx.QueryRow(ctx, `
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
+		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, ''),
 		       source_revision_id, payload, protected_payloads
 		  from public.asset_snapshots where asset_id = $1 and number = $2
 	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
+		&recorded.NotesEditedAt, &recorded.WithdrawnAt, &recorded.WithdrawalExplanation,
 		&sourceRevision, &stored, &recorded.protectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordedVersion{}, ErrNotFound

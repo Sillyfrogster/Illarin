@@ -64,6 +64,8 @@ export type AssetInstanceList = components["schemas"]["AssetInstanceList"];
 export type QueuedDelivery = components["schemas"]["QueuedDelivery"];
 export type AssetUpdate = components["schemas"]["AssetUpdate"];
 export type AssetUpdateRequest = components["schemas"]["AssetUpdateRequest"];
+export type AssetVersionNotesRequest =
+  components["schemas"]["AssetVersionNotesRequest"];
 export type PromptCorrespondenceRequest =
   components["schemas"]["PromptCorrespondenceRequest"];
 export type Profile = components["schemas"]["Profile"];
@@ -581,6 +583,48 @@ export async function fetchAssetUpdates(
     headers: cookie ? { cookie } : undefined,
   });
   return data?.items ?? [];
+}
+
+export async function restoreAssetVersion(
+  candidate: Candidate,
+  id: string,
+  number: number,
+) {
+  const { error, response } = await api.POST(
+    "/v1/assets/{id}/updates/{number}/restore",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, number },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error) throw writeRefusal(error, "That version could not be restored.");
+}
+
+export async function correctAssetVersionNotes(
+  id: string,
+  number: number,
+  correction: AssetVersionNotesRequest,
+) {
+  const { error } = await api.PATCH("/v1/assets/{id}/updates/{number}/notes", {
+    params: { path: { id, number } },
+    body: correction,
+  });
+  if (error) throw writeRefusal(error, "Those notes could not be corrected.");
+}
+
+export async function withdrawAssetVersion(
+  id: string,
+  number: number,
+  explanation: string,
+) {
+  const { error } = await api.POST(
+    "/v1/assets/{id}/updates/{number}/withdraw",
+    { params: { path: { id, number } }, body: { explanation } },
+  );
+  if (error) throw writeRefusal(error, "That version could not be withdrawn.");
 }
 
 /** fetchRecordedVersionDownloads reads what a file of one recorded version can carry today. */

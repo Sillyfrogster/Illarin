@@ -224,6 +224,12 @@ paths:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates
   /v1/assets/{id}/updates/comparison:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1comparison
+  /v1/assets/{id}/updates/{number}/restore:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1{number}~1restore
+  /v1/assets/{id}/updates/{number}/notes:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1{number}~1notes
+  /v1/assets/{id}/updates/{number}/withdraw:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1{number}~1withdraw
   /v1/assets/{id}/updates/protection:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1updates~1protection
   /v1/assets/{id}/updates/{number}/downloads:
@@ -606,6 +612,10 @@ components:
       $ref: ./assets.yaml#/components/schemas/RecordedVersion
     RecordedVersionList:
       $ref: ./assets.yaml#/components/schemas/RecordedVersionList
+    AssetVersionNotesRequest:
+      $ref: ./assets.yaml#/components/schemas/AssetVersionNotesRequest
+    AssetVersionWithdrawalRequest:
+      $ref: ./assets.yaml#/components/schemas/AssetVersionWithdrawalRequest
     VersionChange:
       $ref: ./assets.yaml#/components/schemas/VersionChange
     VersionChangeGroup:

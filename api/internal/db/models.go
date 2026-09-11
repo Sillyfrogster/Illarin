@@ -178,18 +178,21 @@ type AssetRevision struct {
 }
 
 type AssetSnapshot struct {
-	ID                pgtype.UUID
-	AssetID           pgtype.UUID
-	Number            int32
-	RecordedAt        pgtype.Timestamptz
-	InitialRecorded   bool
-	VersionLabel      string
-	ContentGeneration int32
-	SourceRevisionID  pgtype.UUID
-	Payload           []byte
-	ProtectedPayloads []byte
-	Summary           string
-	Notes             string
+	ID                    pgtype.UUID
+	AssetID               pgtype.UUID
+	Number                int32
+	RecordedAt            pgtype.Timestamptz
+	InitialRecorded       bool
+	VersionLabel          string
+	ContentGeneration     int32
+	SourceRevisionID      pgtype.UUID
+	Payload               []byte
+	ProtectedPayloads     []byte
+	Summary               string
+	Notes                 string
+	NotesEditedAt         pgtype.Timestamptz
+	WithdrawnAt           pgtype.Timestamptz
+	WithdrawalExplanation pgtype.Text
 }
 
 type AssetSnapshotMedium struct {
