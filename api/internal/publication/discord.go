@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
-	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -17,8 +16,6 @@ import (
 const roleNameLimit = 48
 
 var ErrNotDiscord = errors.New("the destination is not a Discord channel")
-
-const SettledUnconfirmed = "unconfirmed"
 
 type ChannelEdit struct {
 	Name     string
@@ -223,7 +220,7 @@ func checkRole(roleID, roleName string) (approved, error) {
 
 func (s *Service) announceOnDiscord(
 	ctx context.Context,
-	held waiting,
+	held carried,
 	destinationID uuid.UUID,
 	now time.Time,
 ) error {
@@ -244,36 +241,16 @@ func (s *Service) announceOnDiscord(
 	}
 	answer, err := s.sender.Post(ctx, capability.Confirming(), nil, body)
 	if err != nil {
-		return s.record(ctx, held, unreachable, now)
+		return s.ledger.Record(ctx, held.Work, outbox.Unreachable, now)
 	}
-	said := readAnnouncement(answer)
+	said, message := outbox.ReadAnnouncement(answer)
 	said.Status, said.Took = &answer.Status, answer.Took
-	if said.Message != "" {
-		if err := s.keepMessage(ctx, held.ID, said.Message); err != nil {
+	if message != "" {
+		if err := s.ledger.KeepMessage(ctx, held.ID, message); err != nil {
 			return err
 		}
 	}
-	return s.record(ctx, held, said.verdict, now)
-}
-
-type announced struct {
-	verdict
-	Message string
-}
-
-func readAnnouncement(answer outbound.Answer) announced {
-	if answer.Status < http.StatusOK || answer.Status >= http.StatusMultipleChoices {
-		return announced{verdict: readAnswer(answer)}
-	}
-	message := discord.MessageID(answer.Body)
-	if message == "" {
-		return announced{verdict: verdict{
-			Outcome: AttemptUnconfirmed,
-			Detail:  "Discord took it without saying which message it made.",
-			Reason:  SettledUnconfirmed,
-		}}
-	}
-	return announced{verdict: arrived, Message: message}
+	return s.ledger.Record(ctx, held.Work, said, now)
 }
 
 func announcementOf(said sent, role string) discord.Announcement {
@@ -321,14 +298,4 @@ func (s *Service) channelOf(
 		return capability, "", nil
 	}
 	return capability, *role, nil
-}
-
-func (s *Service) keepMessage(ctx context.Context, deliveryID uuid.UUID, message string) error {
-	_, err := s.pool.Exec(ctx, `
-		update publication_deliveries set message_id = $2 where id = $1
-	`, deliveryID, message)
-	if err != nil {
-		return fmt.Errorf("keep the announcement's message id: %w", err)
-	}
-	return nil
 }

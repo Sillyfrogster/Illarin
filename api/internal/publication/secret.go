@@ -130,7 +130,7 @@ func (s *Service) retireDestination(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("retire the destination: %w", err)
 	}
-	if err := stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
+	if err := s.stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
 		return err
 	}
 	err = recordPublicationAudit(ctx, tx, change{

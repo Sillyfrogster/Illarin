@@ -8,6 +8,7 @@ import (
 
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/google/uuid"
@@ -76,6 +77,7 @@ type Service struct {
 	site    string
 	blog    string
 	rates   Rates
+	ledger  outbox.Ledger
 	now     func() time.Time
 }
 
@@ -89,7 +91,7 @@ func NewService(
 		pool: pool, media: media, signer: signing.NewKey(),
 		sealing: sending.Sealing, sender: sending.Sender,
 		site: sending.Site, blog: sending.Blog,
-		rates: rates, now: time.Now,
+		rates: rates, ledger: outbox.NewLedger(pool, deliveryTables), now: time.Now,
 	}
 }
 

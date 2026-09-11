@@ -215,7 +215,7 @@ func (s *Service) UpdateDestination(
 		return Destination{}, fmt.Errorf("update the destination: %w", err)
 	}
 	if moved {
-		if err := stopDeliveriesTo(ctx, tx, id, SettledMoved); err != nil {
+		if err := s.stopDeliveriesTo(ctx, tx, id, SettledMoved); err != nil {
 			return Destination{}, err
 		}
 	}
@@ -252,7 +252,7 @@ func (s *Service) DisableDestination(
 	if err != nil {
 		return Destination{}, fmt.Errorf("disable the destination: %w", err)
 	}
-	if err := stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
+	if err := s.stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
 		return Destination{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -276,7 +276,7 @@ func (s *Service) RemoveDestination(ctx context.Context, actor uuid.UUID, id uui
 		return fmt.Errorf("begin destination removal: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := stopDeliveriesTo(ctx, tx, id, SettledRemoved); err != nil {
+	if err := s.stopDeliveriesTo(ctx, tx, id, SettledRemoved); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `

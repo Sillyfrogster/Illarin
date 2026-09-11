@@ -7,29 +7,32 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 const (
-	DeliveryPending     = "pending"
-	DeliverySending     = "sending"
-	DeliveryDelivered   = "delivered"
-	DeliveryFailed      = "failed"
-	DeliveryUnconfirmed = "unconfirmed"
+	DeliveryPending     = outbox.Pending
+	DeliverySending     = outbox.Sending
+	DeliveryDelivered   = outbox.Delivered
+	DeliveryFailed      = outbox.Failed
+	DeliveryUnconfirmed = outbox.Unconfirmed
 )
 
 const (
-	AttemptDelivered   = "delivered"
-	AttemptRefused     = "refused"
-	AttemptUnreachable = "unreachable"
-	AttemptUnconfirmed = "unconfirmed"
+	AttemptDelivered   = outbox.OutcomeDelivered
+	AttemptRefused     = outbox.OutcomeRefused
+	AttemptUnreachable = outbox.OutcomeUnreachable
+	AttemptUnconfirmed = outbox.OutcomeUnconfirmed
 )
 
-const DeliveryPoll = 5 * time.Second
+const DeliveryPoll = outbox.Poll
 
-const DeliveryLease = time.Minute
+var deliveryTables = outbox.Tables{
+	Deliveries: "publication_deliveries", Attempts: "publication_delivery_attempts",
+}
 
 var ErrDeliveryNotFound = errors.New("no such publication delivery")
 
@@ -69,15 +72,7 @@ type Delivery struct {
 	Last          *DeliveryAttempt
 }
 
-type DeliveryAttempt struct {
-	Run       int
-	Number    int
-	Outcome   string
-	Status    *int
-	Detail    string
-	Took      time.Duration
-	Attempted time.Time
-}
+type DeliveryAttempt = outbox.Attempt
 
 func (s *Service) PostDeliveries(
 	ctx context.Context,
@@ -198,15 +193,8 @@ func (s *Service) ReplayDelivery(
 	if state != DestinationActive {
 		return Delivery{}, ErrDeliveryUnsendable
 	}
-	_, err = tx.Exec(ctx, `
-		update publication_deliveries
-		   set state = $2, run = run + 1, due_at = $3,
-		       settled_at = null, settled_reason = null,
-		       lease_token = null, lease_expires_at = null, updated_at = $3
-		 where id = $1
-	`, id, DeliveryPending, s.now().UTC())
-	if err != nil {
-		return Delivery{}, fmt.Errorf("put the delivery back in the queue: %w", err)
+	if err := s.ledger.Requeue(ctx, tx, id, s.now()); err != nil {
+		return Delivery{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
 		Actor: actor, Action: "delivery.replayed", DeliveryID: &id, PostID: &held.PostID,
@@ -248,43 +236,8 @@ func queueDeliveries(
 	return nil
 }
 
-func stopDeliveriesTo(ctx context.Context, tx pgx.Tx, id uuid.UUID, reason string) error {
-	said := stopped(reason)
-	rows, err := tx.Query(ctx, `
-		update publication_deliveries
-		   set state = $2, settled_at = now(), settled_reason = $5, attempts = attempts + 1,
-		       lease_token = null, lease_expires_at = null, updated_at = now()
-		 where destination_id = $1 and state in ($3, $4)
-		returning id, run, attempts
-	`, id, DeliveryFailed, DeliveryPending, DeliverySending, reason)
-	if err != nil {
-		return fmt.Errorf("stop the work waiting on a destination: %w", err)
-	}
-	halted := make([]DeliveryAttempt, 0, 4)
-	held := make([]uuid.UUID, 0, 4)
-	for rows.Next() {
-		var deliveryID uuid.UUID
-		var run, number int
-		if err := rows.Scan(&deliveryID, &run, &number); err != nil {
-			rows.Close()
-			return fmt.Errorf("stop one piece of work waiting on a destination: %w", err)
-		}
-		held = append(held, deliveryID)
-		halted = append(halted, DeliveryAttempt{
-			Run: run, Number: number, Outcome: said.Outcome, Detail: said.Detail,
-			Attempted: time.Now().UTC(),
-		})
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("stop the work waiting on a destination: %w", err)
-	}
-	for index, deliveryID := range held {
-		if err := recordAttempt(ctx, tx, deliveryID, halted[index]); err != nil {
-			return err
-		}
-	}
-	return nil
+func (s *Service) stopDeliveriesTo(ctx context.Context, tx pgx.Tx, id uuid.UUID, reason string) error {
+	return s.ledger.StopTo(ctx, tx, id, outbox.Stopped(reason))
 }
 
 func (s *Service) RunDeliveries(ctx context.Context, onError func(error)) {
@@ -306,7 +259,7 @@ func (s *Service) RunDeliveries(ctx context.Context, onError func(error)) {
 func (s *Service) SendDueDeliveries(ctx context.Context, now time.Time) (int, error) {
 	made := 0
 	for {
-		held, taken, err := s.leaseDueDelivery(ctx, now)
+		held, taken, err := s.ledger.Lease(ctx, now)
 		if err != nil || !taken {
 			return made, err
 		}
@@ -317,63 +270,32 @@ func (s *Service) SendDueDeliveries(ctx context.Context, now time.Time) (int, er
 	}
 }
 
-type waiting struct {
-	ID            uuid.UUID
-	EventID       uuid.UUID
-	EventType     string
-	DestinationID *uuid.UUID
-	Ping          bool
-	Token         uuid.UUID
-	Run           int
-	Attempts      int
-	Made          int
+type carried struct {
+	outbox.Work
+	EventType string
+	Ping      bool
 }
 
-func (s *Service) leaseDueDelivery(ctx context.Context, now time.Time) (waiting, bool, error) {
-	var held waiting
-	held.Token = uuid.New()
+func (s *Service) sendLeased(ctx context.Context, work outbox.Work, now time.Time) error {
+	held := carried{Work: work}
 	err := s.pool.QueryRow(ctx, `
-		with candidate as (
-			select id
-			  from publication_deliveries
-			 where due_at <= $1
-			   and (state = $4 or (state = $5 and lease_expires_at <= $1))
-			 order by due_at
-			 for update skip locked
-			 limit 1
-		)
-		update publication_deliveries work
-		   set state = $5, attempts = attempts + 1,
-		       lease_token = $2, lease_expires_at = $3, updated_at = $1
-		  from candidate, publication_events event
-		 where work.id = candidate.id and event.id = work.event_id
-		returning work.id, work.event_id, event.type, work.destination_id,
-		          work.mention_role, work.run, work.attempts,
-		          (select count(*) from publication_delivery_attempts made
-		            where made.delivery_id = work.id and made.run = work.run)
-	`, now, held.Token, now.Add(DeliveryLease), DeliveryPending, DeliverySending).Scan(
-		&held.ID, &held.EventID, &held.EventType, &held.DestinationID, &held.Ping,
-		&held.Run, &held.Attempts, &held.Made,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return waiting{}, false, nil
-	}
+		select event.type, work.mention_role
+		  from publication_deliveries work
+		  join publication_events event on event.id = work.event_id
+		 where work.id = $1
+	`, work.ID).Scan(&held.EventType, &held.Ping)
 	if err != nil {
-		return waiting{}, false, fmt.Errorf("lease a due delivery: %w", err)
+		return fmt.Errorf("read what a leased delivery carries: %w", err)
 	}
-	return held, true, nil
-}
-
-func (s *Service) sendLeased(ctx context.Context, held waiting, now time.Time) error {
 	if held.DestinationID == nil {
-		return s.record(ctx, held, stopped(SettledRemoved), now)
+		return s.ledger.Record(ctx, held.Work, outbox.Stopped(SettledRemoved), now)
 	}
 	kind, state, err := s.destinationStanding(ctx, *held.DestinationID)
 	if err != nil {
 		return err
 	}
 	if state != DestinationActive {
-		return s.record(ctx, held, stopped(SettledDisabled), now)
+		return s.ledger.Record(ctx, held.Work, outbox.Stopped(SettledDisabled), now)
 	}
 	if kind == KindDiscord {
 		return s.announceOnDiscord(ctx, held, *held.DestinationID, now)
@@ -392,141 +314,17 @@ func (s *Service) sendLeased(ctx context.Context, held waiting, now time.Time) e
 	}
 	answer, err := s.sender.Post(ctx, address, headers, body)
 	if err != nil {
-		return s.record(ctx, held, unreachable, now)
+		return s.ledger.Record(ctx, held.Work, outbox.Unreachable, now)
 	}
-	said := readAnswer(answer)
+	said := outbox.ReadAnswer(answer)
 	said.Status, said.Took = &answer.Status, answer.Took
-	if err := s.record(ctx, held, said, now); err != nil {
+	if err := s.ledger.Record(ctx, held.Work, said, now); err != nil {
 		return err
 	}
 	if !said.Gone {
 		return nil
 	}
 	return s.retireDestination(ctx, *held.DestinationID)
-}
-
-func (s *Service) record(
-	ctx context.Context,
-	held waiting,
-	said verdict,
-	now time.Time,
-) error {
-	made := DeliveryAttempt{
-		Run: held.Run, Number: held.Attempts, Outcome: said.Outcome,
-		Status: said.Status, Detail: said.Detail, Took: said.Took, Attempted: now.UTC(),
-	}
-	delay, again := deliveryDelay(held.Made+1, spread())
-	if said.Retry && again {
-		return s.deferAttempt(ctx, held, made, now.Add(max(delay, said.After)))
-	}
-	reason := said.Reason
-	state := DeliveryFailed
-	switch {
-	case said.Outcome == AttemptDelivered:
-		state = DeliveryDelivered
-	case said.Outcome == AttemptUnconfirmed:
-		state = DeliveryUnconfirmed
-	case reason == "":
-		reason = SettledExhausted
-	}
-	return s.settle(ctx, held, state, reason, made)
-}
-
-func (s *Service) deferAttempt(
-	ctx context.Context,
-	held waiting,
-	made DeliveryAttempt,
-	due time.Time,
-) error {
-	return s.close(ctx, held, made, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			update publication_deliveries
-			   set state = $2, due_at = $3,
-			       lease_token = null, lease_expires_at = null, updated_at = $3
-			 where id = $1
-		`, held.ID, DeliveryPending, due.UTC())
-		if err != nil {
-			return fmt.Errorf("leave the delivery due again: %w", err)
-		}
-		return nil
-	})
-}
-
-func (s *Service) settle(
-	ctx context.Context,
-	held waiting,
-	state, reason string,
-	made DeliveryAttempt,
-) error {
-	return s.close(ctx, held, made, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			update publication_deliveries
-			   set state = $2, settled_at = $4, settled_reason = $3,
-			       lease_token = null, lease_expires_at = null, updated_at = $4
-			 where id = $1
-		`, held.ID, state, reason, made.Attempted)
-		if err != nil {
-			return fmt.Errorf("settle the delivery: %w", err)
-		}
-		return nil
-	})
-}
-
-func (s *Service) close(
-	ctx context.Context,
-	held waiting,
-	made DeliveryAttempt,
-	change func(pgx.Tx) error,
-) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin the delivery record: %w", err)
-	}
-	defer tx.Rollback(ctx)
-	still, err := deliveryHeldByThisAttempt(ctx, tx, held)
-	if err != nil || !still {
-		return err
-	}
-	if err := change(tx); err != nil {
-		return err
-	}
-	if err := recordAttempt(ctx, tx, held.ID, made); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit the delivery record: %w", err)
-	}
-	return nil
-}
-
-func recordAttempt(ctx context.Context, tx pgx.Tx, deliveryID uuid.UUID, made DeliveryAttempt) error {
-	_, err := tx.Exec(ctx, `
-		insert into publication_delivery_attempts
-		       (id, delivery_id, run, number, outcome, status, detail, took_ms, attempted_at)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		on conflict (delivery_id, number) do nothing
-	`, uuid.New(), deliveryID, made.Run, made.Number, made.Outcome, made.Status, made.Detail,
-		made.Took.Milliseconds(), made.Attempted)
-	if err != nil {
-		return fmt.Errorf("record the delivery attempt: %w", err)
-	}
-	return nil
-}
-
-func deliveryHeldByThisAttempt(ctx context.Context, tx pgx.Tx, held waiting) (bool, error) {
-	var found bool
-	err := tx.QueryRow(ctx, `
-		select true from publication_deliveries
-		 where id = $1 and lease_token = $2 and state = $3
-		   for update
-	`, held.ID, held.Token, DeliverySending).Scan(&found)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("check the delivery lease: %w", err)
-	}
-	return found, nil
 }
 
 func (s *Service) destinationStanding(ctx context.Context, id uuid.UUID) (string, string, error) {
