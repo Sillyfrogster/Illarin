@@ -1,16 +1,56 @@
 package asset
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
+	parsed := format.Parsed{Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
+		Elements: []block.Element{
+			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}},
+			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: uuid.New(), Text: "Hello"}}}},
+		}}
+	svc, pool := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
+	owner := revisionOwner(t, svc, "unchanged.upload")
+	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	publishImported(t, svc, owner, created)
+	generation := contentGeneration(t, pool, created.ID)
+	parsed.Elements[1].Content = block.TextSet{Texts: []block.TextItem{{ID: uuid.New(), Text: "Hello"}}}
+	candidate := currentCandidate(t, svc, created.ID)
+	operation, err := svc.AcceptRevision(t.Context(), RevisionInput{OwnerID: owner, AssetID: created.ID,
+		Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`)}, candidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed, err := svc.ProcessNextIngest(t.Context()); err != nil || !processed {
+		t.Fatalf("ingest = %v, %v", processed, err)
+	}
+	if _, err := svc.AcceptReplacement(t.Context(), owner, created.ID, operation.ID, candidate, nil, false); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = svc.PublishUpdate(t.Context(), UpdateRequest{OwnerID: owner, AssetID: created.ID, Summary: "No change"}, currentCandidate(t, svc, created.ID))
+	if !errors.Is(err, ErrNothingToPublish) {
+		t.Fatalf("identical upload = %v", err)
+	}
+	if recordedUpdates(t, pool, created.ID) != 1 || contentGeneration(t, pool, created.ID) != generation {
+		t.Fatal("identical upload published a version")
+	}
+	saveDescription(t, svc, owner, created.ID, pool, "A real change")
+	updated, _, err := svc.PublishUpdate(t.Context(), UpdateRequest{OwnerID: owner, AssetID: created.ID, Summary: "Changed description"}, currentCandidate(t, svc, created.ID))
+	if err != nil || !updated.ContentChanged {
+		t.Fatalf("real change = %+v, %v", updated, err)
+	}
+}
 
 func publishedAsset(t *testing.T, svc *Service, pool *pgxpool.Pool, handle string) (uuid.UUID, uuid.UUID) {
 	t.Helper()

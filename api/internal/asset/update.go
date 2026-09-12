@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -219,6 +220,16 @@ func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID)
 		}
 		fmt.Fprintf(whole, "page\x00%s\x00%s\x00%t\x00%s\x00%s\n",
 			holder.Definition, title, holder.Hidden, holder.Layout, holder.Width)
+		for _, element := range holder.Elements {
+			if element.Content == nil || element.Content.Empty() {
+				continue
+			}
+			options, err := json.Marshal(element.Options)
+			if err != nil {
+				return versionDigest{}, err
+			}
+			fmt.Fprintf(whole, "display\x00%s\x00%s\x00%s\x00%s\n", element.Type, element.Role, element.Slot, options)
+		}
 	}
 	return versionDigest{content: content, whole: hex.EncodeToString(whole.Sum(nil))}, nil
 }
@@ -229,7 +240,9 @@ func digestCatalog(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, into hash.
 	var isNSFW *bool
 	var cover pgtype.UUID
 	err := tx.QueryRow(ctx, `
-		select name, blurb, tags, is_nsfw, cover_media_id from assets where id = $1
+		select name, blurb, tags, is_nsfw,
+		       (select blob_id from asset_media where id = assets.cover_media_id)
+		  from assets where id = $1
 	`, assetID).Scan(&name, &blurb, &tags, &isNSFW, &cover)
 	if err != nil {
 		return fmt.Errorf("read the catalog fields to compare: %w", err)

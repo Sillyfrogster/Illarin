@@ -1,14 +1,16 @@
 package asset
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
@@ -66,8 +68,12 @@ func (s *Service) contentFingerprint(
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
+	names, err := fingerprintNames(ctx, q, assetID, elements)
+	if err != nil {
+		return "", err
+	}
 	slices.SortFunc(elements, func(a, b block.Element) int {
-		return bytes.Compare(a.ID[:], b.ID[:])
+		return strings.Compare(names[a.ID], names[b.ID])
 	})
 	for _, element := range elements {
 		if element.Content == nil || element.Content.Empty() {
@@ -84,22 +90,61 @@ func (s *Service) contentFingerprint(
 		if err != nil {
 			return "", fmt.Errorf("fingerprint the %s element: %w", element.Role, err)
 		}
-		fmt.Fprintf(digest, "element\x00%s\x00%s\x00%s\n", element.ID, element.Role, content)
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(string(content)))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			return "", err
+		}
+		content, err = json.Marshal(steadyIDs(value, names))
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(digest, "element\x00%s\x00%s\n", names[element.ID], content)
 	}
 
-	if err := fingerprintPreserved(ctx, q, assetID, digest); err != nil {
+	if err := fingerprintPreserved(ctx, q, assetID, names, digest); err != nil {
 		return "", err
 	}
-	if err := fingerprintPictures(ctx, q, assetID, elements, uuidOrNil(cover), digest); err != nil {
+	if err := fingerprintPictures(ctx, q, assetID, elements, uuidOrNil(cover), names, digest); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(digest.Sum(nil)), nil
+}
+
+// fingerprintNames gives imported elements, items and pictures stable comparison keys.
+func fingerprintNames(ctx context.Context, q db.DBTX, assetID uuid.UUID, elements []block.Element) (map[uuid.UUID]string, error) {
+	names := make(map[uuid.UUID]string)
+	counts := make(map[string]int)
+	for _, element := range elements {
+		key := string(element.Type) + "/" + string(element.Role)
+		counts[key]++
+		key += "/" + strconv.Itoa(counts[key])
+		names[element.ID] = key
+		for index, id := range block.ItemIDs(element.Content) {
+			names[id] = key + "/" + strconv.Itoa(index)
+		}
+	}
+	rows, err := q.Query(ctx, `select id, blob_id from asset_media where asset_id = $1`, assetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, blob uuid.UUID
+		if err := rows.Scan(&id, &blob); err != nil {
+			return nil, err
+		}
+		names[id] = "picture/" + blob.String()
+	}
+	return names, rows.Err()
 }
 
 func fingerprintPreserved(
 	ctx context.Context,
 	q db.DBTX,
 	assetID uuid.UUID,
+	names map[uuid.UUID]string,
 	digest hash.Hash,
 ) error {
 	rows, err := q.Query(ctx, `
@@ -112,14 +157,33 @@ func fingerprintPreserved(
 		return fmt.Errorf("read preserved data to fingerprint: %w", err)
 	}
 	defer rows.Close()
+	entries := []string{}
 	for rows.Next() {
 		var ownerKind, namespace, payload string
 		var ownerID uuid.UUID
 		if err := rows.Scan(&ownerKind, &ownerID, &namespace, &payload); err != nil {
 			return fmt.Errorf("read a preserved row to fingerprint: %w", err)
 		}
-		fmt.Fprintf(digest, "preserved\x00%s\x00%s\x00%s\x00%s\n",
-			ownerKind, ownerID, namespace, payload)
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(payload))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		canonical, err := json.Marshal(steadyIDs(value, names))
+		if err != nil {
+			return err
+		}
+		owner := ownerID.String()
+		if stable, ok := names[ownerID]; ok {
+			owner = stable
+		}
+		entries = append(entries, fmt.Sprintf("preserved\x00%s\x00%s\x00%s\x00%s\n",
+			ownerKind, owner, namespace, canonical))
+	}
+	slices.Sort(entries)
+	for _, entry := range entries {
+		fmt.Fprint(digest, entry)
 	}
 	return rows.Err()
 }
@@ -130,6 +194,7 @@ func fingerprintPictures(
 	assetID uuid.UUID,
 	elements []block.Element,
 	cover *uuid.UUID,
+	names map[uuid.UUID]string,
 	digest hash.Hash,
 ) error {
 	wanted := make([]uuid.UUID, 0)
@@ -158,13 +223,18 @@ func fingerprintPictures(
 		return fmt.Errorf("read pictures to fingerprint: %w", err)
 	}
 	defer rows.Close()
+	entries := []string{}
 	for rows.Next() {
 		var mediaID, blobID uuid.UUID
 		var current bool
 		if err := rows.Scan(&mediaID, &blobID, &current); err != nil {
 			return fmt.Errorf("read a picture to fingerprint: %w", err)
 		}
-		fmt.Fprintf(digest, "picture\x00%s\x00%s\x00%t\n", mediaID, blobID, current)
+		entries = append(entries, fmt.Sprintf("picture\x00%s\x00%s\x00%t\n", names[mediaID], blobID, current))
+	}
+	slices.Sort(entries)
+	for _, entry := range entries {
+		fmt.Fprint(digest, entry)
 	}
 	return rows.Err()
 }
