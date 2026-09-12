@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
-import { GrantTokens } from "../GrantTokens";
 
 export function Approvals({ workspace }: { workspace: PublicationWorkspace }) {
   return (
@@ -115,7 +114,13 @@ function Approval({ grant }: { grant: PublicationGrant }) {
           <ArrowUpRight aria-hidden="true" className="size-3.5" />
         </a>
 
-        <GrantTokens grant={grant} />
+        <Link
+          className="inline-flex min-h-11 items-center gap-1.5 font-ui text-ui font-medium text-accent outline-offset-3 hover:underline"
+          href="/admin/blog/api"
+        >
+          API tokens and examples
+          <ArrowUpRight aria-hidden="true" className="size-4" />
+        </Link>
       </div>
     </MorphingDisclosure>
   );
