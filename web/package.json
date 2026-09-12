@@ -38,6 +38,7 @@
     "postcss": "^8.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-image-crop": "^11.1.2",
     "react-medium-image-zoom": "^5.4.9",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",

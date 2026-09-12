@@ -1,8 +1,9 @@
 "use client";
 
 import { ImageUp, Trash2 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CreatorPortrait } from "@/components/media/CreatorPortrait";
+import { CropPicture, cropsCleanly } from "@/components/media/CropPicture";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/api/query";
 
@@ -22,6 +23,7 @@ export function ProfilePicture({
   profile: Profile;
 }) {
   const picker = useRef<HTMLInputElement>(null);
+  const [framing, setFraming] = useState<File | null>(null);
 
   return (
     <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
@@ -81,13 +83,24 @@ export function ProfilePicture({
           className="sr-only"
           onChange={(event) => {
             const file = event.target.files?.[0];
-            if (file) onUpload(file);
+            if (file && cropsCleanly(file)) setFraming(file);
+            else if (file) onUpload(file);
             event.target.value = "";
           }}
           ref={picker}
           type="file"
         />
       </div>
+      <CropPicture
+        aspect={1}
+        file={framing}
+        onCancel={() => setFraming(null)}
+        onDone={(file) => {
+          setFraming(null);
+          onUpload(file);
+        }}
+        title="Frame your picture"
+      />
     </div>
   );
 }
