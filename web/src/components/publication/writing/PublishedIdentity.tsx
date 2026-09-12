@@ -124,9 +124,7 @@ function Named({ post }: { post: Post }) {
   const byline = post.byline;
   if (!byline) return null;
   const name = byline.displayName || `@${byline.handle}`;
-  const standing = byline.app
-    ? byline.app.name
-    : [...byline.positions, ...byline.distinctions].join(" · ");
+  const standing = byline.app ? byline.app.name : `@${byline.handle}`;
   return (
     <p className="flex items-center gap-3">
       <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-plane font-display text-meta font-medium text-mute">
@@ -150,7 +148,7 @@ function Named({ post }: { post: Post }) {
           {name}
         </span>
         <span className="block font-prose text-meta text-mute wrap-anywhere">
-          {standing || `@${byline.handle}`}
+          {standing}
         </span>
       </span>
     </p>
@@ -262,7 +260,7 @@ function ChangeName({
   return (
     <form className="flex flex-col gap-3" onSubmit={commit}>
       <Field
-        hint="The post's byline will use this account's current name, picture and positions."
+        hint="The post's byline will use this account's current name and picture."
         htmlFor="corrected-name"
         label="Handle of the person who wrote it"
       >

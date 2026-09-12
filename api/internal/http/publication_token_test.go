@@ -43,7 +43,7 @@ type contributor struct {
 	grant   publicationGrant
 }
 
-func (s distinctionStack) contributor(t *testing.T, email, handle string) contributor {
+func (s publicationStack) contributor(t *testing.T, email, handle string) contributor {
 	t.Helper()
 	session := s.member(t, email, handle)
 	illarin := s.appBySlug(t, "illarin")
@@ -52,7 +52,7 @@ func (s distinctionStack) contributor(t *testing.T, email, handle string) contri
 	return contributor{handle: handle, session: session, grant: made}
 }
 
-func (s distinctionStack) issue(
+func (s publicationStack) issue(
 	t *testing.T,
 	session *http.Cookie,
 	grantID, body string,
@@ -63,7 +63,7 @@ func (s distinctionStack) issue(
 	), session))
 }
 
-func (s distinctionStack) issued(
+func (s publicationStack) issued(
 	t *testing.T,
 	who contributor,
 	name string,
@@ -80,7 +80,7 @@ func (s distinctionStack) issued(
 	return made
 }
 
-func (s distinctionStack) tokens(
+func (s publicationStack) tokens(
 	t *testing.T,
 	session *http.Cookie,
 	grantID string,
@@ -99,7 +99,7 @@ func (s distinctionStack) tokens(
 	return listed.Tokens
 }
 
-func (s distinctionStack) revokeToken(
+func (s publicationStack) revokeToken(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -110,7 +110,7 @@ func (s distinctionStack) revokeToken(
 	))
 }
 
-func (s distinctionStack) bearing(t *testing.T, value string) *httptest.ResponseRecorder {
+func (s publicationStack) bearing(t *testing.T, value string) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/publication/token", nil)
 	request.Header.Set("Authorization", "Bearer "+value)
@@ -118,7 +118,7 @@ func (s distinctionStack) bearing(t *testing.T, value string) *httptest.Response
 }
 
 func TestATokenValueIsShownOnceAndNeverKeptWhole(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
 	made := stack.issued(t, who, "Release robot")
@@ -153,7 +153,7 @@ func TestATokenValueIsShownOnceAndNeverKeptWhole(t *testing.T) {
 }
 
 func TestOneGrantCarriesSeveralTokensAndRevokingOneLeavesTheRest(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
 	robot := stack.issued(t, who, "Release robot")
@@ -185,7 +185,7 @@ func TestOneGrantCarriesSeveralTokensAndRevokingOneLeavesTheRest(t *testing.T) {
 }
 
 func TestAnExpiredTokenStopsAuthenticatingWhileItsHashStillMatches(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
 	soon := time.Now().Add(2 * time.Minute).UTC().Format(time.RFC3339)
@@ -236,7 +236,7 @@ func TestAnExpiredTokenStopsAuthenticatingWhileItsHashStillMatches(t *testing.T)
 }
 
 func TestRevokingAGrantStopsEveryTokenBeneathIt(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 
@@ -257,7 +257,7 @@ func TestRevokingAGrantStopsEveryTokenBeneathIt(t *testing.T) {
 }
 
 func TestTheAuthorityRevokesAnyTokenAndAnAdminCannot(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	outsider := stack.member(t, "outsider@example.com", "publication.outsider")
 	made := stack.issued(t, who, "Release robot")
@@ -289,7 +289,7 @@ func TestTheAuthorityRevokesAnyTokenAndAnAdminCannot(t *testing.T) {
 }
 
 func TestOneContributorNeverReachesAnothersTokens(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -316,7 +316,7 @@ func TestOneContributorNeverReachesAnothersTokens(t *testing.T) {
 }
 
 func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 
@@ -324,7 +324,6 @@ func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
 		{http.MethodGet, "/v1/instances"},
 		{http.MethodGet, "/v1/instances/me"},
 		{http.MethodPost, "/v1/library/sync"},
-		{http.MethodGet, "/v1/distinctions"},
 		{http.MethodGet, "/v1/publication/apps"},
 		{http.MethodGet, "/v1/publication/grants"},
 		{http.MethodGet, "/v1/publication/workspace"},
@@ -363,7 +362,7 @@ func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
 }
 
 func TestOnlyAPublicationTokenOfTheRightShapeAuthenticates(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 
@@ -404,7 +403,7 @@ func TestOnlyAPublicationTokenOfTheRightShapeAuthenticates(t *testing.T) {
 }
 
 func TestAnUnnamedOrBadlyDatedTokenIsRefused(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
 	past := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -425,7 +424,7 @@ func TestAnUnnamedOrBadlyDatedTokenIsRefused(t *testing.T) {
 }
 
 func TestIssuingAndRevokingATokenIsAuditedWithoutItsValue(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 	if revoked := stack.revokeToken(t, who.session, made.Token.ID); revoked.Code != http.StatusNoContent {
@@ -465,7 +464,7 @@ func TestIssuingAndRevokingATokenIsAuditedWithoutItsValue(t *testing.T) {
 }
 
 func TestNothingCarryingATokenIsCacheable(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 
@@ -487,7 +486,7 @@ func TestNothingCarryingATokenIsCacheable(t *testing.T) {
 }
 
 func TestUsingATokenRecordsThatItWasUsed(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
 

@@ -219,7 +219,7 @@ export function ContributorStep({
             <Consequence
               action="Revoke the approval"
               busy={busy}
-              confirm="Revoke approval and badge"
+              confirm="Revoke approval"
               onConfirm={revoke}
             >
               Everything @{existing.holder.handle} published stays, under their

@@ -205,7 +205,6 @@ components:
             - handle
             - name
             - url
-            - positions
           properties:
             handle:
               type: string
@@ -213,10 +212,6 @@ components:
               type: string
             url:
               type: string
-            positions:
-              type: array
-              items:
-                type: string
             app:
               $ref: '#/components/schemas/PublicationEventApp'
     PublicationEventApp:

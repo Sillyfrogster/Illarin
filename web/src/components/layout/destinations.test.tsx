@@ -20,14 +20,8 @@ test("account navigation names each task and keeps icons when labels change", ()
     ["View profile", "/@copy_fixture"],
     ["Account settings", "/settings"],
     ["Blog administration", "/publication"],
-    ["Profile recognition", "/recognition"],
   ]);
-  const icons = [
-    "circle-user-round",
-    "settings",
-    "notebook-pen",
-    "badge-check",
-  ];
+  const icons = ["circle-user-round", "settings", "notebook-pen"];
   for (const [index, destination] of destinations.entries()) {
     const renamed = { ...destination, label: "A different label" };
     const markup = renderToStaticMarkup(<DestinationIcon id={renamed.id} />);

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/oapi-codegen/runtime/types"
@@ -117,19 +116,10 @@ func (h *Handlers) refuseProfile(c *gin.Context, err error) {
 }
 
 func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
-	if found.Restricted {
-		c.JSON(http.StatusOK, toAPIProfile(found, publication.Showcase{}))
-		return
-	}
-	shown, err := h.publications.Showcase(c.Request.Context(), found.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
-		return
-	}
-	c.JSON(http.StatusOK, toAPIProfile(found, shown))
+	c.JSON(http.StatusOK, toAPIProfile(found))
 }
 
-func toAPIProfile(found account.PublicProfile, shown publication.Showcase) Profile {
+func toAPIProfile(found account.PublicProfile) Profile {
 	links := make([]ProfileLink, 0, len(found.Links))
 	for _, link := range found.Links {
 		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
@@ -141,9 +131,6 @@ func toAPIProfile(found account.PublicProfile, shown publication.Showcase) Profi
 		Biography:    found.Biography,
 		ContactEmail: found.ContactEmail,
 		Links:        links,
-		Positions:    toAPIProfileDistinctions(shown.Positions),
-		Titles:       toAPIProfileDistinctions(shown.Titles),
-		Badges:       toAPIProfileDistinctions(shown.Badges),
 		Restricted:   found.Restricted,
 	}
 	if found.Avatar != nil {

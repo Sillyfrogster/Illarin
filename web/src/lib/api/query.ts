@@ -70,12 +70,7 @@ export type PromptCorrespondenceRequest =
   components["schemas"]["PromptCorrespondenceRequest"];
 export type Profile = components["schemas"]["Profile"];
 export type ProfileLink = components["schemas"]["ProfileLink"];
-export type ProfileDistinction = components["schemas"]["ProfileDistinction"];
 export type ProfileRestriction = components["schemas"]["ProfileRestriction"];
-export type Distinction = components["schemas"]["Distinction"];
-export type DistinctionForm = components["schemas"]["DistinctionForm"];
-export type DistinctionAssignment =
-  components["schemas"]["DistinctionAssignment"];
 export type PublicationApp = components["schemas"]["PublicationApp"];
 export type PublicationCategory = components["schemas"]["PublicationCategory"];
 export type PublicationGrant = components["schemas"]["PublicationGrant"];

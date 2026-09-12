@@ -56,14 +56,7 @@ export function Byline({ byline }: { byline: PostByline }) {
               <span className="truncate">Published by Illarin</span>
             </>
           ) : (
-            <>
-              <span className="truncate text-ink">Illarin Team</span>
-              {standingOf(byline).length > 0 ? (
-                <span className="min-w-0 truncate">
-                  {standingOf(byline).join(" · ")}
-                </span>
-              ) : null}
-            </>
+            <span className="truncate text-ink">Illarin Team</span>
           )}
         </span>
       </span>
@@ -84,8 +77,4 @@ export function BylineText({
       {affiliation ? <span>{byline.app?.name ?? "Illarin Team"}</span> : null}
     </span>
   );
-}
-
-function standingOf(byline: PostByline): string[] {
-  return [...byline.positions, ...byline.distinctions];
 }

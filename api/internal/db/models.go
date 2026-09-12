@@ -545,8 +545,6 @@ type PostByline struct {
 	DisplayName   string
 	ContactEmail  string
 	AvatarMediaID pgtype.UUID
-	Positions     []byte
-	Distinctions  []byte
 	AppID         pgtype.UUID
 	AppSlug       pgtype.Text
 	AppName       pgtype.Text
@@ -629,40 +627,6 @@ type PostWithdrawal struct {
 	Explanation string
 	WithdrawnBy pgtype.UUID
 	WithdrawnAt pgtype.Timestamptz
-}
-
-type ProfileDistinction struct {
-	ID          pgtype.UUID
-	Form        string
-	Name        string
-	Explanation string
-	MarkMediaID pgtype.UUID
-	Position    int32
-	RetiredAt   pgtype.Timestamptz
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-}
-
-type ProfileDistinctionAssignment struct {
-	ID            pgtype.UUID
-	UserID        pgtype.UUID
-	DistinctionID pgtype.UUID
-	IssuedBy      pgtype.UUID
-	Source        string
-	Position      int32
-	AssignedAt    pgtype.Timestamptz
-	Active        bool
-	DeactivatedAt pgtype.Timestamptz
-}
-
-type ProfileDistinctionAudit struct {
-	ID            pgtype.UUID
-	ActorID       pgtype.UUID
-	Action        string
-	DistinctionID pgtype.UUID
-	AssignmentID  pgtype.UUID
-	SubjectID     pgtype.UUID
-	RecordedAt    pgtype.Timestamptz
 }
 
 type ProfileMedium struct {

@@ -1402,310 +1402,6 @@ paths:
                 format: binary
         '404':
           description: No live delivery artifact is at that address
-  /v1/distinctions:
-    get:
-      operationId: listDistinctions
-      description: >-
-        Every distinction definition, retired ones included, in the order the
-        publication authority chose. Only the publication authority may read it.
-      security:
-        - sessionCookie: []
-      responses:
-        '200':
-          description: The defined distinctions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DistinctionList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-    post:
-      operationId: defineDistinction
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DefineDistinctionRequest'
-      responses:
-        '201':
-          description: The distinction as it was defined
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Distinction'
-        '400':
-          description: A definition field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-    put:
-      operationId: orderDistinctions
-      description: Put one form's definitions in the order they are listed.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrderDistinctionsRequest'
-      responses:
-        '200':
-          description: The defined distinctions in their new order
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DistinctionList'
-        '400':
-          description: The order does not name that form's definitions exactly once each
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-  /v1/distinctions/{id}:
-    patch:
-      operationId: updateDistinction
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateDistinctionRequest'
-      responses:
-        '200':
-          description: The distinction as it now reads
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Distinction'
-        '400':
-          description: A definition field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such distinction
-  /v1/distinctions/{id}/mark:
-    put:
-      operationId: setDistinctionMark
-      description: >-
-        Upload the mark Illarin hosts for this recognition. A title that is
-        given a mark is shown as a badge from then on.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        description: Send the image as the only form data part.
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: The badge carrying its new mark
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Distinction'
-        '400':
-          description: The image is not valid or the distinction is a position
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such distinction
-        '413':
-          description: The image exceeds the upload limit
-        '503':
-          description: The storage reserve cannot accept the image
-    delete:
-      operationId: clearDistinctionMark
-      description: >-
-        Take the mark away. The recognition stays and is shown as a title from
-        then on.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: The recognition with its mark gone
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Distinction'
-        '400':
-          description: The distinction is a position
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such distinction
-  /v1/accounts/{handle}/distinctions:
-    get:
-      operationId: listAccountDistinctions
-      description: >-
-        Every distinction one account has ever been given, inactive ones
-        included. Only the publication authority may read it.
-      security:
-        - sessionCookie: []
-      parameters:
-        - name: handle
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: The account's distinction assignments
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DistinctionAssignmentList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such account
-    post:
-      operationId: assignDistinction
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: handle
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignDistinctionRequest'
-      responses:
-        '201':
-          description: The assignment as it was recorded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DistinctionAssignment'
-        '400':
-          description: The distinction is retired or unknown
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such account
-        '409':
-          description: The account already holds that distinction
-    put:
-      operationId: orderAccountDistinctions
-      description: Put one account's active assignments in the order they are listed.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: handle
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrderAssignmentsRequest'
-      responses:
-        '200':
-          description: The account's assignments in their new order
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DistinctionAssignmentList'
-        '400':
-          description: The order does not name the active assignments exactly once each
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such account
-  /v1/accounts/{handle}/distinctions/{assignmentId}:
-    delete:
-      operationId: removeAccountDistinction
-      description: >-
-        Stop showing an assignment publicly. The record stays, so the history of
-        who issued it and when remains readable.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: handle
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: The assignment no longer appears publicly
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such account or assignment
   /v1/publication/apps:
     get:
       operationId: listPublicationApps
@@ -2027,9 +1723,8 @@ paths:
     delete:
       operationId: revokePublicationGrant
       description: >-
-        End an approval. Editor access stops at once and the contributor badge
-        goes with it, while the grant record and everything already published
-        stay.
+        End an approval. Editor access stops at once, while the grant record and
+        everything already published stay.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -6023,9 +5718,6 @@ components:
         - biography
         - contactEmail
         - links
-        - positions
-        - titles
-        - badges
         - restricted
       properties:
         id:
@@ -6047,18 +5739,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProfileLink'
-        positions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileDistinction'
-        titles:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileDistinction'
-        badges:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileDistinction'
         restricted:
           description: >-
             True when an admin has hidden the added identity. The handle and the
@@ -6090,176 +5770,6 @@ components:
           type: string
           minLength: 1
           maxLength: 500
-    DistinctionForm:
-      type: string
-      enum:
-        - position
-        - title
-        - badge
-    Distinction:
-      type: object
-      required:
-        - id
-        - form
-        - name
-        - explanation
-        - position
-        - retired
-      properties:
-        id:
-          type: string
-          format: uuid
-        form:
-          $ref: '#/components/schemas/DistinctionForm'
-        name:
-          type: string
-        explanation:
-          type: string
-        mark:
-          anyOf:
-            - $ref: '#/components/schemas/DistinctionMark'
-            - type: 'null'
-        position:
-          type: integer
-        retired:
-          type: boolean
-    DistinctionMark:
-      type: object
-      required:
-        - url
-        - width
-        - height
-      properties:
-        url:
-          type: string
-        width:
-          type: integer
-        height:
-          type: integer
-    ProfileDistinction:
-      type: object
-      required:
-        - id
-        - name
-        - explanation
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        explanation:
-          type: string
-        mark:
-          anyOf:
-            - $ref: '#/components/schemas/DistinctionMark'
-            - type: 'null'
-    DistinctionList:
-      type: object
-      required:
-        - definitions
-      properties:
-        definitions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Distinction'
-    DefineDistinctionRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - form
-        - name
-      properties:
-        form:
-          $ref: '#/components/schemas/DistinctionForm'
-        name:
-          type: string
-        explanation:
-          type: string
-    UpdateDistinctionRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        name:
-          type: string
-        explanation:
-          type: string
-        retired:
-          type: boolean
-    OrderDistinctionsRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - form
-        - distinctionIds
-      properties:
-        form:
-          $ref: '#/components/schemas/DistinctionForm'
-        distinctionIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-    DistinctionAssignment:
-      type: object
-      required:
-        - id
-        - distinction
-        - source
-        - assignedAt
-        - active
-        - position
-      properties:
-        id:
-          type: string
-          format: uuid
-        distinction:
-          $ref: '#/components/schemas/Distinction'
-        issuedBy:
-          anyOf:
-            - type: string
-            - type: 'null'
-        source:
-          type: string
-        assignedAt:
-          type: string
-          format: date-time
-        active:
-          type: boolean
-        position:
-          type: integer
-    DistinctionAssignmentList:
-      type: object
-      required:
-        - handle
-        - assignments
-      properties:
-        handle:
-          type: string
-        assignments:
-          type: array
-          items:
-            $ref: '#/components/schemas/DistinctionAssignment'
-    AssignDistinctionRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - distinctionId
-      properties:
-        distinctionId:
-          type: string
-          format: uuid
-    OrderAssignmentsRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - assignmentIds
-      properties:
-        assignmentIds:
-          type: array
-          items:
-            type: string
-            format: uuid
     PublicationApp:
       type: object
       required:
@@ -6282,7 +5792,7 @@ components:
           type: string
         mark:
           anyOf:
-            - $ref: '#/components/schemas/DistinctionMark'
+            - $ref: '#/components/schemas/PublicationAppMark'
             - type: 'null'
         position:
           type: integer
@@ -6295,6 +5805,19 @@ components:
             names its own.
           items:
             $ref: '#/components/schemas/PublicationDestinationChoice'
+    PublicationAppMark:
+      type: object
+      required:
+        - url
+        - width
+        - height
+      properties:
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
     PublicationAppList:
       type: object
       required:
@@ -6793,8 +6316,6 @@ components:
         - handle
         - displayName
         - contactEmail
-        - positions
-        - distinctions
         - historical
       properties:
         handle:
@@ -6812,14 +6333,6 @@ components:
           anyOf:
             - $ref: '#/components/schemas/ProfileAvatar'
             - type: 'null'
-        positions:
-          type: array
-          items:
-            type: string
-        distinctions:
-          type: array
-          items:
-            type: string
         app:
           anyOf:
             - $ref: '#/components/schemas/PublicationApp'
@@ -11080,7 +10593,6 @@ components:
             - handle
             - name
             - url
-            - positions
           properties:
             handle:
               type: string
@@ -11088,10 +10600,6 @@ components:
               type: string
             url:
               type: string
-            positions:
-              type: array
-              items:
-                type: string
             app:
               $ref: '#/components/schemas/PublicationEventApp'
     PublicationPostEvent:

@@ -25,13 +25,11 @@ type postRelease struct {
 }
 
 type postByline struct {
-	Handle       string           `json:"handle"`
-	DisplayName  string           `json:"displayName"`
-	ContactEmail string           `json:"contactEmail"`
-	Avatar       *distinctionMark `json:"avatar"`
-	Positions    []string         `json:"positions"`
-	Distinctions []string         `json:"distinctions"`
-	App          *publicationApp  `json:"app"`
+	Handle       string          `json:"handle"`
+	DisplayName  string          `json:"displayName"`
+	ContactEmail string          `json:"contactEmail"`
+	Avatar       *profileAvatar  `json:"avatar"`
+	App          *publicationApp `json:"app"`
 }
 
 type postDocument struct {
@@ -95,7 +93,7 @@ func paragraph(words string) string {
 	)
 }
 
-func (s distinctionStack) start(
+func (s publicationStack) start(
 	t *testing.T,
 	session *http.Cookie,
 	body string,
@@ -106,7 +104,7 @@ func (s distinctionStack) start(
 	), session))
 }
 
-func (s distinctionStack) started(t *testing.T, session *http.Cookie, body string) blogPost {
+func (s publicationStack) started(t *testing.T, session *http.Cookie, body string) blogPost {
 	t.Helper()
 	response := s.start(t, session, body)
 	if response.Code != http.StatusCreated {
@@ -115,7 +113,7 @@ func (s distinctionStack) started(t *testing.T, session *http.Cookie, body strin
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) save(
+func (s publicationStack) save(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -146,7 +144,7 @@ func finished(draft blogPost, changes map[string]any) map[string]any {
 	return working
 }
 
-func (s distinctionStack) saved(
+func (s publicationStack) saved(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -160,7 +158,7 @@ func (s distinctionStack) saved(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) publish(
+func (s publicationStack) publish(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -176,7 +174,7 @@ func (s distinctionStack) publish(
 	return s.publishAt(t, session, id, version)
 }
 
-func (s distinctionStack) publishAt(
+func (s publicationStack) publishAt(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -189,7 +187,7 @@ func (s distinctionStack) publishAt(
 	), session))
 }
 
-func (s distinctionStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
+func (s publicationStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := send(t, s.router, authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
@@ -200,7 +198,7 @@ func (s distinctionStack) working(t *testing.T, session *http.Cookie, id string)
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) published(t *testing.T, session *http.Cookie, id string) blogPost {
+func (s publicationStack) published(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := s.publish(t, session, id)
 	if response.Code != http.StatusOK {
@@ -209,7 +207,7 @@ func (s distinctionStack) published(t *testing.T, session *http.Cookie, id strin
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) publishedAt(
+func (s publicationStack) publishedAt(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -223,12 +221,12 @@ func (s distinctionStack) publishedAt(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) read(t *testing.T, slug string) *httptest.ResponseRecorder {
+func (s publicationStack) read(t *testing.T, slug string) *httptest.ResponseRecorder {
 	t.Helper()
 	return send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts/"+slug, nil))
 }
 
-func (s distinctionStack) reader(t *testing.T, slug string) publicPost {
+func (s publicationStack) reader(t *testing.T, slug string) publicPost {
 	t.Helper()
 	response := s.read(t, slug)
 	if response.Code != http.StatusOK {
@@ -250,14 +248,14 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 	return found
 }
 
-func (s distinctionStack) admin(t *testing.T, email, handle string) *http.Cookie {
+func (s publicationStack) admin(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	session := s.member(t, email, handle)
 	setRole(t, s.pool, handle, "admin")
 	return session
 }
 
-func (s distinctionStack) illarinDraft(t *testing.T, session *http.Cookie, title string) blogPost {
+func (s publicationStack) illarinDraft(t *testing.T, session *http.Cookie, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")
 	return s.started(t, session, fmt.Sprintf(
@@ -266,7 +264,7 @@ func (s distinctionStack) illarinDraft(t *testing.T, session *http.Cookie, title
 }
 
 func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Illarin has a blog again")
@@ -309,7 +307,7 @@ func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 }
 
 func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
 	article := stack.categoryBySlug(t, "article")
@@ -346,7 +344,7 @@ func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
 }
 
 func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	first := stack.contributor(t, "first@example.com", "first.dev")
 	sillytavern := stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -383,7 +381,7 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 }
 
 func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -412,7 +410,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 }
 
 func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Two editors one post")
 
@@ -449,7 +447,7 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
 }
 
 func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Nothing written yet")
@@ -466,7 +464,7 @@ func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
 }
 
 func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
 	illarin := stack.appBySlug(t, "illarin")
@@ -496,7 +494,7 @@ func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
 }
 
 func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
 	illarin := stack.appBySlug(t, "illarin")
@@ -518,7 +516,7 @@ func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
 }
 
 func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Nothing dangerous here")
 
@@ -547,7 +545,7 @@ func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
 }
 
 func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "First edition")
 
@@ -586,11 +584,9 @@ func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.
 }
 
 func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	saveProfile(t, stack.router, session, `{"displayName":"The Editor","links":[]}`)
-	founder := stack.defined(t, "position", "Founder", "Runs Illarin.")
-	stack.assigned(t, "illarin.editor", founder.ID)
 
 	draft := stack.illarinDraft(t, session, "Signed and dated")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -599,9 +595,6 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 	found := stack.reader(t, draft.Slug)
 	if found.Byline.DisplayName != "The Editor" {
 		t.Fatalf("byline name = %q", found.Byline.DisplayName)
-	}
-	if len(found.Byline.Positions) != 1 || found.Byline.Positions[0] != "Founder" {
-		t.Fatalf("byline positions = %v", found.Byline.Positions)
 	}
 
 	saveProfile(t, stack.router, session, `{"displayName":"Someone Else","links":[]}`)
@@ -612,7 +605,7 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 }
 
 func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "On the record")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -660,7 +653,7 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 }
 
 func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	first := stack.illarinDraft(t, session, "Taken already")
@@ -680,7 +673,7 @@ func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
 }
 
 func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -708,7 +701,7 @@ func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
 }
 
 func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Held still")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -738,7 +731,7 @@ func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
 }
 
 func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Not ready yet")
 
@@ -769,7 +762,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 }
 
 func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A title that goes away")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -790,7 +783,7 @@ func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
 }
 
 func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Written a version ago")
 
@@ -819,7 +812,7 @@ func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
 }
 
 func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Every structure at once")
 

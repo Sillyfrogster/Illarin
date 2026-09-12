@@ -131,7 +131,7 @@ export function DetailsRail({
         <p className="font-prose text-meta text-mute">
           {post.app
             ? `When you publish, this post takes your name and ${post.app.name}. Illarin stays the publisher.`
-            : "First publication records your name and Illarin positions in the Illarin Team byline."}
+            : "First publication records your name and picture in the Illarin Team byline."}
         </p>
       )}
     </div>

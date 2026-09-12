@@ -10,10 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const SourceGrant = "publication-grant"
-
-var VerifiedAppContributor = uuid.MustParse("9d3f1c00-0000-4000-8000-000000000021")
-
 type Holder struct {
 	ID     uuid.UUID
 	Handle string
@@ -94,9 +90,6 @@ func (s *Service) CreateGrant(ctx context.Context, actor uuid.UUID, in GrantEdit
 		return Grant{}, fmt.Errorf("create grant: %w", err)
 	}
 	if err := writeGrantCategories(ctx, tx, id, allowed); err != nil {
-		return Grant{}, err
-	}
-	if err := carryBadge(ctx, tx, holder.ID, actor); err != nil {
 		return Grant{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -188,9 +181,6 @@ func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	if err != nil {
 		return fmt.Errorf("revoke grant: %w", err)
 	}
-	if err := dropBadgeWhenLastGrant(ctx, tx, holderID); err != nil {
-		return err
-	}
 	if err := stopSchedulesUnder(ctx, tx, id); err != nil {
 		return err
 	}
@@ -203,37 +193,6 @@ func (s *Service) RevokeGrant(ctx context.Context, actor uuid.UUID, id uuid.UUID
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit grant revocation: %w", err)
-	}
-	return nil
-}
-
-func carryBadge(ctx context.Context, tx pgx.Tx, holderID, actor uuid.UUID) error {
-	_, err := tx.Exec(ctx, `
-		insert into profile_distinction_assignments
-		       (id, user_id, distinction_id, issued_by, source, position)
-		values ($1, $2, $3, $4, $5, coalesce(
-			(select max(position) + 1 from profile_distinction_assignments
-			  where user_id = $2 and active), 0
-		))
-		on conflict (user_id, distinction_id) where active do nothing
-	`, uuid.New(), holderID, VerifiedAppContributor, actor, SourceGrant)
-	if err != nil {
-		return fmt.Errorf("carry the contributor badge: %w", err)
-	}
-	return nil
-}
-
-func dropBadgeWhenLastGrant(ctx context.Context, tx pgx.Tx, holderID uuid.UUID) error {
-	_, err := tx.Exec(ctx, `
-		update profile_distinction_assignments
-		   set active = false, deactivated_at = now()
-		 where user_id = $1 and distinction_id = $2 and active and source = $3
-		   and not exists (
-			select 1 from publication_grants where user_id = $1 and active
-		   )
-	`, holderID, VerifiedAppContributor, SourceGrant)
-	if err != nil {
-		return fmt.Errorf("withdraw the contributor badge: %w", err)
 	}
 	return nil
 }

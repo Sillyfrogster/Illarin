@@ -29,13 +29,13 @@ type tooling struct {
 	value string
 }
 
-func (s distinctionStack) tooling(t *testing.T, email, handle string) tooling {
+func (s publicationStack) tooling(t *testing.T, email, handle string) tooling {
 	t.Helper()
 	who := s.contributor(t, email, handle)
 	return tooling{who: who, value: s.issued(t, who, "Release robot").Value}
 }
 
-func (s distinctionStack) sent(
+func (s publicationStack) sent(
 	t *testing.T,
 	value string,
 	request *http.Request,
@@ -50,7 +50,7 @@ func withKey(request *http.Request, key string) *http.Request {
 	return request
 }
 
-func (s distinctionStack) startedByTool(
+func (s publicationStack) startedByTool(
 	t *testing.T,
 	kit tooling,
 	body string,
@@ -65,7 +65,7 @@ func (s distinctionStack) startedByTool(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) toolPosts(t *testing.T, value string) []blogPost {
+func (s publicationStack) toolPosts(t *testing.T, value string) []blogPost {
 	t.Helper()
 	response := s.sent(t, value, httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts", nil,
@@ -80,7 +80,7 @@ func (s distinctionStack) toolPosts(t *testing.T, value string) []blogPost {
 	return listed.Posts
 }
 
-func (s distinctionStack) uploadedByTool(
+func (s publicationStack) uploadedByTool(
 	t *testing.T,
 	kit tooling,
 	postID, purpose string,
@@ -118,7 +118,7 @@ func refusalOf(t *testing.T, response *httptest.ResponseRecorder) publicationRef
 	return refused
 }
 
-func newPacedDistinctionStack(t *testing.T, rates publication.Rates) distinctionStack {
+func newPacedPublicationStack(t *testing.T, rates publication.Rates) publicationStack {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	pool := testdb.Connect(t)
@@ -129,11 +129,11 @@ func newPacedDistinctionStack(t *testing.T, rates publication.Rates) distinction
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
-	return distinctionStack{router: router, pool: pool, outbox: outbox, authority: session}
+	return publicationStack{router: router, pool: pool, outbox: outbox, authority: session}
 }
 
 func TestATokenRunsTheWholeContributorWorkflow(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -194,7 +194,7 @@ func TestATokenRunsTheWholeContributorWorkflow(t *testing.T) {
 }
 
 func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -231,7 +231,7 @@ func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
 }
 
 func TestATokenWritesUnderItsOwnGrantAndNoOther(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	other := stack.contributor(t, "another@example.com", "publication.another")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -268,7 +268,7 @@ func TestATokenWritesUnderItsOwnGrantAndNoOther(t *testing.T) {
 }
 
 func TestATokenReachesOnlyThePostsUnderItsOwnGrant(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	mine := stack.tooling(t, "writer@example.com", "publication.writer")
 	theirs := stack.contributor(t, "another@example.com", "publication.another")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -302,7 +302,7 @@ func TestATokenReachesOnlyThePostsUnderItsOwnGrant(t *testing.T) {
 }
 
 func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -331,7 +331,7 @@ func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
 }
 
 func TestARetriedMutationReturnsItsFirstOutcome(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	body := fmt.Sprintf(`{"categoryId":%q,"title":"Sent twice"}`, announcement.ID)
@@ -355,7 +355,7 @@ func TestARetriedMutationReturnsItsFirstOutcome(t *testing.T) {
 }
 
 func TestAReusedKeyWithADifferentRequestConflicts(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -378,7 +378,7 @@ func TestAReusedKeyWithADifferentRequestConflicts(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyBelongsToOneCredentialAndOperation(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	mine := stack.tooling(t, "writer@example.com", "publication.writer")
 	theirs := stack.tooling(t, "another@example.com", "publication.another")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -408,7 +408,7 @@ func TestThePaceHoldsATokenAndLeavesTheEditorAlone(t *testing.T) {
 		Write:  publication.Rate{Attempts: 1, Window: time.Minute},
 		Upload: publication.Rate{Attempts: 1, Window: time.Minute},
 	}
-	stack := newPacedDistinctionStack(t, rates)
+	stack := newPacedPublicationStack(t, rates)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -457,7 +457,7 @@ func TestThePaceHoldsATokenAndLeavesTheEditorAlone(t *testing.T) {
 }
 
 func TestAPublicationTokenIsRefusedFromABrowser(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -478,7 +478,7 @@ func TestAPublicationTokenIsRefusedFromABrowser(t *testing.T) {
 }
 
 func TestEveryPublicationRefusalNamesItselfAndNobodyElse(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	expiring := stack.issued(t, kit.who, "Short life")
 	revoked := stack.issued(t, kit.who, "Gone")
@@ -523,7 +523,7 @@ func TestEveryPublicationRefusalNamesItselfAndNobodyElse(t *testing.T) {
 	}
 }
 
-func expireToken(t *testing.T, stack distinctionStack, id string) {
+func expireToken(t *testing.T, stack publicationStack, id string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
 		update publication_tokens
@@ -535,7 +535,7 @@ func expireToken(t *testing.T, stack distinctionStack, id string) {
 	}
 }
 
-func dropGrant(t *testing.T, stack distinctionStack, id string) {
+func dropGrant(t *testing.T, stack publicationStack, id string) {
 	t.Helper()
 	response := send(t, stack.router, authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/publication/grants/"+id, nil,
@@ -546,7 +546,7 @@ func dropGrant(t *testing.T, stack distinctionStack, id string) {
 }
 
 func TestAKeyStillRunningRefusesRatherThanRepeatingTheWork(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	claimOnly(t, stack, kit, "POST /v1/publication/posts", "still-running")
@@ -566,7 +566,7 @@ func TestAKeyStillRunningRefusesRatherThanRepeatingTheWork(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	body := fmt.Sprintf(`{"categoryId":%q,"title":"Kept for a day"}`, announcement.ID)
@@ -599,7 +599,7 @@ func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
 	}
 }
 
-func claimOnly(t *testing.T, stack distinctionStack, kit tooling, operation, key string) {
+func claimOnly(t *testing.T, stack publicationStack, kit tooling, operation, key string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
 		insert into publication_idempotency (token_id, operation, key)
@@ -614,7 +614,7 @@ func claimOnly(t *testing.T, stack distinctionStack, kit tooling, operation, key
 	}
 }
 
-func ageEveryKey(t *testing.T, stack distinctionStack) {
+func ageEveryKey(t *testing.T, stack publicationStack) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
 		update publication_idempotency set claimed_at = now() - interval '2 days'
@@ -625,7 +625,7 @@ func ageEveryKey(t *testing.T, stack distinctionStack) {
 }
 
 func TestATokenReadsItsContextAndSubmitsNoIdentityOfItsOwn(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -683,7 +683,7 @@ func TestATokenReadsItsContextAndSubmitsNoIdentityOfItsOwn(t *testing.T) {
 }
 
 func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -753,7 +753,7 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	body := fmt.Sprintf(`{"categoryId":%q,"title":"Short key"}`, announcement.ID)
@@ -773,7 +773,7 @@ func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
 }
 
 func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	post := stack.startedByTool(t, kit, fmt.Sprintf(

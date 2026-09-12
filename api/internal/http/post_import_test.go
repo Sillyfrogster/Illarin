@@ -43,7 +43,7 @@ const theSameThingAsJSON = `{"version":2,"content":[
 	]}
 ]}`
 
-func (s distinctionStack) imported(
+func (s publicationStack) imported(
 	t *testing.T,
 	kit tooling,
 	id, markdown string,
@@ -60,7 +60,7 @@ func (s distinctionStack) imported(
 	))
 }
 
-func (s distinctionStack) byTool(t *testing.T, kit tooling, id string) blogPost {
+func (s publicationStack) byTool(t *testing.T, kit tooling, id string) blogPost {
 	t.Helper()
 	response := s.sent(t, kit.value, httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id, nil,
@@ -93,7 +93,7 @@ func decodeImportRefusal(t *testing.T, response *httptest.ResponseRecorder) impo
 }
 
 func TestMarkdownAndJSONReachTheSameDocument(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	start := fmt.Sprintf(`{"categoryId":%q,"title":"Lumiverse 3 is out"}`, announcement.ID)
@@ -124,7 +124,7 @@ func TestMarkdownAndJSONReachTheSameDocument(t *testing.T) {
 }
 
 func TestAnImportSaysWhatItCouldNotCarryExactly(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 
@@ -144,7 +144,7 @@ func TestAnImportSaysWhatItCouldNotCarryExactly(t *testing.T) {
 }
 
 func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 
@@ -175,7 +175,7 @@ func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 }
 
 func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	mine := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	theirs := stack.toolDraft(t, kit, "Lumiverse 2 is out")
@@ -193,7 +193,7 @@ func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
 }
 
 func TestAnImportPlacesAPictureThePostOwns(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	picture := stack.uploadedByTool(t, kit, draft.ID, "document", httpTestPNG(t, 900, 500))
@@ -211,7 +211,7 @@ func TestAnImportPlacesAPictureThePostOwns(t *testing.T) {
 }
 
 func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	decodeImport(t, stack.imported(t, kit, draft.ID, theSameThing))
@@ -235,7 +235,7 @@ func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
 }
 
 func TestARepeatedImportKeyReturnsTheFirstOutcome(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	body, err := json.Marshal(map[string]any{
@@ -275,7 +275,7 @@ func TestARepeatedImportKeyReturnsTheFirstOutcome(t *testing.T) {
 }
 
 func TestAnImportKeepsNoMarkdownAnywhere(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	body, err := json.Marshal(map[string]any{
@@ -325,7 +325,7 @@ func TestAnImportKeepsNoMarkdownAnywhere(t *testing.T) {
 }
 
 func TestOnlyTheImportOperationTakesMarkdown(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	body, err := json.Marshal(finished(draft, map[string]any{"document": theSameThing}))
@@ -341,7 +341,7 @@ func TestOnlyTheImportOperationTakesMarkdown(t *testing.T) {
 }
 
 func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	mine := stack.tooling(t, "writer@example.com", "publication.writer")
 	theirs := stack.tooling(t, "other@example.com", "publication.other")
 	draft := stack.toolDraft(t, mine, "Lumiverse 3 is out")
@@ -361,7 +361,7 @@ func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
 }
 
 func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 	body, err := json.Marshal(map[string]any{
@@ -379,7 +379,7 @@ func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
 }
 
 func TestMarkdownLongerThanAPostRefusesTheFieldItWasSentIn(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
 
@@ -392,7 +392,7 @@ func TestMarkdownLongerThanAPostRefusesTheFieldItWasSentIn(t *testing.T) {
 	}
 }
 
-func (s distinctionStack) toolDraft(t *testing.T, kit tooling, title string) blogPost {
+func (s publicationStack) toolDraft(t *testing.T, kit tooling, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")
 	return s.startedByTool(t, kit, fmt.Sprintf(

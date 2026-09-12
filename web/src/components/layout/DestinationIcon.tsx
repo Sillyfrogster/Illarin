@@ -1,5 +1,4 @@
 import {
-  BadgeCheck,
   CircleUserRound,
   LogIn,
   type LucideIcon,
@@ -14,7 +13,6 @@ const icons: Record<AccountDestination["id"], LucideIcon> = {
   profile: CircleUserRound,
   settings: Settings,
   publication: NotebookPen,
-  recognition: BadgeCheck,
   verify: Mail,
   "sign-in": LogIn,
   "sign-up": UserPlus,

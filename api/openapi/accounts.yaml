@@ -546,9 +546,6 @@ components:
         - biography
         - contactEmail
         - links
-        - positions
-        - titles
-        - badges
         - restricted
       properties:
         id:
@@ -570,18 +567,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProfileLink'
-        positions:
-          type: array
-          items:
-            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
-        titles:
-          type: array
-          items:
-            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
-        badges:
-          type: array
-          items:
-            $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
         restricted:
           description: >-
             True when an admin has hidden the added identity. The handle and the

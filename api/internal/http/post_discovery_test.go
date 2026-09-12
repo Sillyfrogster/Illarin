@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (s distinctionStack) readableApps(t *testing.T) []publicationApp {
+func (s publicationStack) readableApps(t *testing.T) []publicationApp {
 	t.Helper()
 	response := send(t, s.router,
 		httptest.NewRequest(http.MethodGet, "/v1/post-apps", nil))
@@ -31,7 +31,7 @@ func appSlugsOf(found []publicationApp) []string {
 }
 
 func TestOnlyAnAppWithPublishedWritingIsReadable(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
@@ -55,7 +55,7 @@ func TestOnlyAnAppWithPublishedWritingIsReadable(t *testing.T) {
 }
 
 func TestAPostKeepsTheAddressItFirstPublishedUnder(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.May, 4, 9, 0, 0, 0, time.UTC)
 	live := stack.publishedOn(t, session, "The first address", day)

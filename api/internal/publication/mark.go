@@ -13,13 +13,6 @@ import (
 
 const markVariant = "grid"
 
-type markOwner string
-
-const (
-	distinctionMarks markOwner = "profile_distinctions"
-	appMarks         markOwner = "publication_apps"
-)
-
 type Mark struct {
 	MediaID           uuid.UUID
 	Width             int
@@ -31,19 +24,18 @@ func MarkURL(mediaID uuid.UUID, version uint32) string {
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, markVariant, version)
 }
 
-func (s *Service) replaceMark(
+func replaceAppMark(
 	ctx context.Context,
 	tx pgx.Tx,
-	owner markOwner,
-	id, blobID uuid.UUID,
+	appID, blobID uuid.UUID,
 	width, height int,
 ) error {
 	var superseded *uuid.UUID
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		select mark_media_id from %s where id = $1 for update
-	`, owner), id).Scan(&superseded)
+	err := tx.QueryRow(ctx, `
+		select mark_media_id from publication_apps where id = $1 for update
+	`, appID).Scan(&superseded)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+		return ErrAppNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("read the mark being replaced: %w", err)
@@ -55,47 +47,16 @@ func (s *Service) replaceMark(
 	if err != nil {
 		return fmt.Errorf("record mark: %w", err)
 	}
-	_, err = tx.Exec(ctx, fmt.Sprintf(`
-		update %s set mark_media_id = $2, updated_at = now() where id = $1
-	`, owner), id, mediaID)
+	_, err = tx.Exec(ctx, `
+		update publication_apps set mark_media_id = $2, updated_at = now() where id = $1
+	`, appID, mediaID)
 	if err != nil {
-		return fmt.Errorf("point the row at its mark: %w", err)
+		return fmt.Errorf("point the app at its mark: %w", err)
 	}
 	if superseded != nil {
 		if _, err := tx.Exec(ctx, `delete from publication_media where id = $1`, *superseded); err != nil {
 			return fmt.Errorf("drop the superseded mark: %w", err)
 		}
-	}
-	return nil
-}
-
-func (s *Service) dropMark(
-	ctx context.Context,
-	tx pgx.Tx,
-	owner markOwner,
-	id uuid.UUID,
-) error {
-	var held *uuid.UUID
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		select mark_media_id from %s where id = $1 for update
-	`, owner), id).Scan(&held)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("read the mark being removed: %w", err)
-	}
-	if held == nil {
-		return nil
-	}
-	_, err = tx.Exec(ctx, fmt.Sprintf(`
-		update %s set mark_media_id = null, updated_at = now() where id = $1
-	`, owner), id)
-	if err != nil {
-		return fmt.Errorf("take the mark off the row: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `delete from publication_media where id = $1`, *held); err != nil {
-		return fmt.Errorf("drop the removed mark: %w", err)
 	}
 	return nil
 }
@@ -107,7 +68,7 @@ func (s *Service) MarkVariant(
 	version uint32,
 ) (string, string, error) {
 	if _, known := mediaproc.VariantByName(variant); !known || version != mediaproc.DerivativeVersion {
-		return "", "", ErrNotFound
+		return "", "", ErrMarkNotFound
 	}
 	var blobID uuid.UUID
 	var digestBytes []byte
@@ -118,7 +79,7 @@ func (s *Service) MarkVariant(
 		 where media.id = $1
 	`, mediaID).Scan(&blobID, &digestBytes)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", "", ErrNotFound
+		return "", "", ErrMarkNotFound
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("find publication media: %w", err)

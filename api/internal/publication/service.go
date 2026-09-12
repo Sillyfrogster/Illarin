@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
@@ -18,13 +20,10 @@ import (
 )
 
 var (
-	ErrNotAuthority     = errors.New("account does not hold publication authority")
-	ErrAccountNotFound  = errors.New("no such account")
-	ErrNotFound         = errors.New("no such distinction")
-	ErrAlreadyAssigned  = errors.New("account already holds that distinction")
-	ErrDistinctionForm  = errors.New("distinction form does not allow that")
-	ErrIncompleteOrder  = errors.New("order does not name every member exactly once")
-	ErrRetiredAssigning = errors.New("a retired distinction cannot be assigned")
+	ErrNotAuthority    = errors.New("account does not hold publication authority")
+	ErrAccountNotFound = errors.New("no such account")
+	ErrMarkNotFound    = errors.New("no such publication mark")
+	ErrIncompleteOrder = errors.New("order does not name every member exactly once")
 
 	ErrAppNotFound       = errors.New("no such publication app")
 	ErrCategoryNotFound  = errors.New("no such publication category")
@@ -136,4 +135,56 @@ func (s *Service) accountByHandle(ctx context.Context, handle string) (uuid.UUID
 func isUniqueViolation(err error) bool {
 	var databaseError *pgconn.PgError
 	return errors.As(err, &databaseError) && databaseError.Code == "23505"
+}
+
+func plainField(field, raw string, limit int) (string, error) {
+	value := strings.TrimSpace(raw)
+	for _, char := range value {
+		if unicode.IsControl(char) {
+			return "", FieldError{
+				Field:   field,
+				Message: "Use plain text without control characters.",
+			}
+		}
+	}
+	if len([]rune(value)) > limit {
+		return "", FieldError{
+			Field:   field,
+			Message: fmt.Sprintf("Keep this to %d characters or fewer.", limit),
+		}
+	}
+	return value, nil
+}
+
+func collectIDs(rows pgx.Rows) ([]uuid.UUID, error) {
+	defer rows.Close()
+	found := make([]uuid.UUID, 0, 8)
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("read an identifier: %w", err)
+		}
+		found = append(found, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read identifiers: %w", err)
+	}
+	return found, nil
+}
+
+func sameSet(present, given []uuid.UUID) bool {
+	if len(present) != len(given) {
+		return false
+	}
+	remaining := make(map[uuid.UUID]bool, len(present))
+	for _, id := range present {
+		remaining[id] = true
+	}
+	for _, id := range given {
+		if !remaining[id] {
+			return false
+		}
+		delete(remaining, id)
+	}
+	return len(remaining) == 0
 }

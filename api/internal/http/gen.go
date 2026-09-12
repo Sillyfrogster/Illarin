@@ -723,27 +723,6 @@ func (e DeliveryArtifactKind) Valid() bool {
 	}
 }
 
-// Defines values for DistinctionForm.
-const (
-	Badge    DistinctionForm = "badge"
-	Position DistinctionForm = "position"
-	Title    DistinctionForm = "title"
-)
-
-// Valid indicates whether the value is a known member of the DistinctionForm enum.
-func (e DistinctionForm) Valid() bool {
-	switch e {
-	case Badge:
-		return true
-	case Position:
-		return true
-	case Title:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DownloadRoleVerdictVerdict.
 const (
 	Carried DownloadRoleVerdictVerdict = "carried"
@@ -2692,11 +2671,6 @@ type AssetWithhold struct {
 	Reason string    `json:"reason"`
 }
 
-// AssignDistinctionRequest defines model for AssignDistinctionRequest.
-type AssignDistinctionRequest struct {
-	DistinctionId openapi_types.UUID `json:"distinctionId"`
-}
-
 // AuthorizationCode defines model for AuthorizationCode.
 type AuthorizationCode = string
 
@@ -2837,13 +2811,6 @@ type CreatePublicationGrantRequest struct {
 	Handle            string               `json:"handle"`
 }
 
-// DefineDistinctionRequest defines model for DefineDistinctionRequest.
-type DefineDistinctionRequest struct {
-	Explanation *string         `json:"explanation,omitempty"`
-	Form        DistinctionForm `json:"form"`
-	Name        string          `json:"name"`
-}
-
 // DefinePublicationAppRequest defines model for DefinePublicationAppRequest.
 type DefinePublicationAppRequest struct {
 	Home string `json:"home"`
@@ -2934,49 +2901,6 @@ type DialogueSampleContent struct {
 		Speaker string              `json:"speaker"`
 		Text    string              `json:"text"`
 	} `json:"turns"`
-}
-
-// Distinction defines model for Distinction.
-type Distinction struct {
-	Explanation string             `json:"explanation"`
-	Form        DistinctionForm    `json:"form"`
-	Id          openapi_types.UUID `json:"id"`
-	Mark        *DistinctionMark   `json:"mark,omitempty"`
-	Name        string             `json:"name"`
-	Position    int                `json:"position"`
-	Retired     bool               `json:"retired"`
-}
-
-// DistinctionAssignment defines model for DistinctionAssignment.
-type DistinctionAssignment struct {
-	Active      bool               `json:"active"`
-	AssignedAt  time.Time          `json:"assignedAt"`
-	Distinction Distinction        `json:"distinction"`
-	Id          openapi_types.UUID `json:"id"`
-	IssuedBy    *string            `json:"issuedBy,omitempty"`
-	Position    int                `json:"position"`
-	Source      string             `json:"source"`
-}
-
-// DistinctionAssignmentList defines model for DistinctionAssignmentList.
-type DistinctionAssignmentList struct {
-	Assignments []DistinctionAssignment `json:"assignments"`
-	Handle      string                  `json:"handle"`
-}
-
-// DistinctionForm defines model for DistinctionForm.
-type DistinctionForm string
-
-// DistinctionList defines model for DistinctionList.
-type DistinctionList struct {
-	Definitions []Distinction `json:"definitions"`
-}
-
-// DistinctionMark defines model for DistinctionMark.
-type DistinctionMark struct {
-	Height int    `json:"height"`
-	Url    string `json:"url"`
-	Width  int    `json:"width"`
 }
 
 // DownloadRoleVerdict defines model for DownloadRoleVerdict.
@@ -3330,17 +3254,6 @@ type NsfwVisibilityRequest struct {
 // NsfwVisibilityRequestVisibility defines model for NsfwVisibilityRequest.Visibility.
 type NsfwVisibilityRequestVisibility string
 
-// OrderAssignmentsRequest defines model for OrderAssignmentsRequest.
-type OrderAssignmentsRequest struct {
-	AssignmentIds []openapi_types.UUID `json:"assignmentIds"`
-}
-
-// OrderDistinctionsRequest defines model for OrderDistinctionsRequest.
-type OrderDistinctionsRequest struct {
-	DistinctionIds []openapi_types.UUID `json:"distinctionIds"`
-	Form           DistinctionForm      `json:"form"`
-}
-
 // OrderPublicationAppsRequest defines model for OrderPublicationAppsRequest.
 type OrderPublicationAppsRequest struct {
 	AppIds []openapi_types.UUID `json:"appIds"`
@@ -3490,12 +3403,10 @@ type PostByline struct {
 	Avatar       *ProfileAvatar  `json:"avatar,omitempty"`
 	ContactEmail string          `json:"contactEmail"`
 	DisplayName  string          `json:"displayName"`
-	Distinctions []string        `json:"distinctions"`
 	Handle       string          `json:"handle"`
 
 	// Historical True when the byline is an admin-supplied snapshot with no account behind it, so nothing should link it to a public profile.
-	Historical bool     `json:"historical"`
-	Positions  []string `json:"positions"`
+	Historical bool `json:"historical"`
 }
 
 // PostConflict A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version.
@@ -3768,19 +3679,16 @@ type PreservedNamespace struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	Avatar       *ProfileAvatar       `json:"avatar,omitempty"`
-	Badges       []ProfileDistinction `json:"badges"`
-	Biography    string               `json:"biography"`
-	ContactEmail string               `json:"contactEmail"`
-	DisplayName  string               `json:"displayName"`
-	Handle       string               `json:"handle"`
-	Id           openapi_types.UUID   `json:"id"`
-	Links        []ProfileLink        `json:"links"`
-	Positions    []ProfileDistinction `json:"positions"`
+	Avatar       *ProfileAvatar     `json:"avatar,omitempty"`
+	Biography    string             `json:"biography"`
+	ContactEmail string             `json:"contactEmail"`
+	DisplayName  string             `json:"displayName"`
+	Handle       string             `json:"handle"`
+	Id           openapi_types.UUID `json:"id"`
+	Links        []ProfileLink      `json:"links"`
 
 	// Restricted True when an admin has hidden the added identity. The handle and the published-asset listing stay; every other field answers empty.
-	Restricted bool                 `json:"restricted"`
-	Titles     []ProfileDistinction `json:"titles"`
+	Restricted bool `json:"restricted"`
 }
 
 // ProfileAvatar defines model for ProfileAvatar.
@@ -3788,14 +3696,6 @@ type ProfileAvatar struct {
 	Height int    `json:"height"`
 	Url    string `json:"url"`
 	Width  int    `json:"width"`
-}
-
-// ProfileDistinction defines model for ProfileDistinction.
-type ProfileDistinction struct {
-	Explanation string             `json:"explanation"`
-	Id          openapi_types.UUID `json:"id"`
-	Mark        *DistinctionMark   `json:"mark,omitempty"`
-	Name        string             `json:"name"`
 }
 
 // ProfileLink defines model for ProfileLink.
@@ -3913,7 +3813,7 @@ type PublicationApp struct {
 	Destinations []PublicationDestinationChoice `json:"destinations"`
 	Home         string                         `json:"home"`
 	Id           openapi_types.UUID             `json:"id"`
-	Mark         *DistinctionMark               `json:"mark,omitempty"`
+	Mark         *PublicationAppMark            `json:"mark,omitempty"`
 	Name         string                         `json:"name"`
 	Position     int                            `json:"position"`
 	Retired      bool                           `json:"retired"`
@@ -3923,6 +3823,13 @@ type PublicationApp struct {
 // PublicationAppList defines model for PublicationAppList.
 type PublicationAppList struct {
 	Apps []PublicationApp `json:"apps"`
+}
+
+// PublicationAppMark defines model for PublicationAppMark.
+type PublicationAppMark struct {
+	Height int    `json:"height"`
+	Url    string `json:"url"`
+	Width  int    `json:"width"`
 }
 
 // PublicationCategory defines model for PublicationCategory.
@@ -4125,11 +4032,10 @@ type PublicationPostEvent struct {
 type PublicationPostSummary struct {
 	// Byline Who the post was published under, as it stood at first publication.
 	Byline struct {
-		App       *PublicationEventApp `json:"app,omitempty"`
-		Handle    string               `json:"handle"`
-		Name      string               `json:"name"`
-		Positions []string             `json:"positions"`
-		Url       string               `json:"url"`
+		App    *PublicationEventApp `json:"app,omitempty"`
+		Handle string               `json:"handle"`
+		Name   string               `json:"name"`
+		Url    string               `json:"url"`
 	} `json:"byline"`
 	Category struct {
 		Label string `json:"label"`
@@ -4686,13 +4592,6 @@ type UpdateAssetUpdateDestinationRequest struct {
 	Name    *string `json:"name,omitempty"`
 }
 
-// UpdateDistinctionRequest defines model for UpdateDistinctionRequest.
-type UpdateDistinctionRequest struct {
-	Explanation *string `json:"explanation,omitempty"`
-	Name        *string `json:"name,omitempty"`
-	Retired     *bool   `json:"retired,omitempty"`
-}
-
 // UpdateInstance defines model for UpdateInstance.
 type UpdateInstance struct {
 	AcceptedTargets    AcceptedTargets      `json:"acceptedTargets"`
@@ -5106,11 +5005,6 @@ type DiscardDeliveryParams struct {
 // DiscardDeliveryParamsXIllarinRequest defines parameters for DiscardDelivery.
 type DiscardDeliveryParamsXIllarinRequest string
 
-// SetDistinctionMarkMultipartBody defines parameters for SetDistinctionMark.
-type SetDistinctionMarkMultipartBody struct {
-	File openapi_types.File `json:"file"`
-}
-
 // RevokeInstanceParams defines parameters for RevokeInstance.
 type RevokeInstanceParams struct {
 	// XIllarinRequest Illarin's browser request proof. The value must be 1.
@@ -5348,12 +5242,6 @@ type AddAssetUpdateDestinationJSONRequestBody = AddAssetUpdateDestinationRequest
 // UpdateAssetUpdateDestinationJSONRequestBody defines body for UpdateAssetUpdateDestination for application/json ContentType.
 type UpdateAssetUpdateDestinationJSONRequestBody = UpdateAssetUpdateDestinationRequest
 
-// AssignDistinctionJSONRequestBody defines body for AssignDistinction for application/json ContentType.
-type AssignDistinctionJSONRequestBody = AssignDistinctionRequest
-
-// OrderAccountDistinctionsJSONRequestBody defines body for OrderAccountDistinctions for application/json ContentType.
-type OrderAccountDistinctionsJSONRequestBody = OrderAssignmentsRequest
-
 // CreateAssetJSONRequestBody defines body for CreateAsset for application/json ContentType.
 type CreateAssetJSONRequestBody = StartAssetRequest
 
@@ -5425,18 +5313,6 @@ type VerifyEmailJSONRequestBody = VerifyEmailRequest
 
 // CollectDeliveriesJSONRequestBody defines body for CollectDeliveries for application/json ContentType.
 type CollectDeliveriesJSONRequestBody = CollectDeliveries
-
-// DefineDistinctionJSONRequestBody defines body for DefineDistinction for application/json ContentType.
-type DefineDistinctionJSONRequestBody = DefineDistinctionRequest
-
-// OrderDistinctionsJSONRequestBody defines body for OrderDistinctions for application/json ContentType.
-type OrderDistinctionsJSONRequestBody = OrderDistinctionsRequest
-
-// UpdateDistinctionJSONRequestBody defines body for UpdateDistinction for application/json ContentType.
-type UpdateDistinctionJSONRequestBody = UpdateDistinctionRequest
-
-// SetDistinctionMarkMultipartRequestBody defines body for SetDistinctionMark for multipart/form-data ContentType.
-type SetDistinctionMarkMultipartRequestBody SetDistinctionMarkMultipartBody
 
 // UpdateInstanceJSONRequestBody defines body for UpdateInstance for application/json ContentType.
 type UpdateInstanceJSONRequestBody = UpdateInstance
@@ -5920,18 +5796,6 @@ type ServerInterface interface {
 	// (POST /v1/account/update-destinations/{id}/verification)
 	VerifyAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
 
-	// (GET /v1/accounts/{handle}/distinctions)
-	ListAccountDistinctions(c *gin.Context, handle string)
-
-	// (POST /v1/accounts/{handle}/distinctions)
-	AssignDistinction(c *gin.Context, handle string)
-
-	// (PUT /v1/accounts/{handle}/distinctions)
-	OrderAccountDistinctions(c *gin.Context, handle string)
-
-	// (DELETE /v1/accounts/{handle}/distinctions/{assignmentId})
-	RemoveAccountDistinction(c *gin.Context, handle string, assignmentId openapi_types.UUID)
-
 	// (GET /v1/assets)
 	ListAssets(c *gin.Context, params ListAssetsParams)
 
@@ -6078,24 +5942,6 @@ type ServerInterface interface {
 
 	// (DELETE /v1/deliveries/{id})
 	DiscardDelivery(c *gin.Context, id openapi_types.UUID, params DiscardDeliveryParams)
-
-	// (GET /v1/distinctions)
-	ListDistinctions(c *gin.Context)
-
-	// (POST /v1/distinctions)
-	DefineDistinction(c *gin.Context)
-
-	// (PUT /v1/distinctions)
-	OrderDistinctions(c *gin.Context)
-
-	// (PATCH /v1/distinctions/{id})
-	UpdateDistinction(c *gin.Context, id openapi_types.UUID)
-
-	// (DELETE /v1/distinctions/{id}/mark)
-	ClearDistinctionMark(c *gin.Context, id openapi_types.UUID)
-
-	// (PUT /v1/distinctions/{id}/mark)
-	SetDistinctionMark(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/ingests/{id})
 	GetIngest(c *gin.Context, id openapi_types.UUID)
@@ -6812,115 +6658,6 @@ func (siw *ServerInterfaceWrapper) VerifyAssetUpdateDestination(c *gin.Context) 
 	}
 
 	siw.Handler.VerifyAssetUpdateDestination(c, id)
-}
-
-// ListAccountDistinctions operation middleware
-func (siw *ServerInterfaceWrapper) ListAccountDistinctions(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "handle" -------------
-	var handle string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ListAccountDistinctions(c, handle)
-}
-
-// AssignDistinction operation middleware
-func (siw *ServerInterfaceWrapper) AssignDistinction(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "handle" -------------
-	var handle string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.AssignDistinction(c, handle)
-}
-
-// OrderAccountDistinctions operation middleware
-func (siw *ServerInterfaceWrapper) OrderAccountDistinctions(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "handle" -------------
-	var handle string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.OrderAccountDistinctions(c, handle)
-}
-
-// RemoveAccountDistinction operation middleware
-func (siw *ServerInterfaceWrapper) RemoveAccountDistinction(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "handle" -------------
-	var handle string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Path parameter "assignmentId" -------------
-	var assignmentId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "assignmentId", c.Param("assignmentId"), &assignmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter assignmentId: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.RemoveAccountDistinction(c, handle, assignmentId)
 }
 
 // ListAssets operation middleware
@@ -8685,120 +8422,6 @@ func (siw *ServerInterfaceWrapper) DiscardDelivery(c *gin.Context) {
 	}
 
 	siw.Handler.DiscardDelivery(c, id, params)
-}
-
-// ListDistinctions operation middleware
-func (siw *ServerInterfaceWrapper) ListDistinctions(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ListDistinctions(c)
-}
-
-// DefineDistinction operation middleware
-func (siw *ServerInterfaceWrapper) DefineDistinction(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.DefineDistinction(c)
-}
-
-// OrderDistinctions operation middleware
-func (siw *ServerInterfaceWrapper) OrderDistinctions(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.OrderDistinctions(c)
-}
-
-// UpdateDistinction operation middleware
-func (siw *ServerInterfaceWrapper) UpdateDistinction(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.UpdateDistinction(c, id)
-}
-
-// ClearDistinctionMark operation middleware
-func (siw *ServerInterfaceWrapper) ClearDistinctionMark(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ClearDistinctionMark(c, id)
-}
-
-// SetDistinctionMark operation middleware
-func (siw *ServerInterfaceWrapper) SetDistinctionMark(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.SetDistinctionMark(c, id)
 }
 
 // GetIngest operation middleware
@@ -11136,16 +10759,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/assets/:id/instances", wrapper.GetAssetInstances)
 	router.POST(options.BaseURL+"/v1/assets/:id/deliveries", wrapper.SendAssetToInstance)
 	router.GET(options.BaseURL+"/delivery/:id/export", wrapper.DownloadDeliveryExport)
-	router.GET(options.BaseURL+"/v1/distinctions", wrapper.ListDistinctions)
-	router.POST(options.BaseURL+"/v1/distinctions", wrapper.DefineDistinction)
-	router.PUT(options.BaseURL+"/v1/distinctions", wrapper.OrderDistinctions)
-	router.PATCH(options.BaseURL+"/v1/distinctions/:id", wrapper.UpdateDistinction)
-	router.DELETE(options.BaseURL+"/v1/distinctions/:id/mark", wrapper.ClearDistinctionMark)
-	router.PUT(options.BaseURL+"/v1/distinctions/:id/mark", wrapper.SetDistinctionMark)
-	router.GET(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.ListAccountDistinctions)
-	router.POST(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.AssignDistinction)
-	router.PUT(options.BaseURL+"/v1/accounts/:handle/distinctions", wrapper.OrderAccountDistinctions)
-	router.DELETE(options.BaseURL+"/v1/accounts/:handle/distinctions/:assignmentId", wrapper.RemoveAccountDistinction)
 	router.GET(options.BaseURL+"/v1/publication/apps", wrapper.ListPublicationApps)
 	router.POST(options.BaseURL+"/v1/publication/apps", wrapper.DefinePublicationApp)
 	router.PUT(options.BaseURL+"/v1/publication/apps", wrapper.OrderPublicationApps)

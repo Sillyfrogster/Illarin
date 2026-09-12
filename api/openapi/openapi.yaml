@@ -101,16 +101,6 @@ paths:
     $ref: ./delivery.yaml#/paths/~1v1~1assets~1{id}~1deliveries
   /delivery/{id}/export:
     $ref: ./delivery.yaml#/paths/~1delivery~1{id}~1export
-  /v1/distinctions:
-    $ref: ./distinctions.yaml#/paths/~1v1~1distinctions
-  /v1/distinctions/{id}:
-    $ref: ./distinctions.yaml#/paths/~1v1~1distinctions~1{id}
-  /v1/distinctions/{id}/mark:
-    $ref: ./distinctions.yaml#/paths/~1v1~1distinctions~1{id}~1mark
-  /v1/accounts/{handle}/distinctions:
-    $ref: ./distinctions.yaml#/paths/~1v1~1accounts~1{handle}~1distinctions
-  /v1/accounts/{handle}/distinctions/{assignmentId}:
-    $ref: ./distinctions.yaml#/paths/~1v1~1accounts~1{handle}~1distinctions~1{assignmentId}
   /v1/publication/apps:
     $ref: ./publication.yaml#/paths/~1v1~1publication~1apps
   /v1/publication/apps/{id}:
@@ -364,32 +354,10 @@ components:
       $ref: ./accounts.yaml#/components/schemas/ProfileRestriction
     RestrictProfileRequest:
       $ref: ./accounts.yaml#/components/schemas/RestrictProfileRequest
-    DistinctionForm:
-      $ref: ./distinctions.yaml#/components/schemas/DistinctionForm
-    Distinction:
-      $ref: ./distinctions.yaml#/components/schemas/Distinction
-    DistinctionMark:
-      $ref: ./distinctions.yaml#/components/schemas/DistinctionMark
-    ProfileDistinction:
-      $ref: ./distinctions.yaml#/components/schemas/ProfileDistinction
-    DistinctionList:
-      $ref: ./distinctions.yaml#/components/schemas/DistinctionList
-    DefineDistinctionRequest:
-      $ref: ./distinctions.yaml#/components/schemas/DefineDistinctionRequest
-    UpdateDistinctionRequest:
-      $ref: ./distinctions.yaml#/components/schemas/UpdateDistinctionRequest
-    OrderDistinctionsRequest:
-      $ref: ./distinctions.yaml#/components/schemas/OrderDistinctionsRequest
-    DistinctionAssignment:
-      $ref: ./distinctions.yaml#/components/schemas/DistinctionAssignment
-    DistinctionAssignmentList:
-      $ref: ./distinctions.yaml#/components/schemas/DistinctionAssignmentList
-    AssignDistinctionRequest:
-      $ref: ./distinctions.yaml#/components/schemas/AssignDistinctionRequest
-    OrderAssignmentsRequest:
-      $ref: ./distinctions.yaml#/components/schemas/OrderAssignmentsRequest
     PublicationApp:
       $ref: ./publication.yaml#/components/schemas/PublicationApp
+    PublicationAppMark:
+      $ref: ./publication.yaml#/components/schemas/PublicationAppMark
     PublicationAppList:
       $ref: ./publication.yaml#/components/schemas/PublicationAppList
     DefinePublicationAppRequest:

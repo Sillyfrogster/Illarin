@@ -277,7 +277,7 @@ func (t throughLoopback) send(
 }
 
 type destinationStack struct {
-	distinctionStack
+	publicationStack
 	to      *receiver
 	discord *discordServer
 	editor  *http.Cookie
@@ -305,7 +305,7 @@ func newDestinationStackThrough(
 	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
 	stack := destinationStack{
-		distinctionStack: distinctionStack{
+		publicationStack: publicationStack{
 			router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
 		},
 		to:      to,

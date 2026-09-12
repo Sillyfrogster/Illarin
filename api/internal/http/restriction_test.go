@@ -16,10 +16,7 @@ import (
 
 type restrictedProfile struct {
 	publicProfile
-	Positions  []profileDistinction `json:"positions"`
-	Titles     []profileDistinction `json:"titles"`
-	Badges     []profileDistinction `json:"badges"`
-	Restricted bool                 `json:"restricted"`
+	Restricted bool `json:"restricted"`
 }
 
 type profileRestriction struct {
@@ -29,7 +26,7 @@ type profileRestriction struct {
 }
 
 type restrictionStack struct {
-	distinctionStack
+	publicationStack
 	assets  *asset.Service
 	admin   *http.Cookie
 	owner   *http.Cookie
@@ -48,7 +45,7 @@ func newRestrictionStack(t *testing.T) restrictionStack {
 	setRole(t, pool, "site.admin", "admin")
 	owner := verifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
 	return restrictionStack{
-		distinctionStack: distinctionStack{
+		publicationStack: publicationStack{
 			router: router, pool: pool, outbox: outbox, authority: authority,
 		},
 		assets:  handlers.assets,
@@ -85,13 +82,6 @@ func (s restrictionStack) fillProfile(t *testing.T) {
 	))
 	if uploaded.Code != http.StatusOK {
 		t.Fatalf("avatar status = %d, want 200: %s", uploaded.Code, uploaded.Body.String())
-	}
-	for _, given := range []struct{ form, name string }{
-		{"position", "Curator"},
-		{"title", "Weatherwright"},
-		{"badge", "Early reader"},
-	} {
-		s.assigned(t, ownerHandle, s.defined(t, given.form, given.name, "").ID)
 	}
 }
 
@@ -167,9 +157,6 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	if shown.Avatar != nil || len(shown.Links) != 0 {
 		t.Fatalf("restricted profile still carries an avatar or links: %+v", shown)
 	}
-	if len(shown.Positions) != 0 || len(shown.Titles) != 0 || len(shown.Badges) != 0 {
-		t.Fatalf("restricted profile still carries distinctions: %+v", shown)
-	}
 
 	listing := send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?creator="+ownerHandle, nil,
@@ -199,8 +186,7 @@ func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testin
 	))
 	body := response.Body.String()
 	for _, hidden := range []string{
-		"Wren Ashdown", "weather", "hello@example.com", "example.com/notes",
-		"Curator", "Weatherwright", "Early reader", "Impersonating",
+		"Wren Ashdown", "weather", "hello@example.com", "example.com/notes", "Impersonating",
 	} {
 		if strings.Contains(body, hidden) {
 			t.Fatalf("the public response still contains %q: %s", hidden, body)
@@ -389,9 +375,6 @@ func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
 	}
 	if shown.Avatar == nil {
 		t.Fatal("the avatar did not come back")
-	}
-	if len(shown.Positions) != 1 || len(shown.Titles) != 1 || len(shown.Badges) != 1 {
-		t.Fatalf("restored distinctions = %+v %+v %+v", shown.Positions, shown.Titles, shown.Badges)
 	}
 
 	saved := saveProfile(t, stack.router, stack.owner, `{

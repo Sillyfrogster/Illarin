@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func (s distinctionStack) correctAddress(
+func (s publicationStack) correctAddress(
 	t *testing.T,
 	session *http.Cookie,
 	id, slug string,
@@ -21,7 +21,7 @@ func (s distinctionStack) correctAddress(
 	), session))
 }
 
-func (s distinctionStack) addressCorrected(
+func (s publicationStack) addressCorrected(
 	t *testing.T,
 	session *http.Cookie,
 	id, slug string,
@@ -34,7 +34,7 @@ func (s distinctionStack) addressCorrected(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) correctByline(
+func (s publicationStack) correctByline(
 	t *testing.T,
 	session *http.Cookie,
 	id, handle string,
@@ -46,7 +46,7 @@ func (s distinctionStack) correctByline(
 	), session))
 }
 
-func (s distinctionStack) livePost(t *testing.T, session *http.Cookie, title string) blogPost {
+func (s publicationStack) livePost(t *testing.T, session *http.Cookie, title string) blogPost {
 	t.Helper()
 	draft := s.illarinDraft(t, session, title)
 	s.saved(t, session, draft.ID, finished(draft, nil))
@@ -54,7 +54,7 @@ func (s distinctionStack) livePost(t *testing.T, session *http.Cookie, title str
 }
 
 func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Choose the address")
 
@@ -78,7 +78,7 @@ func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
 }
 
 func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Reserved words")
 
@@ -96,7 +96,7 @@ func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
 }
 
 func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -127,7 +127,7 @@ func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
 }
 
 func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Illarin 3 is heer")
 
@@ -154,7 +154,7 @@ func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
 }
 
 func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "The first name")
 	stack.addressCorrected(t, session, live.ID, "the-second-name")
@@ -174,7 +174,7 @@ func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
 }
 
 func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -210,7 +210,7 @@ func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
 }
 
 func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -278,7 +278,7 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 }
 
 func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Still private")
 
@@ -291,7 +291,7 @@ func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
 }
 
 func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Somebody wrote this")
 
@@ -308,7 +308,7 @@ func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
 }
 
 func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	saveProfile(t, stack.router, writer.session, `{"displayName":"The Writer","links":[]}`)
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -355,7 +355,7 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 }
 
 func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "One hop only")
 	stack.addressCorrected(t, session, live.ID, "second-address")
@@ -388,7 +388,7 @@ func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
 }
 
 func TestACorrectedAddressIsRefusedWhenItIsAlreadyTheCurrentOne(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Stay where you are")
 

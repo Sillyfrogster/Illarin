@@ -339,6 +339,49 @@ func categoryOr(err error, otherwise PublicationErrorCode) PublicationErrorCode 
 	return otherwise
 }
 
+func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountIdentity, bool) {
+	current, ok := h.verifiedAccount(c, action)
+	if !ok {
+		return accountIdentity{}, false
+	}
+	held, err := h.publications.HoldsAuthority(c.Request.Context(), current.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check publication authority."})
+		return accountIdentity{}, false
+	}
+	if !held {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Only the account designated to manage blog access can do that.",
+		})
+		return accountIdentity{}, false
+	}
+	return accountIdentity{ID: current.ID, Handle: current.Handle}, true
+}
+
+type accountIdentity struct {
+	ID     uuid.UUID
+	Handle string
+}
+
+func toUUIDs(given []types.UUID) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(given))
+	for _, id := range given {
+		ids = append(ids, uuid.UUID(id))
+	}
+	return ids
+}
+
+func toAPIMark(mark *publication.Mark) *PublicationAppMark {
+	if mark == nil {
+		return nil
+	}
+	return &PublicationAppMark{
+		Url:    publication.MarkURL(mark.MediaID, mark.DerivativeVersion),
+		Width:  mark.Width,
+		Height: mark.Height,
+	}
+}
+
 func toAPIApps(configured []publication.App) []PublicationApp {
 	listed := make([]PublicationApp, 0, len(configured))
 	for _, one := range configured {

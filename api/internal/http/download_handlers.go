@@ -202,7 +202,7 @@ func (h *Handlers) sharedImageVariant(
 		redirect, mediaType, private, err := owner()
 		switch {
 		case errors.Is(err, account.ErrProfileMediaNotFound),
-			errors.Is(err, publication.ErrNotFound),
+			errors.Is(err, publication.ErrMarkNotFound),
 			errors.Is(err, publication.ErrPostMediaNotFound):
 			continue
 		case errors.Is(err, storage.ErrInsufficientSpace):

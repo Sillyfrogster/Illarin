@@ -24,8 +24,6 @@ const POST: PostSummary = {
     displayName: "Wren Ashdown",
     contactEmail: "",
     historical: false,
-    positions: [],
-    distinctions: [],
   },
   publishedAt: "2026-08-29T10:33:48Z",
 };

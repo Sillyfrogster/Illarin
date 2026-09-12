@@ -1162,8 +1162,6 @@ components:
         - handle
         - displayName
         - contactEmail
-        - positions
-        - distinctions
         - historical
       properties:
         handle:
@@ -1181,14 +1179,6 @@ components:
           anyOf:
             - $ref: './accounts.yaml#/components/schemas/ProfileAvatar'
             - type: 'null'
-        positions:
-          type: array
-          items:
-            type: string
-        distinctions:
-          type: array
-          items:
-            type: string
         app:
           anyOf:
             - $ref: './publication.yaml#/components/schemas/PublicationApp'

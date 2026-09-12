@@ -7,8 +7,6 @@ const BYLINE: PostByline = {
   displayName: "Wren Ashdown",
   contactEmail: "",
   historical: false,
-  positions: [],
-  distinctions: [],
 };
 
 test("a site address is whole, so it holds wherever it is linked from", () => {

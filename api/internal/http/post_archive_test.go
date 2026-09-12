@@ -33,12 +33,12 @@ type postArchive struct {
 	App      *publicationApp      `json:"app"`
 }
 
-func (s distinctionStack) browse(t *testing.T, query string) *httptest.ResponseRecorder {
+func (s publicationStack) browse(t *testing.T, query string) *httptest.ResponseRecorder {
 	t.Helper()
 	return send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts"+query, nil))
 }
 
-func (s distinctionStack) readableCategories(t *testing.T) []publicationCategory {
+func (s publicationStack) readableCategories(t *testing.T) []publicationCategory {
 	t.Helper()
 	response := send(t, s.router,
 		httptest.NewRequest(http.MethodGet, "/v1/post-categories", nil))
@@ -52,7 +52,7 @@ func (s distinctionStack) readableCategories(t *testing.T) []publicationCategory
 	return found.Categories
 }
 
-func (s distinctionStack) archive(t *testing.T, query string) postArchive {
+func (s publicationStack) archive(t *testing.T, query string) postArchive {
 	t.Helper()
 	response := s.browse(t, query)
 	if response.Code != http.StatusOK {
@@ -65,7 +65,7 @@ func (s distinctionStack) archive(t *testing.T, query string) postArchive {
 	return found
 }
 
-func (s distinctionStack) dated(t *testing.T, id string, at time.Time) {
+func (s publicationStack) dated(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
 		update posts set published_at = $2 where id = $1
@@ -75,7 +75,7 @@ func (s distinctionStack) dated(t *testing.T, id string, at time.Time) {
 	}
 }
 
-func (s distinctionStack) revisedOn(t *testing.T, id string, at time.Time) {
+func (s publicationStack) revisedOn(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
 		update posts set updated_public_at = $2 where id = $1
@@ -85,7 +85,7 @@ func (s distinctionStack) revisedOn(t *testing.T, id string, at time.Time) {
 	}
 }
 
-func (s distinctionStack) publishedOn(
+func (s publicationStack) publishedOn(
 	t *testing.T,
 	session *http.Cookie,
 	title string,
@@ -108,7 +108,7 @@ func titlesOf(found postArchive) []string {
 }
 
 func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.March, 1, 9, 0, 0, 0, time.UTC)
 
@@ -149,7 +149,7 @@ func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
 }
 
 func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	illarin := stack.appBySlug(t, "illarin")
 	release := stack.categoryBySlug(t, "release")
@@ -184,7 +184,7 @@ func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.
 }
 
 func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	release := stack.categoryBySlug(t, "release")
@@ -244,7 +244,7 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 }
 
 func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 
 	if got := stack.browse(t, "?category=musings"); got.Code != http.StatusNotFound {
 		t.Errorf("an unknown category status = %d, want 404", got.Code)
@@ -258,7 +258,7 @@ func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
 }
 
 func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	live := stack.publishedOn(t, session, "The one public post",
@@ -282,7 +282,7 @@ func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
 }
 
 func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	release := stack.categoryBySlug(t, "release")
@@ -343,7 +343,7 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 }
 
 func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	if len(stack.readableCategories(t)) != 0 {
@@ -361,7 +361,7 @@ func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
 }
 
 func TestAPostCorrectedInPublicRetakesTheLead(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.May, 1, 9, 0, 0, 0, time.UTC)
 

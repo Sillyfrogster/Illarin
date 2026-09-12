@@ -17,7 +17,7 @@ type postDeletion struct {
 	By    string    `json:"by"`
 }
 
-func (s distinctionStack) remove(
+func (s publicationStack) remove(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -30,7 +30,7 @@ func (s distinctionStack) remove(
 	), session))
 }
 
-func (s distinctionStack) removed(
+func (s publicationStack) removed(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -44,7 +44,7 @@ func (s distinctionStack) removed(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) recover(
+func (s publicationStack) recover(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -57,7 +57,7 @@ func (s distinctionStack) recover(
 	), session))
 }
 
-func (s distinctionStack) recovered(
+func (s publicationStack) recovered(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -71,7 +71,7 @@ func (s distinctionStack) recovered(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) listing(t *testing.T, session *http.Cookie, deleted bool) []blogPost {
+func (s publicationStack) listing(t *testing.T, session *http.Cookie, deleted bool) []blogPost {
 	t.Helper()
 	address := "/v1/publication/posts"
 	if deleted {
@@ -90,7 +90,7 @@ func (s distinctionStack) listing(t *testing.T, session *http.Cookie, deleted bo
 	return listed.Posts
 }
 
-func (s distinctionStack) clearOut(t *testing.T, at time.Time) int {
+func (s publicationStack) clearOut(t *testing.T, at time.Time) int {
 	t.Helper()
 	removed, err := s.handlers.publications.RemoveExpiredPosts(t.Context(), at)
 	if err != nil {
@@ -99,7 +99,7 @@ func (s distinctionStack) clearOut(t *testing.T, at time.Time) int {
 	return removed
 }
 
-func blobOf(t *testing.T, stack distinctionStack, mediaID string) string {
+func blobOf(t *testing.T, stack publicationStack, mediaID string) string {
 	t.Helper()
 	var blob string
 	err := stack.pool.QueryRow(t.Context(),
@@ -110,7 +110,7 @@ func blobOf(t *testing.T, stack distinctionStack, mediaID string) string {
 	return blob
 }
 
-func markedBlob(t *testing.T, stack distinctionStack, blobID string) bool {
+func markedBlob(t *testing.T, stack publicationStack, blobID string) bool {
 	t.Helper()
 	var sighted bool
 	err := stack.pool.QueryRow(t.Context(),
@@ -131,7 +131,7 @@ func postTitles(listed []blogPost) []string {
 }
 
 func TestAContributorDeletesTheirOwnDraftAndGetsItBack(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -191,7 +191,7 @@ func TestAContributorDeletesTheirOwnDraftAndGetsItBack(t *testing.T) {
 }
 
 func TestADeletedPostIsListedToItsOwnerAndToAnAdminAndNobodyElse(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	stranger := stack.contributor(t, "stranger@example.com", "stranger.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -214,7 +214,7 @@ func TestADeletedPostIsListedToItsOwnerAndToAnAdminAndNobodyElse(t *testing.T) {
 }
 
 func TestOnlyAnAdminDeletesAPostThatHasPublishedAndOnlyOnceItIsDown(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
@@ -249,7 +249,7 @@ func TestOnlyAnAdminDeletesAPostThatHasPublishedAndOnlyOnceItIsDown(t *testing.T
 }
 
 func TestADeletedPostIsNeitherWrittenNorPublished(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A post out of the workspace")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -274,7 +274,7 @@ func TestADeletedPostIsNeitherWrittenNorPublished(t *testing.T) {
 }
 
 func TestDeletingAPostStopsTheEditionItHadWaiting(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	waiting, due := stack.scheduledDraft(t, session, "An edition nobody wants", "The first words.")
 
@@ -298,7 +298,7 @@ func TestDeletingAPostStopsTheEditionItHadWaiting(t *testing.T) {
 }
 
 func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A draft nobody came back for")
 	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 800, 400))
@@ -342,7 +342,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 }
 
 func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	same := httpTestPNG(t, 800, 400)
 
@@ -376,7 +376,7 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 }
 
 func TestAnOfficialAddressIsNeverGivenBackAfterCleanup(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a history")
 	first := live.Slug

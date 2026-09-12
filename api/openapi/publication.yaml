@@ -320,9 +320,8 @@ paths:
     delete:
       operationId: revokePublicationGrant
       description: >-
-        End an approval. Editor access stops at once and the contributor badge
-        goes with it, while the grant record and everything already published
-        stay.
+        End an approval. Editor access stops at once, while the grant record
+        and everything already published stay.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -493,7 +492,7 @@ components:
           type: string
         mark:
           anyOf:
-            - $ref: './distinctions.yaml#/components/schemas/DistinctionMark'
+            - $ref: '#/components/schemas/PublicationAppMark'
             - type: 'null'
         position:
           type: integer
@@ -506,6 +505,19 @@ components:
             names its own.
           items:
             $ref: './destinations.yaml#/components/schemas/PublicationDestinationChoice'
+    PublicationAppMark:
+      type: object
+      required:
+        - url
+        - width
+        - height
+      properties:
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
     PublicationAppList:
       type: object
       required:

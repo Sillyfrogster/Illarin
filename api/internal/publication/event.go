@@ -53,11 +53,10 @@ type sentRelease struct {
 }
 
 type sentByline struct {
-	Handle    string   `json:"handle"`
-	Name      string   `json:"name"`
-	URL       string   `json:"url"`
-	Positions []string `json:"positions"`
-	App       *sentApp `json:"app,omitempty"`
+	Handle string   `json:"handle"`
+	Name   string   `json:"name"`
+	URL    string   `json:"url"`
+	App    *sentApp `json:"app,omitempty"`
 }
 
 func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, error) {
@@ -132,16 +131,12 @@ func (s *Service) sentByline(ctx context.Context, postID uuid.UUID) (sentByline,
 		return sentByline{}, err
 	}
 	shown := sentByline{
-		Handle:    byline.Handle,
-		Name:      byline.DisplayName,
-		URL:       s.profileAddress(byline.Handle),
-		Positions: byline.Positions,
+		Handle: byline.Handle,
+		Name:   byline.DisplayName,
+		URL:    s.profileAddress(byline.Handle),
 	}
 	if shown.Name == "" {
 		shown.Name = byline.Handle
-	}
-	if shown.Positions == nil {
-		shown.Positions = []string{}
 	}
 	if byline.App != nil {
 		shown.App = &sentApp{

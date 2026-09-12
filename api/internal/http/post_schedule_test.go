@@ -22,7 +22,7 @@ type postSchedule struct {
 	CreatedAt      time.Time `json:"createdAt"`
 }
 
-func (s distinctionStack) schedule(
+func (s publicationStack) schedule(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -36,7 +36,7 @@ func (s distinctionStack) schedule(
 	), session))
 }
 
-func (s distinctionStack) scheduled(
+func (s publicationStack) scheduled(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -51,7 +51,7 @@ func (s distinctionStack) scheduled(
 	return decodePost(t, response)
 }
 
-func (s distinctionStack) replaceSchedule(
+func (s publicationStack) replaceSchedule(
 	t *testing.T,
 	session *http.Cookie,
 	id, revisionID string,
@@ -64,7 +64,7 @@ func (s distinctionStack) replaceSchedule(
 	), session))
 }
 
-func (s distinctionStack) cancelSchedule(
+func (s publicationStack) cancelSchedule(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -75,7 +75,7 @@ func (s distinctionStack) cancelSchedule(
 	), session))
 }
 
-func (s distinctionStack) runSchedules(t *testing.T, at time.Time) int {
+func (s publicationStack) runSchedules(t *testing.T, at time.Time) int {
 	t.Helper()
 	settled, err := s.handlers.publications.PublishDueSchedules(t.Context(), at)
 	if err != nil {
@@ -84,7 +84,7 @@ func (s distinctionStack) runSchedules(t *testing.T, at time.Time) int {
 	return settled
 }
 
-func (s distinctionStack) scheduledDraft(
+func (s publicationStack) scheduledDraft(
 	t *testing.T,
 	session *http.Cookie,
 	title, text string,
@@ -99,7 +99,7 @@ func (s distinctionStack) scheduledDraft(
 }
 
 func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Illarin ships on Tuesday", "The first words.")
@@ -142,7 +142,7 @@ func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 }
 
 func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Release notes")
@@ -183,7 +183,7 @@ func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T
 }
 
 func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "A correction is coming", "The first attempt.")
@@ -230,7 +230,7 @@ func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *tes
 }
 
 func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Not this week after all", "Held back.")
@@ -262,7 +262,7 @@ func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
 }
 
 func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Only one at a time", "The words.")
@@ -277,7 +277,7 @@ func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
 }
 
 func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Yesterday")
@@ -298,7 +298,7 @@ func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 }
 
 func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -329,7 +329,7 @@ func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) 
 }
 
 func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 
@@ -351,7 +351,7 @@ func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *test
 }
 
 func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Survives a restart", "The words that go live.")
@@ -379,7 +379,7 @@ func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testi
 }
 
 func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Never quite made it", "The words.")
@@ -406,7 +406,7 @@ func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *test
 }
 
 func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "An article with a picture")
@@ -447,7 +447,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 }
 
 func TestSchedulingRecordsWhatHappenedWithoutCopyingTheArticle(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	secret := "Words that belong only in the article."
@@ -486,7 +486,7 @@ func actionOf(done []postAction, named string) *postAction {
 	return nil
 }
 
-func scheduleState(t *testing.T, stack distinctionStack, id string) string {
+func scheduleState(t *testing.T, stack publicationStack, id string) string {
 	t.Helper()
 	var state string
 	err := stack.pool.QueryRow(t.Context(),
@@ -509,7 +509,7 @@ func firstWords(document postDocument) string {
 }
 
 func TestToolingSchedulesReplacesAndCancelsWithoutRepeatingItself(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "robot@example.com", "release.robot")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -561,7 +561,7 @@ func TestToolingSchedulesReplacesAndCancelsWithoutRepeatingItself(t *testing.T) 
 }
 
 func TestSchedulingRefusesAWorkingCopySomeoneElseHasMovedPast(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Two people at one desk")
@@ -584,7 +584,7 @@ func TestSchedulingRefusesAWorkingCopySomeoneElseHasMovedPast(t *testing.T) {
 	}
 }
 
-func scheduleCount(t *testing.T, stack distinctionStack, postID string) int {
+func scheduleCount(t *testing.T, stack publicationStack, postID string) int {
 	t.Helper()
 	var held int
 	err := stack.pool.QueryRow(t.Context(),
@@ -596,7 +596,7 @@ func scheduleCount(t *testing.T, stack distinctionStack, postID string) int {
 }
 
 func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Out early", "The scheduled words.")
@@ -624,7 +624,7 @@ func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 }
 
 func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	ctx, stop := context.WithCancel(t.Context())
 	stopped := make(chan struct{})
 

@@ -12,14 +12,7 @@ export function primaryDestinations(blog: string): Destination[] {
   ];
 }
 export type AccountDestination = Destination & {
-  id:
-    | "profile"
-    | "settings"
-    | "publication"
-    | "recognition"
-    | "verify"
-    | "sign-in"
-    | "sign-up";
+  id: "profile" | "settings" | "publication" | "verify" | "sign-in" | "sign-up";
 };
 
 export function publishAction(
@@ -58,11 +51,6 @@ export function accountDestinations(
             id: "publication" as const,
             label: "Blog administration",
             href: "/publication",
-          },
-          {
-            id: "recognition" as const,
-            label: "Profile recognition",
-            href: "/recognition",
           },
         ]
       : []),

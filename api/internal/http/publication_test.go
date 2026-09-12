@@ -5,16 +5,34 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type publicationStack struct {
+	router    *gin.Engine
+	pool      *pgxpool.Pool
+	handlers  *Handlers
+	outbox    *verificationOutbox
+	authority *http.Cookie
+}
+
+type publicationMark struct {
+	URL    string `json:"url"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
 
 type publicationApp struct {
 	ID       string           `json:"id"`
 	Slug     string           `json:"slug"`
 	Name     string           `json:"name"`
 	Home     string           `json:"home"`
-	Mark     *distinctionMark `json:"mark"`
+	Mark     *publicationMark `json:"mark"`
 	Position int              `json:"position"`
 	Retired  bool             `json:"retired"`
 }
@@ -35,7 +53,7 @@ type publicationCategoryList struct {
 	Categories []publicationCategory `json:"categories"`
 }
 
-type profileAvatar = distinctionMark
+type profileAvatar = publicationMark
 
 type publicationGrantHolder struct {
 	Handle      string         `json:"handle"`
@@ -64,7 +82,52 @@ type publicationWorkspace struct {
 	Grants []publicationGrant `json:"grants"`
 }
 
-func (s distinctionStack) apps(t *testing.T) []publicationApp {
+func newPublicationStack(t *testing.T) publicationStack {
+	t.Helper()
+	outbox := &verificationOutbox{}
+	router, pool, handlers := newTestRouterWithSenderPoolAndHandlers(
+		t, 1<<20, DefaultDeadlines(), outbox,
+	)
+	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
+	holdsAuthority(t, pool, "publication.authority")
+	return publicationStack{
+		router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
+	}
+}
+
+func (s publicationStack) member(t *testing.T, email, handle string) *http.Cookie {
+	t.Helper()
+	return verifiedSignUp(t, s.router, s.outbox, email, handle)
+}
+
+func holdsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+		insert into publication_authorities (user_id)
+		select id from users where username = $1
+	`, handle)
+	if err != nil {
+		t.Fatalf("assign publication authority: %v", err)
+	}
+}
+
+func setRole(t *testing.T, pool *pgxpool.Pool, handle, role string) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), `
+		update users set role = $2 where username = $1
+	`, handle, role); err != nil {
+		t.Fatalf("set %s role: %v", handle, err)
+	}
+}
+
+func jsonRequest(t *testing.T, method, target, body string) *http.Request {
+	t.Helper()
+	request := httptest.NewRequest(method, target, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	return request
+}
+
+func (s publicationStack) apps(t *testing.T) []publicationApp {
 	t.Helper()
 	response := send(t, s.router, authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/apps", nil), s.authority,
@@ -79,7 +142,7 @@ func (s distinctionStack) apps(t *testing.T) []publicationApp {
 	return listed.Apps
 }
 
-func (s distinctionStack) categories(t *testing.T) []publicationCategory {
+func (s publicationStack) categories(t *testing.T) []publicationCategory {
 	t.Helper()
 	response := send(t, s.router, authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/categories", nil), s.authority,
@@ -94,7 +157,7 @@ func (s distinctionStack) categories(t *testing.T) []publicationCategory {
 	return listed.Categories
 }
 
-func (s distinctionStack) categoryBySlug(t *testing.T, slug string) publicationCategory {
+func (s publicationStack) categoryBySlug(t *testing.T, slug string) publicationCategory {
 	t.Helper()
 	for _, category := range s.categories(t) {
 		if category.Slug == slug {
@@ -105,7 +168,7 @@ func (s distinctionStack) categoryBySlug(t *testing.T, slug string) publicationC
 	return publicationCategory{}
 }
 
-func (s distinctionStack) appBySlug(t *testing.T, slug string) publicationApp {
+func (s publicationStack) appBySlug(t *testing.T, slug string) publicationApp {
 	t.Helper()
 	for _, app := range s.apps(t) {
 		if app.Slug == slug {
@@ -116,7 +179,7 @@ func (s distinctionStack) appBySlug(t *testing.T, slug string) publicationApp {
 	return publicationApp{}
 }
 
-func (s distinctionStack) configureApp(t *testing.T, slug, name, home string) publicationApp {
+func (s publicationStack) configureApp(t *testing.T, slug, name, home string) publicationApp {
 	t.Helper()
 	response := send(t, s.router, authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/apps",
@@ -132,7 +195,7 @@ func (s distinctionStack) configureApp(t *testing.T, slug, name, home string) pu
 	return configured
 }
 
-func (s distinctionStack) approve(
+func (s publicationStack) approve(
 	t *testing.T,
 	session *http.Cookie,
 	handle, appID string,
@@ -152,7 +215,7 @@ func (s distinctionStack) approve(
 	), session))
 }
 
-func (s distinctionStack) approved(
+func (s publicationStack) approved(
 	t *testing.T,
 	handle, appID string,
 	categoryIDs []string,
@@ -170,7 +233,7 @@ func (s distinctionStack) approved(
 	return made
 }
 
-func (s distinctionStack) workspace(t *testing.T, session *http.Cookie) publicationWorkspace {
+func (s publicationStack) workspace(t *testing.T, session *http.Cookie) publicationWorkspace {
 	t.Helper()
 	response := send(t, s.router, authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/workspace", nil), session,
@@ -186,7 +249,7 @@ func (s distinctionStack) workspace(t *testing.T, session *http.Cookie) publicat
 }
 
 func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 
 	illarin := stack.appBySlug(t, "illarin")
 	if illarin.Name != "Illarin" || illarin.Home != "https://illarin.xyz" {
@@ -203,7 +266,7 @@ func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
 }
 
 func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	outsider := stack.member(t, "outsider@example.com", "publication.outsider")
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -247,7 +310,7 @@ func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T)
 }
 
 func TestTheAuthorityConfiguresOrdersAndRetiresApps(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	illarin := stack.appBySlug(t, "illarin")
 
@@ -290,15 +353,12 @@ func TestTheAuthorityConfiguresOrdersAndRetiresApps(t *testing.T) {
 }
 
 func TestConfiguringAnAppGrantsNobodyAnything(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	developer := stack.member(t, "developer@example.com", "lumiverse.developer")
 	stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 
 	if open := stack.workspace(t, developer); len(open.Grants) != 0 {
 		t.Fatalf("an app alone opened a workspace of %+v", open.Grants)
-	}
-	if shown := stack.profile(t, "lumiverse.developer"); len(shown.Badges) != 0 {
-		t.Fatalf("an app alone put %+v on a profile", shown.Badges)
 	}
 	refused := send(t, stack.router, authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), developer,
@@ -309,7 +369,7 @@ func TestConfiguringAnAppGrantsNobodyAnything(t *testing.T) {
 }
 
 func TestTheAuthorityRelabelsAndOrdersCategories(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	announcement := stack.categoryBySlug(t, "announcement")
 	article := stack.categoryBySlug(t, "article")
 	release := stack.categoryBySlug(t, "release")
@@ -342,7 +402,7 @@ func TestTheAuthorityRelabelsAndOrdersCategories(t *testing.T) {
 }
 
 func TestAGrantNeedsAVerifiedAccountAnAppAndABackedDefaultCategory(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	stack.member(t, "writer@example.com", "lumiverse.writer")
 	signUp(t, stack.router, "unverified@example.com", "unverified.writer")
 	illarin := stack.appBySlug(t, "illarin")
@@ -383,7 +443,7 @@ func TestAGrantNeedsAVerifiedAccountAnAppAndABackedDefaultCategory(t *testing.T)
 }
 
 func TestAContributorSeesOnlyTheirOwnEffectiveScope(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.member(t, "scoped@example.com", "scoped.writer")
 	other := stack.member(t, "elsewhere@example.com", "other.writer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -421,7 +481,7 @@ func TestAContributorSeesOnlyTheirOwnEffectiveScope(t *testing.T) {
 }
 
 func TestSeparatePeopleForOneAppGetSeparateGrants(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	first := stack.member(t, "first@example.com", "first.developer")
 	second := stack.member(t, "second@example.com", "second.developer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -445,66 +505,10 @@ func TestSeparatePeopleForOneAppGetSeparateGrants(t *testing.T) {
 	if open := stack.workspace(t, second); len(open.Grants) != 1 {
 		t.Fatalf("the other contributor lost their grant: %+v", open.Grants)
 	}
-	if shown := stack.profile(t, "second.developer"); len(shown.Badges) != 1 {
-		t.Fatalf("the other contributor's badges = %+v", shown.Badges)
-	}
-}
-
-func TestAnActiveGrantCarriesTheContributorBadge(t *testing.T) {
-	stack := newDistinctionStack(t)
-	writer := stack.member(t, "badged@example.com", "badged.writer")
-	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
-	illarin := stack.appBySlug(t, "illarin")
-	announcement := stack.categoryBySlug(t, "announcement")
-
-	first := stack.approved(
-		t, "badged.writer", lumiverse.ID, []string{announcement.ID}, announcement.ID,
-	)
-	shown := stack.profile(t, "badged.writer")
-	if len(shown.Badges) != 1 || shown.Badges[0].Name != "Verified App Contributor" {
-		t.Fatalf("badges after the grant = %+v", shown.Badges)
-	}
-
-	second := stack.approved(
-		t, "badged.writer", illarin.ID, []string{announcement.ID}, announcement.ID,
-	)
-	if after := stack.profile(t, "badged.writer"); len(after.Badges) != 1 {
-		t.Fatalf("a second grant gave a second badge: %+v", after.Badges)
-	}
-
-	for _, grantID := range []string{first.ID, second.ID} {
-		revoked := send(t, stack.router, authorized(
-			httptest.NewRequest(http.MethodDelete, "/v1/publication/grants/"+grantID, nil),
-			stack.authority,
-		))
-		if revoked.Code != http.StatusNoContent {
-			t.Fatalf("revoke status = %d: %s", revoked.Code, revoked.Body.String())
-		}
-	}
-
-	if after := stack.profile(t, "badged.writer"); len(after.Badges) != 0 {
-		t.Fatalf("badges after every grant went = %+v", after.Badges)
-	}
-	if open := stack.workspace(t, writer); len(open.Grants) != 0 {
-		t.Fatalf("editor access outlived the grants: %+v", open.Grants)
-	}
-
-	var records int
-	err := stack.pool.QueryRow(context.Background(), `
-		select count(*) from profile_distinction_assignments assignment
-		  join users account on account.id = assignment.user_id
-		 where account.username = 'badged.writer' and assignment.source = 'publication-grant'
-	`).Scan(&records)
-	if err != nil {
-		t.Fatalf("count badge assignments: %v", err)
-	}
-	if records != 1 {
-		t.Fatalf("the badge left %d records, want the one it made", records)
-	}
 }
 
 func TestRevocationKeepsTheAccountAndTheGrantRecord(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	stack.member(t, "ended@example.com", "ended.writer")
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -553,7 +557,7 @@ func TestRevocationKeepsTheAccountAndTheGrantRecord(t *testing.T) {
 }
 
 func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.member(t, "bounded@example.com", "bounded.writer")
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -564,10 +568,8 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 		path   string
 		body   string
 	}{
-		{http.MethodGet, "/v1/distinctions", ""},
 		{http.MethodPost, "/v1/publication/apps", `{"slug":"x","name":"X","home":"https://x.example"}`},
 		{http.MethodGet, "/v1/publication/grants", ""},
-		{http.MethodGet, "/v1/accounts/publication.authority/distinctions", ""},
 	}
 	for _, refused := range elsewhere {
 		var request *http.Request
@@ -599,7 +601,7 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 }
 
 func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	stack.member(t, "audited@example.com", "audited.writer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -670,7 +672,7 @@ func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 }
 
 func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	writer := stack.member(t, "named@example.com", "named.writer")
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")

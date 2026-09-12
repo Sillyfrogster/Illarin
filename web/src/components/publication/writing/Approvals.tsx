@@ -18,27 +18,14 @@ export function Approvals({ workspace }: { workspace: PublicationWorkspace }) {
 
       {workspace.grants.length === 0 ? (
         <p className="mt-3 max-w-[52ch] font-prose text-prose text-mute">
-          You write as the Illarin Team. A post carries your name and your
-          public positions.
+          You write as the Illarin Team. A post carries your name and picture.
         </p>
       ) : (
-        <>
-          <p className="mt-3 max-w-[52ch] font-prose text-prose text-mute">
-            Your{" "}
-            <Link
-              className="text-ink underline decoration-rule underline-offset-[3px] hover:decoration-ink"
-              href={`/@${workspace.handle}`}
-            >
-              Verified App Contributor badge
-            </Link>{" "}
-            stays on your profile for as long as an approval stands.
-          </p>
-          <div className="mt-5 flex flex-col gap-3">
-            {workspace.grants.map((grant) => (
-              <Approval grant={grant} key={grant.id} />
-            ))}
-          </div>
-        </>
+        <div className="mt-5 flex flex-col gap-3">
+          {workspace.grants.map((grant) => (
+            <Approval grant={grant} key={grant.id} />
+          ))}
+        </div>
       )}
     </section>
   );

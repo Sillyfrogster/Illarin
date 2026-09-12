@@ -206,7 +206,7 @@ func (s *Service) SetAppMark(
 		return App{}, fmt.Errorf("begin app mark change: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	err = s.replaceMark(ctx, tx, appMarks, id, stored.ID, prepared.Width, prepared.Height)
+	err = replaceAppMark(ctx, tx, id, stored.ID, prepared.Width, prepared.Height)
 	if err != nil {
 		return App{}, err
 	}

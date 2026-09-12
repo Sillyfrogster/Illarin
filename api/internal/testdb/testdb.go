@@ -13,7 +13,6 @@ var immutableTables = []string{"download_events", "migration_legacy_counters"}
 
 const seeded = `
 	truncate publication_apps, publication_categories cascade;
-	delete from profile_distinctions where id = '9d3f1c00-0000-4000-8000-000000000021';
 
 	insert into publication_apps (id, slug, name, home_url, position)
 	values ('9d3f1c00-0000-4000-8000-000000000001', 'illarin', 'Illarin',
@@ -23,10 +22,6 @@ const seeded = `
 	values ('9d3f1c00-0000-4000-8000-000000000011', 'announcement', 'Announcement', 0),
 	       ('9d3f1c00-0000-4000-8000-000000000012', 'release', 'Release', 1),
 	       ('9d3f1c00-0000-4000-8000-000000000013', 'article', 'Article', 2);
-
-	insert into profile_distinctions (id, form, name, explanation, position)
-	values ('9d3f1c00-0000-4000-8000-000000000021', 'badge', 'Verified App Contributor',
-	        'Publishes official updates for a project on Illarin.', 0);
 `
 
 func Connect(t *testing.T) *pgxpool.Pool {

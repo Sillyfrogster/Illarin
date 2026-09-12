@@ -27,7 +27,7 @@ type postHeader struct {
 	Caption string `json:"caption"`
 }
 
-func (s distinctionStack) upload(
+func (s publicationStack) upload(
 	t *testing.T,
 	session *http.Cookie,
 	postID, purpose string,
@@ -48,7 +48,7 @@ func (s distinctionStack) upload(
 	return send(t, s.router, authorized(request, session))
 }
 
-func (s distinctionStack) uploaded(
+func (s publicationStack) uploaded(
 	t *testing.T,
 	session *http.Cookie,
 	postID, purpose string,
@@ -75,13 +75,13 @@ func bodyWithPicture(mediaID, alt string) json.RawMessage {
 	))
 }
 
-func (s distinctionStack) fetch(t *testing.T, address string) *httptest.ResponseRecorder {
+func (s publicationStack) fetch(t *testing.T, address string) *httptest.ResponseRecorder {
 	t.Helper()
 	return send(t, s.router, httptest.NewRequest(http.MethodGet, address, nil))
 }
 
 func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "pictures@example.com", "illarin.pictures")
 	draft := stack.illarinDraft(t, session, "The workspace has pictures")
 
@@ -124,7 +124,7 @@ func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
 }
 
 func TestAPostCannotPlaceAPictureAnotherPostOwns(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "foreign@example.com", "illarin.foreign")
 	theirs := stack.illarinDraft(t, session, "The post that owns the picture")
 	mine := stack.illarinDraft(t, session, "The post that wants it")
@@ -143,7 +143,7 @@ func TestAPostCannotPlaceAPictureAnotherPostOwns(t *testing.T) {
 }
 
 func TestAPictureIsPlacedOnlyWhereItWasUploadedFor(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "purpose@example.com", "illarin.purpose")
 	draft := stack.illarinDraft(t, session, "One picture, one job")
 
@@ -161,7 +161,7 @@ func TestAPictureIsPlacedOnlyWhereItWasUploadedFor(t *testing.T) {
 }
 
 func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "alt@example.com", "illarin.alt")
 	draft := stack.illarinDraft(t, session, "Pictures say what they show")
 
@@ -191,7 +191,7 @@ func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
 }
 
 func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "replace@example.com", "illarin.replace")
 	draft := stack.illarinDraft(t, session, "The picture that was replaced")
 
@@ -223,7 +223,7 @@ func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
 }
 
 func TestAnUploadRefusesBytesThatAreNotAPicture(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "notapicture@example.com", "illarin.notapicture")
 	draft := stack.illarinDraft(t, session, "Only pictures go here")
 
@@ -238,7 +238,7 @@ func TestAnUploadRefusesBytesThatAreNotAPicture(t *testing.T) {
 }
 
 func TestOnlyTheEditorOfAPostUploadsPicturesToIt(t *testing.T) {
-	stack := newDistinctionStack(t)
+	stack := newPublicationStack(t)
 	session := stack.admin(t, "owner@example.com", "illarin.owner")
 	outsider := stack.member(t, "outsider@example.com", "outsider.account")
 	draft := stack.illarinDraft(t, session, "Not everyone writes here")
@@ -250,7 +250,7 @@ func TestOnlyTheEditorOfAPostUploadsPicturesToIt(t *testing.T) {
 	}
 }
 
-func (s distinctionStack) reload(t *testing.T, session *http.Cookie, id string) blogPost {
+func (s publicationStack) reload(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := send(t, s.router, authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id, nil,

@@ -2,7 +2,6 @@ package publication
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -18,8 +17,6 @@ type Byline struct {
 	DisplayName  string
 	ContactEmail string
 	Avatar       *Portrait
-	Positions    []string
-	Distinctions []string
 	App          *App
 }
 
@@ -36,8 +33,6 @@ type snapshot struct {
 	DisplayName  string
 	ContactEmail string
 	AvatarID     *uuid.UUID
-	Positions    []byte
-	Distinctions []byte
 	AppID        *uuid.UUID
 	AppSlug      *string
 	AppName      *string
@@ -73,19 +68,6 @@ func takeSnapshot(
 	if restricted {
 		taken.DisplayName, taken.ContactEmail, taken.AvatarID = "", "", nil
 	}
-	positions, distinctions := []string{}, []string{}
-	if !restricted {
-		positions, distinctions, err = shownNames(ctx, tx, accountID)
-		if err != nil {
-			return snapshot{}, err
-		}
-	}
-	if taken.Positions, err = json.Marshal(positions); err != nil {
-		return snapshot{}, fmt.Errorf("write the author's positions: %w", err)
-	}
-	if taken.Distinctions, err = json.Marshal(distinctions); err != nil {
-		return snapshot{}, fmt.Errorf("write the author's distinctions: %w", err)
-	}
 	taken.AppID, taken.AppSlug, taken.AppName, err = grantApp(ctx, tx, grantID)
 	if err != nil {
 		return snapshot{}, err
@@ -120,8 +102,7 @@ func replaceByline(
 		on conflict (post_id) do update
 		   set account_id = excluded.account_id, handle = excluded.handle,
 		       display_name = excluded.display_name, contact_email = excluded.contact_email,
-		       avatar_media_id = excluded.avatar_media_id, positions = excluded.positions,
-		       distinctions = excluded.distinctions, app_id = excluded.app_id,
+		       avatar_media_id = excluded.avatar_media_id, app_id = excluded.app_id,
 		       app_slug = excluded.app_slug, app_name = excluded.app_name,
 		       captured_at = now()`)
 }
@@ -135,13 +116,11 @@ func writeByline(
 ) error {
 	_, err := tx.Exec(ctx, `
 		insert into post_bylines (post_id, account_id, handle, display_name, contact_email,
-		                          avatar_media_id, positions, distinctions,
-		                          app_id, app_slug, app_name)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		                          avatar_media_id, app_id, app_slug, app_name)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`+whenHeld,
 		postID, taken.AccountID, taken.Handle, taken.DisplayName, taken.ContactEmail,
-		taken.AvatarID, taken.Positions, taken.Distinctions,
-		taken.AppID, taken.AppSlug, taken.AppName)
+		taken.AvatarID, taken.AppID, taken.AppSlug, taken.AppName)
 	if err != nil {
 		return fmt.Errorf("record the post byline: %w", err)
 	}
@@ -170,44 +149,9 @@ func grantApp(
 	return &id, &slug, &name, nil
 }
 
-func shownNames(ctx context.Context, tx pgx.Tx, accountID uuid.UUID) ([]string, []string, error) {
-	rows, err := tx.Query(ctx, `
-		select definition.form, definition.name
-		  from profile_distinction_assignments assignment
-		  join profile_distinctions definition on definition.id = assignment.distinction_id
-		 where assignment.user_id = $1 and assignment.active and definition.retired_at is null
-		 order by case when definition.form = 'position' then 0 else 1 end,
-		          case when definition.form = 'position' then definition.position else assignment.position end,
-		          assignment.assigned_at
-	`, accountID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read the author's distinctions: %w", err)
-	}
-	defer rows.Close()
-	positions, distinctions := []string{}, []string{}
-	for rows.Next() {
-		var form, name string
-		if err := rows.Scan(&form, &name); err != nil {
-			return nil, nil, fmt.Errorf("read one of the author's distinctions: %w", err)
-		}
-		if Form(form) == FormPosition {
-			positions = append(positions, name)
-			continue
-		}
-		if len(distinctions) < showcaseLimit {
-			distinctions = append(distinctions, name)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("read the author's distinctions: %w", err)
-	}
-	return positions, distinctions, nil
-}
-
 const selectBylines = `
 	select byline.post_id, byline.account_id, byline.handle, byline.display_name,
 	       byline.contact_email, avatar.id, avatar.width, avatar.height,
-	       byline.positions, byline.distinctions,
 	       app.id, app.slug, app.name, app.home_url, app.position,
 	       app.retired_at is not null
 	  from post_bylines byline
@@ -249,7 +193,6 @@ func bylinesFor(
 func scanByline(row rowScanner) (uuid.UUID, Byline, error) {
 	var postID uuid.UUID
 	var found Byline
-	var positions, distinctions []byte
 	var avatarID *uuid.UUID
 	var width, height *int
 	var appID *uuid.UUID
@@ -258,19 +201,13 @@ func scanByline(row rowScanner) (uuid.UUID, Byline, error) {
 	var appRetired *bool
 	err := row.Scan(
 		&postID, &found.AccountID, &found.Handle, &found.DisplayName, &found.ContactEmail,
-		&avatarID, &width, &height, &positions, &distinctions,
+		&avatarID, &width, &height,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
 	)
 	if err != nil {
 		return uuid.Nil, Byline{}, fmt.Errorf("read the post byline: %w", err)
 	}
 	found.Avatar = scanPortrait(avatarID, width, height)
-	if err := json.Unmarshal(positions, &found.Positions); err != nil {
-		return uuid.Nil, Byline{}, fmt.Errorf("read the byline positions: %w", err)
-	}
-	if err := json.Unmarshal(distinctions, &found.Distinctions); err != nil {
-		return uuid.Nil, Byline{}, fmt.Errorf("read the byline distinctions: %w", err)
-	}
 	if appID != nil {
 		found.App = &App{
 			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,

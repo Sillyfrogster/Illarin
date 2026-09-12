@@ -7,7 +7,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { LineLink } from "@/components/ui/line-link";
 import type { Profile } from "@/lib/api/query";
 import { siteUrl } from "@/lib/site-metadata";
-import { ProfileRecognition } from "./ProfileRecognition";
 import { RestrictionControl } from "./RestrictionControl";
 
 function Portrait({ profile }: { profile: Profile }) {
@@ -45,16 +44,8 @@ export function ProfileBanner({
             {profile.restricted ? `@${profile.handle}` : name}
           </h1>
           {profile.restricted ? null : (
-            <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-ui text-ui text-mute">
-              <span className="[overflow-wrap:anywhere]">
-                @{profile.handle}
-              </span>
-              {profile.positions.map((position) => (
-                <span className="flex items-center gap-2.5" key={position.id}>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-ink">{position.name}</span>
-                </span>
-              ))}
+            <p className="mt-2 font-ui text-ui text-mute [overflow-wrap:anywhere]">
+              @{profile.handle}
             </p>
           )}
         </div>
@@ -139,13 +130,6 @@ export function ProfileBanner({
           ) : null}
         </div>
       </div>
-
-      {!profile.restricted &&
-      (profile.titles.length > 0 || profile.badges.length > 0) ? (
-        <div className="mt-8 border-t border-rule pt-6">
-          <ProfileRecognition badges={profile.badges} titles={profile.titles} />
-        </div>
-      ) : null}
 
       <RestrictionControl
         handle={profile.handle}
