@@ -26,19 +26,12 @@ import { cn } from "@/lib/cn";
 import {
   BLOCK_GRID_GAP_PX,
   elementTracks,
-  ornamentPlacement,
   packBlockRows,
-  pageFullness,
 } from "@/lib/page-arrangement";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
 import { ContentsBar } from "./ContentsBar";
 import { ElementBody } from "./ElementBody";
-import {
-  type ArtPlacement,
-  EmptyPage,
-  EmptyPageInvitation,
-  QuietPageArt,
-} from "./QuietPage";
+import { EmptyPage, EmptyPageInvitation } from "./QuietPage";
 import { useSuggestedWidths } from "./use-suggested-widths";
 import { BlockTools } from "./workspace/BlockTools";
 import { EditableElementSection } from "./workspace/EditableElement";
@@ -95,16 +88,7 @@ export function AssetBlocks({
     ? blocks
     : publicBlocks.filter(rendersOnThePage);
   const rows = packBlockRows(packable, { availableWidth });
-  const fullness = pageFullness(rows);
   const invited = writing && assetHoldsNothing(blocks);
-  const ornament = invited
-    ? null
-    : ornamentPlacement(rows, holdsCreatorPictures);
-  const ornamentAtFoot =
-    !invited &&
-    rows.length > 0 &&
-    !ornament &&
-    !rows.some(holdsCreatorPictures);
   const contentsBlocks = useMemo(
     () => (writing ? blocks : publicBlocks.filter(rendersOnThePage)),
     [blocks, publicBlocks, writing],
@@ -137,7 +121,7 @@ export function AssetBlocks({
             coreBlocks={coreBlockTitles(blocks)}
             kind={kind}
           />
-        ) : fullness === "empty" ? (
+        ) : rows.length === 0 ? (
           <EmptyPage kind={kind} />
         ) : null}
         {rows.length === 0 ? null : (
@@ -150,7 +134,7 @@ export function AssetBlocks({
               } as CSSProperties
             }
           >
-            {rows.map((row, rowIndex) => (
+            {rows.map((row) => (
               <div
                 className="grid grid-cols-1 items-start gap-14 md:grid-cols-12 md:gap-[var(--block-grid-gap)] md:gap-y-[5.5rem]"
                 key={row.map((item) => item.block.id).join(":")}
@@ -272,23 +256,8 @@ export function AssetBlocks({
                     </article>
                   </Arrive>
                 ))}
-                {ornament?.row === rowIndex ? (
-                  <Ornament
-                    barren={fullness === "barren"}
-                    placement="inRow"
-                    style={
-                      {
-                        "--block-columns": ornament.columns,
-                        "--block-start": ornament.startColumn,
-                      } as CSSProperties
-                    }
-                  />
-                ) : null}
               </div>
             ))}
-            {ornamentAtFoot ? (
-              <Ornament barren={fullness === "barren"} placement="atFoot" />
-            ) : null}
           </div>
         )}
         {modelContent.length > 0 ? (
@@ -346,28 +315,8 @@ function BlockTitle({ block }: { block: AssetBlock }) {
   );
 }
 
-function Ornament({
-  barren,
-  placement,
-  style,
-}: {
-  barren: boolean;
-  placement: Extract<ArtPlacement, "inRow" | "atFoot">;
-  style?: CSSProperties;
-}) {
-  return <QuietPageArt compact={!barren} placement={placement} style={style} />;
-}
-
 function BlockCounts({ elements }: { elements: AssetElement[] }) {
   const counts = blockCounts(elements);
   if (!counts) return null;
   return <p className="basis-full text-label text-mute">{counts}</p>;
-}
-
-function holdsCreatorPictures(row: readonly { block: AssetBlock }[]): boolean {
-  return row.some(({ block }) =>
-    block.elements.some(
-      (element) => element.type === "image_set" && !element.isEmpty,
-    ),
-  );
 }

@@ -7,11 +7,7 @@ import {
   LAYOUTS,
   layoutChoiceIssue,
   NARROW_BLOCK_GRID_PX,
-  ORNAMENT_MINIMUM_COLUMNS,
-  ornamentPlacement,
   packBlockRows,
-  pageFullness,
-  rowRemainder,
   suggestedBlockWidth,
   suggestionCandidateWidths,
   WIDTH_COLUMNS,
@@ -290,56 +286,6 @@ describe("page arrangement", () => {
   });
 });
 
-describe("where a row ends short", () => {
-  test("a full row leaves no remainder", () => {
-    const [row] = packBlockRows([block("a", "half"), block("b", "half")], {});
-    expect(rowRemainder(row)).toBe(0);
-  });
-
-  test("a short row reports the columns nothing claimed", () => {
-    const [row] = packBlockRows([block("a", "two_thirds")], {});
-    expect(rowRemainder(row)).toBe(4);
-  });
-
-  test("the ornament takes the first remainder wide enough to hold it", () => {
-    const rows = packBlockRows(
-      [block("a", "half"), block("b", "third"), block("c", "two_thirds")],
-      {},
-    );
-    expect(rows.map(rowRemainder)).toEqual([2, 4]);
-    expect(ornamentPlacement(rows)).toEqual({
-      row: 1,
-      startColumn: 9,
-      columns: 4,
-    });
-  });
-
-  test("a remainder narrower than the ornament is left as space", () => {
-    const rows = packBlockRows([block("a", "half"), block("b", "third")], {});
-    expect(rowRemainder(rows[0])).toBeLessThan(ORNAMENT_MINIMUM_COLUMNS);
-    expect(ornamentPlacement(rows)).toBeNull();
-  });
-
-  test("a row holding the creator's own pictures is passed over", () => {
-    const rows = packBlockRows(
-      [block("gallery", "two_thirds"), block("notes", "half")],
-      {},
-    );
-    expect(ornamentPlacement(rows)?.row).toBe(0);
-    expect(
-      ornamentPlacement(rows, (row) => row[0].block.id === "gallery"),
-    ).toEqual({ row: 1, startColumn: 7, columns: 6 });
-  });
-
-  test("a page of full-width blocks has nowhere to put the ornament", () => {
-    expect(
-      ornamentPlacement(
-        packBlockRows([block("a", "full"), block("b", "full")], {}),
-      ),
-    ).toBeNull();
-  });
-});
-
 describe("remove confirmation counts", () => {
   test("counts each element through its public content shape", () => {
     expect(
@@ -470,39 +416,5 @@ describe("the columns a block's elements arrange into", () => {
 
   test("more elements than slots take the slots the layout has", () => {
     expect(elementTracks("duo", 5)).toBe("repeat(2, minmax(0, 1fr))");
-  });
-});
-
-describe("how much a page has to show", () => {
-  test("a page whose blocks all render nothing is empty", () => {
-    expect(pageFullness([])).toBe("empty");
-  });
-
-  test("a page that fills one row is barren", () => {
-    const rows = packBlockRows([block("a", "two_thirds")], {
-      availableWidth: 1200,
-    });
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("one block filling the width is still barren", () => {
-    const rows = packBlockRows([block("a", "full")], { availableWidth: 1200 });
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("three thirds side by side are one row, so still barren", () => {
-    const rows = packBlockRows(
-      [block("a", "third"), block("b", "third"), block("c", "third")],
-      { availableWidth: 1200 },
-    );
-    expect(rows).toHaveLength(1);
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("a second row of content makes the page full", () => {
-    const rows = packBlockRows([block("a", "full"), block("b", "full")], {
-      availableWidth: 1200,
-    });
-    expect(pageFullness(rows)).toBe("full");
   });
 });
