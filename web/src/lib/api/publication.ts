@@ -13,7 +13,7 @@ import type {
   PublicationWorkspace,
   RotatedPublicationSecret,
 } from "@/lib/api/query";
-import { ask, json } from "./distinctions";
+import { ask, json } from "./request";
 
 export function readApps() {
   return json<{ apps: PublicationApp[] }>("/publication/apps", "GET");

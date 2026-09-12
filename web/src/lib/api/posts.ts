@@ -8,7 +8,7 @@ import type {
   PublicationDestinationChoiceList,
 } from "@/lib/api/query";
 import type { PostDocument } from "@/lib/post-document";
-import { ask, json } from "./distinctions";
+import { ask, json } from "./request";
 
 export type WorkingCopy = {
   version: number;

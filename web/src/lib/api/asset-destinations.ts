@@ -1,4 +1,4 @@
-import { type Answer, ask } from "./distinctions";
+import { type Answer, ask } from "./request";
 import type { components } from "./schema";
 
 export type AssetUpdateDestination =
