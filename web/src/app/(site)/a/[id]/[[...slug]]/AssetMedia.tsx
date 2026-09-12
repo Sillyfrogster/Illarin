@@ -1,11 +1,11 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Expand, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
-import { FullscreenPreview } from "@/components/ui/fullscreen-preview";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import type { AssetImage, BrowseKind, NsfwVisibility } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -56,7 +56,6 @@ export function AssetMedia({
   const here = chosen ?? (recorded >= 0 ? recorded : null);
   const [failed, setFailed] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [enlarged, setEnlarged] = useState(false);
   const [signedOutVisibility, setSignedOutVisibility] =
     useState<NsfwVisibility>();
   const shown = here === null ? undefined : presentationMedia[here];
@@ -98,11 +97,11 @@ export function AssetMedia({
             <DefaultCover kind={kind} />
           </div>
         ) : (
-          <button
-            aria-label={`See ${name || "this picture"} at full size`}
-            className="group block w-full cursor-zoom-in rounded-plate outline-offset-3"
-            onClick={() => setEnlarged(true)}
-            type="button"
+          <ImageZoom
+            alt={name}
+            className="rounded-plate"
+            detailSrc={source}
+            revealOnHover
           >
             <Image
               alt={name}
@@ -115,10 +114,7 @@ export function AssetMedia({
               unoptimized
               width={shown.width}
             />
-            <span className="absolute right-3 bottom-3 flex size-11 items-center justify-center rounded-full bg-field text-ink opacity-100 transition-opacity duration-200 motion-reduce:transition-none lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-visible:opacity-100">
-              <Expand aria-hidden="true" className="size-4" />
-            </span>
-          </button>
+          </ImageZoom>
         )}
         {isNsfw === true ? (
           <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium tracking-wide text-on-media uppercase">
@@ -186,18 +182,6 @@ export function AssetMedia({
           assetId={id}
           hasCover={presentationMedia.length > 0}
           kindLabel={kindLabel}
-        />
-      ) : null}
-
-      {enlarged && shown ? (
-        <FullscreenPreview
-          onClose={() => setEnlarged(false)}
-          picture={{
-            alt: name,
-            height: shown.height,
-            src: source,
-            width: shown.width,
-          }}
         />
       ) : null}
     </div>

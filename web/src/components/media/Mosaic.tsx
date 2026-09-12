@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { FullscreenPreview } from "@/components/ui/fullscreen-preview";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import { cn } from "@/lib/cn";
 import {
   MOSAIC_GAP_PX,
@@ -25,7 +24,6 @@ export function Mosaic({
   rowHeight: number;
 }) {
   const [measure, width] = useMeasuredWidth<HTMLDivElement>();
-  const [enlarged, setEnlarged] = useState<MosaicPicture | null>(null);
 
   if (pictures.length === 0) return null;
 
@@ -50,24 +48,24 @@ export function Mosaic({
                 key={picture.id}
                 style={{ flexBasis: pictureWidth(picture, row.height) }}
               >
-                <button
-                  aria-label={`See ${picture.name || "this picture"} at full size`}
-                  className="group block w-full cursor-zoom-in overflow-hidden rounded-control bg-media outline-offset-3"
-                  onClick={() => setEnlarged(picture)}
-                  style={{ height: row.height }}
-                  type="button"
+                <ImageZoom
+                  alt={picture.name || ""}
+                  className="group block w-full overflow-hidden rounded-control bg-media"
+                  detailSrc={picture.src}
+                  revealOnHover
                 >
                   <Image
                     alt={picture.name || ""}
-                    className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
+                    className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
                     draggable={false}
                     height={picture.height}
                     sizes="(max-width: 768px) 90vw, 460px"
                     src={picture.src}
+                    style={{ height: row.height }}
                     unoptimized
                     width={picture.width}
                   />
-                </button>
+                </ImageZoom>
                 {picture.name ? (
                   <figcaption className="mt-1.5 truncate font-ui text-label text-mute">
                     {picture.name}
@@ -78,17 +76,6 @@ export function Mosaic({
           </li>
         ))}
       </ul>
-      {enlarged ? (
-        <FullscreenPreview
-          onClose={() => setEnlarged(null)}
-          picture={{
-            alt: enlarged.name || "",
-            height: enlarged.height,
-            src: enlarged.src,
-            width: enlarged.width,
-          }}
-        />
-      ) : null}
     </div>
   );
 }
