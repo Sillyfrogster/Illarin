@@ -125,7 +125,7 @@ export function UploadFlow() {
   }
 
   return (
-    <div className="mt-10 flex flex-col gap-12">
+    <div className="mt-8 flex flex-col gap-9">
       <ImportFile onAccepted={setOperation} />
       <StartFromNothing />
     </div>

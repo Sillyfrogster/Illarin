@@ -76,7 +76,7 @@ export function AccountForm({
   const failed = (field: string) => refused?.field === field;
 
   return (
-    <form className="grid max-w-[30rem] gap-6" noValidate onSubmit={submit}>
+    <form className="grid max-w-[30rem] gap-5" noValidate onSubmit={submit}>
       <Button asChild size="large" variant="outline">
         <a href={`/api/v1/auth/discord${carry}`}>
           <MessageCircle aria-hidden="true" />
@@ -179,7 +179,13 @@ export function AccountForm({
         <Trouble>{refused.error}</Trouble>
       ) : null}
 
-      <Button loading={pending} size="large" type="submit" variant="primary">
+      <Button
+        className="mt-1 shadow-none"
+        loading={pending}
+        size="large"
+        type="submit"
+        variant="primary"
+      >
         {pending
           ? signUp
             ? "Creating your account"

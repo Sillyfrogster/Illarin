@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { KindMark } from "@/components/catalog/KindMark";
@@ -23,7 +24,7 @@ import {
 } from "@/lib/kinds";
 
 const KIND =
-  "flex min-h-11 items-center gap-2 rounded-control bg-deep px-3.5 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-rule/45 disabled:opacity-45 motion-reduce:transition-none";
+  "group flex min-h-14 items-center gap-3 rounded-control bg-inset px-4 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-accent-wash hover:text-accent disabled:opacity-45 motion-reduce:transition-none";
 
 export function StartFromNothing() {
   const router = useRouter();
@@ -45,7 +46,10 @@ export function StartFromNothing() {
   }
 
   return (
-    <section aria-labelledby="start-heading">
+    <section
+      aria-labelledby="start-heading"
+      className="border-t border-rule pt-8"
+    >
       <h2
         className="font-display text-section font-medium text-ink"
         id="start-heading"
@@ -57,7 +61,7 @@ export function StartFromNothing() {
         file later.
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {BUILDABLE_KINDS.map((kind) =>
           KINDS_ASKING_FOR_AN_APP.includes(kind) ? (
             <Popover
@@ -126,9 +130,13 @@ export function StartFromNothing() {
 function KindLabel({ kind, pending }: { kind: BrowseKind; pending: boolean }) {
   return (
     <>
-      <KindMark className="size-4 text-mute" kind={kind} />
+      <KindMark className="size-4 shrink-0 text-accent" kind={kind} />
       {KIND_LABELS[kind]}
       {pending ? <span className="text-meta text-mute">starting…</span> : null}
+      <ArrowUpRight
+        aria-hidden="true"
+        className="ml-auto size-4 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
+      />
     </>
   );
 }

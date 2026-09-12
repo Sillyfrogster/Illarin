@@ -106,11 +106,11 @@ export function ImportFile({
       />
       <label
         className={cn(
-          "mt-5 flex cursor-pointer flex-col items-center gap-2 rounded-plate px-6 py-10 text-center transition-colors duration-200 motion-reduce:transition-none",
+          "mt-5 flex min-h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-plate border border-dashed px-6 py-8 text-center transition-colors duration-200 motion-reduce:transition-none",
           "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-3",
           over
-            ? "bg-accent-wash inset-ring-2 inset-ring-accent"
-            : "bg-deep inset-ring inset-ring-edge hover:bg-rule/45",
+            ? "border-accent bg-accent-wash"
+            : "border-edge bg-inset hover:border-accent hover:bg-accent-wash",
         )}
         htmlFor={field}
         onDragLeave={() => setOver(false)}
@@ -120,7 +120,12 @@ export function ImportFile({
         }}
         onDrop={drop}
       >
-        <Upload aria-hidden="true" size={24} strokeWidth={1.35} />
+        <Upload
+          aria-hidden="true"
+          className="text-accent"
+          size={28}
+          strokeWidth={1.35}
+        />
         <span className="text-ui font-medium text-ink wrap-anywhere">
           {file ? file.name : "Drop a file here, or choose one"}
         </span>
