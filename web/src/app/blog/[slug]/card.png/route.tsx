@@ -12,10 +12,17 @@ export const dynamic = "force-dynamic";
 const CARD_MAX_AGE = 86400;
 
 const FONTS = [
-  { name: "Bodoni Moda", file: "BodoniModa-Medium.ttf", weight: 500 },
-  { name: "Manrope", file: "Manrope-Medium.ttf", weight: 500 },
-  { name: "Manrope", file: "Manrope-Bold.ttf", weight: 700 },
+  { name: "Outfit", file: "Outfit-SemiBold.ttf", weight: 600 },
+  { name: "DM Sans", file: "DMSans-Medium.ttf", weight: 500 },
 ] as const;
+
+const resources = Promise.all([
+  faces(),
+  readFile(
+    join(process.cwd(), "public/brand/illarin-horizontal-white.svg"),
+    "utf8",
+  ).then((svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`),
+]);
 
 export async function GET(
   _request: Request,
@@ -25,8 +32,11 @@ export async function GET(
     decodeURIComponent((await params).slug),
   );
   if (!post) notFound();
-  const [subject, fonts] = await Promise.all([composed(post), faces()]);
-  return new ImageResponse(PostCard(subject), {
+  const [subject, [fonts, logo]] = await Promise.all([
+    composed(post),
+    resources,
+  ]);
+  return new ImageResponse(PostCard({ ...subject, logo }), {
     ...CARD_SIZE,
     fonts,
     headers: {

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { MARK_BLADE, MARK_CORE } from "@/components/brand/BrandMark";
+import { MARK_PATH } from "@/components/brand/BrandMark";
 import { CARD_SIZE } from "@/lib/publication-metadata";
 
 export type CardSubject = {
@@ -8,9 +8,9 @@ export type CardSubject = {
   plate: string | null;
 };
 
-const FIELD = "#050505";
+const FIELD = "#0a0a0a";
 
-const INK = "#f5f5f2";
+const INK = "#ffffff";
 
 const PLATE_WIDTH = 480;
 
@@ -27,20 +27,25 @@ export function cardTitleSize(title: string): number {
 
 export function markImage(fill: string): string {
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">` +
-    `<path d="${MARK_BLADE}" fill="${fill}" fill-rule="evenodd"/>` +
-    `<path d="${MARK_CORE}" fill="${fill}"/></svg>`;
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">` +
+    `<g fill="${fill}" transform="translate(16 8)"><path d="${MARK_PATH}"/>` +
+    `<path d="${MARK_PATH}" transform="translate(112 0) scale(-1 1)"/></g></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export function PostCard({ title, app, plate }: CardSubject): ReactElement {
+export function PostCard({
+  title,
+  app,
+  plate,
+  logo,
+}: CardSubject & { logo: string }): ReactElement {
   return (
     <div
       style={{
         backgroundColor: FIELD,
         color: INK,
         display: "flex",
-        fontFamily: "Manrope",
+        fontFamily: "DM Sans",
         height: "100%",
         position: "relative",
         width: "100%",
@@ -58,16 +63,15 @@ export function PostCard({ title, app, plate }: CardSubject): ReactElement {
         }}
       >
         <div style={{ alignItems: "center", display: "flex", gap: 15 }}>
-          <img alt="" height={34} src={markImage(INK)} width={34} />
+          <img alt="Illarin" height={57} src={logo} width={170} />
           <span
             style={{
-              fontSize: 19,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
+              fontSize: 27,
+              fontWeight: 500,
               opacity: 0.72,
             }}
           >
-            ILLARIN BLOG
+            Blog
           </span>
         </div>
 
@@ -75,9 +79,9 @@ export function PostCard({ title, app, plate }: CardSubject): ReactElement {
           <div
             style={{
               display: "flex",
-              fontFamily: "Bodoni Moda",
+              fontFamily: "Outfit",
               fontSize: cardTitleSize(title),
-              fontWeight: 500,
+              fontWeight: 600,
               letterSpacing: "-0.022em",
               lineHeight: 1.16,
               paddingRight: 28,
@@ -124,7 +128,7 @@ function Plate({ source }: { source: string }): ReactElement {
       />
       <div
         style={{
-          backgroundImage: `linear-gradient(to right, ${FIELD}, rgba(5, 5, 5, 0.35) 62%, rgba(5, 5, 5, 0))`,
+          backgroundImage: `linear-gradient(to right, ${FIELD}, rgba(10, 10, 10, 0.35) 62%, rgba(10, 10, 10, 0))`,
           height: "100%",
           left: 0,
           position: "absolute",
@@ -141,7 +145,7 @@ function CornerMark(): ReactElement {
     <img
       alt=""
       height={34}
-      src={markImage(INK)}
+      src={markImage("#b89aff")}
       style={{ opacity: 0.55, position: "absolute", right: 76, top: 62 }}
       width={34}
     />

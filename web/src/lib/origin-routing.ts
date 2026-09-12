@@ -14,7 +14,13 @@ export type Route =
 export type Asked = { host: string | null; pathname: string; search: string };
 
 /** Files the blog origin serves from the application root rather than from the blog tree. */
-const ROOT_FILES = new Set(["/favicon.ico", "/icon.svg", "/apple-icon.png"]);
+const ROOT_FILES = new Set([
+  "/favicon.ico",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/site-card.png",
+  "/site.webmanifest",
+]);
 
 /** Decides what one request gets, from the hostname it arrived on and the path it asked for. */
 export async function routeRequest(
@@ -37,7 +43,11 @@ async function onBlogOrigin(
   asked: Asked,
   withdrawnPost: (slug: string) => Promise<WithdrawnPost | null>,
 ): Promise<Route> {
-  if (asked.pathname.startsWith("/_next/") || ROOT_FILES.has(asked.pathname)) {
+  if (
+    asked.pathname.startsWith("/_next/") ||
+    asked.pathname.startsWith("/brand/") ||
+    ROOT_FILES.has(asked.pathname)
+  ) {
     return { kind: "pass" };
   }
   const inside =

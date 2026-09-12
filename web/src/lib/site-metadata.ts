@@ -14,7 +14,7 @@ export const SITE_DESCRIPTION =
 
 export const SITE_CARD = {
   url: "/site-card.png",
-  alt: "Illarin — AI roleplay, in one catalog.",
+  alt: "Illarin. Worlds worth sharing.",
   width: 1200,
   height: 630,
   type: "image/png",

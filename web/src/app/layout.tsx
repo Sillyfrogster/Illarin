@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s \u00b7 ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  manifest: "/site.webmanifest",
   openGraph: {
     ...siteOpenGraph(),
     title: SITE_NAME,
@@ -37,7 +38,7 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#080a0c" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
 };
 

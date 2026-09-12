@@ -66,6 +66,12 @@ test("the blog origin still serves the application's own files and icons", async
     "/favicon.ico",
     "/icon.svg",
     "/apple-icon.png",
+    "/site-card.png",
+    "/site.webmanifest",
+    "/brand/illarin-horizontal-white.svg",
+    "/brand/illarin-horizontal-black.svg",
+    "/brand/icon-192.png",
+    "/brand/app-icon-maskable.png",
   ]) {
     expect(await routeRequest(asked(BLOG, path), nothingWithdrawn)).toEqual({
       kind: "pass",

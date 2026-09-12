@@ -1,5 +1,5 @@
 import { Rss } from "lucide-react";
-import { BrandMark } from "@/components/brand/BrandMark";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
 import { PUBLICATION_FEEDS } from "@/lib/blog-paths";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
@@ -12,17 +12,22 @@ export function BlogFooter() {
       <div className="mx-auto grid w-full max-w-[76rem] gap-x-14 gap-y-8 px-[var(--gutter)] py-12 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <div className="grid content-start gap-3">
           <a
-            className="group flex items-center gap-2 text-mute hover:text-ink"
+            aria-label="Illarin home"
+            className="flex min-h-11 w-fit items-center"
             href={siteAddress("/")}
           >
-            <BrandMark size={20} tone="accent" />
-            <span className="font-display text-section font-medium tracking-[-0.02em]">
-              Illarin
-            </span>
+            <BrandLogo className="w-40" tone="accent" />
           </a>
           <p className="max-w-[40ch] font-prose text-meta leading-6 text-mute">
             {BLOG_DESCRIPTION}
           </p>
+          <a
+            className="flex min-h-11 w-fit items-center text-meta text-ink hover:text-accent"
+            download
+            href="/brand/illarin-brandkit.zip"
+          >
+            Download the brand kit
+          </a>
           <p className="text-meta text-mute">© 2026 Illarin</p>
         </div>
 

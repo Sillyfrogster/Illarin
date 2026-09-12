@@ -4,6 +4,7 @@ import { CircleUserRound, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -54,8 +55,8 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent className="md:hidden">
         <div className="flex min-h-14 items-center justify-between px-[calc(var(--gutter)-0.75rem)] shadow-[inset_0_-1px_0_var(--v-rule)]">
-          <SheetTitle className="px-3 font-display text-section font-medium">
-            Illarin
+          <SheetTitle className="px-3">
+            <BrandLogo />
           </SheetTitle>
           <SheetClose asChild>
             <Button variant="ghost" size="icon">

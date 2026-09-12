@@ -1,4 +1,4 @@
-import { BrandMark } from "@/components/brand/BrandMark";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
 import { blogAddress } from "@/lib/blog-address";
@@ -18,16 +18,18 @@ export function SiteFooter() {
         <div className="h-px w-full bg-edge" />
         <div className="grid gap-group pt-10 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-14">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-ink">
-              <BrandMark size={20} tone="accent" />
-              <span className="font-display text-section font-medium tracking-[-0.02em]">
-                Illarin
-              </span>
-            </p>
+            <BrandLogo className="w-40" tone="accent" />
             <p className="mt-3 max-w-[34ch] font-prose text-meta leading-6 text-mute">
               A cross-application catalog for AI roleplay assets. Every
               creator&rsquo;s source file stays intact.
             </p>
+            <a
+              className="mt-3 flex min-h-11 w-fit items-center text-meta text-ink hover:text-accent"
+              download
+              href="/brand/illarin-brandkit.zip"
+            >
+              Download the brand kit
+            </a>
             <p className="mt-8 text-meta text-mute">© 2026 Illarin</p>
           </div>
 

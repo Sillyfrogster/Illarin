@@ -1,8 +1,8 @@
 # Fonts for the composed social card
 
-The card is drawn on the server by satori, which reads font files rather than a
-stylesheet, so these three cuts of the site's own faces are kept here. They are
-the same Bodoni Moda and Manrope the site loads in a browser.
+Social cards render on the server with Satori, which reads font files directly.
+These are static cuts of the fonts used by the site: Outfit SemiBold (600) for
+titles and DM Sans Medium (500) for labels.
 
 Both families are under the SIL Open Font License 1.1. The files came from
 Google Fonts.

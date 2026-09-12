@@ -1,7 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import blogDark from "@/assets/art/full/illarin-blog-masthead-dark-v1.webp";
-import blogLight from "@/assets/art/full/illarin-blog-masthead-light-v1.webp";
+import doorway from "@/assets/art/brand/doorway-world.png";
 import { siteAddress } from "@/lib/site-address";
 
 export function BackToIllarin() {
@@ -12,17 +11,9 @@ export function BackToIllarin() {
     >
       <Image
         alt=""
-        className="absolute inset-0 size-full object-cover object-[80%_center] dark:hidden"
-        priority={false}
-        sizes="100vw"
-        src={blogLight}
-      />
-      <Image
-        alt=""
-        className="absolute inset-0 hidden size-full object-cover object-[80%_center] dark:block"
-        priority={false}
-        sizes="100vw"
-        src={blogDark}
+        className="absolute inset-0 size-full object-cover object-center"
+        sizes="(min-width: 1216px) 1104px, 100vw"
+        src={doorway}
       />
       <span
         aria-hidden="true"

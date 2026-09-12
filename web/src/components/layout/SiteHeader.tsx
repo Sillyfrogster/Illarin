@@ -9,7 +9,7 @@ import {
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrandMark } from "@/components/brand/BrandMark";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
@@ -64,10 +64,7 @@ export function SiteHeader() {
             aria-label="Illarin home"
             className="flex min-h-11 items-center gap-2 text-ink"
           >
-            <BrandMark size={22} tone="accent" />
-            <span className="font-display text-[1.375rem] leading-none font-medium tracking-[-0.03em] sm:text-brand">
-              Illarin
-            </span>
+            <BrandLogo className="sm:w-36" />
           </Link>
         }
         end={

@@ -8,7 +8,7 @@ import {
 } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrandMark } from "@/components/brand/BrandMark";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { LineLink } from "@/components/ui/line-link";
 import type { PublicationCategory } from "@/lib/api/query";
 import { archivePath, BLOG_HOME } from "@/lib/blog-paths";
@@ -38,10 +38,7 @@ export function BlogMasthead({
             className="flex min-h-11 shrink-0 items-center gap-2 text-ink"
             href={site}
           >
-            <BrandMark size={22} tone="accent" />
-            <span className="font-display text-[1.375rem] leading-none font-medium tracking-[-0.03em]">
-              Illarin
-            </span>
+            <BrandLogo />
           </a>
           <Link
             className="flex min-h-11 items-center font-display text-[1.375rem] leading-none font-normal tracking-[-0.02em] text-mute hover:text-ink"
