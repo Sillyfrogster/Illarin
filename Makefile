@@ -2,6 +2,8 @@ GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
 SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 ACTIONLINT := go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+SHADCN := bunx --bun shadcn@4.21.0
+COMPONENT ?=
 WEB_PORT ?= 3000
 TEST ?= ./...
 VERSION ?=
@@ -43,6 +45,15 @@ production-setup: ## Walk through the reference production integrations
 .PHONY: web-install
 web-install: ## Install the site's locked dependencies
 	cd web && bun install --frozen-lockfile
+
+.PHONY: web-ui-view web-ui-add
+web-ui-view: ## Inspect a component's source and dependencies; set COMPONENT
+	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
+	cd web && $(SHADCN) view "$$COMPONENT"
+
+web-ui-add: ## Add one component from a registry; set COMPONENT
+	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
+	cd web && $(SHADCN) add "$$COMPONENT"
 
 # Running
 

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/cn",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/lib"
+  },
+  "registries": {
+    "@vengeance-ui": "https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json",
+    "@cult-ui": "https://cult-ui.com/r/{name}.json",
+    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
+    "@diceui": "https://diceui.com/r/{style}/{name}.json"
+  }
+}
