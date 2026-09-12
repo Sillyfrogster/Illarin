@@ -30,7 +30,6 @@ import {
   packBlockRows,
   pageFullness,
 } from "@/lib/page-arrangement";
-import { pageWashVariables } from "@/lib/quiet-page-art";
 import { useMeasuredWidth } from "@/lib/use-measured-width";
 import { ContentsBar } from "./ContentsBar";
 import { ElementBody } from "./ElementBody";
@@ -276,7 +275,6 @@ export function AssetBlocks({
                 {ornament?.row === rowIndex ? (
                   <Ornament
                     barren={fullness === "barren"}
-                    kind={kind}
                     placement="inRow"
                     style={
                       {
@@ -289,11 +287,7 @@ export function AssetBlocks({
               </div>
             ))}
             {ornamentAtFoot ? (
-              <Ornament
-                barren={fullness === "barren"}
-                kind={kind}
-                placement="atFoot"
-              />
+              <Ornament barren={fullness === "barren"} placement="atFoot" />
             ) : null}
           </div>
         )}
@@ -354,38 +348,14 @@ function BlockTitle({ block }: { block: AssetBlock }) {
 
 function Ornament({
   barren,
-  kind,
   placement,
   style,
 }: {
   barren: boolean;
-  kind: BrowseKind;
   placement: Extract<ArtPlacement, "inRow" | "atFoot">;
   style?: CSSProperties;
 }) {
-  if (barren) {
-    return <QuietPageArt kind={kind} placement={placement} style={style} />;
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        "relative",
-        placement === "inRow"
-          ? "min-h-52 md:min-h-60 md:[grid-column:var(--block-start)_/_span_var(--block-columns)]"
-          : "h-52 md:mt-10 md:h-70",
-        "[--art-bleed:max(72px,(100vw-var(--shell))/2+var(--gutter))]",
-        "before:absolute before:-z-1 before:bg-[image:var(--ornament-light)] before:bg-cover before:bg-[position:center_32%] before:bg-no-repeat before:opacity-50 before:content-['']",
-        "before:[mask-composite:intersect] before:[mask-image:linear-gradient(to_right,transparent,#000_52%),linear-gradient(to_bottom,transparent,#000_30%,#000_62%,transparent)]",
-        "dark:before:bg-[image:var(--ornament-dark)] dark:before:opacity-[0.78]",
-        placement === "inRow"
-          ? "before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:-inset-y-12 md:before:left-0 md:before:w-[calc(100%+var(--art-bleed))]"
-          : "before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:left-[46%] md:before:w-[calc(54%+var(--art-bleed))]",
-      )}
-      data-measurement-ignore
-      style={{ ...pageWashVariables(), ...style }}
-    />
-  );
+  return <QuietPageArt compact={!barren} placement={placement} style={style} />;
 }
 
 function BlockCounts({ elements }: { elements: AssetElement[] }) {

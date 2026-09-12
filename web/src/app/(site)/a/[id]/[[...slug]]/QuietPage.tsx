@@ -1,35 +1,24 @@
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { BrowseKind } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { emptyPageInvitation } from "@/lib/empty-page-invitation";
 import { KIND_LABELS } from "@/lib/kinds";
-import { quietPageArtVariables } from "@/lib/quiet-page-art";
 
 export type ArtPlacement = "beside" | "inRow" | "atFoot";
 
-const ART = [
-  "relative [--art-bleed:max(72px,(100vw-var(--shell))/2+var(--gutter))]",
-  "before:absolute before:-z-1 before:bg-[image:var(--quiet-art-light)] before:bg-cover before:bg-[position:center_42%] before:bg-no-repeat before:opacity-90 before:content-['']",
-  "before:[mask-composite:intersect] before:[mask-image:linear-gradient(to_right,transparent,#000_34%),linear-gradient(to_bottom,transparent,#000_22%,#000_74%,transparent)]",
-  "dark:before:bg-[image:var(--quiet-art-dark)] dark:before:opacity-85",
-].join(" ");
-
 const PLACEMENT: Record<ArtPlacement, string> = {
-  beside:
-    "self-stretch min-h-[clamp(200px,46vw,300px)] md:min-h-[clamp(260px,28vw,380px)] before:inset-y-0 before:left-0 before:w-[calc(100%+var(--art-bleed))]",
+  beside: "justify-center md:justify-end",
   inRow:
-    "min-h-52 md:min-h-65 md:[grid-column:var(--block-start)_/_span_var(--block-columns)] before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:-inset-y-13 md:before:left-0 md:before:w-[calc(100%+var(--art-bleed))]",
-  atFoot:
-    "h-52 md:mt-12 md:h-75 before:inset-y-0 before:left-[10%] before:w-[calc(90%+var(--gutter))] md:before:left-[42%] md:before:w-[calc(58%+var(--art-bleed))]",
+    "justify-center md:justify-end md:[grid-column:var(--block-start)_/_span_var(--block-columns)]",
+  atFoot: "justify-end pt-6",
 };
 
 export function QuietPageArt({
-  kind,
   placement,
   style,
   compact = false,
 }: {
-  kind: BrowseKind;
   placement: ArtPlacement;
   style?: CSSProperties;
   compact?: boolean;
@@ -38,14 +27,26 @@ export function QuietPageArt({
     <div
       aria-hidden="true"
       className={cn(
-        ART,
+        "pointer-events-none flex min-w-0 items-start select-none",
         PLACEMENT[placement],
-        compact &&
-          "min-h-[clamp(190px,18vw,240px)] md:min-h-[clamp(190px,18vw,240px)]",
       )}
       data-measurement-ignore
-      style={{ ...quietPageArtVariables(kind), ...style } as CSSProperties}
-    />
+      style={style}
+    >
+      <Image
+        alt=""
+        className={cn(
+          "h-auto w-full rounded-plate object-contain",
+          compact || placement === "atFoot"
+            ? "max-w-48"
+            : "max-w-60 md:max-w-72",
+        )}
+        height={1254}
+        sizes="(max-width: 767px) 240px, 288px"
+        src="/reading/watcher-reading.webp"
+        width={1254}
+      />
+    </div>
   );
 }
 
@@ -53,7 +54,7 @@ export function EmptyPage({ kind }: { kind: BrowseKind }) {
   const label = KIND_LABELS[kind].toLowerCase();
 
   return (
-    <QuietComposition heading="No public content" kind={kind}>
+    <QuietComposition heading="No public content">
       The creator has put none of this {label} on the page. What the file holds
       is kept, and every download carries it.
     </QuietComposition>
@@ -70,7 +71,7 @@ export function EmptyPageInvitation({
   canAdd: boolean;
 }) {
   return (
-    <QuietComposition compact heading="Nothing on this page yet" kind={kind}>
+    <QuietComposition compact heading="Nothing on this page yet">
       {emptyPageInvitation({
         canAdd,
         coreBlocks,
@@ -81,12 +82,10 @@ export function EmptyPageInvitation({
 }
 
 function QuietComposition({
-  kind,
   heading,
   compact = false,
   children,
 }: {
-  kind: BrowseKind;
   heading: string;
   compact?: boolean;
   children: React.ReactNode;
@@ -95,7 +94,7 @@ function QuietComposition({
     <section
       aria-labelledby="quiet-page-heading"
       className={cn(
-        "grid items-center gap-y-8 md:gap-x-[clamp(28px,4vw,64px)]",
+        "grid items-center gap-y-8 rounded-plate bg-inset p-6 md:gap-x-[clamp(28px,4vw,64px)] md:p-9",
         compact
           ? "mb-16 md:grid-cols-[7fr_5fr]"
           : "md:min-h-[clamp(300px,32vw,420px)] md:grid-cols-[5fr_7fr]",
@@ -110,7 +109,7 @@ function QuietComposition({
         </h2>
         <p className="mt-3.5 text-ui text-mute">{children}</p>
       </div>
-      <QuietPageArt kind={kind} placement="beside" compact={compact} />
+      <QuietPageArt placement="beside" compact={compact} />
     </section>
   );
 }
