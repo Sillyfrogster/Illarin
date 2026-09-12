@@ -578,13 +578,15 @@ export async function fetchPreservedNamespaces(
 
 export async function fetchAssetUpdates(
   id: string,
-  cookie?: string,
-): Promise<RecordedVersion[]> {
-  const { data } = await api.GET("/v1/assets/{id}/updates", {
-    params: { path: { id } },
-    headers: cookie ? { cookie } : undefined,
-  });
-  return data?.items ?? [];
+): Promise<RecordedVersion[] | null> {
+  try {
+    const { data } = await api.GET("/v1/assets/{id}/updates", {
+      params: { path: { id } },
+    });
+    return data?.items ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function restoreAssetVersion(

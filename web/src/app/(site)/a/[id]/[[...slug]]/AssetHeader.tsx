@@ -12,7 +12,7 @@ import { protectedAppLabel } from "@/lib/protected-apps";
 import { formattingWasRemoved } from "@/lib/rich-text";
 import { AssetMedia, coverMedia } from "./AssetMedia";
 import { GetAsset } from "./GetAsset";
-import { LatestUpdate } from "./LatestUpdate";
+import { UpdateHistory } from "./history/UpdateHistory";
 import { WithholdNotice } from "./WithholdNotice";
 import { EditableText } from "./workspace/EditableText";
 import {
@@ -63,6 +63,20 @@ export function AssetHeader({
   const blurbTrouble = blurbLimitMessage(workspace.identity.blurb);
   const covers = coverMedia(asset.media);
   const showsMedia = covers.length > 0 || (asset.isOwner && writing);
+  const download = (
+    <GetAsset
+      assetId={asset.id}
+      blocks={asset.blocks}
+      downloads={asset.downloads}
+      appTargets={asset.appTargets}
+      holdsNothing={holdsNothing}
+      images={asset.media}
+      isOwner={asset.isOwner}
+      kindLabel={kind.toLowerCase()}
+      linkedInstallOnly={asset.linkedInstallOnly}
+      original={asset.original}
+    />
+  );
 
   return (
     <div className={shellClassName}>
@@ -271,22 +285,7 @@ export function AssetHeader({
             />
           ) : null}
 
-          {isDraft ? null : (
-            <div className="mt-7">
-              <GetAsset
-                assetId={asset.id}
-                blocks={asset.blocks}
-                downloads={asset.downloads}
-                appTargets={asset.appTargets}
-                holdsNothing={holdsNothing}
-                images={asset.media}
-                isOwner={asset.isOwner}
-                kindLabel={kind.toLowerCase()}
-                linkedInstallOnly={asset.linkedInstallOnly}
-                original={asset.original}
-              />
-            </div>
-          )}
+          {isDraft ? null : <div className="mt-7">{download}</div>}
 
           {asset.linkedInstallOnly ? (
             <p className="mt-4 max-w-[42ch] text-meta text-mute">
@@ -298,13 +297,12 @@ export function AssetHeader({
 
           {asset.withhold ? <WithholdNotice withhold={asset.withhold} /> : null}
 
-          {asset.latestUpdate ? (
-            <LatestUpdate
-              assetId={asset.id}
-              kind={kind.toLowerCase()}
-              version={asset.latestUpdate}
-            />
-          ) : null}
+          <UpdateHistory
+            asset={asset}
+            download={download}
+            kind={kind.toLowerCase()}
+            kindLabel={kind}
+          />
         </div>
       </div>
     </div>

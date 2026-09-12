@@ -1,10 +1,8 @@
 "use client";
 
 import { CircleSlash2, PencilLine, RotateCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { Select } from "@/components/ui/select";
 import {
   correctAssetVersionNotes,
@@ -32,13 +30,15 @@ export type HistoryOwner = {
   workingCopyVersion: number;
 };
 
-export function VersionEntry({
+/** VersionDetail reads one recorded version: its notes, its changes, its file and its owner's controls. */
+export function VersionDetail({
   assetId,
   kind,
   version,
   versions,
   current,
   download,
+  onChanged,
   owner,
 }: {
   assetId: string;
@@ -47,123 +47,124 @@ export function VersionEntry({
   versions: RecordedVersion[];
   current: boolean;
   download: ReactNode;
+  onChanged: () => void;
   owner: HistoryOwner;
 }) {
   const earlier = earlierVersions(versions, version);
   const [baseline, setBaseline] = useState(earlier[0]?.number ?? 0);
   const against = earlier.find((one) => one.number === baseline);
-  const anchor = versionAnchor(version);
   const withdrawn = Boolean(
     version.withdrawnAt || version.withdrawalExplanation,
   );
 
   return (
-    <li
-      className="relative scroll-mt-[calc(var(--header-height)+2rem)] border-rule pb-section pl-7 last:border-transparent last:pb-0 sm:pl-9 [&:not(:last-child)]:border-l"
-      id={anchor}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute top-1.5 -left-[5px] size-2.5 rounded-full",
-          current ? "bg-accent" : "bg-edge",
-        )}
-      />
-
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="font-display text-section font-medium text-ink">
-          {versionTitle(version)}
-        </h2>
-        {current ? (
-          <span className="rounded-control bg-accent-wash px-2 py-0.5 text-meta font-medium text-accent">
-            Published
-          </span>
-        ) : null}
-      </div>
-
-      <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
-        <time dateTime={version.recordedAt}>{versionDate(version)}</time>
-        {version.versionLabel ? (
-          <span>Creator’s version {version.versionLabel}</span>
-        ) : null}
-        {version.notesEditedAt ? <span>Notes edited</span> : null}
-        {withdrawn ? (
-          <span className="font-medium text-stop">Withdrawn</span>
-        ) : null}
-      </p>
+    <article aria-labelledby={versionAnchor(version)} className="min-w-0">
+      <header className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+        <div className="min-w-0">
+          <h3
+            className="flex flex-wrap items-baseline gap-x-3 font-display text-title font-medium tracking-[-0.02em] text-ink"
+            id={versionAnchor(version)}
+          >
+            {versionTitle(version)}
+            {current ? (
+              <span className="text-meta font-medium text-accent">
+                Published
+              </span>
+            ) : null}
+            {withdrawn ? (
+              <span className="text-meta font-medium text-stop">Withdrawn</span>
+            ) : null}
+          </h3>
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
+            <time dateTime={version.recordedAt}>{versionDate(version)}</time>
+            {version.versionLabel ? (
+              <span>Creator’s version {version.versionLabel}</span>
+            ) : null}
+            {version.notesEditedAt ? <span>Notes edited</span> : null}
+          </p>
+        </div>
+        {download ? <div className="shrink-0">{download}</div> : null}
+      </header>
 
       {withdrawn && !owner.isOwner ? (
-        <p className="mt-4 max-w-[60ch] font-prose text-prose text-mute">
-          {version.withdrawalExplanation}
-        </p>
-      ) : (
-        <>
-          <p className="mt-4 max-w-[60ch] font-prose text-prose text-ink">
-            {versionSummary(version, kind)}
+        <div className="mt-6 max-w-[60ch]">
+          <p className="font-prose text-prose text-mute">
+            {version.withdrawalExplanation}
           </p>
-
-          {version.notes ? <Note notes={version.notes} /> : null}
-        </>
-      )}
-
-      <div className="mt-4">
-        {withdrawn && !owner.isOwner ? (
-          <p className="text-meta text-mute">
+          <p className="mt-3 text-meta text-mute">
             Its content, comparisons and downloads are unavailable.
           </p>
-        ) : against ? (
-          <MorphingDisclosure
-            summary={`What changed since ${versionTitle(against).toLowerCase()}`}
-          >
-            <Baseline
-              chosen={baseline}
-              earlier={earlier}
-              onChoose={setBaseline}
-              version={version}
-            />
-            <VersionChanges
-              assetId={assetId}
-              from={baseline}
-              kind={kind}
-              to={version.number}
-            />
-          </MorphingDisclosure>
-        ) : (
-          <p className="text-meta text-mute">
-            Illarin recorded nothing before this, so there is nothing to compare
-            it with.
+        </div>
+      ) : (
+        <>
+          <p className="mt-6 max-w-[60ch] font-prose text-lede text-ink">
+            {versionSummary(version, kind)}
           </p>
-        )}
-      </div>
+          {version.notes ? <Note notes={version.notes} /> : null}
 
-      {download ? (
-        <div className="mt-5 grid justify-items-start gap-3">{download}</div>
-      ) : null}
+          <section
+            aria-labelledby={`${versionAnchor(version)}-changes`}
+            className="mt-8 border-t border-rule pt-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+              <h4
+                className="font-display text-section font-medium text-ink"
+                id={`${versionAnchor(version)}-changes`}
+              >
+                What changed
+              </h4>
+              {against ? (
+                <Baseline
+                  chosen={baseline}
+                  earlier={earlier}
+                  onChoose={setBaseline}
+                  version={version}
+                />
+              ) : null}
+            </div>
+            {against ? (
+              <VersionChanges
+                assetId={assetId}
+                from={baseline}
+                kind={kind}
+                to={version.number}
+              />
+            ) : (
+              <p className="mt-3 max-w-[60ch] text-meta text-mute">
+                Illarin recorded nothing before this, so there is nothing to
+                compare it with.
+              </p>
+            )}
+          </section>
+        </>
+      )}
 
       {owner.canManage ? (
         <VersionManagement
           assetId={assetId}
           current={current}
+          onChanged={onChanged}
           owner={owner}
           version={version}
         />
       ) : null}
-    </li>
+    </article>
   );
 }
 
 function VersionManagement({
   assetId,
   current,
+  onChanged,
   owner,
   version,
 }: {
   assetId: string;
   current: boolean;
+  onChanged: () => void;
   owner: HistoryOwner;
   version: RecordedVersion;
 }) {
-  const router = useRouter();
   const [mode, setMode] = useState<"" | "restore" | "correct" | "withdraw">("");
   const [summary, setSummary] = useState(version.summary);
   const [notes, setNotes] = useState(version.notes);
@@ -194,7 +195,7 @@ function VersionManagement({
   }
 
   return (
-    <div className="mt-6 max-w-[38rem] border-rule border-t pt-2">
+    <div className="mt-8 max-w-[38rem] border-rule border-t pt-2">
       <div className="flex min-h-11 flex-wrap items-center gap-x-1">
         {!current ? (
           <Button
@@ -293,7 +294,7 @@ function VersionManagement({
                   }),
                 () => {
                   setMode("");
-                  router.refresh();
+                  onChanged();
                 },
               )
             }
@@ -326,7 +327,7 @@ function VersionManagement({
                   withdrawAssetVersion(assetId, version.number, explanation),
                 () => {
                   setMode("");
-                  router.refresh();
+                  onChanged();
                 },
               )
             }
@@ -383,8 +384,8 @@ function Baseline({
   const field = `baseline-${version.number}`;
 
   return (
-    <p className="mt-3 flex flex-wrap items-center gap-2 text-meta text-mute">
-      <label htmlFor={field}>Compared with</label>
+    <p className="flex flex-wrap items-center gap-2 text-meta text-mute">
+      <label htmlFor={field}>Since</label>
       <Select
         className="text-meta"
         id={field}
@@ -406,7 +407,7 @@ function Note({ notes }: { notes: string }) {
   const [shown, setShown] = useState(!foldable);
 
   return (
-    <div className="mt-3 max-w-[60ch]">
+    <div className="mt-4 max-w-[60ch]">
       <p
         className={cn(
           "font-prose text-prose whitespace-pre-wrap text-mute",

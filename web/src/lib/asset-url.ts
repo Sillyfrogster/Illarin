@@ -30,8 +30,14 @@ export function assetHref(id: string, name: string): string {
   return slug ? `/a/${id}/${slug}` : `/a/${id}`;
 }
 
-export function assetHistoryHref(id: string): string {
-  return `/a/${id}/history`;
+/** Opens the asset page with its update history showing, at one version when given. */
+export function assetHistoryHref(
+  id: string,
+  name: string,
+  version?: number,
+): string {
+  const anchor = version === undefined ? "" : `#version-${version}`;
+  return `${assetHref(id, name)}?history${anchor}`;
 }
 
 export function assetRedirect(

@@ -15,7 +15,7 @@ import {
 } from "@/lib/api/query";
 import { assetHoldsNothing } from "@/lib/asset-page-content";
 import { versionTitle } from "@/lib/asset-updates";
-import { AssetChooser } from "../[[...slug]]/AssetChooser";
+import { AssetChooser } from "../AssetChooser";
 
 type Reading =
   | { state: "unread" }

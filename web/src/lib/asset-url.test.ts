@@ -98,6 +98,9 @@ test("recognizes an asset id, and nothing else, as one", () => {
   expect(isAssetId("")).toBe(false);
 });
 
-test("reads an asset's recorded versions at a fixed address", () => {
-  expect(assetHistoryHref(ID)).toBe(`/a/${ID}/history`);
+test("opens update history on the asset page, at one version when asked", () => {
+  expect(assetHistoryHref(ID, "The Glass Cartographer")).toBe(
+    `/a/${ID}/the-glass-cartographer?history`,
+  );
+  expect(assetHistoryHref(ID, "", 3)).toBe(`/a/${ID}?history#version-3`);
 });
