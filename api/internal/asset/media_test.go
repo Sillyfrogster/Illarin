@@ -423,7 +423,7 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 			ready.Done()
 			<-start
 			_, err := svc.MediaVariant(context.Background(), MediaRequest{
-				MediaID: added.ID, Variant: "grid", Version: 1,
+				MediaID: added.ID, Variant: "grid", Version: mediaproc.DerivativeVersion,
 				ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
 				Signature: privateMediaQuery(svc, added.ID, "signature"),
 			})
@@ -432,7 +432,11 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 	}
 	ready.Wait()
 	close(start)
-	<-processor.renderStarted
+	select {
+	case <-processor.renderStarted:
+	case err := <-errors:
+		t.Fatalf("MediaVariant returned before any render started: %v", err)
+	}
 	close(processor.releaseRender)
 	for range requests {
 		if err := <-errors; err != nil {

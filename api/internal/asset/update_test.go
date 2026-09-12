@@ -52,14 +52,14 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 	if len(scripts) != 1 || scripts[0].Find != "/updated/g" {
 		t.Fatalf("working scripts = %+v", scripts)
 	}
-	if got := contentGeneration(t, pool, created.ID); got != generation+1 {
-		t.Fatalf("content generation = %d, want %d", got, generation+1)
-	}
 	updated, _, err := svc.PublishUpdate(t.Context(), UpdateRequest{
 		OwnerID: owner, AssetID: created.ID, Summary: "Updated the bundled script",
 	}, currentCandidate(t, svc, created.ID))
 	if err != nil || !updated.ContentChanged {
 		t.Fatalf("publish JSON replacement = %+v, %v", updated, err)
+	}
+	if got := contentGeneration(t, pool, created.ID); got != generation+1 {
+		t.Fatalf("content generation = %d, want %d", got, generation+1)
 	}
 }
 
