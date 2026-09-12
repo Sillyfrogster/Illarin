@@ -79,5 +79,5 @@ connector from one dot to the next.
 - https://diceui.com/r/new-york/timeline.json
 
 Every source uses the MIT license. Copyright shadcn, Ashutoshx7, Jordan-Gilliam
-and Sadman Sakib respectively. Their licenses are kept here as LICENSE-shadcn,
-LICENSE-vengeance, LICENSE-cult and LICENSE-dice.
+and Sadman Sakib respectively. The shadcn and Vengeance licenses are kept here
+as LICENSE-shadcn and LICENSE-vengeance.
