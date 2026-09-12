@@ -186,7 +186,7 @@ export function ImageCropContent({ className }: { className?: string }) {
     >
       {src ? (
         <img
-          alt="The picture to crop"
+          alt="Your upload, ready to crop"
           className="max-h-[60dvh]"
           onLoad={onLoad}
           ref={image}

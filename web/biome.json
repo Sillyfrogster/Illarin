@@ -45,7 +45,10 @@
       }
     },
     {
-      "includes": ["src/lib/publication-card.tsx"],
+      "includes": [
+        "src/lib/publication-card.tsx",
+        "src/components/ui/image-crop.tsx"
+      ],
       "linter": {
         "rules": {
           "performance": {
