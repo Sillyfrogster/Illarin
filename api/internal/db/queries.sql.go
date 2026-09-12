@@ -26,7 +26,6 @@ type AbandonExhaustedDeliveriesParams struct {
 	MaxAttempts int32
 }
 
-// A delivery an instance keeps taking and never acknowledging stops rather than being handed out forever.
 func (q *Queries) AbandonExhaustedDeliveries(ctx context.Context, arg AbandonExhaustedDeliveriesParams) (int64, error) {
 	result, err := q.db.Exec(ctx, abandonExhaustedDeliveries, arg.InstanceID, arg.MaxAttempts)
 	if err != nil {
@@ -189,8 +188,6 @@ const assetByID = `-- name: AssetByID :one
 select a.id, a.kind, revision.format, a.origin_format,
        a.asset_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       -- Imported drafts carry an answer. The fallback protects older rows
-       -- that predate this invariant.
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
        a.current_revision_id, a.created_at
   from assets a
@@ -382,8 +379,6 @@ type AssetPageRow struct {
 	WithheldBy        pgtype.Text
 }
 
-// Unlisted is missing from this predicate on purpose. A stranger holding the
-// link gets a normal answer.
 func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPageRow, error) {
 	row := q.db.QueryRow(ctx, assetPage, arg.ID, arg.ViewerID)
 	var i AssetPageRow
@@ -410,10 +405,11 @@ func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPage
 }
 
 const assetPageMedia = `-- name: AssetPageMedia :many
-select media.id, media.role, media.width, media.height,
+select media.id, media.role, media.width, media.height, blob.byte_size,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
   from assets a
   join asset_media media on media.asset_id = a.id
+  join blobs blob on blob.id = media.blob_id
  where a.id = $1
    and media.is_current
    and media.width is not null
@@ -432,14 +428,14 @@ select media.id, media.role, media.width, media.height,
 `
 
 type AssetPageMediaRow struct {
-	ID      pgtype.UUID
-	Role    string
-	Width   pgtype.Int4
-	Height  pgtype.Int4
-	IsCover bool
+	ID       pgtype.UUID
+	Role     string
+	Width    pgtype.Int4
+	Height   pgtype.Int4
+	ByteSize int64
+	IsCover  bool
 }
 
-// The direct cover comes first; remaining media follows the established role order.
 func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPageMediaRow, error) {
 	rows, err := q.db.Query(ctx, assetPageMedia, id)
 	if err != nil {
@@ -454,6 +450,7 @@ func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPa
 			&i.Role,
 			&i.Width,
 			&i.Height,
+			&i.ByteSize,
 			&i.IsCover,
 		); err != nil {
 			return nil, err
@@ -609,8 +606,6 @@ type BrowseAssetsRow struct {
 	WithheldBy     pgtype.Text
 }
 
-// A creator's own listing is the one place a draft appears, so the adult
-// content answer comes back as it is stored, unanswered included.
 func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]BrowseAssetsRow, error) {
 	rows, err := q.db.Query(ctx, browseAssets,
 		arg.OwnProfile,
@@ -704,8 +699,6 @@ type ClaimDeliveriesRow struct {
 	LeaseExpiresAt pgtype.Timestamptz
 }
 
-// One claim takes both the waiting work and the work whose lease ran out.
-// The instance is authorised here, at the moment work leaves the queue, so a link cut since the wait opened releases nothing.
 func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams) ([]ClaimDeliveriesRow, error) {
 	rows, err := q.db.Query(ctx, claimDeliveries,
 		arg.LeaseExpiresAt,
@@ -953,7 +946,9 @@ func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSupp
 const currentRevisionLocation = `-- name: CurrentRevisionLocation :one
 select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
   from assets a
-  join asset_revisions r on r.id = a.current_revision_id
+  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
+  join asset_revisions r on r.id = case when snapshot.id is null
+      then a.current_revision_id else snapshot.source_revision_id end
  where a.id = $1
    and r.blob_id is not null
    and a.lifecycle = 'published'
@@ -974,7 +969,6 @@ type CurrentRevisionLocationRow struct {
 	OwnerID    pgtype.UUID
 }
 
-// A draft has no download for anyone, its owner included.
 func (q *Queries) CurrentRevisionLocation(ctx context.Context, arg CurrentRevisionLocationParams) (CurrentRevisionLocationRow, error) {
 	row := q.db.QueryRow(ctx, currentRevisionLocation, arg.ID, arg.ViewerID)
 	var i CurrentRevisionLocationRow
@@ -1363,7 +1357,6 @@ type InsertAssetParams struct {
 	CreatedAt      pgtype.Timestamptz
 }
 
-// indexed_at is left to its default so nothing a caller sends can reach it.
 func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) (pgtype.Timestamptz, error) {
 	row := q.db.QueryRow(ctx, insertAsset,
 		arg.ID,
@@ -1573,7 +1566,6 @@ type InsertLegacyCountersParams struct {
 	V1UpdatedAt pgtype.Timestamptz
 }
 
-// migrated_at defaults to the transaction clock, so every row in a run shares one cutover stamp.
 func (q *Queries) InsertLegacyCounters(ctx context.Context, arg InsertLegacyCountersParams) error {
 	_, err := q.db.Exec(ctx, insertLegacyCounters,
 		arg.AssetID,
@@ -2069,8 +2061,6 @@ const listAssets = `-- name: ListAssets :many
 select a.id, a.kind, revision.format, a.origin_format,
        a.asset_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       -- Only a draft leaves the question unanswered and no draft reaches a
-       -- listing. If one ever did, the safe reading is the one that blurs it.
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
        a.current_revision_id, a.created_at
   from assets a
@@ -2970,7 +2960,6 @@ type ReportLibraryEntriesParams struct {
 	Generations []int32
 }
 
-// An instance that cannot say which version it holds has not told us it is behind.
 func (q *Queries) ReportLibraryEntries(ctx context.Context, arg ReportLibraryEntriesParams) (int64, error) {
 	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.AssetIds, arg.Generations)
 	if err != nil {

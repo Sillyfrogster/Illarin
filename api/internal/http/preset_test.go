@@ -25,8 +25,6 @@ func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string)
 	return started
 }
 
-// Creating a preset asks which app it is for, once. Without an answer there
-// are no names to give the settings, so the question is not skippable.
 func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 
@@ -44,8 +42,6 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	}
 }
 
-// A kind that depends on no app is asked nothing, and an answer sent for one
-// is refused rather than quietly ignored.
 func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 
@@ -58,8 +54,6 @@ func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 	}
 }
 
-// The answer seeds the slot names and nothing else. The settings arrive named
-// and empty, and the two apps share none of their names.
 func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 
@@ -103,8 +97,6 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 				}
 				named[app] = append(named[app], setting.Name)
 			}
-			// A group of named slots with nothing in any of them shows a
-			// reader nothing, and is a form its owner fills in.
 			if !element.IsEmpty {
 				t.Errorf("%s %s reads as content before anyone filled it in", app, element.Role)
 			}
@@ -115,7 +107,6 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 			t.Fatalf("%s nudges = %+v, want one text set", app, nudges.Elements)
 		}
 
-		// Absent until something fills them: neither is part of the seed.
 		for _, definition := range []string{"variables", "scripts"} {
 			for _, held := range started.Blocks {
 				if held.Definition == definition {
@@ -134,8 +125,6 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 	}
 }
 
-// The app is not identity. It seeds names and is stored nowhere, so a preset
-// built by hand has no origin format and nothing offers to switch it.
 func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 
@@ -147,8 +136,6 @@ func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 	}
 }
 
-// A preset publishes on a name, an answered adult content question and one
-// prompt fragment, and the checklist names the block holding them.
 func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 

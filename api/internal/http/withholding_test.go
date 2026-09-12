@@ -130,7 +130,7 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 
 	for _, path := range []string{
 		"/v1/assets/" + assetID + "/media",
-		"/media/" + mediaID + "/grid/1",
+		assets.SignedURL("/media/" + mediaID + "/grid/1"),
 	} {
 		request := httptest.NewRequest(http.MethodGet, path, nil)
 		request.AddCookie(session)

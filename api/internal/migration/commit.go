@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// commit writes every asset in one transaction, so an abort leaves only the unreferenced blobs the sweep collects.
 func commit(
 	ctx context.Context,
 	settings Settings,
@@ -75,7 +74,6 @@ func commit(
 	return report, nil
 }
 
-// writeAssets turns every read row into asset rows and collects each one's claim on a v1 address.
 func writeAssets(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -148,7 +146,6 @@ func shortfallOf(one asset.MigratedAsset) []asset.ReadinessItem {
 	return asset.MigratedShortfall(one.Kind, one.Header.Name, &isNSFW, one.Blocks)
 }
 
-// recordShortfall ledgers an asset today's floor would have refused, because migration is not a publish.
 func recordShortfall(one asset.MigratedAsset, ledger *Ledger) error {
 	missing := shortfallOf(one)
 	if len(missing) == 0 {

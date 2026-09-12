@@ -441,6 +441,159 @@ func (e AssetListVisibility) Valid() bool {
 	}
 }
 
+// Defines values for AssetUpdateAnnouncementAttemptOutcome.
+const (
+	AssetUpdateAnnouncementAttemptOutcomeDelivered   AssetUpdateAnnouncementAttemptOutcome = "delivered"
+	AssetUpdateAnnouncementAttemptOutcomeRefused     AssetUpdateAnnouncementAttemptOutcome = "refused"
+	AssetUpdateAnnouncementAttemptOutcomeUnconfirmed AssetUpdateAnnouncementAttemptOutcome = "unconfirmed"
+	AssetUpdateAnnouncementAttemptOutcomeUnreachable AssetUpdateAnnouncementAttemptOutcome = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementAttemptOutcome enum.
+func (e AssetUpdateAnnouncementAttemptOutcome) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementAttemptOutcomeDelivered:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeRefused:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeUnconfirmed:
+		return true
+	case AssetUpdateAnnouncementAttemptOutcomeUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateAnnouncementSettledReason.
+const (
+	AssetUpdateAnnouncementSettledReasonArrived     AssetUpdateAnnouncementSettledReason = "arrived"
+	AssetUpdateAnnouncementSettledReasonDeleted     AssetUpdateAnnouncementSettledReason = "deleted"
+	AssetUpdateAnnouncementSettledReasonDisabled    AssetUpdateAnnouncementSettledReason = "disabled"
+	AssetUpdateAnnouncementSettledReasonExhausted   AssetUpdateAnnouncementSettledReason = "exhausted"
+	AssetUpdateAnnouncementSettledReasonGone        AssetUpdateAnnouncementSettledReason = "gone"
+	AssetUpdateAnnouncementSettledReasonMoved       AssetUpdateAnnouncementSettledReason = "moved"
+	AssetUpdateAnnouncementSettledReasonRefused     AssetUpdateAnnouncementSettledReason = "refused"
+	AssetUpdateAnnouncementSettledReasonRemoved     AssetUpdateAnnouncementSettledReason = "removed"
+	AssetUpdateAnnouncementSettledReasonUnconfirmed AssetUpdateAnnouncementSettledReason = "unconfirmed"
+	AssetUpdateAnnouncementSettledReasonUnlisted    AssetUpdateAnnouncementSettledReason = "unlisted"
+	AssetUpdateAnnouncementSettledReasonWithdrawn   AssetUpdateAnnouncementSettledReason = "withdrawn"
+	AssetUpdateAnnouncementSettledReasonWithheld    AssetUpdateAnnouncementSettledReason = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementSettledReason enum.
+func (e AssetUpdateAnnouncementSettledReason) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementSettledReasonArrived:
+		return true
+	case AssetUpdateAnnouncementSettledReasonDeleted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonDisabled:
+		return true
+	case AssetUpdateAnnouncementSettledReasonExhausted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonGone:
+		return true
+	case AssetUpdateAnnouncementSettledReasonMoved:
+		return true
+	case AssetUpdateAnnouncementSettledReasonRefused:
+		return true
+	case AssetUpdateAnnouncementSettledReasonRemoved:
+		return true
+	case AssetUpdateAnnouncementSettledReasonUnconfirmed:
+		return true
+	case AssetUpdateAnnouncementSettledReasonUnlisted:
+		return true
+	case AssetUpdateAnnouncementSettledReasonWithdrawn:
+		return true
+	case AssetUpdateAnnouncementSettledReasonWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateAnnouncementState.
+const (
+	AssetUpdateAnnouncementStateDelivered   AssetUpdateAnnouncementState = "delivered"
+	AssetUpdateAnnouncementStateFailed      AssetUpdateAnnouncementState = "failed"
+	AssetUpdateAnnouncementStatePending     AssetUpdateAnnouncementState = "pending"
+	AssetUpdateAnnouncementStateSending     AssetUpdateAnnouncementState = "sending"
+	AssetUpdateAnnouncementStateUnconfirmed AssetUpdateAnnouncementState = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateAnnouncementState enum.
+func (e AssetUpdateAnnouncementState) Valid() bool {
+	switch e {
+	case AssetUpdateAnnouncementStateDelivered:
+		return true
+	case AssetUpdateAnnouncementStateFailed:
+		return true
+	case AssetUpdateAnnouncementStatePending:
+		return true
+	case AssetUpdateAnnouncementStateSending:
+		return true
+	case AssetUpdateAnnouncementStateUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateDestinationState.
+const (
+	AssetUpdateDestinationStateActive     AssetUpdateDestinationState = "active"
+	AssetUpdateDestinationStateDisabled   AssetUpdateDestinationState = "disabled"
+	AssetUpdateDestinationStateUnverified AssetUpdateDestinationState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateDestinationState enum.
+func (e AssetUpdateDestinationState) Valid() bool {
+	switch e {
+	case AssetUpdateDestinationStateActive:
+		return true
+	case AssetUpdateDestinationStateDisabled:
+		return true
+	case AssetUpdateDestinationStateUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateDestinationKind.
+const (
+	AssetUpdateDestinationKindDiscord AssetUpdateDestinationKind = "discord"
+	AssetUpdateDestinationKindWebhook AssetUpdateDestinationKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateDestinationKind enum.
+func (e AssetUpdateDestinationKind) Valid() bool {
+	switch e {
+	case AssetUpdateDestinationKindDiscord:
+		return true
+	case AssetUpdateDestinationKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetUpdateEventType.
+const (
+	AssetUpdatePublishedV1 AssetUpdateEventType = "asset.update.published.v1"
+)
+
+// Valid indicates whether the value is a known member of the AssetUpdateEventType enum.
+func (e AssetUpdateEventType) Valid() bool {
+	switch e {
+	case AssetUpdatePublishedV1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BrowseAssetKind.
 const (
 	BrowseAssetKindCharacter BrowseAssetKind = "character"
@@ -483,6 +636,24 @@ func (e BrowseAssetOwnerState) Valid() bool {
 	case BrowseAssetOwnerStateUnlisted:
 		return true
 	case BrowseAssetOwnerStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CandidateConflictCode.
+const (
+	CandidateConflictCodeAssetFrozen         CandidateConflictCode = "asset_frozen"
+	CandidateConflictCodeWorkingCopyConflict CandidateConflictCode = "working_copy_conflict"
+)
+
+// Valid indicates whether the value is a known member of the CandidateConflictCode enum.
+func (e CandidateConflictCode) Valid() bool {
+	switch e {
+	case CandidateConflictCodeAssetFrozen:
+		return true
+	case CandidateConflictCodeWorkingCopyConflict:
 		return true
 	default:
 		return false
@@ -647,28 +818,37 @@ func (e EntryTableContentEntriesPosition) Valid() bool {
 
 // Defines values for IngestFailureReason.
 const (
-	InternalFailure    IngestFailureReason = "internal_failure"
-	MalformedInput     IngestFailureReason = "malformed_input"
-	SafetyViolation    IngestFailureReason = "safety_violation"
-	UnsupportedFormat  IngestFailureReason = "unsupported_format"
-	UnsupportedVersion IngestFailureReason = "unsupported_version"
-	WrongKind          IngestFailureReason = "wrong_kind"
+	IngestFailureReasonAssetUnavailable    IngestFailureReason = "asset_unavailable"
+	IngestFailureReasonInternalFailure     IngestFailureReason = "internal_failure"
+	IngestFailureReasonLimitExceeded       IngestFailureReason = "limit_exceeded"
+	IngestFailureReasonMalformedInput      IngestFailureReason = "malformed_input"
+	IngestFailureReasonSafetyViolation     IngestFailureReason = "safety_violation"
+	IngestFailureReasonUnsupportedFormat   IngestFailureReason = "unsupported_format"
+	IngestFailureReasonUnsupportedVersion  IngestFailureReason = "unsupported_version"
+	IngestFailureReasonWorkingCopyConflict IngestFailureReason = "working_copy_conflict"
+	IngestFailureReasonWrongKind           IngestFailureReason = "wrong_kind"
 )
 
 // Valid indicates whether the value is a known member of the IngestFailureReason enum.
 func (e IngestFailureReason) Valid() bool {
 	switch e {
-	case InternalFailure:
+	case IngestFailureReasonAssetUnavailable:
 		return true
-	case MalformedInput:
+	case IngestFailureReasonInternalFailure:
 		return true
-	case SafetyViolation:
+	case IngestFailureReasonLimitExceeded:
 		return true
-	case UnsupportedFormat:
+	case IngestFailureReasonMalformedInput:
 		return true
-	case UnsupportedVersion:
+	case IngestFailureReasonSafetyViolation:
 		return true
-	case WrongKind:
+	case IngestFailureReasonUnsupportedFormat:
+		return true
+	case IngestFailureReasonUnsupportedVersion:
+		return true
+	case IngestFailureReasonWorkingCopyConflict:
+		return true
+	case IngestFailureReasonWrongKind:
 		return true
 	default:
 		return false
@@ -677,8 +857,10 @@ func (e IngestFailureReason) Valid() bool {
 
 // Defines values for IngestOperationStatus.
 const (
+	IngestOperationStatusCancelled  IngestOperationStatus = "cancelled"
 	IngestOperationStatusFailed     IngestOperationStatus = "failed"
 	IngestOperationStatusPending    IngestOperationStatus = "pending"
+	IngestOperationStatusPreview    IngestOperationStatus = "preview"
 	IngestOperationStatusProcessing IngestOperationStatus = "processing"
 	IngestOperationStatusSuccess    IngestOperationStatus = "success"
 )
@@ -686,9 +868,13 @@ const (
 // Valid indicates whether the value is a known member of the IngestOperationStatus enum.
 func (e IngestOperationStatus) Valid() bool {
 	switch e {
+	case IngestOperationStatusCancelled:
+		return true
 	case IngestOperationStatusFailed:
 		return true
 	case IngestOperationStatusPending:
+		return true
+	case IngestOperationStatusPreview:
 		return true
 	case IngestOperationStatusProcessing:
 		return true
@@ -816,6 +1002,204 @@ func (e PendingLinkPollResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for PostDeliveryKind.
+const (
+	PostDeliveryKindDiscord PostDeliveryKind = "discord"
+	PostDeliveryKindEmpty   PostDeliveryKind = ""
+	PostDeliveryKindWebhook PostDeliveryKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryKind enum.
+func (e PostDeliveryKind) Valid() bool {
+	switch e {
+	case PostDeliveryKindDiscord:
+		return true
+	case PostDeliveryKindEmpty:
+		return true
+	case PostDeliveryKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostDeliveryOutcome.
+const (
+	PostDeliveryOutcomeDelivered   PostDeliveryOutcome = "delivered"
+	PostDeliveryOutcomeRefused     PostDeliveryOutcome = "refused"
+	PostDeliveryOutcomeUnconfirmed PostDeliveryOutcome = "unconfirmed"
+	PostDeliveryOutcomeUnreachable PostDeliveryOutcome = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryOutcome enum.
+func (e PostDeliveryOutcome) Valid() bool {
+	switch e {
+	case PostDeliveryOutcomeDelivered:
+		return true
+	case PostDeliveryOutcomeRefused:
+		return true
+	case PostDeliveryOutcomeUnconfirmed:
+		return true
+	case PostDeliveryOutcomeUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostDeliverySettledReason.
+const (
+	PostDeliverySettledReasonArrived     PostDeliverySettledReason = "arrived"
+	PostDeliverySettledReasonDisabled    PostDeliverySettledReason = "disabled"
+	PostDeliverySettledReasonExhausted   PostDeliverySettledReason = "exhausted"
+	PostDeliverySettledReasonGone        PostDeliverySettledReason = "gone"
+	PostDeliverySettledReasonMoved       PostDeliverySettledReason = "moved"
+	PostDeliverySettledReasonRefused     PostDeliverySettledReason = "refused"
+	PostDeliverySettledReasonRemoved     PostDeliverySettledReason = "removed"
+	PostDeliverySettledReasonUnconfirmed PostDeliverySettledReason = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliverySettledReason enum.
+func (e PostDeliverySettledReason) Valid() bool {
+	switch e {
+	case PostDeliverySettledReasonArrived:
+		return true
+	case PostDeliverySettledReasonDisabled:
+		return true
+	case PostDeliverySettledReasonExhausted:
+		return true
+	case PostDeliverySettledReasonGone:
+		return true
+	case PostDeliverySettledReasonMoved:
+		return true
+	case PostDeliverySettledReasonRefused:
+		return true
+	case PostDeliverySettledReasonRemoved:
+		return true
+	case PostDeliverySettledReasonUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostDeliveryState.
+const (
+	PostDeliveryStateDelivered   PostDeliveryState = "delivered"
+	PostDeliveryStateFailed      PostDeliveryState = "failed"
+	PostDeliveryStatePending     PostDeliveryState = "pending"
+	PostDeliveryStateSending     PostDeliveryState = "sending"
+	PostDeliveryStateUnconfirmed PostDeliveryState = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the PostDeliveryState enum.
+func (e PostDeliveryState) Valid() bool {
+	switch e {
+	case PostDeliveryStateDelivered:
+		return true
+	case PostDeliveryStateFailed:
+		return true
+	case PostDeliveryStatePending:
+		return true
+	case PostDeliveryStateSending:
+		return true
+	case PostDeliveryStateUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostMediaPurpose.
+const (
+	Document PostMediaPurpose = "document"
+	Header   PostMediaPurpose = "header"
+	Social   PostMediaPurpose = "social"
+)
+
+// Valid indicates whether the value is a known member of the PostMediaPurpose enum.
+func (e PostMediaPurpose) Valid() bool {
+	switch e {
+	case Document:
+		return true
+	case Header:
+		return true
+	case Social:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostRevisionReason.
+const (
+	Checkpoint  PostRevisionReason = "checkpoint"
+	Publication PostRevisionReason = "publication"
+	Schedule    PostRevisionReason = "schedule"
+)
+
+// Valid indicates whether the value is a known member of the PostRevisionReason enum.
+func (e PostRevisionReason) Valid() bool {
+	switch e {
+	case Checkpoint:
+		return true
+	case Publication:
+		return true
+	case Schedule:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostScheduleState.
+const (
+	PostScheduleStateCancelled  PostScheduleState = "cancelled"
+	PostScheduleStatePending    PostScheduleState = "pending"
+	PostScheduleStatePublished  PostScheduleState = "published"
+	PostScheduleStatePublishing PostScheduleState = "publishing"
+	PostScheduleStateStopped    PostScheduleState = "stopped"
+)
+
+// Valid indicates whether the value is a known member of the PostScheduleState enum.
+func (e PostScheduleState) Valid() bool {
+	switch e {
+	case PostScheduleStateCancelled:
+		return true
+	case PostScheduleStatePending:
+		return true
+	case PostScheduleStatePublished:
+		return true
+	case PostScheduleStatePublishing:
+		return true
+	case PostScheduleStateStopped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PostStatus.
+const (
+	PostStatusDraft     PostStatus = "draft"
+	PostStatusPublished PostStatus = "published"
+	PostStatusWithdrawn PostStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the PostStatus enum.
+func (e PostStatus) Valid() bool {
+	switch e {
+	case PostStatusDraft:
+		return true
+	case PostStatusPublished:
+		return true
+	case PostStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PromptListContentFragmentsPlacement.
 const (
 	InHistory   PromptListContentFragmentsPlacement = "in_history"
@@ -858,6 +1242,144 @@ func (e PromptListContentFragmentsRole) Valid() bool {
 	case PromptListContentFragmentsRoleUser:
 		return true
 	case PromptListContentFragmentsRoleUserAppend:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationDestinationKind.
+const (
+	PublicationDestinationKindDiscord PublicationDestinationKind = "discord"
+	PublicationDestinationKindWebhook PublicationDestinationKind = "webhook"
+)
+
+// Valid indicates whether the value is a known member of the PublicationDestinationKind enum.
+func (e PublicationDestinationKind) Valid() bool {
+	switch e {
+	case PublicationDestinationKindDiscord:
+		return true
+	case PublicationDestinationKindWebhook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationDestinationState.
+const (
+	PublicationDestinationStateActive     PublicationDestinationState = "active"
+	PublicationDestinationStateDisabled   PublicationDestinationState = "disabled"
+	PublicationDestinationStateUnverified PublicationDestinationState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the PublicationDestinationState enum.
+func (e PublicationDestinationState) Valid() bool {
+	switch e {
+	case PublicationDestinationStateActive:
+		return true
+	case PublicationDestinationStateDisabled:
+		return true
+	case PublicationDestinationStateUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationErrorCode.
+const (
+	CodeAlreadyScheduled      PublicationErrorCode = "already_scheduled"
+	CodeCategoryRefused       PublicationErrorCode = "category_refused"
+	CodeForbidden             PublicationErrorCode = "forbidden"
+	CodeGrantRevoked          PublicationErrorCode = "grant_revoked"
+	CodeIdempotencyInProgress PublicationErrorCode = "idempotency_in_progress"
+	CodeIdempotencyMismatch   PublicationErrorCode = "idempotency_mismatch"
+	CodeInvalid               PublicationErrorCode = "invalid"
+	CodeNotFound              PublicationErrorCode = "not_found"
+	CodeRateLimited           PublicationErrorCode = "rate_limited"
+	CodeScheduleRunning       PublicationErrorCode = "schedule_running"
+	CodeServerError           PublicationErrorCode = "server_error"
+	CodeStaleVersion          PublicationErrorCode = "stale_version"
+	CodeTokenExpired          PublicationErrorCode = "token_expired"
+	CodeTokenRevoked          PublicationErrorCode = "token_revoked"
+	CodeUnauthenticated       PublicationErrorCode = "unauthenticated"
+)
+
+// Valid indicates whether the value is a known member of the PublicationErrorCode enum.
+func (e PublicationErrorCode) Valid() bool {
+	switch e {
+	case CodeAlreadyScheduled:
+		return true
+	case CodeCategoryRefused:
+		return true
+	case CodeForbidden:
+		return true
+	case CodeGrantRevoked:
+		return true
+	case CodeIdempotencyInProgress:
+		return true
+	case CodeIdempotencyMismatch:
+		return true
+	case CodeInvalid:
+		return true
+	case CodeNotFound:
+		return true
+	case CodeRateLimited:
+		return true
+	case CodeScheduleRunning:
+		return true
+	case CodeServerError:
+		return true
+	case CodeStaleVersion:
+		return true
+	case CodeTokenExpired:
+		return true
+	case CodeTokenRevoked:
+		return true
+	case CodeUnauthenticated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationEvent.
+const (
+	PublicationPostPublishedV1 PublicationEvent = "publication.post.published.v1"
+	PublicationPostUpdatedV1   PublicationEvent = "publication.post.updated.v1"
+	PublicationPostWithdrawnV1 PublicationEvent = "publication.post.withdrawn.v1"
+)
+
+// Valid indicates whether the value is a known member of the PublicationEvent enum.
+func (e PublicationEvent) Valid() bool {
+	switch e {
+	case PublicationPostPublishedV1:
+		return true
+	case PublicationPostUpdatedV1:
+		return true
+	case PublicationPostWithdrawnV1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublishRefusalCode.
+const (
+	AlreadyPublished PublishRefusalCode = "already_published"
+	NoChanges        PublishRefusalCode = "no_changes"
+	NotReady         PublishRefusalCode = "not_ready"
+)
+
+// Valid indicates whether the value is a known member of the PublishRefusalCode enum.
+func (e PublishRefusalCode) Valid() bool {
+	switch e {
+	case AlreadyPublished:
+		return true
+	case NoChanges:
+		return true
+	case NotReady:
 		return true
 	default:
 		return false
@@ -939,6 +1461,66 @@ const (
 func (e RecordListContentSchema) Valid() bool {
 	switch e {
 	case Lumia:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordedVersionDownloadsKind.
+const (
+	RecordedVersionDownloadsKindCharacter RecordedVersionDownloadsKind = "character"
+	RecordedVersionDownloadsKindLorebook  RecordedVersionDownloadsKind = "lorebook"
+	RecordedVersionDownloadsKindPack      RecordedVersionDownloadsKind = "pack"
+	RecordedVersionDownloadsKindPreset    RecordedVersionDownloadsKind = "preset"
+	RecordedVersionDownloadsKindTheme     RecordedVersionDownloadsKind = "theme"
+)
+
+// Valid indicates whether the value is a known member of the RecordedVersionDownloadsKind enum.
+func (e RecordedVersionDownloadsKind) Valid() bool {
+	switch e {
+	case RecordedVersionDownloadsKindCharacter:
+		return true
+	case RecordedVersionDownloadsKindLorebook:
+		return true
+	case RecordedVersionDownloadsKindPack:
+		return true
+	case RecordedVersionDownloadsKindPreset:
+		return true
+	case RecordedVersionDownloadsKindTheme:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplacementAcceptanceUnrepresentable.
+const (
+	Keep   ReplacementAcceptanceUnrepresentable = "keep"
+	Remove ReplacementAcceptanceUnrepresentable = "remove"
+)
+
+// Valid indicates whether the value is a known member of the ReplacementAcceptanceUnrepresentable enum.
+func (e ReplacementAcceptanceUnrepresentable) Valid() bool {
+	switch e {
+	case Keep:
+		return true
+	case Remove:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RestoreConflict1Code.
+const (
+	InvalidRecordedVersion RestoreConflict1Code = "invalid_recorded_version"
+)
+
+// Valid indicates whether the value is a known member of the RestoreConflict1Code enum.
+func (e RestoreConflict1Code) Valid() bool {
+	switch e {
+	case InvalidRecordedVersion:
 		return true
 	default:
 		return false
@@ -1092,6 +1674,21 @@ func (e ScriptListContentScriptsTargets) Valid() bool {
 	}
 }
 
+// Defines values for SealedExposureRefusalCode.
+const (
+	SealedExposure SealedExposureRefusalCode = "sealed_exposure"
+)
+
+// Valid indicates whether the value is a known member of the SealedExposureRefusalCode enum.
+func (e SealedExposureRefusalCode) Valid() bool {
+	switch e {
+	case SealedExposure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SettingGroupContentSettingsType.
 const (
 	SettingGroupContentSettingsTypeBoolean    SettingGroupContentSettingsType = "boolean"
@@ -1176,6 +1773,27 @@ func (e VariableSchemaContentVariablesWidget) Valid() bool {
 	case VariableSchemaContentVariablesWidgetText:
 		return true
 	case VariableSchemaContentVariablesWidgetTextarea:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VersionChangeKind.
+const (
+	Addition VersionChangeKind = "addition"
+	Change   VersionChangeKind = "change"
+	Removal  VersionChangeKind = "removal"
+)
+
+// Valid indicates whether the value is a known member of the VersionChangeKind enum.
+func (e VersionChangeKind) Valid() bool {
+	switch e {
+	case Addition:
+		return true
+	case Change:
+		return true
+	case Removal:
 		return true
 	default:
 		return false
@@ -1317,6 +1935,48 @@ func (e SendAssetToInstanceParamsXIllarinRequest) Valid() bool {
 	}
 }
 
+// Defines values for SetAssetIdentity400JSONResponseBodyField.
+const (
+	Blurb  SetAssetIdentity400JSONResponseBodyField = "blurb"
+	IsNsfw SetAssetIdentity400JSONResponseBodyField = "isNsfw"
+	Name   SetAssetIdentity400JSONResponseBodyField = "name"
+)
+
+// Valid indicates whether the value is a known member of the SetAssetIdentity400JSONResponseBodyField enum.
+func (e SetAssetIdentity400JSONResponseBodyField) Valid() bool {
+	switch e {
+	case Blurb:
+		return true
+	case IsNsfw:
+		return true
+	case Name:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetRecordedVersionDownloadsParamsNsfw.
+const (
+	GetRecordedVersionDownloadsParamsNsfwBlurred GetRecordedVersionDownloadsParamsNsfw = "blurred"
+	GetRecordedVersionDownloadsParamsNsfwHidden  GetRecordedVersionDownloadsParamsNsfw = "hidden"
+	GetRecordedVersionDownloadsParamsNsfwShown   GetRecordedVersionDownloadsParamsNsfw = "shown"
+)
+
+// Valid indicates whether the value is a known member of the GetRecordedVersionDownloadsParamsNsfw enum.
+func (e GetRecordedVersionDownloadsParamsNsfw) Valid() bool {
+	switch e {
+	case GetRecordedVersionDownloadsParamsNsfwBlurred:
+		return true
+	case GetRecordedVersionDownloadsParamsNsfwHidden:
+		return true
+	case GetRecordedVersionDownloadsParamsNsfwShown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BeginDiscordParamsIntent.
 const (
 	Attach BeginDiscordParamsIntent = "attach"
@@ -1425,6 +2085,48 @@ func (e DenyLinkRequestParamsXIllarinRequest) Valid() bool {
 	}
 }
 
+// Defines values for RepairDiscordAnnouncementJSONBodyAction.
+const (
+	Correction RepairDiscordAnnouncementJSONBodyAction = "correction"
+	Delete     RepairDiscordAnnouncementJSONBodyAction = "delete"
+	Edit       RepairDiscordAnnouncementJSONBodyAction = "edit"
+)
+
+// Valid indicates whether the value is a known member of the RepairDiscordAnnouncementJSONBodyAction enum.
+func (e RepairDiscordAnnouncementJSONBodyAction) Valid() bool {
+	switch e {
+	case Correction:
+		return true
+	case Delete:
+		return true
+	case Edit:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RepairDiscordAnnouncement200JSONResponseBodyState.
+const (
+	RepairDiscordAnnouncement200JSONResponseBodyStateCompleted   RepairDiscordAnnouncement200JSONResponseBodyState = "completed"
+	RepairDiscordAnnouncement200JSONResponseBodyStateRefused     RepairDiscordAnnouncement200JSONResponseBodyState = "refused"
+	RepairDiscordAnnouncement200JSONResponseBodyStateUnconfirmed RepairDiscordAnnouncement200JSONResponseBodyState = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the RepairDiscordAnnouncement200JSONResponseBodyState enum.
+func (e RepairDiscordAnnouncement200JSONResponseBodyState) Valid() bool {
+	switch e {
+	case RepairDiscordAnnouncement200JSONResponseBodyStateCompleted:
+		return true
+	case RepairDiscordAnnouncement200JSONResponseBodyStateRefused:
+		return true
+	case RepairDiscordAnnouncement200JSONResponseBodyStateUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
 // AcceptedTargets defines model for AcceptedTargets.
 type AcceptedTargets = []ExportTargetId
 
@@ -1453,6 +2155,13 @@ type AddAssetBlockRequest struct {
 	ElementType ElementType `json:"elementType"`
 }
 
+// AddAssetUpdateDestinationRequest defines model for AddAssetUpdateDestinationRequest.
+type AddAssetUpdateDestinationRequest struct {
+	Address *string                    `json:"address,omitempty"`
+	Kind    AssetUpdateDestinationKind `json:"kind"`
+	Name    string                     `json:"name"`
+}
+
 // AddMediaRequest defines model for AddMediaRequest.
 type AddMediaRequest struct {
 	Role AddMediaRequestRole `json:"role"`
@@ -1460,6 +2169,21 @@ type AddMediaRequest struct {
 
 // AddMediaRequestRole defines model for AddMediaRequest.Role.
 type AddMediaRequestRole string
+
+// AddPostMediaRequest defines model for AddPostMediaRequest.
+type AddPostMediaRequest struct {
+	Purpose PostMediaPurpose `json:"purpose"`
+}
+
+// AddPublicationDestinationRequest defines model for AddPublicationDestinationRequest.
+type AddPublicationDestinationRequest struct {
+	// Address An https address on port 443 with no username, password or fragment, whose host resolves into public address space.
+	Address string `json:"address"`
+
+	// Events Which Publication events this endpoint receives. An absent list takes published events and nothing else.
+	Events *[]PublicationEvent `json:"events,omitempty"`
+	Name   string              `json:"name"`
+}
 
 // AddableBlock One block the add tray offers. Where the content ends up is what the tray groups by, so a creator arrives at it by destination.
 type AddableBlock struct {
@@ -1482,6 +2206,33 @@ type AddableBlockChoice struct {
 
 	// Type What an element's data structure is, from the global vocabulary.
 	Type ElementType `json:"type"`
+}
+
+// AddedAssetUpdateDestination defines model for AddedAssetUpdateDestination.
+type AddedAssetUpdateDestination struct {
+	Destination AssetUpdateDestination `json:"destination"`
+
+	// Secret A new webhook signing secret, shown once. Absent for Discord.
+	Secret *string `json:"secret,omitempty"`
+}
+
+// AddedPublicationDestination A new destination and the one showing its signing secret ever gets.
+type AddedPublicationDestination struct {
+	// Destination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+	Destination PublicationDestination `json:"destination"`
+
+	// Secret The signing secret this endpoint's requests carry. Illarin cannot show it again.
+	Secret string `json:"secret"`
+}
+
+// AppTarget defines model for AppTarget.
+type AppTarget struct {
+	// Format The offered format Illarin writes for this application, chosen by what reaches it rather than by how many applications read it.
+	Format string `json:"format"`
+
+	// Id The application id, matching the ids allowedApps uses.
+	Id    string `json:"id"`
+	Label string `json:"label"`
 }
 
 // ApplicationName A self-asserted, unverified application name.
@@ -1560,6 +2311,9 @@ type AssetDetail struct {
 	// AllowedApps The applications the creator allows to receive protected content.
 	AllowedApps []AssetDetailAllowedApps `json:"allowedApps"`
 
+	// AppTargets One entry per application that reads a format this asset is offered in, naming the format that lands most of the asset in it. An application no offered format reaches is absent.
+	AppTargets []AppTarget `json:"appTargets"`
+
 	// Blocks The asset's blocks in page order.
 	Blocks []AssetBlock `json:"blocks"`
 
@@ -1583,6 +2337,9 @@ type AssetDetail struct {
 	IsOwner bool            `json:"isOwner"`
 	Kind    AssetDetailKind `json:"kind"`
 
+	// LatestUpdate The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none.
+	LatestUpdate *RecordedVersion `json:"latestUpdate,omitempty"`
+
 	// Lifecycle A draft resolves for its owner alone. Discovery applies to a published asset only.
 	Lifecycle AssetDetailLifecycle `json:"lifecycle"`
 
@@ -1603,10 +2360,16 @@ type AssetDetail struct {
 	Readiness *[]ReadinessItem `json:"readiness,omitempty"`
 
 	// SealedBlocks How many sealed v1 preset blocks the asset preserves. Present only while the owner is reading their own asset, and absent where there are none, so a stranger cannot learn that an asset is withholding anything.
-	SealedBlocks *int                  `json:"sealedBlocks,omitempty"`
-	Tags         []AssetTag            `json:"tags"`
-	Visibility   AssetDetailVisibility `json:"visibility"`
-	Withhold     *AssetWithhold        `json:"withhold,omitempty"`
+	SealedBlocks *int       `json:"sealedBlocks,omitempty"`
+	Tags         []AssetTag `json:"tags"`
+
+	// UnpublishedChanges Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset.
+	UnpublishedChanges *bool                 `json:"unpublishedChanges,omitempty"`
+	Visibility         AssetDetailVisibility `json:"visibility"`
+	Withhold           *AssetWithhold        `json:"withhold,omitempty"`
+
+	// WorkingCopyVersion Only returned with the owner's working copy or draft, from the same read snapshot
+	WorkingCopyVersion *int64 `json:"workingCopyVersion,omitempty"`
 }
 
 // AssetDetailAllowedApps defines model for AssetDetail.AllowedApps.
@@ -1666,6 +2429,9 @@ type AssetElementDisplay string
 
 // AssetIdentityRequest defines model for AssetIdentityRequest.
 type AssetIdentityRequest struct {
+	// Blurb The catalog pitch written for a person. An empty value clears it.
+	Blurb string `json:"blurb"`
+
 	// IsNsfw Null is the unanswered state, which only a draft may be in.
 	IsNsfw *bool  `json:"isNsfw"`
 	Name   string `json:"name"`
@@ -1673,6 +2439,8 @@ type AssetIdentityRequest struct {
 
 // AssetImage defines model for AssetImage.
 type AssetImage struct {
+	// Bytes The stored file's size, which is what the download chooser adds up to say how large a file a choice of images will make.
+	Bytes     int                `json:"bytes"`
 	DetailUrl string             `json:"detailUrl"`
 	Height    int                `json:"height"`
 	Id        openapi_types.UUID `json:"id"`
@@ -1731,6 +2499,213 @@ type AssetTag struct {
 	Value string `json:"value"`
 }
 
+// AssetUpdate defines model for AssetUpdate.
+type AssetUpdate struct {
+	// ContentChanged Whether this update changed the file linked apps download
+	ContentChanged    bool               `json:"contentChanged"`
+	ContentGeneration int                `json:"contentGeneration"`
+	Id                openapi_types.UUID `json:"id"`
+	Notes             string             `json:"notes"`
+	Number            int                `json:"number"`
+	RecordedAt        time.Time          `json:"recordedAt"`
+	Summary           string             `json:"summary"`
+	VersionLabel      string             `json:"versionLabel"`
+}
+
+// AssetUpdateAnnouncement One update announcement on its way to one destination.
+type AssetUpdateAnnouncement struct {
+	Attempts int `json:"attempts"`
+
+	// Destination The name the destination carried when the update was published.
+	Destination string `json:"destination"`
+
+	// DueAt When the next attempt is due, in the past once it has settled.
+	DueAt   time.Time          `json:"dueAt"`
+	EventId openapi_types.UUID `json:"eventId"`
+
+	// Id The delivery, which is also the webhook-id every attempt carries.
+	Id   openapi_types.UUID         `json:"id"`
+	Kind AssetUpdateDestinationKind `json:"kind"`
+
+	// Last The most recent attempt, absent until one has been made.
+	Last *AssetUpdateAnnouncementAttempt `json:"last,omitempty"`
+
+	// MessageId The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed.
+	MessageId  string    `json:"messageId"`
+	OccurredAt time.Time `json:"occurredAt"`
+
+	// Removed Whether the destination behind this announcement is gone.
+	Removed   bool       `json:"removed"`
+	Run       int        `json:"run"`
+	SettledAt *time.Time `json:"settledAt,omitempty"`
+
+	// SettledReason Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+	SettledReason *AssetUpdateAnnouncementSettledReason `json:"settledReason,omitempty"`
+
+	// State Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+	State        AssetUpdateAnnouncementState `json:"state"`
+	UpdateId     openapi_types.UUID           `json:"updateId"`
+	UpdateNumber int                          `json:"updateNumber"`
+}
+
+// AssetUpdateAnnouncementAttempt The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with.
+type AssetUpdateAnnouncementAttempt struct {
+	AttemptedAt time.Time                             `json:"attemptedAt"`
+	Detail      string                                `json:"detail"`
+	Number      int                                   `json:"number"`
+	Outcome     AssetUpdateAnnouncementAttemptOutcome `json:"outcome"`
+	Run         int                                   `json:"run"`
+
+	// Status The HTTP status the destination answered, absent when it never answered.
+	Status *int `json:"status,omitempty"`
+	TookMs int  `json:"tookMs"`
+}
+
+// AssetUpdateAnnouncementAttemptOutcome defines model for AssetUpdateAnnouncementAttempt.Outcome.
+type AssetUpdateAnnouncementAttemptOutcome string
+
+// AssetUpdateAnnouncementList defines model for AssetUpdateAnnouncementList.
+type AssetUpdateAnnouncementList struct {
+	Announcements []AssetUpdateAnnouncement `json:"announcements"`
+}
+
+// AssetUpdateAnnouncementSettledReason Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+type AssetUpdateAnnouncementSettledReason string
+
+// AssetUpdateAnnouncementState Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+type AssetUpdateAnnouncementState string
+
+// AssetUpdateChannel defines model for AssetUpdateChannel.
+type AssetUpdateChannel struct {
+	ChannelId string `json:"channelId"`
+	GuildId   string `json:"guildId"`
+}
+
+// AssetUpdateDestination defines model for AssetUpdateDestination.
+type AssetUpdateDestination struct {
+	// Address The scheme and host followed by a masked path; never the capability address.
+	Address             string                      `json:"address"`
+	Channel             *AssetUpdateChannel         `json:"channel,omitempty"`
+	CreatedAt           time.Time                   `json:"createdAt"`
+	DisabledAt          *time.Time                  `json:"disabledAt,omitempty"`
+	Host                string                      `json:"host"`
+	Id                  openapi_types.UUID          `json:"id"`
+	Kind                AssetUpdateDestinationKind  `json:"kind"`
+	Name                string                      `json:"name"`
+	PreviousSecretUntil *time.Time                  `json:"previousSecretUntil,omitempty"`
+	SecretSetAt         *time.Time                  `json:"secretSetAt,omitempty"`
+	State               AssetUpdateDestinationState `json:"state"`
+	VerifiedAt          *time.Time                  `json:"verifiedAt,omitempty"`
+}
+
+// AssetUpdateDestinationState defines model for AssetUpdateDestination.State.
+type AssetUpdateDestinationState string
+
+// AssetUpdateDestinationChoice defines model for AssetUpdateDestinationChoice.
+type AssetUpdateDestinationChoice struct {
+	ByDefault bool                       `json:"byDefault"`
+	Id        openapi_types.UUID         `json:"id"`
+	Kind      AssetUpdateDestinationKind `json:"kind"`
+	Name      string                     `json:"name"`
+}
+
+// AssetUpdateDestinationChoices defines model for AssetUpdateDestinationChoices.
+type AssetUpdateDestinationChoices struct {
+	Destinations []AssetUpdateDestinationChoice `json:"destinations"`
+}
+
+// AssetUpdateDestinationDefaultsRequest defines model for AssetUpdateDestinationDefaultsRequest.
+type AssetUpdateDestinationDefaultsRequest struct {
+	DestinationIds []openapi_types.UUID `json:"destinationIds"`
+}
+
+// AssetUpdateDestinationKind defines model for AssetUpdateDestinationKind.
+type AssetUpdateDestinationKind string
+
+// AssetUpdateDestinationList defines model for AssetUpdateDestinationList.
+type AssetUpdateDestinationList struct {
+	Destinations []AssetUpdateDestination `json:"destinations"`
+}
+
+// AssetUpdateEvent One published asset update, as a summary. The same delivery keeps its webhook-id across every attempt, so deduplicate on that header. Illarin promises no global ordering between events; compare `occurredAt` and `update.number` so an event that arrives after a newer one can be discarded rather than applied. The body never carries the changes themselves, prompt text or anything from a private working copy.
+type AssetUpdateEvent struct {
+	Asset AssetUpdateEventAsset `json:"asset"`
+
+	// Id The event, stable across every attempt.
+	Id openapi_types.UUID `json:"id"`
+
+	// OccurredAt When the update was published, which is what orders two events.
+	OccurredAt time.Time              `json:"occurredAt"`
+	Type       AssetUpdateEventType   `json:"type"`
+	Update     AssetUpdateEventUpdate `json:"update"`
+}
+
+// AssetUpdateEventType defines model for AssetUpdateEvent.Type.
+type AssetUpdateEventType string
+
+// AssetUpdateEventAsset defines model for AssetUpdateEventAsset.
+type AssetUpdateEventAsset struct {
+	Id   openapi_types.UUID `json:"id"`
+	Kind string             `json:"kind"`
+
+	// Name The asset's name at the moment of publication.
+	Name string `json:"name"`
+
+	// Url The asset's page on Illarin.
+	Url string `json:"url"`
+}
+
+// AssetUpdateEventUpdate defines model for AssetUpdateEventUpdate.
+type AssetUpdateEventUpdate struct {
+	// ContentChanged Whether the exported file changed, as opposed to the page or catalog entry alone.
+	ContentChanged bool `json:"contentChanged"`
+
+	// HistoryUrl The asset's update history, opened at this update.
+	HistoryUrl string `json:"historyUrl"`
+
+	// Id The recorded version this update published.
+	Id openapi_types.UUID `json:"id"`
+
+	// Number The update's number in the asset's history, rising by one each time.
+	Number     int       `json:"number"`
+	RecordedAt time.Time `json:"recordedAt"`
+
+	// Summary The creator's one-line summary as published. A later correction does not resend it.
+	Summary string `json:"summary"`
+
+	// VersionLabel The creator's free-text version label, absent when none was written.
+	VersionLabel *string `json:"versionLabel,omitempty"`
+}
+
+// AssetUpdateRequest defines model for AssetUpdateRequest.
+type AssetUpdateRequest struct {
+	// AnnounceUnlisted Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one.
+	AnnounceUnlisted *bool `json:"announceUnlisted,omitempty"`
+
+	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+
+	// Notes The longer explanation, where the creator writes one
+	Notes *string `json:"notes,omitempty"`
+
+	// Summary A short line saying what changed, which every update needs
+	Summary string `json:"summary"`
+
+	// VersionLabel Free text a creator may repeat, keeping the asset's own version where it is empty
+	VersionLabel *string `json:"versionLabel,omitempty"`
+}
+
+// AssetVersionNotesRequest defines model for AssetVersionNotesRequest.
+type AssetVersionNotesRequest struct {
+	Notes   *string `json:"notes,omitempty"`
+	Summary string  `json:"summary"`
+}
+
+// AssetVersionWithdrawalRequest defines model for AssetVersionWithdrawalRequest.
+type AssetVersionWithdrawalRequest struct {
+	Explanation string `json:"explanation"`
+}
+
 // AssetWithhold defines model for AssetWithhold.
 type AssetWithhold struct {
 	Actor  string    `json:"actor"`
@@ -1740,6 +2715,11 @@ type AssetWithhold struct {
 
 // AuthorizationCode defines model for AuthorizationCode.
 type AuthorizationCode = string
+
+// BlockSaveConflict defines model for BlockSaveConflict.
+type BlockSaveConflict struct {
+	union json.RawMessage
+}
 
 // BrowseAsset defines model for BrowseAsset.
 type BrowseAsset struct {
@@ -1791,6 +2771,18 @@ type BrowseOption struct {
 	Value    string `json:"value"`
 }
 
+// CandidateConflict defines model for CandidateConflict.
+type CandidateConflict struct {
+	Code CandidateConflictCode `json:"code"`
+
+	// CurrentVersion Present only for an authorized stale request; reload the working copy before retrying
+	CurrentVersion *int64 `json:"currentVersion,omitempty"`
+	Error          string `json:"error"`
+}
+
+// CandidateConflictCode defines model for CandidateConflict.Code.
+type CandidateConflictCode string
+
 // CapabilityId A namespaced interoperability claim. It never grants permission and unknown values have no effect.
 type CapabilityId = string
 
@@ -1823,6 +2815,16 @@ type CompletePasswordResetRequest struct {
 	Token    string `json:"token"`
 }
 
+// CorrectPostAddressRequest defines model for CorrectPostAddressRequest.
+type CorrectPostAddressRequest struct {
+	Slug string `json:"slug"`
+}
+
+// CorrectPostBylineRequest defines model for CorrectPostBylineRequest.
+type CorrectPostBylineRequest struct {
+	Handle string `json:"handle"`
+}
+
 // CreateAssetRequest defines model for CreateAssetRequest.
 type CreateAssetRequest struct {
 	Blurb     *string                      `json:"blurb,omitempty"`
@@ -1835,6 +2837,28 @@ type CreateAssetRequest struct {
 
 // CreateAssetRequestDiscovery defines model for CreateAssetRequest.Discovery.
 type CreateAssetRequestDiscovery string
+
+// CreatePostRequest defines model for CreatePostRequest.
+type CreatePostRequest struct {
+	CategoryId openapi_types.UUID  `json:"categoryId"`
+	GrantId    *openapi_types.UUID `json:"grantId,omitempty"`
+	Title      string              `json:"title"`
+}
+
+// CreatePublicationGrantRequest defines model for CreatePublicationGrantRequest.
+type CreatePublicationGrantRequest struct {
+	AppId             openapi_types.UUID   `json:"appId"`
+	CategoryIds       []openapi_types.UUID `json:"categoryIds"`
+	DefaultCategoryId openapi_types.UUID   `json:"defaultCategoryId"`
+	Handle            string               `json:"handle"`
+}
+
+// DefinePublicationAppRequest defines model for DefinePublicationAppRequest.
+type DefinePublicationAppRequest struct {
+	Home string `json:"home"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
 
 // DeletedAsset defines model for DeletedAsset.
 type DeletedAsset struct {
@@ -1894,6 +2918,15 @@ type DeliveryWorkList struct {
 	Deliveries []DeliveryWork `json:"deliveries"`
 }
 
+// DestinationPolicyRequest defines model for DestinationPolicyRequest.
+type DestinationPolicyRequest struct {
+	// DefaultDestinationIds Which of the allowed destinations a publication starts with.
+	DefaultDestinationIds *[]openapi_types.UUID `json:"defaultDestinationIds,omitempty"`
+
+	// DestinationIds The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+}
+
 // DeviceCode defines model for DeviceCode.
 type DeviceCode = string
 
@@ -1914,14 +2947,17 @@ type DialogueSampleContent struct {
 
 // DownloadRoleVerdict defines model for DownloadRoleVerdict.
 type DownloadRoleVerdict struct {
-	// Destination Where the content lands when that is not the format's standard home for it. Independent of how much survives, so it rides on a carried verdict too.
+	// Destination One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. Names no application: shownBy carries that.
 	Destination *string `json:"destination,omitempty"`
 	Label       string  `json:"label"`
 
 	// Reason What went, on a reduced verdict.
-	Reason  *string                    `json:"reason,omitempty"`
-	Role    string                     `json:"role"`
-	Sample  DownloadSample             `json:"sample"`
+	Reason *string        `json:"reason,omitempty"`
+	Role   string         `json:"role"`
+	Sample DownloadSample `json:"sample"`
+
+	// ShownBy The applications that show what the destination writes. Present only beside a destination, and the rest of the named applications receive the file without that content reaching them.
+	ShownBy *[]string                  `json:"shownBy,omitempty"`
 	Verdict DownloadRoleVerdictVerdict `json:"verdict"`
 }
 
@@ -2005,14 +3041,26 @@ type FieldListContent struct {
 	} `json:"fields"`
 }
 
-// ImageSetContent An ordered list of images. An item carries its image and one optional free-text name, and its position is where it sits in the list.
+// ImageSetContent An ordered list of images. An item carries its image, one optional free-text name and, in a gallery, whether it travels in downloads. Its position is where it sits in the list.
 type ImageSetContent struct {
 	Images []struct {
 		// Id Illarin's own id for this item, minted when the item is created. Preserved data keys against it, so send it back unchanged; an item with no id is a new one.
 		Id      *openapi_types.UUID `json:"id,omitempty"`
 		MediaId openapi_types.UUID  `json:"mediaId"`
 		Name    *string             `json:"name,omitempty"`
+
+		// OmitFromDownloads The creator's own choice to keep this image out of downloads. A reader can put it back for their own copy without changing it. Only a gallery image carries the choice; it is refused on an expression set, whose images an application indexes by name.
+		OmitFromDownloads *bool `json:"omitFromDownloads,omitempty"`
 	} `json:"images"`
+}
+
+// ImportPostMarkdownRequest defines model for ImportPostMarkdownRequest.
+type ImportPostMarkdownRequest struct {
+	// Markdown Constrained Markdown. Raw HTML, MDX and pictures from anywhere but this post are refused rather than quietly dropped.
+	Markdown string `json:"markdown"`
+
+	// Version The working-copy version the import means to replace.
+	Version int `json:"version"`
 }
 
 // IngestFailure defines model for IngestFailure.
@@ -2029,6 +3077,7 @@ type IngestOperation struct {
 	Asset   *Asset                `json:"asset,omitempty"`
 	Failure *IngestFailure        `json:"failure,omitempty"`
 	Id      openapi_types.UUID    `json:"id"`
+	Preview *ReplacementPreview   `json:"preview,omitempty"`
 	Status  IngestOperationStatus `json:"status"`
 	Url     string                `json:"url"`
 }
@@ -2050,6 +3099,20 @@ type InstanceTokenGrant struct {
 	AccessTokenExpiresAt time.Time      `json:"accessTokenExpiresAt"`
 	Instance             LinkedInstance `json:"instance"`
 	RefreshToken         RefreshToken   `json:"refreshToken"`
+}
+
+// IssuePublicationTokenRequest defines model for IssuePublicationTokenRequest.
+type IssuePublicationTokenRequest struct {
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	Name      string     `json:"name"`
+}
+
+// IssuedPublicationToken defines model for IssuedPublicationToken.
+type IssuedPublicationToken struct {
+	Token PublicationToken `json:"token"`
+
+	// Value The token value, returned here and never again.
+	Value string `json:"value"`
 }
 
 // ItemSize How large the images inside an element are drawn. It names what it controls, and no element type declares a measurement of its own.
@@ -2219,6 +3282,12 @@ type MoveAssetBlockContentRequest struct {
 	DestinationBlockId openapi_types.UUID `json:"destinationBlockId"`
 }
 
+// NamedPrompt defines model for NamedPrompt.
+type NamedPrompt struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.
 type NsfwVisibilityRequest struct {
 	Visibility NsfwVisibilityRequestVisibility `json:"visibility"`
@@ -2226,6 +3295,16 @@ type NsfwVisibilityRequest struct {
 
 // NsfwVisibilityRequestVisibility defines model for NsfwVisibilityRequest.Visibility.
 type NsfwVisibilityRequestVisibility string
+
+// OrderPublicationAppsRequest defines model for OrderPublicationAppsRequest.
+type OrderPublicationAppsRequest struct {
+	AppIds []openapi_types.UUID `json:"appIds"`
+}
+
+// OrderPublicationCategoriesRequest defines model for OrderPublicationCategoriesRequest.
+type OrderPublicationCategoriesRequest struct {
+	CategoryIds []openapi_types.UUID `json:"categoryIds"`
+}
 
 // OriginalUpload defines model for OriginalUpload.
 type OriginalUpload struct {
@@ -2292,6 +3371,345 @@ type PollLinkRequest struct {
 	DeviceCode DeviceCode `json:"deviceCode"`
 }
 
+// Post defines model for Post.
+type Post struct {
+	App       *PublicationApp     `json:"app,omitempty"`
+	Author    PostAuthor          `json:"author"`
+	Byline    *PostByline         `json:"byline,omitempty"`
+	Category  PublicationCategory `json:"category"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Deletion  *PostDeletion       `json:"deletion,omitempty"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document        PostDocument `json:"document"`
+	DocumentVersion int          `json:"documentVersion"`
+
+	// FormerAddresses Addresses this post published under and has since left. Every one of them still reaches it.
+	FormerAddresses []string            `json:"formerAddresses"`
+	GrantId         *openapi_types.UUID `json:"grantId,omitempty"`
+	Header          *PostHeader         `json:"header,omitempty"`
+	Id              openapi_types.UUID  `json:"id"`
+	Media           []PostMedia         `json:"media"`
+
+	// PublicRevisionId The edition readers are being given, once there is one.
+	PublicRevisionId *openapi_types.UUID `json:"publicRevisionId,omitempty"`
+	PublishedAt      *time.Time          `json:"publishedAt,omitempty"`
+	Release          *PostRelease        `json:"release,omitempty"`
+	Schedule         *PostSchedule       `json:"schedule,omitempty"`
+	Slug             string              `json:"slug"`
+	SocialMediaId    *openapi_types.UUID `json:"socialMediaId,omitempty"`
+	Status           PostStatus          `json:"status"`
+	Summary          string              `json:"summary"`
+	Title            string              `json:"title"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
+	UpdatedPublicAt  *time.Time          `json:"updatedPublicAt,omitempty"`
+	Version          int                 `json:"version"`
+	Withdrawal       *PostWithdrawal     `json:"withdrawal,omitempty"`
+}
+
+// PostAction One thing that was done to a post, named by who did it, what it was and which edition it touched.
+type PostAction struct {
+	Action     string             `json:"action"`
+	Actor      string             `json:"actor"`
+	After      *string            `json:"after,omitempty"`
+	At         time.Time          `json:"at"`
+	Before     *string            `json:"before,omitempty"`
+	Credential string             `json:"credential"`
+	Id         openapi_types.UUID `json:"id"`
+	Revision   *int               `json:"revision,omitempty"`
+}
+
+// PostActionList defines model for PostActionList.
+type PostActionList struct {
+	Actions []PostAction `json:"actions"`
+}
+
+// PostArchive One page of the published archive and the scope it was read under.
+type PostArchive struct {
+	App      *PublicationApp      `json:"app,omitempty"`
+	Category *PublicationCategory `json:"category,omitempty"`
+	Page     int                  `json:"page"`
+	Pages    int                  `json:"pages"`
+	Posts    []PostSummary        `json:"posts"`
+	Total    int                  `json:"total"`
+}
+
+// PostAuthor defines model for PostAuthor.
+type PostAuthor struct {
+	Handle string `json:"handle"`
+}
+
+// PostByline defines model for PostByline.
+type PostByline struct {
+	App          *PublicationApp `json:"app,omitempty"`
+	Avatar       *ProfileAvatar  `json:"avatar,omitempty"`
+	ContactEmail string          `json:"contactEmail"`
+	DisplayName  string          `json:"displayName"`
+	Handle       string          `json:"handle"`
+
+	// Historical True when the byline is an admin-supplied snapshot with no account behind it, so nothing should link it to a public profile.
+	Historical bool `json:"historical"`
+}
+
+// PostConflict A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version.
+type PostConflict struct {
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code      PublicationErrorCode `json:"code"`
+	Error     string               `json:"error"`
+	Field     *string              `json:"field,omitempty"`
+	UpdatedAt *time.Time           `json:"updatedAt,omitempty"`
+	Version   *int                 `json:"version,omitempty"`
+}
+
+// PostDeletion A deleted post and the deadline it has to come back by. Nothing about it is public, and readers were never shown any of it.
+type PostDeletion struct {
+	At time.Time `json:"at"`
+	By string    `json:"by"`
+
+	// Until When the post and everything it holds are removed for good.
+	Until time.Time `json:"until"`
+}
+
+// PostDelivery One publication event on its way to one destination.
+type PostDelivery struct {
+	Attempts int `json:"attempts"`
+
+	// Destination The name the destination carried when this event was captured.
+	Destination string `json:"destination"`
+
+	// DueAt When the next attempt is due, in the past once it has settled.
+	DueAt     time.Time          `json:"dueAt"`
+	EventId   openapi_types.UUID `json:"eventId"`
+	EventType string             `json:"eventType"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What the destination behind this delivery is, empty once it has been removed.
+	Kind PostDeliveryKind `json:"kind"`
+
+	// Last The most recent attempt, absent until one has been made.
+	Last *PostDeliveryAttempt `json:"last,omitempty"`
+
+	// MessageId The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed.
+	MessageId  string             `json:"messageId"`
+	OccurredAt time.Time          `json:"occurredAt"`
+	PostId     openapi_types.UUID `json:"postId"`
+
+	// PostTitle The title the edition behind this event carries.
+	PostTitle string `json:"postTitle"`
+
+	// Removed Whether the destination behind this delivery is gone.
+	Removed    bool               `json:"removed"`
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// Run Which attempt sequence the delivery is on; a replay opens the next.
+	Run       int        `json:"run"`
+	SettledAt *time.Time `json:"settledAt,omitempty"`
+
+	// SettledReason Why a delivery stopped, absent while it is still going.
+	SettledReason *PostDeliverySettledReason `json:"settledReason,omitempty"`
+
+	// State Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+	State PostDeliveryState `json:"state"`
+}
+
+// PostDeliveryKind What the destination behind this delivery is, empty once it has been removed.
+type PostDeliveryKind string
+
+// PostDeliveryAttempt The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with.
+type PostDeliveryAttempt struct {
+	AttemptedAt time.Time `json:"attemptedAt"`
+
+	// Detail A safe sentence about the attempt, never a response body.
+	Detail string `json:"detail"`
+	Number int    `json:"number"`
+
+	// Outcome What one attempt found at the far end.
+	Outcome PostDeliveryOutcome `json:"outcome"`
+
+	// Run Which attempt sequence this belongs to; a replay opens the next.
+	Run int `json:"run"`
+
+	// Status What the endpoint answered, absent when nothing was reached.
+	Status *int `json:"status,omitempty"`
+	TookMs int  `json:"tookMs"`
+}
+
+// PostDeliveryAttemptList Every attempt one delivery has made, oldest first.
+type PostDeliveryAttemptList struct {
+	Attempts []PostDeliveryAttempt `json:"attempts"`
+}
+
+// PostDeliveryList defines model for PostDeliveryList.
+type PostDeliveryList struct {
+	Deliveries []PostDelivery `json:"deliveries"`
+}
+
+// PostDeliveryOutcome What one attempt found at the far end.
+type PostDeliveryOutcome string
+
+// PostDeliverySettledReason Why a delivery stopped, absent while it is still going.
+type PostDeliverySettledReason string
+
+// PostDeliveryState Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+type PostDeliveryState string
+
+// PostDocument The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+type PostDocument struct {
+	Content []map[string]interface{} `json:"content"`
+	Version int                      `json:"version"`
+}
+
+// PostHeader defines model for PostHeader.
+type PostHeader struct {
+	Alt     string             `json:"alt"`
+	Caption *string            `json:"caption,omitempty"`
+	MediaId openapi_types.UUID `json:"mediaId"`
+}
+
+// PostHeaderEdit defines model for PostHeaderEdit.
+type PostHeaderEdit struct {
+	Alt     string             `json:"alt"`
+	Caption *string            `json:"caption,omitempty"`
+	MediaId openapi_types.UUID `json:"mediaId"`
+}
+
+// PostImport The working copy an import produced, together with everything the conversion could not carry across exactly.
+type PostImport struct {
+	Post     Post             `json:"post"`
+	Warnings []PostImportNote `json:"warnings"`
+}
+
+// PostImportNote One line of an import and what could not be carried across it.
+type PostImportNote struct {
+	Line    int    `json:"line"`
+	Message string `json:"message"`
+}
+
+// PostImportRefusal An import that did not happen. The working copy is left exactly as it was. A refusal that came from reading the Markdown names every line that stopped it; one about the request or the post it was aimed at does not.
+type PostImportRefusal struct {
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code     PublicationErrorCode `json:"code"`
+	Error    string               `json:"error"`
+	Field    *string              `json:"field,omitempty"`
+	Refusals *[]PostImportNote    `json:"refusals,omitempty"`
+}
+
+// PostList defines model for PostList.
+type PostList struct {
+	Posts []Post `json:"posts"`
+}
+
+// PostMedia One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with.
+type PostMedia struct {
+	Height  int                `json:"height"`
+	Id      openapi_types.UUID `json:"id"`
+	PostId  openapi_types.UUID `json:"postId"`
+	Purpose PostMediaPurpose   `json:"purpose"`
+
+	// ThumbUrl The size a gallery shows a picture at.
+	ThumbUrl string `json:"thumbUrl"`
+
+	// Url The size a picture is shown at on its own.
+	Url   string `json:"url"`
+	Width int    `json:"width"`
+}
+
+// PostMediaPurpose defines model for PostMediaPurpose.
+type PostMediaPurpose string
+
+// PostRelease defines model for PostRelease.
+type PostRelease struct {
+	Address *string        `json:"address,omitempty"`
+	App     PublicationApp `json:"app"`
+	Version string         `json:"version"`
+}
+
+// PostReleaseEdit defines model for PostReleaseEdit.
+type PostReleaseEdit struct {
+	Address *string            `json:"address,omitempty"`
+	AppId   openapi_types.UUID `json:"appId"`
+	Version string             `json:"version"`
+}
+
+// PostRevision One immutable edition of a post. It carries what the edition was called and when it was kept, not the words it holds.
+type PostRevision struct {
+	CapturedAt time.Time `json:"capturedAt"`
+	CapturedBy string    `json:"capturedBy"`
+
+	// CapturedFor Why an edition was kept.
+	CapturedFor PostRevisionReason  `json:"capturedFor"`
+	Category    PublicationCategory `json:"category"`
+	Id          openapi_types.UUID  `json:"id"`
+	Number      int                 `json:"number"`
+
+	// Public Whether this is the edition readers are being given.
+	Public  bool   `json:"public"`
+	Slug    string `json:"slug"`
+	Summary string `json:"summary"`
+	Title   string `json:"title"`
+}
+
+// PostRevisionList defines model for PostRevisionList.
+type PostRevisionList struct {
+	Revisions []PostRevision `json:"revisions"`
+}
+
+// PostRevisionReason Why an edition was kept.
+type PostRevisionReason string
+
+// PostSchedule The post's most recent schedule. It names the exact edition that will go live and the instant it goes, both in UTC.
+type PostSchedule struct {
+	At             time.Time          `json:"at"`
+	CreatedAt      time.Time          `json:"createdAt"`
+	CreatedBy      string             `json:"createdBy"`
+	Id             openapi_types.UUID `json:"id"`
+	RevisionId     openapi_types.UUID `json:"revisionId"`
+	RevisionNumber int                `json:"revisionNumber"`
+
+	// State Where a schedule got to.
+	State PostScheduleState `json:"state"`
+
+	// StoppedBecause Why Illarin stopped a schedule instead of publishing it.
+	StoppedBecause *string `json:"stoppedBecause,omitempty"`
+}
+
+// PostScheduleState Where a schedule got to.
+type PostScheduleState string
+
+// PostStatus defines model for PostStatus.
+type PostStatus string
+
+// PostSummary One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile.
+type PostSummary struct {
+	App      *PublicationApp     `json:"app,omitempty"`
+	Byline   PostByline          `json:"byline"`
+	Category PublicationCategory `json:"category"`
+	Id       openapi_types.UUID  `json:"id"`
+
+	// OriginalSlug The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes.
+	OriginalSlug   string     `json:"originalSlug"`
+	PublishedAt    time.Time  `json:"publishedAt"`
+	ReleaseVersion *string    `json:"releaseVersion,omitempty"`
+	Slug           string     `json:"slug"`
+	Summary        string     `json:"summary"`
+	Title          string     `json:"title"`
+	UpdatedAt      *time.Time `json:"updatedAt,omitempty"`
+}
+
+// PostVersionRequest defines model for PostVersionRequest.
+type PostVersionRequest struct {
+	// Version The working-copy version the action means to act on.
+	Version int `json:"version"`
+}
+
+// PostWithdrawal Why a post is out of public view. The reason is Illarin's own record; the explanation is the only part a reader is ever shown.
+type PostWithdrawal struct {
+	At          time.Time `json:"at"`
+	By          string    `json:"by"`
+	Explanation string    `json:"explanation"`
+	Reason      string    `json:"reason"`
+}
+
 // PreservedNamespace defines model for PreservedNamespace.
 type PreservedNamespace struct {
 	// Bytes How much the asset is holding under this namespace.
@@ -2303,8 +3721,47 @@ type PreservedNamespace struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	Handle string             `json:"handle"`
-	Id     openapi_types.UUID `json:"id"`
+	Avatar       *ProfileAvatar     `json:"avatar,omitempty"`
+	Biography    string             `json:"biography"`
+	ContactEmail string             `json:"contactEmail"`
+	DisplayName  string             `json:"displayName"`
+	Handle       string             `json:"handle"`
+	Id           openapi_types.UUID `json:"id"`
+	Links        []ProfileLink      `json:"links"`
+
+	// Restricted True when an admin has hidden the added identity. The handle and the published-asset listing stay; every other field answers empty.
+	Restricted bool `json:"restricted"`
+}
+
+// ProfileAvatar defines model for ProfileAvatar.
+type ProfileAvatar struct {
+	Height int    `json:"height"`
+	Url    string `json:"url"`
+	Width  int    `json:"width"`
+}
+
+// ProfileLink defines model for ProfileLink.
+type ProfileLink struct {
+	Address string `json:"address"`
+	Label   string `json:"label"`
+}
+
+// ProfileRestriction The admin-only record of why a profile is hidden.
+type ProfileRestriction struct {
+	Reason       string    `json:"reason"`
+	RestrictedAt time.Time `json:"restrictedAt"`
+	RestrictedBy *string   `json:"restrictedBy,omitempty"`
+}
+
+// PromptCorrespondenceRequest defines model for PromptCorrespondenceRequest.
+type PromptCorrespondenceRequest struct {
+	Matches []struct {
+		// Current A prompt the asset seals right now
+		Current openapi_types.UUID `json:"current"`
+
+		// Recorded The prompt this version carries in its place, absent where it carries none
+		Recorded *openapi_types.UUID `json:"recorded,omitempty"`
+	} `json:"matches"`
 }
 
 // PromptListContent A preset's prompt, in the order it is sent. One level of grouping is the list's own nesting rather than a second element.
@@ -2352,13 +3809,366 @@ type ProseContent struct {
 	Text string `json:"text"`
 }
 
+// ProtectionMismatch defines model for ProtectionMismatch.
+type ProtectionMismatch struct {
+	// Recorded The prompts this version does carry, which a match chooses from
+	Recorded []NamedPrompt `json:"recorded"`
+
+	// Unmatched The sealed prompts this version does not carry under the same id
+	Unmatched []NamedPrompt   `json:"unmatched"`
+	Version   RecordedVersion `json:"version"`
+}
+
+// ProtectionMismatchList defines model for ProtectionMismatchList.
+type ProtectionMismatchList struct {
+	Items []ProtectionMismatch `json:"items"`
+}
+
+// PublicPost defines model for PublicPost.
+type PublicPost struct {
+	Byline   PostByline          `json:"byline"`
+	Category PublicationCategory `json:"category"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document PostDocument       `json:"document"`
+	Header   *PostHeader        `json:"header,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Media    []PostMedia        `json:"media"`
+
+	// OriginalSlug The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes.
+	OriginalSlug string    `json:"originalSlug"`
+	PublishedAt  time.Time `json:"publishedAt"`
+
+	// Related At most three other published posts, preferring the same publication app and then the same category, newest first.
+	Related     []PostSummary `json:"related"`
+	Release     *PostRelease  `json:"release,omitempty"`
+	Slug        string        `json:"slug"`
+	SocialImage *PostMedia    `json:"socialImage,omitempty"`
+	Summary     string        `json:"summary"`
+	Title       string        `json:"title"`
+	UpdatedAt   *time.Time    `json:"updatedAt,omitempty"`
+}
+
+// PublicationApp defines model for PublicationApp.
+type PublicationApp struct {
+	// Destinations The destinations every grant on this app follows unless the grant names its own.
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+	Home         string                         `json:"home"`
+	Id           openapi_types.UUID             `json:"id"`
+	Mark         *PublicationAppMark            `json:"mark,omitempty"`
+	Name         string                         `json:"name"`
+	Position     int                            `json:"position"`
+	Retired      bool                           `json:"retired"`
+	Slug         string                         `json:"slug"`
+}
+
+// PublicationAppList defines model for PublicationAppList.
+type PublicationAppList struct {
+	Apps []PublicationApp `json:"apps"`
+}
+
+// PublicationAppMark defines model for PublicationAppMark.
+type PublicationAppMark struct {
+	Height int    `json:"height"`
+	Url    string `json:"url"`
+	Width  int    `json:"width"`
+}
+
+// PublicationCategory defines model for PublicationCategory.
+type PublicationCategory struct {
+	Id       openapi_types.UUID `json:"id"`
+	Label    string             `json:"label"`
+	Position int                `json:"position"`
+	Retired  bool               `json:"retired"`
+	Slug     string             `json:"slug"`
+}
+
+// PublicationCategoryList defines model for PublicationCategoryList.
+type PublicationCategoryList struct {
+	Categories []PublicationCategory `json:"categories"`
+}
+
+// PublicationChannel The safe identity behind a Discord destination. It names where announcements land and nothing that would let a reader send one.
+type PublicationChannel struct {
+	// ChannelId The channel announcements land in.
+	ChannelId string `json:"channelId"`
+
+	// GuildId The Discord server the channel belongs to.
+	GuildId string `json:"guildId"`
+
+	// RoleId The one role an author may ask for, empty when there is none.
+	RoleId string `json:"roleId"`
+
+	// RoleName What that role is called, and all a contributor is shown.
+	RoleName string `json:"roleName"`
+
+	// WebhookName The name Discord shows the announcement under.
+	WebhookName string `json:"webhookName"`
+}
+
+// PublicationChannelRequest defines model for PublicationChannelRequest.
+type PublicationChannelRequest struct {
+	// Address The Discord incoming webhook address. Illarin masks it after saving; leave it out when changing a destination to keep the one it has.
+	Address *string `json:"address,omitempty"`
+	Name    string  `json:"name"`
+
+	// RoleId The one role an author may ask this destination to mention. Send it empty to approve no role.
+	RoleId *string `json:"roleId,omitempty"`
+
+	// RoleName What that role is called, and all a contributor is shown.
+	RoleName *string `json:"roleName,omitempty"`
+}
+
+// PublicationCredential defines model for PublicationCredential.
+type PublicationCredential struct {
+	Grant PublicationGrant `json:"grant"`
+	Token PublicationToken `json:"token"`
+}
+
+// PublicationDestination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+type PublicationDestination struct {
+	// Address The masked address, which names the host and hides the rest.
+	Address string `json:"address"`
+
+	// Channel Where a Discord destination announces, absent on a generic webhook.
+	Channel    *PublicationChannel `json:"channel,omitempty"`
+	CreatedAt  time.Time           `json:"createdAt"`
+	DisabledAt *time.Time          `json:"disabledAt,omitempty"`
+
+	// Events Which Publication events this endpoint asked for.
+	Events []PublicationEvent `json:"events"`
+
+	// Host The host the endpoint answers on.
+	Host string             `json:"host"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Kind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+	Kind PublicationDestinationKind `json:"kind"`
+
+	// Name What the authority calls this endpoint, and all a contributor sees.
+	Name string `json:"name"`
+
+	// PreviousSecretUntil How long a rotated secret keeps producing an accepted signature, absent when no rotation is in its overlap.
+	PreviousSecretUntil *time.Time `json:"previousSecretUntil,omitempty"`
+
+	// SecretSetAt When the current signing secret was drawn.
+	SecretSetAt time.Time `json:"secretSetAt"`
+
+	// State Whether a destination is ready to receive anything.
+	State      PublicationDestinationState `json:"state"`
+	VerifiedAt *time.Time                  `json:"verifiedAt,omitempty"`
+}
+
+// PublicationDestinationChoice One destination a post may send to. It carries no address and no secret, which is the whole point of it.
+type PublicationDestinationChoice struct {
+	// ByDefault Whether a publication starts with this one selected.
+	ByDefault bool `json:"byDefault"`
+
+	// Events Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach.
+	Events []PublicationEvent `json:"events"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Kind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+	Kind PublicationDestinationKind `json:"kind"`
+	Name string                     `json:"name"`
+
+	// Role The notification role an author may ask this destination to mention, empty when the authority approved none.
+	Role string `json:"role"`
+
+	// State Whether a destination is ready to receive anything.
+	State PublicationDestinationState `json:"state"`
+}
+
+// PublicationDestinationChoiceList defines model for PublicationDestinationChoiceList.
+type PublicationDestinationChoiceList struct {
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+
+	// Inherited Whether this set comes from the app rather than being its own.
+	Inherited bool `json:"inherited"`
+}
+
+// PublicationDestinationKind What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+type PublicationDestinationKind string
+
+// PublicationDestinationList defines model for PublicationDestinationList.
+type PublicationDestinationList struct {
+	Destinations []PublicationDestination `json:"destinations"`
+}
+
+// PublicationDestinationState Whether a destination is ready to receive anything.
+type PublicationDestinationState string
+
+// PublicationError How every publication route refuses. It never names another account, grant or token.
+type PublicationError struct {
+	// Code The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+	Code  PublicationErrorCode `json:"code"`
+	Error string               `json:"error"`
+
+	// Field The request field the refusal is about, where there is one.
+	Field *string `json:"field,omitempty"`
+}
+
+// PublicationErrorCode The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+type PublicationErrorCode string
+
+// PublicationEvent One Publication event a destination may subscribe to.
+type PublicationEvent string
+
+// PublicationEventApp defines model for PublicationEventApp.
+type PublicationEventApp struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+	Url  string `json:"url"`
+}
+
+// PublicationGrant defines model for PublicationGrant.
+type PublicationGrant struct {
+	Active          bool                  `json:"active"`
+	App             PublicationApp        `json:"app"`
+	Categories      []PublicationCategory `json:"categories"`
+	DefaultCategory PublicationCategory   `json:"defaultCategory"`
+
+	// Destinations The destinations this contributor may send to.
+	Destinations []PublicationDestinationChoice `json:"destinations"`
+
+	// DestinationsInherited Whether the set comes from the app rather than the grant itself.
+	DestinationsInherited bool                   `json:"destinationsInherited"`
+	GrantedAt             time.Time              `json:"grantedAt"`
+	Holder                PublicationGrantHolder `json:"holder"`
+	Id                    openapi_types.UUID     `json:"id"`
+	RevokedAt             *time.Time             `json:"revokedAt,omitempty"`
+}
+
+// PublicationGrantHolder defines model for PublicationGrantHolder.
+type PublicationGrantHolder struct {
+	Avatar      *ProfileAvatar `json:"avatar,omitempty"`
+	DisplayName string         `json:"displayName"`
+	Handle      string         `json:"handle"`
+	Restricted  bool           `json:"restricted"`
+}
+
+// PublicationGrantList defines model for PublicationGrantList.
+type PublicationGrantList struct {
+	Grants []PublicationGrant `json:"grants"`
+}
+
+// PublicationPostEvent One public transition of one post, as a summary. Illarin promises no global ordering between events. Compare `occurredAt` and treat `post.revisionId` as the identity of the edition, so an event that arrives after a newer one can be discarded rather than applied.
+type PublicationPostEvent struct {
+	// Id The Publication event, stable across every attempt and replay.
+	Id openapi_types.UUID `json:"id"`
+
+	// Note One line the publisher wrote for this transition alone. It is never part of the post and is absent when nothing was written.
+	Note *string `json:"note,omitempty"`
+
+	// OccurredAt When the transition happened, which is what orders two events.
+	OccurredAt time.Time `json:"occurredAt"`
+
+	// Post What the post was at the moment of the transition. It never carries the article body.
+	Post PublicationPostSummary `json:"post"`
+
+	// Type One Publication event a destination may subscribe to.
+	Type PublicationEvent `json:"type"`
+}
+
+// PublicationPostSummary What the post was at the moment of the transition. It never carries the article body.
+type PublicationPostSummary struct {
+	// Byline Who the post was published under, as it stood at first publication.
+	Byline struct {
+		App    *PublicationEventApp `json:"app,omitempty"`
+		Handle string               `json:"handle"`
+		Name   string               `json:"name"`
+		Url    string               `json:"url"`
+	} `json:"byline"`
+	Category struct {
+		Label string `json:"label"`
+		Slug  string `json:"slug"`
+	} `json:"category"`
+
+	// Id The post, which is the same across its whole public life.
+	Id          openapi_types.UUID `json:"id"`
+	PublishedAt time.Time          `json:"publishedAt"`
+
+	// Release The release this post announces, absent when it announces none.
+	Release *struct {
+		App     PublicationEventApp `json:"app"`
+		Url     *string             `json:"url,omitempty"`
+		Version string              `json:"version"`
+	} `json:"release,omitempty"`
+
+	// RevisionId The exact edition this event is about.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// SocialImageUrl The composed sharing image, absent when the post has none.
+	SocialImageUrl *string `json:"socialImageUrl,omitempty"`
+
+	// Summary The hand-written summary readers see before the article.
+	Summary   string     `json:"summary"`
+	Title     string     `json:"title"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+
+	// Url The permanent address of the post.
+	Url string `json:"url"`
+}
+
+// PublicationToken defines model for PublicationToken.
+type PublicationToken struct {
+	Active     bool               `json:"active"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	ExpiresAt  *time.Time         `json:"expiresAt,omitempty"`
+	GrantId    openapi_types.UUID `json:"grantId"`
+	Id         openapi_types.UUID `json:"id"`
+	LastUsedAt *time.Time         `json:"lastUsedAt,omitempty"`
+	Name       string             `json:"name"`
+	Prefix     string             `json:"prefix"`
+	RevokedAt  *time.Time         `json:"revokedAt,omitempty"`
+}
+
+// PublicationTokenList defines model for PublicationTokenList.
+type PublicationTokenList struct {
+	Tokens []PublicationToken `json:"tokens"`
+}
+
+// PublicationWorkspace defines model for PublicationWorkspace.
+type PublicationWorkspace struct {
+	Admin bool `json:"admin"`
+
+	// Apps The projects this account may name in a release. A contributor gets the apps they are approved for; an admin gets every live app.
+	Apps []PublicationApp `json:"apps"`
+
+	// Categories The categories this account may start a post in. A contributor gets what their grants allow; an admin gets every live category.
+	Categories []PublicationCategory `json:"categories"`
+	Grants     []PublicationGrant    `json:"grants"`
+	Handle     string                `json:"handle"`
+}
+
+// PublishConflict defines model for PublishConflict.
+type PublishConflict struct {
+	union json.RawMessage
+}
+
+// PublishPostRequest defines model for PublishPostRequest.
+type PublishPostRequest struct {
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
+
+	// Version The working-copy version the action means to act on.
+	Version int `json:"version"`
+}
+
 // PublishRefusal defines model for PublishRefusal.
 type PublishRefusal struct {
-	Error string `json:"error"`
+	Code  *PublishRefusalCode `json:"code,omitempty"`
+	Error string              `json:"error"`
 
 	// Readiness The whole floor, so a refusal names every missing item at once.
 	Readiness *[]ReadinessItem `json:"readiness,omitempty"`
 }
+
+// PublishRefusalCode defines model for PublishRefusal.Code.
+type PublishRefusalCode string
 
 // QueuedDelivery defines model for QueuedDelivery.
 type QueuedDelivery struct {
@@ -2413,6 +4223,49 @@ type RecordListContentRecordsGenderIdentity int
 // RecordListContentSchema defines model for RecordListContent.Schema.
 type RecordListContentSchema string
 
+// RecordedVersion defines model for RecordedVersion.
+type RecordedVersion struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Initial Whether this version was captured from what the asset already was, rather than published as an update.
+	Initial               bool       `json:"initial"`
+	Notes                 string     `json:"notes"`
+	NotesEditedAt         *time.Time `json:"notesEditedAt,omitempty"`
+	Number                int        `json:"number"`
+	RecordedAt            time.Time  `json:"recordedAt"`
+	Summary               string     `json:"summary"`
+	VersionLabel          string     `json:"versionLabel"`
+	WithdrawalExplanation *string    `json:"withdrawalExplanation,omitempty"`
+	WithdrawnAt           *time.Time `json:"withdrawnAt,omitempty"`
+}
+
+// RecordedVersionDownloads defines model for RecordedVersionDownloads.
+type RecordedVersionDownloads struct {
+	AppTargets []AppTarget `json:"appTargets"`
+
+	// Blocks The blocks this version recorded, under the asset's current protection, so a reader can choose which of its gallery images a download carries.
+	Blocks []AssetBlock `json:"blocks"`
+
+	// Downloads The formats the current writers offer for the content this version recorded, with the loss each one costs it. Empty while linkedInstallOnly is true.
+	Downloads []DownloadTarget             `json:"downloads"`
+	Kind      RecordedVersionDownloadsKind `json:"kind"`
+
+	// LinkedInstallOnly Whether protected content keeps this version out of any file. True while the asset installs only through a linked app, and for a version that recorded a sealed prompt the asset no longer carries.
+	LinkedInstallOnly bool `json:"linkedInstallOnly"`
+
+	// Media The pictures this version recorded, cover first, addressed under the reader's own adult-content preference.
+	Media   []AssetImage    `json:"media"`
+	Version RecordedVersion `json:"version"`
+}
+
+// RecordedVersionDownloadsKind defines model for RecordedVersionDownloads.Kind.
+type RecordedVersionDownloadsKind string
+
+// RecordedVersionList defines model for RecordedVersionList.
+type RecordedVersionList struct {
+	Items []RecordedVersion `json:"items"`
+}
+
 // RefreshInstanceToken defines model for RefreshInstanceToken.
 type RefreshInstanceToken struct {
 	RefreshToken RefreshToken `json:"refreshToken"`
@@ -2426,15 +4279,106 @@ type RenameHandleRequest struct {
 	Handle string `json:"handle"`
 }
 
+// ReplacePostScheduleRequest defines model for ReplacePostScheduleRequest.
+type ReplacePostScheduleRequest struct {
+	// At When the edition goes live, with an explicit offset.
+	At             time.Time             `json:"at"`
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
+	// RevisionId An edition the post has already kept.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
+}
+
+// ReplacementAcceptance defines model for ReplacementAcceptance.
+type ReplacementAcceptance struct {
+	// ExposeProtected Confirms that removing protection may expose published and recorded prompt text immediately
+	ExposeProtected *bool                                           `json:"exposeProtected,omitempty"`
+	Unrepresentable map[string]ReplacementAcceptanceUnrepresentable `json:"unrepresentable"`
+}
+
+// ReplacementAcceptanceUnrepresentable defines model for ReplacementAcceptance.Unrepresentable.
+type ReplacementAcceptanceUnrepresentable string
+
+// ReplacementConflict defines model for ReplacementConflict.
+type ReplacementConflict struct {
+	union json.RawMessage
+}
+
+// ReplacementPreview defines model for ReplacementPreview.
+type ReplacementPreview struct {
+	// Conflicts The subjects where the file overwrites an edit made since the asset was last published
+	Conflicts []string             `json:"conflicts"`
+	Format    string               `json:"format"`
+	Groups    []VersionChangeGroup `json:"groups"`
+
+	// MissingWording Sealed prompts whose wording is not in the file or the current asset
+	MissingWording []string `json:"missingWording"`
+
+	// Seals How many prompt fragments the file would seal
+	Seals           int      `json:"seals"`
+	Unrepresentable []string `json:"unrepresentable"`
+}
+
+// RepublishPostRequest defines model for RepublishPostRequest.
+type RepublishPostRequest struct {
+	// DestinationIds Where this republication announces. An absent list takes the policy defaults; an empty one puts the post back quietly.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
+	// RevisionId The edition readers are given when the post returns.
+	RevisionId openapi_types.UUID `json:"revisionId"`
+
+	// Version The working-copy version the republication means to act on.
+	Version int `json:"version"`
+}
+
 // RequestCode defines model for RequestCode.
 type RequestCode = string
+
+// RestoreConflict defines model for RestoreConflict.
+type RestoreConflict struct {
+	union json.RawMessage
+}
+
+// RestoreConflict1 defines model for RestoreConflict.1.
+type RestoreConflict1 struct {
+	Code  RestoreConflict1Code `json:"code"`
+	Error string               `json:"error"`
+}
+
+// RestoreConflict1Code defines model for RestoreConflict.1.Code.
+type RestoreConflict1Code string
+
+// RestrictProfileRequest defines model for RestrictProfileRequest.
+type RestrictProfileRequest struct {
+	Reason string `json:"reason"`
+}
+
+// RotatedPublicationSecret A destination's new signing secret and how long the old one stays acceptable alongside it.
+type RotatedPublicationSecret struct {
+	// Destination One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent.
+	Destination PublicationDestination `json:"destination"`
+
+	// PreviousSecretUntil When the old secret stops producing an accepted signature.
+	PreviousSecretUntil time.Time `json:"previousSecretUntil"`
+
+	// Secret The signing secret this endpoint's requests now carry. Illarin cannot show it again.
+	Secret string `json:"secret"`
+}
 
 // SaveAssetBlockRequest defines model for SaveAssetBlockRequest.
 type SaveAssetBlockRequest struct {
 	// AllowedApps The applications that may receive a sealed prompt in this save. Send an empty list only when no fragment remains sealed.
 	AllowedApps *[]SaveAssetBlockRequestAllowedApps `json:"allowedApps,omitempty"`
 	Elements    []SaveAssetElement                  `json:"elements"`
-	Layout      SaveAssetBlockRequestLayout         `json:"layout"`
+
+	// ExposeProtected The creator confirming that this save makes sealed prompt text public. A save that unseals a prompt without it is refused.
+	ExposeProtected *bool                       `json:"exposeProtected,omitempty"`
+	Layout          SaveAssetBlockRequestLayout `json:"layout"`
 
 	// Title Null keeps the definition's current default wording.
 	Title *string                    `json:"title"`
@@ -2470,6 +4414,43 @@ type SaveAssetElement struct {
 
 // SaveAssetElementDisplay defines model for SaveAssetElement.Display.
 type SaveAssetElementDisplay string
+
+// SavePostRequest defines model for SavePostRequest.
+type SavePostRequest struct {
+	CategoryId openapi_types.UUID `json:"categoryId"`
+
+	// Document The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly.
+	Document      PostDocument        `json:"document"`
+	Header        *PostHeaderEdit     `json:"header,omitempty"`
+	Release       *PostReleaseEdit    `json:"release,omitempty"`
+	Slug          string              `json:"slug"`
+	SocialMediaId *openapi_types.UUID `json:"socialMediaId,omitempty"`
+	Summary       string              `json:"summary"`
+	Title         string              `json:"title"`
+	Version       int                 `json:"version"`
+}
+
+// SaveProfileRequest defines model for SaveProfileRequest.
+type SaveProfileRequest struct {
+	Biography    string        `json:"biography"`
+	ContactEmail string        `json:"contactEmail"`
+	DisplayName  string        `json:"displayName"`
+	Links        []ProfileLink `json:"links"`
+}
+
+// SchedulePostRequest defines model for SchedulePostRequest.
+type SchedulePostRequest struct {
+	// At When the edition goes live, with an explicit offset.
+	At             time.Time             `json:"at"`
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+	Note           *string               `json:"note,omitempty"`
+
+	// RoleDestinationIds Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused.
+	RoleDestinationIds *[]openapi_types.UUID `json:"roleDestinationIds,omitempty"`
+
+	// Version The working-copy version the edition is captured from.
+	Version int `json:"version"`
+}
 
 // Scope asset:receive lets an instance receive assets sent to it. library:sync lets it report what it has installed.
 type Scope string
@@ -2511,6 +4492,18 @@ type ScriptListContentScriptsAffects string
 // ScriptListContentScriptsTargets defines model for ScriptListContent.Scripts.Targets.
 type ScriptListContentScriptsTargets string
 
+// SealedExposureRefusal defines model for SealedExposureRefusal.
+type SealedExposureRefusal struct {
+	Code  SealedExposureRefusalCode `json:"code"`
+	Error string                    `json:"error"`
+
+	// Prompts The prompts whose protection would be removed
+	Prompts []string `json:"prompts"`
+}
+
+// SealedExposureRefusalCode defines model for SealedExposureRefusal.Code.
+type SealedExposureRefusalCode string
+
 // SendAssetRequest defines model for SendAssetRequest.
 type SendAssetRequest struct {
 	InstanceId openapi_types.UUID `json:"instanceId"`
@@ -2518,7 +4511,9 @@ type SendAssetRequest struct {
 
 // SessionState defines model for SessionState.
 type SessionState struct {
-	User *Account `json:"user"`
+	// PublicationAuthority True when this account is the one recorded as holding publication authority. It is not a system role and grants nothing on its own.
+	PublicationAuthority bool     `json:"publicationAuthority"`
+	User                 *Account `json:"user"`
 }
 
 // SettingGroupContent A set of named settings an app understands. The names are taken at face value and Illarin models nothing about what any of them controls.
@@ -2640,12 +4635,47 @@ type TypedValue struct {
 	Text    *string   `json:"text,omitempty"`
 }
 
+// UpdateAssetUpdateDestinationRequest defines model for UpdateAssetUpdateDestinationRequest.
+type UpdateAssetUpdateDestinationRequest struct {
+	Address *string `json:"address,omitempty"`
+	Name    *string `json:"name,omitempty"`
+}
+
 // UpdateInstance defines model for UpdateInstance.
 type UpdateInstance struct {
 	AcceptedTargets    AcceptedTargets      `json:"acceptedTargets"`
 	ApplicationVersion *ApplicationVersion  `json:"applicationVersion,omitempty"`
 	Capabilities       InstanceCapabilities `json:"capabilities"`
 	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
+}
+
+// UpdatePublicationAppRequest defines model for UpdatePublicationAppRequest.
+type UpdatePublicationAppRequest struct {
+	Home    *string `json:"home,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	Retired *bool   `json:"retired,omitempty"`
+	Slug    *string `json:"slug,omitempty"`
+}
+
+// UpdatePublicationCategoryRequest defines model for UpdatePublicationCategoryRequest.
+type UpdatePublicationCategoryRequest struct {
+	Label   *string `json:"label,omitempty"`
+	Retired *bool   `json:"retired,omitempty"`
+}
+
+// UpdatePublicationDestinationRequest defines model for UpdatePublicationDestinationRequest.
+type UpdatePublicationDestinationRequest struct {
+	Address *string `json:"address,omitempty"`
+
+	// Events Which Publication events this endpoint receives. An absent list leaves the subscription alone.
+	Events *[]PublicationEvent `json:"events,omitempty"`
+	Name   *string             `json:"name,omitempty"`
+}
+
+// UpdatePublicationGrantRequest defines model for UpdatePublicationGrantRequest.
+type UpdatePublicationGrantRequest struct {
+	CategoryIds       *[]openapi_types.UUID `json:"categoryIds,omitempty"`
+	DefaultCategoryId *openapi_types.UUID   `json:"defaultCategoryId,omitempty"`
 }
 
 // UserCode defines model for UserCode.
@@ -2697,13 +4727,106 @@ type VerifyEmailRequest struct {
 	Token string `json:"token"`
 }
 
+// VersionChange defines model for VersionChange.
+type VersionChange struct {
+	After *string `json:"after,omitempty"`
+
+	// AfterImage The address of the picture this change added or replaced it with
+	AfterImage *string `json:"afterImage,omitempty"`
+	Before     *string `json:"before,omitempty"`
+
+	// BeforeImage The address of the picture this change replaced or removed
+	BeforeImage *string           `json:"beforeImage,omitempty"`
+	Kind        VersionChangeKind `json:"kind"`
+	Name        string            `json:"name"`
+
+	// Note What changed about an item when there is no wording to show
+	Note         *string `json:"note,omitempty"`
+	PreviousName *string `json:"previousName,omitempty"`
+}
+
+// VersionChangeKind defines model for VersionChange.Kind.
+type VersionChangeKind string
+
+// VersionChangeGroup defines model for VersionChangeGroup.
+type VersionChangeGroup struct {
+	Changes []VersionChange `json:"changes"`
+	Label   string          `json:"label"`
+	Subject string          `json:"subject"`
+}
+
+// VersionComparison defines model for VersionComparison.
+type VersionComparison struct {
+	From   RecordedVersion      `json:"from"`
+	Groups []VersionChangeGroup `json:"groups"`
+
+	// PromptsWithheld Whether a version's prompts could not be matched to the asset's current sealed prompts, so none of them are shown
+	PromptsWithheld bool            `json:"promptsWithheld"`
+	To              RecordedVersion `json:"to"`
+
+	// Unavailable Why a version may not be opened, leaving the groups empty
+	Unavailable *string `json:"unavailable,omitempty"`
+}
+
+// WithdrawPostRequest defines model for WithdrawPostRequest.
+type WithdrawPostRequest struct {
+	// DestinationIds Where this withdrawal announces. An absent list takes the policy defaults; an empty one withdraws quietly.
+	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
+
+	// Explanation A separate sentence for readers, shown on the withdrawn address.
+	Explanation *string `json:"explanation,omitempty"`
+	Note        *string `json:"note,omitempty"`
+
+	// Reason Why the post is coming down. Illarin keeps this and readers never see it.
+	Reason string `json:"reason"`
+
+	// Version The working-copy version the withdrawal means to act on.
+	Version int `json:"version"`
+}
+
+// WithdrawnPost The whole of what a withdrawn address answers with. It carries the address the tombstone lives at and nothing the post used to say.
+type WithdrawnPost struct {
+	Explanation string `json:"explanation"`
+	Slug        string `json:"slug"`
+}
+
 // WithholdAssetRequest defines model for WithholdAssetRequest.
 type WithholdAssetRequest struct {
 	Reason string `json:"reason"`
 }
 
+// IdempotencyKey defines model for IdempotencyKey.
+type IdempotencyKey = string
+
 // IllarinRequest defines model for IllarinRequest.
 type IllarinRequest string
+
+// WebhookId defines model for WebhookId.
+type WebhookId = openapi_types.UUID
+
+// WebhookSignature defines model for WebhookSignature.
+type WebhookSignature = string
+
+// WebhookTimestamp defines model for WebhookTimestamp.
+type WebhookTimestamp = int
+
+// WorkingCopyVersion defines model for WorkingCopyVersion.
+type WorkingCopyVersion = int64
+
+// PublicationForbidden How every publication route refuses. It never names another account, grant or token.
+type PublicationForbidden = PublicationError
+
+// PublicationInvalid How every publication route refuses. It never names another account, grant or token.
+type PublicationInvalid = PublicationError
+
+// PublicationNotFound How every publication route refuses. It never names another account, grant or token.
+type PublicationNotFound = PublicationError
+
+// PublicationTooManyRequests How every publication route refuses. It never names another account, grant or token.
+type PublicationTooManyRequests = PublicationError
+
+// PublicationUnauthenticated How every publication route refuses. It never names another account, grant or token.
+type PublicationUnauthenticated = PublicationError
 
 // DownloadDeliveryExportParams defines parameters for DownloadDeliveryExport.
 type DownloadDeliveryExportParams struct {
@@ -2712,6 +4835,15 @@ type DownloadDeliveryExportParams struct {
 
 	// Signature The signature Illarin minted for this exact address.
 	Signature string `form:"signature" json:"signature"`
+}
+
+// DownloadExportParams defines parameters for DownloadExport.
+type DownloadExportParams struct {
+	// Images The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole.
+	Images *string `form:"images,omitempty" json:"images,omitempty"`
+
+	// Version The number of a recorded version to write instead of the published one. The file is written now, by the current writer, from the content, pictures and preserved data that version recorded, under the asset's current access and protection. It is not the file the creator uploaded at the time. The filename names the update.
+	Version *int `form:"version,omitempty" json:"version,omitempty"`
 }
 
 // GetMediaVariantParams defines parameters for GetMediaVariant.
@@ -2723,6 +4855,11 @@ type GetMediaVariantParams struct {
 
 // GetMediaVariantParamsVariant defines parameters for GetMediaVariant.
 type GetMediaVariantParamsVariant string
+
+// SetProfileAvatarMultipartBody defines parameters for SetProfileAvatar.
+type SetProfileAvatarMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
 
 // ListAssetsParams defines parameters for ListAssets.
 type ListAssetsParams struct {
@@ -2765,12 +4902,45 @@ type CreateAssetMultipartBody struct {
 
 // GetAssetParams defines parameters for GetAsset.
 type GetAssetParams struct {
+	// WorkingCopy Read the private working copy. Only the owner may request it.
+	WorkingCopy *bool `form:"workingCopy,omitempty" json:"workingCopy,omitempty"`
+
 	// Nsfw The reader's presentation preference. Asset page URLs keep this preference out of their own query string.
 	Nsfw *GetAssetParamsNsfw `form:"nsfw,omitempty" json:"nsfw,omitempty"`
 }
 
 // GetAssetParamsNsfw defines parameters for GetAsset.
 type GetAssetParamsNsfw string
+
+// AddAssetBlockParams defines parameters for AddAssetBlock.
+type AddAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// ArrangeAssetBlocksParams defines parameters for ArrangeAssetBlocks.
+type ArrangeAssetBlocksParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// RemoveAssetBlockParams defines parameters for RemoveAssetBlock.
+type RemoveAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// SaveAssetBlockParams defines parameters for SaveAssetBlock.
+type SaveAssetBlockParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// MoveAssetBlockContentParams defines parameters for MoveAssetBlockContent.
+type MoveAssetBlockContentParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
 
 // SendAssetToInstanceParams defines parameters for SendAssetToInstance.
 type SendAssetToInstanceParams struct {
@@ -2781,15 +4951,80 @@ type SendAssetToInstanceParams struct {
 // SendAssetToInstanceParamsXIllarinRequest defines parameters for SendAssetToInstance.
 type SendAssetToInstanceParamsXIllarinRequest string
 
+// SetAssetIdentityParams defines parameters for SetAssetIdentity.
+type SetAssetIdentityParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// SetAssetIdentity400JSONResponseBodyField defines parameters for SetAssetIdentity.
+type SetAssetIdentity400JSONResponseBodyField string
+
 // AddMediaMultipartBody defines parameters for AddMedia.
 type AddMediaMultipartBody struct {
 	File     openapi_types.File `json:"file"`
 	Metadata AddMediaRequest    `json:"metadata"`
 }
 
+// AddMediaParams defines parameters for AddMedia.
+type AddMediaParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// DeletePreservedNamespaceParams defines parameters for DeletePreservedNamespace.
+type DeletePreservedNamespaceParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// PublishAssetParams defines parameters for PublishAsset.
+type PublishAssetParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
 // AddAssetRevisionMultipartBody defines parameters for AddAssetRevision.
 type AddAssetRevisionMultipartBody struct {
 	File openapi_types.File `json:"file"`
+}
+
+// AddAssetRevisionParams defines parameters for AddAssetRevision.
+type AddAssetRevisionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// AcceptAssetRevisionParams defines parameters for AcceptAssetRevision.
+type AcceptAssetRevisionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// PublishAssetUpdateParams defines parameters for PublishAssetUpdate.
+type PublishAssetUpdateParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// CompareAssetVersionsParams defines parameters for CompareAssetVersions.
+type CompareAssetVersionsParams struct {
+	From *int `form:"from,omitempty" json:"from,omitempty"`
+	To   *int `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// GetRecordedVersionDownloadsParams defines parameters for GetRecordedVersionDownloads.
+type GetRecordedVersionDownloadsParams struct {
+	Nsfw *GetRecordedVersionDownloadsParamsNsfw `form:"nsfw,omitempty" json:"nsfw,omitempty"`
+}
+
+// GetRecordedVersionDownloadsParamsNsfw defines parameters for GetRecordedVersionDownloads.
+type GetRecordedVersionDownloadsParamsNsfw string
+
+// RestoreAssetVersionParams defines parameters for RestoreAssetVersion.
+type RestoreAssetVersionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
 
 // BeginDiscordParams defines parameters for BeginDiscord.
@@ -2864,6 +5099,188 @@ type DenyLinkRequestParams struct {
 // DenyLinkRequestParamsXIllarinRequest defines parameters for DenyLinkRequest.
 type DenyLinkRequestParamsXIllarinRequest string
 
+// ListPublishedPostsParams defines parameters for ListPublishedPosts.
+type ListPublishedPostsParams struct {
+	// Page The archive page to read, counting from one.
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Category A publication category slug the archive is narrowed to.
+	Category *string `form:"category,omitempty" json:"category,omitempty"`
+
+	// App A publication app slug the archive is narrowed to.
+	App *string `form:"app,omitempty" json:"app,omitempty"`
+}
+
+// SetPublicationAppMarkMultipartBody defines parameters for SetPublicationAppMark.
+type SetPublicationAppMarkMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
+// ListPublicationDeliveriesParams defines parameters for ListPublicationDeliveries.
+type ListPublicationDeliveriesParams struct {
+	// State Narrow the listing to one state.
+	State *PostDeliveryState `form:"state,omitempty" json:"state,omitempty"`
+	Limit *int               `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RepairDiscordAnnouncementJSONBody defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncementJSONBody struct {
+	Action    RepairDiscordAnnouncementJSONBodyAction `json:"action"`
+	MessageId *string                                 `json:"messageId,omitempty"`
+	RequestId openapi_types.UUID                      `json:"requestId"`
+	Text      *string                                 `json:"text,omitempty"`
+}
+
+// RepairDiscordAnnouncementJSONBodyAction defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncementJSONBodyAction string
+
+// RepairDiscordAnnouncement200JSONResponseBodyState defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncement200JSONResponseBodyState string
+
+// ListPostsParams defines parameters for ListPosts.
+type ListPostsParams struct {
+	// Deleted Ask for the deleted posts still inside their recovery window instead of the active ones.
+	Deleted *bool `form:"deleted,omitempty" json:"deleted,omitempty"`
+}
+
+// CreatePostParams defines parameters for CreatePost.
+type CreatePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// SavePostParams defines parameters for SavePost.
+type SavePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// DeletePostParams defines parameters for DeletePost.
+type DeletePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ImportPostMarkdownParams defines parameters for ImportPostMarkdown.
+type ImportPostMarkdownParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// AddPostMediaMultipartBody defines parameters for AddPostMedia.
+type AddPostMediaMultipartBody struct {
+	File     openapi_types.File  `json:"file"`
+	Metadata AddPostMediaRequest `json:"metadata"`
+}
+
+// AddPostMediaParams defines parameters for AddPostMedia.
+type AddPostMediaParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// PublishPostParams defines parameters for PublishPost.
+type PublishPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RecoverPostParams defines parameters for RecoverPost.
+type RecoverPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RepublishPostParams defines parameters for RepublishPost.
+type RepublishPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// CheckpointPostParams defines parameters for CheckpointPost.
+type CheckpointPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RestorePostRevisionParams defines parameters for RestorePostRevision.
+type RestorePostRevisionParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// CancelPostScheduleParams defines parameters for CancelPostSchedule.
+type CancelPostScheduleParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// SchedulePostParams defines parameters for SchedulePost.
+type SchedulePostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ReplacePostScheduleParams defines parameters for ReplacePostSchedule.
+type ReplacePostScheduleParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// WithdrawPostParams defines parameters for WithdrawPost.
+type WithdrawPostParams struct {
+	// IdempotencyKey A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// AssetUpdatePublishedParams defines parameters for AssetUpdatePublished.
+type AssetUpdatePublishedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
+// PublicationPostPublishedParams defines parameters for PublicationPostPublished.
+type PublicationPostPublishedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
+// PublicationPostUpdatedParams defines parameters for PublicationPostUpdated.
+type PublicationPostUpdatedParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
+// PublicationPostWithdrawnParams defines parameters for PublicationPostWithdrawn.
+type PublicationPostWithdrawnParams struct {
+	// WebhookId The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying.
+	WebhookId WebhookId `json:"webhook-id"`
+
+	// WebhookTimestamp Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds.
+	WebhookTimestamp WebhookTimestamp `json:"webhook-timestamp"`
+
+	// WebhookSignature One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first.
+	WebhookSignature WebhookSignature `json:"webhook-signature"`
+}
+
 // ChangeUnverifiedEmailJSONRequestBody defines body for ChangeUnverifiedEmail for application/json ContentType.
 type ChangeUnverifiedEmailJSONRequestBody = ChangeEmailRequest
 
@@ -2875,6 +5292,18 @@ type SetNsfwVisibilityJSONRequestBody = NsfwVisibilityRequest
 
 // SetPasswordJSONRequestBody defines body for SetPassword for application/json ContentType.
 type SetPasswordJSONRequestBody = PasswordRequest
+
+// SavePublicProfileJSONRequestBody defines body for SavePublicProfile for application/json ContentType.
+type SavePublicProfileJSONRequestBody = SaveProfileRequest
+
+// SetProfileAvatarMultipartRequestBody defines body for SetProfileAvatar for multipart/form-data ContentType.
+type SetProfileAvatarMultipartRequestBody SetProfileAvatarMultipartBody
+
+// AddAssetUpdateDestinationJSONRequestBody defines body for AddAssetUpdateDestination for application/json ContentType.
+type AddAssetUpdateDestinationJSONRequestBody = AddAssetUpdateDestinationRequest
+
+// UpdateAssetUpdateDestinationJSONRequestBody defines body for UpdateAssetUpdateDestination for application/json ContentType.
+type UpdateAssetUpdateDestinationJSONRequestBody = UpdateAssetUpdateDestinationRequest
 
 // CreateAssetJSONRequestBody defines body for CreateAsset for application/json ContentType.
 type CreateAssetJSONRequestBody = StartAssetRequest
@@ -2908,6 +5337,24 @@ type AddMediaMultipartRequestBody AddMediaMultipartBody
 
 // AddAssetRevisionMultipartRequestBody defines body for AddAssetRevision for multipart/form-data ContentType.
 type AddAssetRevisionMultipartRequestBody AddAssetRevisionMultipartBody
+
+// AcceptAssetRevisionJSONRequestBody defines body for AcceptAssetRevision for application/json ContentType.
+type AcceptAssetRevisionJSONRequestBody = ReplacementAcceptance
+
+// SetAssetUpdateDestinationDefaultsJSONRequestBody defines body for SetAssetUpdateDestinationDefaults for application/json ContentType.
+type SetAssetUpdateDestinationDefaultsJSONRequestBody = AssetUpdateDestinationDefaultsRequest
+
+// PublishAssetUpdateJSONRequestBody defines body for PublishAssetUpdate for application/json ContentType.
+type PublishAssetUpdateJSONRequestBody = AssetUpdateRequest
+
+// CorrectAssetVersionNotesJSONRequestBody defines body for CorrectAssetVersionNotes for application/json ContentType.
+type CorrectAssetVersionNotesJSONRequestBody = AssetVersionNotesRequest
+
+// ResolvePromptCorrespondenceJSONRequestBody defines body for ResolvePromptCorrespondence for application/json ContentType.
+type ResolvePromptCorrespondenceJSONRequestBody = PromptCorrespondenceRequest
+
+// WithdrawAssetVersionJSONRequestBody defines body for WithdrawAssetVersion for application/json ContentType.
+type WithdrawAssetVersionJSONRequestBody = AssetVersionWithdrawalRequest
 
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
@@ -2956,6 +5403,176 @@ type DenyLinkRequestJSONRequestBody = DeviceLinkDecision
 
 // ExchangeLinkAuthorizationJSONRequestBody defines body for ExchangeLinkAuthorization for application/json ContentType.
 type ExchangeLinkAuthorizationJSONRequestBody = ExchangeLinkAuthorization
+
+// RestrictProfileJSONRequestBody defines body for RestrictProfile for application/json ContentType.
+type RestrictProfileJSONRequestBody = RestrictProfileRequest
+
+// DefinePublicationAppJSONRequestBody defines body for DefinePublicationApp for application/json ContentType.
+type DefinePublicationAppJSONRequestBody = DefinePublicationAppRequest
+
+// OrderPublicationAppsJSONRequestBody defines body for OrderPublicationApps for application/json ContentType.
+type OrderPublicationAppsJSONRequestBody = OrderPublicationAppsRequest
+
+// UpdatePublicationAppJSONRequestBody defines body for UpdatePublicationApp for application/json ContentType.
+type UpdatePublicationAppJSONRequestBody = UpdatePublicationAppRequest
+
+// SetPublicationAppDestinationsJSONRequestBody defines body for SetPublicationAppDestinations for application/json ContentType.
+type SetPublicationAppDestinationsJSONRequestBody = DestinationPolicyRequest
+
+// SetPublicationAppMarkMultipartRequestBody defines body for SetPublicationAppMark for multipart/form-data ContentType.
+type SetPublicationAppMarkMultipartRequestBody SetPublicationAppMarkMultipartBody
+
+// OrderPublicationCategoriesJSONRequestBody defines body for OrderPublicationCategories for application/json ContentType.
+type OrderPublicationCategoriesJSONRequestBody = OrderPublicationCategoriesRequest
+
+// UpdatePublicationCategoryJSONRequestBody defines body for UpdatePublicationCategory for application/json ContentType.
+type UpdatePublicationCategoryJSONRequestBody = UpdatePublicationCategoryRequest
+
+// AddPublicationChannelJSONRequestBody defines body for AddPublicationChannel for application/json ContentType.
+type AddPublicationChannelJSONRequestBody = PublicationChannelRequest
+
+// UpdatePublicationChannelJSONRequestBody defines body for UpdatePublicationChannel for application/json ContentType.
+type UpdatePublicationChannelJSONRequestBody = PublicationChannelRequest
+
+// RepairDiscordAnnouncementJSONRequestBody defines body for RepairDiscordAnnouncement for application/json ContentType.
+type RepairDiscordAnnouncementJSONRequestBody RepairDiscordAnnouncementJSONBody
+
+// AddPublicationDestinationJSONRequestBody defines body for AddPublicationDestination for application/json ContentType.
+type AddPublicationDestinationJSONRequestBody = AddPublicationDestinationRequest
+
+// UpdatePublicationDestinationJSONRequestBody defines body for UpdatePublicationDestination for application/json ContentType.
+type UpdatePublicationDestinationJSONRequestBody = UpdatePublicationDestinationRequest
+
+// CreatePublicationGrantJSONRequestBody defines body for CreatePublicationGrant for application/json ContentType.
+type CreatePublicationGrantJSONRequestBody = CreatePublicationGrantRequest
+
+// UpdatePublicationGrantJSONRequestBody defines body for UpdatePublicationGrant for application/json ContentType.
+type UpdatePublicationGrantJSONRequestBody = UpdatePublicationGrantRequest
+
+// SetPublicationGrantDestinationsJSONRequestBody defines body for SetPublicationGrantDestinations for application/json ContentType.
+type SetPublicationGrantDestinationsJSONRequestBody = DestinationPolicyRequest
+
+// IssuePublicationTokenJSONRequestBody defines body for IssuePublicationToken for application/json ContentType.
+type IssuePublicationTokenJSONRequestBody = IssuePublicationTokenRequest
+
+// CreatePostJSONRequestBody defines body for CreatePost for application/json ContentType.
+type CreatePostJSONRequestBody = CreatePostRequest
+
+// SavePostJSONRequestBody defines body for SavePost for application/json ContentType.
+type SavePostJSONRequestBody = SavePostRequest
+
+// CorrectPostAddressJSONRequestBody defines body for CorrectPostAddress for application/json ContentType.
+type CorrectPostAddressJSONRequestBody = CorrectPostAddressRequest
+
+// CorrectPostBylineJSONRequestBody defines body for CorrectPostByline for application/json ContentType.
+type CorrectPostBylineJSONRequestBody = CorrectPostBylineRequest
+
+// DeletePostJSONRequestBody defines body for DeletePost for application/json ContentType.
+type DeletePostJSONRequestBody = PostVersionRequest
+
+// ImportPostMarkdownJSONRequestBody defines body for ImportPostMarkdown for application/json ContentType.
+type ImportPostMarkdownJSONRequestBody = ImportPostMarkdownRequest
+
+// AddPostMediaMultipartRequestBody defines body for AddPostMedia for multipart/form-data ContentType.
+type AddPostMediaMultipartRequestBody AddPostMediaMultipartBody
+
+// PublishPostJSONRequestBody defines body for PublishPost for application/json ContentType.
+type PublishPostJSONRequestBody = PublishPostRequest
+
+// RecoverPostJSONRequestBody defines body for RecoverPost for application/json ContentType.
+type RecoverPostJSONRequestBody = PostVersionRequest
+
+// RepublishPostJSONRequestBody defines body for RepublishPost for application/json ContentType.
+type RepublishPostJSONRequestBody = RepublishPostRequest
+
+// CheckpointPostJSONRequestBody defines body for CheckpointPost for application/json ContentType.
+type CheckpointPostJSONRequestBody = PostVersionRequest
+
+// RestorePostRevisionJSONRequestBody defines body for RestorePostRevision for application/json ContentType.
+type RestorePostRevisionJSONRequestBody = PostVersionRequest
+
+// SchedulePostJSONRequestBody defines body for SchedulePost for application/json ContentType.
+type SchedulePostJSONRequestBody = SchedulePostRequest
+
+// ReplacePostScheduleJSONRequestBody defines body for ReplacePostSchedule for application/json ContentType.
+type ReplacePostScheduleJSONRequestBody = ReplacePostScheduleRequest
+
+// WithdrawPostJSONRequestBody defines body for WithdrawPost for application/json ContentType.
+type WithdrawPostJSONRequestBody = WithdrawPostRequest
+
+// AssetUpdatePublishedJSONRequestBody defines body for AssetUpdatePublished for application/json ContentType.
+type AssetUpdatePublishedJSONRequestBody = AssetUpdateEvent
+
+// PublicationPostPublishedJSONRequestBody defines body for PublicationPostPublished for application/json ContentType.
+type PublicationPostPublishedJSONRequestBody = PublicationPostEvent
+
+// PublicationPostUpdatedJSONRequestBody defines body for PublicationPostUpdated for application/json ContentType.
+type PublicationPostUpdatedJSONRequestBody = PublicationPostEvent
+
+// PublicationPostWithdrawnJSONRequestBody defines body for PublicationPostWithdrawn for application/json ContentType.
+type PublicationPostWithdrawnJSONRequestBody = PublicationPostEvent
+
+// AsCandidateConflict returns the union data inside the BlockSaveConflict as a CandidateConflict
+func (t BlockSaveConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the BlockSaveConflict as the provided CandidateConflict
+func (t *BlockSaveConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the BlockSaveConflict, using the provided CandidateConflict
+func (t *BlockSaveConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSealedExposureRefusal returns the union data inside the BlockSaveConflict as a SealedExposureRefusal
+func (t BlockSaveConflict) AsSealedExposureRefusal() (SealedExposureRefusal, error) {
+	var body SealedExposureRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSealedExposureRefusal overwrites any union data inside the BlockSaveConflict as the provided SealedExposureRefusal
+func (t *BlockSaveConflict) FromSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSealedExposureRefusal performs a merge with any union data inside the BlockSaveConflict, using the provided SealedExposureRefusal
+func (t *BlockSaveConflict) MergeSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t BlockSaveConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *BlockSaveConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsPendingLinkPollResult returns the union data inside the LinkPollResult as a PendingLinkPollResult
 func (t LinkPollResult) AsPendingLinkPollResult() (PendingLinkPollResult, error) {
@@ -3058,6 +5675,192 @@ func (t *LinkPollResult) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsCandidateConflict returns the union data inside the PublishConflict as a CandidateConflict
+func (t PublishConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the PublishConflict as the provided CandidateConflict
+func (t *PublishConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the PublishConflict, using the provided CandidateConflict
+func (t *PublishConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublishRefusal returns the union data inside the PublishConflict as a PublishRefusal
+func (t PublishConflict) AsPublishRefusal() (PublishRefusal, error) {
+	var body PublishRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublishRefusal overwrites any union data inside the PublishConflict as the provided PublishRefusal
+func (t *PublishConflict) FromPublishRefusal(v PublishRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublishRefusal performs a merge with any union data inside the PublishConflict, using the provided PublishRefusal
+func (t *PublishConflict) MergePublishRefusal(v PublishRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PublishConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PublishConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCandidateConflict returns the union data inside the ReplacementConflict as a CandidateConflict
+func (t ReplacementConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the ReplacementConflict as the provided CandidateConflict
+func (t *ReplacementConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the ReplacementConflict, using the provided CandidateConflict
+func (t *ReplacementConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSealedExposureRefusal returns the union data inside the ReplacementConflict as a SealedExposureRefusal
+func (t ReplacementConflict) AsSealedExposureRefusal() (SealedExposureRefusal, error) {
+	var body SealedExposureRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSealedExposureRefusal overwrites any union data inside the ReplacementConflict as the provided SealedExposureRefusal
+func (t *ReplacementConflict) FromSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSealedExposureRefusal performs a merge with any union data inside the ReplacementConflict, using the provided SealedExposureRefusal
+func (t *ReplacementConflict) MergeSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReplacementConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ReplacementConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCandidateConflict returns the union data inside the RestoreConflict as a CandidateConflict
+func (t RestoreConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the RestoreConflict as the provided CandidateConflict
+func (t *RestoreConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the RestoreConflict, using the provided CandidateConflict
+func (t *RestoreConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRestoreConflict1 returns the union data inside the RestoreConflict as a RestoreConflict1
+func (t RestoreConflict) AsRestoreConflict1() (RestoreConflict1, error) {
+	var body RestoreConflict1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRestoreConflict1 overwrites any union data inside the RestoreConflict as the provided RestoreConflict1
+func (t *RestoreConflict) FromRestoreConflict1(v RestoreConflict1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRestoreConflict1 performs a merge with any union data inside the RestoreConflict, using the provided RestoreConflict1
+func (t *RestoreConflict) MergeRestoreConflict1(v RestoreConflict1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RestoreConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RestoreConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -3068,7 +5871,7 @@ type ServerInterface interface {
 	DownloadSource(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /download/{id}/{target})
-	DownloadExport(c *gin.Context, id openapi_types.UUID, target string)
+	DownloadExport(c *gin.Context, id openapi_types.UUID, target string, params DownloadExportParams)
 
 	// (GET /media/{media_id}/{variant}/{derivative_version})
 	GetMediaVariant(c *gin.Context, mediaId openapi_types.UUID, variant GetMediaVariantParamsVariant, derivativeVersion int, params GetMediaVariantParams)
@@ -3088,6 +5891,39 @@ type ServerInterface interface {
 	// (PUT /v1/account/password)
 	SetPassword(c *gin.Context)
 
+	// (PUT /v1/account/profile)
+	SavePublicProfile(c *gin.Context)
+
+	// (DELETE /v1/account/profile/avatar)
+	RemoveProfileAvatar(c *gin.Context)
+
+	// (PUT /v1/account/profile/avatar)
+	SetProfileAvatar(c *gin.Context)
+
+	// (GET /v1/account/update-destinations)
+	ListAssetUpdateDestinations(c *gin.Context)
+
+	// (POST /v1/account/update-destinations)
+	AddAssetUpdateDestination(c *gin.Context)
+
+	// (DELETE /v1/account/update-destinations/{id})
+	RemoveAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/account/update-destinations/{id})
+	GetAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/account/update-destinations/{id})
+	UpdateAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/account/update-destinations/{id}/secret)
+	RotateAssetUpdateDestinationSecret(c *gin.Context, id openapi_types.UUID)
+
+	// (DELETE /v1/account/update-destinations/{id}/verification)
+	DisableAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/account/update-destinations/{id}/verification)
+	VerifyAssetUpdateDestination(c *gin.Context, id openapi_types.UUID)
+
 	// (GET /v1/assets)
 	ListAssets(c *gin.Context, params ListAssetsParams)
 
@@ -3100,20 +5936,23 @@ type ServerInterface interface {
 	// (GET /v1/assets/{id})
 	GetAsset(c *gin.Context, id openapi_types.UUID, params GetAssetParams)
 
+	// (GET /v1/assets/{id}/announcements)
+	ListAssetUpdateAnnouncements(c *gin.Context, id openapi_types.UUID)
+
 	// (POST /v1/assets/{id}/blocks)
-	AddAssetBlock(c *gin.Context, id openapi_types.UUID)
+	AddAssetBlock(c *gin.Context, id openapi_types.UUID, params AddAssetBlockParams)
 
 	// (PUT /v1/assets/{id}/blocks)
-	ArrangeAssetBlocks(c *gin.Context, id openapi_types.UUID)
+	ArrangeAssetBlocks(c *gin.Context, id openapi_types.UUID, params ArrangeAssetBlocksParams)
 
 	// (DELETE /v1/assets/{id}/blocks/{blockId})
-	RemoveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	RemoveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params RemoveAssetBlockParams)
 
 	// (PUT /v1/assets/{id}/blocks/{blockId})
-	SaveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	SaveAssetBlock(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params SaveAssetBlockParams)
 
 	// (POST /v1/assets/{id}/blocks/{blockId}/move-and-remove)
-	MoveAssetBlockContent(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID)
+	MoveAssetBlockContent(c *gin.Context, id openapi_types.UUID, blockId openapi_types.UUID, params MoveAssetBlockContentParams)
 
 	// (POST /v1/assets/{id}/deliveries)
 	SendAssetToInstance(c *gin.Context, id openapi_types.UUID, params SendAssetToInstanceParams)
@@ -3122,7 +5961,7 @@ type ServerInterface interface {
 	SetAssetDiscovery(c *gin.Context, id openapi_types.UUID)
 
 	// (PUT /v1/assets/{id}/identity)
-	SetAssetIdentity(c *gin.Context, id openapi_types.UUID)
+	SetAssetIdentity(c *gin.Context, id openapi_types.UUID, params SetAssetIdentityParams)
 
 	// (GET /v1/assets/{id}/instances)
 	GetAssetInstances(c *gin.Context, id openapi_types.UUID)
@@ -3131,25 +5970,67 @@ type ServerInterface interface {
 	ListMedia(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/assets/{id}/media)
-	AddMedia(c *gin.Context, id openapi_types.UUID)
+	AddMedia(c *gin.Context, id openapi_types.UUID, params AddMediaParams)
 
 	// (GET /v1/assets/{id}/preserved)
 	ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID)
 
 	// (DELETE /v1/assets/{id}/preserved/{namespace})
-	DeletePreservedNamespace(c *gin.Context, id openapi_types.UUID, namespace string)
+	DeletePreservedNamespace(c *gin.Context, id openapi_types.UUID, namespace string, params DeletePreservedNamespaceParams)
 
 	// (POST /v1/assets/{id}/publish)
-	PublishAsset(c *gin.Context, id openapi_types.UUID)
+	PublishAsset(c *gin.Context, id openapi_types.UUID, params PublishAssetParams)
 
 	// (POST /v1/assets/{id}/restore)
 	RestoreAsset(c *gin.Context, id openapi_types.UUID)
 
+	// (GET /v1/assets/{id}/revisions)
+	GetAssetReplacement(c *gin.Context, id openapi_types.UUID)
+
 	// (POST /v1/assets/{id}/revisions)
-	AddAssetRevision(c *gin.Context, id openapi_types.UUID)
+	AddAssetRevision(c *gin.Context, id openapi_types.UUID, params AddAssetRevisionParams)
+
+	// (DELETE /v1/assets/{id}/revisions/{operationId})
+	CancelAssetRevision(c *gin.Context, id openapi_types.UUID, operationId openapi_types.UUID)
+
+	// (POST /v1/assets/{id}/revisions/{operationId}/accept)
+	AcceptAssetRevision(c *gin.Context, id openapi_types.UUID, operationId openapi_types.UUID, params AcceptAssetRevisionParams)
 
 	// (GET /v1/assets/{id}/sealed)
 	ExportSealedContent(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/assets/{id}/update-destinations)
+	ListAssetUpdateDestinationChoices(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/assets/{id}/update-destinations)
+	SetAssetUpdateDestinationDefaults(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/assets/{id}/updates)
+	ListAssetUpdates(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/assets/{id}/updates)
+	PublishAssetUpdate(c *gin.Context, id openapi_types.UUID, params PublishAssetUpdateParams)
+
+	// (GET /v1/assets/{id}/updates/comparison)
+	CompareAssetVersions(c *gin.Context, id openapi_types.UUID, params CompareAssetVersionsParams)
+
+	// (GET /v1/assets/{id}/updates/protection)
+	ListProtectionMismatches(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/assets/{id}/updates/{number}/downloads)
+	GetRecordedVersionDownloads(c *gin.Context, id openapi_types.UUID, number int, params GetRecordedVersionDownloadsParams)
+
+	// (PATCH /v1/assets/{id}/updates/{number}/notes)
+	CorrectAssetVersionNotes(c *gin.Context, id openapi_types.UUID, number int)
+
+	// (PUT /v1/assets/{id}/updates/{number}/protection)
+	ResolvePromptCorrespondence(c *gin.Context, id openapi_types.UUID, number int)
+
+	// (POST /v1/assets/{id}/updates/{number}/restore)
+	RestoreAssetVersion(c *gin.Context, id openapi_types.UUID, number int, params RestoreAssetVersionParams)
+
+	// (POST /v1/assets/{id}/updates/{number}/withdraw)
+	WithdrawAssetVersion(c *gin.Context, id openapi_types.UUID, number int)
 
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
@@ -3247,11 +6128,194 @@ type ServerInterface interface {
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
 
+	// (GET /v1/post-apps)
+	ListPostApps(c *gin.Context)
+
+	// (GET /v1/post-categories)
+	ListPostCategories(c *gin.Context)
+
+	// (GET /v1/posts)
+	ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams)
+
+	// (GET /v1/posts/{slug})
+	GetPublishedPost(c *gin.Context, slug string)
+
 	// (GET /v1/profiles/{handle})
 	GetProfile(c *gin.Context, handle string)
 
 	// (GET /v1/profiles/{handle}/deleted)
 	ListDeletedAssets(c *gin.Context, handle string)
+
+	// (DELETE /v1/profiles/{handle}/restriction)
+	RestoreProfile(c *gin.Context, handle string)
+
+	// (GET /v1/profiles/{handle}/restriction)
+	GetProfileRestriction(c *gin.Context, handle string)
+
+	// (PUT /v1/profiles/{handle}/restriction)
+	RestrictProfile(c *gin.Context, handle string)
+
+	// (GET /v1/publication/apps)
+	ListPublicationApps(c *gin.Context)
+
+	// (POST /v1/publication/apps)
+	DefinePublicationApp(c *gin.Context)
+
+	// (PUT /v1/publication/apps)
+	OrderPublicationApps(c *gin.Context)
+
+	// (PATCH /v1/publication/apps/{id})
+	UpdatePublicationApp(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/apps/{id}/destinations)
+	SetPublicationAppDestinations(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/apps/{id}/mark)
+	SetPublicationAppMark(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/categories)
+	ListPublicationCategories(c *gin.Context)
+
+	// (PUT /v1/publication/categories)
+	OrderPublicationCategories(c *gin.Context)
+
+	// (PATCH /v1/publication/categories/{id})
+	UpdatePublicationCategory(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/channels)
+	AddPublicationChannel(c *gin.Context)
+
+	// (PATCH /v1/publication/channels/{id})
+	UpdatePublicationChannel(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/deliveries)
+	ListPublicationDeliveries(c *gin.Context, params ListPublicationDeliveriesParams)
+
+	// (GET /v1/publication/deliveries/{id}/attempts)
+	ListPublicationDeliveryAttempts(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/deliveries/{id}/repair)
+	RepairDiscordAnnouncement(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/deliveries/{id}/replay)
+	ReplayPublicationDelivery(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/destinations)
+	ListPublicationDestinations(c *gin.Context)
+
+	// (POST /v1/publication/destinations)
+	AddPublicationDestination(c *gin.Context)
+
+	// (DELETE /v1/publication/destinations/{id})
+	RemovePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/publication/destinations/{id})
+	UpdatePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/destinations/{id}/secret)
+	RotatePublicationDestinationSecret(c *gin.Context, id openapi_types.UUID)
+
+	// (DELETE /v1/publication/destinations/{id}/verification)
+	DisablePublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/destinations/{id}/verification)
+	VerifyPublicationDestination(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/grants)
+	ListPublicationGrants(c *gin.Context)
+
+	// (POST /v1/publication/grants)
+	CreatePublicationGrant(c *gin.Context)
+
+	// (DELETE /v1/publication/grants/{id})
+	RevokePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (PATCH /v1/publication/grants/{id})
+	UpdatePublicationGrant(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/grants/{id}/destinations)
+	SetPublicationGrantDestinations(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/grants/{id}/tokens)
+	ListPublicationTokens(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/grants/{id}/tokens)
+	IssuePublicationToken(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts)
+	ListPosts(c *gin.Context, params ListPostsParams)
+
+	// (POST /v1/publication/posts)
+	CreatePost(c *gin.Context, params CreatePostParams)
+
+	// (GET /v1/publication/posts/{id})
+	GetPost(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/posts/{id})
+	SavePost(c *gin.Context, id openapi_types.UUID, params SavePostParams)
+
+	// (PUT /v1/publication/posts/{id}/address)
+	CorrectPostAddress(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/publication/posts/{id}/byline)
+	CorrectPostByline(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/delete)
+	DeletePost(c *gin.Context, id openapi_types.UUID, params DeletePostParams)
+
+	// (GET /v1/publication/posts/{id}/deliveries)
+	ListPostDeliveries(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts/{id}/destinations)
+	ListPostDestinations(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/posts/{id}/history)
+	ReadPostHistory(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/import)
+	ImportPostMarkdown(c *gin.Context, id openapi_types.UUID, params ImportPostMarkdownParams)
+
+	// (POST /v1/publication/posts/{id}/media)
+	AddPostMedia(c *gin.Context, id openapi_types.UUID, params AddPostMediaParams)
+
+	// (POST /v1/publication/posts/{id}/publish)
+	PublishPost(c *gin.Context, id openapi_types.UUID, params PublishPostParams)
+
+	// (POST /v1/publication/posts/{id}/recover)
+	RecoverPost(c *gin.Context, id openapi_types.UUID, params RecoverPostParams)
+
+	// (POST /v1/publication/posts/{id}/republish)
+	RepublishPost(c *gin.Context, id openapi_types.UUID, params RepublishPostParams)
+
+	// (GET /v1/publication/posts/{id}/revisions)
+	ListPostRevisions(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/posts/{id}/revisions)
+	CheckpointPost(c *gin.Context, id openapi_types.UUID, params CheckpointPostParams)
+
+	// (POST /v1/publication/posts/{id}/revisions/{revisionId}/restore)
+	RestorePostRevision(c *gin.Context, id openapi_types.UUID, revisionId openapi_types.UUID, params RestorePostRevisionParams)
+
+	// (DELETE /v1/publication/posts/{id}/schedule)
+	CancelPostSchedule(c *gin.Context, id openapi_types.UUID, params CancelPostScheduleParams)
+
+	// (POST /v1/publication/posts/{id}/schedule)
+	SchedulePost(c *gin.Context, id openapi_types.UUID, params SchedulePostParams)
+
+	// (PUT /v1/publication/posts/{id}/schedule)
+	ReplacePostSchedule(c *gin.Context, id openapi_types.UUID, params ReplacePostScheduleParams)
+
+	// (POST /v1/publication/posts/{id}/withdraw)
+	WithdrawPost(c *gin.Context, id openapi_types.UUID, params WithdrawPostParams)
+
+	// (GET /v1/publication/token)
+	GetPublicationCredential(c *gin.Context)
+
+	// (DELETE /v1/publication/tokens/{id})
+	RevokePublicationToken(c *gin.Context, id openapi_types.UUID)
+
+	// (GET /v1/publication/workspace)
+	GetPublicationWorkspace(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -3356,6 +6420,25 @@ func (siw *ServerInterfaceWrapper) DownloadExport(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadExportParams
+
+	// ------------- Optional query parameter "images" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "images", c.Request.URL.Query(), &params.Images, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter images: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "version" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "version", c.Request.URL.Query(), &params.Version, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter version: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3363,7 +6446,7 @@ func (siw *ServerInterfaceWrapper) DownloadExport(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.DownloadExport(c, id, target)
+	siw.Handler.DownloadExport(c, id, target, params)
 }
 
 // GetMediaVariant operation middleware
@@ -3491,6 +6574,221 @@ func (siw *ServerInterfaceWrapper) SetPassword(c *gin.Context) {
 	}
 
 	siw.Handler.SetPassword(c)
+}
+
+// SavePublicProfile operation middleware
+func (siw *ServerInterfaceWrapper) SavePublicProfile(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SavePublicProfile(c)
+}
+
+// RemoveProfileAvatar operation middleware
+func (siw *ServerInterfaceWrapper) RemoveProfileAvatar(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveProfileAvatar(c)
+}
+
+// SetProfileAvatar operation middleware
+func (siw *ServerInterfaceWrapper) SetProfileAvatar(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetProfileAvatar(c)
+}
+
+// ListAssetUpdateDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateDestinations(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdateDestinations(c)
+}
+
+// AddAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) AddAssetUpdateDestination(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddAssetUpdateDestination(c)
+}
+
+// RemoveAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) RemoveAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveAssetUpdateDestination(c, id)
+}
+
+// GetAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) GetAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAssetUpdateDestination(c, id)
+}
+
+// UpdateAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateAssetUpdateDestination(c, id)
+}
+
+// RotateAssetUpdateDestinationSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotateAssetUpdateDestinationSecret(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RotateAssetUpdateDestinationSecret(c, id)
+}
+
+// DisableAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) DisableAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DisableAssetUpdateDestination(c, id)
+}
+
+// VerifyAssetUpdateDestination operation middleware
+func (siw *ServerInterfaceWrapper) VerifyAssetUpdateDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.VerifyAssetUpdateDestination(c, id)
 }
 
 // ListAssets operation middleware
@@ -3640,6 +6938,14 @@ func (siw *ServerInterfaceWrapper) GetAsset(c *gin.Context) {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetAssetParams
 
+	// ------------- Optional query parameter "workingCopy" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "workingCopy", c.Request.URL.Query(), &params.WorkingCopy, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter workingCopy: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	// ------------- Optional query parameter "nsfw" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "nsfw", c.Request.URL.Query(), &params.Nsfw, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -3658,8 +6964,8 @@ func (siw *ServerInterfaceWrapper) GetAsset(c *gin.Context) {
 	siw.Handler.GetAsset(c, id, params)
 }
 
-// AddAssetBlock operation middleware
-func (siw *ServerInterfaceWrapper) AddAssetBlock(c *gin.Context) {
+// ListAssetUpdateAnnouncements operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateAnnouncements(c *gin.Context) {
 
 	var err error
 	_ = err
@@ -3680,7 +6986,59 @@ func (siw *ServerInterfaceWrapper) AddAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddAssetBlock(c, id)
+	siw.Handler.ListAssetUpdateAnnouncements(c, id)
+}
+
+// AddAssetBlock operation middleware
+func (siw *ServerInterfaceWrapper) AddAssetBlock(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddAssetBlock(c, id, params)
 }
 
 // ArrangeAssetBlocks operation middleware
@@ -3698,6 +7056,33 @@ func (siw *ServerInterfaceWrapper) ArrangeAssetBlocks(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ArrangeAssetBlocksParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3705,7 +7090,7 @@ func (siw *ServerInterfaceWrapper) ArrangeAssetBlocks(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ArrangeAssetBlocks(c, id)
+	siw.Handler.ArrangeAssetBlocks(c, id, params)
 }
 
 // RemoveAssetBlock operation middleware
@@ -3732,6 +7117,33 @@ func (siw *ServerInterfaceWrapper) RemoveAssetBlock(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3739,7 +7151,7 @@ func (siw *ServerInterfaceWrapper) RemoveAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.RemoveAssetBlock(c, id, blockId)
+	siw.Handler.RemoveAssetBlock(c, id, blockId, params)
 }
 
 // SaveAssetBlock operation middleware
@@ -3766,6 +7178,33 @@ func (siw *ServerInterfaceWrapper) SaveAssetBlock(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveAssetBlockParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3773,7 +7212,7 @@ func (siw *ServerInterfaceWrapper) SaveAssetBlock(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.SaveAssetBlock(c, id, blockId)
+	siw.Handler.SaveAssetBlock(c, id, blockId, params)
 }
 
 // MoveAssetBlockContent operation middleware
@@ -3800,6 +7239,33 @@ func (siw *ServerInterfaceWrapper) MoveAssetBlockContent(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveAssetBlockContentParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3807,7 +7273,7 @@ func (siw *ServerInterfaceWrapper) MoveAssetBlockContent(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.MoveAssetBlockContent(c, id, blockId)
+	siw.Handler.MoveAssetBlockContent(c, id, blockId, params)
 }
 
 // SendAssetToInstance operation middleware
@@ -3902,6 +7368,33 @@ func (siw *ServerInterfaceWrapper) SetAssetIdentity(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetAssetIdentityParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3909,7 +7402,7 @@ func (siw *ServerInterfaceWrapper) SetAssetIdentity(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.SetAssetIdentity(c, id)
+	siw.Handler.SetAssetIdentity(c, id, params)
 }
 
 // GetAssetInstances operation middleware
@@ -3977,6 +7470,33 @@ func (siw *ServerInterfaceWrapper) AddMedia(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddMediaParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -3984,7 +7504,7 @@ func (siw *ServerInterfaceWrapper) AddMedia(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddMedia(c, id)
+	siw.Handler.AddMedia(c, id, params)
 }
 
 // ListPreservedNamespaces operation middleware
@@ -4036,6 +7556,33 @@ func (siw *ServerInterfaceWrapper) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeletePreservedNamespaceParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -4043,7 +7590,7 @@ func (siw *ServerInterfaceWrapper) DeletePreservedNamespace(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.DeletePreservedNamespace(c, id, namespace)
+	siw.Handler.DeletePreservedNamespace(c, id, namespace, params)
 }
 
 // PublishAsset operation middleware
@@ -4061,6 +7608,33 @@ func (siw *ServerInterfaceWrapper) PublishAsset(c *gin.Context) {
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishAssetParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -4068,7 +7642,7 @@ func (siw *ServerInterfaceWrapper) PublishAsset(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PublishAsset(c, id)
+	siw.Handler.PublishAsset(c, id, params)
 }
 
 // RestoreAsset operation middleware
@@ -4096,8 +7670,8 @@ func (siw *ServerInterfaceWrapper) RestoreAsset(c *gin.Context) {
 	siw.Handler.RestoreAsset(c, id)
 }
 
-// AddAssetRevision operation middleware
-func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
+// GetAssetReplacement operation middleware
+func (siw *ServerInterfaceWrapper) GetAssetReplacement(c *gin.Context) {
 
 	var err error
 	_ = err
@@ -4118,7 +7692,154 @@ func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.AddAssetRevision(c, id)
+	siw.Handler.GetAssetReplacement(c, id)
+}
+
+// AddAssetRevision operation middleware
+func (siw *ServerInterfaceWrapper) AddAssetRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddAssetRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddAssetRevision(c, id, params)
+}
+
+// CancelAssetRevision operation middleware
+func (siw *ServerInterfaceWrapper) CancelAssetRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "operationId" -------------
+	var operationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "operationId", c.Param("operationId"), &operationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operationId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelAssetRevision(c, id, operationId)
+}
+
+// AcceptAssetRevision operation middleware
+func (siw *ServerInterfaceWrapper) AcceptAssetRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "operationId" -------------
+	var operationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "operationId", c.Param("operationId"), &operationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operationId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptAssetRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptAssetRevision(c, id, operationId, params)
 }
 
 // ExportSealedContent operation middleware
@@ -4144,6 +7865,410 @@ func (siw *ServerInterfaceWrapper) ExportSealedContent(c *gin.Context) {
 	}
 
 	siw.Handler.ExportSealedContent(c, id)
+}
+
+// ListAssetUpdateDestinationChoices operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdateDestinationChoices(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdateDestinationChoices(c, id)
+}
+
+// SetAssetUpdateDestinationDefaults operation middleware
+func (siw *ServerInterfaceWrapper) SetAssetUpdateDestinationDefaults(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetAssetUpdateDestinationDefaults(c, id)
+}
+
+// ListAssetUpdates operation middleware
+func (siw *ServerInterfaceWrapper) ListAssetUpdates(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssetUpdates(c, id)
+}
+
+// PublishAssetUpdate operation middleware
+func (siw *ServerInterfaceWrapper) PublishAssetUpdate(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishAssetUpdateParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PublishAssetUpdate(c, id, params)
+}
+
+// CompareAssetVersions operation middleware
+func (siw *ServerInterfaceWrapper) CompareAssetVersions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CompareAssetVersionsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", c.Request.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", c.Request.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CompareAssetVersions(c, id, params)
+}
+
+// ListProtectionMismatches operation middleware
+func (siw *ServerInterfaceWrapper) ListProtectionMismatches(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListProtectionMismatches(c, id)
+}
+
+// GetRecordedVersionDownloads operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordedVersionDownloads(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetRecordedVersionDownloadsParams
+
+	// ------------- Optional query parameter "nsfw" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "nsfw", c.Request.URL.Query(), &params.Nsfw, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter nsfw: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRecordedVersionDownloads(c, id, number, params)
+}
+
+// CorrectAssetVersionNotes operation middleware
+func (siw *ServerInterfaceWrapper) CorrectAssetVersionNotes(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectAssetVersionNotes(c, id, number)
+}
+
+// ResolvePromptCorrespondence operation middleware
+func (siw *ServerInterfaceWrapper) ResolvePromptCorrespondence(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ResolvePromptCorrespondence(c, id, number)
+}
+
+// RestoreAssetVersion operation middleware
+func (siw *ServerInterfaceWrapper) RestoreAssetVersion(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreAssetVersionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestoreAssetVersion(c, id, number, params)
+}
+
+// WithdrawAssetVersion operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawAssetVersion(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", c.Param("number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter number: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WithdrawAssetVersion(c, id, number)
 }
 
 // ClearAssetWithhold operation middleware
@@ -4941,6 +9066,100 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ListPostApps operation middleware
+func (siw *ServerInterfaceWrapper) ListPostApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostApps(c)
+}
+
+// ListPostCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListPostCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostCategories(c)
+}
+
+// ListPublishedPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListPublishedPosts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPublishedPostsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", c.Request.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter page: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category", c.Request.URL.Query(), &params.Category, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter category: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "app" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "app", c.Request.URL.Query(), &params.App, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter app: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublishedPosts(c, params)
+}
+
+// GetPublishedPost operation middleware
+func (siw *ServerInterfaceWrapper) GetPublishedPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", c.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slug: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublishedPost(c, slug)
+}
+
 // GetProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetProfile(c *gin.Context) {
 
@@ -4991,6 +9210,1635 @@ func (siw *ServerInterfaceWrapper) ListDeletedAssets(c *gin.Context) {
 	siw.Handler.ListDeletedAssets(c, handle)
 }
 
+// RestoreProfile operation middleware
+func (siw *ServerInterfaceWrapper) RestoreProfile(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestoreProfile(c, handle)
+}
+
+// GetProfileRestriction operation middleware
+func (siw *ServerInterfaceWrapper) GetProfileRestriction(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetProfileRestriction(c, handle)
+}
+
+// RestrictProfile operation middleware
+func (siw *ServerInterfaceWrapper) RestrictProfile(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "handle" -------------
+	var handle string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "handle", c.Param("handle"), &handle, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter handle: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestrictProfile(c, handle)
+}
+
+// ListPublicationApps operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationApps(c)
+}
+
+// DefinePublicationApp operation middleware
+func (siw *ServerInterfaceWrapper) DefinePublicationApp(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DefinePublicationApp(c)
+}
+
+// OrderPublicationApps operation middleware
+func (siw *ServerInterfaceWrapper) OrderPublicationApps(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrderPublicationApps(c)
+}
+
+// UpdatePublicationApp operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationApp(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationApp(c, id)
+}
+
+// SetPublicationAppDestinations operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationAppDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationAppDestinations(c, id)
+}
+
+// SetPublicationAppMark operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationAppMark(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationAppMark(c, id)
+}
+
+// ListPublicationCategories operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationCategories(c)
+}
+
+// OrderPublicationCategories operation middleware
+func (siw *ServerInterfaceWrapper) OrderPublicationCategories(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrderPublicationCategories(c)
+}
+
+// UpdatePublicationCategory operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationCategory(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationCategory(c, id)
+}
+
+// AddPublicationChannel operation middleware
+func (siw *ServerInterfaceWrapper) AddPublicationChannel(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPublicationChannel(c)
+}
+
+// UpdatePublicationChannel operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationChannel(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationChannel(c, id)
+}
+
+// ListPublicationDeliveries operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDeliveries(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPublicationDeliveriesParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", c.Request.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter state: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDeliveries(c, params)
+}
+
+// ListPublicationDeliveryAttempts operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDeliveryAttempts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDeliveryAttempts(c, id)
+}
+
+// RepairDiscordAnnouncement operation middleware
+func (siw *ServerInterfaceWrapper) RepairDiscordAnnouncement(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RepairDiscordAnnouncement(c, id)
+}
+
+// ReplayPublicationDelivery operation middleware
+func (siw *ServerInterfaceWrapper) ReplayPublicationDelivery(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayPublicationDelivery(c, id)
+}
+
+// ListPublicationDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationDestinations(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationDestinations(c)
+}
+
+// AddPublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) AddPublicationDestination(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPublicationDestination(c)
+}
+
+// RemovePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) RemovePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemovePublicationDestination(c, id)
+}
+
+// UpdatePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationDestination(c, id)
+}
+
+// RotatePublicationDestinationSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotatePublicationDestinationSecret(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RotatePublicationDestinationSecret(c, id)
+}
+
+// DisablePublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) DisablePublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DisablePublicationDestination(c, id)
+}
+
+// VerifyPublicationDestination operation middleware
+func (siw *ServerInterfaceWrapper) VerifyPublicationDestination(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.VerifyPublicationDestination(c, id)
+}
+
+// ListPublicationGrants operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationGrants(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationGrants(c)
+}
+
+// CreatePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreatePublicationGrant(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreatePublicationGrant(c)
+}
+
+// RevokePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) RevokePublicationGrant(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RevokePublicationGrant(c, id)
+}
+
+// UpdatePublicationGrant operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePublicationGrant(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdatePublicationGrant(c, id)
+}
+
+// SetPublicationGrantDestinations operation middleware
+func (siw *ServerInterfaceWrapper) SetPublicationGrantDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPublicationGrantDestinations(c, id)
+}
+
+// ListPublicationTokens operation middleware
+func (siw *ServerInterfaceWrapper) ListPublicationTokens(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPublicationTokens(c, id)
+}
+
+// IssuePublicationToken operation middleware
+func (siw *ServerInterfaceWrapper) IssuePublicationToken(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.IssuePublicationToken(c, id)
+}
+
+// ListPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListPosts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPostsParams
+
+	// ------------- Optional query parameter "deleted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deleted", c.Request.URL.Query(), &params.Deleted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter deleted: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPosts(c, params)
+}
+
+// CreatePost operation middleware
+func (siw *ServerInterfaceWrapper) CreatePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreatePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreatePost(c, params)
+}
+
+// GetPost operation middleware
+func (siw *ServerInterfaceWrapper) GetPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPost(c, id)
+}
+
+// SavePost operation middleware
+func (siw *ServerInterfaceWrapper) SavePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SavePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SavePost(c, id, params)
+}
+
+// CorrectPostAddress operation middleware
+func (siw *ServerInterfaceWrapper) CorrectPostAddress(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectPostAddress(c, id)
+}
+
+// CorrectPostByline operation middleware
+func (siw *ServerInterfaceWrapper) CorrectPostByline(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectPostByline(c, id)
+}
+
+// DeletePost operation middleware
+func (siw *ServerInterfaceWrapper) DeletePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeletePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeletePost(c, id, params)
+}
+
+// ListPostDeliveries operation middleware
+func (siw *ServerInterfaceWrapper) ListPostDeliveries(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostDeliveries(c, id)
+}
+
+// ListPostDestinations operation middleware
+func (siw *ServerInterfaceWrapper) ListPostDestinations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostDestinations(c, id)
+}
+
+// ReadPostHistory operation middleware
+func (siw *ServerInterfaceWrapper) ReadPostHistory(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReadPostHistory(c, id)
+}
+
+// ImportPostMarkdown operation middleware
+func (siw *ServerInterfaceWrapper) ImportPostMarkdown(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ImportPostMarkdownParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ImportPostMarkdown(c, id, params)
+}
+
+// AddPostMedia operation middleware
+func (siw *ServerInterfaceWrapper) AddPostMedia(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddPostMediaParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddPostMedia(c, id, params)
+}
+
+// PublishPost operation middleware
+func (siw *ServerInterfaceWrapper) PublishPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PublishPost(c, id, params)
+}
+
+// RecoverPost operation middleware
+func (siw *ServerInterfaceWrapper) RecoverPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecoverPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecoverPost(c, id, params)
+}
+
+// RepublishPost operation middleware
+func (siw *ServerInterfaceWrapper) RepublishPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RepublishPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RepublishPost(c, id, params)
+}
+
+// ListPostRevisions operation middleware
+func (siw *ServerInterfaceWrapper) ListPostRevisions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListPostRevisions(c, id)
+}
+
+// CheckpointPost operation middleware
+func (siw *ServerInterfaceWrapper) CheckpointPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CheckpointPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CheckpointPost(c, id, params)
+}
+
+// RestorePostRevision operation middleware
+func (siw *ServerInterfaceWrapper) RestorePostRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestorePostRevisionParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestorePostRevision(c, id, revisionId, params)
+}
+
+// CancelPostSchedule operation middleware
+func (siw *ServerInterfaceWrapper) CancelPostSchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CancelPostScheduleParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelPostSchedule(c, id, params)
+}
+
+// SchedulePost operation middleware
+func (siw *ServerInterfaceWrapper) SchedulePost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SchedulePostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SchedulePost(c, id, params)
+}
+
+// ReplacePostSchedule operation middleware
+func (siw *ServerInterfaceWrapper) ReplacePostSchedule(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReplacePostScheduleParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplacePostSchedule(c, id, params)
+}
+
+// WithdrawPost operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawPost(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params WithdrawPostParams
+
+	headers := c.Request.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for Idempotency-Key, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter Idempotency-Key: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WithdrawPost(c, id, params)
+}
+
+// GetPublicationCredential operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicationCredential(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicationCredential(c)
+}
+
+// RevokePublicationToken operation middleware
+func (siw *ServerInterfaceWrapper) RevokePublicationToken(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RevokePublicationToken(c, id)
+}
+
+// GetPublicationWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicationWorkspace(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPublicationWorkspace(c)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -5018,11 +10866,25 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.GET(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.ListAssetUpdateDestinationChoices)
+	router.PUT(options.BaseURL+"/v1/assets/:id/update-destinations", wrapper.SetAssetUpdateDestinationDefaults)
+	router.GET(options.BaseURL+"/v1/assets/:id/announcements", wrapper.ListAssetUpdateAnnouncements)
+	router.GET(options.BaseURL+"/v1/account/update-destinations", wrapper.ListAssetUpdateDestinations)
+	router.POST(options.BaseURL+"/v1/account/update-destinations", wrapper.AddAssetUpdateDestination)
+	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.RemoveAssetUpdateDestination)
+	router.GET(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.GetAssetUpdateDestination)
+	router.PATCH(options.BaseURL+"/v1/account/update-destinations/:id", wrapper.UpdateAssetUpdateDestination)
+	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.DisableAssetUpdateDestination)
+	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.VerifyAssetUpdateDestination)
+	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/secret", wrapper.RotateAssetUpdateDestinationSecret)
 	router.DELETE(options.BaseURL+"/v1/account/discord", wrapper.DetachDiscord)
 	router.PATCH(options.BaseURL+"/v1/account/email", wrapper.ChangeUnverifiedEmail)
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)
 	router.PUT(options.BaseURL+"/v1/account/password", wrapper.SetPassword)
 	router.PUT(options.BaseURL+"/v1/account/nsfw-visibility", wrapper.SetNsfwVisibility)
+	router.PUT(options.BaseURL+"/v1/account/profile", wrapper.SavePublicProfile)
+	router.DELETE(options.BaseURL+"/v1/account/profile/avatar", wrapper.RemoveProfileAvatar)
+	router.PUT(options.BaseURL+"/v1/account/profile/avatar", wrapper.SetProfileAvatar)
 	router.POST(options.BaseURL+"/v1/auth/sign-up", wrapper.SignUp)
 	router.POST(options.BaseURL+"/v1/auth/sign-in", wrapper.SignIn)
 	router.GET(options.BaseURL+"/v1/auth/discord", wrapper.BeginDiscord)
@@ -5053,14 +10915,78 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/assets/:id/instances", wrapper.GetAssetInstances)
 	router.POST(options.BaseURL+"/v1/assets/:id/deliveries", wrapper.SendAssetToInstance)
 	router.GET(options.BaseURL+"/delivery/:id/export", wrapper.DownloadDeliveryExport)
+	router.GET(options.BaseURL+"/v1/publication/apps", wrapper.ListPublicationApps)
+	router.POST(options.BaseURL+"/v1/publication/apps", wrapper.DefinePublicationApp)
+	router.PUT(options.BaseURL+"/v1/publication/apps", wrapper.OrderPublicationApps)
+	router.PATCH(options.BaseURL+"/v1/publication/apps/:id", wrapper.UpdatePublicationApp)
+	router.PUT(options.BaseURL+"/v1/publication/apps/:id/mark", wrapper.SetPublicationAppMark)
+	router.GET(options.BaseURL+"/v1/publication/categories", wrapper.ListPublicationCategories)
+	router.PUT(options.BaseURL+"/v1/publication/categories", wrapper.OrderPublicationCategories)
+	router.PATCH(options.BaseURL+"/v1/publication/categories/:id", wrapper.UpdatePublicationCategory)
+	router.GET(options.BaseURL+"/v1/publication/grants", wrapper.ListPublicationGrants)
+	router.POST(options.BaseURL+"/v1/publication/grants", wrapper.CreatePublicationGrant)
+	router.DELETE(options.BaseURL+"/v1/publication/grants/:id", wrapper.RevokePublicationGrant)
+	router.PATCH(options.BaseURL+"/v1/publication/grants/:id", wrapper.UpdatePublicationGrant)
+	router.GET(options.BaseURL+"/v1/publication/grants/:id/tokens", wrapper.ListPublicationTokens)
+	router.POST(options.BaseURL+"/v1/publication/grants/:id/tokens", wrapper.IssuePublicationToken)
+	router.DELETE(options.BaseURL+"/v1/publication/tokens/:id", wrapper.RevokePublicationToken)
+	router.GET(options.BaseURL+"/v1/publication/token", wrapper.GetPublicationCredential)
+	router.GET(options.BaseURL+"/v1/publication/workspace", wrapper.GetPublicationWorkspace)
+	router.GET(options.BaseURL+"/v1/publication/posts", wrapper.ListPosts)
+	router.POST(options.BaseURL+"/v1/publication/posts", wrapper.CreatePost)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id", wrapper.GetPost)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id", wrapper.SavePost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/media", wrapper.AddPostMedia)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.ListPostRevisions)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions", wrapper.CheckpointPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/revisions/:revisionId/restore", wrapper.RestorePostRevision)
+	router.GET(options.BaseURL+"/v1/publication/destinations", wrapper.ListPublicationDestinations)
+	router.POST(options.BaseURL+"/v1/publication/destinations", wrapper.AddPublicationDestination)
+	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id", wrapper.RemovePublicationDestination)
+	router.PATCH(options.BaseURL+"/v1/publication/destinations/:id", wrapper.UpdatePublicationDestination)
+	router.DELETE(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.DisablePublicationDestination)
+	router.POST(options.BaseURL+"/v1/publication/destinations/:id/verification", wrapper.VerifyPublicationDestination)
+	router.POST(options.BaseURL+"/v1/publication/destinations/:id/secret", wrapper.RotatePublicationDestinationSecret)
+	router.POST(options.BaseURL+"/v1/publication/channels", wrapper.AddPublicationChannel)
+	router.PATCH(options.BaseURL+"/v1/publication/channels/:id", wrapper.UpdatePublicationChannel)
+	router.GET(options.BaseURL+"/v1/publication/deliveries", wrapper.ListPublicationDeliveries)
+	router.GET(options.BaseURL+"/v1/publication/deliveries/:id/attempts", wrapper.ListPublicationDeliveryAttempts)
+	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/replay", wrapper.ReplayPublicationDelivery)
+	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/repair", wrapper.RepairDiscordAnnouncement)
+	router.PUT(options.BaseURL+"/v1/publication/apps/:id/destinations", wrapper.SetPublicationAppDestinations)
+	router.PUT(options.BaseURL+"/v1/publication/grants/:id/destinations", wrapper.SetPublicationGrantDestinations)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/destinations", wrapper.ListPostDestinations)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/deliveries", wrapper.ListPostDeliveries)
+	router.GET(options.BaseURL+"/v1/publication/posts/:id/history", wrapper.ReadPostHistory)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/import", wrapper.ImportPostMarkdown)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/publish", wrapper.PublishPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/withdraw", wrapper.WithdrawPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/republish", wrapper.RepublishPost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/delete", wrapper.DeletePost)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/recover", wrapper.RecoverPost)
+	router.DELETE(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.CancelPostSchedule)
+	router.POST(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.SchedulePost)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/schedule", wrapper.ReplacePostSchedule)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/address", wrapper.CorrectPostAddress)
+	router.PUT(options.BaseURL+"/v1/publication/posts/:id/byline", wrapper.CorrectPostByline)
+	router.GET(options.BaseURL+"/v1/post-categories", wrapper.ListPostCategories)
+	router.GET(options.BaseURL+"/v1/post-apps", wrapper.ListPostApps)
+	router.GET(options.BaseURL+"/v1/posts", wrapper.ListPublishedPosts)
+	router.GET(options.BaseURL+"/v1/posts/:slug", wrapper.GetPublishedPost)
 	router.GET(options.BaseURL+"/v1/profiles/:handle", wrapper.GetProfile)
+	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
+	router.GET(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.GetProfileRestriction)
+	router.PUT(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestrictProfile)
 	router.GET(options.BaseURL+"/v1/legacy-profiles/:discordId", wrapper.ResolveLegacyProfile)
 	router.GET(options.BaseURL+"/v1/assets", wrapper.ListAssets)
 	router.POST(options.BaseURL+"/v1/assets", wrapper.CreateAsset)
 	router.DELETE(options.BaseURL+"/v1/assets/:id", wrapper.DeleteAsset)
 	router.GET(options.BaseURL+"/v1/assets/:id", wrapper.GetAsset)
 	router.GET(options.BaseURL+"/v1/legacy-assets/:author/:name", wrapper.ResolveLegacyAsset)
+	router.GET(options.BaseURL+"/v1/assets/:id/revisions", wrapper.GetAssetReplacement)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions", wrapper.AddAssetRevision)
+	router.POST(options.BaseURL+"/v1/assets/:id/revisions/:operationId/accept", wrapper.AcceptAssetRevision)
+	router.DELETE(options.BaseURL+"/v1/assets/:id/revisions/:operationId", wrapper.CancelAssetRevision)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/blocks/:blockId", wrapper.RemoveAssetBlock)
 	router.PUT(options.BaseURL+"/v1/assets/:id/blocks/:blockId", wrapper.SaveAssetBlock)
 	router.POST(options.BaseURL+"/v1/assets/:id/blocks", wrapper.AddAssetBlock)
@@ -5072,6 +10998,15 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/restore", wrapper.RestoreAsset)
 	router.PUT(options.BaseURL+"/v1/assets/:id/identity", wrapper.SetAssetIdentity)
 	router.POST(options.BaseURL+"/v1/assets/:id/publish", wrapper.PublishAsset)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates", wrapper.ListAssetUpdates)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates", wrapper.PublishAssetUpdate)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/comparison", wrapper.CompareAssetVersions)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates/:number/restore", wrapper.RestoreAssetVersion)
+	router.PATCH(options.BaseURL+"/v1/assets/:id/updates/:number/notes", wrapper.CorrectAssetVersionNotes)
+	router.POST(options.BaseURL+"/v1/assets/:id/updates/:number/withdraw", wrapper.WithdrawAssetVersion)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/protection", wrapper.ListProtectionMismatches)
+	router.GET(options.BaseURL+"/v1/assets/:id/updates/:number/downloads", wrapper.GetRecordedVersionDownloads)
+	router.PUT(options.BaseURL+"/v1/assets/:id/updates/:number/protection", wrapper.ResolvePromptCorrespondence)
 	router.PUT(options.BaseURL+"/v1/assets/:id/discovery", wrapper.SetAssetDiscovery)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/deleted", wrapper.ListDeletedAssets)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/withhold", wrapper.ClearAssetWithhold)
@@ -5082,4 +11017,348 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/assets/:id/media", wrapper.AddMedia)
 	router.GET(options.BaseURL+"/media/:media_id/:variant/:derivative_version", wrapper.GetMediaVariant)
 	router.GET(options.BaseURL+"/v1/ingests/:id", wrapper.GetIngest)
+}
+
+// WebhookReceiverInterface represents handlers for receiving inbound
+// webhook requests. Each webhook becomes a Handle*Webhook
+// method that the implementation fills in. The caller mounts the per-
+// webhook gin.HandlerFunc returned by {Op}WebhookHandler at
+// whatever URL path they advertise to senders.
+type WebhookReceiverInterface interface {
+
+	// HandleAssetUpdatePublishedWebhook handles the POST webhook for asset.update.published.v1.
+	HandleAssetUpdatePublishedWebhook(c *gin.Context, params AssetUpdatePublishedParams)
+
+	// HandlePublicationPostPublishedWebhook handles the POST webhook for publication.post.published.v1.
+	HandlePublicationPostPublishedWebhook(c *gin.Context, params PublicationPostPublishedParams)
+
+	// HandlePublicationPostUpdatedWebhook handles the POST webhook for publication.post.updated.v1.
+	HandlePublicationPostUpdatedWebhook(c *gin.Context, params PublicationPostUpdatedParams)
+
+	// HandlePublicationPostWithdrawnWebhook handles the POST webhook for publication.post.withdrawn.v1.
+	HandlePublicationPostWithdrawnWebhook(c *gin.Context, params PublicationPostWithdrawnParams)
+}
+
+// AssetUpdatePublishedWebhookHandler returns the gin.HandlerFunc for the asset.update.published.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func AssetUpdatePublishedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params AssetUpdatePublishedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandleAssetUpdatePublishedWebhook(c, params)
+	}
+}
+
+// PublicationPostPublishedWebhookHandler returns the gin.HandlerFunc for the publication.post.published.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostPublishedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostPublishedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostPublishedWebhook(c, params)
+	}
+}
+
+// PublicationPostUpdatedWebhookHandler returns the gin.HandlerFunc for the publication.post.updated.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostUpdatedWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostUpdatedParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostUpdatedWebhook(c, params)
+	}
+}
+
+// PublicationPostWithdrawnWebhookHandler returns the gin.HandlerFunc for the publication.post.withdrawn.v1 webhook.
+// Mount this at the URL path advertised to webhook senders.
+// Parameter-binding errors abort the request with 400 and a JSON body
+// of the form {"error": "..."}. Engine-level middleware can be applied
+// via gin.Engine.Use(); per-handler middleware is not generated here
+// (gin's idiom prefers route-group / engine .Use composition).
+func PublicationPostWithdrawnWebhookHandler(si WebhookReceiverInterface) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		_ = err
+
+		// Parameter object where we will unmarshal all parameters from the context.
+		var params PublicationPostWithdrawnParams
+
+		// ------------- Required header parameter "webhook-id" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-id")]; found {
+			var WebhookId WebhookId
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-id, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-id", valueList[0], &WebhookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uuid"})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-id: %s", err)})
+				return
+			}
+			params.WebhookId = WebhookId
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-id is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-timestamp" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-timestamp")]; found {
+			var WebhookTimestamp WebhookTimestamp
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-timestamp, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-timestamp", valueList[0], &WebhookTimestamp, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-timestamp: %s", err)})
+				return
+			}
+			params.WebhookTimestamp = WebhookTimestamp
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-timestamp is required, but not found"})
+			return
+		}
+
+		// ------------- Required header parameter "webhook-signature" -------------
+		if valueList, found := c.Request.Header[http.CanonicalHeaderKey("webhook-signature")]; found {
+			var WebhookSignature WebhookSignature
+			n := len(valueList)
+			if n != 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Expected one value for webhook-signature, got %d", n)})
+				return
+			}
+
+			err = runtime.BindStyledParameterWithOptions("simple", "webhook-signature", valueList[0], &WebhookSignature, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid format for parameter webhook-signature: %s", err)})
+				return
+			}
+			params.WebhookSignature = WebhookSignature
+
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Header parameter webhook-signature is required, but not found"})
+			return
+		}
+
+		si.HandlePublicationPostWithdrawnWebhook(c, params)
+	}
 }

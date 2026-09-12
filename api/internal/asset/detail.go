@@ -15,13 +15,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// DetailTag holds a creator's tag and its normalized browse form.
 type DetailTag struct {
 	Label string
 	Value string
 }
 
-// DetailImage is one of an asset's images at the two sizes the page uses.
 type DetailImage struct {
 	ID        uuid.UUID
 	Role      MediaRole
@@ -30,46 +28,36 @@ type DetailImage struct {
 	ThumbURL  string
 	Width     int
 	Height    int
+	Bytes     int64
 }
 
-// Detail is everything an asset's own page shows. It holds no total of any
-// kind, because nothing on that page displays one.
 type Detail struct {
-	ID      uuid.UUID
-	Kind    string
-	Name    string
-	Blurb   string
-	Tags    []DetailTag
-	Creator string
-	// IsNSFW is nil while a draft has not been asked the question.
-	IsNSFW    *bool
-	Discovery Discovery
-	Lifecycle Lifecycle
-	// IsOwner says whether the reader owns the asset. The owner's page is the
-	// reader's page with more on it, never a second page.
-	IsOwner bool
-	// Downloads are the formats this asset is offered in, read from its
-	// projection rather than worked out per request. The recommended one is
-	// marked, and a format Illarin cannot produce for the asset is absent
-	// rather than listed as unavailable.
-	Downloads []format.Target
-	// Original is the creator's own upload, and is nil for an asset built from
-	// nothing.
-	Original  *OriginalUpload
-	CreatedAt time.Time
-	// Blocks are the asset's content, in page order.
-	Blocks []block.Block
-	// Media puts the direct cover first, followed by the remaining roles.
-	Media []DetailImage
-	// Preview is the composed social preview a link unfurler fetches.
-	Preview *string
-	// Readiness is the whole publish floor on a draft and only the shortfall on a published page, and stands only for the owner.
-	Readiness         []ReadinessItem
-	SealedBlocks      int
-	LinkedInstallOnly bool
-	AllowedApps       []string
-	EligibleApps      []string
-	Withhold          *Withhold
+	WorkingCopyVersion *int64
+	UnpublishedChanges *bool
+	ID                 uuid.UUID
+	Kind               string
+	Name               string
+	Blurb              string
+	Tags               []DetailTag
+	Creator            string
+	IsNSFW             *bool
+	Discovery          Discovery
+	Lifecycle          Lifecycle
+	IsOwner            bool
+	Downloads          []format.Target
+	AppTargets         []format.AppTarget
+	Original           *OriginalUpload
+	CreatedAt          time.Time
+	Blocks             []block.Block
+	Media              []DetailImage
+	Preview            *string
+	LatestUpdate       *Version
+	Readiness          []ReadinessItem
+	SealedBlocks       int
+	LinkedInstallOnly  bool
+	AllowedApps        []string
+	EligibleApps       []string
+	Withhold           *Withhold
 }
 
 type Withhold struct {
@@ -78,20 +66,33 @@ type Withhold struct {
 	At     time.Time
 }
 
-// Detail returns one asset by id. Unlisted assets answer normally. A draft and
-// a withheld asset answer only to their owner, and a deleted asset answers to
-// nobody.
 func (s *Service) Detail(
 	ctx context.Context,
 	id uuid.UUID,
 	viewerID *uuid.UUID,
 	visibility ContentVisibility,
 ) (Detail, error) {
+	return s.detail(ctx, id, viewerID, visibility, false)
+}
+
+func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility) (Detail, error) {
+	if viewerID == nil {
+		return Detail{}, ErrNotFound
+	}
+	return s.detail(ctx, id, viewerID, visibility, true)
+}
+
+func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility, working bool) (Detail, error) {
 	tx, err := s.beginReadSnapshot(ctx)
 	if err != nil {
 		return Detail{}, fmt.Errorf("begin asset page snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
+	if working {
+		if _, err := tx.Exec(ctx, `set local search_path = public`); err != nil {
+			return Detail{}, err
+		}
+	}
 
 	queries := db.New(tx)
 	row, err := queries.AssetPage(ctx, db.AssetPageParams{
@@ -102,6 +103,9 @@ func (s *Service) Detail(
 	}
 	if err != nil {
 		return Detail{}, fmt.Errorf("read asset page: %w", err)
+	}
+	if working && !row.IsOwner {
+		return Detail{}, ErrNotFound
 	}
 	found := Detail{
 		ID:        uuidFromPgtype(row.ID),
@@ -118,6 +122,13 @@ func (s *Service) Detail(
 		CreatedAt: timeFromPgtype(row.CreatedAt),
 		Media:     []DetailImage{},
 	}
+	if working || (found.IsOwner && found.Lifecycle == LifecycleDraft) {
+		var version int64
+		if err := tx.QueryRow(ctx, `select working_copy_version from public.assets where id = $1`, id).Scan(&version); err != nil {
+			return Detail{}, err
+		}
+		found.WorkingCopyVersion = &version
+	}
 	found.Downloads, err = s.exportProjection(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
@@ -125,6 +136,22 @@ func (s *Service) Detail(
 	found.Blocks, err = readBlocks(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
+	}
+	found.LatestUpdate, err = latestUpdate(ctx, tx, id)
+	if err != nil {
+		return Detail{}, err
+	}
+	if working && found.Lifecycle == LifecyclePublished {
+		unpublished, err := s.unpublishedChanges(ctx, tx, id)
+		if err != nil {
+			return Detail{}, err
+		}
+		found.UnpublishedChanges = &unpublished
+	}
+	if !working && !found.IsOwner {
+		if err := protected.ApplyPublishedPolicy(ctx, tx, id, found.Blocks); err != nil {
+			return Detail{}, err
+		}
 	}
 	if row.WithheldAt.Valid {
 		found.Withhold = &Withhold{
@@ -138,7 +165,6 @@ func (s *Service) Detail(
 	if err != nil {
 		return Detail{}, fmt.Errorf("read asset page media: %w", err)
 	}
-	// Only a draft is unanswered, and only its owner can be looking at it.
 	flagged := found.IsNSFW != nil && *found.IsNSFW
 	blurred := flagged && visibility != ContentShown
 	draft := found.Lifecycle == LifecycleDraft
@@ -148,10 +174,11 @@ func (s *Service) Detail(
 			ID:        mediaID,
 			Role:      MediaRole(image.Role),
 			IsCover:   image.IsCover,
-			DetailURL: s.variantURL(mediaID, "detail", blurred, draft),
-			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft),
+			DetailURL: s.variantURL(mediaID, "detail", blurred, draft || working),
+			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft || working),
 			Width:     int(image.Width.Int32),
 			Height:    int(image.Height.Int32),
+			Bytes:     image.ByteSize,
 		})
 	}
 	if found.IsOwner {
@@ -175,21 +202,22 @@ func (s *Service) Detail(
 	if err != nil {
 		return Detail{}, err
 	}
-	found.LinkedInstallOnly = len(found.AllowedApps) > 0
+	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || protected.HasPromptFragments(found.Blocks)
 	offered := make([]string, len(found.Downloads))
 	for i, target := range found.Downloads {
 		offered[i] = target.Format
 	}
 	found.EligibleApps = protected.EligibleApps(found.Kind, offered)
+	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {
 		found.Downloads = []format.Target{}
+		found.AppTargets = []format.AppTarget{}
 	}
-	if draft {
+	if draft || working {
 		return found, nil
 	}
 	for _, image := range found.Media {
 		if image.IsCover {
-			// A link unfurler has no reader to ask, so a flagged preview is blurred.
 			preview := s.variantURL(image.ID, "og", flagged, false)
 			found.Preview = &preview
 			break
@@ -198,14 +226,41 @@ func (s *Service) Detail(
 	return found, nil
 }
 
-// originalUpload names the creator's own file by what it is and when it
-// arrived. An asset built from nothing has none, and gets no group saying so.
+func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*Version, error) {
+	var recorded Version
+	err := tx.QueryRow(ctx, `
+		select s.id, s.number, s.recorded_at, s.initial_recorded,
+		       s.version_label, s.summary, s.notes
+		  from public.assets a
+		  join public.asset_snapshots s on s.id = a.published_snapshot_id
+		 where a.id = $1
+	`, assetID).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
+		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read the latest recorded version: %w", err)
+	}
+	return &recorded, nil
+}
+
+func (s *Service) unpublishedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
+	published, err := s.publishedDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	reviewed, err := s.assetDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	return reviewed.whole != published.whole, nil
+}
+
 func originalUpload(reg *format.Registry, row db.AssetPageRow) *OriginalUpload {
 	if !row.OriginalFormat.Valid {
 		return nil
 	}
-	// A format Illarin has no module for names itself to nobody, so the file is
-	// described by what it is rather than by a stored identifier.
 	label := ""
 	if declaration, known := reg.Declaration(row.OriginalFormat.String); known {
 		label = declaration.Label
@@ -217,7 +272,6 @@ func originalUpload(reg *format.Registry, row db.AssetPageRow) *OriginalUpload {
 	}
 }
 
-// detailTags pairs the creator's text with the form browse matches on.
 func detailTags(tags []string) []DetailTag {
 	out := make([]DetailTag, 0, len(tags))
 	for _, tag := range tags {
@@ -230,9 +284,6 @@ func detailTags(tags []string) []DetailTag {
 	return out
 }
 
-// variantURL addresses one image at one size. A draft's images sit at the same
-// address a published asset's do, signed and short-lived until it is
-// published, so publishing re-keys nothing.
 func (s *Service) variantURL(mediaID uuid.UUID, variant string, blurred, private bool) string {
 	if blurred {
 		variant += "_blurred"

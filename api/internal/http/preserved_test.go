@@ -19,7 +19,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// aCardCarryingThirdPartyNamespaces exercises body, extension, and entry data.
 const aCardCarryingThirdPartyNamespaces = `{
 	"spec":"chara_card_v3","spec_version":"3.0",
 	"data":{
@@ -101,8 +100,6 @@ func namespaceNames(rows []struct {
 	return names
 }
 
-// The panel names what an asset carries and leaves out the namespaces the
-// module calls boilerplate. Those are still stored; only the panel skips them.
 func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
@@ -120,8 +117,6 @@ func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 	}
 }
 
-// Deleting is the only thing the panel does besides naming, and it is
-// permanent.
 func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
@@ -149,8 +144,6 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	}
 }
 
-// Preserved data belongs to the file and never to the page. Nobody but the
-// owner can even ask what an asset carries.
 func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
@@ -198,8 +191,6 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	}
 }
 
-// Deleting an entry deletes its preserved data with it, and the entry beside
-// it keeps its own.
 func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
@@ -260,8 +251,6 @@ func contains(names []string, wanted string) bool {
 	return false
 }
 
-// smallLimitModule reads a card-shaped payload and holds very little of it, so
-// a limit refusal is reachable without a nine-megabyte upload.
 type smallLimitModule struct{}
 
 const smallPayloadLimit = 512
@@ -289,9 +278,6 @@ func (smallLimitModule) Parse(
 	return format.Parsed{}, errors.New("an over-limit file never reaches the reader")
 }
 
-// A file over the limit is refused, and the refusal says where the weight is
-// rather than only that the file is too big. Nothing about the asset is
-// stored: preservation never keeps less of a file than arrived in it.
 func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 	registry := format.NewRegistry()
 	if err := registry.Register(smallLimitModule{}); err != nil {
@@ -344,12 +330,6 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 	}
 }
 
-// The round trip, end to end: a card carrying third-party namespaces is
-// uploaded, an unrelated block is edited, and an export in the same format
-// brings every preserved key back byte for byte.
-// The round trip this whole effort exists for: a card carrying third-party
-// namespaces is read, an unrelated block is edited, and every preserved key
-// comes back byte-identical.
 func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	metadata := exampleMetadata("Ana")
@@ -367,7 +347,7 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export the card: %v", err)
@@ -375,7 +355,6 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 
 	exported := cardBodyOf(t, export.Body)
 	source := cardBodyOf(t, []byte(aCardCarryingThirdPartyNamespaces))
-	// Every key the reader could not model, back where it came from.
 	for _, key := range []string{"tags"} {
 		if !bytes.Equal(compactJSON(t, exported[key]), compactJSON(t, source[key])) {
 			t.Errorf("%s came back as %s, want %s", key, exported[key], source[key])
@@ -387,8 +366,6 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 			t.Errorf("%s came back as %s, want %s", namespace, got, value)
 		}
 	}
-	// The book's own keys and each entry's own keys come back too, keyed
-	// against the entry Illarin minted an id for.
 	book := namespacesOf(t, exported["character_book"])
 	if !bytes.Equal(compactJSON(t, book["scan_depth"]), []byte("4")) {
 		t.Errorf("the book's own keys did not come back: %s", exported["character_book"])

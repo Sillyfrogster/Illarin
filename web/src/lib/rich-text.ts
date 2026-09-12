@@ -20,7 +20,6 @@ export type RichText = {
   formattingRemoved: boolean;
 };
 
-/** Parses supported Markdown and reduces HTML to plain text. */
 export function readRichText(source: string): RichText {
   const stripped = stripHtml(source);
   const removed = { formatting: stripped.removed };
@@ -71,7 +70,6 @@ export function formattingWasRemoved(texts: readonly string[]): boolean {
   return texts.some((text) => readRichText(text).formattingRemoved);
 }
 
-/** Returns prose fields that may be rendered as rich text. */
 export function richTextsOf(element: {
   type: string;
   display?: string;
@@ -115,7 +113,6 @@ function texts(entries: Record<string, unknown>[], key: string): string[] {
   return found;
 }
 
-/** Keeps indented prose and thematic breaks literal after HTML is stripped. */
 const DISABLED = {
   disable: { null: ["codeIndented", "htmlFlow", "htmlText", "thematicBreak"] },
 };
@@ -274,7 +271,6 @@ const DISCARDED = /<(script|style|svg)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi;
 const COMMENT_OR_TAG =
   /<!--[\s\S]*?-->|<\/?([a-zA-Z][a-zA-Z0-9-]*)(?:\s(?:"[^"]*"|'[^']*'|[^'">])*)?\/?>/g;
 
-/** Strips recognized HTML while preserving prompt-like angle brackets. */
 function stripHtml(source: string): { text: string; removed: boolean } {
   let removed = false;
   let text = source.replace(DISCARDED, () => {

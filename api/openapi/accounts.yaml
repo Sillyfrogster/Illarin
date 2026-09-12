@@ -112,6 +112,85 @@ paths:
           description: The visibility value is invalid
         '401':
           description: No account is signed in
+  /v1/account/profile:
+    put:
+      operationId: savePublicProfile
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProfileRequest'
+      responses:
+        '200':
+          description: The public profile as visitors now see it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: A profile field is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+  /v1/account/profile/avatar:
+    put:
+      operationId: setProfileAvatar
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      requestBody:
+        required: true
+        description: Send the image as the only form data part.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: The public profile carrying its new avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: The image is not valid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '413':
+          description: The image exceeds the upload limit
+        '503':
+          description: The storage reserve cannot accept the image
+    delete:
+      operationId: removeProfileAvatar
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '200':
+          description: The public profile without an avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The profile has no avatar
   /v1/auth/sign-up:
     post:
       operationId: signUp
@@ -295,6 +374,89 @@ paths:
                 $ref: '#/components/schemas/Profile'
         '404':
           description: No active profile uses the handle
+  /v1/profiles/{handle}/restriction:
+    get:
+      operationId: getProfileRestriction
+      description: >-
+        The private reason a profile is restricted. Only an admin may read it,
+        and it never reaches a public or owner response.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The restriction now in force
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileRestriction'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not an admin
+        '404':
+          description: No such account, or its profile is not restricted
+    put:
+      operationId: restrictProfile
+      description: >-
+        Hides the added identity on one public profile until an admin restores
+        it. It changes no role, credential, asset or ownership.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestrictProfileRequest'
+      responses:
+        '200':
+          description: The restriction now in force
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileRestriction'
+        '400':
+          description: The audit reason is missing or too long
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not an admin
+        '404':
+          description: No such account
+    delete:
+      operationId: restoreProfile
+      description: Gives a restricted profile its retained fields back.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: The profile is restored
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account is not an admin
+        '404':
+          description: No such account, or its profile is not restricted
   /v1/legacy-profiles/{discordId}:
     get:
       operationId: resolveLegacyProfile
@@ -364,22 +526,124 @@ components:
       type: object
       required:
         - user
+        - publicationAuthority
       properties:
         user:
           anyOf:
             - $ref: '#/components/schemas/Account'
             - type: 'null'
+        publicationAuthority:
+          type: boolean
+          description: >-
+            True when this account is the one recorded as holding publication
+            authority. It is not a system role and grants nothing on its own.
     Profile:
       type: object
       required:
         - id
         - handle
+        - displayName
+        - biography
+        - contactEmail
+        - links
+        - restricted
       properties:
         id:
           type: string
           format: uuid
         handle:
           type: string
+        displayName:
+          type: string
+        biography:
+          type: string
+        contactEmail:
+          type: string
+        avatar:
+          anyOf:
+            - $ref: '#/components/schemas/ProfileAvatar'
+            - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileLink'
+        restricted:
+          description: >-
+            True when an admin has hidden the added identity. The handle and the
+            published-asset listing stay; every other field answers empty.
+          type: boolean
+    ProfileRestriction:
+      description: The admin-only record of why a profile is hidden.
+      type: object
+      required:
+        - reason
+        - restrictedAt
+      properties:
+        reason:
+          type: string
+        restrictedBy:
+          type:
+            - string
+            - 'null'
+        restrictedAt:
+          type: string
+          format: date-time
+    RestrictProfileRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    ProfileAvatar:
+      type: object
+      required:
+        - url
+        - width
+        - height
+      properties:
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+    ProfileLink:
+      type: object
+      required:
+        - label
+        - address
+      properties:
+        label:
+          type: string
+        address:
+          type: string
+    SaveProfileRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - biography
+        - contactEmail
+        - links
+      properties:
+        displayName:
+          type: string
+          maxLength: 48
+        biography:
+          type: string
+          maxLength: 400
+        contactEmail:
+          type: string
+          maxLength: 254
+        links:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ProfileLink'
     RenameHandleRequest:
       type: object
       required:

@@ -11,8 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Postgres reports a statement it cut off, and a transaction it closed for
-// sitting idle, with these codes.
 const (
 	queryCanceled  = "57014"
 	idleInTransact = "25P03"

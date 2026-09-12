@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -60,9 +61,6 @@ func losses(target downloadTarget) []roleVerdict {
 	return lost
 }
 
-// A character offers all three card formats, and the loss report is checked
-// against the asset rather than fixed per format: the same writer reports
-// nothing for a plain card and a dropped role once the asset has expressions.
 func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -85,16 +83,12 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	if lost[0].Sample.Count != 1 || len(lost[0].Sample.Images) != 1 {
 		t.Errorf("sample = %+v, want the picture that is at stake", lost[0].Sample)
 	}
-	// Nothing is withheld for losing optional content, so the target is still
-	// on the menu with the loss stated.
 	if len(withImages) != 3 {
 		t.Fatalf("menu = %+v, want the lossy target still offered", withImages)
 	}
 }
 
-// The recommendation is the widest-compatibility rule: CharX carries at least
-// as much and is still not recommended, because SillyTavern cannot open one.
-func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
+func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -107,18 +101,20 @@ func TestTheRecommendationIsTheFormatMostAppsCanOpen(t *testing.T) {
 			recommended = target.Format
 		}
 	}
-	if recommended != "chara_card_v3" {
-		t.Fatalf("recommended = %q, want the format most apps can open", recommended)
+	if recommended != "charx" {
+		t.Fatalf("recommended = %q, want the format whose images every app reads", recommended)
 	}
 	if len(losses(targetLine(t, menu, "charx"))) >
 		len(losses(targetLine(t, menu, "chara_card_v3"))) {
 		t.Fatal("CharX lost more here, so least loss would have chosen CCv3 anyway")
 	}
-	// A gallery has no standard home in either, so its verdict carries a note
-	// about where it actually lands.
-	gallery := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
-	if gallery.Verdict != "carried" || gallery.Destination == "" {
-		t.Fatalf("gallery verdict = %+v, want carried with a destination note", gallery)
+	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
+	if inline.Verdict != "carried" || inline.Destination == "" {
+		t.Fatalf("gallery verdict = %+v, want carried with a destination note", inline)
+	}
+	archived := roleVerdictNamed(t, targetLine(t, menu, "charx"), "gallery")
+	if archived.Verdict != "carried" || archived.Destination != "" {
+		t.Fatalf("gallery verdict = %+v, want carried with nothing to warn about", archived)
 	}
 }
 
@@ -133,8 +129,6 @@ func roleVerdictNamed(t *testing.T, target downloadTarget, role string) roleVerd
 	return roleVerdict{}
 }
 
-// Two of the three character formats are a picture, so a download that named
-// only the asset would put three files in a folder that nothing tells apart.
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -156,7 +150,6 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	}
 }
 
-// The creator's panel is the reader's, read from the same projection.
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -178,8 +171,6 @@ func mustJSON(t *testing.T, value any) []byte {
 	return encoded
 }
 
-// The upload is its own group, labelled by what it is and when it arrived, and
-// an asset built from nothing simply has none.
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -202,14 +193,11 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	if fromNothing.Original != nil {
 		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
 	}
-	// The builder is an origin in its own right, so all three targets stand.
 	if len(fromNothing.Downloads) != 3 {
 		t.Fatalf("menu = %+v, want all three character targets", fromNothing.Downloads)
 	}
 }
 
-// The projection is written with the change that caused it, for a draft as
-// much as a published asset, and publishing computes nothing.
 func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -227,8 +215,6 @@ func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *test
 	}
 }
 
-// Hiding is a promise about a page and an export is a promise about a file, so
-// a hidden block leaves the download alone and its content still travels.
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
@@ -252,7 +238,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
@@ -262,15 +248,11 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	}
 }
 
-// giveExpressions adds a picture and puts it in an expressions block, which
-// is a role two of the three character formats have nowhere to put.
 func giveExpressions(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
 	givePictures(t, r, session, assetID, "expression", "expressions")
 }
 
-// givePictures adds one picture in a role and puts it in the block that
-// carries that role.
 func givePictures(
 	t *testing.T,
 	r http.Handler,
@@ -278,34 +260,21 @@ func givePictures(
 	assetID, mediaRole, definition string,
 ) {
 	t.Helper()
-	added := send(t, r, authorized(mediaUploadRequest(
-		t, assetID, mediaRole, httpTestPNG(t, 64, 64),
-	), session))
-	if added.Code != http.StatusCreated {
-		t.Fatalf("add an expression: %d %s", added.Code, added.Body.String())
-	}
-	var picture struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(added.Body.Bytes(), &picture); err != nil {
-		t.Fatalf("decode the added picture: %v", err)
-	}
+	mediaID := uploadedImageID(t, r, session, assetID, mediaRole, httpTestPNG(t, 64, 64))
 	block := addedBlock(t, addBlock(t, r, session, assetID, definition, "image_set"))
 	body := editableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
-		`{"images":[{"mediaId":"` + picture.ID + `","name":"happy"}]}`,
+		`{"images":[{"mediaId":"` + mediaID + `","name":"happy"}]}`,
 	)
 	if saved := saveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the %s block: %d %s", definition, saved.Code, saved.Body.String())
 	}
 }
 
-// publishCharacter fills the floor an uploaded character still misses and
-// publishes it.
 func publishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, assetID,
-		`{"name":"Ana","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
@@ -339,4 +308,55 @@ func projectionComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time
 
 func containsBytes(haystack, needle []byte) bool {
 	return bytes.Contains(haystack, needle)
+}
+
+func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
+	r, session, assets := newCharacterIngestRouter(t)
+	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	givePictures(t, r, session, assetID, "gallery", "gallery")
+
+	offered := appTargetsFor(t, r, session, assetID)
+	if len(offered) == 0 {
+		t.Fatal("no application was offered a format")
+	}
+	for _, app := range offered {
+		if app.Format != "charx" {
+			t.Errorf("%s = %q, want the format whose gallery it shows", app.ID, app.Format)
+		}
+	}
+}
+
+func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
+	r, session, assets := newCharacterIngestRouter(t)
+	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	givePictures(t, r, session, assetID, "gallery", "gallery")
+
+	menu := downloadMenu(t, r, session, assetID)
+	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
+	if inline.Destination == "" {
+		t.Fatal("the inline gallery lost its destination note")
+	}
+	if !slices.Equal(inline.ShownBy, []string{"risu"}) {
+		t.Fatalf("shownBy = %v, want the one app that unpacks it", inline.ShownBy)
+	}
+	archived := roleVerdictNamed(t, targetLine(t, menu, "charx"), "gallery")
+	if len(archived.ShownBy) != 0 {
+		t.Fatalf("shownBy = %v, want nothing beside a gallery every app reads", archived.ShownBy)
+	}
+}
+
+func appTargetsFor(
+	t *testing.T, r http.Handler, session *http.Cookie, assetID string,
+) []appTarget {
+	t.Helper()
+	request := authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session)
+	response := send(t, r, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
+	}
+	var page startedAsset
+	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode the asset: %v", err)
+	}
+	return page.AppTargets
 }

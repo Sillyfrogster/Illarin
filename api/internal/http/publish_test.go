@@ -46,11 +46,10 @@ func publishAsset(
 		httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/publish", nil), session))
 }
 
-// writeCharacterFloor fills everything a character needs to be published.
 func writeCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started startedAsset) {
 	t.Helper()
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse of the west shelf","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse of the west shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -156,12 +155,10 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse","isNsfw":true}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d: %s", got.Code, got.Body.String())
 	}
 
-	// Every required block already exists and is empty, so publishing has to
-	// refuse on content.
 	refused := publishAsset(t, r, session, started.ID)
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("an asset with empty required blocks published: %d", refused.Code)
@@ -212,7 +209,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 		t.Fatalf("readiness on a new draft = %+v, want four items", started.Readiness)
 	}
 	if got := saveIdentity(t, r, session, started.ID,
-		`{"name":"Ilse","isNsfw":null}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse","blurb":"","isNsfw":null}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save a name with no answer status = %d: %s", got.Code, got.Body.String())
 	}
 	named := fetchStartedAsset(t, r, session, started.ID)
@@ -391,14 +388,14 @@ func TestAPublishedAssetKeepsItsAdultContentAnswer(t *testing.T) {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
-	unanswered := saveIdentity(t, r, session, started.ID, `{"name":"Ilse","isNsfw":null}`)
+	unanswered := saveIdentity(t, r, session, started.ID, `{"name":"Ilse","blurb":"","isNsfw":null}`)
 	if unanswered.Code != http.StatusBadRequest {
 		t.Errorf("unanswering a published asset status = %d, want 400: %s",
 			unanswered.Code, unanswered.Body.String())
 	}
 
 	long := saveIdentity(t, r, session, started.ID,
-		`{"name":"`+strings.Repeat("a", 201)+`","isNsfw":false}`)
+		`{"name":"`+strings.Repeat("a", 201)+`","blurb":"","isNsfw":false}`)
 	if long.Code != http.StatusBadRequest {
 		t.Errorf("an overlong name status = %d, want 400: %s", long.Code, long.Body.String())
 	}
@@ -462,5 +459,69 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	}
 	if len(visitor.Readiness) != 0 {
 		t.Errorf("a visitor reads %d readiness items, want none", len(visitor.Readiness))
+	}
+}
+
+func publishAssetUpdate(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+	body string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost,
+		"/v1/assets/"+assetID+"/updates", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	return send(t, r, authorized(request, session))
+}
+
+func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
+	r, session := newVerifiedTestRouter(t)
+	started := startCharacter(t, r, session)
+	writeCharacterFloor(t, r, session, started)
+	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	coreBlock := blockNamed(t, started.Blocks, "character_core")
+	core := editableBlock(coreBlock)
+	core.Elements[0].Content = json.RawMessage(`{"text":"She has moved to the east shelf."}`)
+	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+
+	response := publishAssetUpdate(t, r, session, started.ID,
+		`{"summary":"Moved her to the east shelf","versionLabel":"v2"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("publish an update status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	var recorded struct {
+		Number         int    `json:"number"`
+		Summary        string `json:"summary"`
+		VersionLabel   string `json:"versionLabel"`
+		ContentChanged bool   `json:"contentChanged"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &recorded); err != nil {
+		t.Fatalf("decode the recorded update: %v", err)
+	}
+	if recorded.Number != 2 || recorded.VersionLabel != "v2" || !recorded.ContentChanged {
+		t.Fatalf("recorded update = %+v", recorded)
+	}
+	if response.Header().Get("X-Working-Copy-Version") == "" {
+		t.Error("the update named no committed working-copy version")
+	}
+
+	again := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
+	if again.Code != http.StatusConflict {
+		t.Fatalf("republishing status = %d, want 409: %s", again.Code, again.Body.String())
+	}
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(again.Body.Bytes(), &refusal); err != nil {
+		t.Fatalf("decode the refusal: %v", err)
+	}
+	if refusal.Code != "no_changes" {
+		t.Fatalf("refusal code = %q, want no_changes: %s", refusal.Code, again.Body.String())
 	}
 }

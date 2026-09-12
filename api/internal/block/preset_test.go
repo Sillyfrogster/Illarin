@@ -31,8 +31,6 @@ func TestThePresetElementTypesAreFourSeparateTypes(t *testing.T) {
 	}
 }
 
-// A string list keeps what a creator put in it, in the order they put it in,
-// and a list they emptied on purpose is not a setting nobody ever supplied.
 func TestAStringListSettingKeepsItsItemsVerbatimAndInOrder(t *testing.T) {
 	raw := json.RawMessage(`{"settings":[
 		{"name":"customStopStrings","type":"string_list",
@@ -75,9 +73,6 @@ func TestAStringListSettingKeepsItsItemsVerbatimAndInOrder(t *testing.T) {
 	}
 }
 
-// A setting nobody supplied survives the round trip through storage. A format
-// writes an absent key for it rather than a zero, so the difference has to
-// last longer than one save.
 func TestASettingNobodySuppliedSurvivesStorage(t *testing.T) {
 	group := SettingGroup{Settings: []Setting{
 		{ID: NewItemID(), Name: "temperature", Type: SettingNumber},
@@ -105,8 +100,6 @@ func TestASettingNobodySuppliedSurvivesStorage(t *testing.T) {
 	}
 }
 
-// Every preset role has one element type it may attach to, so a creator
-// cannot put prompt fragments in a settings group.
 func TestThePresetRolesBindToTheirOwnElementTypes(t *testing.T) {
 	bindings := map[Role]Type{
 		RolePromptFragments:    TypePromptList,
@@ -166,8 +159,6 @@ func TestAPromptListCountsItsFragmentsAndNeverItsTokens(t *testing.T) {
 	}
 }
 
-// Preserved data keys against item ids, so every item inside a preset element
-// carries one from the moment it is created.
 func TestEveryPresetItemIsGivenAnIDWhenItIsRead(t *testing.T) {
 	cases := []struct {
 		elementType Type
@@ -198,8 +189,6 @@ func TestEveryPresetItemIsGivenAnIDWhenItIsRead(t *testing.T) {
 	}
 }
 
-// A fragment sits in one group and no deeper. Grouping is the list's own
-// nesting, which is why it is not a second element.
 func TestAPromptFragmentSitsUnderTheGroupItNames(t *testing.T) {
 	raw := json.RawMessage(`{
 		"groups":[{"id":"3f1a3d3a-0b1e-4e2f-9a3c-1f0e2d3c4b5a","name":"Style"}],
@@ -224,8 +213,6 @@ func TestAPromptFragmentSitsUnderTheGroupItNames(t *testing.T) {
 	}
 }
 
-// A fragment naming a group that is not in the list would render nowhere, so
-// the save is refused rather than the fragment quietly losing its heading.
 func TestAFragmentCannotNameAGroupThatIsNotThere(t *testing.T) {
 	raw := json.RawMessage(`{"groups":[],
 		"fragments":[{"role":"system","text":"one","enabled":true,
@@ -239,8 +226,6 @@ func TestAFragmentCannotNameAGroupThatIsNotThere(t *testing.T) {
 	}
 }
 
-// A closed vocabulary is refused at the point it is written rather than
-// discovered by whatever renders it.
 func TestThePresetVocabulariesAreClosed(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -265,8 +250,6 @@ func TestThePresetVocabulariesAreClosed(t *testing.T) {
 	}
 }
 
-// A preset is its prompt. The one block a creator cannot remove holds the
-// fragments, and everything else about the kind is optional.
 func TestAnEmptyPresetIsOneRequiredBlockHoldingItsPromptFragments(t *testing.T) {
 	blocks, err := Place("preset", nil)
 	if err != nil {
@@ -308,8 +291,6 @@ func TestAnEmptyPresetIsOneRequiredBlockHoldingItsPromptFragments(t *testing.T) 
 	}
 }
 
-// The four optional blocks carry the rest of what a preset holds, each one
-// absent until something fills it.
 func TestThePresetCatalogCarriesItsFourOptionalBlocks(t *testing.T) {
 	type slot struct {
 		role        Role
@@ -360,8 +341,6 @@ func TestThePresetCatalogCarriesItsFourOptionalBlocks(t *testing.T) {
 	}
 }
 
-// Every kind lists the seven shared blocks, so a preset can carry a gallery,
-// a note on how to run it and the rest without a catalog of its own.
 func TestAPresetListsTheSevenSharedBlocks(t *testing.T) {
 	definitions, ok := Catalog("preset")
 	if !ok {
@@ -377,9 +356,6 @@ func TestAPresetListsTheSevenSharedBlocks(t *testing.T) {
 	}
 }
 
-// A preset publishes on a name, an answered adult content question and one
-// prompt fragment. The check reads the fragments themselves, because the
-// block holding them is on every preset from the moment it exists.
 func TestAPresetNeedsOnePromptFragmentBeforeItPublishes(t *testing.T) {
 	blocks, err := Place("preset", nil)
 	if err != nil {
@@ -407,8 +383,6 @@ func TestAPresetNeedsOnePromptFragmentBeforeItPublishes(t *testing.T) {
 	}
 }
 
-// A page shows the settings somebody filled in, so the count beside the block
-// title is that number and not the length of the app's slot list.
 func TestASettingGroupCountsWhatSomebodyFilledIn(t *testing.T) {
 	group := SettingGroup{Settings: []Setting{
 		{ID: NewItemID(), Name: "temperature", Type: SettingNumber,

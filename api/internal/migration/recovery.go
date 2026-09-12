@@ -18,10 +18,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// recoveryChunk identifies the card shape eligible for greeting recovery.
 const recoveryChunk = "ccv3"
 
-// readVerifiedRecoveries returns the greetings a surviving card may put back into a row that has none.
 func readVerifiedRecoveries(characters []v1.Row, backup *FileBackup) (v1.RecoveryAllowlist, error) {
 	wanted := newBackupIndex()
 	for at, source := range characters {
@@ -57,7 +55,6 @@ func readVerifiedRecoveries(characters []v1.Row, backup *FileBackup) (v1.Recover
 	return allowlist, nil
 }
 
-// recoveredGreeting reports the greeting the allowlist rule permits.
 func recoveredGreeting(
 	body []byte,
 	row v1.CharacterRow,

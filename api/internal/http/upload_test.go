@@ -10,8 +10,6 @@ import (
 	"testing"
 )
 
-// uploadRequest builds the form a browser sends: the metadata first, then the
-// file.
 func uploadRequest(t *testing.T, metadata map[string]any, file []byte) *http.Request {
 	t.Helper()
 
@@ -73,6 +71,7 @@ func exampleMetadata(name string) map[string]any {
 
 func send(t *testing.T, r http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	t.Helper()
+	withReviewedVersion(t, r, req)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return rec
@@ -105,7 +104,6 @@ func TestUploadAtTheCeilingIsAccepted(t *testing.T) {
 func TestUploadIsCutOffWhenItsLengthIsUnknown(t *testing.T) {
 	r, session := newVerifiedTestRouterWith(t, 512, DefaultDeadlines())
 
-	// A sender that does not say how long the request is gets no free pass.
 	req := uploadRequest(t, exampleMetadata("Unstated"), bytes.Repeat([]byte("a"), 4096))
 	req.ContentLength = -1
 	authorized(req, session)

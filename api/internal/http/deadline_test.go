@@ -11,12 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// alreadyPast is a deadline that has gone by before the handler starts, so a
-// test about a limit does not depend on how fast the database answers.
 const alreadyPast = time.Nanosecond
 
 func deadlines(json time.Duration) Deadlines {
-	return Deadlines{JSON: json, Upload: time.Minute, Download: time.Minute, Deliver: time.Minute}
+	return Deadlines{
+		JSON: json, Upload: time.Minute, Download: time.Minute,
+		Deliver: time.Minute, Verify: time.Minute,
+	}
 }
 
 func TestAListingPastItsDeadlineFailsRatherThanAnswers(t *testing.T) {
@@ -43,7 +44,7 @@ func list(t *testing.T, r *gin.Engine) *httptest.ResponseRecorder {
 func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	err := Register(
 		gin.New(),
-		NewHandlers(nil, nil, nil, nil, 1<<20),
+		NewHandlers(nil, nil, nil, nil, nil, nil, 1<<20),
 		Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
 		func(context.Context) error { return nil },
 	)

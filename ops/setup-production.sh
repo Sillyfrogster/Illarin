@@ -228,6 +228,10 @@ LINKING_HMAC_KEY="$(_existing LINKING_HMAC_KEY || true)"
 if [[ -z "$LINKING_HMAC_KEY" ]]; then
   LINKING_HMAC_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 fi
+PUBLICATION_SECRET_KEY="$(_existing PUBLICATION_SECRET_KEY || true)"
+if [[ -z "$PUBLICATION_SECRET_KEY" ]]; then
+  PUBLICATION_SECRET_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
+fi
 
 write_env ILLARIN_IMAGE_REGISTRY "$ILLARIN_IMAGE_REGISTRY"
 write_env ILLARIN_DATA_DIR "/srv/illarin"
@@ -236,11 +240,13 @@ write_env ILLARIN_GATEWAY_BIND "127.0.0.1"
 write_env ILLARIN_GATEWAY_PORT "8000"
 write_env NPMPLUS_NETWORK ""
 write_env SITE_URL "https://$ILLARIN_DOMAIN"
+write_env BLOG_URL "https://blog.$ILLARIN_DOMAIN"
 write_env POSTGRES_DB "illarin"
 write_env POSTGRES_USER "illarin"
 write_env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
 write_env DATABASE_URL "postgres://illarin:$POSTGRES_PASSWORD@db:5432/illarin"
 write_env LINKING_HMAC_KEY "$LINKING_HMAC_KEY"
+write_env PUBLICATION_SECRET_KEY "$PUBLICATION_SECRET_KEY"
 write_env DISCORD_CLIENT_ID "$DISCORD_CLIENT_ID"
 write_env DISCORD_CLIENT_SECRET "$DISCORD_CLIENT_SECRET"
 write_env BACKUPS_ENABLED "false"
@@ -350,21 +356,23 @@ if [[ -n "$NPMPLUS_DASHBOARD_URL" ]]; then
   ask NPMPLUS_FORWARD_PORT "Detected forward port:"
   open_url "$NPMPLUS_DASHBOARD_URL"
   step "Create one Proxy Host for $ILLARIN_DOMAIN using HTTP to $NPMPLUS_FORWARD_HOST:$NPMPLUS_FORWARD_PORT."
-  step "Request or select its certificate, then enable Force SSL and HTTP/2."
+  step "Create a second Proxy Host for blog.$ILLARIN_DOMAIN forwarding to the same address and port."
+  step "Request or select a certificate for each, then enable Force SSL and HTTP/2 on both."
 else
-  step "Configure the TLS proxy to forward $ILLARIN_DOMAIN to the gateway address in the production environment."
+  step "Configure the TLS proxy to forward $ILLARIN_DOMAIN and blog.$ILLARIN_DOMAIN to the gateway address in the production environment."
 fi
 if [[ -n "$DNS_DASHBOARD_URL" ]]; then
   open_url "$DNS_DASHBOARD_URL"
 fi
-step "In the DNS provider, point the hostname at $PRODUCTION_HOST and choose the provider's appropriate proxy mode."
-note "The edge proxy owns certificates. The repo nginx owns /api, /media, /download, and private blob routing."
+step "In the DNS provider, point $ILLARIN_DOMAIN and blog.$ILLARIN_DOMAIN at $PRODUCTION_HOST and choose the provider's appropriate proxy mode."
+note "The edge proxy owns certificates. The repo nginx tells the two hostnames apart: the site owns /api, /media, /download and private blob routing, and the blog hostname serves only blog pages and media."
 
 stage "First deployment and verification"
 say "Push to $GITHUB_DEFAULT_BRANCH first. CI must pass and Publish images must finish before deployment."
 open_url "https://github.com/$GITHUB_REPOSITORY/actions/workflows/deploy-production.yml"
 step "Choose Run workflow on $GITHUB_DEFAULT_BRANCH. Approve the production environment if GitHub asks."
 step "After it finishes, open https://$ILLARIN_DOMAIN/api/healthz and expect ok."
+step "Open https://blog.$ILLARIN_DOMAIN/ and expect the blog, and https://$ILLARIN_DOMAIN/blog to send you there."
 step "Create a test account and confirm the Microsoft 365 mailbox sends its verification email."
 step "In Datadog, confirm the illarin-production host and the API, web, gateway, and Postgres containers appear."
 warn "Off-box backups remain disabled until a restic repository is configured and a restore succeeds."

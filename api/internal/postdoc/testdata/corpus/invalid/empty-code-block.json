@@ -1,0 +1,5 @@
+{
+  "note": "A code block with nothing in it",
+  "path": "document.content.0.source",
+  "document": {"version": 2, "content": [{"type": "codeBlock", "language": "go", "source": "   \n\n"}]}
+}

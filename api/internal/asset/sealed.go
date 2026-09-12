@@ -9,10 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// sealedSourceTable is the v1 table the sealed blocks came out of, and the namespace they are kept under.
 const sealedSourceTable = "preset_sealed_blocks"
 
-// SealedContent is the withheld v1 preset content an asset preserves, written as one file rather than stored, so no blob is made and no download is recorded.
 type SealedContent struct {
 	Body      []byte
 	MediaType string
@@ -20,7 +18,6 @@ type SealedContent struct {
 	Blocks    int
 }
 
-// sealedExport is what the file holds, with each block as it was preserved, so what comes out is what v1 held rather than a reading of it.
 type sealedExport struct {
 	AssetID   uuid.UUID         `json:"asset_id"`
 	AssetName string            `json:"asset_name"`
@@ -28,7 +25,6 @@ type sealedExport struct {
 	Blocks    []json.RawMessage `json:"blocks"`
 }
 
-// OpenSealedContent hands an owner the sealed blocks their asset preserves, and gives ErrNotFound to anyone else and to any asset holding nothing sealed.
 func (s *Service) OpenSealedContent(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -74,12 +70,11 @@ func (s *Service) OpenSealedContent(
 	return SealedContent{
 		Body:      body,
 		MediaType: "application/json",
-		Filename:  downloadFilename(name, "sealed", ".json"),
+		Filename:  downloadFilename(name, "", "sealed", ".json"),
 		Blocks:    len(blocks),
 	}, nil
 }
 
-// SealedBlockCount says whether an asset has sealed content for its owner to read, and answers nobody else, so a stranger cannot learn that an asset is withholding anything.
 func (s *Service) SealedBlockCount(
 	ctx context.Context,
 	ownerID uuid.UUID,

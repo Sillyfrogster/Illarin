@@ -1,4 +1,3 @@
-// Package modules names every format module Illarin has, in one place.
 package modules
 
 import (
@@ -14,7 +13,6 @@ import (
 	v1 "github.com/Sillyfrogster/Illarin/api/internal/format/v1"
 )
 
-// All returns every module, and adding one to Illarin means adding it here and nowhere else.
 func All() []format.Module {
 	readers := slices.Concat(
 		character.Modules(), lorebook.Modules(), preset.Modules(), theme.Modules(), pack.Modules(),
@@ -26,7 +24,6 @@ func All() []format.Module {
 	return append(all, v1.Module{})
 }
 
-// Registry returns every module registered and checked against each other.
 func Registry() (*format.Registry, error) {
 	registry := format.NewRegistry()
 	for _, module := range All() {

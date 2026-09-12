@@ -1,0 +1,229 @@
+webhooks:
+  publication.post.published.v1:
+    post:
+      operationId: publicationPostPublished
+      description: >-
+        Sent to every active destination subscribed to published events when a
+        post first reaches public view, and again when a withdrawn post is put
+        back. It summarizes the post and links to it; the article itself lives
+        only on the blog.
+      parameters:
+        - $ref: '#/components/parameters/WebhookId'
+        - $ref: '#/components/parameters/WebhookTimestamp'
+        - $ref: '#/components/parameters/WebhookSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationPostEvent'
+      responses:
+        '2xx':
+          description: >-
+            Any 2xx counts as delivered. A redirect is never followed and
+            counts as a wrong address. 410 stops Illarin sending to the
+            endpoint again. 429 is honored, including its Retry-After. A
+            network failure, 408, 425 or any 5xx is retried on the schedule.
+            Any other 4xx stops the attempt sequence until an admin replays it.
+  publication.post.updated.v1:
+    post:
+      operationId: publicationPostUpdated
+      description: >-
+        Sent to every active destination subscribed to updated events when a
+        post that is already public is published again with changes. Saving a
+        working copy, scheduling, deleting, recovering and every
+        administrative action send nothing.
+      parameters:
+        - $ref: '#/components/parameters/WebhookId'
+        - $ref: '#/components/parameters/WebhookTimestamp'
+        - $ref: '#/components/parameters/WebhookSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationPostEvent'
+      responses:
+        '2xx':
+          description: Handled the same way as a published event.
+  publication.post.withdrawn.v1:
+    post:
+      operationId: publicationPostWithdrawn
+      description: >-
+        Sent to every active destination subscribed to withdrawn events when a
+        post leaves public view. Its permalink answers 410 from then on, so a
+        receiver holding a copy of the summary should stop showing it.
+      parameters:
+        - $ref: '#/components/parameters/WebhookId'
+        - $ref: '#/components/parameters/WebhookTimestamp'
+        - $ref: '#/components/parameters/WebhookSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationPostEvent'
+      responses:
+        '2xx':
+          description: Handled the same way as a published event.
+components:
+  parameters:
+    WebhookId:
+      name: webhook-id
+      in: header
+      required: true
+      description: >-
+        The delivery this event belongs to. It is the same on every attempt of
+        one event reaching one destination, including an admin replay, so it is
+        the value to deduplicate on. Keep it for at least the four days a
+        delivery may keep trying.
+      schema:
+        type: string
+        format: uuid
+    WebhookTimestamp:
+      name: webhook-timestamp
+      in: header
+      required: true
+      description: >-
+        Unix seconds at which this attempt was signed. It is new on every
+        attempt. Refuse a request whose timestamp is far from your own clock,
+        and use a tolerance of a few minutes rather than seconds.
+      schema:
+        type: integer
+    WebhookSignature:
+      name: webhook-signature
+      in: header
+      required: true
+      description: >-
+        One or more space-separated signatures, each written as `v1,` followed
+        by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>`
+        over the exact bytes received. Accept the request when any one of them
+        matches, and compare in constant time. A destination whose signing
+        secret is being rotated carries two for the length of the overlap, the
+        new secret first.
+      schema:
+        type: string
+  schemas:
+    PublicationPostEvent:
+      type: object
+      description: >-
+        One public transition of one post, as a summary. Illarin promises no
+        global ordering between events. Compare `occurredAt` and treat
+        `post.revisionId` as the identity of the edition, so an event that
+        arrives after a newer one can be discarded rather than applied.
+      required:
+        - id
+        - type
+        - occurredAt
+        - post
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The Publication event, stable across every attempt and replay.
+        type:
+          $ref: './destinations.yaml#/components/schemas/PublicationEvent'
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the transition happened, which is what orders two events.
+        note:
+          type: string
+          description: >-
+            One line the publisher wrote for this transition alone. It is
+            never part of the post and is absent when nothing was written.
+        post:
+          $ref: '#/components/schemas/PublicationPostSummary'
+    PublicationPostSummary:
+      type: object
+      description: >-
+        What the post was at the moment of the transition. It never carries the
+        article body.
+      required:
+        - id
+        - revisionId
+        - title
+        - summary
+        - category
+        - url
+        - publishedAt
+        - byline
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The post, which is the same across its whole public life.
+        revisionId:
+          type: string
+          format: uuid
+          description: The exact edition this event is about.
+        title:
+          type: string
+        summary:
+          type: string
+          description: The hand-written summary readers see before the article.
+        category:
+          type: object
+          required:
+            - slug
+            - label
+          properties:
+            slug:
+              type: string
+            label:
+              type: string
+        url:
+          type: string
+          description: The permanent address of the post.
+        socialImageUrl:
+          type: string
+          description: The composed sharing image, absent when the post has none.
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        release:
+          type: object
+          description: The release this post announces, absent when it announces none.
+          required:
+            - app
+            - version
+          properties:
+            app:
+              $ref: '#/components/schemas/PublicationEventApp'
+            version:
+              type: string
+            url:
+              type: string
+        byline:
+          type: object
+          description: Who the post was published under, as it stood at first publication.
+          required:
+            - handle
+            - name
+            - url
+          properties:
+            handle:
+              type: string
+            name:
+              type: string
+            url:
+              type: string
+            app:
+              $ref: '#/components/schemas/PublicationEventApp'
+    PublicationEventApp:
+      type: object
+      required:
+        - slug
+        - name
+        - url
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        url:
+          type: string

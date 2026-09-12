@@ -1,0 +1,15 @@
+{
+  "note": "A heading address that is not an address",
+  "path": "document.content.0.anchor",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "heading",
+        "level": 2,
+        "anchor": "Release Notes",
+        "content": [{"type": "text", "text": "Release notes"}]
+      }
+    ]
+  }
+}

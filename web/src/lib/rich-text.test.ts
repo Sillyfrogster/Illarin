@@ -6,7 +6,6 @@ import {
   richTextsOf,
 } from "./rich-text";
 
-/** The words a reader ends up with, one string per block. */
 function lines(blocks: RichBlock[]): string[] {
   return blocks.flatMap((block) => {
     if (block.kind === "quote") return lines(block.children);

@@ -16,21 +16,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Catalog is the whole of what delivery knows about an asset, so visibility stays one decision.
 type Catalog interface {
 	DeliverableAsset(ctx context.Context, q db.DBTX, assetID uuid.UUID) (asset.Deliverable, error)
 	SignedURL(path string) string
 	ValidSignature(path, expires, signature string) bool
 }
 
-// Instances is everything delivery needs from the linking layer.
 type Instances interface {
 	Live(ctx context.Context, userID uuid.UUID) ([]linking.Instance, error)
 	LiveByID(ctx context.Context, userID, instanceID uuid.UUID) (linking.Instance, error)
 	Throttle(ctx context.Context, action, source string, limit int32, window time.Duration) error
 }
 
-// Settings are the bounds the queue runs under, each a wall rather than a target.
 type Settings struct {
 	HoldFloor          time.Duration
 	HoldCeiling        time.Duration
@@ -46,7 +43,6 @@ type Settings struct {
 	MaxLibraryEntries  int
 }
 
-// DefaultSettings match the lease to a signature's life, so a delivery and its addresses expire together.
 func DefaultSettings() Settings {
 	return Settings{
 		HoldFloor:          25 * time.Second,
@@ -64,7 +60,6 @@ func DefaultSettings() Settings {
 	}
 }
 
-// The named limits every caller of these routes is counted against.
 const (
 	actionQueue       = "delivery-queue"
 	actionCollect     = "delivery-collect"
@@ -77,7 +72,6 @@ const (
 	deliveryPathStart = "/delivery/"
 )
 
-// Service owns the delivery queue and the mirror of what instances installed.
 type Service struct {
 	pool      *pgxpool.Pool
 	catalog   Catalog
@@ -99,7 +93,6 @@ func NewService(
 	}
 }
 
-// Queue sends one asset to one of the creator's own instances, and a second press returns the first.
 func (s *Service) Queue(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -180,7 +173,6 @@ func (s *Service) liveDelivery(
 	), nil
 }
 
-// Discard drops one of the creator's own deliveries, and its signed addresses stop answering with it.
 func (s *Service) Discard(ctx context.Context, userID, deliveryID uuid.UUID) error {
 	discarded, err := db.New(s.pool).DiscardDelivery(ctx, db.DiscardDeliveryParams{
 		DeliveryID: uuidValue(deliveryID), UserID: uuidValue(userID),
@@ -194,7 +186,6 @@ func (s *Service) Discard(ctx context.Context, userID, deliveryID uuid.UUID) err
 	return nil
 }
 
-// AssetInstances is what an asset page shows, and an asset nobody may be sent is absent rather than described.
 func (s *Service) AssetInstances(
 	ctx context.Context,
 	userID uuid.UUID,

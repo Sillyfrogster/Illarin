@@ -12,9 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Write builds a SillyTavern preset out of the asset's roles. The prompts and
-// the order they are sent in are written together, because the file keeps them
-// apart and they have to agree.
 func (SillyTavernModule) Write(
 	_ context.Context,
 	asset format.ExportAsset,
@@ -66,9 +63,6 @@ func (SillyTavernModule) Write(
 	}, nil
 }
 
-// sillyTavernIdentifiers is the identifier the file knows each fragment by.
-// The order structure names its prompts by it, so a fragment a creator added
-// here is named by the id Illarin minted for it.
 func sillyTavernIdentifiers(list block.PromptList, held kept) map[uuid.UUID]string {
 	identifiers := make(map[uuid.UUID]string, len(list.Fragments))
 	for _, fragment := range list.Fragments {
@@ -79,9 +73,6 @@ func sillyTavernIdentifiers(list block.PromptList, held kept) map[uuid.UUID]stri
 	return identifiers
 }
 
-// writeSillyTavernPrompts writes the prompts themselves. A heading is not
-// among them: the file has nowhere to put one, which is what this format's
-// declaration says it loses.
 func writeSillyTavernPrompts(
 	list block.PromptList,
 	identifiers map[uuid.UUID]string,
@@ -95,9 +86,6 @@ func writeSillyTavernPrompts(
 		}
 		keys.WriteIfSet(fields, stMarker, fragment.Marker != "", true)
 		keys.WriteIfSet(fields, stRole, fragment.Role != "", fragment.Role)
-		// A prompt always carries the text it sends, even where it is empty. A
-		// marker sends none of its own, so it carries the key only where the
-		// creator has put something there.
 		keys.WriteIfSet(fields, stText,
 			fragment.Text != "" || fragment.Marker == "", fragment.Text)
 		if fragment.Placement == block.InHistory {
@@ -110,9 +98,6 @@ func writeSillyTavernPrompts(
 	return written
 }
 
-// writeSillyTavernOrder writes the order the prompts are sent in, with the
-// switch each one is under. Every other character's order comes back from
-// preservation, in front of this one, where the file had them.
 func writeSillyTavernOrder(
 	list block.PromptList,
 	identifiers map[uuid.UUID]string,
@@ -170,7 +155,6 @@ func writeSillyTavernScripts(
 	return written
 }
 
-// numbersFor writes the text a script runs over in the numbers the file uses.
 func numbersFor(targets []block.ScriptTarget) []float64 {
 	numbered := make([]float64, 0, len(targets))
 	for _, target := range targets {
@@ -185,9 +169,6 @@ func numbersFor(targets []block.ScriptTarget) []float64 {
 	return numbered
 }
 
-// restoreSillyTavernPreserved writes an asset's preserved data back into the
-// file the writer built. The order structure is the one thing the writer holds
-// on to itself, because it rebuilt that from the prompts.
 func restoreSillyTavernPreserved(body map[string]json.RawMessage, held kept) {
 	preserved := held.object(sillyTavernNamespace)
 	delete(preserved, stOrder)

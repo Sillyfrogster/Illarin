@@ -16,13 +16,17 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -69,8 +73,6 @@ func run() error {
 	svc := asset.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
-	// Changing what a format declares or what the facet catalog holds is a
-	// deploy, so the deploy is what recomputes the projections it invalidated.
 	recomputed, err := svc.RecomputeStaleExportProjections(runtimeContext)
 	if err != nil {
 		return fmt.Errorf("export projections: %w", err)
@@ -136,20 +138,65 @@ func run() error {
 			return fmt.Errorf("Discord sign-in: %w", err)
 		}
 	}
-	accounts := account.NewService(pool, verificationSender, discordProvider, cfg.SiteURL)
+	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
+	sealing, err := secrets.NewKey(cfg.PublicationSecretKey)
+	if err != nil {
+		return fmt.Errorf("publication secret key: %w", err)
+	}
+	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
+	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
+	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
+	svc.OnUpdatePublished(updateDestinations.Announce)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(1)
+	background.Add(7)
+	go func() {
+		defer background.Done()
+		updateDestinations.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("asset update destination sweeper: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		updateDestinations.RunAnnouncements(runtimeContext, func(err error) {
+			log.Printf("asset update announcement: %v", err)
+		})
+	}()
 	go func() {
 		defer background.Done()
 		deliveries.RunSweeper(runtimeContext, func(err error) {
 			log.Printf("delivery sweeper: %v", err)
 		})
 	}()
+	go func() {
+		defer background.Done()
+		publications.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("publication sweeper: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		publications.RunScheduler(runtimeContext, func(err error) {
+			log.Printf("publication scheduler: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		publications.RunRecovery(runtimeContext, func(err error) {
+			log.Printf("publication recovery: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		publications.RunDeliveries(runtimeContext, func(err error) {
+			log.Printf("publication delivery: %v", err)
+		})
+	}()
 
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, cfg.MaxUploadBytes)
+	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, publications, updateDestinations, cfg.MaxUploadBytes)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err

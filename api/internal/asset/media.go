@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
-	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -52,20 +51,14 @@ type AddMediaInput struct {
 type MediaDownload struct {
 	InternalRedirect string
 	MediaType        string
-	// Private is a draft's image, which is short-lived and must not be cached
-	// the way a public one is.
-	Private bool
+	Private          bool
 }
 
-// MediaRequest is one image request. It names the image and the size wanted,
-// and carries whatever the caller presented for it.
 type MediaRequest struct {
-	MediaID  uuid.UUID
-	Variant  string
-	Version  uint32
-	ViewerID *uuid.UUID
-	// Expires and Signature carry the signature a draft's image is served
-	// against. A published image needs neither.
+	MediaID   uuid.UUID
+	Variant   string
+	Version   uint32
+	ViewerID  *uuid.UUID
 	Expires   string
 	Signature string
 }
@@ -93,8 +86,7 @@ func (r *sourceErrorReader) Read(payload []byte) (int, error) {
 	return count, err
 }
 
-// AddMedia stores one creator-managed image under a new media ID.
-func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error) {
+func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Candidate) (Media, error) {
 	if !in.Role.Valid() {
 		return Media{}, ErrInvalidMediaRole
 	}
@@ -114,11 +106,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 		return Media{}, ErrAssetFrozen
 	}
 
-	stored, err := s.store.Put(ctx, in.File)
-	if err != nil {
-		return Media{}, fmt.Errorf("store media: %w", err)
-	}
-	prepared, err := s.prepareMedia(ctx, stored)
+	stored, prepared, err := s.media.Accept(ctx, in.File)
 	if err != nil {
 		return Media{}, err
 	}
@@ -128,24 +116,12 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 		return Media{}, fmt.Errorf("begin media addition: %w", err)
 	}
 	defer tx.Rollback(ctx)
+
 	if err := s.ensureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return Media{}, err
 	}
-	withheldAt = pgtype.Timestamptz{}
-	err = tx.QueryRow(ctx, `
-		select withheld_at
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Media{}, ErrMediaNotFound
-	}
-	if err != nil {
-		return Media{}, fmt.Errorf("lock media owner: %w", err)
-	}
-	if withheldAt.Valid {
-		return Media{}, ErrAssetFrozen
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+		return Media{}, err
 	}
 	fingerprint, err := s.contentFingerprint(ctx, tx, in.AssetID)
 	if err != nil {
@@ -161,6 +137,9 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 	}
 	switch in.Role {
 	case MediaAvatar:
+		if err := supersedeCoverMedia(ctx, tx, in.AssetID, id); err != nil {
+			return Media{}, err
+		}
 		if err := setCoverMedia(ctx, tx, in.AssetID, &id); err != nil {
 			return Media{}, err
 		}
@@ -169,13 +148,10 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 			return Media{}, err
 		}
 	}
-	// A picture nothing points at yet reaches no file. This moves the counter
-	// where the new picture became the cover, and leaves it where a gallery
-	// image waits for the block save that will use it.
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return Media{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, in.AssetID); err != nil {
 		return Media{}, fmt.Errorf("commit media addition: %w", err)
 	}
 	return Media{
@@ -185,7 +161,6 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput) (Media, error)
 	}, nil
 }
 
-// ListMedia returns an asset's media.
 func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uuid.UUID) ([]Media, error) {
 	var foundAssetID uuid.UUID
 	err := s.pool.QueryRow(ctx,
@@ -203,7 +178,7 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 	}
 	rows, err := s.pool.Query(ctx, `
 		select id, asset_id, role, width, height
-		  from asset_media
+		  from asset_public.asset_media
 		 where asset_id = $1 and is_current
 		 order by created_at, id
 	`, foundAssetID)
@@ -232,41 +207,6 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 		return nil, fmt.Errorf("list asset media: %w", err)
 	}
 	return media, nil
-}
-
-func (s *Service) prepareMedia(ctx context.Context, stored storage.StoredBlob) (mediaproc.Prepared, error) {
-	source, err := s.store.Open(ctx, stored.ID)
-	if err != nil {
-		return mediaproc.Prepared{}, fmt.Errorf("open stored media: %w", err)
-	}
-	release, err := s.acquireMediaSlot(ctx)
-	if err != nil {
-		source.Close()
-		return mediaproc.Prepared{}, err
-	}
-	prepared, prepareErr := s.media.Prepare(ctx, source)
-	release()
-	closeErr := source.Close()
-	if prepareErr != nil {
-		return mediaproc.Prepared{}, prepareErr
-	}
-	if closeErr != nil {
-		return mediaproc.Prepared{}, fmt.Errorf("close stored media: %w", closeErr)
-	}
-	for _, derivative := range prepared.Derivatives {
-		id := storage.DerivativeID{
-			SourceDigest: stored.Digest,
-			Variant:      derivative.Variant,
-			Version:      mediaproc.DerivativeVersion,
-		}
-		if err := s.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
-			if errors.Is(err, storage.ErrInsufficientSpace) {
-				break
-			}
-			return mediaproc.Prepared{}, fmt.Errorf("store %s media variant: %w", derivative.Variant, err)
-		}
-	}
-	return prepared, nil
 }
 
 func (s *Service) prepareExtractedMedia(
@@ -302,7 +242,7 @@ func (s *Service) prepareExtractedMedia(
 		if err != nil {
 			return nil, fmt.Errorf("store extracted media: %w", err)
 		}
-		image, err := s.prepareMedia(ctx, stored)
+		image, err := s.media.Prepare(ctx, stored)
 		if err != nil {
 			if errors.Is(err, mediaproc.ErrUnsupportedImage) {
 				continue
@@ -365,6 +305,19 @@ func insertAssetMedia(
 	return nil
 }
 
+// supersedeCoverMedia retires the picture a new display picture replaces.
+func supersedeCoverMedia(ctx context.Context, tx pgx.Tx, assetID, keep uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		update asset_media
+		   set is_current = false
+		 where asset_id = $1 and id <> $2 and is_current
+		   and role in ('avatar', 'avatar_alt')
+	`, assetID, keep); err != nil {
+		return fmt.Errorf("supersede cover media: %w", err)
+	}
+	return nil
+}
+
 func supersedeExtractedMedia(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `
 		update asset_media
@@ -387,9 +340,6 @@ func mediaIngestFailure(err error) format.FailureReason {
 	}
 }
 
-// MediaVariant returns a cached image and safely regenerates a missing one. A
-// draft's image is at the same address as a published one and is served only
-// against a signature Go wrote.
 func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownload, error) {
 	_, ordinary := mediaproc.VariantByName(in.Variant)
 	_, composed := mediaproc.SocialPreviewByName(in.Variant)
@@ -399,26 +349,31 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	variant, version := in.Variant, in.Version
 	var blobID uuid.UUID
 	var digestBytes []byte
-	var lifecycle string
+	var private, owner, draft bool
 	err := s.pool.QueryRow(ctx, `
-		select media.blob_id, blob.sha256, asset.lifecycle
+		select media.blob_id, blob.sha256,
+		       asset.lifecycle = 'draft' or not exists (
+		           select 1 from asset_snapshot_media recorded
+		           join asset_snapshots snapshot on snapshot.id = recorded.snapshot_id
+		           where recorded.asset_id = asset.id and recorded.media_id = media.id
+		             and snapshot.withdrawn_at is null
+		       ), coalesce(asset.owner_id = $2, false), asset.lifecycle = 'draft'
 		  from asset_media media
 		  join assets asset on asset.id = media.asset_id
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
 		   and asset.deleted_at is null
 		   and (asset.withheld_at is null or asset.owner_id = $2)
-	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &lifecycle)
+	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &private, &owner, &draft)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MediaDownload{}, ErrMediaNotFound
 	}
 	if err != nil {
 		return MediaDownload{}, fmt.Errorf("find media: %w", err)
 	}
-	private := Lifecycle(lifecycle) == LifecycleDraft
 	if private {
 		path := fmt.Sprintf("/media/%s/%s/%d", in.MediaID, variant, version)
-		if !s.signer.Valid(path, in.Expires, in.Signature, s.now()) {
+		if (!draft && !owner) || !s.signer.Valid(path, in.Expires, in.Signature, s.now()) {
 			return MediaDownload{}, ErrMediaNotFound
 		}
 	}
@@ -427,75 +382,13 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	derivativeID := storage.DerivativeID{
-		SourceDigest: digest,
-		Variant:      variant,
-		Version:      version,
-	}
-	redirect, err := s.store.InternalDerivativeRedirect(ctx, derivativeID)
-	if errors.Is(err, storage.ErrDerivativeNotFound) {
-		job := s.mediaFlight.DoChan(fmt.Sprintf("%x/%s/%d", digest, variant, version), func() (any, error) {
-			return nil, s.regenerateMediaVariant(ctx, blobID, derivativeID)
-		})
-		select {
-		case <-ctx.Done():
-			return MediaDownload{}, ctx.Err()
-		case result := <-job:
-			if result.Err != nil {
-				return MediaDownload{}, result.Err
-			}
-		}
-		redirect, err = s.store.InternalDerivativeRedirect(ctx, derivativeID)
-	}
+	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
 	if err != nil {
-		return MediaDownload{}, fmt.Errorf("resolve media variant: %w", err)
+		return MediaDownload{}, err
 	}
 	return MediaDownload{
 		InternalRedirect: redirect,
 		MediaType:        s.media.DerivativeType(),
 		Private:          private,
 	}, nil
-}
-
-func (s *Service) regenerateMediaVariant(
-	ctx context.Context,
-	blobID uuid.UUID,
-	id storage.DerivativeID,
-) error {
-	release, err := s.acquireMediaSlot(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
-	source, err := s.store.Open(ctx, blobID)
-	if err != nil {
-		return fmt.Errorf("open media for regeneration: %w", err)
-	}
-	var derivative mediaproc.Derivative
-	var renderErr error
-	if _, composed := mediaproc.SocialPreviewByName(id.Variant); composed {
-		derivative, renderErr = s.media.ComposeSocialPreview(ctx, source, id.Variant)
-	} else {
-		derivative, renderErr = s.media.Render(ctx, source, id.Variant)
-	}
-	closeErr := source.Close()
-	if renderErr != nil {
-		return fmt.Errorf("regenerate media variant: %w", renderErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close media after regeneration: %w", closeErr)
-	}
-	if err := s.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
-		return fmt.Errorf("store regenerated media variant: %w", err)
-	}
-	return nil
-}
-
-func (s *Service) acquireMediaSlot(ctx context.Context) (func(), error) {
-	select {
-	case s.mediaSlots <- struct{}{}:
-		return func() { <-s.mediaSlots }, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
 }

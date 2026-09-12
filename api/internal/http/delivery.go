@@ -14,7 +14,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-// maxLibraryBodyBytes bounds a library report before parsing, with room to spare for 2000 entries.
 const maxLibraryBodyBytes = 256 << 10
 
 func (h *Handlers) CollectDeliveries(c *gin.Context) {
@@ -122,7 +121,6 @@ func (h *Handlers) DiscardDelivery(c *gin.Context, id types.UUID, _ DiscardDeliv
 	c.Status(http.StatusNoContent)
 }
 
-// DownloadDeliveryExport hands over one released delivery's file, authorizing the asset again here.
 func (h *Handlers) DownloadDeliveryExport(
 	c *gin.Context,
 	id types.UUID,
@@ -153,7 +151,6 @@ func (h *Handlers) DownloadDeliveryExport(
 	h.handOffExport(c, download)
 }
 
-// deliveryArtifactError answers a signed address the way an ordinary download answers.
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
 	if errors.Is(err, delivery.ErrArtifactNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})

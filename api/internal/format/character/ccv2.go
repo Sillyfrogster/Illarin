@@ -7,9 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-// CCv2Module reads a Character Card V2, as a JSON document or inside a raster
-// image. It also reads the shape cards had before any spec existed, which is
-// the only place that shape is ever consulted.
 type CCv2Module struct{}
 
 func (CCv2Module) ID() string { return V2 }

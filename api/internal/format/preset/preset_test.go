@@ -19,8 +19,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// tidyScript is the one script the Lumiverse fixture carries. The file keeps a
-// copy of the list under `extensions` too, and both copies are the same list.
 const tidyScript = `{
 	"name": "Trim asterisks", "description": "Take the emphasis out",
 	"find_regex": "/\\*+/g", "replace_string": "", "flags": "g",
@@ -29,9 +27,6 @@ const tidyScript = `{
 	"folder": "Tidy", "script_id": "tidy-1", "sort_order": 3
 }`
 
-// lumiversePreset is the shape a real Lumiverse preset has: an ordered block
-// list with headings among it, a form held on the fragment it belongs to, four
-// groups of named settings, and keys nothing here reads.
 var lumiversePreset = `{
 	"id": "a-preset", "schemaVersion": 2,
 	"name": "Quiet Room",
@@ -75,8 +70,6 @@ var lumiversePreset = `{
 	"extensions": {"regex_scripts": [` + tidyScript + `], "risuai": {"folders": []}}
 }`
 
-// sillyTavernPreset is the shape a real SillyTavern preset has: flat settings,
-// a prompt list, and the order it is sent in held separately by character.
 const sillyTavernPreset = `{
 	"temperature": 1, "top_p": 1, "openai_max_tokens": 8192,
 	"names_behavior": -1, "use_sysprompt": true, "assistant_prefill": "",
@@ -147,15 +140,12 @@ func TestBothPresetModulesReadAndWriteWithAFullDeclaration(t *testing.T) {
 	}
 }
 
-// The two preset formats are told apart by a marker on one and a structure on
-// the other, and neither may shadow another module's evidence.
 func TestRecognitionDoesNotOverlapAnotherModules(t *testing.T) {
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
 	}
 }
 
-// SillyTavern switches a script off where Illarin switches one on.
 func TestTheScriptSwitchIsInvertedInBothFiles(t *testing.T) {
 	for _, test := range []struct{ name, body string }{
 		{"lumiverse", strings.Replace(lumiversePreset, `"disabled": false`, `"disabled": true`, 2)},
@@ -170,8 +160,6 @@ func TestTheScriptSwitchIsInvertedInBothFiles(t *testing.T) {
 	}
 }
 
-// Reading the file the writer produced gives back the same preset, and every
-// key the file carried that Illarin has no place for comes back byte for byte.
 func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
 	for _, test := range []struct {
 		name   string
@@ -240,8 +228,6 @@ func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
 	}
 }
 
-// Import fills the kind's blocks through its catalog rather than through the
-// module, so a preset lands as the blocks a preset has.
 func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 	for _, test := range []struct{ name, body string }{
 		{"lumiverse", lumiversePreset},
@@ -270,8 +256,6 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 	}
 }
 
-// Neither preset format converts to the other, so neither writer is offered
-// for the other's origin however alike the two shapes look.
 func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 	for _, test := range []struct{ origin, offered string }{
 		{LumiverseID, LumiverseID},
@@ -292,8 +276,6 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 	}
 }
 
-// A preset built here is offered both writers, because the export gates read
-// what the asset holds rather than a format it was born in.
 func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind,
@@ -307,8 +289,6 @@ func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
 	}
 }
 
-// assertPreservedComesBack proves every preserved key is somewhere in the
-// written file, exactly as it was stored.
 func assertPreservedComesBack(t *testing.T, rows []format.Remainder, written []byte) {
 	t.Helper()
 	document := string(written)
@@ -319,8 +299,6 @@ func assertPreservedComesBack(t *testing.T, rows []format.Remainder, written []b
 		}
 		for key, value := range payload {
 			if key == "prompt_order" || key == "samplerOverrides" {
-				// Both are structures the writer rebuilt, and each is checked
-				// where it is written rather than as one stored blob.
 				continue
 			}
 			encoded, err := json.Marshal(map[string]json.RawMessage{key: value})
@@ -382,8 +360,6 @@ func stripIDs(elements []block.Element) []block.Element {
 	return stripped
 }
 
-// testRegistry is the registry the server builds, so recognition and the
-// export gates are exercised against the modules a real upload meets.
 func testRegistry(t *testing.T) *format.Registry {
 	t.Helper()
 	registry := format.NewRegistry()
@@ -500,8 +476,6 @@ func preservedPayload(
 	return payload
 }
 
-// document inspects real bytes, so a test reads what the probe produces rather
-// than a hand-made structure.
 func document(t *testing.T, body string) probe.Inspection {
 	t.Helper()
 	data := []byte(body)
@@ -527,9 +501,6 @@ func (s memoryStore) ReadRange(
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-// Each module declares its own app's slot names and reads no others. A handful
-// of names, such as `temperature`, happen to be spelled the same in both apps;
-// what matters is that neither module reads the other's table.
 func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 	declared := func(module format.Module) map[string]bool {
 		names := make(map[string]bool)
@@ -547,9 +518,6 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 			t.Errorf("a module declares %q, which belongs to the other app", name)
 		}
 	}
-	// Only the names the writer declares reach a file, so a setting from the
-	// other app stays behind rather than being written into a file that would
-	// ignore it.
 	written := write(t, SillyTavernModule{}, format.Parsed{
 		Elements: []block.Element{
 			{
@@ -579,7 +547,6 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 	if _, written := body["topP"]; written {
 		t.Error("a name belonging to the other preset format was written into the file")
 	}
-	// The loss report says so rather than the file quietly losing it.
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind, Origin: SillyTavernID,
 		Elements: []block.Element{{
@@ -601,8 +568,6 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 
 func pointerTo[T any](value T) *T { return &value }
 
-// An empty script list is a key the file carries and Illarin has no content
-// for, so it comes back rather than disappearing.
 func TestAnEmptyScriptListComesBack(t *testing.T) {
 	for _, test := range []struct {
 		name, body, key string

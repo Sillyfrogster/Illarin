@@ -10,15 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Kind is what a preset is to a person.
 const Kind = "preset"
 
-// Modules returns every preset module, so the server registers the set rather
-// than remembering to add each one.
 func Modules() []format.Reader { return []format.Reader{LumiverseModule{}, SillyTavernModule{}} }
 
-// declaredSlots derives module declarations from the same table used to seed
-// new presets.
 func declaredSlots(app App) []format.SlotDeclaration {
 	named := slotsByApp[app]
 	declared := make([]format.SlotDeclaration, 0,
@@ -36,7 +31,6 @@ func declaredSlots(app App) []format.SlotDeclaration {
 	return declared
 }
 
-// slotValueTypes says what a setting's type looks like in a file.
 var slotValueTypes = map[block.SettingType]format.ValueType{
 	block.SettingNumber:  format.ValueNumber,
 	block.SettingBoolean: format.ValueBoolean,
@@ -44,8 +38,6 @@ var slotValueTypes = map[block.SettingType]format.ValueType{
 	block.SettingStrings: format.ValueArray,
 }
 
-// settingsElement consumes known slots and leaves unknown fields for
-// preservation. Null keeps a known slot present but unfilled.
 func settingsElement(
 	role block.Role,
 	values map[string]json.RawMessage,
@@ -75,8 +67,6 @@ func settingsElement(
 	}, true
 }
 
-// nudgesElement reads the short prompts an app sends on its own. They are text
-// rather than settings, so they are one list of named bodies.
 func nudgesElement(values map[string]json.RawMessage, names []string) (block.Element, bool) {
 	texts := make([]block.TextItem, 0, len(names))
 	for _, name := range names {
@@ -95,9 +85,6 @@ func nudgesElement(values map[string]json.RawMessage, names []string) (block.Ele
 	}, true
 }
 
-// readValue reads what somebody put in one named slot, and reports whether the
-// key is one this module consumed. A value of the wrong shape for the slot is
-// left where it is, so a bad value costs its own key and nothing else.
 func readValue(raw json.RawMessage, holds block.SettingType) (*block.Value, bool) {
 	if keys.IsNull(raw) {
 		return nil, true
@@ -131,9 +118,6 @@ func readValue(raw json.RawMessage, holds block.SettingType) (*block.Value, bool
 	return nil, false
 }
 
-// writeValue writes one named slot back out. A slot nobody filled in is JSON's
-// own word for nothing, which is what tells the app to use its own default
-// rather than the zero somebody would read into a 0 or an empty string.
 func writeValue(setting block.Setting) json.RawMessage {
 	if setting.Value == nil {
 		return json.RawMessage("null")
@@ -164,7 +148,6 @@ func orEmptyStrings(values []string) []string {
 	return values
 }
 
-// settings returns the named settings an asset holds under one role.
 func settings(asset format.ExportAsset, role block.Role) []block.Setting {
 	content, ok := asset.Content(role)
 	if !ok {
@@ -177,7 +160,6 @@ func settings(asset format.ExportAsset, role block.Role) []block.Setting {
 	return group.Settings
 }
 
-// fragments returns the prompt list an asset is built on.
 func fragments(asset format.ExportAsset) block.PromptList {
 	content, ok := asset.Content(block.RolePromptFragments)
 	if !ok {
@@ -190,7 +172,6 @@ func fragments(asset format.ExportAsset) block.PromptList {
 	return list
 }
 
-// variables returns the form a preset asks a reader to fill in.
 func variables(asset format.ExportAsset) []block.Variable {
 	content, ok := asset.Content(block.RolePromptVariables)
 	if !ok {
@@ -203,7 +184,6 @@ func variables(asset format.ExportAsset) []block.Variable {
 	return schema.Variables
 }
 
-// scripts returns the find and replace an asset carries.
 func scripts(asset format.ExportAsset) []block.Script {
 	content, ok := asset.Content(block.RoleRegexScripts)
 	if !ok {
@@ -216,7 +196,6 @@ func scripts(asset format.ExportAsset) []block.Script {
 	return list.Scripts
 }
 
-// nudges returns the short prompts an asset carries.
 func nudges(asset format.ExportAsset) []block.TextItem {
 	content, ok := asset.Content(block.RolePromptNudges)
 	if !ok {
@@ -229,7 +208,6 @@ func nudges(asset format.ExportAsset) []block.TextItem {
 	return set.Texts
 }
 
-// unnamedSetting matches a populated setting the target app does not read.
 func unnamedSetting(named []slot) *format.ContentCondition {
 	return &format.ContentCondition{
 		Description: "a setting this app has no name for",
@@ -250,7 +228,6 @@ func unnamedSetting(named []slot) *format.ContentCondition {
 	}
 }
 
-// unnamedNudge matches a list holding a nudge this app does not send.
 func unnamedNudge(names []string) *format.ContentCondition {
 	return &format.ContentCondition{
 		Description: "a nudge this app does not send",
@@ -269,9 +246,6 @@ func unnamedNudge(names []string) *format.ContentCondition {
 	}
 }
 
-// hasLooseVariable matches a form holding a variable that belongs to no prompt
-// fragment. Both formats that carry variables keep them on the fragment they
-// belong to, so a loose one has nowhere to go.
 func hasLooseVariable(content block.Content) bool {
 	schema, isSchema := content.(block.VariableSchema)
 	if !isSchema {

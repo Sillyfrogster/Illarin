@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Every key of extensions is a namespace of its own, so listing what an asset
-// preserves never means opening a payload and reading around inside it.
 func TestEachExtensionKeyIsPreservedAsItsOwnNamespace(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -36,8 +34,6 @@ func TestEachExtensionKeyIsPreservedAsItsOwnNamespace(t *testing.T) {
 	}
 }
 
-// Nothing accepted is discarded. A value that records nothing is stored like
-// any other, and no filter runs over emptiness at import.
 func TestValuesThatRecordNothingAreStoredAnyway(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -53,8 +49,6 @@ func TestValuesThatRecordNothingAreStoredAnyway(t *testing.T) {
 		}
 	}
 
-	// The same four are what the panel leaves out, which is display and not
-	// storage.
 	declaration := CCv3Module{}.Declaration()
 	for namespace, payload := range preserved {
 		if namespace == cardNamespace {
@@ -66,7 +60,6 @@ func TestValuesThatRecordNothingAreStoredAnyway(t *testing.T) {
 	}
 }
 
-// A namespace holding something the creator chose keeps its place in the panel.
 func TestBoilerplateHidesOnlyWhatRecordsNothing(t *testing.T) {
 	declaration := CCv3Module{}.Declaration()
 	cases := []struct {
@@ -94,8 +87,6 @@ func TestBoilerplateHidesOnlyWhatRecordsNothing(t *testing.T) {
 	}
 }
 
-// A lorebook Illarin holds as content has no preserved second copy, wherever
-// the card kept it. This is the 2.84 MB of duplicated books.
 func TestALorebookHeldAsContentIsNotPreservedASecondTime(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -121,8 +112,6 @@ func TestALorebookHeldAsContentIsNotPreservedASecondTime(t *testing.T) {
 	}
 }
 
-// The half Illarin understands becomes content and only the rest is preserved,
-// keyed against the entry that carried it.
 func TestAHalfUnderstoodBookSplitsRatherThanDuplicates(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -151,7 +140,6 @@ func TestAHalfUnderstoodBookSplitsRatherThanDuplicates(t *testing.T) {
 	if bookRow.OwnerID == uuid.Nil {
 		t.Error("the book's remainder names no element")
 	}
-	// A format's own identifier is preserved data like anything else.
 	if entryRow.OwnerID != entry.ID ||
 		!bytes.Contains(entryRow.Payload, []byte(`"uid":91`)) ||
 		!bytes.Contains(entryRow.Payload, []byte(`"probability":75`)) {
@@ -162,8 +150,6 @@ func TestAHalfUnderstoodBookSplitsRatherThanDuplicates(t *testing.T) {
 	}
 }
 
-// Preserved data keys against an id, so the entry beside a deleted one never
-// inherits its fields.
 func TestEachEntryGetsItsOwnIDAndItsOwnPreservedFields(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -191,8 +177,6 @@ func TestEachEntryGetsItsOwnIDAndItsOwnPreservedFields(t *testing.T) {
 	}
 }
 
-// A card whose extensions carry a key named for the card body would ask for
-// two namespaces of one name. It travels back out whole instead.
 func TestAnExtensionNamedForTheCardBodyStaysInsideIt(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -210,7 +194,6 @@ func TestAnExtensionNamedForTheCardBodyStaysInsideIt(t *testing.T) {
 	}
 }
 
-// namespaces reads the asset-owned rows into the panel's own view of them.
 func namespaces(parsed format.Parsed) map[string][]byte {
 	found := make(map[string][]byte)
 	for _, remainder := range parsed.Remainder {
@@ -221,9 +204,6 @@ func namespaces(parsed format.Parsed) map[string][]byte {
 	return found
 }
 
-// Every item a reader produces carries an id from the moment it is read, not
-// from the first time a creator saves over it. Preserved data keys against
-// these ids, and two items sharing the nil id would be one owner.
 func TestEveryImportedItemArrivesWithAnIDOfItsOwn(t *testing.T) {
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",

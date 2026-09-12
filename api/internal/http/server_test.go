@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// serve runs a handler on a real port, which is the only way to watch what the
-// server does with a connection rather than with a request.
 func serve(t *testing.T, handler http.Handler, timeouts Timeouts) string {
 	t.Helper()
 
@@ -37,7 +35,6 @@ func TestAConnectionThatNeverFinishesItsHeadersIsCutOff(t *testing.T) {
 	}
 	defer conn.Close()
 
-	// No blank line after the header, so the request is never finished.
 	if _, err := fmt.Fprint(conn, "GET /v1/assets HTTP/1.1\r\nHost: illarin.test\r\n"); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -56,6 +53,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		Upload:   30 * time.Second,
 		Download: 30 * time.Second,
 		Deliver:  30 * time.Second,
+		Verify:   30 * time.Second,
 	})
 	base := serve(t, r, Timeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})
 
@@ -65,8 +63,6 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		t.Fatalf("read form: %v", err)
 	}
 
-	// Sent over about a second, which is far longer than a listing is allowed
-	// and longer than the whole request may take to start.
 	body := &slowReader{rest: form, chunk: len(form)/5 + 1, pause: 200 * time.Millisecond}
 	req, err := http.NewRequest(http.MethodPost, base+"/v1/assets", body)
 	if err != nil {
@@ -86,7 +82,6 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 	}
 }
 
-// slowReader hands over a request a piece at a time, with a pause between.
 type slowReader struct {
 	rest  []byte
 	chunk int

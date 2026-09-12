@@ -11,7 +11,7 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID, params AddAssetBlockParams) {
 	owner, ok := h.verifiedAccount(c, "adding a block")
 	if !ok {
 		return
@@ -21,15 +21,16 @@ func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Name the block to add and the element it starts with."})
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	saved, err := h.assets.AddBlock(
 		c.Request.Context(), owner.ID, uuid.UUID(id),
-		block.DefinitionID(request.Definition), block.Type(request.ElementType),
-	)
+		block.DefinitionID(request.Definition), block.Type(request.ElementType), candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrInvalidBlock):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case err != nil:
@@ -44,7 +45,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID) {
+func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID, params ArrangeAssetBlocksParams) {
 	owner, ok := h.verifiedAccount(c, "arranging an asset")
 	if !ok {
 		return
@@ -60,12 +61,14 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID) {
 			ID: uuid.UUID(choice.Id), Hidden: choice.Hidden, Width: block.Width(choice.Width),
 		}
 	}
-	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, uuid.UUID(id), arrangement)
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, uuid.UUID(id), arrangement, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrInvalidBlock):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case err != nil:
@@ -80,17 +83,19 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) RemoveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID) {
+func (h *Handlers) RemoveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID, params RemoveAssetBlockParams) {
 	owner, ok := h.verifiedAccount(c, "removing a block")
 	if !ok {
 		return
 	}
-	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID))
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrInvalidBlock):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case err != nil:
@@ -100,7 +105,7 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context, id types.UUID, blockID types
 	}
 }
 
-func (h *Handlers) MoveAssetBlockContent(c *gin.Context, id types.UUID, blockID types.UUID) {
+func (h *Handlers) MoveAssetBlockContent(c *gin.Context, id types.UUID, blockID types.UUID, params MoveAssetBlockContentParams) {
 	owner, ok := h.verifiedAccount(c, "moving block content")
 	if !ok {
 		return
@@ -110,14 +115,15 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context, id types.UUID, blockID 
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Choose the block that should keep this content."})
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	saved, err := h.assets.MoveBlockContent(
-		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), uuid.UUID(request.DestinationBlockId),
-	)
+		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), uuid.UUID(request.DestinationBlockId), candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case errors.Is(err, asset.ErrInvalidBlock):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case err != nil:

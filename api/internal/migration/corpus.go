@@ -10,14 +10,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Corpus is every v1 row the migration reads, with its side tables already attached.
 type Corpus struct {
 	Rows         []v1.Row
 	Recoveries   v1.RecoveryAllowlist
 	ClaimedFiles []string
 }
 
-// ReadCorpus loads the v1 rows along with theme fonts and verified card recoveries.
 func ReadCorpus(ctx context.Context, source *pgxpool.Pool, backup *FileBackup) (Corpus, error) {
 	images, err := readCharacterImages(ctx, source)
 	if err != nil {

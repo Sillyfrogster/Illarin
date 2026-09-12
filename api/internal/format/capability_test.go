@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// writerModule is a declared writer with no reader, so the gates can be stated
-// against declarations rather than against one shipped format's behaviour.
 type writerModule struct {
 	declaration Declaration
 }
@@ -102,8 +100,6 @@ func TestAnUntestedOriginOffersNoTarget(t *testing.T) {
 	}
 }
 
-// The builder is an origin in its own right, so a character built from nothing
-// is offered every writer tested against Illarin-authored assets.
 func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
 	registry := registryOf(t,
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
@@ -117,8 +113,6 @@ func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *test
 	}
 }
 
-// A target is blocked only where the asset has content for a role the kind
-// requires and none of it survives.
 func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
@@ -137,9 +131,6 @@ func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 	}
 }
 
-// The test is loss, not emptiness. A creator who left a field alone is never
-// punished for it, so a writer that carries no greetings at all is still
-// offered for an asset that has none.
 func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
@@ -156,8 +147,6 @@ func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
 	}
 }
 
-// Nothing is withheld for losing optional content, however much of it.
-// Deciding a download is not worth having is the reader's call.
 func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 	grades := map[block.Role]SupportGrade{
 		block.RoleDescription: SupportFull,
@@ -185,8 +174,6 @@ func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 	}
 }
 
-// A partial grade fires only where its condition holds against this asset, so
-// the same format reports nothing for one asset and a reason for another.
 func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	grades := fullCharacterGrades()
 	declaration := writerDeclaration("chara_card_v2", grades)
@@ -237,8 +224,6 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	}
 }
 
-// A destination note is an independent fact from how much survives, so it
-// rides on a carried verdict.
 func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 	declaration := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	declaration.Roles[block.RoleCreatorNotes] = DirectionalRoleSupport{
@@ -266,15 +251,12 @@ func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 	}
 }
 
-// The recommendation is the widest-compatibility rule and not the least-loss
-// rule. Recommending a format somebody's app refuses is a worse failure than
-// dropping a gallery.
 func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 	wide := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	wide.Roles[block.RoleGallery] = DirectionalRoleSupport{
 		Read: RoleSupport{Grade: SupportNone}, Write: RoleSupport{Grade: SupportNone},
 	}
-	narrow := writerDeclaration("charx", fullCharacterGrades())
+	narrow := writerDeclaration("byaf", fullCharacterGrades())
 	registry := registryOf(t, wide, narrow)
 
 	gallery := block.Element{
@@ -293,7 +275,7 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 			lossiest = target.Format
 		}
 	}
-	if lossiest != "charx" {
+	if lossiest != "byaf" {
 		t.Fatalf("the narrow target lost something; the rules do not disagree here")
 	}
 	if recommended != "chara_card_v3" {
@@ -301,8 +283,6 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 	}
 }
 
-// A cross-platform target is offered only where the creator has allowed it,
-// and nothing grants an allowance yet.
 func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
 	declaration := writerDeclaration("preset_sillytavern", fullCharacterGrades())
 	declaration.CrossPlatform = true
@@ -320,7 +300,6 @@ func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
 	}
 }
 
-// Preserved data goes back to the family it came from and nowhere else.
 func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 	card := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	card.Preservation = PreservationDeclaration{Body: "card", Container: []string{"extensions"}}
@@ -337,8 +316,6 @@ func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 	}
 }
 
-// A declaration change is a deploy, and the stamp is what tells a stored report
-// it was computed under a contract that no longer holds.
 func TestTheCapabilityStampMovesWithADeclaration(t *testing.T) {
 	before := registryOf(t, writerDeclaration("chara_card_v2", fullCharacterGrades()))
 	grades := fullCharacterGrades()
@@ -352,5 +329,27 @@ func TestTheCapabilityStampMovesWithADeclaration(t *testing.T) {
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
 	).CapabilityStamp() {
 		t.Fatal("the stamp is not stable for one contract")
+	}
+}
+
+func TestTheRecommendationPrefersTheFormatWhoseContentActuallyArrives(t *testing.T) {
+	noted := writerDeclaration("chara_card_v3", fullCharacterGrades())
+	gallerySupport := noted.Roles[block.RoleGallery]
+	gallerySupport.Write.Destination = "Only one app unpacks them."
+	noted.Roles[block.RoleGallery] = gallerySupport
+	plain := writerDeclaration("charx", fullCharacterGrades())
+	registry := registryOf(t, noted, plain)
+
+	gallery := block.Element{
+		ID: uuid.New(), Type: block.TypeImageSet, Role: block.RoleGallery,
+		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
+	}
+	targets := registry.OfferedTargets(CapabilitySubject{
+		Kind: "character", Elements: filledCharacter(gallery),
+	})
+	for _, target := range targets {
+		if target.Recommended && target.Format != "charx" {
+			t.Fatalf("recommended %s, want the one that needs no note", target.Format)
+		}
 	}
 }

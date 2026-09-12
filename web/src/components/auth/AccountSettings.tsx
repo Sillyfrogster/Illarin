@@ -1,76 +1,85 @@
 "use client";
 
-import {
-  Check,
-  KeyRound,
-  Mail,
-  MessageCircle,
-  ShieldCheck,
-} from "lucide-react";
+import { Check, KeyRound, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Said, TextInput } from "@/components/ui/field";
+import { Gate } from "@/components/ui/gate";
+import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
+import { type Refusal, refusalMessage } from "@/lib/answer";
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
-import styles from "./AccountSettings.module.css";
+import { cn } from "@/lib/cn";
 
-type ErrorAnswer = { error?: string };
+const UNREACHABLE =
+  "We could not reach Illarin. Check your connection and try again.";
+
+const MARKS: Record<WayInId, ReactNode> = {
+  discord: (
+    <MessageCircle aria-hidden="true" className="size-5" strokeWidth={1.5} />
+  ),
+  email: <Mail aria-hidden="true" className="size-5" strokeWidth={1.5} />,
+  password: (
+    <KeyRound aria-hidden="true" className="size-5" strokeWidth={1.5} />
+  ),
+};
 
 export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
   const { account, setAccount } = useAuth();
-  const [message, setMessage] = useState(discordNotice ?? "");
+  const [said, setSaid] = useState(discordNotice ?? "");
   const [passwordPending, setPasswordPending] = useState(false);
   const [detachPending, setDetachPending] = useState(false);
 
   if (account === undefined) {
     return (
-      <div className={styles.loading} aria-live="polite">
-        <span />
-        <span />
-        <span />
-        <p>Reading your sign-in methods…</p>
-      </div>
+      <p aria-live="polite" className="font-ui text-ui text-mute">
+        Loading your sign-in methods…
+      </p>
     );
   }
 
   if (!account) {
     return (
-      <section className={styles.signedOut}>
-        <ShieldCheck size={27} strokeWidth={1.35} aria-hidden="true" />
-        <h2>Sign in to open account settings</h2>
-        <p>Sign in to view or change the ways you access your account.</p>
-        <Link href="/sign-in">Sign in</Link>
-      </section>
+      <Gate
+        action="Sign in"
+        heading="Sign in to open account settings"
+        href="/sign-in"
+        line="Manage your sign-in methods after signing in."
+      />
     );
   }
 
   async function setPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setPasswordPending(true);
-    setMessage("");
-    const form = new FormData(event.currentTarget);
+    setSaid("");
 
     try {
       const response = await browserFetch("/api/v1/account/password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         body: JSON.stringify({
-          password: String(form.get("password") ?? ""),
+          password: String(new FormData(form).get("password") ?? ""),
         }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
       });
-      const answer = (await response.json()) as SignedInAccount & ErrorAnswer;
+      const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setMessage(answer.error ?? "The password could not be saved.");
+        setSaid(
+          refusalMessage(answer, "The password could not be saved. Try again."),
+        );
         return;
       }
       setAccount(answer);
-      event.currentTarget.reset();
-      setMessage("Your email can now be used with this password.");
-    } catch {
-      setMessage(
-        "We could not reach Illarin. Check your connection and try again.",
+      form.reset();
+      setSaid(
+        "Password saved. You can sign in with your verified email address.",
       );
+    } catch {
+      setSaid(UNREACHABLE);
     } finally {
       setPasswordPending(false);
     }
@@ -78,159 +87,180 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
 
   async function detachDiscord() {
     setDetachPending(true);
-    setMessage("");
+    setSaid("");
     try {
       const response = await browserFetch("/api/v1/account/discord", {
-        method: "DELETE",
         credentials: "same-origin",
+        method: "DELETE",
       });
-      const answer = (await response.json()) as SignedInAccount & ErrorAnswer;
+      const answer = (await response.json()) as SignedInAccount & Refusal;
       if (!response.ok) {
-        setMessage(answer.error ?? "Discord could not be detached.");
+        setSaid(
+          refusalMessage(
+            answer,
+            "Discord could not be disconnected. Try again.",
+          ),
+        );
         return;
       }
       setAccount(answer);
-      setMessage("Discord is detached and free to be used on another account.");
-    } catch {
-      setMessage(
-        "We could not reach Illarin. Check your connection and try again.",
+      setSaid(
+        "Discord disconnected. It can now be connected to another account.",
       );
+    } catch {
+      setSaid(UNREACHABLE);
     } finally {
       setDetachPending(false);
     }
   }
 
-  const canDetach = account.emailVerified && account.hasPassword;
+  const ways = waysIn(account);
+  const settled = ways.filter((way) => way.settled).length;
+  const discord = ways.find((way) => way.id === "discord");
 
   return (
-    <section className={styles.settings}>
-      <div className={styles.summary}>
-        <div>
-          <p>Signed in as</p>
-          <h2>@{account.handle}</h2>
-        </div>
-        <span className={styles.safety}>
-          <ShieldCheck size={17} strokeWidth={1.55} aria-hidden="true" />
-          {account.emailVerified ? "Verified account" : "Browse-only account"}
-        </span>
-      </div>
+    <div className="grid gap-5">
+      <p className="font-ui text-ui text-mute">
+        {settled === 0
+          ? "No usable sign-in method is available. Verify your email and add a password."
+          : settled === 1
+            ? "One sign-in method is available. Add another for backup access."
+            : `${settled} sign-in methods are available.`}
+      </p>
 
-      {message ? (
-        <output className={styles.message} aria-live="polite">
-          {message}
-        </output>
-      ) : null}
+      {said ? <Said>{said}</Said> : null}
 
-      <div className={styles.method}>
-        <span className={styles.methodIcon}>
-          <Mail size={21} strokeWidth={1.4} aria-hidden="true" />
-        </span>
-        <div className={styles.methodCopy}>
-          <h3>Email address</h3>
-          <p>{account.email ?? "No verified address yet"}</p>
-          <span>
-            {account.emailVerified
-              ? "Verified and available for recovery."
-              : "Verify an address before publishing or detaching Discord."}
-          </span>
-        </div>
-        {!account.emailVerified ? (
-          <Link className={styles.secondaryAction} href="/verify-email">
-            Add or verify email
-          </Link>
-        ) : (
-          <span className={styles.complete}>
-            <Check size={15} strokeWidth={1.8} aria-hidden="true" />
-            Verified
-          </span>
-        )}
-      </div>
+      <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
+        {ways.map((way) => (
+          <li className="bg-plane" key={way.id}>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-5">
+              <span
+                className={cn(
+                  "grid size-11 shrink-0 place-items-center rounded-control",
+                  way.settled
+                    ? "bg-accent-wash text-accent"
+                    : "bg-deep text-mute",
+                )}
+              >
+                {MARKS[way.id]}
+              </span>
+              <div className="min-w-0 flex-1 basis-56">
+                <h3 className="font-ui text-ui font-medium text-ink">
+                  {way.name}
+                </h3>
+                <p className="font-ui text-ui text-ink [overflow-wrap:anywhere]">
+                  {way.standing}
+                </p>
+                <p className="mt-1 font-ui text-meta text-mute">{way.note}</p>
+              </div>
+              <WayAction
+                account={account}
+                detach={() => void detachDiscord()}
+                detachPending={detachPending}
+                way={way}
+              />
+            </div>
 
-      <div className={styles.method}>
-        <span className={styles.methodIcon}>
-          <MessageCircle size={21} strokeWidth={1.4} aria-hidden="true" />
-        </span>
-        <div className={styles.methodCopy}>
-          <h3>Discord</h3>
-          <p>{account.discordLinked ? "Attached" : "Not attached"}</p>
-          <span>
-            {account.discordLinked
-              ? "Use Discord to return without entering a password."
-              : "Attach Discord without combining this account with another."}
-          </span>
-        </div>
-        {account.discordLinked ? (
-          <button
-            className={styles.secondaryAction}
-            type="button"
-            onClick={detachDiscord}
-            disabled={!canDetach || detachPending}
-            aria-describedby={!canDetach ? "detach-requirement" : undefined}
-          >
-            {detachPending ? "Detaching…" : "Detach Discord"}
-          </button>
-        ) : (
-          <a
-            className={styles.primaryAction}
-            href="/api/v1/auth/discord?intent=attach"
-            aria-disabled={!account.emailVerified}
-            onClick={(event) => {
-              if (!account.emailVerified) event.preventDefault();
-            }}
-          >
-            Attach Discord
-          </a>
-        )}
-      </div>
+            {way.id === "password" && !way.settled ? (
+              <form
+                className="flex flex-wrap items-center gap-3 border-t border-rule px-5 py-4"
+                noValidate
+                onSubmit={setPassword}
+              >
+                <label className="sr-only" htmlFor="settings-password">
+                  New password
+                </label>
+                <TextInput
+                  autoComplete="new-password"
+                  className="min-w-0 flex-1 basis-56"
+                  id="settings-password"
+                  name="password"
+                  placeholder="Choose a password"
+                  required
+                  type="password"
+                />
+                <Button
+                  loading={passwordPending}
+                  type="submit"
+                  variant="primary"
+                >
+                  {passwordPending ? "Saving" : "Add password"}
+                </Button>
+              </form>
+            ) : null}
+          </li>
+        ))}
+      </ul>
 
-      {account.discordLinked && !canDetach ? (
-        <p id="detach-requirement" className={styles.requirement}>
-          Keep at least one verified way in. Verify an email and add a password
-          before detaching Discord.
+      {discord?.settled && !discord.canDetach ? (
+        <p className="font-ui text-meta text-mute" id="detach-requirement">
+          Verify your email and add a password before disconnecting Discord so
+          you can still sign in.
         </p>
       ) : null}
+    </div>
+  );
+}
 
-      {account.hasPassword ? (
-        <div className={styles.method}>
-          <span className={styles.methodIcon}>
-            <KeyRound size={21} strokeWidth={1.4} aria-hidden="true" />
-          </span>
-          <div className={styles.methodCopy}>
-            <h3>Password</h3>
-            <p>Added</p>
-            <span>Use password recovery if you need to replace it.</span>
-          </div>
-          <Link className={styles.secondaryAction} href="/forgot-password">
-            Reset password
-          </Link>
-        </div>
-      ) : (
-        <form className={styles.password} onSubmit={setPassword} noValidate>
-          <span className={styles.methodIcon}>
-            <KeyRound size={21} strokeWidth={1.4} aria-hidden="true" />
-          </span>
-          <div className={styles.methodCopy}>
-            <h3>Add a password</h3>
-            <p>Create an independent way back if Discord is unavailable.</p>
-          </div>
-          <div className={styles.passwordControl}>
-            <label className="sr-only" htmlFor="settings-password">
-              Password
-            </label>
-            <input
-              id="settings-password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Password"
-              required
-            />
-            <button type="submit" disabled={passwordPending}>
-              {passwordPending ? "Saving…" : "Add password"}
-            </button>
-          </div>
-        </form>
-      )}
-    </section>
+function WayAction({
+  account,
+  detach,
+  detachPending,
+  way,
+}: {
+  account: SignedInAccount;
+  detach: () => void;
+  detachPending: boolean;
+  way: WayIn;
+}) {
+  if (way.id === "email") {
+    return account.emailVerified ? (
+      <Settled />
+    ) : (
+      <Button asChild variant="secondary">
+        <Link href="/verify-email">Add or verify email</Link>
+      </Button>
+    );
+  }
+
+  if (way.id === "discord") {
+    return way.settled ? (
+      <Button
+        aria-describedby={way.canDetach ? undefined : "detach-requirement"}
+        disabled={!way.canDetach}
+        loading={detachPending}
+        onClick={detach}
+        variant="secondary"
+      >
+        {detachPending ? "Disconnecting…" : "Disconnect Discord"}
+      </Button>
+    ) : (
+      <Button asChild disabled={!way.canAttach} variant="secondary">
+        <a
+          aria-disabled={!way.canAttach}
+          href="/api/v1/auth/discord?intent=attach"
+          onClick={(event) => {
+            if (!way.canAttach) event.preventDefault();
+          }}
+        >
+          Connect Discord
+        </a>
+      </Button>
+    );
+  }
+
+  return way.settled ? (
+    <Button asChild variant="ghost">
+      <Link href="/forgot-password">Reset password</Link>
+    </Button>
+  ) : null;
+}
+
+function Settled() {
+  return (
+    <span className="inline-flex min-h-11 items-center gap-2 font-ui text-meta font-medium text-accent">
+      <Check aria-hidden="true" className="size-4" strokeWidth={2} />
+      Verified
+    </span>
   );
 }

@@ -76,7 +76,6 @@ type declarationModule struct {
 
 func (m declarationModule) Declaration() Declaration { return m.declaration }
 
-// registerSignatures puts one module behind each structural signature.
 func registerSignatures(t *testing.T, signatures map[string]map[string]ValueType) *Registry {
 	t.Helper()
 	registry := NewRegistry()
@@ -102,9 +101,6 @@ func TestValidationRejectsASignatureThatShadowsAnother(t *testing.T) {
 	}
 }
 
-// The formats that name themselves nowhere are told apart by the keys each one
-// requires and the other does not, which is the whole of how a lorebook and a
-// legacy character card separate.
 func TestValidationAcceptsSignaturesThatEachRequireWhatTheOtherDoesNot(t *testing.T) {
 	registry := registerSignatures(t, map[string]map[string]ValueType{
 		"first":  {"alpha": ValueString},

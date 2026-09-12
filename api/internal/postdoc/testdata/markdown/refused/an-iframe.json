@@ -1,0 +1,10 @@
+{
+  "note": "An embedded frame is not content",
+  "markdown": "Words.\n\n<iframe src=\"https://example.com/player\"></iframe>\n",
+  "refusals": [
+    {
+      "line": 3,
+      "says": "HTML"
+    }
+  ]
+}

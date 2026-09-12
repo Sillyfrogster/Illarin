@@ -219,7 +219,6 @@ func assertContentPlaced(t *testing.T, target *pgxpool.Pool) {
 	}
 }
 
-// assertLorebookKeysSurvive counts against the source rather than a number written here.
 func assertLorebookKeysSurvive(t *testing.T, source, target *pgxpool.Pool) {
 	t.Helper()
 	var wanted int
@@ -351,7 +350,6 @@ func assertShortfallIsPublishedAndMarked(t *testing.T, target *pgxpool.Pool, rep
 	}
 }
 
-// assertRowTextWon proves card recovery changes only the allowlisted greeting.
 func assertRowTextWon(t *testing.T, source, target *pgxpool.Pool) {
 	t.Helper()
 	rows, err := source.Query(context.Background(),
@@ -531,7 +529,7 @@ func assertReturningPresetActivated(
 		t.Errorf("initial allowed apps = %v, want Lumiverse", reader.AllowedApps)
 	}
 	if _, err := assets.OpenExport(
-		context.Background(), assetID, nil, "preset_lumiverse",
+		context.Background(), assetID, nil, "preset_lumiverse", nil,
 	); !errors.Is(err, asset.ErrLinkedInstallOnly) {
 		t.Errorf("ordinary export error = %v, want linked-install-only", err)
 	}
@@ -686,7 +684,6 @@ func migrationSettings(t *testing.T, source, target *pgxpool.Pool) Settings {
 	}
 }
 
-// everyImageArrives stands in for the third-party hosts, because the addresses come from the dump and never leave it.
 type everyImageArrives struct{}
 
 func (everyImageArrives) Fetch(_ context.Context, _ string) (FetchedMedia, error) {

@@ -1,4 +1,3 @@
-// Package protected keeps content that leaves Illarin only through an explicit view.
 package protected
 
 import (
@@ -22,13 +21,12 @@ const (
 
 var ErrPolicyRequired = errors.New("choose at least one allowed app before sealing a prompt")
 
-// ImportPromptFragments stores protected prompt text a format module separated
-// before persistence. A keyed placeholder may reuse exactly one prior payload.
 func ImportPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
 	assetID uuid.UUID,
 	blocks []block.Block,
+	carried map[uuid.UUID]string,
 	imports []format.ProtectedPrompt,
 	initialApps []string,
 ) error {
@@ -82,15 +80,11 @@ func ImportPromptFragments(
 		}
 		text := imported.Text
 		if imported.ReuseExisting {
-			if imported.SourceKey == "" {
-				return format.MalformedInput(errors.New(
-					"a reusable sealed prompt needs a source key",
-				))
-			}
-			text, err = promptTextBySourceKey(ctx, tx, assetID, imported.SourceKey)
+			held, err := heldPromptText(ctx, tx, assetID, carried, imported)
 			if err != nil {
 				return err
 			}
+			text = held
 		}
 		values[imported.FragmentID] = promptValue{
 			text: text, sourceKey: imported.SourceKey, replaceSourceKey: true,
@@ -99,12 +93,64 @@ func ImportPromptFragments(
 	return replacePromptPayloads(ctx, tx, assetID, values)
 }
 
+// UnfillablePrompts names the sealed fragments this asset holds no wording for.
+func UnfillablePrompts(
+	ctx context.Context,
+	tx pgx.Tx,
+	assetID uuid.UUID,
+	carried map[uuid.UUID]string,
+	imports []format.ProtectedPrompt,
+) ([]uuid.UUID, error) {
+	missing := make([]uuid.UUID, 0)
+	for _, imported := range imports {
+		if !imported.ReuseExisting {
+			continue
+		}
+		if _, err := heldPromptText(ctx, tx, assetID, carried, imported); err != nil {
+			if _, classified := format.FailureOf(err); !classified {
+				return nil, err
+			}
+			missing = append(missing, imported.FragmentID)
+		}
+	}
+	return missing, nil
+}
+
+// heldPromptText finds the text a placeholder stands in for, sealed or still public.
+func heldPromptText(
+	ctx context.Context,
+	tx pgx.Tx,
+	assetID uuid.UUID,
+	carried map[uuid.UUID]string,
+	imported format.ProtectedPrompt,
+) (string, error) {
+	if imported.SourceKey == "" {
+		return "", format.MalformedInput(errors.New(
+			"a reusable sealed prompt needs a source key",
+		))
+	}
+	sealed, held, err := promptTextBySourceKey(ctx, tx, assetID, imported.SourceKey)
+	if err != nil {
+		return "", err
+	}
+	if held {
+		return sealed, nil
+	}
+	if public, found := carried[imported.FragmentID]; found {
+		return public, nil
+	}
+	return "", format.MalformedInput(fmt.Errorf(
+		"this file leaves out the text of sealed prompt %q, and nothing here holds it",
+		imported.SourceKey,
+	))
+}
+
 func promptTextBySourceKey(
 	ctx context.Context,
 	tx pgx.Tx,
 	assetID uuid.UUID,
 	sourceKey string,
-) (string, error) {
+) (string, bool, error) {
 	rows, err := tx.Query(ctx, `
 		select payload
 		  from protected_content
@@ -112,35 +158,37 @@ func promptTextBySourceKey(
 		 for update
 	`, assetID, promptOwnerKind, promptPayload, sourceKey)
 	if err != nil {
-		return "", fmt.Errorf("read existing sealed prompt: %w", err)
+		return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
 	}
 	defer rows.Close()
 	var texts []string
 	for rows.Next() {
 		var payload []byte
 		if err := rows.Scan(&payload); err != nil {
-			return "", fmt.Errorf("read existing sealed prompt: %w", err)
+			return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
 		}
 		var item struct {
 			Text string `json:"text"`
 		}
 		if err := json.Unmarshal(payload, &item); err != nil {
-			return "", fmt.Errorf("decode existing sealed prompt: %w", err)
+			return "", false, fmt.Errorf("decode existing sealed prompt: %w", err)
 		}
 		texts = append(texts, item.Text)
 	}
 	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("read existing sealed prompt: %w", err)
+		return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
 	}
-	if len(texts) != 1 {
-		return "", format.MalformedInput(fmt.Errorf(
-			"sealed prompt key %q needs exactly one existing protected value", sourceKey,
+	if len(texts) > 1 {
+		return "", false, format.MalformedInput(fmt.Errorf(
+			"sealed prompt key %q stands for more than one saved value", sourceKey,
 		))
 	}
-	return texts[0], nil
+	if len(texts) == 0 {
+		return "", false, nil
+	}
+	return texts[0], true, nil
 }
 
-// AppTargets names the code-owned export targets each allowed app can receive.
 func AppTargets(kind, app string) []string {
 	if kind == "preset" && app == AppLumiverse {
 		return []string{"preset_lumiverse"}
@@ -148,7 +196,6 @@ func AppTargets(kind, app string) []string {
 	return nil
 }
 
-// EligibleApps returns the code-known apps with at least one offered target.
 func EligibleApps(kind string, offered []string) []string {
 	apps := []string{}
 	for _, app := range []string{AppLumiverse} {
@@ -171,7 +218,6 @@ func EligibleApps(kind string, offered []string) []string {
 	return apps
 }
 
-// HasPromptFragments reports whether this page needs a protected-content policy.
 func HasPromptFragments(blocks []block.Block) bool {
 	for _, holder := range blocks {
 		for _, element := range holder.Elements {
@@ -189,8 +235,6 @@ func HasPromptFragments(blocks []block.Block) bool {
 	return false
 }
 
-// SyncPromptFragments splits sealed prompt text from the public blocks in the
-// transaction that saves them. A nil policy keeps an existing policy only.
 func SyncPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -326,12 +370,17 @@ func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]strin
 	return apps, rows.Err()
 }
 
-// RestorePromptFragments returns the owner or delivery view. Readers never call it.
 func RestorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID, blocks []block.Block) error {
+	return restorePromptFragments(ctx, q, assetID, blocks, "protected_content")
+}
+
+func restorePromptFragments(ctx context.Context, q interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}, assetID uuid.UUID, blocks []block.Block, table string) error {
 	rows, err := q.Query(ctx, `
-		select owner_id, payload from protected_content
+		select owner_id, payload from `+table+`
 		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
 	`, assetID, promptOwnerKind, promptPayload)
 	if err != nil {
@@ -380,7 +429,6 @@ func RestorePromptFragments(ctx context.Context, q interface {
 	return nil
 }
 
-// Apps returns an asset's policy. An ordinary asset has no entries.
 func Apps(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, assetID uuid.UUID) ([]string, error) {

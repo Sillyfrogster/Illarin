@@ -1,15 +1,19 @@
 "use client";
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
-import { makeQueryClient } from "@/lib/api/query";
-import { AuthProvider } from "@/lib/auth";
+import { MotionConfig } from "framer-motion";
+import type { ReactNode } from "react";
+import { type Origins, OriginsProvider } from "@/lib/origins";
 
-export function Providers({ children }: { children: ReactNode }) {
-  const [client] = useState(makeQueryClient);
+export function Providers({
+  origins,
+  children,
+}: {
+  origins: Origins;
+  children: ReactNode;
+}) {
   return (
-    <QueryClientProvider client={client}>
-      <AuthProvider>{children}</AuthProvider>
-    </QueryClientProvider>
+    <OriginsProvider blog={origins.blog} site={origins.site}>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </OriginsProvider>
   );
 }

@@ -1,19 +1,18 @@
-# One entry point for both halves of the project. Run every target from here.
-#
-# Settings come from api/.env, which is not committed. Run make setup once on a
-# fresh clone to write it.
-
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
 SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 ACTIONLINT := go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+SHADCN := bunx --bun shadcn@4.21.0
+COMPONENT ?=
 WEB_PORT ?= 3000
 TEST ?= ./...
 VERSION ?=
 SERVICE ?=
 OUTPUT ?= illarin-release.tar.gz
-PROD_ENV ?= /etc/illarin/production.env
+PROD_ENV ?= $(or $(ILLARIN_ENV_FILE),/etc/illarin/production.env)
 NGINX_IMAGE ?= nginx:alpine
+# Serialize tests because packages share one database.
+GO_TEST_FLAGS := -p 1
 NGINX := docker run --rm --network host -v "$(CURDIR):/work:ro" -w /work $(NGINX_IMAGE) \
 	nginx -p /work/ -c nginx/local.conf
 
@@ -33,6 +32,8 @@ setup: ## Get a fresh clone ready to run
 	@test -f api/.env || { cp api/.env.example api/.env; \
 		linking_key=$$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'); \
 		sed -i "s/^LINKING_HMAC_KEY=$$/LINKING_HMAC_KEY=$$linking_key/" api/.env; \
+		publication_key=$$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'); \
+		sed -i "s/^PUBLICATION_SECRET_KEY=$$/PUBLICATION_SECRET_KEY=$$publication_key/" api/.env; \
 		echo "Wrote api/.env from the example. Check the database URLs in it."; }
 	$(MAKE) web-install
 	$(MAKE) migrate migrate-test
@@ -44,6 +45,15 @@ production-setup: ## Walk through the reference production integrations
 .PHONY: web-install
 web-install: ## Install the site's locked dependencies
 	cd web && bun install --frozen-lockfile
+
+.PHONY: web-ui-view web-ui-add
+web-ui-view: ## Inspect a component's source and dependencies; set COMPONENT
+	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
+	cd web && $(SHADCN) view "$$COMPONENT"
+
+web-ui-add: ## Add one component from a registry; set COMPONENT
+	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
+	cd web && $(SHADCN) add "$$COMPONENT"
 
 # Running
 
@@ -91,6 +101,11 @@ prod-smoke: ## Check the production gateway, API and site
 prod-config-check: ## Validate the production Compose configuration
 	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh config --quiet
 
+.PHONY: prod-publication-authority
+prod-publication-authority: ## Give an existing production account publication authority; set HANDLE
+	@test -n "$$HANDLE" || { echo "Set HANDLE to your existing account handle."; exit 1; }
+	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh exec -T api /app/publication-authority -handle "$$HANDLE"
+
 .PHONY: prod-backup prod-backup-init prod-backup-check
 prod-backup: ## Run an off-box backup when backups are enabled
 	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/backup.sh run
@@ -115,8 +130,7 @@ check: fmt-check vet test test-web lint openapi-check workflow-check ## Everythi
 
 .PHONY: test
 test: need-test-db ## Run the Go tests
-# -p 1 because every package sharing the test database empties it on the way in.
-	cd api && go test -p 1 $(TEST)
+	cd api && go test $(GO_TEST_FLAGS) $(TEST)
 
 .PHONY: test-web
 test-web: ## Run the site tests
@@ -124,7 +138,7 @@ test-web: ## Run the site tests
 
 .PHONY: cover
 cover: need-test-db ## Report Go test coverage per package
-	cd api && go test -p 1 -cover ./...
+	cd api && go test $(GO_TEST_FLAGS) -cover ./...
 
 .PHONY: vet
 vet: ## Report suspicious Go code
@@ -192,6 +206,11 @@ migrate-down: need-db ## Roll the dev database back one migration
 migrate-status: need-db ## Show which migrations have run
 	cd api && $(GOOSE) -dir migrations postgres "$(DATABASE_URL)" status
 
+.PHONY: publication-authority
+publication-authority: need-db ## Record which account holds publication authority; set HANDLE
+	@test -n "$(HANDLE)" || { echo "Set HANDLE to the account that holds publication authority."; exit 1; }
+	cd api && go run ./cmd/publication-authority -handle "$(HANDLE)"
+
 .PHONY: migrate-v1
 migrate-v1: need-db ## Carry the v1 catalog across; set V1_SOURCE, V1_BACKUP and V1_IMAGE_HOSTS
 	@test -n "$(V1_SOURCE)" || { echo "Set V1_SOURCE to the restored v1 database URL."; exit 1; }
@@ -225,6 +244,10 @@ quiet-page-art: ## Generate the empty and barren page artwork, one piece per kin
 .PHONY: archive-cutouts
 archive-cutouts: ## Neutralize the archive mascot glass cutouts
 	cd web && bun scripts/neutralize-archive-cutouts.mjs
+
+.PHONY: direction-fixtures
+direction-fixtures: ## Draw the synthetic art the visual direction prototype reads
+	cd web && bun scripts/generate-direction-fixtures.mjs
 
 # Guards
 

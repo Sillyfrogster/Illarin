@@ -182,8 +182,13 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		c.JSON(http.StatusOK, SessionState{User: nil})
 		return
 	}
+	authority, err := h.publications.HoldsAuthority(c.Request.Context(), current.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the signed-in account."})
+		return
+	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user})
+	c.JSON(http.StatusOK, SessionState{User: &user, PublicationAuthority: authority})
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {
@@ -402,7 +407,7 @@ func (h *Handlers) DetachDiscord(c *gin.Context) {
 }
 
 func (h *Handlers) GetProfile(c *gin.Context, handle string) {
-	profile, err := h.accounts.Profile(c.Request.Context(), handle)
+	profile, err := h.accounts.PublicProfile(c.Request.Context(), handle)
 	if errors.Is(err, account.ErrProfileNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 		return
@@ -411,12 +416,11 @@ func (h *Handlers) GetProfile(c *gin.Context, handle string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, Profile{Id: types.UUID(profile.ID), Handle: profile.Handle})
+	h.showProfile(c, profile)
 }
 
-// ResolveLegacyProfile answers for v1's /user/<discordId> address, resolving before anything redirects
 func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
-	profile, err := h.accounts.ProfileByDiscordSubject(c.Request.Context(), discordId)
+	profile, err := h.accounts.PublicProfileByDiscordSubject(c.Request.Context(), discordId)
 	if errors.Is(err, account.ErrProfileNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 		return
@@ -425,7 +429,7 @@ func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
 		return
 	}
-	c.JSON(http.StatusOK, Profile{Id: types.UUID(profile.ID), Handle: profile.Handle})
+	h.showProfile(c, profile)
 }
 
 func (h *Handlers) accountError(c *gin.Context, err error) {
@@ -548,8 +552,6 @@ func (h *Handlers) uploadOwner(c *gin.Context) (account.Account, bool) {
 	return h.verifiedAccount(c, "uploading")
 }
 
-// signedInAccount answers the account behind the session cookie, or writes the
-// refusal and returns false. The action finishes the sentence "Sign in before".
 func (h *Handlers) signedInAccount(c *gin.Context, action string) (account.Account, bool) {
 	token, err := c.Cookie(sessionCookieName)
 	if err != nil {
@@ -568,8 +570,6 @@ func (h *Handlers) signedInAccount(c *gin.Context, action string) (account.Accou
 	return *current, true
 }
 
-// verifiedAccount answers the signed-in account only once its email is
-// verified, and otherwise writes the refusal and returns false.
 func (h *Handlers) verifiedAccount(c *gin.Context, action string) (account.Account, bool) {
 	current, ok := h.signedInAccount(c, action)
 	if !ok {
@@ -577,6 +577,18 @@ func (h *Handlers) verifiedAccount(c *gin.Context, action string) (account.Accou
 	}
 	if !current.EmailVerified {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Verify your email before " + action + "."})
+		return account.Account{}, false
+	}
+	return current, true
+}
+
+func (h *Handlers) adminAccount(c *gin.Context, action string) (account.Account, bool) {
+	current, ok := h.verifiedAccount(c, action)
+	if !ok {
+		return account.Account{}, false
+	}
+	if current.Role != account.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only an admin can " + action + "."})
 		return account.Account{}, false
 	}
 	return current, true

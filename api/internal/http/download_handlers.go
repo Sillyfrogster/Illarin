@@ -4,8 +4,11 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,12 +28,29 @@ func (h *Handlers) DownloadSource(c *gin.Context, id types.UUID) {
 	h.handOffDownload(c, download)
 }
 
-func (h *Handlers) DownloadExport(c *gin.Context, id types.UUID, target string) {
+func (h *Handlers) DownloadExport(
+	c *gin.Context,
+	id types.UUID,
+	target string,
+	params DownloadExportParams,
+) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
 	}
-	download, err := h.assets.DownloadExport(c.Request.Context(), id, viewerID, target)
+	gallery, ok := chosenGallery(params.Images)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+		return
+	}
+	var err error
+	var download asset.Export
+	if params.Version == nil {
+		download, err = h.assets.DownloadExport(c.Request.Context(), id, viewerID, target, gallery)
+	} else {
+		download, err = h.assets.DownloadRecordedExport(
+			c.Request.Context(), id, viewerID, *params.Version, target, gallery)
+	}
 	if err != nil {
 		h.downloadError(c, err)
 		return
@@ -38,16 +58,46 @@ func (h *Handlers) DownloadExport(c *gin.Context, id types.UUID, target string) 
 	h.handOffExport(c, download)
 }
 
-func (h *Handlers) downloadError(c *gin.Context, err error) {
-	if errors.Is(err, asset.ErrNotFound) || errors.Is(err, asset.ErrTargetNotOffered) || errors.Is(err, asset.ErrLinkedInstallOnly) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
-		return
+func chosenGallery(images *string) (*asset.GallerySelection, bool) {
+	if images == nil {
+		return nil, true
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
+	chosen := asset.GallerySelection{Images: []uuid.UUID{}}
+	for _, written := range strings.Split(*images, ",") {
+		written = strings.TrimSpace(written)
+		if written == "" {
+			continue
+		}
+		mediaID, err := uuid.Parse(written)
+		if err != nil {
+			return nil, false
+		}
+		chosen.Images = append(chosen.Images, mediaID)
+	}
+	return &chosen, true
 }
 
-// handOffExport writes a generated file straight out. There is nothing on disk
-// to hand nginx, because an export is produced on request and never cached.
+func (h *Handlers) downloadError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, asset.ErrNotFound), errors.Is(err, asset.ErrTargetNotOffered),
+		errors.Is(err, asset.ErrLinkedInstallOnly):
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+	case errors.Is(err, asset.ErrExportTooLarge):
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": oversizedDownload})
+	case errors.Is(err, asset.ErrExportImageUnreadable):
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": unreadableDownloadImage})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
+	}
+}
+
+const (
+	oversizedDownload = "Those images make a file larger than Illarin will produce. " +
+		"Leave some of them out and try again."
+	unreadableDownloadImage = "One of this asset's images could not be read, " +
+		"so Illarin made no file rather than one missing a picture. Try again in a moment."
+)
+
 func (h *Handlers) handOffExport(c *gin.Context, download asset.Export) {
 	if download.Event != nil {
 		if err := h.assets.RecordDownload(c.Request.Context(), *download.Event); err != nil {
@@ -103,7 +153,7 @@ func (h *Handlers) GetMediaVariant(
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, asset.ErrMediaNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+		h.sharedImageVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion), params)
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -114,8 +164,6 @@ func (h *Handlers) GetMediaVariant(
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
 		return
 	}
-	// A public image can never resolve to different bytes, so it is cached
-	// hard. A draft's image is served against a signature that runs out.
 	cache := "public, max-age=31536000, immutable"
 	if download.Private {
 		cache = "private, no-store"
@@ -126,6 +174,57 @@ func (h *Handlers) GetMediaVariant(
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("X-Accel-Redirect", download.InternalRedirect)
 	c.Status(http.StatusOK)
+}
+
+func (h *Handlers) sharedImageVariant(
+	c *gin.Context,
+	mediaID uuid.UUID,
+	variant string,
+	version uint32,
+	params GetMediaVariantParams,
+) {
+	ctx := c.Request.Context()
+	owners := []func() (string, string, bool, error){
+		func() (string, string, bool, error) {
+			redirect, mediaType, err := h.accounts.AvatarVariant(ctx, mediaID, variant, version)
+			return redirect, mediaType, false, err
+		},
+		func() (string, string, bool, error) {
+			redirect, mediaType, err := h.publications.MarkVariant(ctx, mediaID, variant, version)
+			return redirect, mediaType, false, err
+		},
+		func() (string, string, bool, error) {
+			return h.publications.PostMediaVariant(ctx, mediaID, variant, version,
+				valueOrEmpty(params.Expires), valueOrEmpty(params.Signature))
+		},
+	}
+	for _, owner := range owners {
+		redirect, mediaType, private, err := owner()
+		switch {
+		case errors.Is(err, account.ErrProfileMediaNotFound),
+			errors.Is(err, publication.ErrMarkNotFound),
+			errors.Is(err, publication.ErrPostMediaNotFound):
+			continue
+		case errors.Is(err, storage.ErrInsufficientSpace):
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
+			return
+		case err != nil:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
+			return
+		}
+		cache := "public, max-age=31536000, immutable"
+		if private {
+			cache = "private, no-store"
+		}
+		c.Header("Cache-Control", cache)
+		c.Header("Content-Disposition", "inline")
+		c.Header("Content-Type", mediaType)
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Accel-Redirect", redirect)
+		c.Status(http.StatusOK)
+		return
+	}
+	c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
 }
 
 func valueOrEmpty(value *string) string {

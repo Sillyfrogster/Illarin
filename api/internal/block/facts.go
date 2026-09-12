@@ -5,8 +5,6 @@ import (
 	"strconv"
 )
 
-// Facts derives display counts from current content. It omits token counts
-// because Illarin has no tokenizer.
 func (e Element) Facts() []string {
 	switch content := e.Content.(type) {
 	case EntryTable:
@@ -48,9 +46,6 @@ func (e Element) Facts() []string {
 	}
 }
 
-// bookFacts says how large a book is and how much of it is live. The second
-// fact is left out where every entry is on, because a count that always
-// repeats the first one says nothing.
 func (e Element) bookFacts(book EntryTable) []string {
 	facts := e.itemFacts(len(book.Entries))
 	if len(facts) == 0 {
@@ -68,9 +63,6 @@ func (e Element) bookFacts(book EntryTable) []string {
 	return append(facts, fmt.Sprintf("%s switched on", number(on)))
 }
 
-// fragmentFacts says how long a prompt is and how much of it is live. The
-// second fact is left out where every fragment is on, because a count that
-// always repeats the first one says nothing.
 func (e Element) fragmentFacts(list PromptList) []string {
 	facts := e.itemFacts(len(list.Fragments))
 	if len(facts) == 0 {
@@ -88,9 +80,6 @@ func (e Element) fragmentFacts(list PromptList) []string {
 	return append(facts, fmt.Sprintf("%s switched on", number(on)))
 }
 
-// settingFacts counts the settings somebody filled in. A slot left empty is
-// not shown on the page, so counting it would promise a reader rows that are
-// not there.
 func (e Element) settingFacts(group SettingGroup) []string {
 	return e.itemFacts(group.Supplied())
 }
@@ -107,9 +96,6 @@ func (e Element) itemFacts(count int) []string {
 	return []string{fmt.Sprintf("%s %s", number(count), noun)}
 }
 
-// itemNoun is what one item inside this element is called. The role names it
-// where the element has one, because a reader knows greetings and expressions
-// by those words and not by the element type underneath them.
 func (e Element) itemNoun() (string, string) {
 	switch e.Role {
 	case RoleGreetings:
@@ -155,8 +141,6 @@ func (e Element) itemNoun() (string, string) {
 	}
 }
 
-// number writes a count the way a person reads it, so a book of 1004 entries
-// says 1,004. Counts are never negative, so there is no sign to carry.
 func number(count int) string {
 	digits := strconv.Itoa(count)
 	for cut := len(digits) - 3; cut > 0; cut -= 3 {

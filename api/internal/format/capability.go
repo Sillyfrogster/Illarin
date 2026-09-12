@@ -10,26 +10,23 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-// App describes formats an application can open for download recommendations.
 type App struct {
 	ID    string
 	Label string
-	// Reads names the formats the app opens.
 	Reads []string
 }
 
-// Apps returns the applications Illarin names, in the order it names them.
 func Apps() []App {
 	return []App{
 		{ID: "sillytavern", Label: "SillyTavern", Reads: []string{
-			"chara_card_v2", "chara_card_v3",
+			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook_sillytavern", "preset_sillytavern", "theme_sillytavern",
 		}},
 		{ID: "risu", Label: "RisuAI", Reads: []string{
 			"chara_card_v2", "chara_card_v3", "charx", "lorebook_sillytavern",
 		}},
 		{ID: "lumiverse", Label: "Lumiverse", Reads: []string{
-			"chara_card_v2", "chara_card_v3",
+			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook", "preset_lumiverse", "theme_lumiverse", "pack_lumiverse",
 		}},
 	}
@@ -45,7 +42,6 @@ func reach(formatID string) int {
 	return count
 }
 
-// Verdict describes how much content a target keeps.
 type Verdict string
 
 const (
@@ -54,31 +50,33 @@ const (
 	Dropped Verdict = "dropped"
 )
 
-// RoleLoss is one role measured against one target, on one asset.
 type RoleLoss struct {
-	Role    block.Role `json:"role"`
-	Label   string     `json:"label"`
-	Verdict Verdict    `json:"verdict"`
-	// Reason names what went, and stands only on a reduced verdict.
-	Reason string `json:"reason,omitempty"`
-	// Destination names a nonstandard output location.
+	Role        block.Role   `json:"role"`
+	Label       string       `json:"label"`
+	Verdict     Verdict      `json:"verdict"`
+	Reason      string       `json:"reason,omitempty"`
 	Destination string       `json:"destination,omitempty"`
+	ShownBy     []string     `json:"shownBy,omitempty"`
 	Sample      block.Sample `json:"sample"`
 }
 
-// Lossy reports whether this verdict costs the asset something.
+// reaches says whether what this role wrote arrives in the named app.
+func (l RoleLoss) reaches(app string) bool {
+	if l.Lossy() {
+		return false
+	}
+	return l.Destination == "" || slices.Contains(l.ShownBy, app)
+}
+
 func (l RoleLoss) Lossy() bool { return l.Verdict != Carried }
 
-// Target is one offered download format and its content costs.
 type Target struct {
-	Format string `json:"format"`
-	Label  string `json:"label"`
-	// Recommended is computed from compatibility and loss.
+	Format      string     `json:"format"`
+	Label       string     `json:"label"`
 	Recommended bool       `json:"recommended"`
 	Roles       []RoleLoss `json:"roles"`
 }
 
-// Losses returns the verdicts that cost the asset something.
 func (t Target) Losses() []RoleLoss {
 	losses := make([]RoleLoss, 0, len(t.Roles))
 	for _, role := range t.Roles {
@@ -89,13 +87,32 @@ func (t Target) Losses() []RoleLoss {
 	return losses
 }
 
-// CapabilitySubject is the asset as the export gates read it.
+// LossesFor counts what this target leaves out of the named app.
+func (t Target) LossesFor(app string) int {
+	lost := 0
+	for _, role := range t.Roles {
+		if !role.reaches(app) {
+			lost++
+		}
+	}
+	return lost
+}
+
+// Notes counts the roles this target carries somewhere only some apps read.
+func (t Target) Notes() int {
+	notes := 0
+	for _, role := range t.Roles {
+		if !role.Lossy() && role.Destination != "" {
+			notes++
+		}
+	}
+	return notes
+}
+
 type CapabilitySubject struct {
-	Kind string
-	// Origin is empty for content authored in Illarin.
-	Origin   string
-	Elements []block.Element
-	// AllowedCrossPlatform names explicitly allowed targets.
+	Kind                 string
+	Origin               string
+	Elements             []block.Element
 	AllowedCrossPlatform []string
 }
 
@@ -106,7 +123,16 @@ func (s CapabilitySubject) origin() string {
 	return s.Origin
 }
 
-// OfferedTargets returns tested, permitted formats and their content costs.
+func (r *Registry) WritesKind(kind string) bool {
+	for _, module := range r.modules {
+		declaration := module.Declaration()
+		if declaration.Direction.Write && declaration.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
@@ -150,12 +176,14 @@ func lossReport(declaration Declaration, subject CapabilitySubject) ([]RoleLoss,
 		support := declaration.Roles[role].Write
 		loss := RoleLoss{
 			Role: role, Label: role.Label(), Verdict: Carried,
-			Destination: support.Destination, Sample: block.TakeSample(written),
+			Destination: support.Destination, ShownBy: support.ShownBy,
+			Sample: block.TakeSample(written),
 		}
 		switch {
 		case support.Grade == SupportNone || matchesAny(support.DropWhen, written):
 			loss.Verdict = Dropped
 			loss.Destination = ""
+			loss.ShownBy = nil
 		case support.Grade == SupportPartial && matchesAny(support.Condition, written):
 			loss.Verdict = Reduced
 			loss.Reason = support.Condition.Description
@@ -191,7 +219,6 @@ func matchesAny(condition *ContentCondition, written []block.Content) bool {
 	return false
 }
 
-// recommend prefers reach, fewer losses, and wider role support.
 func recommend(targets []Target, r *Registry) {
 	best := -1
 	for i := range targets {
@@ -208,6 +235,7 @@ func outranks(candidate, holder Target, r *Registry) bool {
 	for _, comparison := range []int{
 		reach(candidate.Format) - reach(holder.Format),
 		len(holder.Losses()) - len(candidate.Losses()),
+		holder.Notes() - candidate.Notes(),
 		writableRoles(r, candidate.Format) - writableRoles(r, holder.Format),
 		strings.Compare(holder.Format, candidate.Format),
 	} {
@@ -232,7 +260,6 @@ func writableRoles(r *Registry, formatID string) int {
 	return count
 }
 
-// CapabilityStamp identifies the current writer and app declarations.
 func (r *Registry) CapabilityStamp() string {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
@@ -258,8 +285,9 @@ func (r *Registry) CapabilityStamp() string {
 			if support.Condition != nil {
 				condition = support.Condition.Description
 			}
-			fmt.Fprintf(digest, "role\x00%s\x00%s\x00%s\x00%s\n",
-				role, support.Grade, condition, support.Destination)
+			fmt.Fprintf(digest, "role\x00%s\x00%s\x00%s\x00%s\x00%s\n",
+				role, support.Grade, condition, support.Destination,
+				strings.Join(support.ShownBy, ","))
 		}
 	}
 	return hex.EncodeToString(digest.Sum(nil))[:16]

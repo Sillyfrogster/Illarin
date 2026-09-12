@@ -1,16 +1,22 @@
-import type { ElementType, ReactNode } from "react";
-import styles from "./Shell.module.css";
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
-type ShellProps = {
+export const shellClasses =
+  "mx-auto w-full max-w-[var(--shell)] px-[var(--gutter)]";
+
+type ShellProps = ComponentPropsWithoutRef<"div"> & {
   children: ReactNode;
   as?: ElementType;
-  className?: string;
 };
 
-/** Holds page content to a fixed width */
-export function Shell({ children, as: Tag = "div", className }: ShellProps) {
+export function Shell({
+  children,
+  as: Tag = "div",
+  className,
+  ...rest
+}: ShellProps) {
   return (
-    <Tag className={className ? `${styles.shell} ${className}` : styles.shell}>
+    <Tag className={cn(shellClasses, className)} {...rest}>
       {children}
     </Tag>
   );

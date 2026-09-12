@@ -2,7 +2,11 @@ package character
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
+	"path"
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -11,13 +15,8 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-// embeddedPrefix is how a CharX card points at a file beside it in the archive.
-// The misspelling is the standard's.
 const embeddedPrefix = "embeded://"
 
-// CharXModule reads a CharX archive: a card and the pictures it names, zipped
-// together. The card inside declares chara_card_v3, so the module owns that
-// spec rather than one of its own.
 type CharXModule struct{}
 
 func (CharXModule) ID() string { return CharX }
@@ -31,7 +30,7 @@ func (m CharXModule) Claim(file probe.Inspection) (format.Claim, bool) {
 }
 
 func (m CharXModule) Parse(
-	_ context.Context,
+	ctx context.Context,
 	file probe.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
@@ -39,7 +38,114 @@ func (m CharXModule) Parse(
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	return read.parsed(m.ID(), archivedImages(read, file))
+	images := archivedImages(read, file)
+	parsed, err := read.parsed(m.ID(), images)
+	if err != nil {
+		return format.Parsed{}, err
+	}
+	members, err := archivedMembers(ctx, file)
+	if err != nil {
+		return format.Parsed{}, err
+	}
+	parsed.Remainder = append(parsed.Remainder, members...)
+	return parsed, nil
+}
+
+const (
+	cardEntry = "card.json"
+	// MemberNamespace marks a preserved file that came out of an archive.
+	MemberNamespace        = "archive:"
+	maxArchiveMemberBytes  = 1 << 20
+	maxArchiveMembersBytes = 4 << 20
+)
+
+// archivedMembers keeps the archived files Illarin reads nothing from.
+func archivedMembers(ctx context.Context, file probe.Inspection) ([]format.Remainder, error) {
+	pictures := make(map[string]bool, len(file.Images))
+	for _, image := range file.Images {
+		if image.Locator.Container == probe.ZIP {
+			pictures[image.Locator.Name] = true
+		}
+	}
+	kept := make([]format.Remainder, 0)
+	budget := uint64(maxArchiveMembersBytes)
+	for _, entry := range file.ZIPEntries {
+		if entry.Directory || entry.Name == cardEntry || pictures[entry.Name] {
+			continue
+		}
+		if entry.UncompressedSize > maxArchiveMemberBytes || entry.UncompressedSize > budget {
+			return nil, format.LimitExceeded(fmt.Errorf(
+				"the archived %s is %d bytes, past what a card may carry beside it",
+				entry.Name, entry.UncompressedSize,
+			))
+		}
+		payload, err := readArchivedMember(ctx, file, entry.Name)
+		if err != nil {
+			return nil, err
+		}
+		budget -= entry.UncompressedSize
+		kept = append(kept, format.Remainder{
+			Owner:     format.OwnerAsset,
+			Namespace: MemberNamespace + entry.Name,
+			Payload:   payload,
+		})
+	}
+	return kept, nil
+}
+
+func readArchivedMember(
+	ctx context.Context,
+	file probe.Inspection,
+	name string,
+) (json.RawMessage, error) {
+	opened, err := file.OpenZIPEntry(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("open the archived %s: %w", name, err)
+	}
+	defer opened.Close()
+	held, err := io.ReadAll(io.LimitReader(opened, maxArchiveMemberBytes))
+	if err != nil {
+		return nil, fmt.Errorf("read the archived %s: %w", name, err)
+	}
+	payload, err := json.Marshal(archivedMember{
+		Bytes: base64.StdEncoding.EncodeToString(held),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("keep the archived %s: %w", name, err)
+	}
+	return payload, nil
+}
+
+type archivedMember struct {
+	Bytes string `json:"bytes"`
+}
+
+// ArchivedMember reads back the bytes a preserved archived file holds.
+func ArchivedMember(payload []byte) ([]byte, bool) {
+	var held archivedMember
+	if err := json.Unmarshal(payload, &held); err != nil {
+		return nil, false
+	}
+	given, err := base64.StdEncoding.DecodeString(held.Bytes)
+	if err != nil {
+		return nil, false
+	}
+	return given, true
+}
+
+// ArchivedMemberName is the archive entry a preserved file goes back to.
+func ArchivedMemberName(namespace string) (string, bool) {
+	name, marked := strings.CutPrefix(namespace, MemberNamespace)
+	if !marked || name == "" || name == cardEntry {
+		return "", false
+	}
+	if path.IsAbs(name) || strings.Contains(name, "\\") || path.Clean(name) != name {
+		return "", false
+	}
+	if name == ".." || strings.HasPrefix(name, "../") {
+		return "", false
+	}
+	return name, true
 }
 
 type cardAsset struct {
@@ -49,14 +155,14 @@ type cardAsset struct {
 	Ext  string `json:"ext"`
 }
 
-// archivedImages gives a role to each picture the card names in the archive.
-// The card decides what is in it; a picture nothing points at is left alone.
+// archivedImages routes every bundled image, naming the ones the card names.
 func archivedImages(read card, file probe.Inspection) []format.Media {
 	var assets []cardAsset
 	if raw, ok := read.fields["assets"]; ok {
 		_ = json.Unmarshal(raw, &assets)
 	}
-	var found []format.Media
+	named := make(map[uint32]bool)
+	found := make([]format.Media, 0, len(file.Images))
 	hasAvatar := false
 	for _, asset := range assets {
 		path, embedded := strings.CutPrefix(asset.URI, embeddedPrefix)
@@ -64,9 +170,10 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 			continue
 		}
 		image, located := archivedImage(file, path)
-		if !located {
+		if !located || named[image] {
 			continue
 		}
+		named[image] = true
 		role, wanted := assetRole(asset, hasAvatar)
 		if !wanted {
 			continue
@@ -74,21 +181,52 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 		if role == media.Avatar {
 			hasAvatar = true
 		}
-		elementRole := block.Role("")
-		if role == media.Expression {
-			elementRole = block.RoleExpressions
-		} else if role == media.Gallery {
-			elementRole = block.RoleGallery
+		found = append(found, format.Media{
+			Role: role, ImageID: image, ElementRole: elementRole(role), Name: asset.Name,
+		})
+	}
+	for _, image := range file.Images {
+		if image.Locator.Container != probe.ZIP || named[image.ID] {
+			continue
+		}
+		role := archivedRole(image.Locator.Name, hasAvatar)
+		if role == media.Avatar {
+			hasAvatar = true
 		}
 		found = append(found, format.Media{
-			Role: role, ImageID: image, ElementRole: elementRole, Name: asset.Name,
+			Role: role, ImageID: image.ID, ElementRole: elementRole(role),
 		})
 	}
 	return found
 }
 
-// assetRole maps a CharX asset type onto Illarin's role vocabulary. A card
-// carries one avatar, so a second icon becomes an alternate.
+// archivedRole reads the layout the spec recommends, and guesses nothing beyond it.
+func archivedRole(name string, hasAvatar bool) media.Role {
+	folder := strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "./")
+	switch {
+	case strings.HasPrefix(folder, "assets/icon/"):
+		if hasAvatar {
+			return media.AvatarAlt
+		}
+		return media.Avatar
+	case strings.HasPrefix(folder, "assets/emotion/"):
+		return media.Expression
+	default:
+		return media.Gallery
+	}
+}
+
+func elementRole(role media.Role) block.Role {
+	switch role {
+	case media.Expression:
+		return block.RoleExpressions
+	case media.Gallery:
+		return block.RoleGallery
+	default:
+		return ""
+	}
+}
+
 func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
 	switch asset.Type {
 	case "icon":
@@ -99,7 +237,6 @@ func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
 	case "emotion":
 		return media.Expression, true
 	case "user_icon":
-		// The reader's own picture, not the character's.
 		return "", false
 	default:
 		return media.Gallery, true

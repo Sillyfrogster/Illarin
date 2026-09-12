@@ -16,6 +16,10 @@ func TestAV1AddressResolvesToTheAssetThatHeldIt(t *testing.T) {
 	router, pool, session := legacyAddressStack(t)
 	assetID := publishedCharacter(t, router, session)
 	storeLegacyAddress(t, pool, "old-author/old-name", assetID)
+	published := fetchAssetPage(t, router, "/v1/assets/"+assetID)
+	if got := saveIdentity(t, router, session, assetID, `{"name":"Private replacement name","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save private name: %d", got.Code)
+	}
 
 	response := send(t, router,
 		httptest.NewRequest(http.MethodGet, "/v1/legacy-assets/old-author/old-name", nil))
@@ -32,8 +36,8 @@ func TestAV1AddressResolvesToTheAssetThatHeldIt(t *testing.T) {
 	if found.ID != assetID {
 		t.Errorf("the address resolved to %s, want %s", found.ID, assetID)
 	}
-	if found.Name == "" {
-		t.Error("the answer carries no name to build the permalink from")
+	if found.Name != published.Name {
+		t.Error("the legacy address exposed an unpublished name")
 	}
 }
 

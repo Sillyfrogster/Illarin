@@ -49,9 +49,6 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 		})
 	}
 
-	// A marker outside the set is a file nothing recognises, named as far as
-	// Illarin can name it. It is never a version of this format that could be
-	// unsupported, because there is one Lumiverse preset behind every marker.
 	t.Run("a marker outside the set", func(t *testing.T) {
 		_, claimed, err := testRegistry(t).Resolve(document(t, `{"schemaVersion": 3, "blocks": []}`))
 		if claimed {
@@ -99,8 +96,6 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	if first.GroupID == nil || *first.GroupID != list.Groups[0].ID {
 		t.Error("the fragment naming a heading did not land under it")
 	}
-	// The second fragment carries no heading key at all, so it belongs to the
-	// heading above it.
 	if second.GroupID == nil || *second.GroupID != list.Groups[0].ID {
 		t.Error("the fragment with no heading key did not take the heading above it")
 	}
@@ -370,8 +365,6 @@ func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.
 	}
 }
 
-// The declared ceiling clears the largest preset anyone actually has, so a
-// payload over a megabyte imports rather than being refused.
 func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
 	const wanted = 1_060_000
 	blocks := make([]string, 0, 512)
@@ -402,8 +395,6 @@ func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
 	}
 }
 
-// The block list is the required role. If it will not parse the import is
-// refused and nothing is stored.
 func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
 	file := document(t, `{"schemaVersion": 1, "blocks": {"0": {}}}`)
 	claim, claimed := (LumiverseModule{}).Claim(file)
@@ -417,9 +408,6 @@ func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
 	}
 }
 
-// The blurb is the same text as the preset's own description, both ways.
-// A description longer than a blurb holds is not bound and not shortened. It
-// stays in the file, comes back whole, and the creator writes their own line.
 func TestADescriptionTooLongToBindStaysInTheFile(t *testing.T) {
 	long := strings.Repeat("a long README of a description. ", 40)
 	if len([]rune(long)) <= format.MaxBlurbRunes {
@@ -473,8 +461,6 @@ func TestTheBlurbBindsBothWaysForALumiversePreset(t *testing.T) {
 	if string(body["description"]) != `"Rewritten by the creator."` {
 		t.Errorf("description = %s, want the blurb the creator wrote", body["description"])
 	}
-	// A writer that puts a header field in a file declares it, so the download
-	// is recomputed when the creator changes it.
 	if !slices.Contains((LumiverseModule{}).Declaration().Header, format.HeaderBlurb) {
 		t.Error("the writer does not declare the blurb it writes")
 	}

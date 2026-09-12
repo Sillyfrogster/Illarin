@@ -14,41 +14,46 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// BlockUpdate is everything one block sheet can save at once.
 type BlockUpdate struct {
-	Title       *string
-	Layout      block.Layout
-	Width       block.Width
-	Elements    []block.Element
-	AllowedApps *[]string
+	Title           *string
+	Layout          block.Layout
+	Width           block.Width
+	Elements        []block.Element
+	AllowedApps     *[]string
+	ExposeProtected bool
 }
 
-// SavedBlock is the saved row and the kind catalog that describes it.
+type ExposureRefusal struct {
+	Prompts []string
+}
+
+func (refusal ExposureRefusal) Error() string {
+	return "making a sealed prompt public needs an explicit confirmation"
+}
+
 type SavedBlock struct {
 	Kind  string
 	Block block.Block
 }
 
-// BlockArrangement is one row in the page outline.
 type BlockArrangement struct {
 	ID     uuid.UUID
 	Hidden bool
 	Width  block.Width
 }
 
-// SavedBlocks is the whole saved page and the kind catalog that describes it.
 type SavedBlocks struct {
 	Kind   string
 	Blocks []block.Block
 }
 
-// SaveBlock rewrites one block row and leaves every other block untouched.
 func (s *Service) SaveBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	blockID uuid.UUID,
 	update BlockUpdate,
+	candidate *Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -56,7 +61,7 @@ func (s *Service) SaveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -97,6 +102,15 @@ func (s *Service) SaveBlock(
 	if err := s.validateProtectedApps(ctx, tx, assetID, kind, blocks, update.AllowedApps); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
 	}
+	if !update.ExposeProtected {
+		exposed, err := protected.UnsealedFragments(ctx, tx, assetID, blocks)
+		if err != nil {
+			return SavedBlock{}, err
+		}
+		if len(exposed) > 0 {
+			return SavedBlock{}, ExposureRefusal{Prompts: exposed}
+		}
+	}
 	if err := protected.SyncPromptFragments(ctx, tx, assetID, blocks, update.AllowedApps); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
 	}
@@ -130,10 +144,7 @@ func (s *Service) SaveBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return SavedBlock{}, err
-	}
-	if err := protected.RestorePromptFragments(ctx, s.pool, assetID, blocks); err != nil {
+	if err := protected.RestorePromptFragments(ctx, tx, assetID, blocks); err != nil {
 		return SavedBlock{}, err
 	}
 	for i := range blocks {
@@ -141,6 +152,9 @@ func (s *Service) SaveBlock(
 			saved = &blocks[i]
 			break
 		}
+	}
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
+		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: *saved}, nil
 }
@@ -182,14 +196,13 @@ func (s *Service) validateProtectedApps(
 	return nil
 }
 
-// AddBlock puts one optional block at the foot of the page, holding the
-// element the creator chose.
 func (s *Service) AddBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	definition block.DefinitionID,
 	elementType block.Type,
+	candidate *Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -197,7 +210,7 @@ func (s *Service) AddBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -216,8 +229,6 @@ func (s *Service) AddBlock(
 	if err := block.ValidateStructure(added); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
 	}
-	// The new element has no earlier identity to keep, so the page it joins is
-	// both sides of the check.
 	after := append(page, added)
 	if err := block.ValidateBuilderConstraints(kind, after, after); err != nil {
 		return SavedBlock{}, fmt.Errorf("%w: %v", ErrInvalidBlock, err)
@@ -231,18 +242,18 @@ func (s *Service) AddBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: added}, nil
 }
 
-// ArrangeBlocks changes page presentation without changing exported content.
 func (s *Service) ArrangeBlocks(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	arrangement []BlockArrangement,
+	candidate *Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -250,7 +261,7 @@ func (s *Service) ArrangeBlocks(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -300,18 +311,18 @@ func (s *Service) ArrangeBlocks(
 	if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
 }
 
-// RemoveBlock deletes one optional block and closes the gap in page order.
 func (s *Service) RemoveBlock(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	blockID uuid.UUID,
+	candidate *Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -319,7 +330,7 @@ func (s *Service) RemoveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return err
 	}
@@ -368,16 +379,16 @@ func (s *Service) RemoveBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return candidate.commit(ctx, tx, assetID)
 }
 
-// MoveBlockContent moves unpinned elements, then removes their old block.
 func (s *Service) MoveBlockContent(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	blockID uuid.UUID,
 	destinationID uuid.UUID,
+	candidate *Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -385,7 +396,7 @@ func (s *Service) MoveBlockContent(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -480,7 +491,7 @@ func (s *Service) MoveBlockContent(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := candidate.commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
@@ -532,12 +543,11 @@ func lockEditableAsset(
 	return kind, nil
 }
 
-// insertBlocks writes an asset's blocks, one row each.
 func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []block.Block) error {
 	queries := db.New(tx)
 	for _, b := range blocks {
 		if err := block.ValidateStructure(b); err != nil {
-			return fmt.Errorf("validate %s block: %w", b.Definition, err)
+			return fmt.Errorf("validate %s block: %w: %v", b.Definition, ErrInvalidBlock, err)
 		}
 		elements, err := json.Marshal(b.Elements)
 		if err != nil {
@@ -561,7 +571,6 @@ func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []bl
 	return nil
 }
 
-// readBlocks returns an asset's blocks in page order.
 func readBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
 	rows, err := db.New(q).AssetBlocks(ctx, uuidToPgtype(assetID))
 	if err != nil {
@@ -583,6 +592,20 @@ func readBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Bloc
 			Width:      block.Width(row.Width),
 			Elements:   elements,
 		})
+	}
+	return blocks, nil
+}
+
+func readPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
+	var stored []byte
+	err := q.QueryRow(ctx, `select coalesce(jsonb_agg(to_jsonb(b) order by position), '[]'::jsonb)
+		from asset_public.asset_blocks b where asset_id = $1`, assetID).Scan(&stored)
+	if err != nil {
+		return nil, err
+	}
+	var blocks []block.Block
+	if err := json.Unmarshal(stored, &blocks); err != nil {
+		return nil, err
 	}
 	return blocks, nil
 }

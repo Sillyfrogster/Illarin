@@ -1,0 +1,108 @@
+webhooks:
+  asset.update.published.v1:
+    post:
+      operationId: assetUpdatePublished
+      description: >-
+        Sent to each of the creator's destinations chosen for one asset update
+        when the update is published. It summarizes the update and links to the
+        asset's history; the content itself lives only on Illarin. A first
+        publication, a private save, a correction to published notes and the
+        recording of an existing asset's history send nothing.
+      parameters:
+        - $ref: './publication-events.yaml#/components/parameters/WebhookId'
+        - $ref: './publication-events.yaml#/components/parameters/WebhookTimestamp'
+        - $ref: './publication-events.yaml#/components/parameters/WebhookSignature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateEvent'
+      responses:
+        '2xx':
+          description: >-
+            Any 2xx counts as delivered. A redirect is never followed and
+            counts as a wrong address. 410 stops Illarin sending to the
+            endpoint again. 429 is honored, including its Retry-After. A
+            network failure, 408, 425 or any 5xx is retried on the schedule of
+            immediate, 5 seconds, 5 minutes, 30 minutes, 2 hours, 5 hours, 10
+            hours, 14 hours, 20 hours and 24 hours. Any other 4xx ends the
+            attempts. Before every attempt Illarin checks that the asset is
+            still published and the update still stands, and cancels the
+            announcement otherwise.
+components:
+  schemas:
+    AssetUpdateEvent:
+      type: object
+      description: >-
+        One published asset update, as a summary. The same delivery keeps its
+        webhook-id across every attempt, so deduplicate on that header. Illarin
+        promises no global ordering between events; compare `occurredAt` and
+        `update.number` so an event that arrives after a newer one can be
+        discarded rather than applied. The body never carries the changes
+        themselves, prompt text or anything from a private working copy.
+      required:
+        - id
+        - type
+        - occurredAt
+        - asset
+        - update
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The event, stable across every attempt.
+        type:
+          type: string
+          enum: [asset.update.published.v1]
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the update was published, which is what orders two events.
+        asset:
+          $ref: '#/components/schemas/AssetUpdateEventAsset'
+        update:
+          $ref: '#/components/schemas/AssetUpdateEventUpdate'
+    AssetUpdateEventAsset:
+      type: object
+      required: [id, kind, name, url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        name:
+          type: string
+          description: The asset's name at the moment of publication.
+        url:
+          type: string
+          format: uri
+          description: The asset's page on Illarin.
+    AssetUpdateEventUpdate:
+      type: object
+      required: [id, number, summary, recordedAt, contentChanged, historyUrl]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The recorded version this update published.
+        number:
+          type: integer
+          description: The update's number in the asset's history, rising by one each time.
+        versionLabel:
+          type: string
+          description: The creator's free-text version label, absent when none was written.
+        summary:
+          type: string
+          description: The creator's one-line summary as published. A later correction does not resend it.
+        recordedAt:
+          type: string
+          format: date-time
+        contentChanged:
+          type: boolean
+          description: Whether the exported file changed, as opposed to the page or catalog entry alone.
+        historyUrl:
+          type: string
+          format: uri
+          description: The asset's update history, opened at this update.

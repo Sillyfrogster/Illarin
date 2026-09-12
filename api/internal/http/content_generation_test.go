@@ -56,10 +56,8 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 		t.Fatalf("content generation = %d, want %d after a reorder and a width change", got, edited)
 	}
 
-	// The adult content answer is what a page tells a reader, not what a file
-	// carries, so it moves nothing either.
 	request := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity",
-		strings.NewReader(`{"name":"","isNsfw":true}`))
+		strings.NewReader(`{"name":"","blurb":"","isNsfw":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	if answered := send(t, r, authorized(request, session)); answered.Code != http.StatusNoContent {
 		t.Fatalf("answer the adult content question: %d %s", answered.Code, answered.Body.String())
@@ -121,6 +119,8 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 		string(core.Elements[0].Content), `,"protected":true`, "", 1,
 	))
 	core.AllowedApps = &[]string{}
+	confirmed := true
+	core.ExposeProtected = &confirmed
 	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("unseal unchanged prompt: %d %s", response.Code, response.Body.String())
 	}

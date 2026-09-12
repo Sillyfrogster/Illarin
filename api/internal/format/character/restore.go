@@ -3,6 +3,7 @@ package character
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -10,8 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// RestorePreserved restores card, extension, book, and entry fields without
-// overwriting current content. Deleted entries stay deleted.
 func RestorePreserved(
 	body map[string]json.RawMessage,
 	entries []block.Entry,
@@ -28,6 +27,9 @@ func RestorePreserved(
 	}
 
 	for _, row := range rows {
+		if strings.HasPrefix(row.Namespace, MemberNamespace) {
+			continue
+		}
 		var fields map[string]json.RawMessage
 		if err := json.Unmarshal(row.Payload, &fields); err != nil {
 			fields = nil
@@ -65,8 +67,6 @@ func RestorePreserved(
 	return nil
 }
 
-// readWrittenBook takes apart the book the writer put in the body, so
-// preserved keys can go back into it and into its entries.
 func readWrittenBook(
 	body map[string]json.RawMessage,
 ) (map[string]json.RawMessage, []map[string]json.RawMessage, error) {

@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// startAssetFromNothing answers with the page a new draft's creator lands on.
 func (h *Handlers) startAssetFromNothing(c *gin.Context, owner account.Account) {
 	var request StartAssetRequest
 	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
@@ -51,8 +50,6 @@ func (h *Handlers) startAssetFromNothing(c *gin.Context, owner account.Account) 
 	c.JSON(http.StatusCreated, page)
 }
 
-// appAnswerRefusal says what a creator has to answer, naming the apps where
-// there is a question to answer and saying there is none where there is not.
 func appAnswerRefusal(kind string) string {
 	apps := asset.Apps(kind)
 	if len(apps) == 0 {

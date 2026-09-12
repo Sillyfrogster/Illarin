@@ -22,6 +22,13 @@ The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
 nginx gateway, and a Datadog agent. Uploaded blobs remain on the host. nginx may
 serve a blob only after the API authorizes it with `X-Accel-Redirect`.
 
+Illarin answers on two hostnames that both reach the same gateway: the site at
+`SITE_URL` and the blog at `BLOG_URL`. The gateway tells them apart by name. A
+hostname beginning with `blog.` gets the blog, which serves blog pages and
+media and nothing else: no API, no sign-in, no uploads. Every other hostname
+gets the site, including the catalog, accounts, the blog's editor and the
+Publication API. The site's old `/blog` addresses redirect to the blog.
+
 The included deployment has these current integration requirements:
 
 - a container registry that holds `illarin-api` and `illarin-web` images tagged
@@ -38,9 +45,10 @@ port instead.
 ## Prerequisites
 
 - a Linux host with Docker Engine, the Docker Compose plugin, `flock`, and SSH;
-- a DNS name and a TLS-terminating reverse proxy;
+- two DNS names, the site's and its `blog.` subdomain, and a TLS-terminating
+  reverse proxy that forwards both to the gateway;
 - a GitHub fork or another way to build and publish both application images;
-- Microsoft 365 and Datadog credentials for the integrations above;
+- SMTP or Microsoft 365 credentials, and a Datadog API key;
 - enough persistent storage for PostgreSQL, uploads, image replacement, and the
   configured free-space reserve.
 
@@ -62,7 +70,12 @@ fork owned by `example`, use `ghcr.io/example`; the workflows publish
 `ghcr.io/example/illarin-api:<commit>` and
 `ghcr.io/example/illarin-web:<commit>`.
 
-Generate `LINKING_HMAC_KEY` as 32 random bytes encoded as unpadded base64url.
+Set `SITE_URL` to the site's address and `BLOG_URL` to the blog's. The blog
+hostname must begin with `blog.`, because that prefix is how the gateway
+recognises it. The stack refuses to start without `BLOG_URL`.
+
+Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
+encoded as unpadded base64url. They are separate keys and never share a value.
 Use a separate, randomly generated PostgreSQL password and update both
 `POSTGRES_PASSWORD` and `DATABASE_URL` with the same value.
 
@@ -98,6 +111,8 @@ Configure the `production` GitHub environment with:
 | `PRODUCTION_SSH_PORT` | secret | SSH port |
 | `PRODUCTION_SSH_KEY` | secret | Private Ed25519 deployment key |
 | `PRODUCTION_HOST_KEYS` | secret | Verified `known_hosts` entry |
+| `PRODUCTION_ENV_FILE` | variable, optional | Existing production settings file; defaults to `/etc/illarin/production.env` |
+| `PRODUCTION_ROOT` | variable, optional | Release directory; defaults to `/opt/illarin` |
 
 The deployment workflow copies only the control files, selects images by the
 full commit SHA, applies forward database migrations, waits for health checks,
@@ -107,10 +122,15 @@ does not reverse a database migration.
 For a manual deployment from an installed release directory:
 
 ```bash
-make prod-config-check
+make prod-config-check ILLARIN_VERSION=<full-lowercase-commit-sha>
 make prod-deploy VERSION=<full-lowercase-commit-sha>
 make prod-smoke
 ```
+
+The smoke check speaks to both hostnames through the gateway: the site must
+answer, the blog must answer with its own canonical address, the site's `/blog`
+must redirect there, and the blog hostname must refuse every API, sign-in and
+editor address.
 
 Useful operating commands are listed by `make help`. In particular:
 
@@ -124,8 +144,11 @@ make prod-rollback
 ## Backups and recovery
 
 The backup job writes a PostgreSQL dump first, then uploads that dump and the
-immutable blob directory to restic while blob deletion is locked. Derivatives
-are disposable and are not backed up. Retention defaults to 30 daily snapshots.
+immutable blob directory to restic while blob deletion is locked. Uploaded post
+media and avatars are blobs, so they travel with it. Derivatives are disposable
+and are not backed up, and the blog's social cards are composed on request
+rather than stored, so a restore has nothing to rebuild. Retention defaults to
+30 daily snapshots.
 
 Configure `RESTIC_REPOSITORY`, the standard `AWS_*` credentials required by an
 S3-compatible destination, and the `restic-password` secret. Then initialize,
@@ -137,7 +160,8 @@ make prod-backup
 make prod-backup-check
 ```
 
-Set `BACKUPS_ENABLED=true` only after those commands succeed. Restore a snapshot
+Those commands require `BACKUPS_ENABLED=true`. Set it after installing the backup
+credentials, then run them before enabling scheduled backups. Restore a snapshot
 into an isolated directory and scratch PostgreSQL instance, apply its
 `database.dump` with `pg_restore`, and verify database rows against the restored
 blob sizes and hashes. Do not make the first restore attempt during an outage or

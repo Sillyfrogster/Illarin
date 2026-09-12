@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// v1's own field names for a standalone lorebook, close to SillyTavern's World Info but not the same spelling.
 const (
 	v1EntryKeys          = "key"
 	v1EntrySecondaryKeys = "keysecondary"
@@ -22,13 +21,11 @@ const (
 	v1EntryCaseSensitive = "case_sensitive"
 )
 
-// The two placements Illarin has wording for, with any other number left to preservation.
 const (
 	v1BeforeCharacter = 0
 	v1AfterCharacter  = 1
 )
 
-// readLorebookEntries models what the entry table holds and preserves the rest, including the recursion switches no v1 lorebook writer can carry.
 func readLorebookEntries(
 	payloads []json.RawMessage,
 ) ([]block.Entry, map[uuid.UUID]json.RawMessage) {

@@ -11,15 +11,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// PreservedNamespace is one namespace an asset carries, as the creator's panel
-// names it. The panel is read-only apart from deletion, so nothing here
-// carries a payload.
 type PreservedNamespace struct {
 	Name  string
 	Bytes int
 }
 
-// PreservedNamespaces lists the nonempty preserved namespaces for an asset.
 func (s *Service) PreservedNamespaces(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -57,14 +53,12 @@ func (s *Service) PreservedNamespaces(
 	return found, rows.Err()
 }
 
-// DeletePreservedNamespace removes one namespace from an asset for good. A
-// creator who has moved off a platform can take its provenance out of their
-// downloads, and the lossless rule binds Illarin rather than the creator.
 func (s *Service) DeletePreservedNamespace(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
 	namespace string,
+	candidate *Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -72,7 +66,7 @@ func (s *Service) DeletePreservedNamespace(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := lockEditableAsset(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	fingerprint, err := s.contentFingerprint(ctx, tx, assetID)
@@ -91,12 +85,9 @@ func (s *Service) DeletePreservedNamespace(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return candidate.commit(ctx, tx, assetID)
 }
 
-// preservedAssetOrigin returns the format an asset arrived in, which is the
-// module whose boilerplate list governs the panel. An asset built from nothing
-// has no origin and carries no preserved data either.
 func (s *Service) preservedAssetOrigin(
 	ctx context.Context,
 	ownerID uuid.UUID,
@@ -120,7 +111,6 @@ func (s *Service) preservedAssetOrigin(
 	return *origin, nil
 }
 
-// dropUnownedPreservedData removes records detached by an editing operation.
 func dropUnownedPreservedData(
 	ctx context.Context,
 	tx pgx.Tx,

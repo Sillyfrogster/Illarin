@@ -1,0 +1,38 @@
+{
+  "note": "A table cell holds prose, not another table",
+  "path": "document.content.0.content.0.content.0.content.0.type",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "content": [
+                  {
+                    "type": "table",
+                    "content": [
+                      {
+                        "type": "tableRow",
+                        "content": [
+                          {
+                            "type": "tableCell",
+                            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "In"}]}]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

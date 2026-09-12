@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Sync records what one instance reports installing, by immutable id so a rename breaks nothing.
 func (s *Service) Sync(
 	ctx context.Context,
 	instance linking.Instance,
@@ -76,7 +75,6 @@ func (s *Service) Sync(
 	}, nil
 }
 
-// readReport bounds and de-duplicates a report before any of it reaches the database.
 func (s *Service) readReport(report LibraryReport) ([]LibraryEntry, []uuid.UUID, error) {
 	if len(report.Entries) > s.settings.MaxLibraryEntries ||
 		len(report.Removed) > s.settings.MaxLibraryEntries {
@@ -107,7 +105,6 @@ func (s *Service) readReport(report LibraryReport) ([]LibraryEntry, []uuid.UUID,
 	return entries, removed, nil
 }
 
-// LibraryCountsByInstance is how much of each mirror is behind the catalog, as settings shows it.
 func (s *Service) LibraryCountsByInstance(
 	ctx context.Context,
 	userID uuid.UUID,

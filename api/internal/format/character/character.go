@@ -1,6 +1,3 @@
-// Package character reads the three character card standards. CCv2, CCv3 and
-// CharX have different field sets and different round-trip rules, so each gets
-// its own module; what they share lives here.
 package character
 
 import (
@@ -20,19 +17,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// Kind is what a character card is to a person. It comes from the module, so a
-// creator never picks it.
 const Kind = "character"
 
-// Seeded catalog text is a prefill the creator confirms, so it is bounded
-// rather than however long the note in the file happens to be.
 const (
 	maxTags     = 32
 	maxTagRunes = 64
 )
 
-// labels name a format in a download menu, where a reader picks without
-// having to learn what the formats are.
 var labels = map[string]string{
 	V2:    "Character Card V2",
 	V3:    "Character Card V3",
@@ -46,7 +37,6 @@ func declaration(id string) format.Declaration {
 		Path:       []string{"spec"}, Values: []string{id},
 	}}
 	if id == V2 {
-		// A v3 card keeps a v2 copy of itself, so a file with both is a v3 card.
 		recognition[0].SupersededBy = []string{V3}
 		recognition = append(recognition, format.Recognition{
 			Kind: format.RecognitionSignature, LegacyOnly: true,
@@ -76,7 +66,6 @@ func declaration(id string) format.Declaration {
 			Write: format.RoleSupport{Grade: format.SupportFull},
 		}
 	}
-	// Imported cards fit these shapes; only builder-only structure triggers loss.
 	roles[block.RoleGreetings] = format.DirectionalRoleSupport{
 		Read: format.RoleSupport{Grade: format.SupportFull},
 		Write: format.RoleSupport{
@@ -115,16 +104,12 @@ func declaration(id string) format.Declaration {
 			}
 		}
 	}
-	if id != V2 {
-		// The standard names an asset type for a face and none for a gallery,
-		// so the pictures travel under an extension type. They are in the file
-		// and only a client that knows the type will show them.
+	if id == V3 {
 		gallery := roles[block.RoleGallery]
-		gallery.Write.Destination = "an " + galleryAssetType +
-			" asset, which only a client that knows the type will show"
+		gallery.Write.Destination = "Written into the card itself."
+		gallery.Write.ShownBy = []string{"risu"}
 		roles[block.RoleGallery] = gallery
 	}
-	// Keep `assets` preserved because only part of the list maps to Illarin media.
 	consumedKeys := []string{
 		"name", "nickname", "character_version", "creator", "description",
 		"personality", "scenario", "first_mes", "alternate_greetings",
@@ -134,9 +119,6 @@ func declaration(id string) format.Declaration {
 	if id != V2 {
 		consumedKeys = append(consumedKeys, "group_only_greetings")
 	}
-	// The header fields a card carries. A v2 card has no nickname key, so the
-	// creator's alternate name is part of the file a v3 card writes and no
-	// part of the one a v2 card writes.
 	header := []format.HeaderField{
 		format.HeaderName, format.HeaderCreditedAuthor, format.HeaderAssetVersion,
 	}
@@ -152,7 +134,6 @@ func declaration(id string) format.Declaration {
 			ItemBytes: block.MaxItemBytes,
 		},
 		ConsumedKeys: consumedKeys,
-		// Hide stamped empty namespaces from the panel without dropping them.
 		Boilerplate: []format.Boilerplate{
 			{Namespace: "depth_prompt", Path: []string{"prompt"}},
 			{Namespace: "world"},
@@ -166,13 +147,10 @@ func declaration(id string) format.Declaration {
 	}
 }
 
-// card is one card's spec-defined body, whatever container carried it.
 type card struct {
 	fields map[string]json.RawMessage
 }
 
-// readCard checks the payload's version against the one this module implements
-// and reads the card body out of it.
 func readCard(file probe.Inspection, claim format.Claim, implemented int, moduleID string) (card, error) {
 	payload, ok := claim.Payload(file)
 	if !ok {
@@ -188,8 +166,6 @@ func readCard(file probe.Inspection, claim format.Claim, implemented int, module
 	return card{fields: fields}, nil
 }
 
-// readableVersion rejects later major versions and preserves additions from
-// later minor versions.
 func readableVersion(payload probe.Payload, implemented int) error {
 	declared, ok := payload.String("spec_version")
 	if !ok || declared == "" {
@@ -208,8 +184,6 @@ func readableVersion(payload probe.Payload, implemented int) error {
 	return nil
 }
 
-// parsed is what ingest stores. Only the format id and which pictures count
-// differ between the three standards.
 func (c card) parsed(formatID string, pictures []format.Media) (format.Parsed, error) {
 	for _, required := range []string{"description", "first_mes"} {
 		if raw, present := c.fields[required]; present {
@@ -221,9 +195,6 @@ func (c card) parsed(formatID string, pictures []format.Media) (format.Parsed, e
 			}
 		}
 	}
-	// The book is read once. Its entries carry ids Illarin mints here, and the
-	// preserved data keys against those ids, so reading it twice would key
-	// against ids nothing else has.
 	book := c.lorebook()
 	elements := c.elements(formatID, book)
 	return format.Parsed{
@@ -242,8 +213,6 @@ func (c card) parsed(formatID string, pictures []format.Media) (format.Parsed, e
 	}, nil
 }
 
-// remainder groups unconsumed fields by namespace. Invalid modeled fields stay
-// preserved instead of being discarded.
 func (c card) remainder(
 	formatID string,
 	book lorebook,
@@ -260,7 +229,6 @@ func (c card) remainder(
 		}
 		body[key] = raw
 	}
-	// Keep a collision nested so it cannot shadow the card namespace.
 	if collision, clash := extensions[cardNamespace]; clash {
 		body[extensionsKey], _ = json.Marshal(map[string]json.RawMessage{cardNamespace: collision})
 		delete(extensions, cardNamespace)
@@ -284,9 +252,6 @@ func (c card) remainder(
 	return remainder
 }
 
-// consumed reports which of the module's declared keys this card actually
-// turned into content. A declared key the card wrote as the wrong shape is not
-// among them.
 func (c card) consumed(formatID string, book lorebook) map[string]bool {
 	consumed := make(map[string]bool)
 	for _, key := range declaration(formatID).ConsumedKeys {
@@ -305,8 +270,6 @@ func (c card) consumed(formatID string, book lorebook) map[string]bool {
 			consumed[key] = json.Unmarshal(raw, &text) == nil
 		}
 	}
-	// A book the card kept inside its extensions is content all the same, so
-	// the extensions key holding it is consumed rather than the card's own.
 	if book.found {
 		consumed[bookKey] = true
 	}
@@ -347,8 +310,6 @@ func (c card) elements(formatID string, book lorebook) []block.Element {
 			Type: block.TypeEntryTable, Role: block.RoleLorebookEntries, Content: book.table,
 		})
 	}
-	// Every element carries an id from the moment it is read, because the
-	// preserved data beside it points at that id.
 	for i := range elements {
 		elements[i].ID = uuid.New()
 	}
@@ -405,9 +366,6 @@ func (c card) text(name string) string {
 
 func (c card) name() string { return strings.TrimSpace(c.text("name")) }
 
-// blurb is what a person reads while browsing, so it comes from the creator's
-// notes. A card's description is a prompt written to be fed to a model and
-// never becomes the blurb.
 func (c card) blurb() string {
 	return truncate(strings.TrimSpace(c.text("creator_notes")), format.MaxBlurbRunes)
 }
@@ -433,8 +391,6 @@ func (c card) tags() []string {
 	return tags
 }
 
-// createdAt is the date the file carries. CCv3 records it in seconds since the
-// epoch; CCv2 has nowhere to put one.
 func (c card) createdAt() *time.Time {
 	raw, ok := c.fields["creation_date"]
 	if !ok {
@@ -456,8 +412,6 @@ func (c card) extensions() map[string]json.RawMessage {
 	return extensions
 }
 
-// documentImage gives the card's own picture the avatar role when the file
-// carrying the card is itself an image. The file is read, never rewritten.
 func documentImage(file probe.Inspection) []format.Media {
 	for _, image := range file.Images {
 		if image.Locator.Container != probe.ZIP {
@@ -479,13 +433,10 @@ func truncate(text string, limit int) string {
 	return strings.TrimSpace(cut)
 }
 
-// Modules returns every character card module, so the server registers the set
-// rather than remembering to add each one.
 func Modules() []format.Reader {
 	return []format.Reader{CCv2Module{}, CCv3Module{}, CharXModule{}}
 }
 
-// hasNamedText reports whether a creator gave one of a set's texts a name.
 func hasNamedText(content block.Content) bool {
 	set, ok := content.(block.TextSet)
 	if !ok {
@@ -499,8 +450,6 @@ func hasNamedText(content block.Content) bool {
 	return false
 }
 
-// hasMultilineTurn reports whether one turn of an example exchange spans more
-// than one line, which is what runs together when a card is read back.
 func hasMultilineTurn(content block.Content) bool {
 	sample, ok := content.(block.DialogueSample)
 	if !ok {

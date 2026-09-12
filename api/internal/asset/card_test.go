@@ -75,7 +75,6 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 
 }
 
-// pngCardFile puts a card in a text chunk of a picture, the way an exporter does.
 func pngCardFile(t *testing.T, body string) []byte {
 	t.Helper()
 	picture := image.NewRGBA(image.Rect(0, 0, 8, 4))

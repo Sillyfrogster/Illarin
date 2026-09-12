@@ -34,8 +34,6 @@ func TestEveryPreservedKeyComesBackByteIdentical(t *testing.T) {
 	}
 	entries := content.(block.EntryTable).Entries
 
-	// The creator edits an unrelated block. Nothing here touches the book or
-	// the namespaces the card arrived with.
 	written := map[string]json.RawMessage{
 		"name":        json.RawMessage(`"Ana"`),
 		"description": json.RawMessage(`"Quieter than she was."`),
@@ -76,14 +74,11 @@ func TestEveryPreservedKeyComesBackByteIdentical(t *testing.T) {
 	if string(restored[1]["uid"]) != "92" || string(restored[1]["group"]) != `"people"` {
 		t.Errorf("entry 2 came back as %v", restored[1])
 	}
-	// The creator's own edit stands. A preserved copy never overwrites it.
 	if string(written["description"]) != `"Quieter than she was."` {
 		t.Errorf("description = %s, want the creator's edit", written["description"])
 	}
 }
 
-// Deleting an entry takes its preserved keys with it, and the entry beside it
-// keeps its own.
 func TestADeletedEntryTakesItsPreservedKeysWithIt(t *testing.T) {
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -115,8 +110,6 @@ func TestADeletedEntryTakesItsPreservedKeysWithIt(t *testing.T) {
 	}
 }
 
-// bookAsWritten is the book a writer builds from the entries a creator can
-// edit, before any preserved key goes back into it.
 func bookAsWritten(
 	t *testing.T,
 	entries []block.Entry,
@@ -158,8 +151,6 @@ func cardBody(t *testing.T, source string) map[string]json.RawMessage {
 	return root.Data
 }
 
-// compact reads a value into its own shape, so two spellings of one JSON value
-// compare as the same value.
 func compact(t *testing.T, raw json.RawMessage) any {
 	t.Helper()
 	var value any
@@ -169,7 +160,6 @@ func compact(t *testing.T, raw json.RawMessage) any {
 	return value
 }
 
-// v1 wrote lumihub_art_display into 36 cards and the name is theirs now, so the rename leaves it alone and this holds the line.
 func TestTheGrandfatheredArtDisplayKeyComesBackByteIdentical(t *testing.T) {
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",

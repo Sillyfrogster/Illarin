@@ -24,11 +24,12 @@ type saveBlockElement struct {
 }
 
 type saveBlockBody struct {
-	Title       *string            `json:"title"`
-	Layout      string             `json:"layout"`
-	Width       string             `json:"width"`
-	Elements    []saveBlockElement `json:"elements"`
-	AllowedApps *[]string          `json:"allowedApps,omitempty"`
+	Title           *string            `json:"title"`
+	Layout          string             `json:"layout"`
+	Width           string             `json:"width"`
+	Elements        []saveBlockElement `json:"elements"`
+	AllowedApps     *[]string          `json:"allowedApps,omitempty"`
+	ExposeProtected *bool              `json:"exposeProtected,omitempty"`
 }
 
 func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
@@ -47,7 +48,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
 		t.Fatal("the owner did not receive the restored sealed prompt")
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
@@ -103,7 +104,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 			t.Errorf("owner response does not contain %q: %s", want, ownerContent)
 		}
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
@@ -127,6 +128,11 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	content := strings.ReplaceAll(string(core.Elements[0].Content), `"protected":true`, `"protected":false`)
 	core.Elements[0].Content = json.RawMessage(content)
 	core.AllowedApps = &[]string{}
+	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
+		t.Fatalf("unseal without confirming status = %d, want 409: %s", got.Code, got.Body.String())
+	}
+	confirmed := true
+	core.ExposeProtected = &confirmed
 	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
@@ -192,7 +198,7 @@ func fetchStartedAsset(
 ) startedAsset {
 	t.Helper()
 	response := send(t, r, authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())
@@ -241,7 +247,6 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 	if len(greetings.Texts) != 1 || greetings.Texts[0].Text != "The west shelf moved again. Come in." {
 		t.Errorf("saved greetings = %s", messages.Elements[0].Content)
 	}
-	// The greeting is an item, so it left the save with an id of its own.
 	if greetings.Texts[0].ID == uuid.Nil {
 		t.Error("the saved greeting carries no id")
 	}
@@ -684,7 +689,6 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	}
 }
 
-// protectedCounts reads how many private payloads and delivery policy rows an asset still holds.
 func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int) {
 	t.Helper()
 	var payloads, policies int
@@ -699,7 +703,6 @@ func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int
 	return payloads, policies
 }
 
-// withoutFragment returns the preset's prompt content with one named fragment taken out.
 func withoutFragment(t *testing.T, owner startedAsset, name string) json.RawMessage {
 	t.Helper()
 	var content struct {

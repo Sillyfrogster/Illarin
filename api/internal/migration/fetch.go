@@ -12,40 +12,33 @@ import (
 	"time"
 )
 
-// ErrHostNotAllowed is the boundary that keeps one bounded fetch from becoming a general one.
 var ErrHostNotAllowed = errors.New("the host is not on the migration allowlist")
 
-// FetchedMedia is one third-party image, treated as untrusted bytes.
 type FetchedMedia struct {
 	MediaType string
 	Body      []byte
 }
 
-// Fetcher retrieves one creator-supplied image URL.
 type Fetcher interface {
 	Fetch(ctx context.Context, address string) (FetchedMedia, error)
 }
 
-// FetchLimits bound what one response may cost.
 type FetchLimits struct {
 	Bytes     int64
 	Timeout   time.Duration
 	Redirects int
 }
 
-// DefaultFetchLimits are deliberately small, because a pack avatar is a thumbnail.
 func DefaultFetchLimits() FetchLimits {
 	return FetchLimits{Bytes: 8 << 20, Timeout: 20 * time.Second, Redirects: 3}
 }
 
-// AllowlistedFetcher treats every response as untrusted media and re-checks a redirect against the allowlist.
 type AllowlistedFetcher struct {
 	hosts  map[string]struct{}
 	limits FetchLimits
 	client *http.Client
 }
 
-// NewAllowlistedFetcher takes the hosts the corpus names, and an empty allowlist fetches nothing rather than everything.
 func NewAllowlistedFetcher(hosts []string, limits FetchLimits) *AllowlistedFetcher {
 	allowed := make(map[string]struct{}, len(hosts))
 	for _, host := range hosts {
@@ -64,7 +57,6 @@ func NewAllowlistedFetcher(hosts []string, limits FetchLimits) *AllowlistedFetch
 	return fetcher
 }
 
-// Allows reports whether an address is on the allowlist, without fetching it.
 func (fetcher *AllowlistedFetcher) Allows(address string) bool {
 	parsed, err := url.Parse(address)
 	if err != nil {
@@ -119,7 +111,6 @@ func (fetcher *AllowlistedFetcher) Fetch(ctx context.Context, address string) (F
 	return FetchedMedia{MediaType: mediaType, Body: body}, nil
 }
 
-// FetchHosts names the distinct hosts a set of addresses points at.
 func FetchHosts(addresses []string) []string {
 	seen := make(map[string]struct{}, len(addresses))
 	hosts := make([]string, 0, len(addresses))

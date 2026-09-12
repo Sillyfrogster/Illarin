@@ -22,15 +22,12 @@ func (s *Service) writeProjections(
 	if err := s.writeExportProjection(ctx, tx, assetID); err != nil {
 		return err
 	}
-	return s.writeFacetProjection(ctx, tx, assetID)
+	if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
+		return err
+	}
+	return s.writePublishedProjections(ctx, tx, assetID)
 }
 
-// writeExportProjection recomputes an asset's offered targets and what each one
-// costs it, and stores them.
-//
-// It runs inside the transaction that caused the change, for a draft as much as
-// a published asset, because the builder's download panel reads the result
-// before publish. Publishing itself computes nothing.
 func (s *Service) writeExportProjection(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -57,7 +54,6 @@ func (s *Service) writeExportProjection(
 	return nil
 }
 
-// exportCapability measures every writer against what the asset really holds.
 func (s *Service) exportCapability(
 	ctx context.Context,
 	q db.DBTX,
@@ -87,9 +83,6 @@ func (s *Service) exportCapability(
 	}), nil
 }
 
-// ExportTargets reads an asset's offered targets out of its projection, which
-// is what the download menu and the creator's panel both render. Nothing
-// computes compatibility per request.
 func (s *Service) exportProjection(
 	ctx context.Context,
 	q db.DBTX,
@@ -112,11 +105,6 @@ func (s *Service) exportProjection(
 	return targets, nil
 }
 
-// RecomputeStaleExportProjections rewrites every asset whose export capability was
-// computed under a contract that has since changed. Changing a declaration is a
-// deploy, so the deploy is the trigger. At this catalog's size the whole sweep
-// finishes in seconds, and being wrong means a stale sentence in a menu rather
-// than stale bytes in somebody's hands.
 func (s *Service) RecomputeStaleExportProjections(ctx context.Context) (int, error) {
 	stale, err := s.staleProjections(ctx, `
 		select asset.id
@@ -131,7 +119,10 @@ func (s *Service) RecomputeStaleExportProjections(ctx context.Context) (int, err
 	}
 	for _, assetID := range stale {
 		if err := s.inTransaction(ctx, func(tx pgx.Tx) error {
-			return s.writeExportProjection(ctx, tx, assetID)
+			if err := s.writeExportProjection(ctx, tx, assetID); err != nil {
+				return err
+			}
+			return s.writePublishedProjections(ctx, tx, assetID)
 		}); err != nil {
 			return 0, fmt.Errorf("recompute the export projection for %s: %w", assetID, err)
 		}

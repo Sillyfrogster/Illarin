@@ -9,33 +9,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// Where a card's leftovers sit. `card` is Illarin's name for the card body
-// itself; every other namespace is a key of `extensions`, which is where the
-// tools that wrote a card put their own data.
 const (
 	cardNamespace = "card"
 	extensionsKey = "extensions"
 	bookKey       = "character_book"
 )
 
-// lorebook is a card's embedded book, read once: the entries that became
-// content, and what the book carried that the entry table has no place for.
 type lorebook struct {
-	found bool
-	// insideExtensions records that the card kept its book under `extensions`
-	// rather than beside its other fields.
+	found            bool
 	insideExtensions bool
 	table            block.EntryTable
-	// bookFields are the book's own keys, minus its entries.
-	bookFields json.RawMessage
-	// entryFields are one entry's leftover keys, by the id Illarin gave that
-	// entry. A format's own identifier, such as SillyTavern's uid, is in here
-	// like anything else.
-	entryFields map[uuid.UUID]json.RawMessage
+	bookFields       json.RawMessage
+	entryFields      map[uuid.UUID]json.RawMessage
 }
 
-// preserved turns what the book could not model into rows: one for the book,
-// owned by the element that holds it, and one per entry, owned by that entry.
 func (l lorebook) preserved(elements []block.Element) []format.Remainder {
 	if !l.found {
 		return nil
@@ -67,9 +54,6 @@ func (l lorebook) preserved(elements []block.Element) []format.Remainder {
 	return rows
 }
 
-// lorebook reads the card's embedded book. A book the card kept inside its
-// extensions is the same book: it becomes content once, and the extensions key
-// that held it keeps no second copy.
 func (c card) lorebook() lorebook {
 	raw := c.fields[bookKey]
 	insideExtensions := false

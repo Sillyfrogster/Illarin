@@ -23,6 +23,9 @@ type SweepResult struct {
 
 func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 	now := s.now()
+	if err := s.deleteExpiredSnapshots(ctx); err != nil {
+		return SweepResult{}, err
+	}
 	if err := s.deleteExpiredProtectedContent(ctx, now); err != nil {
 		return SweepResult{}, err
 	}
@@ -74,6 +77,26 @@ func (s *Service) Sweep(ctx context.Context) (SweepResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func (s *Service) deleteExpiredSnapshots(ctx context.Context) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin expired history cleanup: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `
+		update assets set published_snapshot_id = null
+		 where deleted_at is not null and recoverable_until <= now()
+		   and published_snapshot_id is not null
+	`); err != nil {
+		return fmt.Errorf("release expired published snapshots: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `delete from asset_snapshots s using assets a
+		where s.asset_id = a.id and a.deleted_at is not null and a.recoverable_until <= now()`); err != nil {
+		return fmt.Errorf("remove expired history: %w", err)
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *Service) deleteExpiredProtectedContent(ctx context.Context, now time.Time) error {
@@ -324,6 +347,14 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		  join assets asset on asset.id = media.asset_id
 		 where media.blob_id = ` + blobID + `
 		   and (asset.deleted_at is null or asset.recoverable_until > ` + at + `)
+		union all
+		select 1 from profile_media media where media.blob_id = ` + blobID + `
+		union all
+		select 1 from publication_media media where media.blob_id = ` + blobID + `
+		union all
+		select 1 from post_media media
+		  join post_media_uses use on use.media_id = media.id
+		 where media.blob_id = ` + blobID + `
 	)`
 }
 
@@ -342,6 +373,14 @@ func releaseExpiredReferences(ctx context.Context, tx pgx.Tx, id uuid.UUID, now 
 		if _, err := tx.Exec(ctx, statement, id, now); err != nil {
 			return fmt.Errorf("release expired blob reference: %w", err)
 		}
+	}
+	_, err := tx.Exec(ctx, `
+		update post_media set blob_id = null
+		 where blob_id = $1
+		   and not exists (select 1 from post_media_uses use where use.media_id = post_media.id)
+	`, id)
+	if err != nil {
+		return fmt.Errorf("release an unused post picture: %w", err)
 	}
 	return nil
 }

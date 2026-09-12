@@ -5,11 +5,9 @@ type LabelledElement = {
 
 type LabellingBlock = {
   title?: string;
-  /** How many elements the block renders, which is not always how many it holds. */
   elements: number;
 };
 
-/** An element's label, or nothing where the block's title already says it. */
 export function elementLabel(
   element: LabelledElement,
   block: LabellingBlock,

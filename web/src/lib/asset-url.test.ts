@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { assetHref, assetRedirect, assetSlug, isAssetId } from "./asset-url";
+import {
+  assetHistoryHref,
+  assetHref,
+  assetRedirect,
+  assetSlug,
+  isAssetId,
+} from "./asset-url";
 
 const ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
 const CHRISSY = { id: ID, name: "Christine Novak" };
@@ -23,6 +29,11 @@ test("has no slug for a name that normalizes to nothing", () => {
   expect(assetSlug("日本語")).toBe("");
   expect(assetSlug("!!!")).toBe("");
   expect(assetSlug("")).toBe("");
+});
+
+test("has no slug for a name that would claim a segment Illarin owns", () => {
+  expect(assetSlug("History")).toBe("");
+  expect(assetHref(ID, "History")).toBe(`/a/${ID}`);
 });
 
 test("caps at sixty characters, preferring the last word boundary", () => {
@@ -85,4 +96,11 @@ test("recognizes an asset id, and nothing else, as one", () => {
   expect(isAssetId("christine-novak")).toBe(false);
   expect(isAssetId(`${ID}x`)).toBe(false);
   expect(isAssetId("")).toBe(false);
+});
+
+test("opens update history on the asset page, at one version when asked", () => {
+  expect(assetHistoryHref(ID, "The Glass Cartographer")).toBe(
+    `/a/${ID}/the-glass-cartographer?history`,
+  );
+  expect(assetHistoryHref(ID, "", 3)).toBe(`/a/${ID}?history#version-3`);
 });

@@ -11,8 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-// TestEveryLocalPresetSurvivesADownload exercises optional local fixtures and
-// skips when the corpus is absent.
 func TestEveryLocalPresetSurvivesADownload(t *testing.T) {
 	root := os.Getenv("ILLARIN_LOCAL_CORPUS")
 	if root == "" {

@@ -59,6 +59,7 @@ func fetchAssetPage(t *testing.T, r http.Handler, path string) assetPageResponse
 func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("The Quiet Archivist")
+	metadata["_keepDraft"] = true
 	metadata["filename"] = "archivist.lumitheme"
 	metadata["blurb"] = "She closes the book on a ribbon."
 	metadata["tags"] = []string{"Slow Burn", " Modern "}
@@ -77,6 +78,10 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 		if added.Code != http.StatusCreated {
 			t.Fatalf("add %s status = %d, want 201: %s", role, added.Code, added.Body.String())
 		}
+	}
+
+	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
 	page := fetchAssetPage(t, r, "/v1/assets/"+assetID)
@@ -126,6 +131,7 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Coverless Gallery")
+	metadata["_keepDraft"] = true
 	metadata["filename"] = "coverless-gallery.lumitheme"
 	assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
 
@@ -134,6 +140,10 @@ func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add gallery status = %d, want 201: %s", added.Code, added.Body.String())
+	}
+
+	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
 	page := fetchAssetPage(t, r, "/v1/assets/"+assetID)
@@ -158,8 +168,10 @@ func TestAssetPageShowsNoTotals(t *testing.T) {
 		"id": true, "kind": true, "name": true, "blurb": true, "tags": true,
 		"creator": true, "isNsfw": true, "discovery": true, "createdAt": true,
 		"lifecycle": true, "isOwner": true, "downloads": true, "original": true,
-		"blocks": true, "media": true, "preview": true, "visibility": true,
+		"appTargets": true,
+		"blocks":     true, "media": true, "preview": true, "visibility": true,
 		"linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
+		"latestUpdate": true,
 	}
 	for key := range body {
 		if !wantKeys[key] {
@@ -227,6 +239,7 @@ func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
 func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("After Dark")
+	metadata["_keepDraft"] = true
 	metadata["filename"] = "after-dark.lumitheme"
 	metadata["isNsfw"] = true
 	assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
@@ -235,6 +248,10 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add media status = %d, want 201: %s", added.Code, added.Body.String())
+	}
+
+	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
 	for _, preference := range []string{"blurred", "hidden"} {

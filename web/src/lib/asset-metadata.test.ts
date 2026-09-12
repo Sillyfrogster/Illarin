@@ -21,6 +21,7 @@ function asset(over: Partial<AssetDetail> = {}): AssetDetail {
     allowedApps: [],
     eligibleApps: [],
     downloads: [],
+    appTargets: [],
     original: null,
     createdAt: "2026-08-13T00:00:00Z",
     blocks: [],

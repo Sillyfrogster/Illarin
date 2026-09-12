@@ -19,9 +19,6 @@ const (
 	characterBookNamespace = "character_book"
 )
 
-// LiftedNamespaces are LumiHub's own display keys, which sit inside creators'
-// extensions against ADR-0007. Migration lifts them out rather than preserving
-// them, so a creator's download stops carrying somebody else's bookkeeping.
 func LiftedNamespaces() []string { return append([]string(nil), liftedNamespaces...) }
 
 var liftedNamespaces = []string{
@@ -240,8 +237,6 @@ func recoverGalleryNames(rows []CharacterImageRow, gallery []int, raw json.RawMe
 	return true, len(assets)
 }
 
-// carriesAssetDescriptors reports a CCv3 asset array with entries in it, which
-// is the only case where failing to line up loses a creator something.
 func carriesAssetDescriptors(raw json.RawMessage) bool {
 	if len(raw) == 0 || string(raw) == "null" {
 		return false

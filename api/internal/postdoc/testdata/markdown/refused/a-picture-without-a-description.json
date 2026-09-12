@@ -1,0 +1,10 @@
+{
+  "note": "A picture a reader cannot see needs describing",
+  "markdown": "![](media:6f2c1b40-9d38-4a7e-b512-0c8e37a41d59)\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "Describe"
+    }
+  ]
+}

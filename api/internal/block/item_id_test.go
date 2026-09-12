@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Preserved data keys against an item's id, so an item that arrives without
-// one gets one before anything can point at its position instead.
 func TestEveryItemInsideAnElementGetsAnIDWhenItIsSaved(t *testing.T) {
 	cases := []struct {
 		elementType Type
@@ -43,8 +41,6 @@ func TestEveryItemInsideAnElementGetsAnIDWhenItIsSaved(t *testing.T) {
 	}
 }
 
-// An id a creator's browser sends back is the id the item already had, so
-// preserved data stays with the item across a save.
 func TestASavedItemKeepsTheIDItArrivedWith(t *testing.T) {
 	kept := uuid.New()
 	content, err := DecodeContent(TypeTextSet, []byte(
@@ -62,8 +58,6 @@ func TestASavedItemKeepsTheIDItArrivedWith(t *testing.T) {
 	}
 }
 
-// Content written before items had ids is read forward, so an entry saved by
-// an older build cannot leave preserved data pointing at nothing.
 func TestItemsWrittenBeforeIDsExistedAreReadForward(t *testing.T) {
 	stored := `{"id":"` + uuid.New().String() + `","type":"entry_table","slot":"main",` +
 		`"version":1,"options":{},"content":{"entries":[` +
@@ -86,8 +80,6 @@ func TestItemsWrittenBeforeIDsExistedAreReadForward(t *testing.T) {
 	}
 }
 
-// A block save reconciles preserved data against the ids that survived, so
-// this list is what the reconciliation reads.
 func TestItemIDsReportsEveryItemInAnElement(t *testing.T) {
 	first, second := uuid.New(), uuid.New()
 	content := TextSet{Texts: []TextItem{{ID: first, Text: "One"}, {ID: second, Text: "Two"}}}

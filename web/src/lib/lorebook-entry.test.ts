@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { type LorebookView, readEntry, readLorebook } from "./lorebook-entry";
+import { readEntries, readEntry } from "./lorebook-entry";
 
 const on = { keys: ["ramiel"], enabled: true, text: "" };
-
-const showing: LorebookView = { search: "", sort: "book", includeOff: true };
 
 describe("how an entry names itself", () => {
   test("an entry with a name uses it", () => {
@@ -165,9 +163,7 @@ describe("what decides whether an entry fires", () => {
       { ...on, order: 100 },
       { ...on, order: 100 },
     ];
-    expect(readLorebook(shared, showing).entries[0].firing).toEqual([
-      "Switched on by its key",
-    ]);
+    expect(readEntries(shared)[0].firing).toEqual(["Switched on by its key"]);
   });
 
   test("an order that sets one entry apart is said", () => {
@@ -175,75 +171,16 @@ describe("what decides whether an entry fires", () => {
       { ...on, order: 100 },
       { ...on, order: 4 },
     ];
-    expect(readLorebook(mixed, showing).entries[1].firing).toEqual([
+    expect(readEntries(mixed)[1].firing).toEqual([
       "Switched on by its key",
       "Order 4",
     ]);
   });
 });
 
-describe("the index a reader searches", () => {
-  const book = [
-    { ...on, id: "a", name: "Remielle Dan", keys: ["ramiel", "void hunter"] },
-    { ...on, id: "b", name: "Belle", keys: ["belle"], enabled: false },
-    { ...on, id: "c", name: "Aokigahara", keys: ["forest"] },
-  ];
-
-  test("the whole book is counted whatever the view shows", () => {
-    const read = readLorebook(book, { ...showing, search: "belle" });
-    expect(read.total).toBe(3);
-    expect(read.off).toBe(1);
-    expect(read.entries).toHaveLength(1);
-  });
-
-  test("a search matches a name", () => {
-    expect(
-      readLorebook(book, { ...showing, search: "remielle" }).entries.map(
-        (entry) => entry.id,
-      ),
-    ).toEqual(["a"]);
-  });
-
-  test("a search matches a key, which is how a reader finds an entry it never names", () => {
-    expect(
-      readLorebook(book, { ...showing, search: "FOREST" }).entries.map(
-        (entry) => entry.id,
-      ),
-    ).toEqual(["c"]);
-  });
-
-  test("a search matching nothing shows nothing", () => {
-    expect(
-      readLorebook(book, { ...showing, search: "kraken" }).entries,
-    ).toEqual([]);
-  });
-
-  test("entries that are off can be folded away", () => {
-    expect(
-      readLorebook(book, { ...showing, includeOff: false }).entries.map(
-        (entry) => entry.id,
-      ),
-    ).toEqual(["a", "c"]);
-  });
-
-  test("book order is the order the entries were written in", () => {
-    expect(
-      readLorebook(book, showing).entries.map((entry) => entry.id),
-    ).toEqual(["a", "b", "c"]);
-  });
-
-  test("sorting by name leaves the positions saying where each entry really sits", () => {
-    const sorted = readLorebook(book, { ...showing, sort: "name" });
-    expect(sorted.entries.map((entry) => entry.name)).toEqual([
-      "Aokigahara",
-      "Belle",
-      "Remielle Dan",
-    ]);
-    expect(sorted.entries.map((entry) => entry.position)).toEqual([3, 2, 1]);
-  });
-
+describe("how a book addresses its entries", () => {
   test("an entry with no id of its own still gets one the index can address", () => {
-    expect(readLorebook([on, on], showing).entries.map((e) => e.id)).toEqual([
+    expect(readEntries([on, on]).map((entry) => entry.id)).toEqual([
       "entry-1",
       "entry-2",
     ]);

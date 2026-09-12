@@ -1,6 +1,0 @@
-.shell {
-  max-width: var(--shell);
-  margin: 0 auto;
-  padding-inline: var(--gutter);
-  width: 100%;
-}

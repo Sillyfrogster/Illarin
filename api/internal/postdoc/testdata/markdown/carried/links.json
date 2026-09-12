@@ -1,0 +1,56 @@
+{
+  "note": "Links reach an https address, an autolink and a mailto address",
+  "markdown": "[Read more](https://example.com/notes), <https://example.com/feed> and [write in](mailto:someone@example.com).\n",
+  "document": {
+    "content": [
+      {
+        "content": [
+          {
+            "marks": [
+              {
+                "href": "https://example.com/notes",
+                "type": "link"
+              }
+            ],
+            "text": "Read more",
+            "type": "text"
+          },
+          {
+            "text": ", ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "href": "https://example.com/feed",
+                "type": "link"
+              }
+            ],
+            "text": "https://example.com/feed",
+            "type": "text"
+          },
+          {
+            "text": " and ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "href": "mailto:someone@example.com",
+                "type": "link"
+              }
+            ],
+            "text": "write in",
+            "type": "text"
+          },
+          {
+            "text": ".",
+            "type": "text"
+          }
+        ],
+        "type": "paragraph"
+      }
+    ],
+    "version": 2
+  }
+}

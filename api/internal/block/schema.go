@@ -5,11 +5,7 @@ import (
 	"fmt"
 )
 
-// schema decodes one element type and upgrades stored content to its current
-// version.
 type schema struct {
-	// upgrade[i] rewrites content written at version i+1 into version i+2, so
-	// the current version is one past the last upgrade.
 	upgrade []func(json.RawMessage) (json.RawMessage, error)
 	empty   func() Content
 	decode  func(json.RawMessage) (Content, error)
@@ -17,8 +13,6 @@ type schema struct {
 
 func (s schema) version() int { return len(s.upgrade) + 1 }
 
-// read turns stored content into the current shape. Content written by a build
-// newer than this one is refused rather than read as if it were current.
 func (s schema) read(version int, stored json.RawMessage) (Content, error) {
 	if version < 1 || version > s.version() {
 		return nil, fmt.Errorf(
@@ -38,7 +32,6 @@ func (s schema) read(version int, stored json.RawMessage) (Content, error) {
 	return s.decode(stored)
 }
 
-// decodeAs reads one element type's stored content into its own struct.
 func decodeAs[C Content](stored json.RawMessage) (Content, error) {
 	var content C
 	if err := json.Unmarshal(stored, &content); err != nil {
@@ -47,8 +40,6 @@ func decodeAs[C Content](stored json.RawMessage) (Content, error) {
 	return content, nil
 }
 
-// schemas is the element vocabulary, closed to code. Adding a type is a
-// deliberate change rather than a value somebody types.
 var schemas = map[Type]schema{
 	TypeProse: {
 		empty:  func() Content { return Prose{} },

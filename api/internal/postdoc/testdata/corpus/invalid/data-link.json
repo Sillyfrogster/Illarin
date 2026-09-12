@@ -1,0 +1,19 @@
+{
+  "note": "A data address is not a link",
+  "path": "document.content.0.content.0.marks.0.href",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Open",
+            "marks": [{"type": "link", "href": "data:text/html,<b>x</b>"}]
+          }
+        ]
+      }
+    ]
+  }
+}

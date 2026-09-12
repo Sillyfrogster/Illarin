@@ -1,0 +1,65 @@
+{
+  "note": "A table with a heading row, a heading column and one empty cell",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {"type": "tableCell", "heading": true, "content": []},
+              {
+                "type": "tableCell",
+                "heading": true,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Reader"}]}]
+              },
+              {
+                "type": "tableCell",
+                "heading": true,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Writer"}]}]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "heading": true,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Draft"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "no"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "yes"}]}]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "heading": true,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Published"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "yes"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "yes"}]}]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

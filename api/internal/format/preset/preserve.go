@@ -11,26 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
-// itemLeftover is what one item carried that Illarin has no place for, and the
-// namespace it belongs under.
 type itemLeftover struct {
 	namespace string
 	fields    map[string]json.RawMessage
 }
 
-// preservation is where one module keeps what a file carried.
 type preservation struct {
-	// body is Illarin's name for the file's own top level.
-	body string
-	// extensions is the key whose every entry is a namespace of its own.
+	body       string
 	extensions string
-	// reserved are this module's own namespace names.
-	reserved []string
+	reserved   []string
 }
 
-// remainder is everything the file carried that did not become content: the
-// preset's own leftover keys, one namespace per key of `extensions`, and one
-// item's leftover keys on the item they came from.
 func (p preservation) remainder(
 	source map[string]json.RawMessage,
 	items ...map[uuid.UUID]itemLeftover,
@@ -43,7 +34,6 @@ func (p preservation) remainder(
 			extensions = make(map[string]json.RawMessage)
 		}
 	}
-	// Keep collisions nested so they cannot shadow the module's namespaces.
 	clashes := make(map[string]json.RawMessage)
 	for _, name := range p.reserved {
 		if collision, clash := extensions[name]; clash {
@@ -79,8 +69,6 @@ func (p preservation) remainder(
 	return rows
 }
 
-// restoreExtensions puts every preserved namespace but the module's own back
-// under `extensions`, one key each. A namespace the writer already wrote wins.
 func (p preservation) restoreExtensions(body map[string]json.RawMessage, held kept) {
 	extensions := keys.Object(body[p.extensions])
 	for namespace, payload := range held.asset {
@@ -100,8 +88,6 @@ func compareIDs(first, second uuid.UUID) int {
 	return slices.Compare(first[:], second[:])
 }
 
-// scriptLeftovers puts each script's leftover keys under a namespace, dropping
-// any whose script is no longer in the list.
 func scriptLeftovers(
 	scripts []block.Script,
 	namespace string,
@@ -116,8 +102,6 @@ func scriptLeftovers(
 	return leftovers
 }
 
-// kept indexes preserved data by owner and namespace. Asset payloads remain raw
-// because not every namespace is an object.
 type kept struct {
 	asset map[string]json.RawMessage
 	items map[string]map[uuid.UUID]map[string]json.RawMessage
@@ -142,18 +126,14 @@ func preservedBy(rows []format.Remainder) kept {
 	return held
 }
 
-// item returns what one item of an element kept from the file it arrived in.
 func (k kept) item(namespace string, id uuid.UUID) map[string]json.RawMessage {
 	return k.items[namespace][id]
 }
 
-// object returns one preserved namespace as keys the writer can put back.
 func (k kept) object(namespace string) map[string]json.RawMessage {
 	return keys.Object(k.asset[namespace])
 }
 
-// itemName reads the identifier a file knew one item by, falling back to the
-// id Illarin minted where the item never came from a file.
 func itemName(held kept, namespace string, id uuid.UUID, key string) string {
 	var name string
 	if json.Unmarshal(held.item(namespace, id)[key], &name) == nil && name != "" {

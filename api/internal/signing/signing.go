@@ -1,7 +1,3 @@
-// Package signing stamps short-lived signatures on the byte-delivery URLs Go
-// serves privately. A draft's images keep the media record, the blob and the
-// URL a published asset has, and the signature is the whole of what withholds
-// them.
 package signing
 
 import (
@@ -15,33 +11,23 @@ import (
 	"time"
 )
 
-// Life is how long a signature stays good for. It only has to outlive the page
-// it was minted on.
 const Life = 15 * time.Minute
 
-// ExpiresParam and SignatureParam are the query parameters a signature travels
-// in.
 const (
 	ExpiresParam   = "expires"
 	SignatureParam = "signature"
 )
 
-// Key signs and checks one deployment's private URLs.
 type Key struct {
 	secret []byte
 }
 
-// NewKey draws a key that lives as long as the process. A signature only has to
-// outlive the page it was minted on, so nothing is stored, there is no secret
-// to leak or rotate, and a restart costs a page reload. A second API process
-// would need a shared key instead.
 func NewKey() Key {
 	secret := make([]byte, 32)
 	rand.Read(secret)
 	return Key{secret: secret}
 }
 
-// Sign returns path with the query a private request has to carry.
 func (k Key) Sign(path string, now time.Time) string {
 	expires := now.Add(Life).Unix()
 	query := url.Values{}
@@ -50,8 +36,6 @@ func (k Key) Sign(path string, now time.Time) string {
 	return path + "?" + query.Encode()
 }
 
-// Valid reports whether a request carries a signature this key wrote for this
-// path and has not run out.
 func (k Key) Valid(path, expires, signature string, now time.Time) bool {
 	if len(k.secret) == 0 {
 		return false

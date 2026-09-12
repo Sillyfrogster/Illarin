@@ -1,21 +1,8 @@
 -- +goose Up
--- A creator's content lives in elements now, and a writer builds a file out of
--- them. Nothing layers a patch over a stored original any more, so the closed
--- eight-field list, the reconciliation patch and additions as a concept go.
 drop table file_field_patches;
 
--- Preserved data is kept as `json` rather than `jsonb`. jsonb stores a parsed
--- value, so it reorders keys and drops duplicates, and a namespace that went in
--- as {"depth":4,"prompt":"","role":"system"} comes back in another order. The
--- promise this table exists for is that what a file carried returns exactly as
--- it arrived, and only the text type keeps it.
 alter table asset_preserved_data alter column payload type json using payload::json;
 
--- One derived row per asset. The export half holds the targets a download
--- menu offers and what each one costs, under the stamp of the declarations it
--- was computed from: a deploy that changes a declaration recomputes what it
--- invalidated. Facets join it later with a stamp of their own, because the two
--- halves follow different rules.
 create table asset_projections (
     asset_id     uuid primary key references assets (id) on delete cascade,
     export       jsonb not null,

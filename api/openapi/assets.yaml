@@ -156,6 +156,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: workingCopy
+          in: query
+          description: Read the private working copy. Only the owner may request it.
+          schema:
+            type: boolean
+            default: false
         - name: nsfw
           in: query
           description: >-
@@ -237,6 +243,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -273,11 +280,124 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
         '413':
           description: The file exceeds an upload limit or the account storage cap
         '503':
           description: The storage reserve cannot accept the revision
+    get:
+      operationId: getAssetReplacement
+      description: >-
+        The replacement upload this asset is still deciding about, so a creator
+        who reloads the page finds the file they left waiting.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: >-
+            The replacement still being read or reviewed, and null where the
+            asset has none waiting
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/IngestOperation'
+                  - type: 'null'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset does not belong to the creator
+  /v1/assets/{id}/revisions/{operationId}:
+    delete:
+      operationId: cancelAssetRevision
+      description: Discard a reviewed replacement preview without changing the asset.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The replacement preview was discarded
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No reviewed replacement belongs to the creator
+  /v1/assets/{id}/revisions/{operationId}/accept:
+    post:
+      operationId: acceptAssetRevision
+      description: >-
+        Apply a reviewed replacement preview to the private working copy.
+        Removing prompt protection requires explicit confirmation because it
+        can expose text in published and recorded versions immediately.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplacementAcceptance'
+      responses:
+        '200':
+          description: The accepted replacement operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestOperation'
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No reviewed replacement belongs to the creator
+        '409':
+          description: The working copy changed, the asset is frozen, or removing prompt protection needs confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplacementConflict'
   /v1/assets/{id}/blocks/{blockId}:
     put:
       operationId: saveAssetBlock
@@ -289,6 +409,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -310,6 +431,12 @@ paths:
       responses:
         '200':
           description: The saved block as it now appears on the page
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -323,7 +450,13 @@ paths:
         '404':
           description: The asset or block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: >-
+            The working copy changed, the asset is frozen, or the save would
+            make a sealed prompt public without saying so
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockSaveConflict'
         '422':
           description: The uploaded bytes have been purged and cannot return
     delete:
@@ -335,6 +468,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -350,6 +484,12 @@ paths:
       responses:
         '204':
           description: The block and everything in it were removed
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '401':
           description: No account is signed in
         '403':
@@ -357,7 +497,11 @@ paths:
         '404':
           description: The asset or block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/blocks:
     post:
       operationId: addAssetBlock
@@ -369,6 +513,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -384,6 +529,12 @@ paths:
       responses:
         '201':
           description: The new block as it now appears at the foot of the page
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -397,7 +548,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
     put:
       operationId: arrangeAssetBlocks
       description: >-
@@ -407,6 +562,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -422,6 +578,12 @@ paths:
       responses:
         '200':
           description: Every block in its saved page order
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -438,7 +600,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/blocks/{blockId}/move-and-remove:
     post:
       operationId: moveAssetBlockContent
@@ -449,6 +615,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -470,6 +637,12 @@ paths:
       responses:
         '200':
           description: Every remaining block in its saved page order
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -485,7 +658,11 @@ paths:
         '404':
           description: The asset or either block does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/preserved:
     get:
       operationId: listPreservedNamespaces
@@ -528,6 +705,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -542,6 +720,12 @@ paths:
       responses:
         '204':
           description: The namespace is gone
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '401':
           description: No account is signed in
         '403':
@@ -549,7 +733,11 @@ paths:
         '404':
           description: The asset or the namespace does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/sealed:
     get:
       operationId: exportSealedContent
@@ -608,13 +796,15 @@ paths:
     put:
       operationId: setAssetIdentity
       description: >-
-        Save the header fields that sit above an asset's blocks. The adult
+        Save the catalog fields that sit above an asset's blocks. The adult
         content answer may be null only while the asset is a draft, so nothing
-        answers it on the creator's behalf. An edit is live when it saves.
+        answers it on the creator's behalf. An edit stays private in a
+        published asset's working copy until the creator publishes the update.
       security:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -630,9 +820,32 @@ paths:
       responses:
         '204':
           description: The header is saved
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
         '400':
-          description: The name is too long
-          or a published asset was sent no adult content answer: null
+          description: >-
+            The name or blurb is too long, or a published asset was sent no
+            adult content answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                  field:
+                    description: The field a creator can correct, when one applies.
+                    type: string
+                    enum:
+                      - name
+                      - blurb
+                      - isNsfw
         '401':
           description: No account is signed in
         '403':
@@ -640,7 +853,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
   /v1/assets/{id}/publish:
     post:
       operationId: publishAsset
@@ -653,6 +870,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -662,6 +880,12 @@ paths:
       responses:
         '200':
           description: The asset as its page now reads, published
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -673,13 +897,318 @@ paths:
         '404':
           description: The draft does not belong to the creator
         '409':
-          description: >-
-            The draft is not ready, the asset is already published, or it is
-            withheld
+          description: The working copy changed or the asset is frozen
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublishRefusal'
+                $ref: '#/components/schemas/PublishConflict'
+  /v1/assets/{id}/updates:
+    get:
+      operationId: listAssetUpdates
+      description: >-
+        The versions this asset has recorded, newest first. A draft, a withheld
+        asset and a deleted one answer their owner or nobody.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The recorded versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordedVersionList'
+        '404':
+          description: The asset is not readable
+    post:
+      operationId: publishAssetUpdate
+      description: >-
+        Publish the reviewed working copy as the asset's next public version.
+        The summary says what changed, and an update that changes nothing is
+        refused rather than recorded.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateRequest'
+      responses:
+        '200':
+          description: The recorded update
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetUpdate'
+        '400':
+          description: The summary is missing or the update text is too long
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset does not belong to the creator
+        '409':
+          description: >-
+            The working copy changed, the asset is frozen or a draft, the
+            candidate falls short of the floor, or nothing has changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishConflict'
+  /v1/assets/{id}/updates/comparison:
+    get:
+      operationId: compareAssetVersions
+      description: >-
+        What changed between two recorded versions, read under the rules the
+        reader is under now. Omitting to compares the published version, and
+        omitting from compares the version recorded before it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The grouped comparison
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionComparison'
+        '404':
+          description: The asset, or one of the versions, is not readable
+        '409':
+          description: The chosen version is the first one recorded
+  /v1/assets/{id}/updates/{number}/restore:
+    post:
+      operationId: restoreAssetVersion
+      description: >-
+        Copy one recorded version into the private working copy. The public
+        version and every recorded snapshot stay unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: number
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '204':
+          description: The version is now the private working copy
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema: { type: integer, format: int64 }
+        '401': { description: No account is signed in }
+        '403': { description: The signed-in account has not verified its email }
+        '404': { description: The asset or version does not belong to the creator }
+        '409':
+          description: The working copy changed, the asset is frozen or the recorded content is no longer structurally valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreConflict'
+  /v1/assets/{id}/updates/{number}/notes:
+    patch:
+      operationId: correctAssetVersionNotes
+      description: Correct the creator-written notes on a recorded version without changing or announcing its snapshot.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: number
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetVersionNotesRequest' }
+      responses:
+        '204': { description: The corrected notes are visible with an edited marker }
+        '400': { description: The summary is empty or the corrected text is too long }
+        '401': { description: No account is signed in }
+        '403': { description: The signed-in account has not verified its email }
+        '404': { description: The asset or version does not belong to the creator }
+        '409': { description: The asset is frozen }
+  /v1/assets/{id}/updates/{number}/withdraw:
+    post:
+      operationId: withdrawAssetVersion
+      description: Withdraw an older recorded version while retaining a public number, date and explanation.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: number
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetVersionWithdrawalRequest' }
+      responses:
+        '204': { description: The older version is withdrawn }
+        '400': { description: The explanation is empty or too long }
+        '401': { description: No account is signed in }
+        '403': { description: The signed-in account has not verified its email }
+        '404': { description: The asset or version does not belong to the creator }
+        '409': { description: The version is current, already withdrawn or the asset is frozen }
+  /v1/assets/{id}/updates/protection:
+    get:
+      operationId: listProtectionMismatches
+      description: >-
+        The recorded versions whose prompts Illarin cannot line up with the
+        asset's current sealed prompts. Each one shows no prompt content and
+        offers no download until its owner settles it.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The versions still to settle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProtectionMismatchList'
+        '401':
+          description: No account is signed in
+        '404':
+          description: The asset does not belong to the creator
+  /v1/assets/{id}/updates/{number}/downloads:
+    get:
+      operationId: getRecordedVersionDownloads
+      description: >-
+        What a file of one recorded version can carry today: the formats the
+        current writers offer for the content it recorded, the pictures it
+        kept, and whether protected content keeps it out of any file. Read
+        under the asset's current access and protection, so a version whose
+        prompts are sealed now, or that recorded a prompt Illarin can no longer
+        line up with a current one, offers no download.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: nsfw
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hidden
+              - blurred
+              - shown
+      responses:
+        '200':
+          description: The version's download choices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordedVersionDownloads'
+        '404':
+          description: The asset or the version is not readable
+  /v1/assets/{id}/updates/{number}/protection:
+    put:
+      operationId: resolvePromptCorrespondence
+      description: >-
+        Say which recorded prompt each current sealed prompt is on one version.
+        A match with no recorded prompt says that version never carried it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptCorrespondenceRequest'
+      responses:
+        '204':
+          description: The correspondence is settled
+        '400':
+          description: A match names a prompt that is not one of the choices
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: The asset or version does not belong to the creator
   /v1/assets/{id}/discovery:
     put:
       operationId: setAssetDiscovery
@@ -853,6 +1382,31 @@ paths:
             list was never a choice and is refused.
           schema:
             type: string
+        - name: images
+          in: query
+          required: false
+          description: >-
+            The gallery images this one download carries, as a comma-separated
+            list of media ids. Leave the parameter off to take the creator's
+            own choice, and send it empty to take no gallery images at all. It
+            changes nothing stored and nothing another reader sees. Cover and
+            expression images are not chosen here: a cover is the card's own
+            picture and an expression set an application indexes by name, so
+            both travel whole.
+          schema:
+            type: string
+        - name: version
+          in: query
+          required: false
+          description: >-
+            The number of a recorded version to write instead of the published
+            one. The file is written now, by the current writer, from the
+            content, pictures and preserved data that version recorded, under
+            the asset's current access and protection. It is not the file the
+            creator uploaded at the time. The filename names the update.
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: >-
@@ -893,7 +1447,17 @@ paths:
                 type: string
                 format: binary
         '404':
-          description: No such asset
+          description: >-
+            No such asset, no such recorded version, or a format that version
+            is not offered in
+        '413':
+          description: >-
+            The chosen images make a file larger than Illarin will produce. The
+            whole selection is refused and nothing is left out of it.
+        '503':
+          description: >-
+            An image this download needs could not be read, so no file was
+            produced. Nothing partial is handed over.
   /v1/assets/{id}/media:
     get:
       operationId: listMedia
@@ -919,6 +1483,7 @@ paths:
         - sessionCookie: []
           browserMutation: []
       parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
         - name: id
           in: path
           required: true
@@ -944,6 +1509,12 @@ paths:
       responses:
         '201':
           description: A new immutable media record
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
           content:
             application/json:
               schema:
@@ -957,7 +1528,11 @@ paths:
         '404':
           description: The asset does not belong to the creator
         '409':
-          description: The asset is withheld and cannot be changed
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
         '413':
           description: The image exceeds an upload limit or the account storage cap
         '503':
@@ -1058,7 +1633,276 @@ paths:
         '404':
           description: No such ingest operation for this creator
 components:
+  parameters:
+    WorkingCopyVersion:
+      name: X-Working-Copy-Version
+      in: header
+      required: true
+      description: The workingCopyVersion returned with the candidate the creator reviewed
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
   schemas:
+    CandidateConflict:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [working_copy_conflict, asset_frozen]
+        currentVersion:
+          type: integer
+          format: int64
+          description: Present only for an authorized stale request; reload the working copy before retrying
+    RestoreConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - type: object
+          required: [error, code]
+          properties:
+            error:
+              type: string
+            code:
+              type: string
+              enum: [invalid_recorded_version]
+    PublishConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/PublishRefusal'
+    BlockSaveConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/SealedExposureRefusal'
+    ReplacementConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/SealedExposureRefusal'
+    SealedExposureRefusal:
+      type: object
+      required: [error, code, prompts]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [sealed_exposure]
+        prompts:
+          description: The prompts whose protection would be removed
+          type: array
+          items:
+            type: string
+    RecordedVersion:
+      type: object
+      required:
+        - id
+        - number
+        - recordedAt
+        - initial
+        - versionLabel
+        - summary
+        - notes
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        initial:
+          description: >-
+            Whether this version was captured from what the asset already was,
+            rather than published as an update.
+          type: boolean
+        versionLabel:
+          type: string
+        summary:
+          type: string
+        notes:
+          type: string
+        notesEditedAt:
+          type: string
+          format: date-time
+        withdrawnAt:
+          type: string
+          format: date-time
+        withdrawalExplanation:
+          type: string
+    RecordedVersionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordedVersion'
+    RecordedVersionDownloads:
+      type: object
+      required:
+        - version
+        - kind
+        - linkedInstallOnly
+        - downloads
+        - appTargets
+        - blocks
+        - media
+      properties:
+        version:
+          $ref: '#/components/schemas/RecordedVersion'
+        kind:
+          type: string
+          enum:
+            - character
+            - lorebook
+            - preset
+            - theme
+            - pack
+        linkedInstallOnly:
+          type: boolean
+          description: >-
+            Whether protected content keeps this version out of any file. True
+            while the asset installs only through a linked app, and for a
+            version that recorded a sealed prompt the asset no longer carries.
+        downloads:
+          type: array
+          description: >-
+            The formats the current writers offer for the content this version
+            recorded, with the loss each one costs it. Empty while
+            linkedInstallOnly is true.
+          items:
+            $ref: '#/components/schemas/DownloadTarget'
+        appTargets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppTarget'
+        blocks:
+          type: array
+          description: >-
+            The blocks this version recorded, under the asset's current
+            protection, so a reader can choose which of its gallery images a
+            download carries.
+          items:
+            $ref: ./blocks.yaml#/components/schemas/AssetBlock
+        media:
+          type: array
+          description: >-
+            The pictures this version recorded, cover first, addressed under the
+            reader's own adult-content preference.
+          items:
+            $ref: '#/components/schemas/AssetImage'
+    VersionChange:
+      type: object
+      required: [kind, name]
+      properties:
+        kind:
+          type: string
+          enum: [addition, removal, change]
+        name:
+          type: string
+        note:
+          description: What changed about an item when there is no wording to show
+          type: string
+        previousName:
+          type: string
+        before:
+          type: string
+        after:
+          type: string
+        beforeImage:
+          description: The address of the picture this change replaced or removed
+          type: string
+        afterImage:
+          description: The address of the picture this change added or replaced it with
+          type: string
+    VersionChangeGroup:
+      type: object
+      required: [subject, label, changes]
+      properties:
+        subject:
+          type: string
+        label:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionChange'
+    VersionComparison:
+      type: object
+      required: [from, to, groups, promptsWithheld]
+      properties:
+        from:
+          $ref: '#/components/schemas/RecordedVersion'
+        to:
+          $ref: '#/components/schemas/RecordedVersion'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionChangeGroup'
+        unavailable:
+          description: Why a version may not be opened, leaving the groups empty
+          type: string
+        promptsWithheld:
+          description: >-
+            Whether a version's prompts could not be matched to the asset's
+            current sealed prompts, so none of them are shown
+          type: boolean
+    NamedPrompt:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    ProtectionMismatch:
+      type: object
+      required: [version, unmatched, recorded]
+      properties:
+        version:
+          $ref: '#/components/schemas/RecordedVersion'
+        unmatched:
+          description: The sealed prompts this version does not carry under the same id
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedPrompt'
+        recorded:
+          description: The prompts this version does carry, which a match chooses from
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedPrompt'
+    ProtectionMismatchList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProtectionMismatch'
+    PromptCorrespondenceRequest:
+      type: object
+      additionalProperties: false
+      required: [matches]
+      properties:
+        matches:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [current]
+            properties:
+              current:
+                description: A prompt the asset seals right now
+                type: string
+                format: uuid
+              recorded:
+                description: The prompt this version carries in its place, absent where it carries none
+                type: string
+                format: uuid
     Asset:
       type: object
       required:
@@ -1127,6 +1971,7 @@ components:
         - allowedApps
         - eligibleApps
         - downloads
+        - appTargets
         - original
         - createdAt
         - blocks
@@ -1134,6 +1979,15 @@ components:
         - preview
         - visibility
       properties:
+        workingCopyVersion:
+          type: integer
+          format: int64
+          description: Only returned with the owner's working copy or draft, from the same read snapshot
+        unpublishedChanges:
+          type: boolean
+          description: >-
+            Whether the working copy differs from the version readers see.
+            Returned with the owner's working copy of a published asset.
         id:
           type: string
           format: uuid
@@ -1211,6 +2065,14 @@ components:
             capability report.
           items:
             $ref: '#/components/schemas/DownloadTarget'
+        appTargets:
+          type: array
+          description: >-
+            One entry per application that reads a format this asset is offered
+            in, naming the format that lands most of the asset in it. An
+            application no offered format reaches is absent.
+          items:
+            $ref: '#/components/schemas/AppTarget'
         original:
           description: >-
             The creator's own upload. Null for an asset built from nothing,
@@ -1270,8 +2132,30 @@ components:
             - hidden
             - blurred
             - shown
+        latestUpdate:
+          description: >-
+            The newest version this asset has recorded, and the one readers
+            have. Absent on a draft, which has recorded none.
+          $ref: '#/components/schemas/RecordedVersion'
         withhold:
           $ref: '#/components/schemas/AssetWithhold'
+    AppTarget:
+      type: object
+      required:
+        - id
+        - label
+        - format
+      properties:
+        id:
+          type: string
+          description: The application id, matching the ids allowedApps uses.
+        label:
+          type: string
+        format:
+          type: string
+          description: >-
+            The offered format Illarin writes for this application, chosen by
+            what reaches it rather than by how many applications read it.
     DownloadTarget:
       type: object
       required:
@@ -1320,9 +2204,18 @@ components:
         destination:
           type: string
           description: >-
-            Where the content lands when that is not the format's standard home
-            for it. Independent of how much survives, so it rides on a carried
-            verdict too.
+            One plain sentence for content that lands somewhere other than the
+            format's standard home for it, saying what a reader gets. Independent
+            of how much survives, so it rides on a carried verdict too. Names no
+            application: shownBy carries that.
+        shownBy:
+          type: array
+          description: >-
+            The applications that show what the destination writes. Present only
+            beside a destination, and the rest of the named applications receive
+            the file without that content reaching them.
+          items:
+            type: string
         sample:
           $ref: '#/components/schemas/DownloadSample'
     DownloadSample:
@@ -1386,10 +2279,16 @@ components:
       additionalProperties: false
       required:
         - name
+        - blurb
         - isNsfw
       properties:
         name:
           type: string
+        blurb:
+          description: >-
+            The catalog pitch written for a person. An empty value clears it.
+          type: string
+          maxLength: 400
         isNsfw:
           description: Null is the unanswered state, which only a draft may be in.
           type:
@@ -1423,11 +2322,99 @@ components:
       properties:
         error:
           type: string
+        code:
+          type: string
+          enum: [not_ready, already_published, no_changes]
         readiness:
           description: The whole floor, so a refusal names every missing item at once.
           type: array
           items:
             $ref: '#/components/schemas/ReadinessItem'
+    AssetUpdateRequest:
+      type: object
+      required:
+        - summary
+      properties:
+        summary:
+          description: A short line saying what changed, which every update needs
+          type: string
+          maxLength: 200
+        notes:
+          description: The longer explanation, where the creator writes one
+          type: string
+          maxLength: 4000
+        versionLabel:
+          description: Free text a creator may repeat, keeping the asset's own version where it is empty
+          type: string
+          maxLength: 60
+        destinationIds:
+          description: >-
+            The creator's own active destinations this update is announced to.
+            Absent, a listed asset uses the destinations remembered for it and an
+            unlisted asset announces nowhere. Present, the list is remembered for
+            the next update, and an empty list publishes quietly. Nothing is sent
+            inside this request; delivery follows on its own schedule.
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        announceUnlisted:
+          description: >-
+            Consent to send an unlisted asset's direct link. Required whenever
+            destinationIds names anything for an unlisted asset; ignored for a
+            listed one.
+          type: boolean
+    AssetVersionNotesRequest:
+      type: object
+      additionalProperties: false
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 4000
+    AssetVersionWithdrawalRequest:
+      type: object
+      additionalProperties: false
+      required: [explanation]
+      properties:
+        explanation:
+          type: string
+          maxLength: 1000
+    AssetUpdate:
+      type: object
+      required:
+        - id
+        - number
+        - recordedAt
+        - versionLabel
+        - summary
+        - notes
+        - contentGeneration
+        - contentChanged
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        recordedAt:
+          type: string
+          format: date-time
+        versionLabel:
+          type: string
+        summary:
+          type: string
+        notes:
+          type: string
+        contentGeneration:
+          type: integer
+        contentChanged:
+          description: Whether this update changed the file linked apps download
+          type: boolean
     DeletedAssetList:
       type: object
       required:
@@ -1511,6 +2498,7 @@ components:
         - thumbUrl
         - width
         - height
+        - bytes
       properties:
         id:
           type: string
@@ -1536,6 +2524,12 @@ components:
         height:
           type: integer
           minimum: 1
+        bytes:
+          type: integer
+          minimum: 0
+          description: >-
+            The stored file's size, which is what the download chooser adds up
+            to say how large a file a choice of images will make.
     AssetList:
       type: object
       required:
@@ -1783,6 +2777,8 @@ components:
           enum:
             - pending
             - processing
+            - preview
+            - cancelled
             - failed
             - success
         url:
@@ -1793,6 +2789,51 @@ components:
             - type: 'null'
         failure:
           $ref: '#/components/schemas/IngestFailure'
+        preview:
+          $ref: '#/components/schemas/ReplacementPreview'
+    ReplacementPreview:
+      type: object
+      required: [format, groups, conflicts, unrepresentable, missingWording, seals]
+      properties:
+        format:
+          type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionChangeGroup'
+        conflicts:
+          description: >-
+            The subjects where the file overwrites an edit made since the
+            asset was last published
+          type: array
+          items:
+            type: string
+        unrepresentable:
+          type: array
+          items:
+            type: string
+        missingWording:
+          description: >-
+            Sealed prompts whose wording is not in the file or the current asset
+          type: array
+          items:
+            type: string
+        seals:
+          description: How many prompt fragments the file would seal
+          type: integer
+    ReplacementAcceptance:
+      type: object
+      required: [unrepresentable]
+      properties:
+        exposeProtected:
+          type: boolean
+          default: false
+          description: Confirms that removing protection may expose published and recorded prompt text immediately
+        unrepresentable:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [keep, remove]
     IngestFailure:
       type: object
       required:
@@ -1807,6 +2848,9 @@ components:
             - unsupported_version
             - safety_violation
             - wrong_kind
+            - working_copy_conflict
+            - asset_unavailable
+            - limit_exceeded
             - internal_failure
         message:
           type: string

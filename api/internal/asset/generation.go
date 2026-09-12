@@ -1,14 +1,16 @@
 package asset
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
@@ -19,9 +21,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Content generation advances when a change alters downloadable bytes.
-
-// contentFingerprint excludes page arrangement and digests elements by ID.
 func (s *Service) contentFingerprint(
 	ctx context.Context,
 	q db.DBTX,
@@ -45,8 +44,6 @@ func (s *Service) contentFingerprint(
 	if err != nil {
 		return "", fmt.Errorf("read the asset to fingerprint: %w", err)
 	}
-	// The origin decides which writers are offered and which preserved
-	// namespaces travel, so a moved origin is a moved file.
 	fmt.Fprintf(digest, "asset\x00%s\x00%s\n", kind, origin.String)
 
 	values := map[format.HeaderField]string{
@@ -71,16 +68,17 @@ func (s *Service) contentFingerprint(
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
+	names, err := fingerprintNames(ctx, q, assetID, elements)
+	if err != nil {
+		return "", err
+	}
 	slices.SortFunc(elements, func(a, b block.Element) int {
-		return bytes.Compare(a.ID[:], b.ID[:])
+		return strings.Compare(names[a.ID], names[b.ID])
 	})
 	for _, element := range elements {
-		// An element the creator has left empty is one no writer writes, so a
-		// block added and not yet filled in changes no file.
 		if element.Content == nil || element.Content.Empty() {
 			continue
 		}
-		// Prompt protection does not change generated content.
 		if prompts, ok := element.Content.(block.PromptList); ok {
 			prompts.Fragments = append([]block.PromptFragment(nil), prompts.Fragments...)
 			for index := range prompts.Fragments {
@@ -92,25 +90,61 @@ func (s *Service) contentFingerprint(
 		if err != nil {
 			return "", fmt.Errorf("fingerprint the %s element: %w", element.Role, err)
 		}
-		fmt.Fprintf(digest, "element\x00%s\x00%s\x00%s\n", element.ID, element.Role, content)
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(string(content)))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			return "", err
+		}
+		content, err = json.Marshal(steadyIDs(value, names))
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(digest, "element\x00%s\x00%s\n", names[element.ID], content)
 	}
 
-	if err := fingerprintPreserved(ctx, q, assetID, digest); err != nil {
+	if err := fingerprintPreserved(ctx, q, assetID, names, digest); err != nil {
 		return "", err
 	}
-	if err := fingerprintPictures(ctx, q, assetID, elements, uuidOrNil(cover), digest); err != nil {
+	if err := fingerprintPictures(ctx, q, assetID, elements, uuidOrNil(cover), names, digest); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(digest.Sum(nil)), nil
 }
 
-// fingerprintPreserved digests what the asset kept from the file it arrived
-// as, exactly as it is stored. A namespace deleted or replaced is a namespace
-// the next download will not carry.
+// fingerprintNames gives imported elements, items and pictures stable comparison keys.
+func fingerprintNames(ctx context.Context, q db.DBTX, assetID uuid.UUID, elements []block.Element) (map[uuid.UUID]string, error) {
+	names := make(map[uuid.UUID]string)
+	counts := make(map[string]int)
+	for _, element := range elements {
+		key := string(element.Type) + "/" + string(element.Role)
+		counts[key]++
+		key += "/" + strconv.Itoa(counts[key])
+		names[element.ID] = key
+		for index, id := range block.ItemIDs(element.Content) {
+			names[id] = key + "/" + strconv.Itoa(index)
+		}
+	}
+	rows, err := q.Query(ctx, `select id, blob_id from asset_media where asset_id = $1`, assetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, blob uuid.UUID
+		if err := rows.Scan(&id, &blob); err != nil {
+			return nil, err
+		}
+		names[id] = "picture/" + blob.String()
+	}
+	return names, rows.Err()
+}
+
 func fingerprintPreserved(
 	ctx context.Context,
 	q db.DBTX,
 	assetID uuid.UUID,
+	names map[uuid.UUID]string,
 	digest hash.Hash,
 ) error {
 	rows, err := q.Query(ctx, `
@@ -123,28 +157,44 @@ func fingerprintPreserved(
 		return fmt.Errorf("read preserved data to fingerprint: %w", err)
 	}
 	defer rows.Close()
+	entries := []string{}
 	for rows.Next() {
 		var ownerKind, namespace, payload string
 		var ownerID uuid.UUID
 		if err := rows.Scan(&ownerKind, &ownerID, &namespace, &payload); err != nil {
 			return fmt.Errorf("read a preserved row to fingerprint: %w", err)
 		}
-		fmt.Fprintf(digest, "preserved\x00%s\x00%s\x00%s\x00%s\n",
-			ownerKind, ownerID, namespace, payload)
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(payload))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		canonical, err := json.Marshal(steadyIDs(value, names))
+		if err != nil {
+			return err
+		}
+		owner := ownerID.String()
+		if stable, ok := names[ownerID]; ok {
+			owner = stable
+		}
+		entries = append(entries, fmt.Sprintf("preserved\x00%s\x00%s\x00%s\x00%s\n",
+			ownerKind, owner, namespace, canonical))
+	}
+	slices.Sort(entries)
+	for _, entry := range entries {
+		fmt.Fprint(digest, entry)
 	}
 	return rows.Err()
 }
 
-// fingerprintPictures digests the cover and every image an element points at,
-// which are the pictures a writer may put in the file. The blob behind each one
-// stands for its bytes, so a replaced picture reads as a changed file without
-// any of them being opened.
 func fingerprintPictures(
 	ctx context.Context,
 	q db.DBTX,
 	assetID uuid.UUID,
 	elements []block.Element,
 	cover *uuid.UUID,
+	names map[uuid.UUID]string,
 	digest hash.Hash,
 ) error {
 	wanted := make([]uuid.UUID, 0)
@@ -173,21 +223,22 @@ func fingerprintPictures(
 		return fmt.Errorf("read pictures to fingerprint: %w", err)
 	}
 	defer rows.Close()
+	entries := []string{}
 	for rows.Next() {
 		var mediaID, blobID uuid.UUID
 		var current bool
 		if err := rows.Scan(&mediaID, &blobID, &current); err != nil {
 			return fmt.Errorf("read a picture to fingerprint: %w", err)
 		}
-		fmt.Fprintf(digest, "picture\x00%s\x00%s\x00%t\n", mediaID, blobID, current)
+		entries = append(entries, fmt.Sprintf("picture\x00%s\x00%s\x00%t\n", names[mediaID], blobID, current))
+	}
+	slices.Sort(entries)
+	for _, entry := range entries {
+		fmt.Fprint(digest, entry)
 	}
 	return rows.Err()
 }
 
-// moveContentGeneration advances the counter where the change just made would
-// alter a file a reader could download, and leaves it alone otherwise. The
-// before fingerprint has to have been taken in this transaction, under the row
-// lock the change itself holds.
 func (s *Service) moveContentGeneration(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -202,7 +253,8 @@ func (s *Service) moveContentGeneration(
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		update assets set content_generation = content_generation + 1 where id = $1
+		update assets set content_generation = content_generation + 1
+		 where id = $1 and published_snapshot_id is null
 	`, assetID); err != nil {
 		return fmt.Errorf("move the content generation: %w", err)
 	}

@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Bodoni_Moda, Manrope } from "next/font/google";
 import { ArtFilters } from "@/components/art/ArtFilters";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
+import { StoredTheme } from "@/components/layout/StoredTheme";
+import { blogAddress } from "@/lib/blog-address";
+import { FONT_VARIABLES } from "@/lib/fonts";
+import { siteAddress } from "@/lib/site-address";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -14,22 +15,12 @@ import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const bodoni = Bodoni_Moda({
-  variable: "--font-bodoni",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: SITE_NAME, template: `%s \u00b7 ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  manifest: "/site.webmanifest",
   openGraph: {
     ...siteOpenGraph(),
     title: SITE_NAME,
@@ -43,31 +34,25 @@ export const metadata: Metadata = {
   },
 };
 
-/** The browser chrome follows the reader's theme */
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f3f0" },
-    { media: "(prefers-color-scheme: dark)", color: "#050505" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${bodoni.variable} ${manrope.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={FONT_VARIABLES} suppressHydrationWarning>
       <head>
         <script>{THEME_BOOTSTRAP_SCRIPT}</script>
       </head>
       <body>
+        <StoredTheme />
         <ArtFilters />
-        <Providers>
-          <SiteHeader />
-          <main>{children}</main>
-          <SiteFooter />
+        <Providers origins={{ site: siteAddress("/"), blog: blogAddress("/") }}>
+          {children}
         </Providers>
       </body>
     </html>

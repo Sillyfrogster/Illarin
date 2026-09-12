@@ -1,5 +1,4 @@
 -- +goose Up
--- The v1 public path, `creator/name`, kept so a link pasted a year ago lands.
 create table asset_legacy_paths (
     path       text primary key,
     asset_id   uuid not null references assets (id) on delete cascade,
@@ -9,8 +8,6 @@ create table asset_legacy_paths (
 
 create index asset_legacy_paths_asset_idx on asset_legacy_paths (asset_id);
 
--- v1 rows kept whole because deleting is irreversible and keeping commits
--- Illarin to nothing. Nothing reads these at runtime.
 create table migration_preserved_records (
     id           uuid primary key,
     source_table text  not null,
@@ -26,7 +23,6 @@ create index migration_preserved_records_asset_idx
     on migration_preserved_records (asset_id)
  where asset_id is not null;
 
--- v1's own counters, kept beside the asset rather than inside creator content.
 create table migration_legacy_counters (
     asset_id   uuid primary key references assets (id) on delete cascade,
     downloads  integer not null,
@@ -35,9 +31,6 @@ create table migration_legacy_counters (
     updated_at timestamptz not null
 );
 
--- What phase one already put on disk. The sweep cannot see this table, so an
--- aborted run leaves unreferenced blobs it collects, and the cascade takes the
--- staging row with them.
 create table migration_staged_media (
     source    text primary key,
     blob_id   uuid    not null references blobs (id) on delete cascade,

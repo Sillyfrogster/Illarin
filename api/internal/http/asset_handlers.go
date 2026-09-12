@@ -16,7 +16,7 @@ import (
 )
 
 func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
-	admin, ok := h.admin(c)
+	admin, ok := h.adminAccount(c, "manage withholds")
 	if !ok {
 		return
 	}
@@ -39,7 +39,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
 }
 
 func (h *Handlers) ClearAssetWithhold(c *gin.Context, id types.UUID) {
-	if _, ok := h.admin(c); !ok {
+	if _, ok := h.adminAccount(c, "manage withholds"); !ok {
 		return
 	}
 	err := h.assets.ClearWithhold(c.Request.Context(), uuid.UUID(id))
@@ -51,28 +51,6 @@ func (h *Handlers) ClearAssetWithhold(c *gin.Context, id types.UUID) {
 	default:
 		c.Status(http.StatusNoContent)
 	}
-}
-
-func (h *Handlers) admin(c *gin.Context) (account.Account, bool) {
-	token, err := c.Cookie(sessionCookieName)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sign in before managing assets."})
-		return account.Account{}, false
-	}
-	current, err := h.accounts.Current(c.Request.Context(), token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check the signed-in account."})
-		return account.Account{}, false
-	}
-	if current == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sign in before managing assets."})
-		return account.Account{}, false
-	}
-	if !current.EmailVerified || current.Role != account.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only an admin can manage withholds."})
-		return account.Account{}, false
-	}
-	return *current, true
 }
 
 func (h *Handlers) viewerID(c *gin.Context) (*uuid.UUID, bool) {
@@ -98,7 +76,7 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 	f := asset.ListFilter{}
 
 	if params.Creator != nil {
-		profile, err := h.accounts.Profile(c.Request.Context(), strings.ToLower(*params.Creator))
+		creator, err := h.accounts.CreatorListing(c.Request.Context(), strings.ToLower(*params.Creator))
 		if errors.Is(err, account.ErrProfileNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
 			return
@@ -114,8 +92,8 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 			return
 		}
 		f.Profile = &asset.ProfileListingScope{
-			CreatorID:        profile.ID,
-			CreatorShowsNSFW: profile.ShowNSFWContributionsOnProfile,
+			CreatorID:        creator.ID,
+			CreatorShowsNSFW: creator.ShowNSFWContributionsOnProfile,
 		}
 		if current != nil {
 			f.Profile.ViewerID = &current.ID
@@ -214,8 +192,6 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 	})
 }
 
-// CreateAsset brings a file in, or starts an asset from nothing when the body
-// is JSON naming a kind. Both paths land on the same page.
 func (h *Handlers) CreateAsset(c *gin.Context) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
@@ -272,7 +248,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAssetRevisionParams) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -294,18 +270,19 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	operation, err := h.assets.AcceptRevision(c.Request.Context(), asset.RevisionInput{
 		OwnerID:  owner.ID,
 		AssetID:  uuid.UUID(id),
 		Filename: file.FileName(),
 		File:     limitedFile,
-	})
+	}, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
-		return
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 		return
 	case errors.Is(err, storage.ErrTombstoned):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "This file cannot be accepted."})
@@ -318,6 +295,87 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID) {
 	location := "/v1/ingests/" + operation.ID.String()
 	c.Header("Location", location)
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
+}
+
+func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	operation, err := h.assets.ReviewedReplacement(c.Request.Context(), owner.ID, uuid.UUID(id))
+	if errors.Is(err, asset.ErrIngestNotFound) {
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load the replacement file. Try again."})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIIngest(operation))
+}
+
+func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID, params AcceptAssetRevisionParams) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	var body ReplacementAcceptance
+	if err := c.ShouldBindJSON(&body); err != nil {
+		h.refuse(c, refusal{reason: "send the replacement decisions as JSON", cause: err})
+		return
+	}
+	decisions := make(map[string]string, len(body.Unrepresentable))
+	for role, decision := range body.Unrepresentable {
+		decisions[role] = string(decision)
+	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID), candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
+	if candidateResult(c, candidate, err) {
+		return
+	}
+	var exposure asset.ExposureRefusal
+	if errors.As(err, &exposure) {
+		c.JSON(http.StatusConflict, SealedExposureRefusal{
+			Error:   "This replacement removes prompt protection. Confirm that text in this asset and its recorded versions may become public immediately.",
+			Code:    SealedExposure,
+			Prompts: exposure.Prompts,
+		})
+		return
+	}
+	if errors.Is(err, asset.ErrIngestNotFound) || errors.Is(err, asset.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		return
+	}
+	if errors.Is(err, asset.ErrReplacementDecision) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+	if _, why, classified := format.Explain(err); classified {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": why})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not apply the replacement file. Try again."})
+		return
+	}
+	c.JSON(http.StatusOK, toAPIIngest(operation))
+}
+
+func (h *Handlers) CancelAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID) {
+	owner, ok := h.uploadOwner(c)
+	if !ok {
+		return
+	}
+	err := h.assets.CancelReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID))
+	if errors.Is(err, asset.ErrIngestNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not discard the replacement file. Try again."})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 func (h *Handlers) DeleteAsset(c *gin.Context, id types.UUID) {
@@ -378,7 +436,7 @@ func (h *Handlers) ListDeletedAssets(c *gin.Context, handle string) {
 	c.JSON(http.StatusOK, DeletedAssetList{Items: items})
 }
 
-func (h *Handlers) AddMedia(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddMedia(c *gin.Context, id types.UUID, params AddMediaParams) {
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -403,18 +461,18 @@ func (h *Handlers) AddMedia(c *gin.Context, id types.UUID) {
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	added, err := h.assets.AddMedia(c.Request.Context(), asset.AddMediaInput{
 		OwnerID: owner.ID,
 		AssetID: uuid.UUID(id),
 		Role:    asset.MediaRole(metadata.Role),
 		File:    limitedFile,
-	})
-	if errors.Is(err, asset.ErrMediaNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+	}, candidate)
+	if candidateResult(c, candidate, err) {
 		return
 	}
-	if errors.Is(err, asset.ErrAssetFrozen) {
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
+	if errors.Is(err, asset.ErrMediaNotFound) || errors.Is(err, asset.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return
 	}
 	if err != nil {
@@ -424,7 +482,6 @@ func (h *Handlers) AddMedia(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, toAPIMedia(added))
 }
 
-// readerVisibility returns the request override or the account preference.
 func (h *Handlers) readerVisibility(
 	c *gin.Context,
 	requested *string,
@@ -443,9 +500,6 @@ func (h *Handlers) readerVisibility(
 	return asset.ContentVisibility(preference), true
 }
 
-// GetAsset answers an asset's own page. For anyone but the owner, withheld,
-// deleted and never-existed all leave through the same 404, so no response says
-// which.
 func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams) {
 	viewerID, ok := h.viewerID(c)
 	if !ok {
@@ -460,7 +514,11 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 	if !ok {
 		return
 	}
-	found, err := h.assets.Detail(c.Request.Context(), uuid.UUID(id), viewerID, visibility)
+	read := h.assets.Detail
+	if params.WorkingCopy != nil && *params.WorkingCopy {
+		read = h.assets.WorkingCopy
+	}
+	found, err := read(c.Request.Context(), uuid.UUID(id), viewerID, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return
@@ -500,7 +558,7 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context, id types.UUID) {
 			"error": "Discovery applies once the asset is published.",
 		})
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save discovery."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the catalog listing. Try again."})
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -511,8 +569,47 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	for _, tag := range found.Tags {
 		tags = append(tags, AssetTag{Label: tag.Label, Value: tag.Value})
 	}
-	media := make([]AssetImage, 0, len(found.Media))
-	for _, image := range found.Media {
+	media := toAPIImages(found.Media)
+	blocks, err := toAPIBlocks(found.Kind, found.Blocks)
+	if err != nil {
+		return AssetDetail{}, err
+	}
+	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
+	return AssetDetail{
+		WorkingCopyVersion: found.WorkingCopyVersion,
+		UnpublishedChanges: found.UnpublishedChanges,
+		Id:                 types.UUID(found.ID),
+		Kind:               AssetDetailKind(found.Kind),
+		Name:               found.Name,
+		Blurb:              found.Blurb,
+		Tags:               tags,
+		Creator:            found.Creator,
+		IsNsfw:             found.IsNSFW,
+		Discovery:          AssetDetailDiscovery(found.Discovery),
+		Lifecycle:          AssetDetailLifecycle(found.Lifecycle),
+		IsOwner:            found.IsOwner,
+		LinkedInstallOnly:  found.LinkedInstallOnly,
+		AllowedApps:        apiAllowedApps(found.AllowedApps),
+		EligibleApps:       apiEligibleApps(found.EligibleApps),
+		Downloads:          toAPIDownloads(found.Downloads),
+		AppTargets:         toAPIAppTargets(found.AppTargets),
+		Original:           toAPIOriginalUpload(found.Original),
+		CreatedAt:          found.CreatedAt,
+		Blocks:             blocks,
+		Media:              media,
+		Preview:            found.Preview,
+		Readiness:          toAPIReadiness(found.Readiness),
+		SealedBlocks:       countOrAbsent(found.SealedBlocks),
+		AddableBlocks:      addable,
+		Visibility:         AssetDetailVisibility(visibility),
+		LatestUpdate:       toAPILatestUpdate(found.LatestUpdate),
+		Withhold:           toAPIWithhold(found.Withhold),
+	}, nil
+}
+
+func toAPIImages(images []asset.DetailImage) []AssetImage {
+	media := make([]AssetImage, 0, len(images))
+	for _, image := range images {
 		media = append(media, AssetImage{
 			Id:        types.UUID(image.ID),
 			Role:      AssetImageRole(image.Role),
@@ -521,39 +618,18 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 			ThumbUrl:  image.ThumbURL,
 			Width:     image.Width,
 			Height:    image.Height,
+			Bytes:     int(image.Bytes),
 		})
 	}
-	blocks, err := toAPIBlocks(found.Kind, found.Blocks)
-	if err != nil {
-		return AssetDetail{}, err
+	return media
+}
+
+func toAPILatestUpdate(recorded *asset.Version) *RecordedVersion {
+	if recorded == nil {
+		return nil
 	}
-	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
-	return AssetDetail{
-		Id:                types.UUID(found.ID),
-		Kind:              AssetDetailKind(found.Kind),
-		Name:              found.Name,
-		Blurb:             found.Blurb,
-		Tags:              tags,
-		Creator:           found.Creator,
-		IsNsfw:            found.IsNSFW,
-		Discovery:         AssetDetailDiscovery(found.Discovery),
-		Lifecycle:         AssetDetailLifecycle(found.Lifecycle),
-		IsOwner:           found.IsOwner,
-		LinkedInstallOnly: found.LinkedInstallOnly,
-		AllowedApps:       apiAllowedApps(found.AllowedApps),
-		EligibleApps:      apiEligibleApps(found.EligibleApps),
-		Downloads:         toAPIDownloads(found.Downloads),
-		Original:          toAPIOriginalUpload(found.Original),
-		CreatedAt:         found.CreatedAt,
-		Blocks:            blocks,
-		Media:             media,
-		Preview:           found.Preview,
-		Readiness:         toAPIReadiness(found.Readiness),
-		SealedBlocks:      countOrAbsent(found.SealedBlocks),
-		AddableBlocks:     addable,
-		Visibility:        AssetDetailVisibility(visibility),
-		Withhold:          toAPIWithhold(found.Withhold),
-	}, nil
+	served := toAPIRecordedVersion(*recorded)
+	return &served
 }
 
 func apiAllowedApps(apps []string) []AssetDetailAllowedApps {
@@ -572,7 +648,6 @@ func apiEligibleApps(apps []string) []AssetDetailEligibleApps {
 	return result
 }
 
-// toAPIDownloads builds the available download choices.
 func toAPIDownloads(targets []format.Target) []DownloadTarget {
 	downloads := make([]DownloadTarget, 0, len(targets))
 	for _, target := range targets {
@@ -583,6 +658,7 @@ func toAPIDownloads(targets []format.Target) []DownloadTarget {
 				Verdict:     DownloadRoleVerdictVerdict(role.Verdict),
 				Reason:      textOrNil(role.Reason),
 				Destination: textOrNil(role.Destination),
+				ShownBy:     listOrNil(role.ShownBy),
 				Sample:      toAPIDownloadSample(role.Sample),
 			})
 		}
@@ -592,6 +668,14 @@ func toAPIDownloads(targets []format.Target) []DownloadTarget {
 		})
 	}
 	return downloads
+}
+
+func toAPIAppTargets(apps []format.AppTarget) []AppTarget {
+	targets := make([]AppTarget, 0, len(apps))
+	for _, app := range apps {
+		targets = append(targets, AppTarget{Id: app.ID, Label: app.Label, Format: app.Format})
+	}
+	return targets
 }
 
 func toAPIDownloadSample(sample block.Sample) DownloadSample {
@@ -619,6 +703,13 @@ func toAPIOriginalUpload(found *asset.OriginalUpload) *OriginalUpload {
 	}
 }
 
+func listOrNil(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return &values
+}
+
 func textOrNil(value string) *string {
 	if value == "" {
 		return nil
@@ -626,8 +717,6 @@ func textOrNil(value string) *string {
 	return &value
 }
 
-// toAPIAddableBlocks serves the add tray's catalog. Only the owner can add a
-// block, so nobody else is handed the list.
 func toAPIAddableBlocks(kind string, isOwner bool) *[]AddableBlock {
 	if !isOwner {
 		return nil
@@ -696,7 +785,7 @@ func (h *Handlers) GetIngest(c *gin.Context, id types.UUID) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the ingest operation"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load import status. Try again."})
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))
@@ -715,7 +804,33 @@ func toAPIIngest(operation asset.IngestOperation) gin.H {
 			"message": operation.Failure.Message,
 		}
 	}
+	if operation.Preview != nil {
+		groups := make([]VersionChangeGroup, 0, len(operation.Preview.Groups))
+		for _, group := range operation.Preview.Groups {
+			changes := make([]VersionChange, 0, len(group.Changes))
+			for _, change := range group.Changes {
+				changes = append(changes, toAPIChange(change))
+			}
+			groups = append(groups, VersionChangeGroup{
+				Subject: group.Subject, Label: group.Label, Changes: changes,
+			})
+		}
+		response["preview"] = gin.H{
+			"format": operation.Preview.Format, "groups": groups,
+			"conflicts":       nonNilStrings(operation.Preview.Conflicts),
+			"unrepresentable": nonNilStrings(operation.Preview.Unrepresentable),
+			"missingWording":  nonNilStrings(operation.Preview.MissingWording),
+			"seals":           operation.Preview.Seals,
+		}
+	}
 	return response
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 func ingestAsset(a *asset.Asset) *Asset {
@@ -726,8 +841,6 @@ func ingestAsset(a *asset.Asset) *Asset {
 	return &converted
 }
 
-// ResolveLegacyAsset answers for a v1 public address. The lookup happens before
-// any redirect, so the answer never confirms an asset a visitor may not see.
 func (h *Handlers) ResolveLegacyAsset(c *gin.Context, author string, name string) {
 	found, err := h.assets.ResolveLegacyAddress(c.Request.Context(), author+"/"+name)
 	if errors.Is(err, asset.ErrNotFound) {
@@ -771,7 +884,6 @@ func toAPI(a asset.Asset) Asset {
 	}
 }
 
-// countOrAbsent leaves the field out where there is nothing to count, because a zero would read as an answer this reader is not entitled to.
 func countOrAbsent(count int) *int {
 	if count == 0 {
 		return nil

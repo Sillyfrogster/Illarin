@@ -1,23 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
   contentItemCount,
+  EXCERPT_DEFINITIONS,
+  editsInTheRail,
   elementTracks,
-  fitsInTheSheet,
-  INLINE_ITEM_LIMIT,
   LAYOUTS,
   layoutChoiceIssue,
   NARROW_BLOCK_GRID_PX,
-  ORNAMENT_MINIMUM_COLUMNS,
-  opensFullScreen,
-  ornamentPlacement,
   packBlockRows,
-  pageFullness,
-  rowRemainder,
   suggestedBlockWidth,
   suggestionCandidateWidths,
   WIDTH_COLUMNS,
   WIDTH_FLOORS_PX,
   widthChoiceIssue,
+  writesInPlace,
 } from "./page-arrangement";
 
 type TestBlock = {
@@ -290,56 +286,6 @@ describe("page arrangement", () => {
   });
 });
 
-describe("where a row ends short", () => {
-  test("a full row leaves no remainder", () => {
-    const [row] = packBlockRows([block("a", "half"), block("b", "half")], {});
-    expect(rowRemainder(row)).toBe(0);
-  });
-
-  test("a short row reports the columns nothing claimed", () => {
-    const [row] = packBlockRows([block("a", "two_thirds")], {});
-    expect(rowRemainder(row)).toBe(4);
-  });
-
-  test("the ornament takes the first remainder wide enough to hold it", () => {
-    const rows = packBlockRows(
-      [block("a", "half"), block("b", "third"), block("c", "two_thirds")],
-      {},
-    );
-    expect(rows.map(rowRemainder)).toEqual([2, 4]);
-    expect(ornamentPlacement(rows)).toEqual({
-      row: 1,
-      startColumn: 9,
-      columns: 4,
-    });
-  });
-
-  test("a remainder narrower than the ornament is left as space", () => {
-    const rows = packBlockRows([block("a", "half"), block("b", "third")], {});
-    expect(rowRemainder(rows[0])).toBeLessThan(ORNAMENT_MINIMUM_COLUMNS);
-    expect(ornamentPlacement(rows)).toBeNull();
-  });
-
-  test("a row holding the creator's own pictures is passed over", () => {
-    const rows = packBlockRows(
-      [block("gallery", "two_thirds"), block("notes", "half")],
-      {},
-    );
-    expect(ornamentPlacement(rows)?.row).toBe(0);
-    expect(
-      ornamentPlacement(rows, (row) => row[0].block.id === "gallery"),
-    ).toEqual({ row: 1, startColumn: 7, columns: 6 });
-  });
-
-  test("a page of full-width blocks has nowhere to put the ornament", () => {
-    expect(
-      ornamentPlacement(
-        packBlockRows([block("a", "full"), block("b", "full")], {}),
-      ),
-    ).toBeNull();
-  });
-});
-
 describe("remove confirmation counts", () => {
   test("counts each element through its public content shape", () => {
     expect(
@@ -405,59 +351,40 @@ describe("remove confirmation counts", () => {
 });
 
 describe("where an element is edited", () => {
-  test("every collection type opens a full-screen surface", () => {
+  test("the page writes its own prose, greetings, turns, fields and links", () => {
+    for (const type of [
+      "prose",
+      "text_set",
+      "dialogue_sample",
+      "field_list",
+      "link_list",
+    ]) {
+      expect(writesInPlace(type)).toBe(true);
+      expect(editsInTheRail(type)).toBe(false);
+    }
+  });
+
+  test("everything else keeps the reader's rendering and opens in the rail", () => {
     for (const type of [
       "entry_table",
       "image_set",
-      "text_set",
-      "dialogue_sample",
       "prompt_list",
       "variable_schema",
       "setting_group",
       "script_list",
+      "color_set",
+      "stylesheet_set",
       "record_list",
     ]) {
-      expect(opensFullScreen(type)).toBe(true);
-    }
-    for (const type of ["prose", "field_list", "link_list"]) {
-      expect(opensFullScreen(type)).toBe(false);
+      expect(editsInTheRail(type)).toBe(true);
+      expect(writesInPlace(type)).toBe(false);
     }
   });
 
-  test("a seeded settings group is past what a sheet holds", () => {
-    const seeded = {
-      type: "setting_group",
-      content: {
-        settings: Array.from({ length: 18 }, (_, index) => ({
-          name: `setting_${index}`,
-          type: "number",
-        })),
-      },
-    };
-    expect(fitsInTheSheet(seeded)).toBe(false);
-
-    const advanced = {
-      type: "setting_group",
-      content: { settings: [{ name: "seed", type: "number" }] },
-    };
-    expect(fitsInTheSheet(advanced)).toBe(true);
-  });
-
-  test("small content stays editable in the sheet", () => {
-    const two = { type: "text_set", content: { texts: [{}, {}] } };
-    expect(fitsInTheSheet(two)).toBe(true);
-
-    const many = {
-      type: "entry_table",
-      content: { entries: Array.from({ length: INLINE_ITEM_LIMIT + 1 }) },
-    };
-    expect(fitsInTheSheet(many)).toBe(false);
-  });
-
-  test("prose is never sent to the overlay however long it is", () => {
-    expect(
-      fitsInTheSheet({ type: "prose", content: { text: "x".repeat(9000) } }),
-    ).toBe(true);
+  test("every element type has exactly one of the two homes", () => {
+    for (const type of Object.keys(EXCERPT_DEFINITIONS)) {
+      expect(writesInPlace(type)).toBe(!editsInTheRail(type));
+    }
   });
 });
 
@@ -489,39 +416,5 @@ describe("the columns a block's elements arrange into", () => {
 
   test("more elements than slots take the slots the layout has", () => {
     expect(elementTracks("duo", 5)).toBe("repeat(2, minmax(0, 1fr))");
-  });
-});
-
-describe("how much a page has to show", () => {
-  test("a page whose blocks all render nothing is empty", () => {
-    expect(pageFullness([])).toBe("empty");
-  });
-
-  test("a page that fills one row is barren", () => {
-    const rows = packBlockRows([block("a", "two_thirds")], {
-      availableWidth: 1200,
-    });
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("one block filling the width is still barren", () => {
-    const rows = packBlockRows([block("a", "full")], { availableWidth: 1200 });
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("three thirds side by side are one row, so still barren", () => {
-    const rows = packBlockRows(
-      [block("a", "third"), block("b", "third"), block("c", "third")],
-      { availableWidth: 1200 },
-    );
-    expect(rows).toHaveLength(1);
-    expect(pageFullness(rows)).toBe("barren");
-  });
-
-  test("a second row of content makes the page full", () => {
-    const rows = packBlockRows([block("a", "full"), block("b", "full")], {
-      availableWidth: 1200,
-    });
-    expect(pageFullness(rows)).toBe("full");
   });
 });

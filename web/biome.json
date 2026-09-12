@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"]
+    "includes": ["**", "!node_modules", "!.next", "!.next-*", "!dist", "!build"]
   },
   "formatter": {
     "enabled": true,
@@ -33,7 +33,35 @@
   },
   "overrides": [
     {
-      "includes": ["src/app/globals.css"],
+      "includes": [
+        "src/app/globals.css",
+        "src/app/prototype/editor/theme.css",
+        "src/app/prototype/direction/theme.css"
+      ],
+      "css": {
+        "parser": {
+          "tailwindDirectives": true
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/lib/publication-card.tsx",
+        "src/components/ui/image-crop.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noImgElement": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/globals.css",
+        "src/app/prototype/direction/theme.css"
+      ],
       "linter": {
         "rules": {
           "complexity": {

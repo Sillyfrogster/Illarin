@@ -1,4 +1,3 @@
-// Package linking joins an application installation to an Illarin account.
 package linking
 
 import (
@@ -15,10 +14,10 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/credential"
 	"github.com/google/uuid"
 )
 
-// Scope is one permission granted to a linked instance.
 type Scope string
 
 const (
@@ -46,7 +45,6 @@ var (
 	ErrInstanceMissingScope = errors.New("the instance was not granted that scope")
 )
 
-// Declaration is self-asserted interoperability metadata, never authority.
 type Declaration struct {
 	ApplicationName    string
 	InstanceName       string
@@ -56,13 +54,11 @@ type Declaration struct {
 	AcceptedTargets    []string
 }
 
-// StartInput is the common input for either authorization path.
 type StartInput struct {
 	Declaration
 	Scopes []Scope
 }
 
-// AuthorizationInput starts same-device browser authorization.
 type AuthorizationInput struct {
 	StartInput
 	RedirectURI         string
@@ -71,7 +67,6 @@ type AuthorizationInput struct {
 	CodeChallengeMethod string
 }
 
-// Request is a device authorization request.
 type Request struct {
 	DeviceCode string
 	UserCode   string
@@ -80,13 +75,11 @@ type Request struct {
 	Interval   time.Duration
 }
 
-// Authorization is the Illarin page a native application opens.
 type Authorization struct {
 	URL       string
 	ExpiresAt time.Time
 }
 
-// Pending is what a creator reviews before deciding.
 type Pending struct {
 	Declaration
 	Scopes        []Scope
@@ -94,12 +87,10 @@ type Pending struct {
 	ApprovalToken string
 }
 
-// Redirect is a validated loopback destination after a browser decision.
 type Redirect struct {
 	URL string
 }
 
-// Instance is one independently authorised installation.
 type Instance struct {
 	ID     uuid.UUID
 	UserID uuid.UUID
@@ -111,7 +102,6 @@ type Instance struct {
 	RevokedAt  *time.Time
 }
 
-// Grants reports whether the instance has a scope.
 func (i Instance) Grants(scope Scope) bool {
 	for _, held := range i.Scopes {
 		if held == scope {
@@ -121,7 +111,6 @@ func (i Instance) Grants(scope Scope) bool {
 	return false
 }
 
-// TokenGrant is the only response that exposes a new token pair.
 type TokenGrant struct {
 	Instance             Instance
 	AccessToken          string
@@ -143,10 +132,9 @@ const (
 	secretBytes            = 32
 	opaqueCodeLength       = 43
 	maxUserCodeInputLength = 16
-	credentialLength       = 3 + 1 + codeLength + 1 + opaqueCodeLength
 
-	accessTokenKind  = "ia1"
-	refreshTokenKind = "ir1"
+	accessTokenKind  = string(credential.InstanceAccess)
+	refreshTokenKind = string(credential.InstanceRefresh)
 )
 
 var (
@@ -290,7 +278,6 @@ func newCode(length int) (string, error) {
 	return string(code), nil
 }
 
-// FormatUserCode groups a user code for reading aloud.
 func FormatUserCode(code string) string {
 	return code[:codeGroupSize] + "-" + code[codeGroupSize:]
 }
@@ -334,36 +321,19 @@ func opaqueCodeHash(code string) ([]byte, bool) {
 }
 
 func newCredential(kind string) (token, prefix string, hash []byte, err error) {
-	prefix, err = newCode(codeLength)
+	minted, err := credential.Mint(credential.Kind(kind))
 	if err != nil {
 		return "", "", nil, err
 	}
-	secret := make([]byte, secretBytes)
-	if _, err := rand.Read(secret); err != nil {
-		return "", "", nil, fmt.Errorf("make token: %w", err)
-	}
-	token = kind + "." + prefix + "." + base64.RawURLEncoding.EncodeToString(secret)
-	return token, prefix, hashOf(token), nil
+	return minted.Value, minted.Prefix, minted.Hash, nil
 }
 
 func credentialHash(token, kind string) ([]byte, bool) {
-	if len(token) != credentialLength {
+	read, ok := credential.Read(token, credential.Kind(kind))
+	if !ok {
 		return nil, false
 	}
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 || parts[0] != kind || len(parts[1]) != codeLength {
-		return nil, false
-	}
-	for _, char := range parts[1] {
-		if !strings.ContainsRune(codeAlphabet, char) {
-			return nil, false
-		}
-	}
-	raw, err := base64.RawURLEncoding.DecodeString(parts[2])
-	if err != nil || len(raw) != secretBytes {
-		return nil, false
-	}
-	return hashOf(token), true
+	return read.Hash, true
 }
 
 func validateAuthorization(in AuthorizationInput) (AuthorizationInput, error) {

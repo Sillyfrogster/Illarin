@@ -15,10 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// holdMargin keeps the wait inside the route deadline, so an empty wait ends in an answer.
 const holdMargin = 2 * time.Second
 
-// Collect acknowledges finished work and waits briefly for more, holding no database connection.
 func (s *Service) Collect(
 	ctx context.Context,
 	instance linking.Instance,
@@ -71,7 +69,6 @@ func (s *Service) Collect(
 	}
 }
 
-// hold is this request's wait, jittered so a fleet does not stay in step and clamped to the deadline.
 func (s *Service) hold(ctx context.Context) time.Duration {
 	spread := s.settings.HoldCeiling - s.settings.HoldFloor
 	wait := s.settings.HoldFloor
@@ -92,7 +89,6 @@ func (s *Service) hold(ctx context.Context) time.Duration {
 	return wait
 }
 
-// claim takes waiting and lease-expired work, deciding authorization again at the moment of release.
 func (s *Service) claim(ctx context.Context, instance linking.Instance) ([]Work, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -167,7 +163,6 @@ func (s *Service) release(
 	}, nil
 }
 
-// stop settles a delivery that will never arrive, so a creator sees why rather than waiting on it.
 func stop(
 	ctx context.Context,
 	queries *db.Queries,
@@ -182,7 +177,6 @@ func stop(
 	return nil
 }
 
-// artifacts names the export and every picture beside it, since no format carries them all.
 func (s *Service) artifacts(deliveryID uuid.UUID, sendable asset.Deliverable) []Artifact {
 	artifacts := make([]Artifact, 0, len(sendable.Pictures)+1)
 	artifacts = append(artifacts, Artifact{

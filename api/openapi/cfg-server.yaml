@@ -4,3 +4,5 @@ generate:
   gin-server: true
   models: true
   strict-server: false
+output-options:
+  skip-prune: true

@@ -53,7 +53,6 @@ func rasterSources(t *testing.T) map[string][]byte {
 func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 
-	// Not valid UTF-8 and not valid JSON, so any re-encoding would show up.
 	original := []byte{0x00, 0xff, 0xfe, 0x10, 0x80}
 
 	metadata := exampleMetadata("Exact")
@@ -240,8 +239,6 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	if got := download.Header().Get("X-Illarin-Export-Target"); got != "test_opaque" {
 		t.Fatalf("target header = %q, want the format handed over", got)
 	}
-	// An export is a response, not stored content, so nothing was handed to
-	// nginx and no blob was created.
 	if redirect := download.Header().Get("X-Accel-Redirect"); redirect != "" {
 		t.Fatalf("a generated export was served from disk at %q", redirect)
 	}
@@ -260,8 +257,6 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	}
 }
 
-// A format outside the offered list was never a choice, so asking for it is a
-// miss rather than a quieter answer in some other format.
 func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
@@ -386,10 +381,7 @@ func TestDownloadUnknownAssetIs404(t *testing.T) {
 	}
 }
 
-// A creator edits a block, downloads the same format, and gets a file carrying
-// the edit and every namespace the upload arrived with. The upload itself is
-// still exactly what they handed over.
-func TestEditingABlockChangesTheDownloadAndNotTheUpload(t *testing.T) {
+func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -423,8 +415,8 @@ func TestEditingABlockChangesTheDownloadAndNotTheUpload(t *testing.T) {
 	if err := json.Unmarshal(download.Body.Bytes(), &card); err != nil {
 		t.Fatalf("read the downloaded card: %v", err)
 	}
-	if card.Data.Description != "After" {
-		t.Fatalf("downloaded description = %q, want the edit", card.Data.Description)
+	if card.Data.Description != "Before" {
+		t.Fatalf("downloaded description = %q, want the published text", card.Data.Description)
 	}
 	var sourceCard struct {
 		Data struct {
@@ -462,7 +454,6 @@ func compactJSON(t *testing.T, raw json.RawMessage) []byte {
 func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 
-	// A file that a browser would happily render if we let it.
 	payload := []byte(`<script>alert(1)</script>`)
 
 	metadata := exampleMetadata("Evil")

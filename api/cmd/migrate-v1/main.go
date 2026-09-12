@@ -1,4 +1,3 @@
-// Command migrate-v1 carries the v1 catalog into Illarin, once.
 package main
 
 import (

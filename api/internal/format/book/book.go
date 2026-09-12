@@ -1,4 +1,3 @@
-// Package book shares the listed lorebook entry vocabulary across containers.
 package book
 
 import (
@@ -9,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Read returns modeled entries and their unmodeled fields, keyed by local ID.
 func Read(payloads []json.RawMessage) ([]block.Entry, map[uuid.UUID]json.RawMessage) {
 	entries := make([]block.Entry, 0, len(payloads))
 	leftovers := make(map[uuid.UUID]json.RawMessage)
@@ -17,8 +15,6 @@ func Read(payloads []json.RawMessage) ([]block.Entry, map[uuid.UUID]json.RawMess
 		item := block.Entry{ID: block.NewItemID(), Enabled: true}
 		var fields map[string]json.RawMessage
 		if json.Unmarshal(payload, &fields) != nil || fields == nil {
-			// An entry that is not an object still arrived, so it is kept as
-			// an entry with nothing read and the whole payload preserved.
 			leftovers[item.ID] = payload
 			entries = append(entries, item)
 			continue
@@ -32,7 +28,6 @@ func Read(payloads []json.RawMessage) ([]block.Entry, map[uuid.UUID]json.RawMess
 	return entries, leftovers
 }
 
-// ReadEntry consumes valid modeled fields and leaves the rest for preservation.
 func ReadEntry(fields map[string]json.RawMessage, item *block.Entry) {
 	keys.Take(fields, "name", &item.Name)
 	keys.Take(fields, "keys", &item.Keys)
@@ -59,8 +54,6 @@ func ReadEntry(fields map[string]json.RawMessage, item *block.Entry) {
 	}
 }
 
-// Write writes the entries a book carries. Everything a book held that the
-// entry table has no place for comes back afterwards, from preservation.
 func Write(entries []block.Entry) []map[string]json.RawMessage {
 	written := make([]map[string]json.RawMessage, 0, len(entries))
 	for _, entry := range entries {
@@ -81,7 +74,6 @@ func Write(entries []block.Entry) []map[string]json.RawMessage {
 	return written
 }
 
-// writtenPosition is the wording a book uses for where an entry's text goes.
 func writtenPosition(position block.EntryPosition) string {
 	if position == block.AfterCharacter {
 		return "after_char"
@@ -89,8 +81,6 @@ func writtenPosition(position block.EntryPosition) string {
 	return "before_char"
 }
 
-// OrEmptyStrings writes an absent list as an empty one, because a book's keys
-// are a list a reader expects to find even when it holds nothing.
 func OrEmptyStrings(values []string) []string {
 	if values == nil {
 		return []string{}

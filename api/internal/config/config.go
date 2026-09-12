@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 )
 
 const (
@@ -18,11 +21,10 @@ const (
 	defaultAccountStorageCapBytes       = 1 << 30
 )
 
-// Config holds every setting the service runs on. They are gathered here and
-// handed down, so nothing reaches for a setting on its own.
 type Config struct {
 	Port                         string
 	SiteURL                      string
+	BlogURL                      string
 	SMTP                         SMTPSettings
 	Microsoft365                 Microsoft365Settings
 	Discord                      DiscordSettings
@@ -32,6 +34,7 @@ type Config struct {
 	StorageFreeSpaceReserveBytes int64
 	AccountStorageCapBytes       int64
 	LinkingHMACKey               []byte
+	PublicationSecretKey         []byte
 	ProbeLimits                  probe.Limits
 	IngestWorkers                int
 	Server                       apihttp.Timeouts
@@ -57,12 +60,12 @@ type DiscordSettings struct {
 	ClientSecret string
 }
 
-// Load reads settings from the environment and rejects anything missing.
 func Load() (Config, error) {
 	databaseURL := get("DATABASE_URL", "")
 	cfg := Config{
 		Port:       get("PORT", "8080"),
 		SiteURL:    get("SITE_URL", "http://localhost:3000"),
+		BlogURL:    get("BLOG_URL", ""),
 		Database:   postgres.DefaultSettings(databaseURL),
 		UploadsDir: get("UPLOADS_DIR", ""),
 		Server:     apihttp.DefaultTimeouts(),
@@ -87,10 +90,14 @@ func Load() (Config, error) {
 	for name, value := range map[string]string{
 		"DATABASE_URL": databaseURL,
 		"UPLOADS_DIR":  cfg.UploadsDir,
+		"BLOG_URL":     cfg.BlogURL,
 	} {
 		if value == "" {
 			return Config{}, fmt.Errorf("%s is required", name)
 		}
+	}
+	if err := checkOrigin("BLOG_URL", cfg.BlogURL); err != nil {
+		return Config{}, err
 	}
 
 	max, err := bytesOrDefault("MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
@@ -115,6 +122,20 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("LINKING_HMAC_KEY must be 32 bytes encoded as unpadded base64url")
 	}
 	cfg.LinkingHMACKey = linkingKey
+	publicationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
+	if err != nil || len(publicationKey) != secrets.KeyBytes {
+		return Config{}, fmt.Errorf(
+			"PUBLICATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
+			secrets.KeyBytes,
+		)
+	}
+	if bytes.Equal(publicationKey, linkingKey) {
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
+	}
+	if _, err := secrets.NewKey(publicationKey); err != nil {
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
+	}
+	cfg.PublicationSecretKey = publicationKey
 	limits := probe.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {
@@ -171,6 +192,9 @@ func Load() (Config, error) {
 	if microsoftSet > 0 && cfg.SMTP.Address != "" {
 		return Config{}, fmt.Errorf("configure either Microsoft 365 or SMTP, not both")
 	}
+	if os.Getenv("GIN_MODE") == "release" && microsoftSet == 0 && cfg.SMTP.Address == "" {
+		return Config{}, fmt.Errorf("production requires SMTP or Microsoft 365 for account email")
+	}
 	if microsoftSecretFile != "" {
 		secret, err := os.ReadFile(microsoftSecretFile)
 		if err != nil {
@@ -186,6 +210,17 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// checkOrigin rejects addresses that cannot safely have blog paths appended.
+func checkOrigin(key, value string) error {
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
+		parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") ||
+		parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("%s must be an http or https origin with no path, got %q", key, value)
+	}
+	return nil
 }
 
 func intOrDefault(key string, fallback int) (int, error) {

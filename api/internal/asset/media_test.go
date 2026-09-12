@@ -11,6 +11,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -22,6 +23,11 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
 )
+
+func privateMediaQuery(svc *Service, id uuid.UUID, key string) string {
+	signed, _ := url.Parse(svc.variantURL(id, "grid", false, true))
+	return signed.Query().Get(key)
+}
 
 func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
 	if !localImageReadFailure(zip.ErrChecksum) {
@@ -50,7 +56,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	added, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader(source),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("AddMedia: %v", err)
 	}
@@ -121,14 +127,14 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 	first, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add first media: %v", err)
 	}
 	second, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 30, 15, color.White)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add replacement media: %v", err)
 	}
@@ -149,6 +155,46 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 	}
 }
 
+func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
+	svc, _ := newTestService(t)
+	ownerID := uuid.New()
+	created, err := svc.Create(context.Background(), CreateInput{
+		OwnerID: ownerID, Kind: "lorebook", Filename: "book.bin",
+		File: bytes.NewReader([]byte("book")), Name: "Book",
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	var newest uuid.UUID
+	for range 3 {
+		added, err := svc.AddMedia(context.Background(), AddMediaInput{
+			OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatar,
+			File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
+		}, currentCandidate(t, svc, created.ID))
+		if err != nil {
+			t.Fatalf("Add display picture: %v", err)
+		}
+		newest = added.ID
+	}
+	rows, err := svc.pool.Query(context.Background(),
+		`select id from asset_media where asset_id = $1 and is_current`, created.ID)
+	if err != nil {
+		t.Fatalf("read current media: %v", err)
+	}
+	defer rows.Close()
+	current := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("scan current media: %v", err)
+		}
+		current = append(current, id)
+	}
+	if len(current) != 1 || current[0] != newest {
+		t.Fatalf("current pictures = %v, want the newest one alone (%s)", current, newest)
+	}
+}
+
 func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()
@@ -162,14 +208,14 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	_, err = svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add alternate avatar: %v", err)
 	}
 	alternate, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 30, 15, color.White)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add second alternate avatar: %v", err)
 	}
@@ -185,14 +231,14 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	primary, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 40, 20, color.Gray{Y: 128})),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add primary avatar: %v", err)
 	}
 	if _, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.White)),
-	}); err != nil {
+	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("Add alternate after primary: %v", err)
 	}
 	if err := svc.pool.QueryRow(context.Background(),
@@ -218,7 +264,7 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 	added, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader(testPNG(t, 320, 180, color.White)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("AddMedia: %v", err)
 	}
@@ -228,6 +274,8 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 
 	download, err := svc.MediaVariant(context.Background(), MediaRequest{
 		MediaID: added.ID, Variant: "grid", Version: mediaproc.DerivativeVersion,
+		ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
+		Signature: privateMediaQuery(svc, added.ID, "signature"),
 	})
 	if err != nil {
 		t.Fatalf("MediaVariant cache miss: %v", err)
@@ -265,7 +313,7 @@ func TestCreatorCannotAddMediaToSomebodyElsesAsset(t *testing.T) {
 	_, err = svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: uuid.New(), AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.White)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, ErrMediaNotFound) {
 		t.Fatalf("AddMedia error = %v, want ErrMediaNotFound", err)
 	}
@@ -346,7 +394,7 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 	added, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader([]byte("encoded image")),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("AddMedia: %v", err)
 	}
@@ -362,6 +410,8 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 			<-start
 			_, err := svc.MediaVariant(context.Background(), MediaRequest{
 				MediaID: added.ID, Variant: "grid", Version: 1,
+				ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
+				Signature: privateMediaQuery(svc, added.ID, "signature"),
 			})
 			errors <- err
 		}()

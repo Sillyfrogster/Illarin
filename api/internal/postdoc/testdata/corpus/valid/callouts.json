@@ -1,0 +1,61 @@
+{
+  "note": "Every kind of callout, one of them holding a list",
+  "document": {
+    "version": 2,
+    "content": [
+      {
+        "type": "callout",
+        "kind": "note",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "Addresses are permanent."}]
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "kind": "tip",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "Preview before publishing."}]
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "kind": "important",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "A first publication fixes three things:"}]
+          },
+          {
+            "type": "bulletList",
+            "content": [
+              {
+                "type": "listItem",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "the address"}]}]
+              },
+              {
+                "type": "listItem",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "the byline"}]}]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "callout",
+        "kind": "warning",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "Withdrawal removes the post from every feed."}]
+          }
+        ]
+      }
+    ]
+  }
+}

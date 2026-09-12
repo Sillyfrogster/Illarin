@@ -4,6 +4,123 @@
  */
 
 export interface paths {
+  "/v1/assets/{id}/update-destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Enumerate only the asset owner's eligible destinations with the defaults remembered for this asset. */
+    get: operations["listAssetUpdateDestinationChoices"];
+    /** @description Remember a selection for this asset. An empty list clears its defaults. This sends no announcement. */
+    put: operations["setAssetUpdateDestinationDefaults"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/announcements": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description What this asset's updates have sent, newest update first, for its owner alone. Each row is one update on its way to one destination, with its state, its attempts and the last thing the destination said. It never carries addresses, credentials or request bodies. */
+    get: operations["listAssetUpdateAnnouncements"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Read only the signed-in creator's masked asset update destinations. */
+    get: operations["listAssetUpdateDestinations"];
+    put?: never;
+    /** @description Create a creator-owned destination independently of blog permissions. A webhook's signing secret is revealed only in this response. Discord capability addresses are never returned. */
+    post: operations["addAssetUpdateDestination"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Inspect one of the signed-in creator's destinations without revealing credentials. */
+    get: operations["getAssetUpdateDestination"];
+    put?: never;
+    post?: never;
+    /** @description Remove an owned destination and its per-asset defaults. */
+    delete: operations["removeAssetUpdateDestination"];
+    options?: never;
+    head?: never;
+    /** @description Change the name or replace credentials. A new generic endpoint requires verification. */
+    patch: operations["updateAssetUpdateDestination"];
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}/verification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Verify the current endpoint by signed challenge or Discord capability read. */
+    post: operations["verifyAssetUpdateDestination"];
+    /** @description Disable an owned destination immediately. */
+    delete: operations["disableAssetUpdateDestination"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/update-destinations/{id}/secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Reveal a new signing secret once; keep the previous secret for 24 hours. */
+    post: operations["rotateAssetUpdateDestinationSecret"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/discord": {
     parameters: {
       query?: never;
@@ -79,6 +196,38 @@ export interface paths {
     put: operations["setNsfwVisibility"];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["savePublicProfile"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/account/profile/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["setProfileAvatar"];
+    post?: never;
+    delete: operations["removeProfileAvatar"];
     options?: never;
     head?: never;
     patch?: never;
@@ -569,6 +718,765 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/apps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every configured publication app, retired ones included, in the order the publication authority chose. Only the publication authority may read it. */
+    get: operations["listPublicationApps"];
+    /** @description Put the configured apps in the order they are listed. */
+    put: operations["orderPublicationApps"];
+    post: operations["definePublicationApp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/apps/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations["updatePublicationApp"];
+    trace?: never;
+  };
+  "/v1/publication/apps/{id}/mark": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Upload the mark Illarin hosts and serves for this app. */
+    put: operations["setPublicationAppMark"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every publication category, retired ones included, in the order the publication authority chose. Only the publication authority may read it. */
+    get: operations["listPublicationCategories"];
+    /** @description Put the categories in the order they are listed. */
+    put: operations["orderPublicationCategories"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/categories/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Change what a category is called and whether it is still current. Its slug is the stable identity posts and grants reference, so it does not change. */
+    patch: operations["updatePublicationCategory"];
+    trace?: never;
+  };
+  "/v1/publication/grants": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every grant ever made, revoked ones included. Only the publication authority may read it. */
+    get: operations["listPublicationGrants"];
+    put?: never;
+    /** @description Approve one verified account to publish for one app. */
+    post: operations["createPublicationGrant"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/grants/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description End an approval. Editor access stops at once, while the grant record and everything already published stay. */
+    delete: operations["revokePublicationGrant"];
+    options?: never;
+    head?: never;
+    /** @description Narrow or widen the categories one grant allows. */
+    patch: operations["updatePublicationGrant"];
+    trace?: never;
+  };
+  "/v1/publication/grants/{id}/tokens": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Safe metadata for every token issued under one grant, revoked ones included. The contributor holding the grant and the publication authority may read it; nobody can read a token value here or anywhere. */
+    get: operations["listPublicationTokens"];
+    put?: never;
+    /** @description Issue one token under an active grant. The response is the only time Illarin can show its value. */
+    post: operations["issuePublicationToken"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/tokens/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Stop one token. The grant, the contributor's other tokens and everything already published are untouched. */
+    delete: operations["revokePublicationToken"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What the publication token sent with this request is, and the grant it publishes under. It is the only thing a publication token reaches today, and it reads nothing outside the publication. */
+    get: operations["getPublicationCredential"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/workspace": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The apps, categories and defaults the signed-in account may publish under. An account with no active grant gets an empty workspace. */
+    get: operations["getPublicationWorkspace"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every post this credential may manage. An admin sees all of them, an approved contributor sees the posts under their active grants, and a publication token sees only the posts under the one grant it was issued for. Deleted posts are left out unless they are the ones asked for. */
+    get: operations["listPosts"];
+    put?: never;
+    /** @description Start a draft. A contributor names the grant it belongs to and an admin may omit it and write as Illarin. A publication token writes under its own grant and may not name another. */
+    post: operations["createPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getPost"];
+    /** @description Replace the working copy. The request names the version it began from, and a stale version is refused rather than applied. */
+    put: operations["savePost"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/media": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Upload one picture against this post. The record is immutable: replacing a picture uploads new bytes at a new address rather than changing an address readers already hold. */
+    post: operations["addPostMedia"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/revisions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every edition this post has kept, newest first. It names titles, times and keepers, and never compares two editions for a reader. */
+    get: operations["listPostRevisions"];
+    put?: never;
+    /** @description Keep the named working copy as an immutable edition. Readers see nothing new, and the working copy carries on unchanged. */
+    post: operations["checkpointPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/revisions/{revisionId}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Copy a kept edition into a new working copy. Every edition, and the one readers have, stay exactly as they were. */
+    post: operations["restorePostRevision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every configured destination, masked. Only the publication authority may read it, and even it cannot read back an endpoint address or a signing secret. */
+    get: operations["listPublicationDestinations"];
+    put?: never;
+    /** @description Configure one endpoint. The response is the only time Illarin can show its signing secret, and the endpoint receives nothing until it has answered a verification challenge. */
+    post: operations["addPublicationDestination"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/destinations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Take a destination out of the configuration. Every delivery it already holds keeps the name it was sent under. */
+    delete: operations["removePublicationDestination"];
+    options?: never;
+    head?: never;
+    /** @description Rename a destination or point it somewhere else. A new address takes it back to unverified, because control of the old one proves nothing about the new one. */
+    patch: operations["updatePublicationDestination"];
+    trace?: never;
+  };
+  "/v1/publication/destinations/{id}/verification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Send one signed challenge and activate the destination only when the exact value comes back. */
+    post: operations["verifyPublicationDestination"];
+    /** @description Stop a destination receiving anything further. What it has already received stays where it is. */
+    delete: operations["disablePublicationDestination"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/destinations/{id}/secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Draw a new signing secret. The old one keeps producing an accepted signature for a bounded overlap, so a receiver changes over without dropping an event, and is then forgotten. */
+    post: operations["rotatePublicationDestinationSecret"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/channels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Configure one Discord channel. Illarin asks Discord what the capability address is for and keeps only the guild and channel it names, so the address itself is never shown again. */
+    post: operations["addPublicationChannel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/channels/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Rename a Discord destination, change the role an author may ask for, or point it at another capability, which Discord is asked about again. */
+    patch: operations["updatePublicationChannel"];
+    trace?: never;
+  };
+  "/v1/publication/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The delivery work the authority is diagnosing, newest first. It carries no endpoint address, secret or response body. */
+    get: operations["listPublicationDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries/{id}/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Every attempt one delivery has made, across every run, so a replay never hides what the runs before it found. */
+    get: operations["listPublicationDeliveryAttempts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries/{id}/replay": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Put settled work back in the queue under a new run. The Publication event it carries and every attempt already made stay as they are. */
+    post: operations["replayPublicationDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/deliveries/{id}/repair": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Explicitly edit a Discord message's note, delete the named message, or send a separate correction. Requires publication authority. Reusing a request ID returns the recorded result without another send. The post, event and original delivery attempts remain unchanged. */
+    post: operations["repairDiscordAnnouncement"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/apps/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Record the destinations every grant on one app may send to, and which of them a publication starts with. */
+    put: operations["setPublicationAppDestinations"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/grants/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Narrow one contributor to its own destinations, or send an absent set to put the grant back on its app's baseline. */
+    put: operations["setPublicationGrantDestinations"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/destinations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The destinations this post may send to, and which of them a publication starts with. A contributor sees safe identities only. */
+    get: operations["listPostDestinations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What this post's public transitions have sent, and how each attempt ended. It carries no endpoint address, secret or response body. */
+    get: operations["listPostDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What has been done to this post, newest first. It carries actors, editions and times, and never a word anyone wrote. */
+    get: operations["readPostHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Convert constrained Markdown into the working copy's document. The Markdown is read once and never kept beside the document it became, and anything that could not be carried across exactly comes back with it. */
+    post: operations["importPostMarkdown"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Capture the named working copy as an immutable revision and make that exact edition the public one. */
+    post: operations["publishPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Take a published post out of public view. Its address answers with a tombstone, its editions and dates stay exactly as they are, and only Illarin reads the reason. */
+    post: operations["withdrawPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/republish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Put a withdrawn post back in public view showing one edition it has already kept. It returns to the same address under the date it first published. */
+    post: operations["republishPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/delete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Delete a post and start its thirty-day recovery window. A contributor may delete their own post up to the moment it first publishes; after that only an admin may, and only once the post is out of public view. Its working copy, editions and pictures are all kept until the window closes. */
+    post: operations["deletePost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/recover": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Bring a deleted post back before its recovery window closes. It returns with the working copy, editions and pictures it was deleted with, and may be scheduled and published again. */
+    post: operations["recoverPost"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Point a waiting schedule at another edition the post has already kept, at the same instant or a new one. The edition it leaves is untouched. */
+    put: operations["replacePostSchedule"];
+    /** @description Capture the named working copy as an immutable revision and set it to go live at one instant. Editing the working copy afterwards does not reach the edition that will publish. */
+    post: operations["schedulePost"];
+    /** @description Stop a waiting schedule. The post keeps whatever it shows readers now, and the edition the schedule named stays in its history. */
+    delete: operations["cancelPostSchedule"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/address": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Move a published post to a corrected permalink. The address it leaves keeps pointing at the post and can never belong to another one. */
+    put: operations["correctPostAddress"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/publication/posts/{id}/byline": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Replace the attribution a published post carries with a fresh snapshot of another account's public identity. The author, grant and captured revisions are unchanged. */
+    put: operations["correctPostByline"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/post-categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The publication categories that carry published posts, in the order the publication shows them. A category nobody has published in is absent, so every category the blog offers leads to writing. */
+    get: operations["listPostCategories"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/post-apps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The publication apps that carry published posts, in the order the publication shows them. An app nobody has published for is absent, so every app archive the blog offers leads to writing. */
+    get: operations["listPostApps"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/posts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description One page of the published archive, newest first. A category or app slug narrows the same chronology. Drafts, working copies, editions held for a later instant and posts out of public view are absent from it. */
+    get: operations["listPublishedPosts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/posts/{slug}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The published edition behind one post address. Drafts and working copies are absent from it. */
+    get: operations["getPublishedPost"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/profiles/{handle}": {
     parameters: {
       query?: never;
@@ -580,6 +1488,25 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/profiles/{handle}/restriction": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The private reason a profile is restricted. Only an admin may read it, and it never reaches a public or owner response. */
+    get: operations["getProfileRestriction"];
+    /** @description Hides the added identity on one public profile until an admin restores it. It changes no role, credential, asset or ownership. */
+    put: operations["restrictProfile"];
+    post?: never;
+    /** @description Gives a restricted profile its retained fields back. */
+    delete: operations["restoreProfile"];
     options?: never;
     head?: never;
     patch?: never;
@@ -660,11 +1587,46 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** @description The replacement upload this asset is still deciding about, so a creator who reloads the page finds the file they left waiting. */
+    get: operations["getAssetReplacement"];
     put?: never;
     /** @description Replace an asset's source bytes. A revision is the file only: name, blurb, tags and the NSFW flag stay as the creator left them. A file that reads as a different kind is refused and the asset is left untouched. */
     post: operations["addAssetRevision"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/revisions/{operationId}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Apply a reviewed replacement preview to the private working copy. Removing prompt protection requires explicit confirmation because it can expose text in published and recorded versions immediately. */
+    post: operations["acceptAssetRevision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/revisions/{operationId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Discard a reviewed replacement preview without changing the asset. */
+    delete: operations["cancelAssetRevision"];
     options?: never;
     head?: never;
     patch?: never;
@@ -798,7 +1760,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Save the header fields that sit above an asset's blocks. The adult content answer may be null only while the asset is a draft, so nothing answers it on the creator's behalf. An edit is live when it saves. */
+    /** @description Save the catalog fields that sit above an asset's blocks. The adult content answer may be null only while the asset is a draft, so nothing answers it on the creator's behalf. An edit stays private in a published asset's working copy until the creator publishes the update. */
     put: operations["setAssetIdentity"];
     post?: never;
     delete?: never;
@@ -818,6 +1780,143 @@ export interface paths {
     put?: never;
     /** @description Publish a draft. Publishing is one-way: unlisted is the reversible retreat and deletion is the exit. A draft that does not meet the floor is refused with the whole readiness list rather than the first thing missing. */
     post: operations["publishAsset"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The versions this asset has recorded, newest first. A draft, a withheld asset and a deleted one answer their owner or nobody. */
+    get: operations["listAssetUpdates"];
+    put?: never;
+    /** @description Publish the reviewed working copy as the asset's next public version. The summary says what changed, and an update that changes nothing is refused rather than recorded. */
+    post: operations["publishAssetUpdate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/comparison": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What changed between two recorded versions, read under the rules the reader is under now. Omitting to compares the published version, and omitting from compares the version recorded before it. */
+    get: operations["compareAssetVersions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Copy one recorded version into the private working copy. The public version and every recorded snapshot stay unchanged. */
+    post: operations["restoreAssetVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Correct the creator-written notes on a recorded version without changing or announcing its snapshot. */
+    patch: operations["correctAssetVersionNotes"];
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Withdraw an older recorded version while retaining a public number, date and explanation. */
+    post: operations["withdrawAssetVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/protection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The recorded versions whose prompts Illarin cannot line up with the asset's current sealed prompts. Each one shows no prompt content and offers no download until its owner settles it. */
+    get: operations["listProtectionMismatches"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/downloads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description What a file of one recorded version can carry today: the formats the current writers offer for the content it recorded, the pictures it kept, and whether protected content keeps it out of any file. Read under the asset's current access and protection, so a version whose prompts are sealed now, or that recorded a prompt Illarin can no longer line up with a current one, offers no download. */
+    get: operations["getRecordedVersionDownloads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/updates/{number}/protection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Say which recorded prompt each current sealed prompt is on one version. A match with no recorded prompt says that version never carried it. */
+    put: operations["resolvePromptCorrespondence"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -953,7 +2052,76 @@ export interface paths {
     trace?: never;
   };
 }
-export type webhooks = Record<string, never>;
+export interface webhooks {
+  "publication.post.published.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to published events when a post first reaches public view, and again when a withdrawn post is put back. It summarizes the post and links to it; the article itself lives only on the blog. */
+    post: operations["publicationPostPublished"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "publication.post.updated.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to updated events when a post that is already public is published again with changes. Saving a working copy, scheduling, deleting, recovering and every administrative action send nothing. */
+    post: operations["publicationPostUpdated"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "publication.post.withdrawn.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to every active destination subscribed to withdrawn events when a post leaves public view. Its permalink answers 410 from then on, so a receiver holding a copy of the summary should stop showing it. */
+    post: operations["publicationPostWithdrawn"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "asset.update.published.v1": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Sent to each of the creator's destinations chosen for one asset update when the update is published. It summarizes the update and links to the asset's history; the content itself lives only on Illarin. A first publication, a private save, a correction to published notes and the recording of an existing asset's history send nothing. */
+    post: operations["assetUpdatePublished"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+}
 export interface components {
   schemas: {
     /**
@@ -1138,11 +2306,401 @@ export interface components {
     };
     SessionState: {
       user: components["schemas"]["Account"] | null;
+      /** @description True when this account is the one recorded as holding publication authority. It is not a system role and grants nothing on its own. */
+      publicationAuthority: boolean;
     };
     Profile: {
       /** Format: uuid */
       id: string;
       handle: string;
+      displayName: string;
+      biography: string;
+      contactEmail: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      links: components["schemas"]["ProfileLink"][];
+      /** @description True when an admin has hidden the added identity. The handle and the published-asset listing stay; every other field answers empty. */
+      restricted: boolean;
+    };
+    /** @description The admin-only record of why a profile is hidden. */
+    ProfileRestriction: {
+      reason: string;
+      restrictedBy?: string | null;
+      /** Format: date-time */
+      restrictedAt: string;
+    };
+    RestrictProfileRequest: {
+      reason: string;
+    };
+    PublicationApp: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      name: string;
+      home: string;
+      mark?: components["schemas"]["PublicationAppMark"] | null;
+      position: number;
+      retired: boolean;
+      /** @description The destinations every grant on this app follows unless the grant names its own. */
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+    };
+    PublicationAppMark: {
+      url: string;
+      width: number;
+      height: number;
+    };
+    PublicationAppList: {
+      apps: components["schemas"]["PublicationApp"][];
+    };
+    DefinePublicationAppRequest: {
+      slug: string;
+      name: string;
+      home: string;
+    };
+    UpdatePublicationAppRequest: {
+      slug?: string;
+      name?: string;
+      home?: string;
+      retired?: boolean;
+    };
+    OrderPublicationAppsRequest: {
+      appIds: string[];
+    };
+    PublicationCategory: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      label: string;
+      position: number;
+      retired: boolean;
+    };
+    PublicationCategoryList: {
+      categories: components["schemas"]["PublicationCategory"][];
+    };
+    UpdatePublicationCategoryRequest: {
+      label?: string;
+      retired?: boolean;
+    };
+    OrderPublicationCategoriesRequest: {
+      categoryIds: string[];
+    };
+    PublicationGrantHolder: {
+      handle: string;
+      displayName: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      restricted: boolean;
+    };
+    PublicationGrant: {
+      /** Format: uuid */
+      id: string;
+      holder: components["schemas"]["PublicationGrantHolder"];
+      app: components["schemas"]["PublicationApp"];
+      categories: components["schemas"]["PublicationCategory"][];
+      defaultCategory: components["schemas"]["PublicationCategory"];
+      /** @description The destinations this contributor may send to. */
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+      /** @description Whether the set comes from the app rather than the grant itself. */
+      destinationsInherited: boolean;
+      /** Format: date-time */
+      grantedAt: string;
+      revokedAt?: string | null;
+      active: boolean;
+    };
+    PublicationGrantList: {
+      grants: components["schemas"]["PublicationGrant"][];
+    };
+    CreatePublicationGrantRequest: {
+      handle: string;
+      /** Format: uuid */
+      appId: string;
+      categoryIds: string[];
+      /** Format: uuid */
+      defaultCategoryId: string;
+    };
+    UpdatePublicationGrantRequest: {
+      categoryIds?: string[];
+      /** Format: uuid */
+      defaultCategoryId?: string;
+    };
+    PublicationWorkspace: {
+      handle: string;
+      admin: boolean;
+      grants: components["schemas"]["PublicationGrant"][];
+      /** @description The categories this account may start a post in. A contributor gets what their grants allow; an admin gets every live category. */
+      categories: components["schemas"]["PublicationCategory"][];
+      /** @description The projects this account may name in a release. A contributor gets the apps they are approved for; an admin gets every live app. */
+      apps: components["schemas"]["PublicationApp"][];
+    };
+    PublicationToken: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      grantId: string;
+      name: string;
+      prefix: string;
+      /** Format: date-time */
+      createdAt: string;
+      expiresAt?: string | null;
+      lastUsedAt?: string | null;
+      revokedAt?: string | null;
+      active: boolean;
+    };
+    PublicationTokenList: {
+      tokens: components["schemas"]["PublicationToken"][];
+    };
+    IssuePublicationTokenRequest: {
+      name: string;
+      expiresAt?: string | null;
+    };
+    IssuedPublicationToken: {
+      token: components["schemas"]["PublicationToken"];
+      /** @description The token value, returned here and never again. */
+      value: string;
+    };
+    PublicationCredential: {
+      token: components["schemas"]["PublicationToken"];
+      grant: components["schemas"]["PublicationGrant"];
+    };
+    /**
+     * @description The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
+     * @enum {string}
+     */
+    PublicationErrorCode:
+      | "unauthenticated"
+      | "token_expired"
+      | "token_revoked"
+      | "grant_revoked"
+      | "forbidden"
+      | "not_found"
+      | "invalid"
+      | "category_refused"
+      | "stale_version"
+      | "already_scheduled"
+      | "schedule_running"
+      | "idempotency_mismatch"
+      | "idempotency_in_progress"
+      | "rate_limited"
+      | "server_error";
+    /** @description How every publication route refuses. It never names another account, grant or token. */
+    PublicationError: {
+      error: string;
+      code: components["schemas"]["PublicationErrorCode"];
+      /** @description The request field the refusal is about, where there is one. */
+      field?: string;
+    };
+    /** @enum {string} */
+    PostStatus: "draft" | "published" | "withdrawn";
+    /** @description The versioned structured body Illarin owns. Go validates its vocabulary for every client, and the site renders it directly. */
+    PostDocument: {
+      version: number;
+      content: Record<string, never>[];
+    };
+    PostAuthor: {
+      handle: string;
+    };
+    /** @enum {string} */
+    PostMediaPurpose: "header" | "document" | "social";
+    /** @description One picture a post owns. Its bytes never change, so an address a reader holds always answers with the picture the edition was written with. */
+    PostMedia: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      postId: string;
+      purpose: components["schemas"]["PostMediaPurpose"];
+      /** @description The size a picture is shown at on its own. */
+      url: string;
+      /** @description The size a gallery shows a picture at. */
+      thumbUrl: string;
+      width: number;
+      height: number;
+    };
+    PostHeader: {
+      /** Format: uuid */
+      mediaId: string;
+      alt: string;
+      caption?: string;
+    };
+    PostHeaderEdit: {
+      /** Format: uuid */
+      mediaId: string;
+      alt: string;
+      caption?: string;
+    };
+    AddPostMediaRequest: {
+      purpose: components["schemas"]["PostMediaPurpose"];
+    };
+    PostRelease: {
+      app: components["schemas"]["PublicationApp"];
+      version: string;
+      address?: string;
+    };
+    PostReleaseEdit: {
+      /** Format: uuid */
+      appId: string;
+      version: string;
+      address?: string;
+    };
+    PostByline: {
+      handle: string;
+      /** @description True when the byline is an admin-supplied snapshot with no account behind it, so nothing should link it to a public profile. */
+      historical: boolean;
+      displayName: string;
+      contactEmail: string;
+      avatar?: components["schemas"]["ProfileAvatar"] | null;
+      app?: components["schemas"]["PublicationApp"] | null;
+    };
+    Post: {
+      /** Format: uuid */
+      id: string;
+      status: components["schemas"]["PostStatus"];
+      title: string;
+      summary: string;
+      slug: string;
+      category: components["schemas"]["PublicationCategory"];
+      document: components["schemas"]["PostDocument"];
+      documentVersion: number;
+      release?: components["schemas"]["PostRelease"] | null;
+      header?: components["schemas"]["PostHeader"] | null;
+      socialMediaId?: string | null;
+      /** @description The edition readers are being given, once there is one. */
+      publicRevisionId?: string | null;
+      schedule?: components["schemas"]["PostSchedule"] | null;
+      withdrawal?: components["schemas"]["PostWithdrawal"] | null;
+      deletion?: components["schemas"]["PostDeletion"] | null;
+      media: components["schemas"]["PostMedia"][];
+      byline?: components["schemas"]["PostByline"] | null;
+      /** @description Addresses this post published under and has since left. Every one of them still reaches it. */
+      formerAddresses: string[];
+      app?: components["schemas"]["PublicationApp"] | null;
+      /** Format: uuid */
+      grantId?: string;
+      version: number;
+      author: components["schemas"]["PostAuthor"];
+      /** Format: date-time */
+      publishedAt?: string;
+      /** Format: date-time */
+      updatedPublicAt?: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    PostList: {
+      posts: components["schemas"]["Post"][];
+    };
+    /** @description A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version. */
+    PostConflict: {
+      error: string;
+      code: components["schemas"]["PublicationErrorCode"];
+      field?: string;
+      version?: number;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    CreatePostRequest: {
+      /** Format: uuid */
+      grantId?: string;
+      /** Format: uuid */
+      categoryId: string;
+      title: string;
+    };
+    SavePostRequest: {
+      version: number;
+      /** Format: uuid */
+      categoryId: string;
+      title: string;
+      summary: string;
+      slug: string;
+      document: components["schemas"]["PostDocument"];
+      release?: components["schemas"]["PostReleaseEdit"] | null;
+      header?: components["schemas"]["PostHeaderEdit"] | null;
+      socialMediaId?: string | null;
+    };
+    ImportPostMarkdownRequest: {
+      /** @description The working-copy version the import means to replace. */
+      version: number;
+      /** @description Constrained Markdown. Raw HTML, MDX and pictures from anywhere but this post are refused rather than quietly dropped. */
+      markdown: string;
+    };
+    /** @description One line of an import and what could not be carried across it. */
+    PostImportNote: {
+      line: number;
+      message: string;
+    };
+    /** @description The working copy an import produced, together with everything the conversion could not carry across exactly. */
+    PostImport: {
+      post: components["schemas"]["Post"];
+      warnings: components["schemas"]["PostImportNote"][];
+    };
+    /** @description An import that did not happen. The working copy is left exactly as it was. A refusal that came from reading the Markdown names every line that stopped it; one about the request or the post it was aimed at does not. */
+    PostImportRefusal: {
+      error: string;
+      code: components["schemas"]["PublicationErrorCode"];
+      field?: string;
+      refusals?: components["schemas"]["PostImportNote"][];
+    };
+    CorrectPostAddressRequest: {
+      slug: string;
+    };
+    CorrectPostBylineRequest: {
+      handle: string;
+    };
+    PublicPost: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      /** @description The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes. */
+      originalSlug: string;
+      title: string;
+      summary: string;
+      category: components["schemas"]["PublicationCategory"];
+      document: components["schemas"]["PostDocument"];
+      release?: components["schemas"]["PostRelease"] | null;
+      header?: components["schemas"]["PostHeader"] | null;
+      socialImage?: components["schemas"]["PostMedia"] | null;
+      media: components["schemas"]["PostMedia"][];
+      byline: components["schemas"]["PostByline"];
+      /** @description At most three other published posts, preferring the same publication app and then the same category, newest first. */
+      related: components["schemas"]["PostSummary"][];
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    /** @description Why a post is out of public view. The reason is Illarin's own record; the explanation is the only part a reader is ever shown. */
+    PostWithdrawal: {
+      reason: string;
+      explanation: string;
+      by: string;
+      /** Format: date-time */
+      at: string;
+    };
+    WithdrawPostRequest: {
+      /** @description The working-copy version the withdrawal means to act on. */
+      version: number;
+      /** @description Why the post is coming down. Illarin keeps this and readers never see it. */
+      reason: string;
+      /** @description A separate sentence for readers, shown on the withdrawn address. */
+      explanation?: string;
+      /** @description Where this withdrawal announces. An absent list takes the policy defaults; an empty one withdraws quietly. */
+      destinationIds?: string[] | null;
+      note?: string;
+    };
+    RepublishPostRequest: {
+      /** @description The working-copy version the republication means to act on. */
+      version: number;
+      /**
+       * Format: uuid
+       * @description The edition readers are given when the post returns.
+       */
+      revisionId: string;
+      /** @description Where this republication announces. An absent list takes the policy defaults; an empty one puts the post back quietly. */
+      destinationIds?: string[] | null;
+      note?: string;
+    };
+    /** @description The whole of what a withdrawn address answers with. It carries the address the tombstone lives at and nothing the post used to say. */
+    WithdrawnPost: {
+      slug: string;
+      explanation: string;
     };
     RenameHandleRequest: {
       handle: string;
@@ -1224,6 +2782,8 @@ export interface components {
       elements: components["schemas"]["SaveAssetElement"][];
       /** @description The applications that may receive a sealed prompt in this save. Send an empty list only when no fragment remains sealed. */
       allowedApps?: "lumiverse"[];
+      /** @description The creator confirming that this save makes sealed prompt text public. A save that unseals a prompt without it is refused. */
+      exposeProtected?: boolean;
     };
     ArrangeAssetBlocksRequest: {
       blocks: {
@@ -1324,7 +2884,7 @@ export interface components {
         text: string;
       }[];
     };
-    /** @description An ordered list of images. An item carries its image and one optional free-text name, and its position is where it sits in the list. */
+    /** @description An ordered list of images. An item carries its image, one optional free-text name and, in a gallery, whether it travels in downloads. Its position is where it sits in the list. */
     ImageSetContent: {
       images: {
         /**
@@ -1335,6 +2895,8 @@ export interface components {
         /** Format: uuid */
         mediaId: string;
         name?: string;
+        /** @description The creator's own choice to keep this image out of downloads. A reader can put it back for their own copy without changing it. Only a gallery image carries the choice; it is refused on an expression set, whose images an application indexes by name. */
+        omitFromDownloads?: boolean;
       }[];
     };
     FieldListContent: {
@@ -1649,6 +3211,13 @@ export interface components {
       createdAt: string;
     };
     AssetDetail: {
+      /**
+       * Format: int64
+       * @description Only returned with the owner's working copy or draft, from the same read snapshot
+       */
+      workingCopyVersion?: number;
+      /** @description Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset. */
+      unpublishedChanges?: boolean;
       /** Format: uuid */
       id: string;
       /** @enum {string} */
@@ -1677,6 +3246,8 @@ export interface components {
       eligibleApps: "lumiverse"[];
       /** @description The formats this asset is offered in, read from its projection. A format Illarin cannot produce for the asset is absent rather than listed as unavailable, so this is a list of choices and not a capability report. */
       downloads: components["schemas"]["DownloadTarget"][];
+      /** @description One entry per application that reads a format this asset is offered in, naming the format that lands most of the asset in it. An application no offered format reaches is absent. */
+      appTargets: components["schemas"]["AppTarget"][];
       /** @description The creator's own upload. Null for an asset built from nothing, which gets no group saying so. */
       original: components["schemas"]["OriginalUpload"] | null;
       /** Format: date-time */
@@ -1695,6 +3266,8 @@ export interface components {
       addableBlocks?: components["schemas"]["AddableBlock"][];
       /** @enum {string} */
       visibility: "hidden" | "blurred" | "shown";
+      /** @description The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none. */
+      latestUpdate?: components["schemas"]["RecordedVersion"];
       withhold?: components["schemas"]["AssetWithhold"];
     };
     DownloadTarget: {
@@ -1713,8 +3286,10 @@ export interface components {
       verdict: "carried" | "reduced" | "dropped";
       /** @description What went, on a reduced verdict. */
       reason?: string;
-      /** @description Where the content lands when that is not the format's standard home for it. Independent of how much survives, so it rides on a carried verdict too. */
+      /** @description One plain sentence for content that lands somewhere other than the format's standard home for it, saying what a reader gets. Independent of how much survives, so it rides on a carried verdict too. Names no application: shownBy carries that. */
       destination?: string;
+      /** @description The applications that show what the destination writes. Present only beside a destination, and the rest of the named applications receive the file without that content reaching them. */
+      shownBy?: string[];
       sample: components["schemas"]["DownloadSample"];
     };
     DownloadSample: {
@@ -1743,6 +3318,8 @@ export interface components {
     };
     AssetIdentityRequest: {
       name: string;
+      /** @description The catalog pitch written for a person. An empty value clears it. */
+      blurb: string;
       /** @description Null is the unanswered state, which only a draft may be in. */
       isNsfw: boolean | null;
     };
@@ -1760,6 +3337,8 @@ export interface components {
     };
     PublishRefusal: {
       error: string;
+      /** @enum {string} */
+      code?: "not_ready" | "already_published" | "no_changes";
       /** @description The whole floor, so a refusal names every missing item at once. */
       readiness?: components["schemas"]["ReadinessItem"][];
     };
@@ -1808,6 +3387,8 @@ export interface components {
       thumbUrl: string;
       width: number;
       height: number;
+      /** @description The stored file's size, which is what the download chooser adds up to say how large a file a choice of images will make. */
+      bytes: number;
     };
     AssetList: {
       items: components["schemas"]["BrowseAsset"][];
@@ -1903,10 +3484,17 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** @enum {string} */
-      status: "pending" | "processing" | "failed" | "success";
+      status:
+        | "pending"
+        | "processing"
+        | "preview"
+        | "cancelled"
+        | "failed"
+        | "success";
       url: string;
       asset?: components["schemas"]["Asset"] | null;
       failure?: components["schemas"]["IngestFailure"];
+      preview?: components["schemas"]["ReplacementPreview"];
     };
     IngestFailure: {
       /** @enum {string} */
@@ -1916,8 +3504,277 @@ export interface components {
         | "unsupported_version"
         | "safety_violation"
         | "wrong_kind"
+        | "working_copy_conflict"
+        | "asset_unavailable"
+        | "limit_exceeded"
         | "internal_failure";
       message: string;
+    };
+    ReplacementPreview: {
+      format: string;
+      groups: components["schemas"]["VersionChangeGroup"][];
+      /** @description The subjects where the file overwrites an edit made since the asset was last published */
+      conflicts: string[];
+      unrepresentable: string[];
+      /** @description Sealed prompts whose wording is not in the file or the current asset */
+      missingWording: string[];
+      /** @description How many prompt fragments the file would seal */
+      seals: number;
+    };
+    ReplacementAcceptance: {
+      /**
+       * @description Confirms that removing protection may expose published and recorded prompt text immediately
+       * @default false
+       */
+      exposeProtected: boolean;
+      unrepresentable: {
+        [key: string]: "keep" | "remove";
+      };
+    };
+    BlockSaveConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["SealedExposureRefusal"];
+    SealedExposureRefusal: {
+      error: string;
+      /** @enum {string} */
+      code: "sealed_exposure";
+      /** @description The prompts whose protection would be removed */
+      prompts: string[];
+    };
+    RecordedVersion: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: date-time */
+      recordedAt: string;
+      /** @description Whether this version was captured from what the asset already was, rather than published as an update. */
+      initial: boolean;
+      versionLabel: string;
+      summary: string;
+      notes: string;
+      /** Format: date-time */
+      notesEditedAt?: string;
+      /** Format: date-time */
+      withdrawnAt?: string;
+      withdrawalExplanation?: string;
+    };
+    RecordedVersionList: {
+      items: components["schemas"]["RecordedVersion"][];
+    };
+    AssetVersionNotesRequest: {
+      summary: string;
+      notes?: string;
+    };
+    AssetVersionWithdrawalRequest: {
+      explanation: string;
+    };
+    VersionChange: {
+      /** @enum {string} */
+      kind: "addition" | "removal" | "change";
+      name: string;
+      /** @description What changed about an item when there is no wording to show */
+      note?: string;
+      previousName?: string;
+      before?: string;
+      after?: string;
+      /** @description The address of the picture this change replaced or removed */
+      beforeImage?: string;
+      /** @description The address of the picture this change added or replaced it with */
+      afterImage?: string;
+    };
+    VersionChangeGroup: {
+      subject: string;
+      label: string;
+      changes: components["schemas"]["VersionChange"][];
+    };
+    VersionComparison: {
+      from: components["schemas"]["RecordedVersion"];
+      to: components["schemas"]["RecordedVersion"];
+      groups: components["schemas"]["VersionChangeGroup"][];
+      /** @description Why a version may not be opened, leaving the groups empty */
+      unavailable?: string;
+      /** @description Whether a version's prompts could not be matched to the asset's current sealed prompts, so none of them are shown */
+      promptsWithheld: boolean;
+    };
+    NamedPrompt: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
+    ProtectionMismatch: {
+      version: components["schemas"]["RecordedVersion"];
+      /** @description The sealed prompts this version does not carry under the same id */
+      unmatched: components["schemas"]["NamedPrompt"][];
+      /** @description The prompts this version does carry, which a match chooses from */
+      recorded: components["schemas"]["NamedPrompt"][];
+    };
+    ProtectionMismatchList: {
+      items: components["schemas"]["ProtectionMismatch"][];
+    };
+    PromptCorrespondenceRequest: {
+      matches: {
+        /**
+         * Format: uuid
+         * @description A prompt the asset seals right now
+         */
+        current: string;
+        /**
+         * Format: uuid
+         * @description The prompt this version carries in its place, absent where it carries none
+         */
+        recorded?: string;
+      }[];
+    };
+    /** @enum {string} */
+    AssetUpdateDestinationKind: "webhook" | "discord";
+    AssetUpdateDestinationChoice: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      byDefault: boolean;
+    };
+    AssetUpdateDestinationChoices: {
+      destinations: components["schemas"]["AssetUpdateDestinationChoice"][];
+    };
+    AssetUpdateDestinationDefaultsRequest: {
+      destinationIds: string[];
+    };
+    /**
+     * @description Where one announcement stands. No settled state changes the published update. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+     * @enum {string}
+     */
+    AssetUpdateAnnouncementState:
+      | "pending"
+      | "sending"
+      | "delivered"
+      | "failed"
+      | "unconfirmed";
+    /**
+     * @description Why an announcement stopped, absent while it is still going. The last four are Illarin cancelling its own work because the asset was withheld, the update withdrawn, the asset unlisted without consent to send its link, or the asset no longer published.
+     * @enum {string}
+     */
+    AssetUpdateAnnouncementSettledReason:
+      | "arrived"
+      | "exhausted"
+      | "refused"
+      | "gone"
+      | "removed"
+      | "disabled"
+      | "moved"
+      | "unconfirmed"
+      | "withheld"
+      | "withdrawn"
+      | "unlisted"
+      | "deleted";
+    /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
+    AssetUpdateAnnouncementAttempt: {
+      run: number;
+      number: number;
+      /** @enum {string} */
+      outcome: "delivered" | "refused" | "unreachable" | "unconfirmed";
+      /** @description The HTTP status the destination answered, absent when it never answered. */
+      status?: number;
+      detail: string;
+      tookMs: number;
+      /** Format: date-time */
+      attemptedAt: string;
+    };
+    /** @description One update announcement on its way to one destination. */
+    AssetUpdateAnnouncement: {
+      /**
+       * Format: uuid
+       * @description The delivery, which is also the webhook-id every attempt carries.
+       */
+      id: string;
+      /** Format: uuid */
+      eventId: string;
+      /** Format: uuid */
+      updateId: string;
+      updateNumber: number;
+      /** @description The name the destination carried when the update was published. */
+      destination: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      /** @description Whether the destination behind this announcement is gone. */
+      removed: boolean;
+      state: components["schemas"]["AssetUpdateAnnouncementState"];
+      settledReason?: components["schemas"]["AssetUpdateAnnouncementSettledReason"];
+      /** @description The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed. */
+      messageId: string;
+      run: number;
+      attempts: number;
+      /** Format: date-time */
+      occurredAt: string;
+      /**
+       * Format: date-time
+       * @description When the next attempt is due, in the past once it has settled.
+       */
+      dueAt: string;
+      /** Format: date-time */
+      settledAt?: string | null;
+      /** @description The most recent attempt, absent until one has been made. */
+      last?: components["schemas"]["AssetUpdateAnnouncementAttempt"];
+    };
+    AssetUpdateAnnouncementList: {
+      announcements: components["schemas"]["AssetUpdateAnnouncement"][];
+    };
+    AssetUpdateChannel: {
+      guildId: string;
+      channelId: string;
+    };
+    AssetUpdateDestination: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      host: string;
+      /** @description The scheme and host followed by a masked path; never the capability address. */
+      address: string;
+      /** @enum {string} */
+      state: "unverified" | "active" | "disabled";
+      channel?: components["schemas"]["AssetUpdateChannel"];
+      /** Format: date-time */
+      secretSetAt?: string;
+      /** Format: date-time */
+      previousSecretUntil?: string;
+      /** Format: date-time */
+      verifiedAt?: string;
+      /** Format: date-time */
+      disabledAt?: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    AssetUpdateDestinationList: {
+      destinations: components["schemas"]["AssetUpdateDestination"][];
+    };
+    AddAssetUpdateDestinationRequest: {
+      name: string;
+      kind: components["schemas"]["AssetUpdateDestinationKind"];
+      address: string;
+    };
+    AddedAssetUpdateDestination: {
+      destination: components["schemas"]["AssetUpdateDestination"];
+      /** @description A new webhook signing secret, shown once. Absent for Discord. */
+      secret?: string;
+    };
+    UpdateAssetUpdateDestinationRequest: {
+      name?: string;
+      address?: string;
+    };
+    ProfileLink: {
+      label: string;
+      address: string;
+    };
+    SaveProfileRequest: {
+      displayName: string;
+      biography: string;
+      contactEmail: string;
+      links: components["schemas"]["ProfileLink"][];
+    };
+    ProfileAvatar: {
+      url: string;
+      width: number;
+      height: number;
     };
     ManagedInstance: components["schemas"]["LinkedInstance"] & {
       /** @description How many assets this instance has reported having installed. It is zero without the library:sync scope. */
@@ -2024,16 +3881,627 @@ export interface components {
       /** Format: uuid */
       instanceId: string;
     };
+    /**
+     * @description What a destination is. A webhook receives the signed event; a Discord channel receives an announcement Illarin composed.
+     * @enum {string}
+     */
+    PublicationDestinationKind: "webhook" | "discord";
+    /**
+     * @description Whether a destination is ready to receive anything.
+     * @enum {string}
+     */
+    PublicationDestinationState: "unverified" | "active" | "disabled";
+    /**
+     * @description One Publication event a destination may subscribe to.
+     * @enum {string}
+     */
+    PublicationEvent:
+      | "publication.post.published.v1"
+      | "publication.post.updated.v1"
+      | "publication.post.withdrawn.v1";
+    /** @description One destination a post may send to. It carries no address and no secret, which is the whole point of it. */
+    PublicationDestinationChoice: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: components["schemas"]["PublicationDestinationKind"];
+      state: components["schemas"]["PublicationDestinationState"];
+      /** @description Which public transitions this destination receives, so a publisher is only offered the ones this transition would reach. */
+      events: components["schemas"]["PublicationEvent"][];
+      /** @description The notification role an author may ask this destination to mention, empty when the authority approved none. */
+      role: string;
+      /** @description Whether a publication starts with this one selected. */
+      byDefault: boolean;
+    };
+    /**
+     * @description Where a schedule got to.
+     * @enum {string}
+     */
+    PostScheduleState:
+      | "pending"
+      | "publishing"
+      | "published"
+      | "cancelled"
+      | "stopped";
+    /** @description The post's most recent schedule. It names the exact edition that will go live and the instant it goes, both in UTC. */
+    PostSchedule: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      revisionId: string;
+      revisionNumber: number;
+      /** Format: date-time */
+      at: string;
+      state: components["schemas"]["PostScheduleState"];
+      /** @description Why Illarin stopped a schedule instead of publishing it. */
+      stoppedBecause?: string;
+      createdBy: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    /** @description A deleted post and the deadline it has to come back by. Nothing about it is public, and readers were never shown any of it. */
+    PostDeletion: {
+      /** Format: date-time */
+      at: string;
+      /**
+       * Format: date-time
+       * @description When the post and everything it holds are removed for good.
+       */
+      until: string;
+      by: string;
+    };
+    /**
+     * @description Why an edition was kept.
+     * @enum {string}
+     */
+    PostRevisionReason: "checkpoint" | "publication" | "schedule";
+    /** @description One immutable edition of a post. It carries what the edition was called and when it was kept, not the words it holds. */
+    PostRevision: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      title: string;
+      summary: string;
+      slug: string;
+      category: components["schemas"]["PublicationCategory"];
+      capturedFor: components["schemas"]["PostRevisionReason"];
+      capturedBy: string;
+      /** Format: date-time */
+      capturedAt: string;
+      /** @description Whether this is the edition readers are being given. */
+      public: boolean;
+    };
+    PostRevisionList: {
+      revisions: components["schemas"]["PostRevision"][];
+    };
+    PostVersionRequest: {
+      /** @description The working-copy version the action means to act on. */
+      version: number;
+    };
+    /** @description The safe identity behind a Discord destination. It names where announcements land and nothing that would let a reader send one. */
+    PublicationChannel: {
+      /** @description The Discord server the channel belongs to. */
+      guildId: string;
+      /** @description The channel announcements land in. */
+      channelId: string;
+      /** @description The name Discord shows the announcement under. */
+      webhookName: string;
+      /** @description The one role an author may ask for, empty when there is none. */
+      roleId: string;
+      /** @description What that role is called, and all a contributor is shown. */
+      roleName: string;
+    };
+    /** @description One configured endpoint as anybody is ever shown it. The address is masked to its host and the signing secret is absent. */
+    PublicationDestination: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["PublicationDestinationKind"];
+      /** @description What the authority calls this endpoint, and all a contributor sees. */
+      name: string;
+      /** @description The host the endpoint answers on. */
+      host: string;
+      /** @description The masked address, which names the host and hides the rest. */
+      address: string;
+      state: components["schemas"]["PublicationDestinationState"];
+      /** @description Which Publication events this endpoint asked for. */
+      events: components["schemas"]["PublicationEvent"][];
+      /** @description Where a Discord destination announces, absent on a generic webhook. */
+      channel?: components["schemas"]["PublicationChannel"];
+      /**
+       * Format: date-time
+       * @description When the current signing secret was drawn.
+       */
+      secretSetAt: string;
+      /**
+       * Format: date-time
+       * @description How long a rotated secret keeps producing an accepted signature, absent when no rotation is in its overlap.
+       */
+      previousSecretUntil?: string | null;
+      /** Format: date-time */
+      verifiedAt?: string | null;
+      /** Format: date-time */
+      disabledAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    PublicationDestinationList: {
+      destinations: components["schemas"]["PublicationDestination"][];
+    };
+    AddPublicationDestinationRequest: {
+      name: string;
+      /** @description An https address on port 443 with no username, password or fragment, whose host resolves into public address space. */
+      address: string;
+      /** @description Which Publication events this endpoint receives. An absent list takes published events and nothing else. */
+      events?: components["schemas"]["PublicationEvent"][];
+    };
+    /** @description A new destination and the one showing its signing secret ever gets. */
+    AddedPublicationDestination: {
+      destination: components["schemas"]["PublicationDestination"];
+      /** @description The signing secret this endpoint's requests carry. Illarin cannot show it again. */
+      secret: string;
+    };
+    UpdatePublicationDestinationRequest: {
+      name?: string;
+      address?: string;
+      /** @description Which Publication events this endpoint receives. An absent list leaves the subscription alone. */
+      events?: components["schemas"]["PublicationEvent"][];
+    };
+    /** @description A destination's new signing secret and how long the old one stays acceptable alongside it. */
+    RotatedPublicationSecret: {
+      destination: components["schemas"]["PublicationDestination"];
+      /** @description The signing secret this endpoint's requests now carry. Illarin cannot show it again. */
+      secret: string;
+      /**
+       * Format: date-time
+       * @description When the old secret stops producing an accepted signature.
+       */
+      previousSecretUntil: string;
+    };
+    PublicationChannelRequest: {
+      name: string;
+      /** @description The Discord incoming webhook address. Illarin masks it after saving; leave it out when changing a destination to keep the one it has. */
+      address?: string;
+      /** @description The one role an author may ask this destination to mention. Send it empty to approve no role. */
+      roleId?: string;
+      /** @description What that role is called, and all a contributor is shown. */
+      roleName?: string;
+    };
+    /**
+     * @description Where one delivery stands. No settled state changes whether the post is public. An unconfirmed announcement was accepted without Discord saying which message it made, so it is neither delivered nor safe to send again.
+     * @enum {string}
+     */
+    PostDeliveryState:
+      | "pending"
+      | "sending"
+      | "delivered"
+      | "failed"
+      | "unconfirmed";
+    /**
+     * @description Why a delivery stopped, absent while it is still going.
+     * @enum {string}
+     */
+    PostDeliverySettledReason:
+      | "arrived"
+      | "exhausted"
+      | "refused"
+      | "gone"
+      | "removed"
+      | "disabled"
+      | "moved"
+      | "unconfirmed";
+    /**
+     * @description What one attempt found at the far end.
+     * @enum {string}
+     */
+    PostDeliveryOutcome:
+      | "delivered"
+      | "refused"
+      | "unreachable"
+      | "unconfirmed";
+    /** @description The safe record of one request. It holds no body, in either direction, and no header Illarin signed it with. */
+    PostDeliveryAttempt: {
+      /** @description Which attempt sequence this belongs to; a replay opens the next. */
+      run: number;
+      number: number;
+      outcome: components["schemas"]["PostDeliveryOutcome"];
+      /** @description What the endpoint answered, absent when nothing was reached. */
+      status?: number | null;
+      /** @description A safe sentence about the attempt, never a response body. */
+      detail: string;
+      tookMs: number;
+      /** Format: date-time */
+      attemptedAt: string;
+    };
+    /** @description One publication event on its way to one destination. */
+    PostDelivery: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      eventId: string;
+      eventType: string;
+      /** Format: uuid */
+      postId: string;
+      /** @description The title the edition behind this event carries. */
+      postTitle: string;
+      /** Format: uuid */
+      revisionId: string;
+      /** @description The name the destination carried when this event was captured. */
+      destination: string;
+      /**
+       * @description What the destination behind this delivery is, empty once it has been removed.
+       * @enum {string}
+       */
+      kind: "" | "webhook" | "discord";
+      /** @description The Discord message this announcement made, empty for a generic webhook and for an announcement Discord never confirmed. */
+      messageId: string;
+      /** @description Whether the destination behind this delivery is gone. */
+      removed: boolean;
+      state: components["schemas"]["PostDeliveryState"];
+      settledReason?: components["schemas"]["PostDeliverySettledReason"];
+      /** @description Which attempt sequence the delivery is on; a replay opens the next. */
+      run: number;
+      attempts: number;
+      /** Format: date-time */
+      occurredAt: string;
+      /**
+       * Format: date-time
+       * @description When the next attempt is due, in the past once it has settled.
+       */
+      dueAt: string;
+      /** Format: date-time */
+      settledAt?: string | null;
+      /** @description The most recent attempt, absent until one has been made. */
+      last?: components["schemas"]["PostDeliveryAttempt"];
+    };
+    PostDeliveryList: {
+      deliveries: components["schemas"]["PostDelivery"][];
+    };
+    /** @description Every attempt one delivery has made, oldest first. */
+    PostDeliveryAttemptList: {
+      attempts: components["schemas"]["PostDeliveryAttempt"][];
+    };
+    DestinationPolicyRequest: {
+      /** @description The destinations this policy allows. An absent list on a grant puts it back on its app's baseline; an empty list allows nothing. */
+      destinationIds?: string[] | null;
+      /** @description Which of the allowed destinations a publication starts with. */
+      defaultDestinationIds?: string[];
+    };
+    PublicationDestinationChoiceList: {
+      destinations: components["schemas"]["PublicationDestinationChoice"][];
+      /** @description Whether this set comes from the app rather than being its own. */
+      inherited: boolean;
+    };
+    /** @description One thing that was done to a post, named by who did it, what it was and which edition it touched. */
+    PostAction: {
+      /** Format: uuid */
+      id: string;
+      actor: string;
+      credential: string;
+      action: string;
+      revision?: number | null;
+      before?: string;
+      after?: string;
+      /** Format: date-time */
+      at: string;
+    };
+    PostActionList: {
+      actions: components["schemas"]["PostAction"][];
+    };
+    PublishPostRequest: {
+      /** @description The working-copy version the action means to act on. */
+      version: number;
+      destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
+      note?: string;
+    };
+    ReplacePostScheduleRequest: {
+      destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
+      note?: string;
+      /**
+       * Format: uuid
+       * @description An edition the post has already kept.
+       */
+      revisionId: string;
+      /**
+       * Format: date-time
+       * @description When the edition goes live, with an explicit offset.
+       */
+      at: string;
+    };
+    SchedulePostRequest: {
+      /** @description The working-copy version the edition is captured from. */
+      version: number;
+      /**
+       * Format: date-time
+       * @description When the edition goes live, with an explicit offset.
+       */
+      at: string;
+      destinationIds?: string[] | null;
+      /** @description Which of the chosen destinations announce with the notification role the authority approved on them. Naming one Illarin is not sending to, or one with no approved role, is refused. */
+      roleDestinationIds?: string[];
+      note?: string;
+    };
+    /** @description One published post as an archive lists it. Every field is stored on the published edition, so a listing writes no excerpt and reads no live profile. */
+    PostSummary: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      /** @description The address the post first published under. It still reaches the post after an address correction, so a feed can name the post by an address that never changes. */
+      originalSlug: string;
+      title: string;
+      summary: string;
+      category: components["schemas"]["PublicationCategory"];
+      app?: components["schemas"]["PublicationApp"] | null;
+      releaseVersion?: string;
+      byline: components["schemas"]["PostByline"];
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    /** @description One page of the published archive and the scope it was read under. */
+    PostArchive: {
+      posts: components["schemas"]["PostSummary"][];
+      page: number;
+      pages: number;
+      total: number;
+      category?: components["schemas"]["PublicationCategory"] | null;
+      app?: components["schemas"]["PublicationApp"] | null;
+    };
+    AppTarget: {
+      /** @description The application id, matching the ids allowedApps uses. */
+      id: string;
+      label: string;
+      /** @description The offered format Illarin writes for this application, chosen by what reaches it rather than by how many applications read it. */
+      format: string;
+    };
     LegacyAsset: {
       /** Format: uuid */
       id: string;
       name: string;
     };
+    CandidateConflict: {
+      error: string;
+      /** @enum {string} */
+      code: "working_copy_conflict" | "asset_frozen";
+      /**
+       * Format: int64
+       * @description Present only for an authorized stale request; reload the working copy before retrying
+       */
+      currentVersion?: number;
+    };
+    ReplacementConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["SealedExposureRefusal"];
+    PublishConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["PublishRefusal"];
+    AssetUpdateRequest: {
+      /** @description A short line saying what changed, which every update needs */
+      summary: string;
+      /** @description The longer explanation, where the creator writes one */
+      notes?: string;
+      /** @description Free text a creator may repeat, keeping the asset's own version where it is empty */
+      versionLabel?: string;
+      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule. */
+      destinationIds?: string[];
+      /** @description Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one. */
+      announceUnlisted?: boolean;
+    };
+    AssetUpdate: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: date-time */
+      recordedAt: string;
+      versionLabel: string;
+      summary: string;
+      notes: string;
+      contentGeneration: number;
+      /** @description Whether this update changed the file linked apps download */
+      contentChanged: boolean;
+    };
+    RestoreConflict:
+      | components["schemas"]["CandidateConflict"]
+      | {
+          error: string;
+          /** @enum {string} */
+          code: "invalid_recorded_version";
+        };
+    RecordedVersionDownloads: {
+      version: components["schemas"]["RecordedVersion"];
+      /** @enum {string} */
+      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      /** @description Whether protected content keeps this version out of any file. True while the asset installs only through a linked app, and for a version that recorded a sealed prompt the asset no longer carries. */
+      linkedInstallOnly: boolean;
+      /** @description The formats the current writers offer for the content this version recorded, with the loss each one costs it. Empty while linkedInstallOnly is true. */
+      downloads: components["schemas"]["DownloadTarget"][];
+      appTargets: components["schemas"]["AppTarget"][];
+      /** @description The blocks this version recorded, under the asset's current protection, so a reader can choose which of its gallery images a download carries. */
+      blocks: components["schemas"]["AssetBlock"][];
+      /** @description The pictures this version recorded, cover first, addressed under the reader's own adult-content preference. */
+      media: components["schemas"]["AssetImage"][];
+    };
+    PublicationEventApp: {
+      slug: string;
+      name: string;
+      url: string;
+    };
+    /** @description What the post was at the moment of the transition. It never carries the article body. */
+    PublicationPostSummary: {
+      /**
+       * Format: uuid
+       * @description The post, which is the same across its whole public life.
+       */
+      id: string;
+      /**
+       * Format: uuid
+       * @description The exact edition this event is about.
+       */
+      revisionId: string;
+      title: string;
+      /** @description The hand-written summary readers see before the article. */
+      summary: string;
+      category: {
+        slug: string;
+        label: string;
+      };
+      /** @description The permanent address of the post. */
+      url: string;
+      /** @description The composed sharing image, absent when the post has none. */
+      socialImageUrl?: string;
+      /** Format: date-time */
+      publishedAt: string;
+      /** Format: date-time */
+      updatedAt?: string | null;
+      /** @description The release this post announces, absent when it announces none. */
+      release?: {
+        app: components["schemas"]["PublicationEventApp"];
+        version: string;
+        url?: string;
+      };
+      /** @description Who the post was published under, as it stood at first publication. */
+      byline: {
+        handle: string;
+        name: string;
+        url: string;
+        app?: components["schemas"]["PublicationEventApp"];
+      };
+    };
+    /** @description One public transition of one post, as a summary. Illarin promises no global ordering between events. Compare `occurredAt` and treat `post.revisionId` as the identity of the edition, so an event that arrives after a newer one can be discarded rather than applied. */
+    PublicationPostEvent: {
+      /**
+       * Format: uuid
+       * @description The Publication event, stable across every attempt and replay.
+       */
+      id: string;
+      type: components["schemas"]["PublicationEvent"];
+      /**
+       * Format: date-time
+       * @description When the transition happened, which is what orders two events.
+       */
+      occurredAt: string;
+      /** @description One line the publisher wrote for this transition alone. It is never part of the post and is absent when nothing was written. */
+      note?: string;
+      post: components["schemas"]["PublicationPostSummary"];
+    };
+    AssetUpdateEventAsset: {
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      /** @description The asset's name at the moment of publication. */
+      name: string;
+      /**
+       * Format: uri
+       * @description The asset's page on Illarin.
+       */
+      url: string;
+    };
+    AssetUpdateEventUpdate: {
+      /**
+       * Format: uuid
+       * @description The recorded version this update published.
+       */
+      id: string;
+      /** @description The update's number in the asset's history, rising by one each time. */
+      number: number;
+      /** @description The creator's free-text version label, absent when none was written. */
+      versionLabel?: string;
+      /** @description The creator's one-line summary as published. A later correction does not resend it. */
+      summary: string;
+      /** Format: date-time */
+      recordedAt: string;
+      /** @description Whether the exported file changed, as opposed to the page or catalog entry alone. */
+      contentChanged: boolean;
+      /**
+       * Format: uri
+       * @description The asset's update history, opened at this update.
+       */
+      historyUrl: string;
+    };
+    /** @description One published asset update, as a summary. The same delivery keeps its webhook-id across every attempt, so deduplicate on that header. Illarin promises no global ordering between events; compare `occurredAt` and `update.number` so an event that arrives after a newer one can be discarded rather than applied. The body never carries the changes themselves, prompt text or anything from a private working copy. */
+    AssetUpdateEvent: {
+      /**
+       * Format: uuid
+       * @description The event, stable across every attempt.
+       */
+      id: string;
+      /** @enum {string} */
+      type: "asset.update.published.v1";
+      /**
+       * Format: date-time
+       * @description When the update was published, which is what orders two events.
+       */
+      occurredAt: string;
+      asset: components["schemas"]["AssetUpdateEventAsset"];
+      update: components["schemas"]["AssetUpdateEventUpdate"];
+    };
   };
-  responses: never;
+  responses: {
+    /** @description A field, the post document or the request itself is not valid */
+    PublicationInvalid: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description The request carries no live credential */
+    PublicationUnauthenticated: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description The credential may not reach that */
+    PublicationForbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description The credential has gone past the pace this operation allows */
+    PublicationTooManyRequests: {
+      headers: {
+        /** @description Seconds to wait before repeating the request */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+    /** @description Nothing this credential may reach has that identifier */
+    PublicationNotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["PublicationError"];
+      };
+    };
+  };
   parameters: {
+    /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+    IdempotencyKey: string;
     /** @description Illarin's browser request proof. The value must be 1. */
     IllarinRequest: "1";
+    /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+    WorkingCopyVersion: number;
+    /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+    WebhookId: string;
+    /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+    WebhookTimestamp: number;
+    /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+    WebhookSignature: string;
   };
   requestBodies: never;
   headers: never;
@@ -2041,6 +4509,520 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listAssetUpdateDestinationChoices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe identities of eligible destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestinationChoices"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setAssetUpdateDestinationDefaults: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateDestinationDefaultsRequest"];
+      };
+    };
+    responses: {
+      /** @description Defaults saved */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A destination is not owned, verified and active */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description This asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listAssetUpdateAnnouncements: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The announcements and where each stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateAnnouncementList"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No asset belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listAssetUpdateDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The creator's destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestinationList"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddAssetUpdateDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination and any new signing secret */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedAssetUpdateDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe destination configuration */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateAssetUpdateDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  verifyAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The verified destination */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed during verification; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  disableAssetUpdateDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  rotateAssetUpdateDestinationSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The requested destination change is complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedAssetUpdateDestination"];
+        };
+      };
+      /** @description Invalid destination configuration */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sign in first */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Verify your account first */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No destination belonging to this creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The destination changed; inspect it before trying again */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   detachDiscord: {
     parameters: {
       query?: never;
@@ -2246,6 +5228,155 @@ export interface operations {
       };
       /** @description No account is signed in */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  savePublicProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaveProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description The public profile as visitors now see it */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description A profile field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setProfileAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Send the image as the only form data part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The public profile carrying its new avatar */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description The image is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeProfileAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The public profile without an avatar */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The profile has no avatar */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -3578,6 +6709,2450 @@ export interface operations {
       };
     };
   };
+  listPublicationApps: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The configured apps */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationAppList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  orderPublicationApps: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderPublicationAppsRequest"];
+      };
+    };
+    responses: {
+      /** @description The configured apps in their new order */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationAppList"];
+        };
+      };
+      /** @description The order does not name every app exactly once */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  definePublicationApp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DefinePublicationAppRequest"];
+      };
+    };
+    responses: {
+      /** @description The app as it was configured */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationApp"];
+        };
+      };
+      /** @description An app field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Another app already uses that slug */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationApp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePublicationAppRequest"];
+      };
+    };
+    responses: {
+      /** @description The app as it now reads */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationApp"];
+        };
+      };
+      /** @description An app field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such app */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Another app already uses that slug */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setPublicationAppMark: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Send the image as the only form data part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The app carrying its new mark */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationApp"];
+        };
+      };
+      /** @description The image is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such app */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The publication categories */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCategoryList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  orderPublicationCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderPublicationCategoriesRequest"];
+      };
+    };
+    responses: {
+      /** @description The categories in their new order */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCategoryList"];
+        };
+      };
+      /** @description The order does not name every category exactly once */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePublicationCategoryRequest"];
+      };
+    };
+    responses: {
+      /** @description The category as it now reads */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCategory"];
+        };
+      };
+      /** @description A category field is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such category */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationGrants: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The publication grants */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationGrantList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  createPublicationGrant: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePublicationGrantRequest"];
+      };
+    };
+    responses: {
+      /** @description The grant as it was made */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationGrant"];
+        };
+      };
+      /** @description The app, category set or default category is not usable */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description That account already publishes for that app */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  revokePublicationGrant: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The grant no longer permits publication */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such active grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationGrant: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePublicationGrantRequest"];
+      };
+    };
+    responses: {
+      /** @description The grant as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationGrant"];
+        };
+      };
+      /** @description The category set or default category is not usable */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The grant's tokens */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationTokenList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account neither holds the grant nor publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  issuePublicationToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IssuePublicationTokenRequest"];
+      };
+    };
+    responses: {
+      /** @description The new token and its value, shown once */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IssuedPublicationToken"];
+        };
+      };
+      /** @description The name or expiry is not usable, or the grant is revoked */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account does not hold the grant */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  revokePublicationToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The token no longer authenticates */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account neither holds the grant nor publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such live token */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPublicationCredential: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The calling token and its grant */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCredential"];
+        };
+      };
+      /** @description The token is missing, expired, revoked or no longer granted */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPublicationWorkspace: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The signed-in account's publication workspace */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationWorkspace"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPosts: {
+    parameters: {
+      query?: {
+        /** @description Ask for the deleted posts still inside their recovery window instead of the active ones. */
+        deleted?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The posts this account may manage */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  createPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The draft as it was started */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  getPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The post's working copy */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  savePost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SavePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy as it now reads */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  addPostMedia: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Send the metadata part before the image file part. */
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          metadata: components["schemas"]["AddPostMediaRequest"];
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description A new immutable post picture */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostMedia"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      /** @description The image exceeds the upload limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationError"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+      /** @description The storage reserve cannot accept the image */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationError"];
+        };
+      };
+    };
+  };
+  listPostRevisions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The editions this post has kept */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostRevisionList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  checkpointPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The edition that was kept */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostRevision"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  restorePostRevision: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+        revisionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy the edition was copied into */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  listPublicationDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The configured destinations */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addPublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddPublicationDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination and its signing secret, shown once */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedPublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination is gone */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePublicationDestinationRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  verifyPublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination, now active */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  disablePublicationDestination: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destination, now disabled */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  rotatePublicationDestinationSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The new signing secret, shown once */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RotatedPublicationSecret"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addPublicationChannel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationChannelRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination, already proved by Discord */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updatePublicationChannel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationChannelRequest"];
+      };
+    };
+    responses: {
+      /** @description The destination as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestination"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationDeliveries: {
+    parameters: {
+      query?: {
+        /** @description Narrow the listing to one state. */
+        state?: components["schemas"]["PostDeliveryState"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The delivery work on record */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPublicationDeliveryAttempts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The attempts this delivery has made */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryAttemptList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  replayPublicationDelivery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The delivery, queued again */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDelivery"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  repairDiscordAnnouncement: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          requestId: string;
+          /** @enum {string} */
+          action: "edit" | "delete" | "correction";
+          messageId?: string;
+          text?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The recorded repair outcome; unconfirmed results need a channel check */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            action: string;
+            messageId: string;
+            /** @enum {string} */
+            state: "completed" | "refused" | "unconfirmed";
+            detail: string;
+          };
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account does not have publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery or destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setPublicationAppDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DestinationPolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description The app with the destinations it now allows */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationApp"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such app or destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  setPublicationGrantDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DestinationPolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description The grant with the destinations it now allows */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationGrant"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not the publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such grant or destination */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPostDestinations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The destinations this post may send to */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationDestinationChoiceList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+    };
+  };
+  listPostDeliveries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description What the post has sent */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostDeliveryList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+    };
+  };
+  readPostHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description What has been done to this post */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostActionList"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  importPostMarkdown: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportPostMarkdownRequest"];
+      };
+    };
+    responses: {
+      /** @description The working copy as the import left it */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostImport"];
+        };
+      };
+      /** @description The request, a field or the Markdown itself is not valid */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostImportRefusal"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  publishPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublishPostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post as it now stands */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  withdrawPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WithdrawPostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, out of public view */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, an edition is publishing, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  republishPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RepublishPostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, back in public view */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  deletePost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, waiting out its recovery window */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, an edition is publishing, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  recoverPost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PostVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description The post, back in the workspace */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  replacePostSchedule: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplacePostScheduleRequest"];
+      };
+    };
+    responses: {
+      /** @description The post with the edition it will now publish */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The schedule is already publishing, or the key was reused */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  schedulePost: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SchedulePostRequest"];
+      };
+    };
+    responses: {
+      /** @description The post with the edition it will publish */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The working copy moved on, the post is already scheduled, or the key was reused for another request */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  cancelPostSchedule: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
+        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The post with nothing waiting to publish */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      401: components["responses"]["PublicationUnauthenticated"];
+      403: components["responses"]["PublicationForbidden"];
+      404: components["responses"]["PublicationNotFound"];
+      /** @description The schedule is already publishing, or the key was reused */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostConflict"];
+        };
+      };
+      429: components["responses"]["PublicationTooManyRequests"];
+    };
+  };
+  correctPostAddress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CorrectPostAddressRequest"];
+      };
+    };
+    responses: {
+      /** @description The post at its corrected address */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description The address is reserved, taken or the post is not published */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Only an Illarin admin may correct a published post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  correctPostByline: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CorrectPostBylineRequest"];
+      };
+    };
+    responses: {
+      /** @description The post carrying its corrected byline */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Post"];
+        };
+      };
+      /** @description The post is not published */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Only an Illarin admin may correct a published post */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such post or account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listPostCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The categories a reader can browse */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationCategoryList"];
+        };
+      };
+    };
+  };
+  listPostApps: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The apps a reader can browse */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicationAppList"];
+        };
+      };
+    };
+  };
+  listPublishedPosts: {
+    parameters: {
+      query?: {
+        /** @description The archive page to read, counting from one. */
+        page?: number;
+        /** @description A publication category slug the archive is narrowed to. */
+        category?: string;
+        /** @description A publication app slug the archive is narrowed to. */
+        app?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The page of posts and the scope it was read under */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PostArchive"];
+        };
+      };
+      /** @description No such publication category or app */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getPublishedPost: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The published post */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublicPost"];
+        };
+      };
+      /** @description No published post has that address */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The post at that address was withdrawn */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WithdrawnPost"];
+        };
+      };
+    };
+  };
   getProfile: {
     parameters: {
       query?: never;
@@ -3599,6 +9174,144 @@ export interface operations {
         };
       };
       /** @description No active profile uses the handle */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getProfileRestriction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The restriction now in force */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfileRestriction"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account, or its profile is not restricted */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restrictProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RestrictProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description The restriction now in force */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfileRestriction"];
+        };
+      };
+      /** @description The audit reason is missing or too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restoreProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        handle: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The profile is restored */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account is not an admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such account, or its profile is not restricted */
       404: {
         headers: {
           [name: string]: unknown;
@@ -3752,6 +9465,8 @@ export interface operations {
   getAsset: {
     parameters: {
       query?: {
+        /** @description Read the private working copy. Only the owner may request it. */
+        workingCopy?: boolean;
         /** @description The reader's presentation preference. Asset page URLs keep this preference out of their own query string. */
         nsfw?: "hidden" | "blurred" | "shown";
       };
@@ -3859,10 +9574,56 @@ export interface operations {
       };
     };
   };
-  addAssetRevision: {
+  getAssetReplacement: {
     parameters: {
       query?: never;
       header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The replacement still being read or reviewed, and null where the asset has none waiting */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IngestOperation"] | null;
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  addAssetRevision: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -3908,12 +9669,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
       /** @description The file exceeds an upload limit or the account storage cap */
       413: {
@@ -3931,10 +9694,115 @@ export interface operations {
       };
     };
   };
-  saveAssetBlock: {
+  acceptAssetRevision: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        operationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplacementAcceptance"];
+      };
+    };
+    responses: {
+      /** @description The accepted replacement operation */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IngestOperation"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No reviewed replacement belongs to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed, the asset is frozen, or removing prompt protection needs confirmation */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReplacementConflict"];
+        };
+      };
+    };
+  };
+  cancelAssetRevision: {
     parameters: {
       query?: never;
       header?: never;
+      path: {
+        id: string;
+        operationId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The replacement preview was discarded */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No reviewed replacement belongs to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  saveAssetBlock: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -3950,6 +9818,8 @@ export interface operations {
       /** @description The saved block as it now appears on the page */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -3984,12 +9854,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed, the asset is frozen, or the save would make a sealed prompt public without saying so */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["BlockSaveConflict"];
+        };
       };
       /** @description The uploaded bytes have been purged and cannot return */
       422: {
@@ -4003,7 +9875,10 @@ export interface operations {
   removeAssetBlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -4015,6 +9890,8 @@ export interface operations {
       /** @description The block and everything in it were removed */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
@@ -4040,19 +9917,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   arrangeAssetBlocks: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -4067,6 +9949,8 @@ export interface operations {
       /** @description Every block in its saved page order */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -4101,19 +9985,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   addAssetBlock: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -4128,6 +10017,8 @@ export interface operations {
       /** @description The new block as it now appears at the foot of the page */
       201: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -4162,19 +10053,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   moveAssetBlockContent: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         blockId: string;
@@ -4190,6 +10086,8 @@ export interface operations {
       /** @description Every remaining block in its saved page order */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -4224,12 +10122,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
@@ -4279,7 +10179,10 @@ export interface operations {
   deletePreservedNamespace: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
         namespace: string;
@@ -4291,6 +10194,8 @@ export interface operations {
       /** @description The namespace is gone */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
@@ -4316,12 +10221,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
@@ -4412,7 +10319,10 @@ export interface operations {
   setAssetIdentity: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -4427,16 +10337,27 @@ export interface operations {
       /** @description The header is saved */
       204: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description The name is too long */
+      /** @description The name or blurb is too long, or a published asset was sent no adult content answer */
       400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": {
+            error: string;
+            /**
+             * @description The field a creator can correct, when one applies.
+             * @enum {string}
+             */
+            field?: "name" | "blurb" | "isNsfw";
+          };
+        };
       };
       /** @description No account is signed in */
       401: {
@@ -4459,19 +10380,24 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
     };
   };
   publishAsset: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -4482,6 +10408,8 @@ export interface operations {
       /** @description The asset as its page now reads, published */
       200: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -4509,14 +10437,447 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The draft is not ready, the asset is already published, or it is withheld */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["PublishRefusal"];
+          "application/json": components["schemas"]["PublishConflict"];
         };
+      };
+    };
+  };
+  listAssetUpdates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The recorded versions */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecordedVersionList"];
+        };
+      };
+      /** @description The asset is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publishAssetUpdate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description The recorded update */
+      200: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetUpdate"];
+        };
+      };
+      /** @description The summary is missing or the update text is too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed, the asset is frozen or a draft, the candidate falls short of the floor, or nothing has changed */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PublishConflict"];
+        };
+      };
+    };
+  };
+  compareAssetVersions: {
+    parameters: {
+      query?: {
+        from?: number;
+        to?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The grouped comparison */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VersionComparison"];
+        };
+      };
+      /** @description The asset, or one of the versions, is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The chosen version is the first one recorded */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  restoreAssetVersion: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The version is now the private working copy */
+      204: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed, the asset is frozen or the recorded content is no longer structurally valid */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RestoreConflict"];
+        };
+      };
+    };
+  };
+  correctAssetVersionNotes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetVersionNotesRequest"];
+      };
+    };
+    responses: {
+      /** @description The corrected notes are visible with an edited marker */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The summary is empty or the corrected text is too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  withdrawAssetVersion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetVersionWithdrawalRequest"];
+      };
+    };
+    responses: {
+      /** @description The older version is withdrawn */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The explanation is empty or too long */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The version is current */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listProtectionMismatches: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The versions still to settle */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProtectionMismatchList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getRecordedVersionDownloads: {
+    parameters: {
+      query?: {
+        nsfw?: "hidden" | "blurred" | "shown";
+      };
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The version's download choices */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecordedVersionDownloads"];
+        };
+      };
+      /** @description The asset or the version is not readable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  resolvePromptCorrespondence: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        number: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PromptCorrespondenceRequest"];
+      };
+    };
+    responses: {
+      /** @description The correspondence is settled */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A match names a prompt that is not one of the choices */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset or version does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -4745,7 +11106,12 @@ export interface operations {
   };
   downloadExport: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description The gallery images this one download carries, as a comma-separated list of media ids. Leave the parameter off to take the creator's own choice, and send it empty to take no gallery images at all. It changes nothing stored and nothing another reader sees. Cover and expression images are not chosen here: a cover is the card's own picture and an expression set an application indexes by name, so both travel whole. */
+        images?: string;
+        /** @description The number of a recorded version to write instead of the published one. The file is written now, by the current writer, from the content, pictures and preserved data that version recorded, under the asset's current access and protection. It is not the file the creator uploaded at the time. The filename names the update. */
+        version?: number;
+      };
       header?: never;
       path: {
         id: string;
@@ -4771,8 +11137,22 @@ export interface operations {
           "image/png": string;
         };
       };
-      /** @description No such asset */
+      /** @description No such asset, no such recorded version, or a format that version is not offered in */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The chosen images make a file larger than Illarin will produce. The whole selection is refused and nothing is left out of it. */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description An image this download needs could not be read, so no file was produced. Nothing partial is handed over. */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -4812,7 +11192,10 @@ export interface operations {
   addMedia: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
       path: {
         id: string;
       };
@@ -4832,6 +11215,8 @@ export interface operations {
       /** @description A new immutable media record */
       201: {
         headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
           [name: string]: unknown;
         };
         content: {
@@ -4866,12 +11251,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The asset is withheld and cannot be changed */
+      /** @description The working copy changed or the asset is frozen */
       409: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
       };
       /** @description The image exceeds an upload limit or the account storage cap */
       413: {
@@ -4978,6 +11365,122 @@ export interface operations {
       };
       /** @description No such ingest operation for this creator */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostPublished: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Any 2xx counts as delivered. A redirect is never followed and counts as a wrong address. 410 stops Illarin sending to the endpoint again. 429 is honored, including its Retry-After. A network failure, 408, 425 or any 5xx is retried on the schedule. Any other 4xx stops the attempt sequence until an admin replays it. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostUpdated: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Handled the same way as a published event. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  publicationPostWithdrawn: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PublicationPostEvent"];
+      };
+    };
+    responses: {
+      /** @description Handled the same way as a published event. */
+      "2xx": {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  assetUpdatePublished: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The delivery this event belongs to. It is the same on every attempt of one event reaching one destination, including an admin replay, so it is the value to deduplicate on. Keep it for at least the four days a delivery may keep trying. */
+        "webhook-id": components["parameters"]["WebhookId"];
+        /** @description Unix seconds at which this attempt was signed. It is new on every attempt. Refuse a request whose timestamp is far from your own clock, and use a tolerance of a few minutes rather than seconds. */
+        "webhook-timestamp": components["parameters"]["WebhookTimestamp"];
+        /** @description One or more space-separated signatures, each written as `v1,` followed by the base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>` over the exact bytes received. Accept the request when any one of them matches, and compare in constant time. A destination whose signing secret is being rotated carries two for the length of the overlap, the new secret first. */
+        "webhook-signature": components["parameters"]["WebhookSignature"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetUpdateEvent"];
+      };
+    };
+    responses: {
+      /** @description Any 2xx counts as delivered. A redirect is never followed and counts as a wrong address. 410 stops Illarin sending to the endpoint again. 429 is honored, including its Retry-After. A network failure, 408, 425 or any 5xx is retried on the schedule of immediate, 5 seconds, 5 minutes, 30 minutes, 2 hours, 5 hours, 10 hours, 14 hours, 20 hours and 24 hours. Any other 4xx ends the attempts. Before every attempt Illarin checks that the asset is still published and the update still stands, and cancels the announcement otherwise. */
+      "2xx": {
         headers: {
           [name: string]: unknown;
         };

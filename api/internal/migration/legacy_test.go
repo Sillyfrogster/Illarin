@@ -53,7 +53,6 @@ func TestTheOlderAssetKeepsAContestedAddress(t *testing.T) {
 	}
 }
 
-// The legacy record has one writer, and the reason it exists is that somebody eventually reads a column named downloads and assumes it is live.
 func TestNoRuntimePathReadsTheLegacyCounters(t *testing.T) {
 	frozen := []string{"migration_legacy_counters", "v1_downloads", "v1_views"}
 	root := repositoryFile(t, "api")

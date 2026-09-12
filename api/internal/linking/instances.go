@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Live returns the instances a creator can still reach, most recently seen first.
 func (s *Service) Live(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
 	rows, err := db.New(s.pool).LiveLinkedInstances(ctx, uuidValue(userID))
 	if err != nil {
@@ -32,7 +31,6 @@ func (s *Service) Live(ctx context.Context, userID uuid.UUID) ([]Instance, error
 	return instances, nil
 }
 
-// LiveByID returns one of a creator's own live instances, and anything else is simply absent.
 func (s *Service) LiveByID(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -58,7 +56,6 @@ func (s *Service) LiveByID(
 	}, nil
 }
 
-// Throttle counts one attempt against a named limit on the counter the instance protocol shares.
 func (s *Service) Throttle(
 	ctx context.Context,
 	action string,

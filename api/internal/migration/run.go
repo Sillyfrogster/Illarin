@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Settings is everything one migration run reads from and writes to.
 type Settings struct {
 	Source  *pgxpool.Pool
 	Target  *pgxpool.Pool
@@ -22,7 +21,6 @@ type Settings struct {
 	Fetcher Fetcher
 }
 
-// Report is what one run carried across.
 type Report struct {
 	Assets      int
 	Kinds       map[string]int
@@ -34,7 +32,6 @@ type Report struct {
 	Exceptions  []Exception
 }
 
-// Run stages every blob and external image first, then commits every asset in one transaction.
 func Run(ctx context.Context, settings Settings) (Report, error) {
 	ledger, err := NewLedger(v1.Module{}.Declaration().Anomalies)
 	if err != nil {
@@ -80,7 +77,6 @@ func requireEmptyAssetTarget(ctx context.Context, target *pgxpool.Pool) error {
 	return nil
 }
 
-// recordReadEvents turns what the reader noticed into ledger entries, so the module declares the policy and the run applies it.
 func recordReadEvents(result v1.Result, ledger *Ledger) error {
 	for _, event := range result.Events {
 		assetID := result.AssetID
@@ -107,7 +103,6 @@ func recordReadEvents(result v1.Result, ledger *Ledger) error {
 	return nil
 }
 
-// placeAsset turns one read row into the blocks its kind catalog declares, choosing nothing itself.
 func placeAsset(
 	result v1.Result,
 	staged *Staged,
@@ -147,7 +142,6 @@ func placeAsset(
 	}, nil
 }
 
-// placeMedia binds every staged picture to the element that points at it and drops the ones that never arrived.
 func placeMedia(
 	result v1.Result,
 	staged *Staged,
@@ -183,7 +177,6 @@ func placeMedia(
 	return withoutMissingImages(elements, present), images, cover, nil
 }
 
-// placeExternalMedia gives a fetched pack image to the record that named it and a fetched cover to the asset.
 func placeExternalMedia(
 	result v1.Result,
 	staged *Staged,
@@ -236,7 +229,6 @@ func withPackItemImage(
 	return elements
 }
 
-// withoutMissingImages drops an image item whose picture never arrived, so a page never points at bytes Illarin does not hold.
 func withoutMissingImages(
 	elements []block.Element,
 	present map[uuid.UUID]struct{},

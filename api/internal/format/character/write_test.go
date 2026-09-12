@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -17,8 +18,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// A writer reads the asset's roles and nothing else. Given a page built from
-// nothing, every character format still produces its own file.
 func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 	asset := format.ExportAsset{
 		Kind:   Kind,
@@ -50,10 +49,6 @@ func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 	}
 }
 
-// A v2 card has nowhere for the keys v3 added, so they are left behind even
-// when the asset kept them from the file it arrived as. Handing a reader an
-// asset list inside a v2 card would ship the very images the loss report said
-// were dropped.
 func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 	asset := format.ExportAsset{
 		Kind:   Kind,
@@ -85,8 +80,6 @@ func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 	}
 }
 
-// The container follows what the asset holds. A card goes inside the picture
-// that stands for it, and becomes a JSON document where there is none.
 func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 	picture := testPNG(t)
 	withCover := format.ExportAsset{
@@ -102,8 +95,6 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 	if !bytes.HasPrefix(embedded.Body, pngSignature) {
 		t.Fatal("the written file is not a PNG")
 	}
-	// The card's own picture is the container, so the card points back at it
-	// rather than repeating it as a string.
 	body := writtenBody(t, embedded.Body, V3)
 	if !bytes.Contains(body["assets"], []byte(defaultAssetURI)) {
 		t.Errorf("assets = %s, want the icon to point at the container", body["assets"])
@@ -117,8 +108,6 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 	}
 }
 
-// A picture the card cannot be written into is not a container, so the card
-// becomes a document and the picture travels inside it.
 func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
 	asset := format.ExportAsset{
 		Kind:     Kind,
@@ -136,7 +125,6 @@ func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
 	}
 }
 
-// CharX writes the pictures as files beside the card, and the card names them.
 func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 	expressionID, galleryID := uuid.New(), uuid.New()
 	asset := format.ExportAsset{
@@ -179,16 +167,46 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 			t.Errorf("the archive has no %q", entry)
 		}
 	}
-	if !bytes.Equal(files["assets/emotion/2.png"], []byte("happy-bytes")) {
-		t.Errorf("the expression file holds %q", files["assets/emotion/2.png"])
+	if !bytes.Equal(files["assets/emotion/image/2.png"], []byte("happy-bytes")) {
+		t.Errorf("the expression file holds %q", files["assets/emotion/image/2.png"])
 	}
-	if !bytes.Equal(files["assets/x_gallery/3.webp"], []byte("gallery-bytes")) {
-		t.Errorf("the gallery file holds %q", files["assets/x_gallery/3.webp"])
+	if !bytes.Equal(files["assets/other/image/3.webp"], []byte("gallery-bytes")) {
+		t.Errorf("the gallery file holds %q", files["assets/other/image/3.webp"])
 	}
 }
 
-// Reading a card and writing it back in the same format gives the same content,
-// because import and export meet at the role layer.
+func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
+	expressionID, galleryID := uuid.New(), uuid.New()
+	asset := format.ExportAsset{
+		Kind:   Kind,
+		Header: format.Header{Name: "Ana"},
+		Elements: []block.Element{
+			prose(block.RoleDescription, "Quiet"),
+			greetings("Hello"),
+			images(block.RoleExpressions, block.ImageItem{
+				ID: uuid.New(), MediaID: expressionID, Name: "happy",
+			}),
+			images(block.RoleGallery, block.ImageItem{ID: uuid.New(), MediaID: galleryID}),
+		},
+		Cover: &format.ExportMedia{MediaType: "image/png", Data: testPNG(t)},
+		Images: map[uuid.UUID]format.ExportMedia{
+			expressionID: {MediaType: "image/png", Data: []byte("happy-bytes")},
+			galleryID:    {MediaType: "image/png", Data: []byte("gallery-bytes")},
+		},
+	}
+
+	files := archiveEntries(t, write(t, CharXModule{}, asset).Body)
+	for _, wanted := range []string{
+		"assets/icon/image/main.png",
+		"assets/emotion/image/2.png",
+		"assets/other/image/3.png",
+	} {
+		if _, held := files[wanted]; !held {
+			t.Errorf("the archive has no %s: %v", wanted, slices.Sorted(maps.Keys(files)))
+		}
+	}
+}
+
 func TestACardWrittenBackReadsAsTheSameContent(t *testing.T) {
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -248,8 +266,6 @@ func write(t *testing.T, module format.Module, asset format.ExportAsset) format.
 	return artifact
 }
 
-// exportAssetOf is what the asset layer hands a writer, built here out of one
-// parse so a round trip can be stated in one test.
 func exportAssetOf(parsed format.Parsed) format.ExportAsset {
 	return format.ExportAsset{
 		Kind: parsed.Kind, Header: parsed.Header,
@@ -257,7 +273,6 @@ func exportAssetOf(parsed format.Parsed) format.ExportAsset {
 	}
 }
 
-// writtenBody reads the card body out of whatever container the writer chose.
 func writtenBody(t *testing.T, artifact []byte, formatID string) map[string]json.RawMessage {
 	t.Helper()
 	card := artifact
@@ -338,9 +353,6 @@ func images(role block.Role, items ...block.ImageItem) block.Element {
 	}
 }
 
-// Every character origin is a tested origin for every character writer. This is
-// what backs that claim. A card read from each of the three standards writes out
-// as each of the three with its content intact.
 func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],
@@ -374,8 +386,6 @@ func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
 	}
 }
 
-// A v3 card keeps a v2 copy of itself, which is what every card in the corpus
-// does. A reader that knows only the older shape has to find something.
 func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 	asset := format.ExportAsset{
 		Kind:     Kind,
@@ -385,7 +395,6 @@ func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 	}
 	for _, module := range []format.Module{CCv3Module{}, CharXModule{}} {
 		if module.ID() == CharX {
-			// The archive holds one card and names it, so there is no chunk.
 			continue
 		}
 		t.Run(module.ID(), func(t *testing.T) {
@@ -415,8 +424,6 @@ func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 	}
 }
 
-// A v3 JSON document repeats the six fields a card carried before any spec
-// existed, for the same reason its picture carries a v2 chunk.
 func TestAV3DocumentRepeatsTheFieldsAnOlderReaderLooksFor(t *testing.T) {
 	asset := format.ExportAsset{
 		Kind:     Kind,
@@ -429,13 +436,11 @@ func TestAV3DocumentRepeatsTheFieldsAnOlderReaderLooksFor(t *testing.T) {
 		text(t, document["first_mes"]) != "Hello" {
 		t.Fatalf("the document has no legacy fields: %s", written.Body)
 	}
-	// The spec-defined body is still where a v3 reader looks.
 	if text(t, decodeObject(t, document["data"])["description"]) != "Quiet" {
 		t.Errorf("the spec body lost the description: %s", document["data"])
 	}
 }
 
-// cardChunks reads every card the picture carries, by its keyword.
 func cardChunks(t *testing.T, picture []byte) map[string][]byte {
 	t.Helper()
 	found := make(map[string][]byte)
@@ -483,8 +488,6 @@ func decodeObject(t *testing.T, source []byte) map[string]json.RawMessage {
 	return object
 }
 
-// The header a module declares is what tells Illarin an edit to that field
-// changes the file, so the declaration has to match what the writer writes.
 func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 	written := map[format.HeaderField]string{
 		format.HeaderName:           "name",
@@ -518,4 +521,47 @@ func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
+	travelling, left := uuid.New(), uuid.New()
+	asset := format.ExportAsset{
+		Kind:   Kind,
+		Header: format.Header{Name: "Ana"},
+		Elements: []block.Element{
+			prose(block.RoleDescription, "Quiet"),
+			greetings("Hello"),
+			images(block.RoleGallery, block.ImageItem{
+				ID: uuid.New(), MediaID: travelling, Name: "At the door",
+			}),
+		},
+		Images: map[uuid.UUID]format.ExportMedia{
+			travelling: {MediaType: "image/png", Data: []byte("door-bytes")},
+			left:       {MediaType: "image/png", Data: []byte("stair-bytes")},
+		},
+	}
+
+	for _, module := range []format.Writer{CCv3Module{}, CharXModule{}} {
+		card := writtenCard(t, module, write(t, module, asset))
+		var records []cardAssetRecord
+		if err := json.Unmarshal(card["assets"], &records); err != nil {
+			t.Fatalf("read %s's asset list: %v", module.ID(), err)
+		}
+		if len(records) != 1 || records[0].Name != "At the door" {
+			t.Fatalf("%s wrote %+v, want the one gallery image it was given",
+				module.ID(), records)
+		}
+	}
+}
+
+func writtenCard(
+	t *testing.T,
+	module format.Writer,
+	written format.Artifact,
+) map[string]json.RawMessage {
+	t.Helper()
+	if module.ID() != CharX {
+		return writtenBody(t, written.Body, V3)
+	}
+	return writtenBody(t, archiveEntries(t, written.Body)["card.json"], V3)
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
@@ -14,16 +15,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ErrNotDeliverable is an asset a linked instance may not be handed.
 var ErrNotDeliverable = errors.New("that asset cannot be sent to an instance")
 
-// DeliveryTarget is one format an asset is offered in, as delivery reads it.
 type DeliveryTarget struct {
 	Format string
 	Label  string
 }
 
-// DeliveryPicture is one of an asset's images behind a short-lived signed URL.
 type DeliveryPicture struct {
 	MediaID uuid.UUID
 	Role    string
@@ -31,7 +29,6 @@ type DeliveryPicture struct {
 	URL     string
 }
 
-// Deliverable is what delivery reads of an asset, with its formats and its pictures.
 type Deliverable struct {
 	Kind              string
 	Name              string
@@ -41,7 +38,6 @@ type Deliverable struct {
 	Pictures          []DeliveryPicture
 }
 
-// DeliverableAsset reads one sendable asset through the connection the caller already holds.
 func (s *Service) DeliverableAsset(
 	ctx context.Context,
 	q db.DBTX,
@@ -52,7 +48,7 @@ func (s *Service) DeliverableAsset(
 	var revisionID, coverID pgtype.UUID
 	err := q.QueryRow(ctx, `
 		select kind, name, content_generation, current_revision_id, cover_media_id
-		  from assets
+		  from asset_public.assets
 		 where id = $1
 		   and deleted_at is null
 		   and withheld_at is null
@@ -76,6 +72,18 @@ func (s *Service) DeliverableAsset(
 	if err != nil {
 		return Deliverable{}, err
 	}
+	if len(apps) == 0 {
+		blocks, err := readPublishedBlocks(ctx, q, assetID)
+		if err != nil {
+			return Deliverable{}, err
+		}
+		if err := protected.ApplyPublishedPolicy(ctx, q, assetID, blocks); err != nil {
+			return Deliverable{}, err
+		}
+		if protected.HasPromptFragments(blocks) {
+			return Deliverable{}, ErrNotDeliverable
+		}
+	}
 	if len(apps) > 0 {
 		found.HasOriginal = false
 		filtered := make([]DeliveryTarget, 0, len(found.Targets))
@@ -93,7 +101,6 @@ func (s *Service) DeliverableAsset(
 	return found, nil
 }
 
-// deliveryTargets reads the same projection a download reads, so both offer the same formats.
 func deliveryTargets(
 	ctx context.Context,
 	q db.DBTX,
@@ -101,7 +108,7 @@ func deliveryTargets(
 ) ([]DeliveryTarget, error) {
 	var stored []byte
 	err := q.QueryRow(ctx,
-		`select export from asset_projections where asset_id = $1`, assetID,
+		`select export from asset_public.asset_projections where asset_id = $1`, assetID,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []DeliveryTarget{}, nil
@@ -120,16 +127,20 @@ func deliveryTargets(
 	return targets, nil
 }
 
-// deliveryPictures lists every current image, because no format carries all of them.
 func (s *Service) deliveryPictures(
 	ctx context.Context,
 	q db.DBTX,
 	assetID uuid.UUID,
 	coverID *uuid.UUID,
 ) ([]DeliveryPicture, error) {
+	blocks, err := readPublishedBlocks(ctx, q, assetID)
+	if err != nil {
+		return nil, fmt.Errorf("read the blocks to deliver: %w", err)
+	}
+	withheld := galleryImagesLeftBehind(blocks)
 	rows, err := q.Query(ctx, `
 		select id, role
-		  from asset_media
+		  from asset_public.asset_media
 		 where asset_id = $1
 		   and is_current
 		   and blob_id is not null
@@ -145,6 +156,9 @@ func (s *Service) deliveryPictures(
 		if err := rows.Scan(&picture.MediaID, &picture.Role); err != nil {
 			return nil, fmt.Errorf("read a picture to deliver: %w", err)
 		}
+		if withheld[picture.MediaID] {
+			continue
+		}
 		picture.IsCover = coverID != nil && *coverID == picture.MediaID
 		picture.URL = s.exportMediaURL(picture.MediaID, true)
 		pictures = append(pictures, picture)
@@ -152,17 +166,33 @@ func (s *Service) deliveryPictures(
 	return pictures, rows.Err()
 }
 
-// SignedURL stamps a private path with a short-lived signature and makes it absolute.
+// galleryImagesLeftBehind names the gallery images the creator keeps out of downloads.
+func galleryImagesLeftBehind(blocks []block.Block) map[uuid.UUID]bool {
+	withheld := make(map[uuid.UUID]bool)
+	for _, holder := range blocks {
+		for _, element := range holder.Elements {
+			set, isSet := element.Content.(block.ImageSet)
+			if !isSet || element.Role != block.RoleGallery {
+				continue
+			}
+			for _, image := range set.Images {
+				if image.OmitFromDownloads {
+					withheld[image.MediaID] = true
+				}
+			}
+		}
+	}
+	return withheld
+}
+
 func (s *Service) SignedURL(path string) string {
 	return s.siteURL + s.signer.Sign(path, s.now())
 }
 
-// ValidSignature reports whether a request carries a live signature written for this path.
 func (s *Service) ValidSignature(path, expires, signature string) bool {
 	return s.signer.Valid(path, expires, signature, s.now())
 }
 
-// DownloadSourceForLinkedInstance prepares the creator's own file for a raw delivery.
 func (s *Service) DownloadSourceForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,

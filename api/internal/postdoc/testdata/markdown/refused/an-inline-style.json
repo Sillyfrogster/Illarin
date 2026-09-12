@@ -1,0 +1,10 @@
+{
+  "note": "Creator content does not style the page",
+  "markdown": "Words with <span style=\"color:red\">colour</span> in them.\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "HTML"
+    }
+  ]
+}

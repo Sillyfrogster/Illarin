@@ -3,7 +3,6 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { fetchAsset, fetchLegacyProfile } from "@/lib/api/query";
 import { assetHref, isAssetId } from "@/lib/asset-url";
 
-/** Sends a v1 asset address to the permalink, resolving first so a hidden asset is the plain 404. */
 export async function redirectFromLegacyAssetAddress(
   id: string,
 ): Promise<void> {
@@ -14,7 +13,6 @@ export async function redirectFromLegacyAssetAddress(
   permanentRedirect(assetHref(asset.id, asset.name));
 }
 
-/** Sends v1's /user/<discordId> address to the profile that Discord identity belongs to. */
 export async function redirectFromLegacyUserAddress(
   discordId: string,
 ): Promise<void> {

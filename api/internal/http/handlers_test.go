@@ -1,8 +1,10 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,10 +14,15 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
@@ -117,7 +124,9 @@ func newTestHandlersWithPool(
 	sender account.EmailSender,
 ) *Handlers {
 	t.Helper()
-	return newTestHandlersWithDelivery(t, pool, maxUploadBytes, sender, testDeliverySettings())
+	return newTestHandlersWithDelivery(
+		t, pool, maxUploadBytes, sender, testDeliverySettings(), publication.DefaultRates(), nil,
+	)
 }
 
 func newTestHandlersWithDelivery(
@@ -126,6 +135,8 @@ func newTestHandlersWithDelivery(
 	maxUploadBytes int64,
 	sender account.EmailSender,
 	settings delivery.Settings,
+	rates publication.Rates,
+	to publication.Sender,
 ) *Handlers {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -135,11 +146,20 @@ func newTestHandlersWithDelivery(
 		t.Fatalf("storage: %v", err)
 	}
 	svc := asset.NewService(pool, testRegistry(t), blob)
-	accounts := account.NewService(pool, sender, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, sender, nil, testMediaLibrary(blob), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
+	updateDestinations := assetdestination.NewService(
+		pool, testSealingKey(), testPublishing(to).Sender, "http://localhost:3000",
+	)
+	svc.OnUpdatePublished(updateDestinations.Announce)
 
-	return NewHandlers(svc, accounts, links, deliveries, maxUploadBytes)
+	return NewHandlers(
+		svc, accounts, links, deliveries,
+		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
+		updateDestinations,
+		maxUploadBytes,
+	)
 }
 
 func newTestRouterWithDiscord(
@@ -173,11 +193,66 @@ func newDiscordTestStack(
 	assets := asset.NewService(pool, testRegistry(t), blob)
 	outbox := &verificationOutbox{}
 	accounts := account.NewService(
-		pool, outbox, provider, "http://localhost:3000",
+		pool, outbox, provider, testMediaLibrary(blob), "http://localhost:3000",
 	)
 	links := newTestLinkingService(pool)
-	handlers := NewHandlers(assets, accounts, links, newTestDeliveryService(pool, assets, links), 1<<20)
+	updateDestinations := newTestUpdateDestinations(pool)
+	assets.OnUpdatePublished(updateDestinations.Announce)
+	handlers := NewHandlers(
+		assets, accounts, links, newTestDeliveryService(pool, assets, links),
+		newTestPublicationService(pool, blob), updateDestinations, 1<<20,
+	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
+}
+
+func testMediaLibrary(store storage.Store) *mediaproc.Library {
+	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+}
+
+func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
+	return publication.NewService(
+		pool, testMediaLibrary(store), publication.DefaultRates(), testPublishing(nil),
+	)
+}
+
+func newTestUpdateDestinations(pool *pgxpool.Pool) *assetdestination.Service {
+	return assetdestination.NewService(pool, testSealingKey(), testPublishing(nil).Sender, "http://localhost:3000")
+}
+
+func testPublishing(to publication.Sender) publication.Publishing {
+	if to == nil {
+		to = closedSender{}
+	}
+	return publication.Publishing{
+		Sealing: testSealingKey(),
+		Sender:  to,
+		Site:    "http://localhost:3000",
+		Blog:    "http://blog.localhost:3000",
+	}
+}
+
+func testSealingKey() secrets.Key {
+	key, err := secrets.NewKey(bytes.Repeat([]byte{3}, secrets.KeyBytes))
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+type closedSender struct{}
+
+func (closedSender) Check(address string) (string, error) {
+	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
+}
+
+func (closedSender) Get(context.Context, string) (outbound.Answer, error) {
+	return outbound.Answer{}, errors.New("this test stack sends nowhere")
+}
+
+func (closedSender) Post(
+	context.Context, string, map[string]string, []byte,
+) (outbound.Answer, error) {
+	return outbound.Answer{}, errors.New("this test stack sends nowhere")
 }
 
 func newTestLinkingService(pool *pgxpool.Pool) *linking.Service {
@@ -192,9 +267,6 @@ func newTestDeliveryService(
 	return delivery.NewService(pool, assets, links, testDeliverySettings())
 }
 
-// testDeliverySettings keep every bound the service runs under and shorten only
-// the waiting, so a test that queues nothing finishes rather than holding for
-// half a minute.
 func testDeliverySettings() delivery.Settings {
 	settings := delivery.DefaultSettings()
 	settings.HoldFloor = 50 * time.Millisecond
@@ -262,7 +334,6 @@ func newVerifiedTestRoutersWithPool(
 	return setupRouter, registerTestRouter(t, handlers, deadlines), session, handlers.assets, pool
 }
 
-// verifiedSignUp signs an account up and follows the link the outbox caught, so the session it returns is past the verification gate.
 func verifiedSignUp(
 	t *testing.T,
 	setupRouter *gin.Engine,

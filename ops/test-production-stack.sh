@@ -72,11 +72,13 @@ printf '%s' 'test-client-secret' >"$TEST_DIR/secrets/microsoft-365-client-secret
   printf 'ILLARIN_GATEWAY_PORT=%s\n' "$TEST_PORT"
   printf 'NPMPLUS_NETWORK=\n'
   printf 'SITE_URL=http://127.0.0.1:%s\n' "$TEST_PORT"
+  printf 'BLOG_URL=http://blog.localhost:%s\n' "$TEST_PORT"
   printf 'POSTGRES_DB=illarin\n'
   printf 'POSTGRES_USER=illarin\n'
   printf 'POSTGRES_PASSWORD=illarin-test-password\n'
   printf 'DATABASE_URL=postgres://illarin:illarin-test-password@db:5432/illarin\n'
   printf 'LINKING_HMAC_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+  printf 'PUBLICATION_SECRET_KEY=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n'
   printf 'SMTP_ADDR=smtp.illarin.test:25\n'
   printf 'SMTP_FROM=mail@illarin.test\n'
   printf 'DD_API_KEY=00000000000000000000000000000000\n'
@@ -119,5 +121,81 @@ if [[ "$internal_status" != "404" ]]; then
   echo "The internal blob location returned $internal_status instead of 404." >&2
   exit 1
 fi
+
+# The gateway tells the site and the blog apart by hostname, so each check
+# names the hostname it speaks to and never follows a redirect.
+blog_host="blog.localhost:$TEST_PORT"
+expect_through_gateway() {
+  local want_status="$1" host="$2" method="$3" path="$4" want_location="${5:-}" want_body="${6:-}"
+  local body="$TEST_DIR/answer"
+  local status redirect
+  read -r status redirect < <(curl --silent --request "$method" --header "Host: $host" \
+    --output "$body" --write-out '%{http_code} %{redirect_url}\n' "http://127.0.0.1:$TEST_PORT$path")
+  if [[ "$status" != "$want_status" ]]; then
+    echo "$method $host$path returned $status instead of $want_status." >&2
+    exit 1
+  fi
+  if [[ -n "$want_location" && "$redirect" != "$want_location" ]]; then
+    echo "$method $host$path redirected to $redirect instead of $want_location." >&2
+    exit 1
+  fi
+  if [[ -n "$want_body" ]] && ! grep -Fq -- "$want_body" "$body"; then
+    echo "$method $host$path did not answer with $want_body." >&2
+    exit 1
+  fi
+}
+
+expect_through_gateway 308 "127.0.0.1:$TEST_PORT" GET /blog "http://$blog_host/"
+expect_through_gateway 200 "$blog_host" GET / "" "<link rel=\"canonical\" href=\"http://$blog_host"
+expect_through_gateway 200 "$blog_host" GET /feed.xml "" "<rss"
+expect_through_gateway 404 "$blog_host" GET /api/v1/auth/session
+expect_through_gateway 404 "$blog_host" POST /api/v1/auth/sign-in
+expect_through_gateway 404 "$blog_host" POST /api/v1/publication/posts
+expect_through_gateway 404 "$blog_host" GET /sign-in
+expect_through_gateway 404 "$blog_host" GET /admin/blog
+expect_through_gateway 404 "$blog_host" GET /withdrawn
+
+expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET /developers/publication "" "Save the writing"
+for page in requests writing publishing document markdown webhooks; do
+  expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET "/developers/publication/$page" "" "Publication API"
+done
+compose_test exec -T api test -x /app/publication-authority
+if [[ -n "$(compose_test exec -T web find /app -path /app/node_modules -prune -o -name '.env*' -print)" ]]; then
+  echo "An environment file was copied into the web image." >&2
+  exit 1
+fi
+
+credential_marker="synthetic-credential-must-not-reach-logs"
+check_private_requests() {
+  local host path status unavailable="${1:-false}"
+  for host in "127.0.0.1:$TEST_PORT" "$blog_host"; do
+    for path in \
+      "/reset-password?token=$credential_marker" \
+      "/verify-email?token=$credential_marker" \
+      "/api/v1/auth/discord/callback?code=$credential_marker&state=$credential_marker" \
+      "/link?code=$credential_marker" \
+      "/api/v1/link/requests/$credential_marker" \
+      "/api/v1/%6cink/requests/$credential_marker" \
+      "/"; do
+      curl --silent --show-error --max-time 3 --header "Host: $host" \
+        --header "Referer: http://$host/%72eset-password?token=$credential_marker" \
+        --output /dev/null "http://127.0.0.1:$TEST_PORT$path" || {
+          status="$?"
+          if [[ "$unavailable" != true || "$status" != 28 ]]; then
+            return "$status"
+          fi
+        }
+    done
+  done
+  compose_test logs --no-color gateway web api >"$TEST_DIR/request-logs"
+  if grep -Fq "$credential_marker" "$TEST_DIR/request-logs"; then
+    echo "A credential appeared in application or gateway logs." >&2
+    exit 1
+  fi
+}
+
+check_private_requests
+compose_test stop web
+check_private_requests true
 
 echo "The isolated production stack passed."

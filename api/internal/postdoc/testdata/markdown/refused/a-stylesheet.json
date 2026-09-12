@@ -1,0 +1,10 @@
+{
+  "note": "A stylesheet is not content",
+  "markdown": "<style>body { display: none }</style>\n",
+  "refusals": [
+    {
+      "line": 1,
+      "says": "HTML"
+    }
+  ]
+}

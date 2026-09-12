@@ -7,29 +7,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// A sample is a glance, not a summary. Four things and sixty characters each
-// is enough to recognise what is at stake and short enough to store beside a
-// loss report on every asset.
 const (
 	sampleItems  = 4
 	sampleRunes  = 60
 	sampleJoiner = ": "
 )
 
-// Sample is a few of the things one element holds, so somebody deciding
-// whether a loss matters sees entry names and greeting openings rather than a
-// bare count.
 type Sample struct {
-	// Texts are openings and names, in the element's own order.
-	Texts []string
-	// Images are the media ids of the pictures the element points at.
+	Texts  []string
 	Images []uuid.UUID
-	// Count is how many things the element holds in all.
-	Count int
+	Count  int
 }
 
-// TakeSample reads one glance across every element carrying a role. A
-// repeatable role holds several, and what is at stake is all of them.
 func TakeSample(contents []Content) Sample {
 	var merged Sample
 	for _, content := range contents {
@@ -123,7 +112,6 @@ func firstWritten(name, fallback string) string {
 	return opening(fallback)
 }
 
-// opening is the start of a body, cut on a word where it can be.
 func opening(text string) string {
 	text = strings.Join(strings.Fields(text), " ")
 	runes := []rune(text)

@@ -53,11 +53,11 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created Asse
 	}
 	nsfw := false
 	if err := svc.SetIdentity(context.Background(), Identity{
-		OwnerID: ownerID, AssetID: created.ID, Name: name, IsNSFW: &nsfw,
-	}); err != nil {
+		OwnerID: ownerID, AssetID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
+	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetIdentity imported asset: %v", err)
 	}
-	if _, err := svc.Publish(context.Background(), ownerID, created.ID); err != nil {
+	if _, err := svc.Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("Publish imported asset: %v", err)
 	}
 }
@@ -72,7 +72,7 @@ func addRevision(
 	t.Helper()
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: ownerID, AssetID: assetID, Filename: filename, File: bytes.NewReader(file),
-	})
+	}, currentCandidate(t, svc, assetID))
 	if err != nil {
 		t.Fatalf("AcceptRevision: %v", err)
 	}
@@ -83,10 +83,16 @@ func addRevision(
 	if err != nil {
 		t.Fatalf("GetIngest: %v", err)
 	}
+	if got.Status == IngestPreview {
+		got, err = svc.AcceptReplacement(context.Background(), ownerID, assetID, operation.ID, currentCandidate(t, svc, assetID), nil, false)
+		if err != nil {
+			t.Fatalf("AcceptReplacement: %v", err)
+		}
+	}
 	return got
 }
 
-func TestANewRevisionReplacesTheCurrentBytesAndKeepsTheCatalogEntry(t *testing.T) {
+func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.T) {
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
 		Elements: []block.Element{
@@ -131,8 +137,8 @@ func TestANewRevisionReplacesTheCurrentBytesAndKeepsTheCatalogEntry(t *testing.T
 	if _, err := served.ReadFrom(source); err != nil {
 		t.Fatalf("read source: %v", err)
 	}
-	if served.String() != `{"spec":"x","take":2}` {
-		t.Fatalf("source = %s, want the new revision's bytes", served.String())
+	if served.String() != `{"spec":"x","take":1}` {
+		t.Fatalf("source = %s, want the published revision's bytes", served.String())
 	}
 }
 
@@ -243,7 +249,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 	_, err := svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: uuid.New(), AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("stranger revision error = %v, want ErrNotFound", err)
 	}
@@ -257,7 +263,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: ownerID, AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, ErrAssetFrozen) {
 		t.Fatalf("withheld revision error = %v, want ErrAssetFrozen", err)
 	}
@@ -275,7 +281,7 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 	added, err := svc.AddMedia(context.Background(), AddMediaInput{
 		OwnerID: ownerID, AssetID: created.ID, Role: MediaGallery,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.Gray{Y: 128})),
-	})
+	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("add creator media: %v", err)
 	}

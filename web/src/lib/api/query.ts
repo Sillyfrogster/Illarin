@@ -1,9 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
+import {
+  acceptCandidateVersion,
+  type Candidate,
+  reportStaleWorkingCopy,
+} from "@/lib/working-copy";
 import { browserFetch } from "./browser-mutation";
 import { api } from "./client";
 import type { components, paths } from "./schema";
 
 export type AssetDetail = components["schemas"]["AssetDetail"];
+export type AssetIdentityRequest =
+  components["schemas"]["AssetIdentityRequest"];
 export type AssetImage = components["schemas"]["AssetImage"];
 export type AssetBlock = components["schemas"]["AssetBlock"];
 export type AssetElement = components["schemas"]["AssetElement"];
@@ -38,7 +45,70 @@ export type ElementType = components["schemas"]["ElementType"];
 export type AssetTag = components["schemas"]["AssetTag"];
 export type ReadinessItem = components["schemas"]["ReadinessItem"];
 export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
+export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
+export type RecordedVersion = components["schemas"]["RecordedVersion"];
+export type RecordedVersionDownloads =
+  components["schemas"]["RecordedVersionDownloads"];
+export type VersionComparison = components["schemas"]["VersionComparison"];
+export type VersionChangeGroup = components["schemas"]["VersionChangeGroup"];
+export type VersionChange = components["schemas"]["VersionChange"];
+export type IngestOperation = components["schemas"]["IngestOperation"];
+export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
+export type ReplacementDecision =
+  components["schemas"]["ReplacementAcceptance"]["unrepresentable"];
+export type DownloadTarget = components["schemas"]["DownloadTarget"];
+export type AppTarget = components["schemas"]["AppTarget"];
+export type OriginalUpload = components["schemas"]["OriginalUpload"];
+export type AssetInstance = components["schemas"]["AssetInstance"];
+export type AssetInstanceList = components["schemas"]["AssetInstanceList"];
+export type QueuedDelivery = components["schemas"]["QueuedDelivery"];
+export type AssetUpdate = components["schemas"]["AssetUpdate"];
+export type AssetUpdateRequest = components["schemas"]["AssetUpdateRequest"];
+export type AssetVersionNotesRequest =
+  components["schemas"]["AssetVersionNotesRequest"];
+export type PromptCorrespondenceRequest =
+  components["schemas"]["PromptCorrespondenceRequest"];
 export type Profile = components["schemas"]["Profile"];
+export type ProfileLink = components["schemas"]["ProfileLink"];
+export type ProfileRestriction = components["schemas"]["ProfileRestriction"];
+export type PublicationApp = components["schemas"]["PublicationApp"];
+export type PublicationCategory = components["schemas"]["PublicationCategory"];
+export type PublicationGrant = components["schemas"]["PublicationGrant"];
+export type PublicationWorkspace =
+  components["schemas"]["PublicationWorkspace"];
+export type PublicationToken = components["schemas"]["PublicationToken"];
+export type PublicationDestination =
+  components["schemas"]["PublicationDestination"];
+export type AddedPublicationDestination =
+  components["schemas"]["AddedPublicationDestination"];
+export type PublicationDestinationKind =
+  components["schemas"]["PublicationDestinationKind"];
+export type PublicationChannel = components["schemas"]["PublicationChannel"];
+export type PublicationDestinationChoice =
+  components["schemas"]["PublicationDestinationChoice"];
+export type PublicationDestinationChoiceList =
+  components["schemas"]["PublicationDestinationChoiceList"];
+export type PostDelivery = components["schemas"]["PostDelivery"];
+export type PostDeliveryAttempt = components["schemas"]["PostDeliveryAttempt"];
+export type PostDeliveryState = components["schemas"]["PostDeliveryState"];
+export type PublicationEvent = components["schemas"]["PublicationEvent"];
+export type RotatedPublicationSecret =
+  components["schemas"]["RotatedPublicationSecret"];
+export type Post = components["schemas"]["Post"];
+export type PublicPost = components["schemas"]["PublicPost"];
+export type PostMedia = components["schemas"]["PostMedia"];
+export type PostMediaPurpose = components["schemas"]["PostMediaPurpose"];
+export type PostByline = components["schemas"]["PostByline"];
+export type PostRelease = components["schemas"]["PostRelease"];
+export type PostSummary = components["schemas"]["PostSummary"];
+export type PostArchive = components["schemas"]["PostArchive"];
+export type PostRevision = components["schemas"]["PostRevision"];
+export type PostAction = components["schemas"]["PostAction"];
+export type PostSchedule = components["schemas"]["PostSchedule"];
+export type PostWithdrawal = components["schemas"]["PostWithdrawal"];
+export type PostDeletion = components["schemas"]["PostDeletion"];
+export type IssuedPublicationToken =
+  components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];
@@ -60,7 +130,7 @@ export type BrowseFilters = Pick<
 export type AssetListParams = BrowseFilters &
   Pick<AssetQuery, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
 
-/** A fresh client every call. A shared one would leak one visitor's cache into another's page. */
+/** Creates an isolated cache for each server render. */
 export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -78,6 +148,37 @@ export const assetKeys = {
   ) => ["assets", "list", creator, filters, visibility] as const,
 };
 
+export class SealedExposureError extends Error {
+  constructor(
+    message: string,
+    readonly prompts: string[],
+  ) {
+    super(message);
+  }
+}
+
+function writeRefusal(error: unknown, fallback: string): Error {
+  reportStaleWorkingCopy(error);
+  const detail = error as
+    | { error?: unknown; code?: unknown; prompts?: unknown }
+    | undefined;
+  if (
+    detail?.code === "sealed_exposure" &&
+    Array.isArray(detail.prompts) &&
+    detail.prompts.every((prompt) => typeof prompt === "string")
+  ) {
+    return new SealedExposureError(
+      typeof detail.error === "string" ? detail.error : fallback,
+      detail.prompts,
+    );
+  }
+  return new Error(
+    typeof detail?.error === "string"
+      ? detail.error.replace(/^invalid block:\s*/i, "")
+      : fallback,
+  );
+}
+
 export async function fetchProfile(handle: string): Promise<Profile | null> {
   const { data, error } = await api.GET("/v1/profiles/{handle}", {
     params: { path: { handle } },
@@ -89,12 +190,14 @@ export async function fetchProfile(handle: string): Promise<Profile | null> {
 export async function fetchAssets(
   params: AssetListParams,
   cookie?: string,
+  signal?: AbortSignal,
 ): Promise<BrowsePage> {
   const { data, error } = await api.GET("/v1/assets", {
+    signal,
     params: { query: params },
     headers: cookie ? { cookie } : undefined,
   });
-  if (error) throw new Error("Could not load the collection");
+  if (error) throw new Error("Could not load the catalog");
   return data;
 }
 
@@ -131,13 +234,13 @@ export async function fetchDeletedAssets(
   return data.items;
 }
 
-/** The API intentionally makes withheld, deleted, and missing assets identical. */
 export async function fetchAsset(
   id: string,
   cookie?: string,
+  workingCopy = false,
 ): Promise<AssetDetail | null> {
   const { data, error } = await api.GET("/v1/assets/{id}", {
-    params: { path: { id } },
+    params: { path: { id }, query: { workingCopy } },
     headers: cookie ? { cookie } : undefined,
   });
   if (error || !data) return null;
@@ -155,7 +258,6 @@ export async function startAsset(
   const { data, error } = await api.POST("/v1/assets", {
     body: app ? { kind, app } : { kind },
   });
-  /** The upload variant returns an ingest operation, so require a page here. */
   if (error || !data || !("blocks" in data)) {
     throw new Error("Could not start the asset");
   }
@@ -177,53 +279,54 @@ export async function saveAssetDiscovery(
     params: { path: { id } },
     body: { discovery },
   });
-  if (error) throw new Error("Could not save discovery");
+  if (error) throw new Error("Could not save the catalog listing");
 }
 
-/** Saves one builder block without changing any other block on the page. */
 export async function saveAssetBlock(
+  candidate: Candidate,
   assetId: string,
   blockId: string,
   block: SaveAssetBlockRequest,
 ): Promise<AssetBlock> {
-  const { data, error } = await api.PUT("/v1/assets/{id}/blocks/{blockId}", {
-    params: { path: { id: assetId, blockId } },
-    body: block,
-  });
+  const { data, error, response } = await api.PUT(
+    "/v1/assets/{id}/blocks/{blockId}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
+      body: block,
+    },
+  );
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    const message =
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be saved. Try again.";
-    throw new Error(message);
+    throw writeRefusal(error, "The block could not be saved. Try again.");
   }
   return data;
 }
 
-/** Adds one block to the foot of the page, holding the element chosen for it. */
 export async function addAssetBlock(
+  candidate: Candidate,
   assetId: string,
   definition: string,
   elementType: ElementType,
 ): Promise<AssetBlock> {
-  const { data, error } = await api.POST("/v1/assets/{id}/blocks", {
-    params: { path: { id: assetId } },
+  const { data, error, response } = await api.POST("/v1/assets/{id}/blocks", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id: assetId },
+    },
     body: { definition, elementType },
   });
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be added. Try again.",
-    );
+    throw writeRefusal(error, "The block could not be added. Try again.");
   }
   return data;
 }
 
-/** Media is stored first, then linked when its block is saved. */
 export async function addAssetImage(
+  candidate: Candidate,
   assetId: string,
   file: File,
   role: components["schemas"]["AddMediaRequest"]["role"],
@@ -233,6 +336,7 @@ export async function addAssetImage(
   body.append("file", file, file.name);
   const response = await browserFetch(`/api/v1/assets/${assetId}/media`, {
     method: "POST",
+    headers: { "X-Working-Copy-Version": String(candidate.version) },
     credentials: "same-origin",
     body,
   });
@@ -243,6 +347,7 @@ export async function addAssetImage(
         : "The image could not be added. Try again.",
     );
   }
+  acceptCandidateVersion(candidate, response);
   const added = (await response.json()) as { id?: unknown };
   if (typeof added.id !== "string") {
     throw new Error("The image could not be added. Try again.");
@@ -250,96 +355,100 @@ export async function addAssetImage(
   return added.id;
 }
 
-/** Saves the full page outline as one arrangement. */
 export async function arrangeAssetBlocks(
+  candidate: Candidate,
   assetId: string,
   arrangement: ArrangeAssetBlocksRequest,
 ): Promise<AssetBlock[]> {
-  const { data, error } = await api.PUT("/v1/assets/{id}/blocks", {
-    params: { path: { id: assetId } },
+  const { data, error, response } = await api.PUT("/v1/assets/{id}/blocks", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id: assetId },
+    },
     body: arrangement,
   });
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block order could not be saved. Try again.",
-    );
+    throw writeRefusal(error, "The block order could not be saved. Try again.");
   }
   return data;
 }
 
-/** Removes one optional block and all of the elements it holds. */
-export async function removeAssetBlock(assetId: string, blockId: string) {
-  const { error } = await api.DELETE("/v1/assets/{id}/blocks/{blockId}", {
-    params: { path: { id: assetId, blockId } },
-  });
+export async function removeAssetBlock(
+  candidate: Candidate,
+  assetId: string,
+  blockId: string,
+) {
+  const { error, response } = await api.DELETE(
+    "/v1/assets/{id}/blocks/{blockId}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The block could not be removed. Try again.",
-    );
+    throw writeRefusal(error, "The block could not be removed. Try again.");
   }
 }
 
-/** Moves a block's unpinned content, then removes the emptied block. */
 export async function moveAssetBlockContent(
+  candidate: Candidate,
   assetId: string,
   blockId: string,
   destinationBlockId: string,
 ): Promise<AssetBlock[]> {
-  const { data, error } = await api.POST(
+  const { data, error, response } = await api.POST(
     "/v1/assets/{id}/blocks/{blockId}/move-and-remove",
     {
-      params: { path: { id: assetId, blockId } },
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, blockId },
+      },
       body: { destinationBlockId },
     },
   );
+  acceptCandidateVersion(candidate, response);
   if (error || !data) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error.replace(/^invalid block:\s*/i, "")
-        : "The content could not be moved. Try again.",
-    );
+    throw writeRefusal(error, "The content could not be moved. Try again.");
   }
   return data;
 }
 
-/** A null adult-content answer is allowed only while the asset is a draft. */
 export async function saveAssetIdentity(
+  candidate: Candidate,
   id: string,
-  identity: { name: string; isNsfw: boolean | null },
+  identity: AssetIdentityRequest,
 ) {
-  const { error } = await api.PUT("/v1/assets/{id}/identity", {
-    params: { path: { id } },
+  const { error, response } = await api.PUT("/v1/assets/{id}/identity", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
     body: identity,
   });
+  acceptCandidateVersion(candidate, response);
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
-    throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error
-        : "The details could not be saved. Try again.",
-    );
+    throw writeRefusal(error, "The details could not be saved. Try again.");
   }
 }
 
-/**
- * Publishes a draft, or comes back with what publication is still waiting on.
- */
 export async function publishAsset(
+  candidate: Candidate,
   id: string,
 ): Promise<
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
 > {
-  const { data, error } = await api.POST("/v1/assets/{id}/publish", {
-    params: { path: { id } },
+  const { data, error, response } = await api.POST("/v1/assets/{id}/publish", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
   });
+  acceptCandidateVersion(candidate, response);
   if (data) return { published: true };
   const refusal = error as
     | { error?: unknown; readiness?: ReadinessItem[] }
@@ -354,7 +463,132 @@ export async function publishAsset(
   };
 }
 
-/** Preserved namespaces belong to the source file and are owner-only. */
+export async function fetchWaitingReplacement(
+  id: string,
+): Promise<IngestOperation | null> {
+  const { data, error } = await api.GET("/v1/assets/{id}/revisions", {
+    params: { path: { id } },
+  });
+  if (error || !data) return null;
+  return data;
+}
+
+export async function uploadAssetReplacement(
+  candidate: Candidate,
+  id: string,
+  file: File,
+): Promise<IngestOperation> {
+  const body = new FormData();
+  body.append("file", file, file.name);
+  const response = await browserFetch(`/api/v1/assets/${id}/revisions`, {
+    method: "POST",
+    headers: { "X-Working-Copy-Version": String(candidate.version) },
+    credentials: "same-origin",
+    body,
+  });
+  acceptCandidateVersion(candidate, response);
+  const answer = (await response.json()) as IngestOperation & {
+    error?: unknown;
+    code?: unknown;
+  };
+  if (!response.ok) {
+    throw writeRefusal(
+      answer,
+      response.status === 413
+        ? "That file is larger than Illarin accepts."
+        : "That file could not be accepted. Try again.",
+    );
+  }
+  return answer;
+}
+
+export async function readIngestOperation(
+  url: string,
+): Promise<IngestOperation> {
+  const response = await fetch(`/api${url}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Illarin could not read this upload yet.");
+  return (await response.json()) as IngestOperation;
+}
+
+export async function acceptAssetReplacement(
+  candidate: Candidate,
+  id: string,
+  operationId: string,
+  unrepresentable: ReplacementDecision,
+  exposeProtected = false,
+): Promise<IngestOperation> {
+  const { data, error, response } = await api.POST(
+    "/v1/assets/{id}/revisions/{operationId}/accept",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, operationId },
+      },
+      body: { unrepresentable, exposeProtected },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error || !data) {
+    throw writeRefusal(error, "That file could not be applied. Try again.");
+  }
+  return data;
+}
+
+export async function cancelAssetReplacement(id: string, operationId: string) {
+  const { error } = await api.DELETE(
+    "/v1/assets/{id}/revisions/{operationId}",
+    { params: { path: { id, operationId } } },
+  );
+  if (error) throw new Error("That file could not be discarded. Try again.");
+}
+
+export async function publishAssetUpdate(
+  candidate: Candidate,
+  id: string,
+  update: AssetUpdateRequest,
+): Promise<
+  | { published: true; update: AssetUpdate }
+  | {
+      published: false;
+      error: string;
+      code?: string;
+      field?: string;
+      readiness?: ReadinessItem[];
+    }
+> {
+  const { data, error, response } = await api.POST("/v1/assets/{id}/updates", {
+    params: {
+      header: { "X-Working-Copy-Version": candidate.version },
+      path: { id },
+    },
+    body: update,
+  });
+  acceptCandidateVersion(candidate, response);
+  if (data) return { published: true, update: data };
+  reportStaleWorkingCopy(error);
+  const refusal = error as
+    | {
+        error?: unknown;
+        code?: unknown;
+        field?: unknown;
+        readiness?: ReadinessItem[];
+      }
+    | undefined;
+  return {
+    published: false,
+    error:
+      typeof refusal?.error === "string"
+        ? refusal.error
+        : "The update could not be published. Try again.",
+    code: typeof refusal?.code === "string" ? refusal.code : undefined,
+    field: typeof refusal?.field === "string" ? refusal.field : undefined,
+    readiness: refusal?.readiness,
+  };
+}
+
 export async function fetchPreservedNamespaces(
   id: string,
 ): Promise<PreservedNamespace[]> {
@@ -364,19 +598,243 @@ export async function fetchPreservedNamespaces(
   return data ?? [];
 }
 
-/** Deletes one namespace and everything under it, for good. */
-export async function deletePreservedNamespace(id: string, namespace: string) {
-  const { error } = await api.DELETE("/v1/assets/{id}/preserved/{namespace}", {
-    params: { path: { id, namespace } },
+export async function fetchAssetUpdates(
+  id: string,
+): Promise<RecordedVersion[] | null> {
+  try {
+    const { data } = await api.GET("/v1/assets/{id}/updates", {
+      params: { path: { id } },
+    });
+    return data?.items ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function restoreAssetVersion(
+  candidate: Candidate,
+  id: string,
+  number: number,
+) {
+  const { error, response } = await api.POST(
+    "/v1/assets/{id}/updates/{number}/restore",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, number },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error) throw writeRefusal(error, "That version could not be restored.");
+}
+
+export async function correctAssetVersionNotes(
+  id: string,
+  number: number,
+  correction: AssetVersionNotesRequest,
+) {
+  const { error } = await api.PATCH("/v1/assets/{id}/updates/{number}/notes", {
+    params: { path: { id, number } },
+    body: correction,
   });
+  if (error) throw writeRefusal(error, "Those notes could not be corrected.");
+}
+
+export async function withdrawAssetVersion(
+  id: string,
+  number: number,
+  explanation: string,
+) {
+  const { error } = await api.POST(
+    "/v1/assets/{id}/updates/{number}/withdraw",
+    { params: { path: { id, number } }, body: { explanation } },
+  );
+  if (error) throw writeRefusal(error, "That version could not be withdrawn.");
+}
+
+/** Loads the formats and media available for a historical download. */
+export async function fetchRecordedVersionDownloads(
+  id: string,
+  number: number,
+): Promise<
+  | { offered: RecordedVersionDownloads }
+  | { offered: null; refusal: string; retry: boolean }
+> {
+  const unreadable = {
+    offered: null,
+    refusal: "Illarin could not load this version's download options.",
+    retry: true,
+  } as const;
+  let data: RecordedVersionDownloads | undefined;
+  let response: Response;
+  try {
+    ({ data, response } = await api.GET(
+      "/v1/assets/{id}/updates/{number}/downloads",
+      { params: { path: { id, number } } },
+    ));
+  } catch {
+    return unreadable;
+  }
+  if (data) return { offered: data };
+  if (response.status === 404) {
+    return {
+      offered: null,
+      refusal: "This version is not available to download.",
+      retry: false,
+    };
+  }
+  return unreadable;
+}
+
+export async function compareAssetVersions(
+  id: string,
+  from: number,
+  to: number,
+  cookie?: string,
+): Promise<
+  { compared: VersionComparison } | { compared: null; refusal: string }
+> {
+  const unreadable = {
+    compared: null,
+    refusal: "That comparison could not be read. Try again.",
+  } as const;
+  let data: VersionComparison | undefined;
+  let response: Response;
+  try {
+    ({ data, response } = await api.GET("/v1/assets/{id}/updates/comparison", {
+      params: { path: { id }, query: { from, to } },
+      headers: cookie ? { cookie } : undefined,
+    }));
+  } catch {
+    return unreadable;
+  }
+  if (data) return { compared: data };
+  if (response.status === 409) {
+    return {
+      compared: null,
+      refusal:
+        "This is the first version Illarin recorded, so there is nothing before it to compare.",
+    };
+  }
+  if (response.status === 404) {
+    return {
+      compared: null,
+      refusal: "That version is not available to read.",
+    };
+  }
+  return unreadable;
+}
+
+export async function fetchProtectionMismatches(
+  id: string,
+): Promise<ProtectionMismatch[]> {
+  const { data } = await api.GET("/v1/assets/{id}/updates/protection", {
+    params: { path: { id } },
+  });
+  return data?.items ?? [];
+}
+
+export async function resolvePromptCorrespondence(
+  id: string,
+  number: number,
+  matches: PromptCorrespondenceRequest["matches"],
+) {
+  const { error } = await api.PUT(
+    "/v1/assets/{id}/updates/{number}/protection",
+    {
+      params: { path: { id, number } },
+      body: { matches },
+    },
+  );
   if (error) {
-    const detail = error as { error?: unknown } | undefined;
+    const refusal = error as { error?: unknown } | undefined;
     throw new Error(
-      typeof detail?.error === "string"
-        ? detail.error
-        : "That data could not be deleted. Try again.",
+      typeof refusal?.error === "string"
+        ? refusal.error
+        : "The prompt matches could not be saved. Try again.",
     );
   }
+}
+
+export async function deletePreservedNamespace(
+  candidate: Candidate,
+  id: string,
+  namespace: string,
+) {
+  const { error, response } = await api.DELETE(
+    "/v1/assets/{id}/preserved/{namespace}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id, namespace },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error) {
+    throw writeRefusal(error, "That data could not be deleted. Try again.");
+  }
+}
+
+export async function fetchPublishedPost(
+  slug: string,
+): Promise<PublicPost | null> {
+  const { data, error } = await api.GET("/v1/posts/{slug}", {
+    params: { path: { slug } },
+  });
+  if (error || !data) return null;
+  return data;
+}
+
+export async function fetchPostArchive(query: {
+  page?: number;
+  category?: string;
+  app?: string;
+}): Promise<PostArchive | null> {
+  const { data, error, response } = await api.GET("/v1/posts", {
+    params: { query },
+  });
+  if (response.status === 404) return null;
+  if (error || !data) throw new Error("Could not load blog posts.");
+  return data;
+}
+
+export async function fetchPostCategories(): Promise<PublicationCategory[]> {
+  const answer = await api.GET("/v1/post-categories", {}).catch(() => null);
+  return answer?.data?.categories ?? [];
+}
+
+export async function fetchPostApps(): Promise<PublicationApp[]> {
+  const { data, error } = await api.GET("/v1/post-apps", {});
+  if (error || !data) return [];
+  return data.apps;
+}
+
+export async function fetchProfileRestriction(
+  handle: string,
+): Promise<ProfileRestriction | null> {
+  const { data, error } = await api.GET("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+  });
+  if (error || !data) return null;
+  return data;
+}
+
+export async function restrictProfile(handle: string, reason: string) {
+  const { data, error } = await api.PUT("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+    body: { reason },
+  });
+  if (error || !data) throw new Error("Could not restrict the profile");
+  return data;
+}
+
+export async function restoreProfile(handle: string) {
+  const { error } = await api.DELETE("/v1/profiles/{handle}/restriction", {
+    params: { path: { handle } },
+  });
+  if (error) throw new Error("Could not restore the profile");
 }
 
 export async function withholdAsset(id: string, reason: string) {

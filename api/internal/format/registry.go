@@ -21,7 +21,6 @@ type Resolution struct {
 	Claim  Claim
 }
 
-// Registry holds every known format module.
 type Registry struct {
 	modules map[string]Module
 }
@@ -40,7 +39,6 @@ func (r *Registry) Register(m Module) error {
 	return nil
 }
 
-// ValidateDeclarations checks every module's static contract.
 func (r *Registry) ValidateDeclarations() error {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
@@ -130,7 +128,6 @@ func (r *Registry) ByID(id string) (Module, bool) {
 	return m, ok
 }
 
-// Declaration returns one registered module's contract.
 func (r *Registry) Declaration(id string) (Declaration, bool) {
 	module, ok := r.modules[id]
 	if !ok {
@@ -139,7 +136,6 @@ func (r *Registry) Declaration(id string) (Declaration, bool) {
 	return module.Declaration(), true
 }
 
-// ReadableLabels names every readable file format.
 func (r *Registry) ReadableLabels() []string {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {

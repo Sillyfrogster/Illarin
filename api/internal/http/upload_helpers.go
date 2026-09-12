@@ -7,6 +7,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -20,8 +22,6 @@ const (
 	filePart     = "file"
 )
 
-// readMetadata reads the catalog fields, which come first because the file is
-// stored as it arrives and the fields have to be known by then.
 func readMetadata(parts *multipart.Reader) (CreateAssetRequest, error) {
 	part, err := nextPart(parts, metadataPart)
 	if err != nil {
@@ -46,6 +46,21 @@ func readMediaMetadata(parts *multipart.Reader) (AddMediaRequest, error) {
 	var metadata AddMediaRequest
 	if err := decodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
 		return AddMediaRequest{}, refusal{
+			reason: "the " + metadataPart + " part is not valid JSON",
+			cause:  err,
+		}
+	}
+	return metadata, nil
+}
+
+func readPostMediaMetadata(parts *multipart.Reader) (AddPostMediaRequest, error) {
+	part, err := nextPart(parts, metadataPart)
+	if err != nil {
+		return AddPostMediaRequest{}, err
+	}
+	var metadata AddPostMediaRequest
+	if err := decodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
+		return AddPostMediaRequest{}, refusal{
 			reason: "the " + metadataPart + " part is not valid JSON",
 			cause:  err,
 		}
@@ -115,9 +130,6 @@ func ingestInput(
 	return in
 }
 
-// refusal is a reason a request cannot be accepted, worded for whoever sent
-// it. The cause stays attached so the ceiling can still be recognised through
-// the layers that wrapped it.
 type refusal struct {
 	reason string
 	cause  error
@@ -147,7 +159,9 @@ func (h *Handlers) refuse(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": fmt.Sprintf("the upload is over the limit of %d bytes", h.maxUploadBytes),
+			"error": fmt.Sprintf(
+				"That file is larger than the %s upload limit.", readableSize(h.maxUploadBytes),
+			),
 		})
 		return
 	}
@@ -158,4 +172,20 @@ func (h *Handlers) refuse(c *gin.Context, err error) {
 		return
 	}
 	c.JSON(http.StatusBadRequest, gin.H{"error": "could not create the asset"})
+}
+
+func readableSize(bytes int64) string {
+	units := []struct {
+		suffix string
+		scale  int64
+	}{{suffix: "GB", scale: 1 << 30}, {suffix: "MB", scale: 1 << 20}, {suffix: "KB", scale: 1 << 10}}
+	for _, unit := range units {
+		if bytes < unit.scale {
+			continue
+		}
+		return strings.TrimSuffix(
+			strconv.FormatFloat(float64(bytes)/float64(unit.scale), 'f', 1, 64), ".0",
+		) + " " + unit.suffix
+	}
+	return fmt.Sprintf("%d bytes", bytes)
 }

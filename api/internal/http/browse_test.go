@@ -415,7 +415,7 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time
 	return computedAt
 }
 
-func TestAHiddenBlockAnswersNoFacetAndStillExports(t *testing.T) {
+func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -452,16 +452,16 @@ func TestAHiddenBlockAnswersNoFacetAndStillExports(t *testing.T) {
 	}
 
 	carried := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
-	if len(carried.Names) != 0 {
-		t.Fatalf("a hidden expression set still answered the facet: %v", carried.Names)
+	if !slices.Equal(carried.Names, []string{"Ana"}) {
+		t.Fatalf("private arrangement changed the published facet: %v", carried.Names)
 	}
 	none := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dfalse")
-	if !slices.Equal(none.Names, []string{"Ana"}) {
+	if len(none.Names) != 0 {
 		t.Fatalf("a hidden expression set answered %v, want the none bucket", none.Names)
 	}
 
 	export, err := assets.OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3",
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
@@ -474,6 +474,7 @@ func TestAHiddenBlockAnswersNoFacetAndStillExports(t *testing.T) {
 func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Veiled Garden")
+	metadata["_keepDraft"] = true
 	metadata["filename"] = "veiled-garden.lumitheme"
 	metadata["isNsfw"] = true
 	created := uploadAndFinish(t, router, session, assets, metadata, []byte("garden"))
@@ -483,6 +484,10 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add cover status = %d, want 201: %s", added.Code, added.Body.String())
+	}
+
+	if got := publishAsset(t, router, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
 	saved := send(t, router, authorizedJSONRequest(

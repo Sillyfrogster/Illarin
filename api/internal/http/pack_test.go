@@ -68,7 +68,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 		t.Fatalf("save a Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
 	if saved := saveIdentity(t, r, session, started.ID,
-		`{"name":"Archive companions","isNsfw":false}`); saved.Code != http.StatusNoContent {
+		`{"name":"Archive companions","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save Pack identity = %d, want 204: %s", saved.Code, saved.Body.String())
 	}
 	if published := publishAsset(t, r, session, started.ID); published.Code != http.StatusOK {

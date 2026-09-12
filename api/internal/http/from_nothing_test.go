@@ -36,6 +36,12 @@ type startedBlock struct {
 	} `json:"elements"`
 }
 
+type appTarget struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	Format string `json:"format"`
+}
+
 type startedAsset struct {
 	ID        string `json:"id"`
 	Kind      string `json:"kind"`
@@ -54,6 +60,7 @@ type startedAsset struct {
 	Blocks            []startedBlock   `json:"blocks"`
 	AddableBlocks     []addableBlock   `json:"addableBlocks"`
 	Downloads         []downloadTarget `json:"downloads"`
+	AppTargets        []appTarget      `json:"appTargets"`
 	LinkedInstallOnly bool             `json:"linkedInstallOnly"`
 	AllowedApps       []string         `json:"allowedApps"`
 	EligibleApps      []string         `json:"eligibleApps"`
@@ -68,11 +75,12 @@ type downloadTarget struct {
 }
 
 type roleVerdict struct {
-	Role        string `json:"role"`
-	Label       string `json:"label"`
-	Verdict     string `json:"verdict"`
-	Reason      string `json:"reason"`
-	Destination string `json:"destination"`
+	Role        string   `json:"role"`
+	Label       string   `json:"label"`
+	Verdict     string   `json:"verdict"`
+	Reason      string   `json:"reason"`
+	Destination string   `json:"destination"`
+	ShownBy     []string `json:"shownBy"`
 	Sample      struct {
 		Count  int      `json:"count"`
 		Texts  []string `json:"texts"`

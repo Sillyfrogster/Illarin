@@ -1,4 +1,3 @@
-// Package lorebook reads and writes listed and keyed standalone lorebooks.
 package lorebook
 
 import (
@@ -17,15 +16,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// ID is the module's identity, and Kind is what a lorebook is to a person.
 const (
 	ID   = "lorebook"
 	Kind = "lorebook"
 )
 
-// Where a lorebook's leftovers sit. `lorebook` is Illarin's name for the
-// document's own top level, `lorebook_entry` for one entry's own keys, and
-// every other namespace is a key of `extensions`.
 const (
 	bookNamespace  = "lorebook"
 	entryNamespace = "lorebook_entry"
@@ -33,7 +28,6 @@ const (
 	entriesKey     = "entries"
 )
 
-// Module reads and writes the standalone lorebook document.
 type Module struct{}
 
 func (Module) ID() string { return ID }
@@ -42,15 +36,11 @@ func (Module) Declaration() format.Declaration {
 	return format.Declaration{
 		ID: ID, Label: "Lorebook", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
-		// Listed lorebooks are identified by a top-level entries array.
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionSignature,
 			Containers: []probe.Container{probe.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueArray},
 		}},
-		// A lorebook page can hold a gallery and an author's note, because
-		// every kind lists the shared blocks. The file has nowhere to put
-		// either, so a reader downloading one is told what stays behind.
 		Roles: map[block.Role]format.DirectionalRoleSupport{
 			block.RoleLorebookEntries: {
 				Read:  format.RoleSupport{Grade: format.SupportFull},
@@ -65,27 +55,17 @@ func (Module) Declaration() format.Declaration {
 				Write: format.RoleSupport{Grade: format.SupportNone},
 			},
 		},
-		// A book names itself and nothing else. Its version, its credited
-		// author and a character's alternate name have nowhere to go, so they
-		// stay above the file rather than being invented inside it.
 		Header: []format.HeaderField{format.HeaderName},
-		// No named slots. A lorebook holds no settings group and no colour
-		// set, so there is no typed knob for a module to declare.
-		Slots: nil,
+		Slots:  nil,
 		Limits: format.ContentLimits{
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		// Description seeds the blurb but stays preserved for round trips.
 		ConsumedKeys: []string{entriesKey, "name"},
-		// No boilerplate. A book is written by hand or by whatever exported
-		// it, and no tool in the corpus stamps a namespace onto every one, so
-		// there is nothing the creator's panel should hide.
-		Boilerplate: nil,
+		Boilerplate:  nil,
 		Preservation: format.PreservationDeclaration{
 			Body: bookNamespace, Container: []string{extensionsKey},
 		},
-		// This module does not convert character cards into standalone books.
 		TestedOrigins:    []string{ID, format.OriginIllarin, format.OriginV1},
 		PreservesOrigins: []string{format.OriginV1},
 	}
@@ -95,7 +75,6 @@ func (m Module) Claim(file probe.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-// Parse reads a listed lorebook and preserves fields it cannot model.
 func (m Module) Parse(
 	_ context.Context,
 	file probe.Inspection,
@@ -105,8 +84,6 @@ func (m Module) Parse(
 	if !ok {
 		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", ID)
 	}
-	// The probe's payload is read by every module that looked at this file, so
-	// the leftovers are computed on a copy of it.
 	source := maps.Clone(payload.Root)
 
 	var entryPayloads []json.RawMessage
@@ -127,7 +104,6 @@ func (m Module) Parse(
 	if named {
 		delete(source, "name")
 	}
-	// Preserve the full description; only its shortened copy seeds the blurb.
 	seeded := blurb(source)
 	return format.Parsed{
 		Kind: Kind, Format: ID,
@@ -137,9 +113,6 @@ func (m Module) Parse(
 	}, nil
 }
 
-// remainder is everything the document carried that did not become content:
-// the book's own leftover keys, one namespace per key of `extensions`, and one
-// entry's leftover keys on the entry they came from.
 func remainder(
 	source map[string]json.RawMessage,
 	entries []block.Entry,
@@ -153,7 +126,6 @@ func remainder(
 			extensions = make(map[string]json.RawMessage)
 		}
 	}
-	// Keep a collision nested so it cannot shadow the document namespace.
 	if collision, clash := extensions[bookNamespace]; clash {
 		source[extensionsKey], _ = json.Marshal(
 			map[string]json.RawMessage{bookNamespace: collision},
@@ -186,15 +158,11 @@ func remainder(
 	return rows
 }
 
-// blurb is the line a person reads while browsing, taken from the book's own
-// description where it has one.
 func blurb(source map[string]json.RawMessage) string {
 	description, _ := text(source, "description")
 	return truncate(strings.TrimSpace(description), format.MaxBlurbRunes)
 }
 
-// text reads a string key, answering false where the key is absent or is not a
-// string. A key that will not read is a key this module did not consume.
 func text(source map[string]json.RawMessage, name string) (string, bool) {
 	raw, present := source[name]
 	if !present {
@@ -219,6 +187,4 @@ func truncate(text string, limit int) string {
 	return strings.TrimSpace(cut)
 }
 
-// Modules returns every lorebook module, so the server registers the set
-// rather than remembering to add each one.
 func Modules() []format.Reader { return []format.Reader{Module{}, SillyTavernModule{}} }

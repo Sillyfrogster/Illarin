@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// sealPresetBlock writes one preserved sealed block the way the migration does, which is a state no route can reach because nothing in Illarin seals anything.
 func sealPresetBlock(
 	t *testing.T,
 	pool *pgxpool.Pool,
@@ -48,7 +47,6 @@ func ownerOfAsset(t *testing.T, pool *pgxpool.Pool, assetID string) uuid.UUID {
 	return ownerID
 }
 
-// sealedStack is two verified creators, one preset, and the pool the sealed rows go in through.
 type sealedStack struct {
 	router   *gin.Engine
 	session  *http.Cookie
@@ -80,7 +78,6 @@ func (stack sealedStack) seal(t *testing.T, version, key, content string) {
 	)
 }
 
-// The owner opens the set and every sealed block comes back, in version and key order.
 func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
@@ -134,7 +131,6 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	}
 }
 
-// The content was withheld from readers in v1 and stays withheld, so nobody but the owner learns it is even there.
 func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
@@ -157,7 +153,6 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	}
 }
 
-// An asset holding nothing sealed has no export, and says so the same way a stranger is answered.
 func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "sillytavern")
@@ -170,7 +165,6 @@ func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
 	}
 }
 
-// The count reaches the owner's own page so their menu can offer the export, and reaches nobody else.
 func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")

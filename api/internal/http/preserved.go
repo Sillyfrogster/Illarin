@@ -10,7 +10,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// ListPreservedNamespaces lists the preserved data visible to an asset owner.
 func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID) {
 	owner, ok := h.verifiedAccount(c, "reading preserved data")
 	if !ok {
@@ -21,7 +20,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read what this asset preserves."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load extra file data. Try again."})
 	default:
 		served := make([]PreservedNamespace, 0, len(found))
 		for _, namespace := range found {
@@ -33,24 +32,25 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID
 	}
 }
 
-// DeletePreservedNamespace removes one namespace for good.
 func (h *Handlers) DeletePreservedNamespace(
 	c *gin.Context,
 	id openapi_types.UUID,
 	namespace string,
+	params DeletePreservedNamespaceParams,
 ) {
 	owner, ok := h.verifiedAccount(c, "deleting preserved data")
 	if !ok {
 		return
 	}
+	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
 	err := h.assets.DeletePreservedNamespace(
-		c.Request.Context(), owner.ID, uuid.UUID(id), namespace,
-	)
+		c.Request.Context(), owner.ID, uuid.UUID(id), namespace, candidate)
+	if candidateResult(c, candidate, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "This asset preserves no such data."})
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
 	case err != nil:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete the preserved data."})
 	default:
@@ -58,7 +58,6 @@ func (h *Handlers) DeletePreservedNamespace(
 	}
 }
 
-// ExportSealedContent hands an owner the content their v1 preset kept sealed, so the preserved set stays live data rather than a backup nobody has ever opened.
 func (h *Handlers) ExportSealedContent(c *gin.Context, id openapi_types.UUID) {
 	owner, ok := h.verifiedAccount(c, "reading sealed content")
 	if !ok {

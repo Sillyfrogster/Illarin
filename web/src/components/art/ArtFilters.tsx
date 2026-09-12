@@ -5,10 +5,10 @@ export function ArtFilters() {
       height="0"
       aria-hidden="true"
       focusable="false"
-      style={{ position: "absolute" }}
+      className="absolute"
     >
       <filter id="watercolor-dark-ink" colorInterpolationFilters="sRGB">
-        <feFlood floodColor="var(--color-accent)" result="ink" />
+        <feFlood floodColor="var(--v-action)" result="ink" />
         <feComposite in="ink" in2="SourceAlpha" operator="in" />
       </filter>
     </svg>

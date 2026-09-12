@@ -136,7 +136,6 @@ type Row interface {
 	common() CommonRow
 }
 
-// Common returns the columns every kind of v1 row shares.
 func Common(row Row) CommonRow { return row.common() }
 
 type Result struct {
@@ -156,7 +155,6 @@ type Result struct {
 	Events            []Event
 }
 
-// LegacyRecord is v1's own bookkeeping for one row, frozen, and holds no favourite count because the favourites themselves migrate as rows.
 type LegacyRecord struct {
 	Downloads int
 	Views     int

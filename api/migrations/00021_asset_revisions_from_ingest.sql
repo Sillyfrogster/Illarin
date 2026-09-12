@@ -2,8 +2,6 @@
 alter table ingest_operations
     add column target_asset_id uuid references assets (id) on delete cascade;
 
--- An ingest that creates an asset stays one to one with it. An ingest that adds
--- a revision names the asset it is adding to, and an asset takes many of those.
 alter table ingest_operations drop constraint ingest_operations_asset_id_key;
 create unique index ingest_operations_created_asset_idx
     on ingest_operations (asset_id)

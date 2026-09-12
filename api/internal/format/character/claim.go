@@ -13,9 +13,6 @@ const (
 	CharX = "charx"
 )
 
-// Fields returns the claimed payload's spec-defined body. A spec-bearing card
-// keeps its fields under `data`, so top-level copies of the same names are
-// shadow fields and are never merged in.
 func Fields(file probe.Inspection, claim format.Claim) (map[string]json.RawMessage, bool) {
 	payload, ok := claim.Payload(file)
 	if !ok {

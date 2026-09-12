@@ -22,8 +22,6 @@ language sql immutable strict parallel safe as $$
 $$;
 -- +goose StatementEnd
 
--- Pending link requests are short-lived and contain no durable user data. They
--- cannot be converted because the old schema stored human codes in plaintext.
 drop table link_code_attempts;
 drop table link_requests;
 
@@ -176,8 +174,6 @@ alter table linked_instances rename constraint linked_instances_token_prefix_che
     to linked_instances_refresh_token_prefix_check;
 alter table linked_instances drop constraint linked_instances_credential_check;
 
--- Old permanent tokens are no longer accepted by any live endpoint. Their
--- one-way hashes remain only for a bounded, one-use legacy credential cutover.
 alter table linked_instances add column refresh_token_hash bytea unique;
 alter table linked_instances add constraint linked_instances_legacy_token_hash_check
     check (legacy_token_hash is null or octet_length(legacy_token_hash) = 32);
@@ -288,8 +284,6 @@ drop table instance_access_tokens;
 drop table link_authorizations;
 drop table link_requests;
 
--- A refresh token must never become the old permanent bearer credential if a
--- deployment rolls back after new instances have linked.
 update linked_instances
    set refresh_token_hash = null,
        application_version = null,

@@ -27,7 +27,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"Linked preset","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
@@ -100,7 +100,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
@@ -169,7 +169,7 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := saveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
@@ -282,6 +282,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	if processed, err := assets.ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process replacement = %t, %v; want true, nil", processed, err)
 	}
+	acceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
 	updated := pollIngestAsset(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
 		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)

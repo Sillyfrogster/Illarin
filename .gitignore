@@ -5,9 +5,8 @@ dist
 *.tsbuildinfo
 
 # Settings and secrets
-.env
-**/.env
-**/.env.local
+.env*
+!**/.env.example
 ops/.production-secrets/
 
 # Logs
@@ -23,8 +22,5 @@ ops/.production-secrets/
 # Uploaded files are runtime data
 api/uploads/
 
-# Irreplaceable local files: secrets, models, and original uploads
-.preserved/
-
-# md
-!CONTRIBUTING.md
+# Alternate site build directories, chosen with WEB_DIST_DIR
+web/.next-*/

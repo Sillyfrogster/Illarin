@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ownedBackupDirectories are the parts of v1's uploads directory this migration owns, where a file no row names is an orphan.
 var ownedBackupDirectories = []string{
 	"uploads/characters",
 	"uploads/characters/images",
@@ -26,18 +25,15 @@ var ownedBackupDirectories = []string{
 	"uploads/worldbooks",
 }
 
-// Staged is every blob phase one put on disk, addressed by the stored path or URL that named it.
 type Staged struct {
 	images map[string]asset.StagedImage
 }
 
-// Image returns what a stored path or URL was staged as.
 func (staged *Staged) Image(source string) (asset.StagedImage, bool) {
 	image, found := staged.images[source]
 	return image, found
 }
 
-// StageReport says what phase one did, so a re-run can be seen to re-fetch nothing.
 type StageReport struct {
 	Stored  int
 	Fetched int
@@ -45,7 +41,6 @@ type StageReport struct {
 	Failed  int
 }
 
-// Stage puts every blob and external image on disk and writes nothing to the asset tables, reusing what content addressing already holds.
 func Stage(
 	ctx context.Context,
 	settings Settings,
@@ -75,7 +70,6 @@ func Stage(
 	return staged, report, nil
 }
 
-// wantedFiles indexes the files the run stores and the ones it only proves are there.
 type wantedFiles struct {
 	stored     *backupIndex
 	paths      []string
@@ -89,7 +83,6 @@ type referencedFile struct {
 	AssetID uuid.UUID
 }
 
-// filesWantedFrom indexes every stored path a read row names, and every path a row only points at.
 func filesWantedFrom(corpus Corpus, results []v1.Result) *wantedFiles {
 	wanted := &wantedFiles{
 		stored: newBackupIndex(), paths: make([]string, 0, 512),
@@ -125,7 +118,6 @@ func filesWantedFrom(corpus Corpus, results []v1.Result) *wantedFiles {
 	return wanted
 }
 
-// stageBackupFiles walks the archive once, storing the files rows name, proving the ones they only reference, and ledgering the rest.
 func stageBackupFiles(
 	ctx context.Context,
 	settings Settings,
@@ -162,7 +154,6 @@ func stageBackupFiles(
 	return ledgerMissingFiles(wanted, found, present, orphans, ledger)
 }
 
-// stageBackupFile stores one archive entry, or reuses what an earlier run already put on disk.
 func stageBackupFile(
 	ctx context.Context,
 	settings Settings,
@@ -186,7 +177,6 @@ func stageBackupFile(
 	return recordStaged(ctx, settings, staged, fileSource(path), image, report)
 }
 
-// ledgerMissingFiles records what the archive did not hold and what nothing in it owns.
 func ledgerMissingFiles(
 	wanted *wantedFiles,
 	found, present []bool,
@@ -225,7 +215,6 @@ func ledgerMissingFiles(
 	return nil
 }
 
-// fetchExternalImages is the one bounded exception to Illarin never fetching a creator-supplied URL, and a miss keeps the URL.
 func fetchExternalImages(
 	ctx context.Context,
 	settings Settings,
@@ -286,7 +275,6 @@ func recordStaged(
 	return nil
 }
 
-// fileSource distinguishes a v1 stored path from a URL in the staging table.
 func fileSource(cleaned string) string { return "file:" + cleaned }
 
 func ownedBackupFile(name string) bool {

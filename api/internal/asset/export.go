@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,27 +19,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ErrTargetNotOffered is a format this asset is not offered in. The menu is a
-// list of choices and a target outside it was never one of them.
 var ErrTargetNotOffered = errors.New("that download is not offered for this asset")
 
-// ErrLinkedInstallOnly is a file that may leave only through an allowed linked instance.
 var ErrLinkedInstallOnly = errors.New("this asset is linked-install-only")
 
-// Export is one finished file on its way to a reader. It is a response rather
-// than stored content, so no blob is created and nothing enters a quota.
+var ErrExportTooLarge = errors.New("that choice of images makes a file too large to produce")
+
+var ErrExportImageUnreadable = errors.New("an image this download needs could not be read")
+
+// MaxExportBytes is the largest file a download may produce.
+const MaxExportBytes = 64 << 20
+
+// GallerySelection is one reader's choice of gallery images for one download.
+type GallerySelection struct {
+	Images []uuid.UUID
+}
+
+func (g *GallerySelection) holds(mediaID uuid.UUID) bool {
+	return slices.Contains(g.Images, mediaID)
+}
+
 type Export struct {
 	Body      []byte
 	MediaType string
 	Filename  string
 	Target    string
-	// Event is what the download log records, and is nil for a draft, which
-	// no reader has been handed anything from.
-	Event *DownloadEvent
+	Event     *DownloadEvent
 }
 
-// exportSubject is one asset as export reads it. It carries what the asset is,
-// where it came from, and the content a writer empties into a file.
 type exportSubject struct {
 	assetID    uuid.UUID
 	kind       string
@@ -46,17 +54,20 @@ type exportSubject struct {
 	origin     string
 	header     format.Header
 	blocks     []block.Block
+	cover      *uuid.UUID
 	ownerID    *uuid.UUID
 	lifecycle  Lifecycle
 	revisionID *uuid.UUID
+	gallery    *GallerySelection
+	recorded   *recordedVersion
 }
 
-// OpenExport validates the current export gates, then writes the target format.
 func (s *Service) OpenExport(
 	ctx context.Context,
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	target string,
+	gallery *GallerySelection,
 ) (Export, error) {
 	tx, err := s.beginReadSnapshot(ctx)
 	if err != nil {
@@ -68,11 +79,15 @@ func (s *Service) OpenExport(
 	if err != nil {
 		return Export{}, err
 	}
+	subject.gallery = gallery
+	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+		return Export{}, err
+	}
 	apps, err := protected.Apps(ctx, tx, assetID)
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 {
+	if len(apps) > 0 || protected.HasPromptFragments(subject.blocks) {
 		return Export{}, ErrLinkedInstallOnly
 	}
 	offered := s.reg.OfferedTargets(subject.capability())
@@ -88,25 +103,39 @@ func (s *Service) OpenExport(
 	if !writes {
 		return Export{}, ErrTargetNotOffered
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
-	}
-	written, err := s.writeExport(ctx, subject, writer)
+	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
 		return Export{}, err
 	}
-	export := Export{
-		Body: written.Body, MediaType: written.MediaType, Target: target,
-		Filename: downloadFilename(subject.name, declaration.Label, written.Extension),
+	if err := tx.Commit(ctx); err != nil {
+		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
 	}
-	if subject.lifecycle == LifecyclePublished {
-		event := downloadEvent(assetID, subject.revisionID, target, subject.ownerID, viewerID)
-		export.Event = &event
-	}
-	return export, nil
+	return subject.export(written, target, declaration.Label, viewerID), nil
 }
 
-// OpenExportForLinkedInstance restores protected fields at the delivery boundary.
+func (subject exportSubject) export(
+	written format.Artifact,
+	target, label string,
+	viewerID *uuid.UUID,
+) Export {
+	export := Export{
+		Body: written.Body, MediaType: written.MediaType, Target: target,
+		Filename: downloadFilename(subject.name, subject.updateName(), label, written.Extension),
+	}
+	if subject.lifecycle == LifecyclePublished {
+		event := downloadEvent(subject.assetID, subject.revisionID, target, subject.ownerID, viewerID)
+		export.Event = &event
+	}
+	return export
+}
+
+func (subject exportSubject) updateName() string {
+	if subject.recorded == nil {
+		return ""
+	}
+	return fmt.Sprintf("update %d", subject.recorded.Number)
+}
+
 func (s *Service) OpenExportForLinkedInstance(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -129,6 +158,14 @@ func (s *Service) OpenExportForLinkedInstance(
 	if len(apps) > 0 && !targetAllowed(apps, subject.kind, target) {
 		return Export{}, ErrTargetNotOffered
 	}
+	if len(apps) == 0 {
+		if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+			return Export{}, err
+		}
+		if protected.HasPromptFragments(subject.blocks) {
+			return Export{}, ErrLinkedInstallOnly
+		}
+	}
 	if err := protected.RestorePromptFragments(ctx, tx, assetID, subject.blocks); err != nil {
 		return Export{}, err
 	}
@@ -143,21 +180,16 @@ func (s *Service) OpenExportForLinkedInstance(
 	if !writes {
 		return Export{}, ErrTargetNotOffered
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
-	}
-	written, err := s.writeExport(ctx, subject, writer)
+	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
 		return Export{}, err
 	}
-	export := Export{
-		Body: written.Body, MediaType: written.MediaType, Target: target,
-		Filename: downloadFilename(subject.name, module.Declaration().Label, written.Extension),
+	if err := tx.Commit(ctx); err != nil {
+		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
 	}
-	if subject.lifecycle == LifecyclePublished {
-		event := downloadEvent(assetID, subject.revisionID, target, subject.ownerID, nil)
-		event.AuthorizationClass = AuthorizationLinkedInstance
-		export.Event = &event
+	export := subject.export(written, target, module.Declaration().Label, nil)
+	if export.Event != nil {
+		export.Event.AuthorizationClass = AuthorizationLinkedInstance
 	}
 	return export, nil
 }
@@ -175,18 +207,20 @@ func targetAllowed(apps []string, kind, target string) bool {
 
 func (s *Service) writeExport(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
 	writer format.Writer,
 ) (format.Artifact, error) {
+	travelling := subject.travellingElements()
 	asset := format.ExportAsset{
-		Kind: subject.kind, Header: subject.header, Elements: subject.elements(),
+		Kind: subject.kind, Header: subject.header, Elements: travelling,
 	}
-	cover, images, err := s.exportImages(ctx, subject)
+	cover, images, err := s.exportImages(ctx, q, subject, travelling)
 	if err != nil {
 		return format.Artifact{}, err
 	}
 	asset.Cover, asset.Images = cover, images
-	asset.Preserved, err = s.travellingPreservedData(ctx, subject, writer.ID())
+	asset.Preserved, err = s.travellingPreservedData(ctx, q, subject, writer.ID())
 	if err != nil {
 		return format.Artifact{}, err
 	}
@@ -194,16 +228,47 @@ func (s *Service) writeExport(
 	if err != nil {
 		return format.Artifact{}, fmt.Errorf("write %s: %w", writer.ID(), err)
 	}
+	if len(written.Body) > MaxExportBytes {
+		return format.Artifact{}, ErrExportTooLarge
+	}
 	return written, nil
 }
 
-// elements includes hidden page content because hiding does not change exports.
 func (subject exportSubject) elements() []block.Element {
 	elements := make([]block.Element, 0)
 	for _, holder := range subject.blocks {
 		elements = append(elements, holder.Elements...)
 	}
 	return elements
+}
+
+// travellingElements drops the gallery images this download leaves behind.
+func (subject exportSubject) travellingElements() []block.Element {
+	elements := subject.elements()
+	for i, element := range elements {
+		if element.Role != block.RoleGallery {
+			continue
+		}
+		set, isSet := element.Content.(block.ImageSet)
+		if !isSet {
+			continue
+		}
+		travelling := make([]block.ImageItem, 0, len(set.Images))
+		for _, image := range set.Images {
+			if subject.carries(image) {
+				travelling = append(travelling, image)
+			}
+		}
+		elements[i].Content = block.ImageSet{Images: travelling}
+	}
+	return elements
+}
+
+func (subject exportSubject) carries(image block.ImageItem) bool {
+	if subject.gallery == nil {
+		return !image.OmitFromDownloads
+	}
+	return subject.gallery.holds(image.MediaID)
 }
 
 func (subject exportSubject) capability() format.CapabilitySubject {
@@ -221,8 +286,6 @@ func offersTarget(offered []format.Target, target string) bool {
 	return false
 }
 
-// exportSubject reads the asset a writer is about to be handed. A draft answers
-// to its owner alone, exactly as its page does.
 func (s *Service) exportSubject(
 	ctx context.Context,
 	q db.DBTX,
@@ -231,11 +294,11 @@ func (s *Service) exportSubject(
 ) (exportSubject, error) {
 	var subject exportSubject
 	var origin pgtype.Text
-	var ownerID, revisionID pgtype.UUID
+	var ownerID, revisionID, cover pgtype.UUID
 	err := q.QueryRow(ctx, `
 		select asset.kind, asset.name, asset.blurb, asset.origin_format, asset.lifecycle,
 		       asset.asset_version, asset.credited_author, asset.nickname,
-		       asset.owner_id, asset.current_revision_id
+		       asset.owner_id, asset.current_revision_id, asset.cover_media_id
 		  from assets asset
 		 where asset.id = $1 and asset.deleted_at is null
 		   and (asset.lifecycle = 'published' or asset.owner_id = $2)
@@ -243,7 +306,7 @@ func (s *Service) exportSubject(
 	`, assetID, viewerID).Scan(
 		&subject.kind, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
 		&subject.header.AssetVersion, &subject.header.CreditedAuthor,
-		&subject.header.Nickname, &ownerID, &revisionID,
+		&subject.header.Nickname, &ownerID, &revisionID, &cover,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, ErrNotFound
@@ -254,6 +317,7 @@ func (s *Service) exportSubject(
 	subject.assetID = assetID
 	subject.header.Name = subject.name
 	subject.origin = origin.String
+	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
 	subject.revisionID = uuidOrNil(revisionID)
 	subject.blocks, err = readBlocks(ctx, q, assetID)
@@ -263,11 +327,9 @@ func (s *Service) exportSubject(
 	return subject, nil
 }
 
-// travellingPreservedData reads what the asset kept from the file it arrived
-// as, and only where the target belongs to that file's family. Having somewhere
-// to put a namespace never makes a target eligible for it.
 func (s *Service) travellingPreservedData(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
 	target string,
 ) ([]format.Remainder, error) {
@@ -279,7 +341,10 @@ func (s *Service) travellingPreservedData(
 	if !known || !writes || !format.TravelsWithOrigin(origin, written) {
 		return nil, nil
 	}
-	rows, err := s.pool.Query(ctx, `
+	if subject.recorded != nil {
+		return subject.recorded.remainder(), nil
+	}
+	rows, err := q.Query(ctx, `
 		select owner_kind, owner_id, namespace, payload
 		  from asset_preserved_data
 		 where asset_id = $1
@@ -300,14 +365,14 @@ func (s *Service) travellingPreservedData(
 	return preserved, rows.Err()
 }
 
-// exportImages opens the pictures a writer may put in the file. That is the
-// asset's own picture and every one an image element points at.
 func (s *Service) exportImages(
 	ctx context.Context,
+	q db.DBTX,
 	subject exportSubject,
+	travelling []block.Element,
 ) (*format.ExportMedia, map[uuid.UUID]format.ExportMedia, error) {
 	wanted := make([]uuid.UUID, 0)
-	for _, element := range subject.elements() {
+	for _, element := range travelling {
 		switch content := element.Content.(type) {
 		case block.ImageSet:
 			for _, image := range content.Images {
@@ -321,13 +386,7 @@ func (s *Service) exportImages(
 			}
 		}
 	}
-	var held pgtype.UUID
-	if err := s.pool.QueryRow(ctx,
-		`select cover_media_id from assets where id = $1`, subject.assetID,
-	).Scan(&held); err != nil {
-		return nil, nil, fmt.Errorf("read the cover: %w", err)
-	}
-	coverID := uuidOrNil(held)
+	coverID := subject.cover
 	if coverID != nil {
 		wanted = append(wanted, *coverID)
 	}
@@ -335,24 +394,27 @@ func (s *Service) exportImages(
 		return nil, map[uuid.UUID]format.ExportMedia{}, nil
 	}
 
-	rows, err := s.pool.Query(ctx, `
-		select id, blob_id from asset_media
-		 where asset_id = $1 and is_current and id = any($2)
-	`, subject.assetID, wanted)
+	rows, err := q.Query(ctx, subject.pictureQuery(), subject.assetID, wanted, subject.snapshotID())
 	if err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
 	}
 	defer rows.Close()
 	blobs := make(map[uuid.UUID]uuid.UUID)
+	var total int64
 	for rows.Next() {
 		var mediaID, blobID uuid.UUID
-		if err := rows.Scan(&mediaID, &blobID); err != nil {
+		var size int64
+		if err := rows.Scan(&mediaID, &blobID, &size); err != nil {
 			return nil, nil, fmt.Errorf("read a picture to export: %w", err)
 		}
 		blobs[mediaID] = blobID
+		total += size
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
+	}
+	if total > MaxExportBytes {
+		return nil, nil, ErrExportTooLarge
 	}
 
 	images := make(map[uuid.UUID]format.ExportMedia, len(blobs))
@@ -360,7 +422,7 @@ func (s *Service) exportImages(
 	for mediaID, blobID := range blobs {
 		picture, err := s.readBlob(ctx, blobID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("read picture %s: %w", mediaID, err)
+			return nil, nil, fmt.Errorf("%w: picture %s: %w", ErrExportImageUnreadable, mediaID, err)
 		}
 		picture.URL = s.exportMediaURL(mediaID, private)
 		images[mediaID] = picture
@@ -373,6 +435,31 @@ func (s *Service) exportImages(
 		}
 	}
 	return cover, images, nil
+}
+
+// pictureQuery lists the pictures a download may carry, published now or kept by a recorded version.
+func (subject exportSubject) pictureQuery() string {
+	if subject.recorded == nil {
+		return `
+			select media.id, media.blob_id, blob.byte_size
+			  from asset_media media
+			  join blobs blob on blob.id = media.blob_id
+			 where media.asset_id = $1 and media.is_current and media.id = any($2)
+			   and $3::uuid is null`
+	}
+	return `
+		select media.id, media.blob_id, blob.byte_size
+		  from public.asset_media media
+		  join public.asset_snapshot_media kept on kept.media_id = media.id
+		  join public.blobs blob on blob.id = media.blob_id
+		 where media.asset_id = $1 and media.id = any($2) and kept.snapshot_id = $3`
+}
+
+func (subject exportSubject) snapshotID() *uuid.UUID {
+	if subject.recorded == nil {
+		return nil
+	}
+	return &subject.recorded.ID
 }
 
 func (s *Service) exportMediaURL(mediaID uuid.UUID, private bool) string {
@@ -395,12 +482,9 @@ func (s *Service) readBlob(ctx context.Context, blobID uuid.UUID) (format.Export
 	return format.ExportMedia{MediaType: http.DetectContentType(data), Data: data}, nil
 }
 
-// downloadFilename names the file after the asset and the format it is in.
-// Two of the three character formats are a picture, so a name that said only
-// the asset would put three files in a folder that nothing tells apart.
-func downloadFilename(name, label, extension string) string {
-	parts := make([]string, 0, 2)
-	for _, part := range []string{name, label} {
+func downloadFilename(name, update, label, extension string) string {
+	parts := make([]string, 0, 3)
+	for _, part := range []string{name, update, label} {
 		if slug := filenameSlug(part); slug != "" {
 			parts = append(parts, slug)
 		}
@@ -424,9 +508,6 @@ func filenameSlug(text string) string {
 	return strings.Trim(string(slug), "-")
 }
 
-// OriginalUpload is the creator's own file. It sits on its own below the
-// generated downloads, because a reader should never mistake a year-old file
-// for the current work.
 type OriginalUpload struct {
 	Label     string
 	MediaType string

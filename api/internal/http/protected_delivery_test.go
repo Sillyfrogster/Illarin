@@ -19,7 +19,6 @@ const ordinaryPreset = `{
 	]
 }`
 
-// sealEveryFragment marks the saved prompt fragments protected, keeping their ids.
 func sealEveryFragment(t *testing.T, body saveBlockBody, apps []string) saveBlockBody {
 	t.Helper()
 	var list struct {
@@ -41,7 +40,6 @@ func sealEveryFragment(t *testing.T, body saveBlockBody, apps []string) saveBloc
 	return body
 }
 
-// publishSealedPreset builds one linked-install-only preset from nothing.
 func publishSealedPreset(
 	t *testing.T,
 	router *gin.Engine,
@@ -60,7 +58,7 @@ func publishSealedPreset(
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if got := saveIdentity(
-		t, router, session, started.ID, `{"name":"`+name+`","isNsfw":false}`,
+		t, router, session, started.ID, `{"name":"`+name+`","blurb":"","isNsfw":false}`,
 	); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}

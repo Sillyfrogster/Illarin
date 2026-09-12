@@ -19,9 +19,6 @@ func readLinkJSON(c *gin.Context, destination any) bool {
 	return readBoundedJSON(c, destination, maxLinkBodyBytes, "The link request is too large.")
 }
 
-// readBoundedJSON refuses anything past its limit before parsing it, so an
-// oversized body costs the process the bytes it takes to notice rather than the
-// memory to hold it.
 func readBoundedJSON(c *gin.Context, destination any, limit int64, tooLargeMessage string) bool {
 	mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
 	if err != nil || mediaType != "application/json" {
@@ -83,14 +80,18 @@ func noStoreLink(c *gin.Context) {
 	c.Header("Pragma", "no-cache")
 }
 
-func noStoreLinkedInstanceResponses() gin.HandlerFunc {
+func noStoreCredentialResponses() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.FullPath()
 		if strings.HasPrefix(path, "/v1/link/") ||
 			path == "/v1/instances" || strings.HasPrefix(path, "/v1/instances/") ||
 			strings.HasPrefix(path, "/v1/deliveries") ||
 			path == "/v1/library/sync" ||
+			strings.HasPrefix(path, "/v1/publication/token") ||
+			strings.HasPrefix(path, "/v1/account/update-destinations") ||
+			path == "/v1/publication/grants/:id/tokens" ||
 			strings.HasSuffix(path, "/instances") ||
+			strings.HasSuffix(path, "/update-destinations") ||
 			strings.HasSuffix(path, "/deliveries") {
 			noStoreLink(c)
 		}

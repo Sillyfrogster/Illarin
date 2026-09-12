@@ -1,0 +1,109 @@
+package publication
+
+import (
+	"context"
+	"crypto/sha256"
+	"errors"
+	"fmt"
+
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+)
+
+const markVariant = "grid"
+
+type Mark struct {
+	MediaID           uuid.UUID
+	Width             int
+	Height            int
+	DerivativeVersion uint32
+}
+
+func MarkURL(mediaID uuid.UUID, version uint32) string {
+	return fmt.Sprintf("/media/%s/%s/%d", mediaID, markVariant, version)
+}
+
+func replaceAppMark(
+	ctx context.Context,
+	tx pgx.Tx,
+	appID, blobID uuid.UUID,
+	width, height int,
+) error {
+	var superseded *uuid.UUID
+	err := tx.QueryRow(ctx, `
+		select mark_media_id from publication_apps where id = $1 for update
+	`, appID).Scan(&superseded)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrAppNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("read the mark being replaced: %w", err)
+	}
+	mediaID := uuid.New()
+	_, err = tx.Exec(ctx, `
+		insert into publication_media (id, blob_id, width, height) values ($1, $2, $3, $4)
+	`, mediaID, blobID, width, height)
+	if err != nil {
+		return fmt.Errorf("record mark: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+		update publication_apps set mark_media_id = $2, updated_at = now() where id = $1
+	`, appID, mediaID)
+	if err != nil {
+		return fmt.Errorf("point the app at its mark: %w", err)
+	}
+	if superseded != nil {
+		if _, err := tx.Exec(ctx, `delete from publication_media where id = $1`, *superseded); err != nil {
+			return fmt.Errorf("drop the superseded mark: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Service) MarkVariant(
+	ctx context.Context,
+	mediaID uuid.UUID,
+	variant string,
+	version uint32,
+) (string, string, error) {
+	if _, known := mediaproc.VariantByName(variant); !known || version != mediaproc.DerivativeVersion {
+		return "", "", ErrMarkNotFound
+	}
+	var blobID uuid.UUID
+	var digestBytes []byte
+	err := s.pool.QueryRow(ctx, `
+		select media.blob_id, blob.sha256
+		  from publication_media media
+		  join blobs blob on blob.id = media.blob_id
+		 where media.id = $1
+	`, mediaID).Scan(&blobID, &digestBytes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrMarkNotFound
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("find publication media: %w", err)
+	}
+	if len(digestBytes) != sha256.Size {
+		return "", "", fmt.Errorf("publication media blob has a %d-byte digest", len(digestBytes))
+	}
+	var digest [sha256.Size]byte
+	copy(digest[:], digestBytes)
+	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
+	if err != nil {
+		return "", "", err
+	}
+	return redirect, s.media.DerivativeType(), nil
+}
+
+func scanMark(markID *uuid.UUID, width, height *int) *Mark {
+	if markID == nil || width == nil || height == nil {
+		return nil
+	}
+	return &Mark{
+		MediaID:           *markID,
+		Width:             *width,
+		Height:            *height,
+		DerivativeVersion: mediaproc.DerivativeVersion,
+	}
+}

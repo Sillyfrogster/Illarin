@@ -24,6 +24,7 @@ import (
 func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	metadata := exampleMetadata("Theme with screenshots")
+	metadata["_keepDraft"] = true
 	metadata["filename"] = "theme.lumitheme"
 	created := uploadAndFinish(t, r, session, assets, metadata, []byte("theme"))
 	assetID := assetIDFromIngest(t, created)
@@ -58,6 +59,10 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	if media.Role != "gallery" || media.Width != 1200 || media.Height != 600 {
 		t.Fatalf("media response = %+v", media)
 	}
+	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
+	}
+
 	listed := send(t, r, httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"/media", nil,
 	))
@@ -138,8 +143,10 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 			return storage.NewStore(pool, root)
 		},
 	)
+	metadata := exampleMetadata("Theme with one image")
+	metadata["_keepDraft"] = true
 	created := uploadAndFinish(
-		t, r, session, assets, exampleMetadata("Theme with one image"), []byte("theme"),
+		t, r, session, assets, metadata, []byte("theme"),
 	)
 	assetID := assetIDFromIngest(t, created)
 	added := send(t, r, authorized(mediaUploadRequest(
@@ -153,6 +160,10 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	}
 	if err := json.Unmarshal(added.Body.Bytes(), &media); err != nil {
 		t.Fatalf("decode media: %v", err)
+	}
+
+	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+		t.Fatalf("publish media: %d", got.Code)
 	}
 
 	unlimited, err := storage.NewStore(pool, root)
@@ -188,10 +199,11 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), limited, asset.DefaultIngestSettings(),
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(limited), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
+		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
+		newTestPublicationService(pool, limited), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
@@ -230,10 +242,11 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
+		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 

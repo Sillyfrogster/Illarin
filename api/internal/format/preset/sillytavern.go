@@ -12,18 +12,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// SillyTavernID identifies presets with separate prompt and order lists.
 const SillyTavernID = "preset_sillytavern"
 
-// Where a SillyTavern preset's leftovers sit.
 const (
 	sillyTavernNamespace       = SillyTavernID
 	sillyTavernPromptNamespace = SillyTavernID + "_prompt"
 	sillyTavernScriptNamespace = SillyTavernID + "_script"
 )
 
-// sillyTavernPreservation is where this module keeps what a file carried that
-// Illarin has no place for.
 var sillyTavernPreservation = preservation{
 	body: sillyTavernNamespace, extensions: stExtensions,
 	reserved: []string{
@@ -31,8 +27,6 @@ var sillyTavernPreservation = preservation{
 	},
 }
 
-// The file's own top-level keys, beyond the flat settings the slot table
-// names.
 const (
 	stPrompts    = "prompts"
 	stOrder      = "prompt_order"
@@ -40,7 +34,6 @@ const (
 	stScripts    = "regex_scripts"
 )
 
-// One prompt's own keys, and one order entry's.
 const (
 	stIdentifier = "identifier"
 	stName       = "name"
@@ -54,7 +47,6 @@ const (
 	stEnabled    = "enabled"
 )
 
-// One regex script's own keys.
 const (
 	stScriptName     = "scriptName"
 	stScriptFind     = "findRegex"
@@ -69,21 +61,14 @@ const (
 	stScriptMaxDepth = "maxDepth"
 )
 
-// The one order SillyTavern reads. Its prompt manager holds every order under
-// a character id and asks for this one, so the others are somebody else's copy
-// and travel back out untouched.
 const stLiveOrder = 100001
 
-// A prompt sits where the order puts it, unless it says it goes into the
-// conversation at a depth instead.
 const (
 	stInOrder    = 0
 	stInHistory  = 1
 	stMarkerOnly = true
 )
 
-// The text a SillyTavern script runs over. It numbers them, and two of the
-// numbers are ones Illarin has no wording for.
 var sillyTavernScriptTargets = map[float64]block.ScriptTarget{
 	1: block.TargetUserInput,
 	2: block.TargetModelOutput,
@@ -91,7 +76,6 @@ var sillyTavernScriptTargets = map[float64]block.ScriptTarget{
 	5: block.TargetLorebook,
 }
 
-// SillyTavernModule reads and writes a SillyTavern preset.
 type SillyTavernModule struct{}
 
 func (SillyTavernModule) ID() string { return SillyTavernID }
@@ -101,9 +85,6 @@ func (SillyTavernModule) Declaration() format.Declaration {
 	return format.Declaration{
 		ID: SillyTavernID, Label: "SillyTavern preset", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
-		// The prompt list and the order beside it. Both are always there and
-		// no other flat SillyTavern file asks for either: its theme is told
-		// apart from this by required keys the two do not share.
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionSignature,
 			Containers: []probe.Container{probe.JSON},
@@ -123,7 +104,6 @@ func (SillyTavernModule) Declaration() format.Declaration {
 					},
 				},
 			},
-			// A SillyTavern preset has no form for a reader to fill in.
 			block.RolePromptVariables: {
 				Read:  format.RoleSupport{Grade: format.SupportNone},
 				Write: format.RoleSupport{Grade: format.SupportNone},
@@ -151,8 +131,6 @@ func (SillyTavernModule) Declaration() format.Declaration {
 				Write: format.RoleSupport{Grade: format.SupportNone},
 			},
 		},
-		// The file carries no name of its own and no description, so there is
-		// no header field to fill and the creator names the page.
 		Header: nil,
 		Slots:  declaredSlots(SillyTavern),
 		Limits: format.ContentLimits{
@@ -164,13 +142,10 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: sillyTavernNamespace, Container: []string{stExtensions},
 		},
-		// This module does not convert between preset formats.
 		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
 	}
 }
 
-// sillyTavernConsumedKeys is the file's own top level: the prompt list, the
-// order beside it, and every flat setting this app names.
 func sillyTavernConsumedKeys(named namedSlots) []string {
 	consumed := []string{stPrompts, stOrder}
 	for _, group := range [][]slot{named.samplers, named.completion, named.advanced} {
@@ -188,9 +163,6 @@ func sillyTavernSettingSupport(named []slot) format.DirectionalRoleSupport {
 	}
 }
 
-// hasHeadingOrHistoryPlacement matches a prompt list holding something this
-// file cannot say: a heading over some of the fragments, or a fragment placed
-// before or after the conversation rather than at a depth inside it.
 func hasHeadingOrHistoryPlacement(content block.Content) bool {
 	list, isList := content.(block.PromptList)
 	if !isList {
@@ -210,7 +182,6 @@ func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-// Parse reads a SillyTavern preset and preserves fields it cannot model.
 func (m SillyTavernModule) Parse(
 	_ context.Context,
 	file probe.Inspection,

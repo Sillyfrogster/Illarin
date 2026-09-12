@@ -17,28 +17,23 @@ var (
 	ErrInsufficientSpace  = errors.New("storage reserve would be crossed")
 )
 
-// Capacity protects room for the largest canonical write while keeping a
-// free-space reserve.
 type Capacity struct {
 	FreeSpaceReserveBytes int64
 	MaximumBlobWriteBytes int64
 }
 
-// StoredBlob identifies one distinct byte sequence.
 type StoredBlob struct {
 	ID       uuid.UUID
 	Digest   [sha256.Size]byte
 	ByteSize int64
 }
 
-// DerivativeID names one rendering of a source blob.
 type DerivativeID struct {
 	SourceDigest [sha256.Size]byte
 	Variant      string
 	Version      uint32
 }
 
-// Store keeps canonical bytes and records their content address.
 type Store interface {
 	Put(ctx context.Context, r io.Reader) (StoredBlob, error)
 	RecordOrphans(ctx context.Context) (int, error)

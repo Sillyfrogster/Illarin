@@ -6,8 +6,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-// Every app Illarin offers has slot names for all three settings groups and
-// for its nudges, so choosing one never lands a creator on an empty form.
 func TestEveryAppOfferedHasSlotNamesForEveryGroup(t *testing.T) {
 	for _, app := range Apps() {
 		if !app.Known() || app.Label() == "" {
@@ -31,8 +29,6 @@ func TestEveryAppOfferedHasSlotNamesForEveryGroup(t *testing.T) {
 					continue
 				}
 				found = true
-				// A group of named slots reads as empty on purpose, because
-				// names are a form and not content, so this counts the items.
 				if len(block.ItemIDs(element.Content)) == 0 {
 					t.Errorf("%s seeded %s with no slot names", app, role)
 				}
@@ -44,8 +40,6 @@ func TestEveryAppOfferedHasSlotNamesForEveryGroup(t *testing.T) {
 	}
 }
 
-// The seed supplies names and never values. A slot nobody filled in is what a
-// writer leaves out of the file rather than writing a zero into.
 func TestTheSeedSuppliesNamesAndNoValues(t *testing.T) {
 	elements, err := Seed(SillyTavern)
 	if err != nil {
@@ -71,16 +65,12 @@ func TestTheSeedSuppliesNamesAndNoValues(t *testing.T) {
 	}
 }
 
-// An app Illarin has no slot names for is refused rather than seeded empty.
 func TestAnAppWithNoSlotNamesIsRefused(t *testing.T) {
 	if _, err := Seed(App("koboldcpp")); err == nil {
 		t.Error("an app Illarin knows nothing about was seeded anyway")
 	}
 }
 
-// The two apps share none of their settings names. Illarin places the names it
-// is given and models nothing about what any of them controls, so a name in
-// one app's file means nothing in the other's.
 func TestTheTwoAppsShareAlmostNoSettingsNames(t *testing.T) {
 	names := map[App]map[string]struct{}{}
 	for _, app := range Apps() {
@@ -105,8 +95,6 @@ func TestTheTwoAppsShareAlmostNoSettingsNames(t *testing.T) {
 			shared = append(shared, name)
 		}
 	}
-	// temperature and seed are spelled the same way in both, and nothing else
-	// is. A longer list means one app's names have leaked into the other's.
 	if len(shared) > 2 {
 		t.Errorf("the two apps share %v, want no more than temperature and seed", shared)
 	}

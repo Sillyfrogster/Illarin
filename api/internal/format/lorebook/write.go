@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Write builds a listed lorebook from canonical roles and preserved fields.
 func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
 	entries := bookEntries(asset)
 	body := map[string]json.RawMessage{
@@ -43,8 +42,6 @@ func bookEntries(asset format.ExportAsset) []block.Entry {
 	return table.Entries
 }
 
-// restorePreserved restores document, extension, and entry fields without
-// overwriting current content. Deleted entries stay deleted.
 func restorePreserved(
 	body map[string]json.RawMessage,
 	entries []block.Entry,
@@ -88,8 +85,6 @@ func restorePreserved(
 	return nil
 }
 
-// writtenEntries takes apart the entry list the writer put in the document, so
-// preserved keys can go back into the entries they came from.
 func writtenEntries(body map[string]json.RawMessage) ([]map[string]json.RawMessage, error) {
 	var entries []map[string]json.RawMessage
 	if err := json.Unmarshal(body[entriesKey], &entries); err != nil {

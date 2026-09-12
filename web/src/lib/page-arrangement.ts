@@ -67,7 +67,6 @@ export const LAYOUT_LABELS: Record<BlockLayout, string> = {
 
 const ONE_COLUMN = "minmax(0, 1fr)";
 
-/** The columns a block's elements arrange into. An empty one holds no slot. */
 export function elementTracks(layout: BlockLayout, rendered: number): string {
   const columns = Math.min(Math.max(rendered, 1), LAYOUTS[layout].slots.length);
   if (columns === 1) return ONE_COLUMN;
@@ -216,32 +215,32 @@ export function packBlockRows<T extends { width: BlockWidth }>(
   return rows;
 }
 
-export const FULL_SCREEN_TYPES = [
-  "entry_table",
-  "image_set",
+export const WRITTEN_IN_PLACE_TYPES = [
+  "prose",
   "text_set",
   "dialogue_sample",
-  "prompt_list",
-  "variable_schema",
-  "setting_group",
-  "script_list",
-  "color_set",
-  "stylesheet_set",
-  "record_list",
-] as const;
+  "field_list",
+  "link_list",
+] as const satisfies readonly ElementType[];
 
-/** How much of an element the page shows. `self` bounds its own height. */
+export function writesInPlace(type: string): boolean {
+  return (WRITTEN_IN_PLACE_TYPES as readonly string[]).includes(type);
+}
+
+export function editsInTheRail(type: string): boolean {
+  return !writesInPlace(type);
+}
+
 export type ExcerptDefinition =
   | { unit: "lines"; limit: number }
-  | { unit: "items"; limit: number }
-  | { unit: "self" };
+  | { unit: "items"; limit: number };
 
 export const EXCERPT_DEFINITIONS = {
   prose: { unit: "lines", limit: 12 },
   text_set: { unit: "items", limit: 3 },
   field_list: { unit: "items", limit: 6 },
   dialogue_sample: { unit: "items", limit: 3 },
-  entry_table: { unit: "self" },
+  entry_table: { unit: "items", limit: 6 },
   image_set: { unit: "items", limit: 3 },
   link_list: { unit: "items", limit: 4 },
   prompt_list: { unit: "items", limit: 3 },
@@ -255,22 +254,6 @@ export const EXCERPT_DEFINITIONS = {
 
 export function excerptDefinition(type: ElementType): ExcerptDefinition {
   return EXCERPT_DEFINITIONS[type];
-}
-
-export function opensFullScreen(type: string): boolean {
-  return (FULL_SCREEN_TYPES as readonly string[]).includes(type);
-}
-
-export const INLINE_ITEM_LIMIT = 8;
-
-export function fitsInTheSheet(element: {
-  type: string;
-  content: unknown;
-}): boolean {
-  return (
-    !opensFullScreen(element.type) ||
-    contentItemCount(element) <= INLINE_ITEM_LIMIT
-  );
 }
 
 export function contentItemCount(element: {
@@ -348,48 +331,4 @@ function colorCount(content: unknown): number {
     const colors = (mode as { colors?: unknown }).colors;
     return total + (Array.isArray(colors) ? colors.length : 0);
   }, 0);
-}
-
-/**
- * How much a page has to show, which decides the composition it gets. A page
- * with nothing on it and a page with one row of blocks are both short, and
- * both need artwork rather than a run of blank ground.
- */
-export type PageFullness = "empty" | "barren" | "full";
-
-export function pageFullness(rows: readonly unknown[]): PageFullness {
-  if (rows.length === 0) return "empty";
-  if (rows.length === 1) return "barren";
-  return "full";
-}
-
-export const ORNAMENT_MINIMUM_COLUMNS = WIDTH_COLUMNS.third;
-
-export function rowRemainder<T>(row: readonly PackedBlock<T>[]): number {
-  const occupied = row.reduce((total, item) => total + item.columns, 0);
-  return Math.max(0, WIDTH_COLUMNS.full - occupied);
-}
-
-export type OrnamentPlacement = {
-  row: number;
-  startColumn: number;
-  columns: number;
-};
-
-export function ornamentPlacement<T>(
-  rows: readonly (readonly PackedBlock<T>[])[],
-  holdsCreatorArt: (row: readonly PackedBlock<T>[]) => boolean = () => false,
-): OrnamentPlacement | null {
-  const row = rows.findIndex(
-    (candidate) =>
-      rowRemainder(candidate) >= ORNAMENT_MINIMUM_COLUMNS &&
-      !holdsCreatorArt(candidate),
-  );
-  if (row === -1) return null;
-  const columns = rowRemainder(rows[row]);
-  return {
-    row,
-    startColumn: WIDTH_COLUMNS.full - columns + 1,
-    columns,
-  };
 }

@@ -172,8 +172,6 @@ func probedPayload(spec, locator string) probe.Inspection {
 	}
 }
 
-// containerModule stands for CharX: its payload names a standard rather than
-// the module, because the standard has no discriminator of its own.
 type containerModule struct{ claimingModule }
 
 func (containerModule) OwnedSpecs() []string { return []string{"chara_card_v3"} }

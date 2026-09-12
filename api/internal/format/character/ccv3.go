@@ -7,8 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-// CCv3Module reads a Character Card V3, as a JSON document or inside a raster
-// image. A V3 card in an archive is CharX and belongs to that module.
 type CCv3Module struct{}
 
 func (CCv3Module) ID() string { return V3 }

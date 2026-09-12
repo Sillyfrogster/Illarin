@@ -18,15 +18,10 @@ import (
 )
 
 const (
-	// SillyTavernID identifies SillyTavern's keyed World Info format.
-	SillyTavernID = "lorebook_sillytavern"
-	// Where a World Info file's leftovers sit. It has no `extensions` of its
-	// own, so an entry's own keys are the whole of the remainder.
+	SillyTavernID             = "lorebook_sillytavern"
 	sillyTavernEntryNamespace = "lorebook_sillytavern_entry"
 )
 
-// The field names SillyTavern uses. They are listed here rather than inline so
-// the reader and the writer cannot drift apart.
 const (
 	stKeys          = "key"
 	stSecondaryKeys = "keysecondary"
@@ -43,15 +38,11 @@ const (
 	stDelayUntil    = "delayUntilRecursion"
 )
 
-// The placements SillyTavern numbers. Illarin has wording for the first two
-// and none for the rest, and a placement it cannot name is left alone rather
-// than rounded to the nearest one it can.
 const (
 	stBeforeCharacter = 0
 	stAfterCharacter  = 1
 )
 
-// SillyTavernModule reads and writes a SillyTavern World Info file.
 type SillyTavernModule struct{}
 
 func (SillyTavernModule) ID() string { return SillyTavernID }
@@ -60,7 +51,6 @@ func (SillyTavernModule) Declaration() format.Declaration {
 	return format.Declaration{
 		ID: SillyTavernID, Label: "SillyTavern lorebook", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
-		// World Info is identified by its top-level entries object.
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionSignature,
 			Containers: []probe.Container{probe.JSON},
@@ -80,18 +70,15 @@ func (SillyTavernModule) Declaration() format.Declaration {
 				Write: format.RoleSupport{Grade: format.SupportNone},
 			},
 		},
-		// The file carries no name of its own, so there is no header field to
-		// fill and the creator names the page.
 		Header: nil,
 		Slots:  nil,
 		Limits: format.ContentLimits{
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		ConsumedKeys: []string{entriesKey},
-		Boilerplate:  nil,
-		Preservation: format.PreservationDeclaration{Body: bookNamespace},
-		// This module does not convert between lorebook formats.
+		ConsumedKeys:  []string{entriesKey},
+		Boilerplate:   nil,
+		Preservation:  format.PreservationDeclaration{Body: bookNamespace},
 		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
 	}
 }
@@ -100,7 +87,6 @@ func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-// Parse reads a keyed World Info file and preserves fields it cannot model.
 func (m SillyTavernModule) Parse(
 	_ context.Context,
 	file probe.Inspection,
@@ -141,9 +127,6 @@ func (m SillyTavernModule) Parse(
 	}, nil
 }
 
-// entryOrder puts the keyed entries back in the order the file meant. The keys
-// are positions written as text, so they sort as numbers where they are
-// numbers and by their own text where they are not.
 func entryOrder(keyed map[string]json.RawMessage) []string {
 	keys := slices.Collect(maps.Keys(keyed))
 	slices.SortFunc(keys, func(a, b string) int {
@@ -163,15 +146,10 @@ func entryOrder(keyed map[string]json.RawMessage) []string {
 	return keys
 }
 
-// readSillyTavernEntry takes what the entry table models out of one entry and
-// gives back everything else for preservation. A field written as the wrong
-// shape is not consumed, so a bad value costs that field and nothing more.
 func readSillyTavernEntry(payload json.RawMessage) (block.Entry, json.RawMessage) {
 	entry := block.Entry{ID: block.NewItemID(), Enabled: true}
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(payload, &fields) != nil || fields == nil {
-		// An entry that is not an object still arrived, so it is kept as an
-		// entry with nothing read and the whole payload preserved.
 		return entry, payload
 	}
 
@@ -187,7 +165,6 @@ func readSillyTavernEntry(payload json.RawMessage) (block.Entry, json.RawMessage
 	keys.Take(fields, stPrevent, &entry.Recursion.Prevent)
 	keys.Take(fields, stDelayUntil, &entry.Recursion.DelayUntil)
 
-	// SillyTavern switches an entry off where the card formats switch one on.
 	var disabled bool
 	if keys.Take(fields, stDisable, &disabled) {
 		entry.Enabled = !disabled
@@ -201,8 +178,6 @@ func readSillyTavernEntry(payload json.RawMessage) (block.Entry, json.RawMessage
 		case stAfterCharacter:
 			entry.Position = block.AfterCharacter
 		default:
-			// A placement Illarin has no wording for goes back where it came
-			// from rather than being rounded to one it has.
 			fields[stPosition], _ = json.Marshal(placement)
 		}
 	}
@@ -213,9 +188,6 @@ func readSillyTavernEntry(payload json.RawMessage) (block.Entry, json.RawMessage
 	return entry, kept
 }
 
-// sillyTavernRemainder is what the file carried that did not become content:
-// the document's own leftover keys, and one entry's leftover keys on the entry
-// they came from.
 func sillyTavernRemainder(
 	source map[string]json.RawMessage,
 	entries []block.Entry,
@@ -241,9 +213,6 @@ func sillyTavernRemainder(
 	return rows
 }
 
-// Write builds a World Info file out of the asset's roles, in SillyTavern's
-// own names and with its own switch. Everything the file arrived with that
-// Illarin has no place for comes back afterwards from preservation.
 func (SillyTavernModule) Write(
 	_ context.Context,
 	asset format.ExportAsset,

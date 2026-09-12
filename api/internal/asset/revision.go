@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// revisionRow is one preserved copy of an asset's bytes.
 type revisionRow struct {
 	Revision  int
 	BlobID    uuid.UUID
@@ -35,10 +34,7 @@ func insertRevision(ctx context.Context, tx pgx.Tx, id, assetID uuid.UUID, row r
 	return nil
 }
 
-// AcceptRevision stores new bytes for an asset that already exists and records
-// the work that remains. Kind is settled before the file is read, because the
-// asset already has one and a revision never changes it.
-func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput) (IngestOperation, error) {
+func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput, candidate *Candidate) (IngestOperation, error) {
 	var withheldAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
 		select withheld_at
@@ -64,31 +60,19 @@ func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput) (IngestO
 		return IngestOperation{}, fmt.Errorf("begin revision acceptance: %w", err)
 	}
 	defer tx.Rollback(ctx)
+
 	if err := s.ensureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return IngestOperation{}, err
 	}
-	withheldAt = pgtype.Timestamptz{}
-	err = tx.QueryRow(ctx, `
-		select withheld_at
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-		 for update
-	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return IngestOperation{}, ErrNotFound
-	}
-	if err != nil {
-		return IngestOperation{}, fmt.Errorf("lock revision owner: %w", err)
-	}
-	if withheldAt.Valid {
-		return IngestOperation{}, ErrAssetFrozen
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+		return IngestOperation{}, err
 	}
 	id := uuid.New()
 	_, err = tx.Exec(ctx, `
 		insert into ingest_operations
-			(id, owner_id, blob_id, filename, status, target_asset_id)
-		values ($1, $2, $3, $4, 'pending', $5)
-	`, id, in.OwnerID, stored.ID, in.Filename, in.AssetID)
+			(id, owner_id, blob_id, filename, status, target_asset_id, candidate_version)
+		values ($1, $2, $3, $4, 'pending', $5, $6)
+	`, id, in.OwnerID, stored.ID, in.Filename, in.AssetID, candidate.Version)
 	if err != nil {
 		return IngestOperation{}, fmt.Errorf("record revision ingest: %w", err)
 	}
@@ -98,8 +82,6 @@ func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput) (IngestO
 	return IngestOperation{ID: id, Status: IngestPending}, nil
 }
 
-// setCurrentRevision points the asset at its current revision. Callers never
-// derive this.
 func setCurrentRevision(ctx context.Context, tx pgx.Tx, assetID, revisionID uuid.UUID) error {
 	queries := db.New(tx)
 	params := db.SetCurrentRevisionParams{
@@ -145,7 +127,6 @@ func currentRevisionLocation(
 	}, nil
 }
 
-// setCoverMedia points the asset at the picture a reader should see first.
 func setCoverMedia(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, mediaID *uuid.UUID) error {
 	if _, err := tx.Exec(ctx,
 		`update assets set cover_media_id = $2 where id = $1`, assetID, mediaID,
@@ -155,7 +136,6 @@ func setCoverMedia(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, mediaID *u
 	return nil
 }
 
-// setAlternateCoverMedia uses an alternate until a primary cover takes its place.
 func setAlternateCoverMedia(ctx context.Context, tx pgx.Tx, assetID, mediaID uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `
 		update assets asset
@@ -177,7 +157,6 @@ func setAlternateCoverMedia(ctx context.Context, tx pgx.Tx, assetID, mediaID uui
 	return nil
 }
 
-// clearSupersededCover removes an imported cover when its replacement has none.
 func clearSupersededCover(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `
 		update assets asset
@@ -196,7 +175,6 @@ func clearSupersededCover(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) err
 	return nil
 }
 
-// avatarMedia finds the picture that stands for the asset.
 func avatarMedia(media []preparedMedia) *uuid.UUID {
 	var alternate *uuid.UUID
 	for _, item := range media {

@@ -9,18 +9,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// immutableTables refuse the mutations a reset needs, so the reset lifts their guard and puts it straight back.
 var immutableTables = []string{"download_events", "migration_legacy_counters"}
 
-// Connect opens a pool on the test database with the settings the server runs
-// on, and empties every table.
+const seeded = `
+	truncate publication_apps, publication_categories cascade;
+
+	insert into publication_apps (id, slug, name, home_url, position)
+	values ('9d3f1c00-0000-4000-8000-000000000001', 'illarin', 'Illarin',
+	        'https://illarin.xyz', 0);
+
+	insert into publication_categories (id, slug, label, position)
+	values ('9d3f1c00-0000-4000-8000-000000000011', 'announcement', 'Announcement', 0),
+	       ('9d3f1c00-0000-4000-8000-000000000012', 'release', 'Release', 1),
+	       ('9d3f1c00-0000-4000-8000-000000000013', 'article', 'Article', 2);
+`
+
 func Connect(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	return ConnectWith(t, nil)
 }
 
-// ConnectWith is Connect with one setting changed, so a test can prove a limit
-// without waiting for the real one.
 func ConnectWith(t *testing.T, tune func(*postgres.Settings)) *pgxpool.Pool {
 	t.Helper()
 
@@ -68,6 +76,9 @@ func ConnectWith(t *testing.T, tune func(*postgres.Settings)) *pgxpool.Pool {
 	}
 	if enableErr != nil {
 		t.Fatalf("restore table immutability: %v", enableErr)
+	}
+	if _, err := pool.Exec(context.Background(), seeded); err != nil {
+		t.Fatalf("restore the seeded publication rows: %v", err)
 	}
 
 	return pool

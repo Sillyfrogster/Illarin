@@ -66,8 +66,6 @@ func (neverClaimsModule) Parse(context.Context, probe.Inspection, format.Claim) 
 
 func (opaqueTestModule) ID() string { return "test_opaque" }
 
-// The stand-in reads and writes, because an asset with no writer is offered no
-// download at all.
 func (opaqueTestModule) Declaration() format.Declaration {
 	declaration := testReaderDeclaration("test_opaque", "character")
 	declaration.Label = "Test format"
@@ -238,10 +236,11 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links), 1<<20,
+		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
 	)
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
@@ -342,8 +341,6 @@ func newVerifiedIngestRouter(
 	return router, session, assets
 }
 
-// newVerifiedIngestRouterWithPool also returns the pool, for a test that needs
-// a row in a state no route can reach.
 func newVerifiedIngestRouterWithPool(
 	t *testing.T,
 	registry *format.Registry,
@@ -399,9 +396,12 @@ func newVerifiedIngestRouterWithStoreFactory(
 	}
 	assets := asset.NewServiceWithIngestSettings(pool, registry, blobs, settings)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, "http://localhost:3000")
+	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
 	links := newTestLinkingService(pool)
-	handlers := NewHandlers(assets, accounts, links, newTestDeliveryService(pool, assets, links), 1<<20)
+	handlers := NewHandlers(
+		assets, accounts, links, newTestDeliveryService(pool, assets, links),
+		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), 1<<20,
+	)
 	setup := registerTestRouter(t, handlers, DefaultDeadlines())
 	session := signUp(t, setup, "verified@example.com", "verified.creator")
 	verificationURL, err := url.Parse(outbox.messages[0].link)
@@ -1290,7 +1290,7 @@ func revisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 	return req
 }
 
-func TestARevisionUploadReplacesTheBytesAndKeepsTheCatalogEntry(t *testing.T) {
+func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
@@ -1316,6 +1316,7 @@ func TestARevisionUploadReplacesTheBytesAndKeepsTheCatalogEntry(t *testing.T) {
 	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process revision: %v", err)
 	}
+	acceptReplacementPreview(t, r, session, created.ID, revision.Header().Get("Location"))
 	updated := pollIngestAsset(t, r, session, revision.Header().Get("Location"))
 	if updated.ID != created.ID {
 		t.Fatalf("revision made asset %s, want %s", updated.ID, created.ID)
@@ -1324,13 +1325,11 @@ func TestARevisionUploadReplacesTheBytesAndKeepsTheCatalogEntry(t *testing.T) {
 		t.Fatalf("name = %q, want the creator's own %q", updated.Name, created.Name)
 	}
 
-	if servedSourcePath(t, r, created.ID) == firstFile {
-		t.Fatal("the download still points at the first revision's file")
+	if servedSourcePath(t, r, created.ID) != firstFile {
+		t.Fatal("the private replacement changed the published source")
 	}
 }
 
-// servedSourcePath is the file nginx is told to send, which is how a caller
-// can see that a download changed without Go reading the bytes.
 func servedSourcePath(t *testing.T, r *gin.Engine, assetID string) string {
 	t.Helper()
 	rec := send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
@@ -1383,4 +1382,42 @@ func pollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 		t.Fatalf("operation = %#v, want a successful asset", operation)
 	}
 	return *operation.Asset
+}
+
+func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string, exposeProtected ...bool) {
+	t.Helper()
+	preview := send(t, r, authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	if preview.Code != http.StatusOK {
+		t.Fatalf("read replacement preview = %d: %s", preview.Code, preview.Body.String())
+	}
+	var operation struct {
+		Status  string `json:"status"`
+		Preview *struct {
+			Unrepresentable []string `json:"unrepresentable"`
+		} `json:"preview"`
+	}
+	if err := json.Unmarshal(preview.Body.Bytes(), &operation); err != nil {
+		t.Fatal(err)
+	}
+	if operation.Status != "preview" || operation.Preview == nil {
+		t.Fatalf("replacement preview = %+v", operation)
+	}
+	decisions := make(map[string]string, len(operation.Preview.Unrepresentable))
+	for _, role := range operation.Preview.Unrepresentable {
+		decisions[role] = "remove"
+	}
+	body, err := json.Marshal(map[string]any{
+		"unrepresentable": decisions,
+		"exposeProtected": len(exposeProtected) > 0 && exposeProtected[0],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID := strings.TrimPrefix(location, "/v1/ingests/")
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	accepted := send(t, r, authorized(request, session))
+	if accepted.Code != http.StatusOK {
+		t.Fatalf("accept replacement preview = %d: %s", accepted.Code, accepted.Body.String())
+	}
 }

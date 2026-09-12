@@ -1,0 +1,2104 @@
+paths:
+  /v1/publication/posts:
+    get:
+      operationId: listPosts
+      description: >-
+        Every post this credential may manage. An admin sees all of them, an
+        approved contributor sees the posts under their active grants, and a
+        publication token sees only the posts under the one grant it was issued
+        for. Deleted posts are left out unless they are the ones asked for.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: deleted
+          in: query
+          required: false
+          description: >-
+            Ask for the deleted posts still inside their recovery window instead
+            of the active ones.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The posts this account may manage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostList'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+    post:
+      operationId: createPost
+      description: >-
+        Start a draft. A contributor names the grant it belongs to and an admin
+        may omit it and write as Illarin. A publication token writes under its
+        own grant and may not name another.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: The draft as it was started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}:
+    get:
+      operationId: getPost
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The post's working copy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+    put:
+      operationId: savePost
+      description: >-
+        Replace the working copy. The request names the version it began from,
+        and a stale version is refused rather than applied.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePostRequest'
+      responses:
+        '200':
+          description: The working copy as it now reads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/media:
+    post:
+      operationId: addPostMedia
+      description: >-
+        Upload one picture against this post. The record is immutable: replacing
+        a picture uploads new bytes at a new address rather than changing an
+        address readers already hold.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        description: Send the metadata part before the image file part.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - metadata
+                - file
+              properties:
+                metadata:
+                  $ref: '#/components/schemas/AddPostMediaRequest'
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: A new immutable post picture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostMedia'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '413':
+          description: The image exceeds the upload limit
+          content:
+            application/json:
+              schema:
+                $ref: ./publication.yaml#/components/schemas/PublicationError
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+        '503':
+          description: The storage reserve cannot accept the image
+          content:
+            application/json:
+              schema:
+                $ref: ./publication.yaml#/components/schemas/PublicationError
+  /v1/publication/posts/{id}/revisions:
+    get:
+      operationId: listPostRevisions
+      description: >-
+        Every edition this post has kept, newest first. It names titles, times
+        and keepers, and never compares two editions for a reader.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The editions this post has kept
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRevisionList'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+    post:
+      operationId: checkpointPost
+      description: >-
+        Keep the named working copy as an immutable edition. Readers see nothing
+        new, and the working copy carries on unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '201':
+          description: The edition that was kept
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostRevision'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/revisions/{revisionId}/restore:
+    post:
+      operationId: restorePostRevision
+      description: >-
+        Copy a kept edition into a new working copy. Every edition, and the one
+        readers have, stay exactly as they were.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: revisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The working copy the edition was copied into
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/destinations:
+    get:
+      operationId: listPostDestinations
+      description: >-
+        The destinations this post may send to, and which of them a publication
+        starts with. A contributor sees safe identities only.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The destinations this post may send to
+          content:
+            application/json:
+              schema:
+                $ref: ./destinations.yaml#/components/schemas/PublicationDestinationChoiceList
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+  /v1/publication/posts/{id}/deliveries:
+    get:
+      operationId: listPostDeliveries
+      description: >-
+        What this post's public transitions have sent, and how each attempt
+        ended. It carries no endpoint address, secret or response body.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: What the post has sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDeliveryList'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+  /v1/publication/posts/{id}/history:
+    get:
+      operationId: readPostHistory
+      description: >-
+        What has been done to this post, newest first. It carries actors,
+        editions and times, and never a word anyone wrote.
+      security:
+        - sessionCookie: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: What has been done to this post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostActionList'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/import:
+    post:
+      operationId: importPostMarkdown
+      description: >-
+        Convert constrained Markdown into the working copy's document. The
+        Markdown is read once and never kept beside the document it became, and
+        anything that could not be carried across exactly comes back with it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPostMarkdownRequest'
+      responses:
+        '200':
+          description: The working copy as the import left it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostImport'
+        '400':
+          description: The request, a field or the Markdown itself is not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostImportRefusal'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/publish:
+    post:
+      operationId: publishPost
+      description: >-
+        Capture the named working copy as an immutable revision and make that
+        exact edition the public one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishPostRequest'
+      responses:
+        '200':
+          description: The post as it now stands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/withdraw:
+    post:
+      operationId: withdrawPost
+      description: >-
+        Take a published post out of public view. Its address answers with a
+        tombstone, its editions and dates stay exactly as they are, and only
+        Illarin reads the reason.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawPostRequest'
+      responses:
+        '200':
+          description: The post, out of public view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: >-
+            The working copy moved on, an edition is publishing, or the key was
+            reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/republish:
+    post:
+      operationId: republishPost
+      description: >-
+        Put a withdrawn post back in public view showing one edition it has
+        already kept. It returns to the same address under the date it first
+        published.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepublishPostRequest'
+      responses:
+        '200':
+          description: The post, back in public view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/delete:
+    post:
+      operationId: deletePost
+      description: >-
+        Delete a post and start its thirty-day recovery window. A contributor
+        may delete their own post up to the moment it first publishes; after
+        that only an admin may, and only once the post is out of public view.
+        Its working copy, editions and pictures are all kept until the window
+        closes.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The post, waiting out its recovery window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: >-
+            The working copy moved on, an edition is publishing, or the key was
+            reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/recover:
+    post:
+      operationId: recoverPost
+      description: >-
+        Bring a deleted post back before its recovery window closes. It returns
+        with the working copy, editions and pictures it was deleted with, and
+        may be scheduled and published again.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostVersionRequest'
+      responses:
+        '200':
+          description: The post, back in the workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The working copy moved on, or the key was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/schedule:
+    post:
+      operationId: schedulePost
+      description: >-
+        Capture the named working copy as an immutable revision and set it to go
+        live at one instant. Editing the working copy afterwards does not reach
+        the edition that will publish.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePostRequest'
+      responses:
+        '201':
+          description: The post with the edition it will publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: >-
+            The working copy moved on, the post is already scheduled, or the key
+            was reused for another request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+    put:
+      operationId: replacePostSchedule
+      description: >-
+        Point a waiting schedule at another edition the post has already kept, at
+        the same instant or a new one. The edition it leaves is untouched.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplacePostScheduleRequest'
+      responses:
+        '200':
+          description: The post with the edition it will now publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The schedule is already publishing, or the key was reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+    delete:
+      operationId: cancelPostSchedule
+      description: >-
+        Stop a waiting schedule. The post keeps whatever it shows readers now,
+        and the edition the schedule named stays in its history.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+        - publicationToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
+      responses:
+        '200':
+          description: The post with nothing waiting to publish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '401':
+          $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
+        '403':
+          $ref: ./publication.yaml#/components/responses/PublicationForbidden
+        '404':
+          $ref: ./publication.yaml#/components/responses/PublicationNotFound
+        '409':
+          description: The schedule is already publishing, or the key was reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostConflict'
+        '429':
+          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
+  /v1/publication/posts/{id}/address:
+    put:
+      operationId: correctPostAddress
+      description: >-
+        Move a published post to a corrected permalink. The address it leaves
+        keeps pointing at the post and can never belong to another one.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectPostAddressRequest'
+      responses:
+        '200':
+          description: The post at its corrected address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The address is reserved, taken or the post is not published
+        '401':
+          description: No account is signed in
+        '403':
+          description: Only an Illarin admin may correct a published post
+        '404':
+          description: No such post
+  /v1/publication/posts/{id}/byline:
+    put:
+      operationId: correctPostByline
+      description: >-
+        Replace the attribution a published post carries with a fresh snapshot
+        of another account's public identity. The author, grant and captured
+        revisions are unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectPostBylineRequest'
+      responses:
+        '200':
+          description: The post carrying its corrected byline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The post is not published
+        '401':
+          description: No account is signed in
+        '403':
+          description: Only an Illarin admin may correct a published post
+        '404':
+          description: No such post or account
+  /v1/post-categories:
+    get:
+      operationId: listPostCategories
+      description: >-
+        The publication categories that carry published posts, in the order the
+        publication shows them. A category nobody has published in is absent, so
+        every category the blog offers leads to writing.
+      responses:
+        '200':
+          description: The categories a reader can browse
+          content:
+            application/json:
+              schema:
+                $ref: './publication.yaml#/components/schemas/PublicationCategoryList'
+  /v1/post-apps:
+    get:
+      operationId: listPostApps
+      description: >-
+        The publication apps that carry published posts, in the order the
+        publication shows them. An app nobody has published for is absent, so
+        every app archive the blog offers leads to writing.
+      responses:
+        '200':
+          description: The apps a reader can browse
+          content:
+            application/json:
+              schema:
+                $ref: './publication.yaml#/components/schemas/PublicationAppList'
+  /v1/posts:
+    get:
+      operationId: listPublishedPosts
+      description: >-
+        One page of the published archive, newest first. A category or app slug
+        narrows the same chronology. Drafts, working copies, editions held for a
+        later instant and posts out of public view are absent from it.
+      parameters:
+        - name: page
+          in: query
+          description: The archive page to read, counting from one.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: category
+          in: query
+          description: A publication category slug the archive is narrowed to.
+          schema:
+            type: string
+        - name: app
+          in: query
+          description: A publication app slug the archive is narrowed to.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The page of posts and the scope it was read under
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostArchive'
+        '404':
+          description: No such publication category or app
+  /v1/posts/{slug}:
+    get:
+      operationId: getPublishedPost
+      description: >-
+        The published edition behind one post address. Drafts and working copies
+        are absent from it.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The published post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPost'
+        '404':
+          description: No published post has that address
+        '410':
+          description: The post at that address was withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawnPost'
+components:
+  schemas:
+    PostStatus:
+      type: string
+      enum:
+        - draft
+        - published
+        - withdrawn
+    PostDocument:
+      type: object
+      description: >-
+        The versioned structured body Illarin owns. Go validates its vocabulary
+        for every client, and the site renders it directly.
+      required:
+        - version
+        - content
+      properties:
+        version:
+          type: integer
+        content:
+          type: array
+          items:
+            type: object
+    PostMediaPurpose:
+      type: string
+      enum:
+        - header
+        - document
+        - social
+    PostMedia:
+      type: object
+      description: >-
+        One picture a post owns. Its bytes never change, so an address a reader
+        holds always answers with the picture the edition was written with.
+      required:
+        - id
+        - postId
+        - purpose
+        - url
+        - thumbUrl
+        - width
+        - height
+      properties:
+        id:
+          type: string
+          format: uuid
+        postId:
+          type: string
+          format: uuid
+        purpose:
+          $ref: '#/components/schemas/PostMediaPurpose'
+        url:
+          type: string
+          description: The size a picture is shown at on its own.
+        thumbUrl:
+          type: string
+          description: The size a gallery shows a picture at.
+        width:
+          type: integer
+        height:
+          type: integer
+    PostHeader:
+      type: object
+      required:
+        - mediaId
+        - alt
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        alt:
+          type: string
+        caption:
+          type: string
+    PostHeaderEdit:
+      type: object
+      additionalProperties: false
+      required:
+        - mediaId
+        - alt
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        alt:
+          type: string
+        caption:
+          type: string
+    AddPostMediaRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - purpose
+      properties:
+        purpose:
+          $ref: '#/components/schemas/PostMediaPurpose'
+    PostAuthor:
+      type: object
+      required:
+        - handle
+      properties:
+        handle:
+          type: string
+    PostRelease:
+      type: object
+      required:
+        - app
+        - version
+      properties:
+        app:
+          $ref: './publication.yaml#/components/schemas/PublicationApp'
+        version:
+          type: string
+        address:
+          type: string
+    PostReleaseEdit:
+      type: object
+      additionalProperties: false
+      required:
+        - appId
+        - version
+      properties:
+        appId:
+          type: string
+          format: uuid
+        version:
+          type: string
+        address:
+          type: string
+    PostByline:
+      type: object
+      required:
+        - handle
+        - displayName
+        - contactEmail
+        - historical
+      properties:
+        handle:
+          type: string
+        historical:
+          type: boolean
+          description: >-
+            True when the byline is an admin-supplied snapshot with no account
+            behind it, so nothing should link it to a public profile.
+        displayName:
+          type: string
+        contactEmail:
+          type: string
+        avatar:
+          anyOf:
+            - $ref: './accounts.yaml#/components/schemas/ProfileAvatar'
+            - type: 'null'
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'
+    Post:
+      type: object
+      required:
+        - id
+        - status
+        - title
+        - summary
+        - slug
+        - category
+        - document
+        - documentVersion
+        - media
+        - formerAddresses
+        - version
+        - author
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        documentVersion:
+          type: integer
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostRelease'
+            - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeader'
+            - type: 'null'
+        socialMediaId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+        publicRevisionId:
+          description: The edition readers are being given, once there is one.
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+        schedule:
+          anyOf:
+            - $ref: '#/components/schemas/PostSchedule'
+            - type: 'null'
+        withdrawal:
+          anyOf:
+            - $ref: '#/components/schemas/PostWithdrawal'
+            - type: 'null'
+        deletion:
+          anyOf:
+            - $ref: '#/components/schemas/PostDeletion'
+            - type: 'null'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+        byline:
+          anyOf:
+            - $ref: '#/components/schemas/PostByline'
+            - type: 'null'
+        formerAddresses:
+          type: array
+          description: >-
+            Addresses this post published under and has since left. Every one of
+            them still reaches it.
+          items:
+            type: string
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'
+        grantId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        author:
+          $ref: '#/components/schemas/PostAuthor'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedPublicAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostList:
+      type: object
+      required:
+        - posts
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+    PostConflict:
+      type: object
+      description: >-
+        A refusal that names the current state where there is one. A stale
+        working copy carries the version to reload from; a reused idempotency
+        key carries no version.
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          $ref: ./publication.yaml#/components/schemas/PublicationErrorCode
+        field:
+          type: string
+        version:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+    CreatePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - categoryId
+        - title
+      properties:
+        grantId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+    SavePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - categoryId
+        - title
+        - summary
+        - slug
+        - document
+      properties:
+        version:
+          type: integer
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostReleaseEdit'
+            - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeaderEdit'
+            - type: 'null'
+        socialMediaId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+    ImportPostMarkdownRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - markdown
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the import means to replace.
+        markdown:
+          type: string
+          description: >-
+            Constrained Markdown. Raw HTML, MDX and pictures from anywhere but
+            this post are refused rather than quietly dropped.
+    PostImportNote:
+      type: object
+      description: One line of an import and what could not be carried across it.
+      required:
+        - line
+        - message
+      properties:
+        line:
+          type: integer
+        message:
+          type: string
+    PostImport:
+      type: object
+      description: >-
+        The working copy an import produced, together with everything the
+        conversion could not carry across exactly.
+      required:
+        - post
+        - warnings
+      properties:
+        post:
+          $ref: '#/components/schemas/Post'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostImportNote'
+    PostImportRefusal:
+      type: object
+      description: >-
+        An import that did not happen. The working copy is left exactly as it
+        was. A refusal that came from reading the Markdown names every line that
+        stopped it; one about the request or the post it was aimed at does not.
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          $ref: ./publication.yaml#/components/schemas/PublicationErrorCode
+        field:
+          type: string
+        refusals:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostImportNote'
+    PostScheduleState:
+      type: string
+      description: Where a schedule got to.
+      enum:
+        - pending
+        - publishing
+        - published
+        - cancelled
+        - stopped
+    PostSchedule:
+      type: object
+      description: >-
+        The post's most recent schedule. It names the exact edition that will go
+        live and the instant it goes, both in UTC.
+      required:
+        - id
+        - revisionId
+        - revisionNumber
+        - at
+        - state
+        - createdBy
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        revisionId:
+          type: string
+          format: uuid
+        revisionNumber:
+          type: integer
+        at:
+          type: string
+          format: date-time
+        state:
+          $ref: '#/components/schemas/PostScheduleState'
+        stoppedBecause:
+          type: string
+          description: Why Illarin stopped a schedule instead of publishing it.
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    SchedulePostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - at
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the edition is captured from.
+        at:
+          type: string
+          format: date-time
+          description: When the edition goes live, with an explicit offset.
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+    ReplacePostScheduleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - revisionId
+        - at
+      properties:
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+        revisionId:
+          type: string
+          format: uuid
+          description: An edition the post has already kept.
+        at:
+          type: string
+          format: date-time
+          description: When the edition goes live, with an explicit offset.
+    PostWithdrawal:
+      type: object
+      description: >-
+        Why a post is out of public view. The reason is Illarin's own record;
+        the explanation is the only part a reader is ever shown.
+      required:
+        - reason
+        - explanation
+        - by
+        - at
+      properties:
+        reason:
+          type: string
+        explanation:
+          type: string
+        by:
+          type: string
+        at:
+          type: string
+          format: date-time
+    PostDeletion:
+      type: object
+      description: >-
+        A deleted post and the deadline it has to come back by. Nothing about it
+        is public, and readers were never shown any of it.
+      required:
+        - at
+        - until
+        - by
+      properties:
+        at:
+          type: string
+          format: date-time
+        until:
+          type: string
+          format: date-time
+          description: When the post and everything it holds are removed for good.
+        by:
+          type: string
+    WithdrawPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - reason
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the withdrawal means to act on.
+        reason:
+          type: string
+          description: Why the post is coming down. Illarin keeps this and readers never see it.
+        explanation:
+          type: string
+          description: A separate sentence for readers, shown on the withdrawn address.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this withdrawal announces. An absent list takes the policy
+            defaults; an empty one withdraws quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+    RepublishPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - revisionId
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the republication means to act on.
+        revisionId:
+          type: string
+          format: uuid
+          description: The edition readers are given when the post returns.
+        destinationIds:
+          type: array
+          nullable: true
+          description: >-
+            Where this republication announces. An absent list takes the policy
+            defaults; an empty one puts the post back quietly.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+    WithdrawnPost:
+      type: object
+      description: >-
+        The whole of what a withdrawn address answers with. It carries the
+        address the tombstone lives at and nothing the post used to say.
+      required:
+        - slug
+        - explanation
+      properties:
+        slug:
+          type: string
+        explanation:
+          type: string
+    PostVersionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the action means to act on.
+    PublishPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          description: The working-copy version the action means to act on.
+        destinationIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+        roleDestinationIds:
+          type: array
+          description: >-
+            Which of the chosen destinations announce with the notification
+            role the authority approved on them. Naming one Illarin is not
+            sending to, or one with no approved role, is refused.
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          maxLength: 500
+    PostDeliveryOutcome:
+      type: string
+      description: What one attempt found at the far end.
+      enum:
+        - delivered
+        - refused
+        - unreachable
+        - unconfirmed
+    PostDeliveryState:
+      type: string
+      description: >-
+        Where one delivery stands. No settled state changes whether the post is
+        public. An unconfirmed announcement was accepted without Discord saying
+        which message it made, so it is neither delivered nor safe to send again.
+      enum:
+        - pending
+        - sending
+        - delivered
+        - failed
+        - unconfirmed
+    PostDeliverySettledReason:
+      type: string
+      description: Why a delivery stopped, absent while it is still going.
+      enum:
+        - arrived
+        - exhausted
+        - refused
+        - gone
+        - removed
+        - disabled
+        - moved
+        - unconfirmed
+    PostDeliveryAttempt:
+      type: object
+      description: >-
+        The safe record of one request. It holds no body, in either direction,
+        and no header Illarin signed it with.
+      additionalProperties: false
+      required:
+        - run
+        - number
+        - outcome
+        - detail
+        - tookMs
+        - attemptedAt
+      properties:
+        run:
+          type: integer
+          description: Which attempt sequence this belongs to; a replay opens the next.
+        number:
+          type: integer
+        outcome:
+          $ref: '#/components/schemas/PostDeliveryOutcome'
+        status:
+          type: integer
+          nullable: true
+          description: What the endpoint answered, absent when nothing was reached.
+        detail:
+          type: string
+          description: A safe sentence about the attempt, never a response body.
+        tookMs:
+          type: integer
+        attemptedAt:
+          type: string
+          format: date-time
+    PostDelivery:
+      type: object
+      description: One publication event on its way to one destination.
+      additionalProperties: false
+      required:
+        - id
+        - eventId
+        - eventType
+        - postId
+        - postTitle
+        - revisionId
+        - destination
+        - kind
+        - messageId
+        - removed
+        - state
+        - run
+        - attempts
+        - occurredAt
+        - dueAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        postId:
+          type: string
+          format: uuid
+        postTitle:
+          type: string
+          description: The title the edition behind this event carries.
+        revisionId:
+          type: string
+          format: uuid
+        destination:
+          type: string
+          description: The name the destination carried when this event was captured.
+        kind:
+          type: string
+          description: >-
+            What the destination behind this delivery is, empty once it has
+            been removed.
+          enum:
+            - ''
+            - webhook
+            - discord
+        messageId:
+          type: string
+          description: >-
+            The Discord message this announcement made, empty for a generic
+            webhook and for an announcement Discord never confirmed.
+        removed:
+          type: boolean
+          description: Whether the destination behind this delivery is gone.
+        state:
+          $ref: '#/components/schemas/PostDeliveryState'
+        settledReason:
+          $ref: '#/components/schemas/PostDeliverySettledReason'
+        run:
+          type: integer
+          description: Which attempt sequence the delivery is on; a replay opens the next.
+        attempts:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+          description: When the next attempt is due, in the past once it has settled.
+        settledAt:
+          type: string
+          format: date-time
+          nullable: true
+        last:
+          allOf:
+            - $ref: '#/components/schemas/PostDeliveryAttempt'
+          description: The most recent attempt, absent until one has been made.
+    PostDeliveryList:
+      type: object
+      additionalProperties: false
+      required:
+        - deliveries
+      properties:
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDelivery'
+    PostDeliveryAttemptList:
+      type: object
+      description: Every attempt one delivery has made, oldest first.
+      additionalProperties: false
+      required:
+        - attempts
+      properties:
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostDeliveryAttempt'
+
+    PostRevisionReason:
+      type: string
+      description: Why an edition was kept.
+      enum:
+        - checkpoint
+        - publication
+        - schedule
+    PostRevision:
+      type: object
+      description: >-
+        One immutable edition of a post. It carries what the edition was called
+        and when it was kept, not the words it holds.
+      required:
+        - id
+        - number
+        - title
+        - summary
+        - slug
+        - category
+        - capturedFor
+        - capturedBy
+        - capturedAt
+        - public
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        capturedFor:
+          $ref: '#/components/schemas/PostRevisionReason'
+        capturedBy:
+          type: string
+        capturedAt:
+          type: string
+          format: date-time
+        public:
+          type: boolean
+          description: Whether this is the edition readers are being given.
+    PostRevisionList:
+      type: object
+      required:
+        - revisions
+      properties:
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostRevision'
+    PostAction:
+      type: object
+      description: >-
+        One thing that was done to a post, named by who did it, what it was and
+        which edition it touched.
+      required:
+        - id
+        - actor
+        - credential
+        - action
+        - at
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          type: string
+        credential:
+          type: string
+        action:
+          type: string
+        revision:
+          anyOf:
+            - type: integer
+            - type: 'null'
+        before:
+          type: string
+        after:
+          type: string
+        at:
+          type: string
+          format: date-time
+    PostActionList:
+      type: object
+      required:
+        - actions
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostAction'
+    CorrectPostAddressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+      properties:
+        slug:
+          type: string
+    CorrectPostBylineRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - handle
+      properties:
+        handle:
+          type: string
+    PublicPost:
+      type: object
+      required:
+        - id
+        - slug
+        - originalSlug
+        - title
+        - summary
+        - category
+        - document
+        - media
+        - byline
+        - related
+        - publishedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        originalSlug:
+          type: string
+          description: >-
+            The address the post first published under. It still reaches the
+            post after an address correction, so a feed can name the post by an
+            address that never changes.
+        title:
+          type: string
+        summary:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        document:
+          $ref: '#/components/schemas/PostDocument'
+        release:
+          anyOf:
+            - $ref: '#/components/schemas/PostRelease'
+            - type: 'null'
+        header:
+          anyOf:
+            - $ref: '#/components/schemas/PostHeader'
+            - type: 'null'
+        socialImage:
+          anyOf:
+            - $ref: '#/components/schemas/PostMedia'
+            - type: 'null'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+        byline:
+          $ref: '#/components/schemas/PostByline'
+        related:
+          type: array
+          description: >-
+            At most three other published posts, preferring the same publication
+            app and then the same category, newest first.
+          items:
+            $ref: '#/components/schemas/PostSummary'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostSummary:
+      type: object
+      description: >-
+        One published post as an archive lists it. Every field is stored on the
+        published edition, so a listing writes no excerpt and reads no live
+        profile.
+      required:
+        - id
+        - slug
+        - originalSlug
+        - title
+        - summary
+        - category
+        - byline
+        - publishedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        originalSlug:
+          type: string
+          description: >-
+            The address the post first published under. It still reaches the
+            post after an address correction, so a feed can name the post by an
+            address that never changes.
+        title:
+          type: string
+        summary:
+          type: string
+        category:
+          $ref: './publication.yaml#/components/schemas/PublicationCategory'
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'
+        releaseVersion:
+          type: string
+        byline:
+          $ref: '#/components/schemas/PostByline'
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostArchive:
+      type: object
+      description: One page of the published archive and the scope it was read under.
+      required:
+        - posts
+        - page
+        - pages
+        - total
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostSummary'
+        page:
+          type: integer
+        pages:
+          type: integer
+        total:
+          type: integer
+        category:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationCategory'
+            - type: 'null'
+        app:
+          anyOf:
+            - $ref: './publication.yaml#/components/schemas/PublicationApp'
+            - type: 'null'

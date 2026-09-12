@@ -7,9 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ColorSet is a theme's named colours, kept in the modes its source names.
-// Names stay at face value because one theme format knows nothing about
-// another format's vocabulary.
 type ColorSet struct {
 	Modes []ColorMode `json:"modes"`
 }
@@ -36,8 +33,6 @@ func (s ColorSet) Empty() bool {
 	return true
 }
 
-// StylesheetSet keeps every stylesheet and the files those stylesheets resolve
-// against. A file belongs to this element rather than to a generic file block.
 type StylesheetSet struct {
 	Global      string            `json:"global"`
 	Stylesheets []Stylesheet      `json:"stylesheets"`
