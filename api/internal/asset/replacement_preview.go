@@ -592,7 +592,7 @@ func readRemainder(ctx context.Context, tx pgx.Tx, table string, assetID uuid.UU
 	return current, nil
 }
 
-func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *Candidate, decisions map[string]string) (IngestOperation, error) {
+func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *Candidate, decisions map[string]string, exposeProtected bool) (IngestOperation, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return IngestOperation{}, err
@@ -628,7 +628,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 		ID: operationID, OwnerID: ownerID, BlobID: uuidFromPgtype(blobID), Filename: filename,
 		Target: &revisionTarget{AssetID: assetID, Kind: prepared.Kind, Version: candidate.Version},
 	}
-	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions); err != nil {
+	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, exposeProtected); err != nil {
 		return IngestOperation{}, err
 	}
 	if _, err := tx.Exec(ctx, `

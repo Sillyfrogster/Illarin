@@ -148,9 +148,30 @@ export const assetKeys = {
   ) => ["assets", "list", creator, filters, visibility] as const,
 };
 
+export class SealedExposureError extends Error {
+  constructor(
+    message: string,
+    readonly prompts: string[],
+  ) {
+    super(message);
+  }
+}
+
 function writeRefusal(error: unknown, fallback: string): Error {
   reportStaleWorkingCopy(error);
-  const detail = error as { error?: unknown } | undefined;
+  const detail = error as
+    | { error?: unknown; code?: unknown; prompts?: unknown }
+    | undefined;
+  if (
+    detail?.code === "sealed_exposure" &&
+    Array.isArray(detail.prompts) &&
+    detail.prompts.every((prompt) => typeof prompt === "string")
+  ) {
+    return new SealedExposureError(
+      typeof detail.error === "string" ? detail.error : fallback,
+      detail.prompts,
+    );
+  }
   return new Error(
     typeof detail?.error === "string"
       ? detail.error.replace(/^invalid block:\s*/i, "")
@@ -497,6 +518,7 @@ export async function acceptAssetReplacement(
   id: string,
   operationId: string,
   unrepresentable: ReplacementDecision,
+  exposeProtected = false,
 ): Promise<IngestOperation> {
   const { data, error, response } = await api.POST(
     "/v1/assets/{id}/revisions/{operationId}/accept",
@@ -505,7 +527,7 @@ export async function acceptAssetReplacement(
         header: { "X-Working-Copy-Version": candidate.version },
         path: { id, operationId },
       },
-      body: { unrepresentable },
+      body: { unrepresentable, exposeProtected },
     },
   );
   acceptCandidateVersion(candidate, response);
@@ -631,7 +653,7 @@ export async function withdrawAssetVersion(
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
 }
 
-/** fetchRecordedVersionDownloads reads what a file of one recorded version can carry today. */
+/** Loads the formats and media available for a historical download. */
 export async function fetchRecordedVersionDownloads(
   id: string,
   number: number,
@@ -641,7 +663,7 @@ export async function fetchRecordedVersionDownloads(
 > {
   const unreadable = {
     offered: null,
-    refusal: "Illarin could not read what this version can be written as.",
+    refusal: "Illarin could not load this version's download options.",
     retry: true,
   } as const;
   let data: RecordedVersionDownloads | undefined;

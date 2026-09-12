@@ -1384,7 +1384,7 @@ func pollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 	return *operation.Asset
 }
 
-func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string) {
+func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string, exposeProtected ...bool) {
 	t.Helper()
 	preview := send(t, r, authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
 	if preview.Code != http.StatusOK {
@@ -1406,7 +1406,10 @@ func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 	for _, role := range operation.Preview.Unrepresentable {
 		decisions[role] = "remove"
 	}
-	body, err := json.Marshal(map[string]any{"unrepresentable": decisions})
+	body, err := json.Marshal(map[string]any{
+		"unrepresentable": decisions,
+		"exposeProtected": len(exposeProtected) > 0 && exposeProtected[0],
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

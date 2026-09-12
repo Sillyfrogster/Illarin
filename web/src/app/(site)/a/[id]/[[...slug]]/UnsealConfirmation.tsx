@@ -32,12 +32,14 @@ export function UnsealConfirmation({
   pending,
   onKeepSealed,
   onExpose,
+  replacement = false,
 }: {
   prompts: string[];
   keepsASeal: boolean;
   pending: boolean;
   onKeepSealed: () => void;
   onExpose: () => void;
+  replacement?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -45,6 +47,8 @@ export function UnsealConfirmation({
 
   return (
     <dialog
+      aria-labelledby="unseal-title"
+      aria-describedby="unseal-description"
       className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-plate bg-plane p-0 text-ink backdrop:bg-black/60"
       onCancel={(event) => {
         event.preventDefault();
@@ -53,13 +57,20 @@ export function UnsealConfirmation({
       ref={dialog}
     >
       <div className="p-6">
-        <h2 className="font-display text-section font-medium text-ink">
-          Make this prompt public?
+        <h2
+          id="unseal-title"
+          className="font-display text-section font-medium text-ink"
+        >
+          Remove prompt protection?
         </h2>
-        <p className="mt-3 text-ui text-mute">
-          Saving puts the text of {namePrompts(prompts)} in front of every
-          reader, in this version and in every recorded one.
-          {keepsASeal ? "" : " Ordinary downloads come back with it."}
+        <p id="unseal-description" className="mt-3 text-ui text-mute">
+          {replacement ? "Applying this file" : "Saving"} removes protection
+          from {namePrompts(prompts)}. Text in published and recorded versions
+          can become readable immediately. New draft writing stays private until
+          you publish.
+          {keepsASeal
+            ? ""
+            : " If no sealed prompts remain, file downloads become available again."}
         </p>
       </div>
       <footer className="flex flex-wrap justify-end gap-2 border-rule border-t p-4">
@@ -67,7 +78,7 @@ export function UnsealConfirmation({
           Keep sealed
         </Button>
         <Button loading={pending} onClick={onExpose} variant="stop">
-          Make prompt public
+          {replacement ? "Apply and remove protection" : "Remove protection"}
         </Button>
       </footer>
     </dialog>

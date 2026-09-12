@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -121,6 +122,75 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	if len(prompts) != 1 || prompts[0].Name != "Private renamed" ||
 		prompts[0].Text != "Exact private prompt." || !prompts[0].Protected {
 		t.Fatalf("owner prompts after placeholder revision = %+v", prompts)
+	}
+}
+
+func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T) {
+	for _, sealedAfterPublication := range []bool{false, true} {
+		name := "sealed on upload"
+		if sealedAfterPublication {
+			name = "sealed after publication"
+		}
+		t.Run(name, func(t *testing.T) {
+			router, session, assets, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+			ordinary := strings.ReplaceAll(keyedSealedPreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
+			initial := keyedSealedPreset
+			if sealedAfterPublication {
+				initial = ordinary
+			}
+			metadata := exampleMetadata("Replacement protection")
+			metadata["filename"] = "keyed.json"
+			created := uploadAndFinish(t, router, session, assets, metadata, []byte(initial))
+			assetID := assetIDFromIngest(t, created)
+			if sealedAfterPublication {
+				page := fetchStartedAsset(t, router, session, assetID)
+				core := blockNamed(t, page.Blocks, "preset_core")
+				body := sealEveryFragment(t, editableBlock(core), []string{"lumiverse"})
+				if response := saveBlock(t, router, session, assetID, core.ID, body); response.Code != http.StatusOK {
+					t.Fatalf("seal published text: %d %s", response.Code, response.Body.String())
+				}
+			}
+			before := fetchStartedAsset(t, router, session, assetID)
+			replacement := strings.ReplaceAll(ordinary, "Keyed sealed preset", "Replacement preset")
+			staged := send(t, router, authorized(revisionRequest(t, assetID, "replacement.json", []byte(replacement)), session))
+			if staged.Code != http.StatusAccepted {
+				t.Fatalf("stage replacement: %d %s", staged.Code, staged.Body.String())
+			}
+			if processed, err := assets.ProcessNextIngest(t.Context()); err != nil || !processed {
+				t.Fatalf("process replacement: %t %v", processed, err)
+			}
+			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/ingests/")
+			path := "/v1/assets/" + assetID + "/revisions/" + operationID + "/accept"
+			request := authorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
+			withReviewedVersion(t, router, request)
+			refused := send(t, router, request)
+			if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), `"code":"sealed_exposure"`) || !strings.Contains(refused.Body.String(), "Private") {
+				t.Fatalf("unconfirmed replacement: %d %s", refused.Code, refused.Body.String())
+			}
+			after := fetchStartedAsset(t, router, session, assetID)
+			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
+				t.Fatal("refused replacement changed the working copy or its protection")
+			}
+			reader := send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+			if reader.Code != http.StatusOK || strings.Contains(reader.Body.String(), "Exact private prompt.") {
+				t.Fatalf("reader after refusal: %d %s", reader.Code, reader.Body.String())
+			}
+			confirmation := authorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{},"exposeProtected":true}`, session)
+			confirmation.Header.Set("X-Working-Copy-Version", request.Header.Get("X-Working-Copy-Version"))
+			confirmed := send(t, router, confirmation)
+			if confirmed.Code != http.StatusOK {
+				t.Fatalf("confirmed replacement: %d %s", confirmed.Code, confirmed.Body.String())
+			}
+			if fetchStartedAsset(t, router, session, assetID).LinkedInstallOnly {
+				t.Fatal("confirmed replacement kept the old protection")
+			}
+			if sealedAfterPublication {
+				reader = send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+				if !strings.Contains(reader.Body.String(), "Exact private prompt.") {
+					t.Fatal("confirmed removal did not restore access to previously public text")
+				}
+			}
+		})
 	}
 }
 

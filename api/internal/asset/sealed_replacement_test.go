@@ -99,7 +99,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 		t.Fatalf("seals = %d, want 1", operation.Preview.Seals)
 	}
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID,
-		currentCandidate(t, svc, created.ID), nil); err != nil {
+		currentCandidate(t, svc, created.ID), nil, false); err != nil {
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
@@ -145,7 +145,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		t.Fatalf("missing wording = %+v", operation.Preview.MissingWording)
 	}
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID,
-		currentCandidate(t, svc, created.ID), nil); err != nil {
+		currentCandidate(t, svc, created.ID), nil, false); err != nil {
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 

@@ -55,7 +55,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	if text := blockFor(t, public.Blocks, block.CharacterCore).Elements[0].Content.(block.Prose).Text; text != "Before" {
 		t.Fatalf("published description = %q, want Before", text)
 	}
-	accepted, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil)
+	accepted, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil)
+	_, err = svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil, false)
 	var conflict *VersionConflict
 	if !errors.As(err, &conflict) {
 		t.Fatalf("stale acceptance = %v, want version conflict", err)
@@ -131,14 +131,14 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	if !slices.Contains(preview.Preview.Unrepresentable, string(block.RolePersonality)) {
 		t.Fatalf("unrepresentable content = %+v", preview.Preview)
 	}
-	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil); !errors.Is(err, ErrReplacementDecision) {
+	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil, false); !errors.Is(err, ErrReplacementDecision) {
 		t.Fatalf("accept without a decision = %v", err)
 	}
 	decisions := make(map[string]string, len(preview.Preview.Unrepresentable))
 	for _, role := range preview.Preview.Unrepresentable {
 		decisions[role] = "keep"
 	}
-	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, currentCandidate(t, svc, created.ID), decisions); err != nil {
+	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, currentCandidate(t, svc, created.ID), decisions, false); err != nil {
 		t.Fatal(err)
 	}
 	working, err := svc.WorkingCopy(context.Background(), created.ID, &owner, ContentShown)
@@ -338,7 +338,7 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 	if err != nil || preview.Preview == nil || preview.Preview.Format != "new_character" {
 		t.Fatalf("format-change preview = %+v, error = %v", preview, err)
 	}
-	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil); err != nil {
+	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil, false); err != nil {
 		t.Fatal(err)
 	}
 	var origin string

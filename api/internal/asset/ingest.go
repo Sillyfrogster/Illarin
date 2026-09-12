@@ -549,7 +549,7 @@ func (s *Service) writeIngestResult(
 	job ingestJob,
 	prepared preparedIngest,
 ) (uuid.UUID, error) {
-	return s.writeIngestResultWithDecisions(ctx, tx, job, prepared, nil)
+	return s.writeIngestResultWithDecisions(ctx, tx, job, prepared, nil, false)
 }
 
 func (s *Service) writeIngestResultWithDecisions(
@@ -558,6 +558,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	job ingestJob,
 	prepared preparedIngest,
 	decisions map[string]string,
+	exposeProtected bool,
 ) (uuid.UUID, error) {
 	blocks := prepared.Blocks
 	if job.Target != nil {
@@ -574,6 +575,19 @@ func (s *Service) writeIngestResultWithDecisions(
 			return uuid.Nil, err
 		}
 		blocks = mergeReplacementBlocks(existing, blocks, prepared.SuppliedRoles, decisions)
+		if !exposeProtected {
+			identities, err := stableItemNames(ctx, tx, job.Target.AssetID, prepared.Remainder)
+			if err != nil {
+				return uuid.Nil, err
+			}
+			exposed, err := protected.UnsealedReplacement(ctx, tx, job.Target.AssetID, blocks, identities, prepared.Protected.Prompts)
+			if err != nil {
+				return uuid.Nil, err
+			}
+			if len(exposed) > 0 {
+				return uuid.Nil, ExposureRefusal{Prompts: exposed}
+			}
+		}
 		fingerprint, err := s.contentFingerprint(ctx, tx, job.Target.AssetID)
 		if err != nil {
 			return uuid.Nil, err

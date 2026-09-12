@@ -329,8 +329,17 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationI
 		decisions[role] = string(decision)
 	}
 	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID), candidate, decisions)
+	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID), candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
 	if candidateResult(c, candidate, err) {
+		return
+	}
+	var exposure asset.ExposureRefusal
+	if errors.As(err, &exposure) {
+		c.JSON(http.StatusConflict, SealedExposureRefusal{
+			Error:   "This replacement removes prompt protection. Confirm that text in this asset and its recorded versions may become public immediately.",
+			Code:    SealedExposure,
+			Prompts: exposure.Prompts,
+		})
 		return
 	}
 	if errors.Is(err, asset.ErrIngestNotFound) || errors.Is(err, asset.ErrNotFound) {

@@ -352,7 +352,10 @@ paths:
   /v1/assets/{id}/revisions/{operationId}/accept:
     post:
       operationId: acceptAssetRevision
-      description: Apply a reviewed replacement preview to the private working copy.
+      description: >-
+        Apply a reviewed replacement preview to the private working copy.
+        Removing prompt protection requires explicit confirmation because it
+        can expose text in published and recorded versions immediately.
       security:
         - sessionCookie: []
           browserMutation: []
@@ -390,11 +393,11 @@ paths:
         '404':
           description: No reviewed replacement belongs to the creator
         '409':
-          description: The working copy changed or the asset is frozen
+          description: The working copy changed, the asset is frozen, or removing prompt protection needs confirmation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CandidateConflict'
+                $ref: '#/components/schemas/ReplacementConflict'
   /v1/assets/{id}/blocks/{blockId}:
     put:
       operationId: saveAssetBlock
@@ -1673,6 +1676,10 @@ components:
       anyOf:
         - $ref: '#/components/schemas/CandidateConflict'
         - $ref: '#/components/schemas/SealedExposureRefusal'
+    ReplacementConflict:
+      anyOf:
+        - $ref: '#/components/schemas/CandidateConflict'
+        - $ref: '#/components/schemas/SealedExposureRefusal'
     SealedExposureRefusal:
       type: object
       required: [error, code, prompts]
@@ -1683,7 +1690,7 @@ components:
           type: string
           enum: [sealed_exposure]
         prompts:
-          description: The sealed prompts this save would make public
+          description: The prompts whose protection would be removed
           type: array
           items:
             type: string
@@ -2818,6 +2825,10 @@ components:
       type: object
       required: [unrepresentable]
       properties:
+        exposeProtected:
+          type: boolean
+          default: false
+          description: Confirms that removing protection may expose published and recorded prompt text immediately
         unrepresentable:
           type: object
           additionalProperties:

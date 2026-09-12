@@ -1590,7 +1590,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** @description Apply a reviewed replacement preview to the private working copy. */
+    /** @description Apply a reviewed replacement preview to the private working copy. Removing prompt protection requires explicit confirmation because it can expose text in published and recorded versions immediately. */
     post: operations["acceptAssetRevision"];
     delete?: never;
     options?: never;
@@ -3505,6 +3505,11 @@ export interface components {
       seals: number;
     };
     ReplacementAcceptance: {
+      /**
+       * @description Confirms that removing protection may expose published and recorded prompt text immediately
+       * @default false
+       */
+      exposeProtected: boolean;
       unrepresentable: {
         [key: string]: "keep" | "remove";
       };
@@ -3516,7 +3521,7 @@ export interface components {
       error: string;
       /** @enum {string} */
       code: "sealed_exposure";
-      /** @description The sealed prompts this save would make public */
+      /** @description The prompts whose protection would be removed */
       prompts: string[];
     };
     RecordedVersion: {
@@ -4251,6 +4256,9 @@ export interface components {
        */
       currentVersion?: number;
     };
+    ReplacementConflict:
+      | components["schemas"]["CandidateConflict"]
+      | components["schemas"]["SealedExposureRefusal"];
     PublishConflict:
       | components["schemas"]["CandidateConflict"]
       | components["schemas"]["PublishRefusal"];
@@ -9657,13 +9665,13 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description The working copy changed or the asset is frozen */
+      /** @description The working copy changed, the asset is frozen, or removing prompt protection needs confirmation */
       409: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CandidateConflict"];
+          "application/json": components["schemas"]["ReplacementConflict"];
         };
       };
     };

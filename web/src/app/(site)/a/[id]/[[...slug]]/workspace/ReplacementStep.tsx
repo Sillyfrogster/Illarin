@@ -11,6 +11,7 @@ import {
   type IngestOperation,
   type ReplacementDecision,
   readIngestOperation,
+  SealedExposureError,
   uploadAssetReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/asset-publication";
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import { useWorkingCopy } from "@/lib/working-copy";
+import { UnsealConfirmation } from "../UnsealConfirmation";
 import { Note } from "./fields";
 import { ReplacementWarnings } from "./ReplacementWarnings";
 import { useWorkspace } from "./state";
@@ -48,6 +50,7 @@ export function ReplacementStep({
   const [decisions, setDecisions] = useState<ReplacementDecision>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [exposure, setExposure] = useState<string[] | null>(null);
 
   const reading =
     operation?.status === "pending" || operation?.status === "processing";
@@ -94,6 +97,7 @@ export function ReplacementStep({
     setOperation(null);
     setFile(null);
     setMessage("");
+    setExposure(null);
     onWaiting(null);
     if (fileInput.current) fileInput.current.value = "";
   }
@@ -105,6 +109,11 @@ export function ReplacementStep({
     try {
       await work();
     } catch (error) {
+      if (error instanceof SealedExposureError) {
+        setExposure(error.prompts);
+        return;
+      }
+      setExposure(null);
       setMessage(
         error instanceof Error
           ? error.message
@@ -115,7 +124,7 @@ export function ReplacementStep({
     }
   }
 
-  function act() {
+  function act(exposeProtected = false) {
     if (operation?.status === "failed") {
       beginAgain();
       return;
@@ -128,7 +137,9 @@ export function ReplacementStep({
           workspace.assetId,
           staged.id,
           decisions,
+          exposeProtected,
         );
+        setExposure(null);
         onApplied(groups);
       });
       return;
@@ -171,8 +182,9 @@ export function ReplacementStep({
       {staged ? (
         <div className="flex flex-col gap-5">
           <p className="text-ui text-ink">
-            Read as {staged.preview.format}. Nothing here reaches readers until
-            you publish an update.
+            Read as {staged.preview.format}. New content stays private until you
+            publish. Removing prompt protection requires a separate confirmation
+            because it can affect text already published.
           </p>
           <ReplacementWarnings preview={staged.preview} />
           {staged.preview.groups.length === 0 ? (
@@ -269,7 +281,7 @@ export function ReplacementStep({
         <Button
           disabled={!replacementReady(operation, file, decisions) || reading}
           loading={busy}
-          onClick={act}
+          onClick={() => act()}
           variant="primary"
         >
           {replacementAction(operation, busy)}
@@ -289,6 +301,16 @@ export function ReplacementStep({
           </Button>
         ) : null}
       </div>
+      {exposure ? (
+        <UnsealConfirmation
+          prompts={exposure}
+          keepsASeal={staged !== null && staged.preview.seals > 0}
+          pending={busy}
+          replacement
+          onKeepSealed={() => setExposure(null)}
+          onExpose={() => act(true)}
+        />
+      ) : null}
     </div>
   );
 }

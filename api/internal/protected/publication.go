@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -174,6 +176,76 @@ func PromptName(fragment block.PromptFragment) string {
 		return fragment.Name
 	}
 	return "Untitled prompt"
+}
+
+// UnsealedReplacement finds protection a replacement does not preserve.
+func UnsealedReplacement(
+	ctx context.Context,
+	q Querier,
+	assetID uuid.UUID,
+	blocks []block.Block,
+	identities map[uuid.UUID]string,
+	imports []format.ProtectedPrompt,
+) ([]string, error) {
+	current, err := currentPrompts(ctx, q, assetID)
+	if err != nil {
+		return nil, err
+	}
+	sealed := map[uuid.UUID]bool{}
+	byIdentity := map[string]uuid.UUID{}
+	duplicate := map[string]bool{}
+	forEachFragment(blocks, func(fragment *block.PromptFragment) {
+		sealed[fragment.ID] = fragment.Protected
+		if identity := identities[fragment.ID]; identity != "" {
+			if _, found := byIdentity[identity]; found {
+				duplicate[identity] = true
+			}
+			byIdentity[identity] = fragment.ID
+		}
+	})
+	oldIdentities := map[string]bool{}
+	for id := range current {
+		if identity := identities[id]; identity != "" {
+			if oldIdentities[identity] {
+				duplicate[identity] = true
+			}
+			oldIdentities[identity] = true
+		}
+	}
+	keys := map[string]bool{}
+	for _, imported := range imports {
+		if sealed[imported.FragmentID] && imported.SourceKey != "" {
+			keys[imported.SourceKey] = true
+		}
+	}
+	rows, err := q.Query(ctx, `
+		select owner_id, coalesce(source_key, '') from protected_content
+		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
+	`, assetID, promptOwnerKind, promptPayload)
+	if err != nil {
+		return nil, fmt.Errorf("read replacement protection: %w", err)
+	}
+	defer rows.Close()
+	exposed := []string{}
+	for rows.Next() {
+		var id uuid.UUID
+		var key string
+		if err := rows.Scan(&id, &key); err != nil {
+			return nil, err
+		}
+		identity := identities[id]
+		matched := identity != "" && !duplicate[identity] && sealed[byIdentity[identity]]
+		if sealed[id] || matched || keys[key] {
+			continue
+		}
+		name := current[id].name
+		if name == "" {
+			name = "Untitled prompt"
+		}
+		exposed = append(exposed, name)
+	}
+	sort.Strings(exposed)
+	return exposed, rows.Err()
 }
 
 func SealedPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.UUID]string, error) {

@@ -4253,11 +4253,18 @@ type ReplacePostScheduleRequest struct {
 
 // ReplacementAcceptance defines model for ReplacementAcceptance.
 type ReplacementAcceptance struct {
+	// ExposeProtected Confirms that removing protection may expose published and recorded prompt text immediately
+	ExposeProtected *bool                                           `json:"exposeProtected,omitempty"`
 	Unrepresentable map[string]ReplacementAcceptanceUnrepresentable `json:"unrepresentable"`
 }
 
 // ReplacementAcceptanceUnrepresentable defines model for ReplacementAcceptance.Unrepresentable.
 type ReplacementAcceptanceUnrepresentable string
+
+// ReplacementConflict defines model for ReplacementConflict.
+type ReplacementConflict struct {
+	union json.RawMessage
+}
 
 // ReplacementPreview defines model for ReplacementPreview.
 type ReplacementPreview struct {
@@ -4448,7 +4455,7 @@ type SealedExposureRefusal struct {
 	Code  SealedExposureRefusalCode `json:"code"`
 	Error string                    `json:"error"`
 
-	// Prompts The sealed prompts this save would make public
+	// Prompts The prompts whose protection would be removed
 	Prompts []string `json:"prompts"`
 }
 
@@ -5667,6 +5674,68 @@ func (t PublishConflict) MarshalJSON() ([]byte, error) {
 }
 
 func (t *PublishConflict) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCandidateConflict returns the union data inside the ReplacementConflict as a CandidateConflict
+func (t ReplacementConflict) AsCandidateConflict() (CandidateConflict, error) {
+	var body CandidateConflict
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCandidateConflict overwrites any union data inside the ReplacementConflict as the provided CandidateConflict
+func (t *ReplacementConflict) FromCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCandidateConflict performs a merge with any union data inside the ReplacementConflict, using the provided CandidateConflict
+func (t *ReplacementConflict) MergeCandidateConflict(v CandidateConflict) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSealedExposureRefusal returns the union data inside the ReplacementConflict as a SealedExposureRefusal
+func (t ReplacementConflict) AsSealedExposureRefusal() (SealedExposureRefusal, error) {
+	var body SealedExposureRefusal
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSealedExposureRefusal overwrites any union data inside the ReplacementConflict as the provided SealedExposureRefusal
+func (t *ReplacementConflict) FromSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSealedExposureRefusal performs a merge with any union data inside the ReplacementConflict, using the provided SealedExposureRefusal
+func (t *ReplacementConflict) MergeSealedExposureRefusal(v SealedExposureRefusal) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReplacementConflict) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ReplacementConflict) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

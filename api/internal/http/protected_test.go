@@ -282,7 +282,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	if processed, err := assets.ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process replacement = %t, %v; want true, nil", processed, err)
 	}
-	acceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"))
+	acceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
 	updated := pollIngestAsset(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
 		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)
