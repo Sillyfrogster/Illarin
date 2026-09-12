@@ -81,7 +81,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 		t.Fatalf("media list = %+v, want %s", mediaList.Items, media.ID)
 	}
 
-	variantURL := "/media/" + media.ID + "/grid/" + "1"
+	variantURL := "/media/" + media.ID + "/grid/" + "2"
 	variant := send(t, r, httptest.NewRequest(http.MethodGet, variantURL, nil))
 	if variant.Code != http.StatusOK {
 		t.Fatalf("media status = %d, want 200: %s", variant.Code, variant.Body.String())
@@ -105,7 +105,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 		t.Errorf("Go wrote %d media bytes instead of handing off to nginx", variant.Body.Len())
 	}
 	preview := send(t, r, httptest.NewRequest(
-		http.MethodGet, "/media/"+media.ID+"/og/1", nil,
+		http.MethodGet, "/media/"+media.ID+"/og/2", nil,
 	))
 	if preview.Code != http.StatusOK {
 		t.Fatalf("og preview status = %d, want 200: %s", preview.Code, preview.Body.String())
@@ -208,7 +208,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
 
 	response := send(t, limitedRouter, httptest.NewRequest(
-		http.MethodGet, "/media/"+media.ID+"/grid/1", nil,
+		http.MethodGet, "/media/"+media.ID+"/grid/2", nil,
 	))
 
 	if response.Code != http.StatusServiceUnavailable {

@@ -130,7 +130,7 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 
 	for _, path := range []string{
 		"/v1/assets/" + assetID + "/media",
-		assets.SignedURL("/media/" + mediaID + "/grid/1"),
+		assets.SignedURL("/media/" + mediaID + "/grid/2"),
 	} {
 		request := httptest.NewRequest(http.MethodGet, path, nil)
 		request.AddCookie(session)
@@ -181,9 +181,9 @@ func TestUnavailableAssetsAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 			"/v1/assets/" + missingAssetID + "/media",
 		},
 		"media file": {
-			"/media/" + withheldMediaID + "/grid/1",
-			"/media/" + deletedMediaID + "/grid/1",
-			"/media/" + missingMediaID + "/grid/1",
+			"/media/" + withheldMediaID + "/grid/2",
+			"/media/" + deletedMediaID + "/grid/2",
+			"/media/" + missingMediaID + "/grid/2",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

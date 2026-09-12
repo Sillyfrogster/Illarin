@@ -186,9 +186,9 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	}
 	coverPath, coverQuery, coverSigned := strings.Cut(document.CoverURL, "?")
 	itemPath, itemQuery, itemSigned := strings.Cut(document.Items[0].AvatarURL, "?")
-	if coverPath != "/media/"+coverImage.ID+"/detail/1" || !coverSigned ||
+	if coverPath != "/media/"+coverImage.ID+"/detail/2" || !coverSigned ||
 		!strings.Contains(coverQuery, "signature=") ||
-		itemPath != "/media/"+itemImage.ID+"/detail/1" || !itemSigned ||
+		itemPath != "/media/"+itemImage.ID+"/detail/2" || !itemSigned ||
 		!strings.Contains(itemQuery, "signature=") ||
 		document.Items[0].Behavior != "Answers with source notes." ||
 		!document.Future.Kept || !document.Items[0].Future.Kept {

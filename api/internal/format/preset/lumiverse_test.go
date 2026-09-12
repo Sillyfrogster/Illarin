@@ -12,6 +12,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 )
 
@@ -177,6 +178,71 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	}
 	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "risuai"); !held {
 		t.Error("the extensions namespace was not preserved as its own namespace")
+	}
+}
+
+func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
+	parsed := parse(t, `{
+		"schemaVersion": 1,
+		"name": "Bundled scripts",
+		"blocks": [],
+		"extensions": {
+			"regex_scripts": [{
+				"name": "Scene parser",
+				"description": "Format a scene card",
+				"find_regex": "<scene>(.*?)</scene>",
+				"replace_string": "$1",
+				"flags": "gis",
+				"placement": ["ai_output"],
+				"target": ["display", "prompt"],
+				"min_depth": null,
+				"max_depth": null,
+				"trim_strings": [],
+				"run_on_edit": true,
+				"disabled": false,
+				"scope": "global",
+				"script_id": "scene-parser"
+			}],
+			"another_extension": {"kept": true}
+		}
+	}`)
+
+	list := scriptList(t, parsed.Elements)
+	if len(list.Scripts) != 1 {
+		t.Fatalf("read %d bundled scripts, want 1", len(list.Scripts))
+	}
+	script := list.Scripts[0]
+	if script.Name != "Scene parser" || script.Find != "<scene>(.*?)</scene>" ||
+		script.Replace != "$1" || script.Flags != "gis" || !script.Enabled || !script.RunOnEdit {
+		t.Errorf("script = %+v", script)
+	}
+	if !reflect.DeepEqual(script.Targets, []block.ScriptTarget{block.TargetModelOutput}) ||
+		!reflect.DeepEqual(script.Affects, []block.ScriptEffect{block.EffectDisplay, block.EffectPrompt}) {
+		t.Errorf("script runs over %v and changes %v", script.Targets, script.Affects)
+	}
+	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "another_extension"); !held {
+		t.Error("a neighbouring extension was dropped")
+	}
+	if _, held := preserved(parsed.Remainder, format.OwnerAsset, lvScripts); held {
+		t.Error("the bundled script list was preserved as opaque data instead of being read")
+	}
+
+	written := write(t, LumiverseModule{}, parsed)
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(written.Body, &body); err != nil {
+		t.Fatalf("read the written preset: %v", err)
+	}
+	var top []map[string]json.RawMessage
+	if err := json.Unmarshal(body[lvScripts], &top); err != nil || len(top) != 1 {
+		t.Fatalf("top-level scripts = %s, error = %v", body[lvScripts], err)
+	}
+	extensions := keys.Object(body[lvExtensions])
+	if string(extensions[lvScripts]) != string(body[lvScripts]) {
+		t.Error("the writer did not mirror the bundled scripts for both Lumiverse layouts")
+	}
+	if string(top[0]["scope"]) != `"global"` || string(top[0]["script_id"]) != `"scene-parser"` ||
+		string(top[0]["min_depth"]) != "null" || string(top[0]["max_depth"]) != "null" {
+		t.Errorf("script-specific preserved fields = %s", body[lvScripts])
 	}
 }
 

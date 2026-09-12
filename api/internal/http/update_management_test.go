@@ -321,7 +321,7 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 		t.Fatalf("withdrawn download = %d, want 404: %s", download.Code, download.Body.String())
 	}
 	directMedia := send(t, r, httptest.NewRequest(http.MethodGet,
-		"/media/"+withdrawnMedia+"/thumb/1", nil))
+		"/media/"+withdrawnMedia+"/thumb/2", nil))
 	if directMedia.Code != http.StatusNotFound {
 		t.Fatalf("withdrawn media = %d, want 404", directMedia.Code)
 	}

@@ -9,10 +9,59 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
+	const initial = `{
+		"schemaVersion":1,
+		"name":"Scripted preset",
+		"blocks":[{
+			"id":"prompt","name":"Prompt","role":"system",
+			"content":"Stay in character.","enabled":true
+		}],
+		"extensions":{"regex_scripts":[{
+			"name":"Formatter","find_regex":"/before/g","replace_string":"after",
+			"placement":["ai_output"],"target":["display"],"disabled":false
+		}]}
+	}`
+
+	svc, pool := newTestServiceWithRegistry(t, registryWithModule(t, preset.LumiverseModule{}))
+	owner := revisionOwner(t, svc, "bundled.scripts.update")
+	created := ingestOne(t, svc, owner, "preset.json", []byte(initial))
+	publishImported(t, svc, owner, created)
+	generation := contentGeneration(t, pool, created.ID)
+
+	replacement := strings.Replace(initial, "/before/g", "/updated/g", 1)
+	operation := addRevision(t, svc, owner, created.ID, "preset.json", []byte(replacement))
+	if operation.Status != IngestSuccess {
+		t.Fatalf("replacement = %+v, want success", operation)
+	}
+	working, err := svc.WorkingCopy(t.Context(), created.ID, &owner, ContentShown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scriptBlock := blockFor(t, working.Blocks, block.PresetScripts)
+	if len(scriptBlock.Elements) != 1 {
+		t.Fatalf("script block elements = %d, want 1", len(scriptBlock.Elements))
+	}
+	scripts := scriptBlock.Elements[0].Content.(block.ScriptList).Scripts
+	if len(scripts) != 1 || scripts[0].Find != "/updated/g" {
+		t.Fatalf("working scripts = %+v", scripts)
+	}
+	if got := contentGeneration(t, pool, created.ID); got != generation+1 {
+		t.Fatalf("content generation = %d, want %d", got, generation+1)
+	}
+	updated, _, err := svc.PublishUpdate(t.Context(), UpdateRequest{
+		OwnerID: owner, AssetID: created.ID, Summary: "Updated the bundled script",
+	}, currentCandidate(t, svc, created.ID))
+	if err != nil || !updated.ContentChanged {
+		t.Fatalf("publish JSON replacement = %+v, %v", updated, err)
+	}
+}
 
 func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
 	parsed := format.Parsed{Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},

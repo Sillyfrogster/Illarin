@@ -29,6 +29,20 @@ func privateMediaQuery(svc *Service, id uuid.UUID, key string) string {
 	return signed.Query().Get(key)
 }
 
+func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
+	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
+	svc := &Service{}
+	if got := svc.variantURL(id, "grid", false, false); got != "/media/"+id.String()+"/grid/2" {
+		t.Fatalf("clear URL = %q", got)
+	}
+	if got := svc.variantURL(id, "grid", true, false); got != "/media/"+id.String()+"/grid_blurred/2" {
+		t.Fatalf("blurred URL = %q", got)
+	}
+	if got := svc.variantURL(id, "og", true, false); got != "/media/"+id.String()+"/og_blurred/2" {
+		t.Fatalf("blurred embed URL = %q", got)
+	}
+}
+
 func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
 	if !localImageReadFailure(zip.ErrChecksum) {
 		t.Error("a corrupt optional ZIP image did not degrade locally")

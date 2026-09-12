@@ -26,6 +26,9 @@ func TestNamedVariantsAreTheRelaunchSet(t *testing.T) {
 	if _, ok := VariantByName("og"); ok {
 		t.Fatal("og was accepted as an ordinary media variant")
 	}
+	if DerivativeVersion != 2 {
+		t.Fatal("the smooth blur must not reuse the mosaic derivative cache")
+	}
 }
 
 func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
@@ -99,6 +102,18 @@ func TestBlurredCounterpartDoesNotCarryClearPixels(t *testing.T) {
 	blurred := derivativeNamed(t, prepared.Derivatives, "grid_blurred")
 	if bytes.Equal(clear.Bytes, blurred.Bytes) {
 		t.Fatal("blurred derivative is byte-identical to the clear derivative")
+	}
+	decoded, err := png.Decode(bytes.NewReader(blurred.Bytes))
+	if err != nil {
+		t.Fatalf("decode blurred derivative: %v", err)
+	}
+	levels := make(map[uint32]struct{})
+	for x := 240; x < 400; x++ {
+		red, _, _, _ := decoded.At(x, 160).RGBA()
+		levels[red] = struct{}{}
+	}
+	if len(levels) < 32 {
+		t.Fatalf("blur transition has %d colour levels, want a smooth field rather than mosaic blocks", len(levels))
 	}
 }
 

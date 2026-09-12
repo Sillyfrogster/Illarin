@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	DerivativeVersion uint32 = 1
+	DerivativeVersion uint32 = 2
 	DerivativeType           = "image/png"
 )
 
@@ -268,10 +268,115 @@ func boundedSize(width, height, maxWidth, maxHeight int) (int, int) {
 
 func obscure(source image.Image) image.Image {
 	size := source.Bounds().Size()
-	width, height := boundedSize(size.X, size.Y, 24, 24)
-	small := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.ApproxBiLinear.Scale(small, small.Bounds(), source, source.Bounds(), draw.Over, nil)
-	blurred := image.NewRGBA(image.Rect(0, 0, size.X, size.Y))
-	draw.BiLinear.Scale(blurred, blurred.Bounds(), small, small.Bounds(), draw.Src, nil)
-	return blurred
+	if size.X == 0 || size.Y == 0 {
+		return source
+	}
+
+	current := image.NewRGBA(image.Rect(0, 0, size.X, size.Y))
+	draw.Draw(current, current.Bounds(), source, source.Bounds().Min, draw.Src)
+	minimum := min(size.X, size.Y)
+	sigma := math.Min(72, math.Max(4, float64(minimum)*0.045))
+	if minimum < 12 {
+		sigma = math.Max(0.8, float64(minimum)*0.25)
+	}
+	for _, radius := range gaussianBoxRadii(sigma, 3) {
+		current = boxBlurRGBA(current, radius)
+	}
+	return current
+}
+
+// gaussianBoxRadii returns the box sizes for a close three-pass Gaussian
+// approximation. Sliding box passes keep large source images inexpensive while
+// producing a smooth field rather than visible censorship tiles.
+func gaussianBoxRadii(sigma float64, passes int) []int {
+	ideal := math.Sqrt((12 * sigma * sigma / float64(passes)) + 1)
+	lower := int(math.Floor(ideal))
+	if lower%2 == 0 {
+		lower--
+	}
+	upper := lower + 2
+	numerator := 12*sigma*sigma - float64(passes*lower*lower+4*passes*lower+3*passes)
+	useLower := int(math.Round(numerator / float64(-4*lower-4)))
+	useLower = max(0, min(passes, useLower))
+
+	radii := make([]int, passes)
+	for index := range radii {
+		width := upper
+		if index < useLower {
+			width = lower
+		}
+		radii[index] = max(0, (width-1)/2)
+	}
+	return radii
+}
+
+func boxBlurRGBA(source *image.RGBA, radius int) *image.RGBA {
+	if radius < 1 {
+		copy := image.NewRGBA(source.Bounds())
+		draw.Draw(copy, copy.Bounds(), source, source.Bounds().Min, draw.Src)
+		return copy
+	}
+	horizontal := image.NewRGBA(source.Bounds())
+	boxBlurHorizontal(horizontal, source, radius)
+	vertical := image.NewRGBA(source.Bounds())
+	boxBlurVertical(vertical, horizontal, radius)
+	return vertical
+}
+
+func boxBlurHorizontal(target, source *image.RGBA, radius int) {
+	bounds := source.Bounds()
+	divisor := 2*radius + 1
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		var red, green, blue, alpha int
+		for offset := -radius; offset <= radius; offset++ {
+			pixel := source.RGBAAt(clamp(bounds.Min.X+offset, bounds.Min.X, bounds.Max.X-1), y)
+			red += int(pixel.R)
+			green += int(pixel.G)
+			blue += int(pixel.B)
+			alpha += int(pixel.A)
+		}
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			target.SetRGBA(x, y, color.RGBA{
+				R: uint8(red / divisor), G: uint8(green / divisor),
+				B: uint8(blue / divisor), A: uint8(alpha / divisor),
+			})
+			leaving := source.RGBAAt(clamp(x-radius, bounds.Min.X, bounds.Max.X-1), y)
+			entering := source.RGBAAt(clamp(x+radius+1, bounds.Min.X, bounds.Max.X-1), y)
+			red += int(entering.R) - int(leaving.R)
+			green += int(entering.G) - int(leaving.G)
+			blue += int(entering.B) - int(leaving.B)
+			alpha += int(entering.A) - int(leaving.A)
+		}
+	}
+}
+
+func boxBlurVertical(target, source *image.RGBA, radius int) {
+	bounds := source.Bounds()
+	divisor := 2*radius + 1
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		var red, green, blue, alpha int
+		for offset := -radius; offset <= radius; offset++ {
+			pixel := source.RGBAAt(x, clamp(bounds.Min.Y+offset, bounds.Min.Y, bounds.Max.Y-1))
+			red += int(pixel.R)
+			green += int(pixel.G)
+			blue += int(pixel.B)
+			alpha += int(pixel.A)
+		}
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			target.SetRGBA(x, y, color.RGBA{
+				R: uint8(red / divisor), G: uint8(green / divisor),
+				B: uint8(blue / divisor), A: uint8(alpha / divisor),
+			})
+			leaving := source.RGBAAt(x, clamp(y-radius, bounds.Min.Y, bounds.Max.Y-1))
+			entering := source.RGBAAt(x, clamp(y+radius+1, bounds.Min.Y, bounds.Max.Y-1))
+			red += int(entering.R) - int(leaving.R)
+			green += int(entering.G) - int(leaving.G)
+			blue += int(entering.B) - int(leaving.B)
+			alpha += int(entering.A) - int(leaving.A)
+		}
+	}
+}
+
+func clamp(value, low, high int) int {
+	return min(high, max(low, value))
 }

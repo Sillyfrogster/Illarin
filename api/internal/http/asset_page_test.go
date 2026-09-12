@@ -114,13 +114,13 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	if !image.IsCover || page.Media[1].IsCover || page.Media[2].IsCover {
 		t.Errorf("cover markers = %t, %t, %t", image.IsCover, page.Media[1].IsCover, page.Media[2].IsCover)
 	}
-	if image.DetailURL != "/media/"+image.ID+"/detail/1" {
+	if image.DetailURL != "/media/"+image.ID+"/detail/2" {
 		t.Errorf("detailUrl = %q", image.DetailURL)
 	}
-	if image.ThumbURL != "/media/"+image.ID+"/thumb/1" {
+	if image.ThumbURL != "/media/"+image.ID+"/thumb/2" {
 		t.Errorf("thumbUrl = %q", image.ThumbURL)
 	}
-	if page.Preview == nil || *page.Preview != "/media/"+image.ID+"/og/1" {
+	if page.Preview == nil || *page.Preview != "/media/"+image.ID+"/og/2" {
 		t.Errorf("preview = %v, want the composed social preview", page.Preview)
 	}
 	if page.Media[1].Role != "gallery" || page.Media[2].Role != "expression" {
@@ -274,7 +274,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	}
 
 	shown := fetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw=shown")
-	if !strings.HasSuffix(shown.Media[0].DetailURL, "/detail/1") {
+	if !strings.HasSuffix(shown.Media[0].DetailURL, "/detail/2") {
 		t.Errorf("a shown reader got %q", shown.Media[0].DetailURL)
 	}
 	if shown.Preview == nil || !strings.Contains(*shown.Preview, "/og_blurred/") {

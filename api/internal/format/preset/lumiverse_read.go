@@ -347,21 +347,13 @@ func readFreeValue(raw json.RawMessage) (*block.Value, bool) {
 func readLumiverseScripts(
 	source map[string]json.RawMessage,
 ) ([]block.Script, map[uuid.UUID]map[string]json.RawMessage) {
-	var listed []json.RawMessage
-	if !keys.Take(source, lvScripts, &listed) {
+	listed, present := takeLumiverseScriptList(source)
+	if !present {
 		return nil, nil
 	}
 	if len(listed) == 0 {
 		source[lvScripts] = keys.Must([]json.RawMessage{})
 		return nil, nil
-	}
-	if extensions := keys.Object(source[lvExtensions]); len(extensions) > 0 {
-		delete(extensions, lvScripts)
-		if len(extensions) == 0 {
-			delete(source, lvExtensions)
-		} else {
-			source[lvExtensions], _ = json.Marshal(extensions)
-		}
 	}
 
 	scripts := make([]block.Script, 0, len(listed))
@@ -398,6 +390,45 @@ func readLumiverseScripts(
 		}
 	}
 	return scripts, fields
+}
+
+// takeLumiverseScriptList accepts both Lumiverse layouts. Older exports put
+// the list at the top level and mirrored it under extensions; newer exports
+// bundle it only under extensions. Where both are present, the top-level copy
+// remains authoritative for compatibility with files Illarin already wrote.
+func takeLumiverseScriptList(source map[string]json.RawMessage) ([]json.RawMessage, bool) {
+	var listed []json.RawMessage
+	if keys.Take(source, lvScripts, &listed) {
+		removeLumiverseScriptExtension(source)
+		return listed, true
+	}
+
+	extensions := keys.Object(source[lvExtensions])
+	if !keys.Take(extensions, lvScripts, &listed) {
+		return nil, false
+	}
+	writeLumiverseExtensions(source, extensions)
+	return listed, true
+}
+
+func removeLumiverseScriptExtension(source map[string]json.RawMessage) {
+	extensions := keys.Object(source[lvExtensions])
+	if len(extensions) == 0 {
+		return
+	}
+	delete(extensions, lvScripts)
+	writeLumiverseExtensions(source, extensions)
+}
+
+func writeLumiverseExtensions(
+	source map[string]json.RawMessage,
+	extensions map[string]json.RawMessage,
+) {
+	if len(extensions) == 0 {
+		delete(source, lvExtensions)
+		return
+	}
+	source[lvExtensions], _ = json.Marshal(extensions)
 }
 
 func takeScriptTargets(
