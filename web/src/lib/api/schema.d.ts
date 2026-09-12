@@ -8305,7 +8305,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PublicationError"];
+        };
       };
       429: components["responses"]["PublicationTooManyRequests"];
       /** @description The storage reserve cannot accept the image */
@@ -8313,7 +8315,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["PublicationError"];
+        };
       };
     };
   };

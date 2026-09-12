@@ -44,7 +44,7 @@ func (h *Handlers) CreatePost(c *gin.Context, _ CreatePostParams) {
 	}
 	var request CreatePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the post as JSON."})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the post as JSON.")
 		return
 	}
 	started, err := h.publications.CreatePost(c.Request.Context(), editor, publication.PostEdit{
@@ -79,12 +79,12 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID, _ SavePostParams) {
 	}
 	var request SavePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the working copy as JSON."})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the working copy as JSON.")
 		return
 	}
 	document, err := json.Marshal(request.Document)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the post body as JSON."})
+		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the post body as JSON.")
 		return
 	}
 	saved, err := h.publications.SavePost(c.Request.Context(), editor, uuid.UUID(id),
@@ -156,9 +156,8 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParam
 	}
 	var request PublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Include the current working-copy version.",
-		})
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"Include the current working-copy version.", "version")
 		return
 	}
 	published, err := h.publications.PublishPost(
@@ -280,17 +279,14 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
 	case errors.As(err, &tooLarge):
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "That picture is larger than the upload limit.",
-		})
+		refuseField(c, http.StatusRequestEntityTooLarge, CodeInvalid,
+			"That picture is larger than the upload limit.", filePart)
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Uploads are temporarily unavailable because storage is low.",
-		})
+		refusePublication(c, http.StatusServiceUnavailable, CodeServerError,
+			"Uploads are temporarily unavailable because storage is low.")
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "That picture could not be read. Use a PNG, JPEG, WebP or GIF.",
-		})
+		refuseField(c, http.StatusBadRequest, CodeInvalid,
+			"That picture could not be read. Use a PNG, JPEG, WebP or GIF.", filePart)
 	}
 }
 

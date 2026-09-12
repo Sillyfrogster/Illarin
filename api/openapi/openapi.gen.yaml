@@ -2382,10 +2382,18 @@ paths:
                 $ref: '#/components/schemas/PostConflict'
         '413':
           description: The image exceeds the upload limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationError'
         '429':
           $ref: '#/components/responses/PublicationTooManyRequests'
         '503':
           description: The storage reserve cannot accept the image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationError'
   /v1/publication/posts/{id}/revisions:
     get:
       operationId: listPostRevisions

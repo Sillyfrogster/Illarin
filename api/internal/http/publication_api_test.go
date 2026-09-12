@@ -771,3 +771,47 @@ func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
 		t.Fatalf("a refused key wrote %d posts", len(listed))
 	}
 }
+
+func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
+	stack := newDistinctionStack(t)
+	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	announcement := stack.categoryBySlug(t, "announcement")
+	post := stack.startedByTool(t, kit, fmt.Sprintf(
+		`{"categoryId":%q,"title":"Notes"}`, announcement.ID,
+	))
+	at := "/v1/publication/posts/" + post.ID
+
+	malformed := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/v1/publication/posts"},
+		{http.MethodPut, at},
+		{http.MethodPost, at + "/revisions"},
+		{http.MethodPost, at + "/publish"},
+		{http.MethodPost, at + "/withdraw"},
+		{http.MethodPost, at + "/republish"},
+		{http.MethodPost, at + "/delete"},
+		{http.MethodPost, at + "/recover"},
+		{http.MethodPost, at + "/schedule"},
+		{http.MethodPut, at + "/schedule"},
+		{http.MethodPost, at + "/import"},
+	}
+	for _, call := range malformed {
+		response := stack.sent(t, kit.value, jsonRequest(t, call.method, call.path, `{"version":`))
+		if response.Code != http.StatusBadRequest {
+			t.Errorf("%s %s answered %d: %s", call.method, call.path, response.Code, response.Body.String())
+			continue
+		}
+		if code := refusalOf(t, response).Code; code != string(CodeInvalid) {
+			t.Errorf("%s %s said %q, want %q", call.method, call.path, code, CodeInvalid)
+		}
+	}
+
+	picture := stack.sent(t, kit.value, httptest.NewRequest(
+		http.MethodPost, at+"/media", strings.NewReader("not a form"),
+	))
+	if picture.Code != http.StatusBadRequest || refusalOf(t, picture).Code != string(CodeInvalid) {
+		t.Errorf("a formless upload answered %d: %s", picture.Code, picture.Body.String())
+	}
+}

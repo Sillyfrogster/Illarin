@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"mime"
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
@@ -18,8 +19,8 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPos
 	if !ok {
 		return
 	}
-	var request ImportPostMarkdownRequest
-	if !readBoundedJSON(c, &request, maxImportBytes, "This import is too large.") {
+	request, ok := readImportRequest(c)
+	if !ok {
 		return
 	}
 	saved, notes, err := h.publications.ImportPost(c.Request.Context(), editor, uuid.UUID(id),
@@ -29,6 +30,28 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPos
 		return
 	}
 	c.JSON(http.StatusOK, PostImport{Post: h.toAPIPost(saved), Warnings: toAPINotes(notes)})
+}
+
+func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
+	var request ImportPostMarkdownRequest
+	mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+			"Send JSON with the application/json content type.")
+		return request, false
+	}
+	body := http.MaxBytesReader(c.Writer, c.Request.Body, maxImportBytes)
+	if err := decodeOneJSON(body, &request); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			refuseField(c, http.StatusRequestEntityTooLarge, CodeInvalid,
+				"This import is too large.", "markdown")
+			return request, false
+		}
+		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send one valid JSON object.")
+		return request, false
+	}
+	return request, true
 }
 
 func (h *Handlers) importError(c *gin.Context, err error) {
