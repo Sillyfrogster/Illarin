@@ -175,6 +175,35 @@ func TestLoadRejectsIncompleteSMTPSettings(t *testing.T) {
 	}
 }
 
+func TestReleaseRequiresAnAccountEmailTransport(t *testing.T) {
+	setLinkingKey(t)
+	setBlogURL(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_test")
+	t.Setenv("UPLOADS_DIR", t.TempDir())
+	for _, name := range []string{
+		"SMTP_ADDR", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD",
+		"MICROSOFT_365_TENANT_ID", "MICROSOFT_365_CLIENT_ID",
+		"MICROSOFT_365_MAILBOX", "MICROSOFT_365_CLIENT_SECRET_FILE",
+	} {
+		t.Setenv(name, "")
+	}
+	t.Setenv("GIN_MODE", "release")
+	if _, err := Load(); err == nil {
+		t.Fatal("production accepted logging account email instead of sending it")
+	}
+	t.Setenv("SMTP_ADDR", "smtp.illarin.test:587")
+	t.Setenv("SMTP_FROM", "mail@illarin.test")
+	if _, err := Load(); err != nil {
+		t.Fatalf("production with SMTP: %v", err)
+	}
+	t.Setenv("SMTP_ADDR", "")
+	t.Setenv("SMTP_FROM", "")
+	t.Setenv("GIN_MODE", "debug")
+	if _, err := Load(); err != nil {
+		t.Fatalf("local development with logged email: %v", err)
+	}
+}
+
 func TestLoadReadsMicrosoft365SecretFromAFile(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")

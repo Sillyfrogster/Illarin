@@ -48,7 +48,7 @@ port instead.
 - two DNS names, the site's and its `blog.` subdomain, and a TLS-terminating
   reverse proxy that forwards both to the gateway;
 - a GitHub fork or another way to build and publish both application images;
-- Microsoft 365 and Datadog credentials for the integrations above;
+- SMTP or Microsoft 365 credentials, and a Datadog API key;
 - enough persistent storage for PostgreSQL, uploads, image replacement, and the
   configured free-space reserve.
 
@@ -111,6 +111,8 @@ Configure the `production` GitHub environment with:
 | `PRODUCTION_SSH_PORT` | secret | SSH port |
 | `PRODUCTION_SSH_KEY` | secret | Private Ed25519 deployment key |
 | `PRODUCTION_HOST_KEYS` | secret | Verified `known_hosts` entry |
+| `PRODUCTION_ENV_FILE` | variable, optional | Existing production settings file; defaults to `/etc/illarin/production.env` |
+| `PRODUCTION_ROOT` | variable, optional | Release directory; defaults to `/opt/illarin` |
 
 The deployment workflow copies only the control files, selects images by the
 full commit SHA, applies forward database migrations, waits for health checks,
@@ -120,7 +122,7 @@ does not reverse a database migration.
 For a manual deployment from an installed release directory:
 
 ```bash
-make prod-config-check
+make prod-config-check ILLARIN_VERSION=<full-lowercase-commit-sha>
 make prod-deploy VERSION=<full-lowercase-commit-sha>
 make prod-smoke
 ```
@@ -158,7 +160,8 @@ make prod-backup
 make prod-backup-check
 ```
 
-Set `BACKUPS_ENABLED=true` only after those commands succeed. Restore a snapshot
+Those commands require `BACKUPS_ENABLED=true`. Set it after installing the backup
+credentials, then run them before enabling scheduled backups. Restore a snapshot
 into an isolated directory and scratch PostgreSQL instance, apply its
 `database.dump` with `pg_restore`, and verify database rows against the restored
 blob sizes and hashes. Do not make the first restore attempt during an outage or

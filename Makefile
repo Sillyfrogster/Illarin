@@ -9,7 +9,7 @@ TEST ?= ./...
 VERSION ?=
 SERVICE ?=
 OUTPUT ?= illarin-release.tar.gz
-PROD_ENV ?= /etc/illarin/production.env
+PROD_ENV ?= $(or $(ILLARIN_ENV_FILE),/etc/illarin/production.env)
 NGINX_IMAGE ?= nginx:alpine
 # Serialize tests because packages share one database.
 GO_TEST_FLAGS := -p 1
@@ -100,6 +100,11 @@ prod-smoke: ## Check the production gateway, API and site
 .PHONY: prod-config-check
 prod-config-check: ## Validate the production Compose configuration
 	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh config --quiet
+
+.PHONY: prod-publication-authority
+prod-publication-authority: ## Give an existing production account publication authority; set HANDLE
+	@test -n "$$HANDLE" || { echo "Set HANDLE to your existing account handle."; exit 1; }
+	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh exec -T api /app/publication-authority -handle "$$HANDLE"
 
 .PHONY: prod-backup prod-backup-init prod-backup-check
 prod-backup: ## Run an off-box backup when backups are enabled

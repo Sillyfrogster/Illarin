@@ -26,6 +26,8 @@ jobs:
       PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
       PRODUCTION_HOST_KEYS: ${{ secrets.PRODUCTION_HOST_KEYS }}
       PRODUCTION_SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT }}
+      PRODUCTION_ENV_FILE: ${{ vars.PRODUCTION_ENV_FILE || '/etc/illarin/production.env' }}
+      PRODUCTION_ROOT: ${{ vars.PRODUCTION_ROOT || '/opt/illarin' }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Check out the selected default-branch commit
@@ -57,7 +59,22 @@ jobs:
             -o BatchMode=yes -o StrictHostKeyChecking=yes \
             "$PRODUCTION_USER@$PRODUCTION_HOST" \
             "docker login ghcr.io --username '${GITHUB_ACTOR}' --password-stdin"
+          printf -v deploy_command '%q ' bash -s -- "$GITHUB_SHA" "$PRODUCTION_ROOT" "$PRODUCTION_ENV_FILE"
           ssh -p "$PRODUCTION_SSH_PORT" \
             -o BatchMode=yes -o StrictHostKeyChecking=yes \
             "$PRODUCTION_USER@$PRODUCTION_HOST" \
-            "mkdir -p '/opt/illarin/releases/${GITHUB_SHA}' && tar -xzf '/tmp/illarin-${GITHUB_SHA}.tar.gz' -C '/opt/illarin/releases/${GITHUB_SHA}' && ln -sfn '/opt/illarin/releases/${GITHUB_SHA}' /opt/illarin/current && rm '/tmp/illarin-${GITHUB_SHA}.tar.gz' && make -C /opt/illarin/current prod-deploy VERSION='${GITHUB_SHA}'"
+            "$deploy_command" <<'REMOTE'
+          set -euo pipefail
+          version="$1"
+          release_root="$2"
+          production_env_file="$3"
+          case "$release_root" in /*) ;; *) echo "PRODUCTION_ROOT must be an absolute path." >&2; exit 1 ;; esac
+          case "$production_env_file" in /*) ;; *) echo "PRODUCTION_ENV_FILE must be an absolute path." >&2; exit 1 ;; esac
+          test -r "$production_env_file"
+          release="$release_root/releases/$version"
+          mkdir -p "$release"
+          tar -xzf "/tmp/illarin-$version.tar.gz" -C "$release"
+          make -C "$release" prod-deploy VERSION="$version" PROD_ENV="$production_env_file"
+          ln -sfn "$release" "$release_root/current"
+          rm "/tmp/illarin-$version.tar.gz"
+          REMOTE

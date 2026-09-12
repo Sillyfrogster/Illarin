@@ -192,6 +192,9 @@ func Load() (Config, error) {
 	if microsoftSet > 0 && cfg.SMTP.Address != "" {
 		return Config{}, fmt.Errorf("configure either Microsoft 365 or SMTP, not both")
 	}
+	if os.Getenv("GIN_MODE") == "release" && microsoftSet == 0 && cfg.SMTP.Address == "" {
+		return Config{}, fmt.Errorf("production requires SMTP or Microsoft 365 for account email")
+	}
 	if microsoftSecretFile != "" {
 		secret, err := os.ReadFile(microsoftSecretFile)
 		if err != nil {
@@ -209,7 +212,7 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
-// checkOrigin accepts only a bare http or https origin, because blog paths are appended to it
+// checkOrigin rejects addresses that cannot safely have blog paths appended.
 func checkOrigin(key, value string) error {
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||

@@ -155,4 +155,47 @@ expect_through_gateway 404 "$blog_host" GET /sign-in
 expect_through_gateway 404 "$blog_host" GET /admin/blog
 expect_through_gateway 404 "$blog_host" GET /withdrawn
 
+expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET /developers/publication "" "Save the writing"
+for page in requests writing publishing document markdown webhooks; do
+  expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET "/developers/publication/$page" "" "Publication API"
+done
+compose_test exec -T api test -x /app/publication-authority
+if [[ -n "$(compose_test exec -T web find /app -path /app/node_modules -prune -o -name '.env*' -print)" ]]; then
+  echo "An environment file was copied into the web image." >&2
+  exit 1
+fi
+
+credential_marker="synthetic-credential-must-not-reach-logs"
+check_private_requests() {
+  local host path status unavailable="${1:-false}"
+  for host in "127.0.0.1:$TEST_PORT" "$blog_host"; do
+    for path in \
+      "/reset-password?token=$credential_marker" \
+      "/verify-email?token=$credential_marker" \
+      "/api/v1/auth/discord/callback?code=$credential_marker&state=$credential_marker" \
+      "/link?code=$credential_marker" \
+      "/api/v1/link/requests/$credential_marker" \
+      "/api/v1/%6cink/requests/$credential_marker" \
+      "/"; do
+      curl --silent --show-error --max-time 3 --header "Host: $host" \
+        --header "Referer: http://$host/%72eset-password?token=$credential_marker" \
+        --output /dev/null "http://127.0.0.1:$TEST_PORT$path" || {
+          status="$?"
+          if [[ "$unavailable" != true || "$status" != 28 ]]; then
+            return "$status"
+          fi
+        }
+    done
+  done
+  compose_test logs --no-color gateway web api >"$TEST_DIR/request-logs"
+  if grep -Fq "$credential_marker" "$TEST_DIR/request-logs"; then
+    echo "A credential appeared in application or gateway logs." >&2
+    exit 1
+  fi
+}
+
+check_private_requests
+compose_test stop web
+check_private_requests true
+
 echo "The isolated production stack passed."

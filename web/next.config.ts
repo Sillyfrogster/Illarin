@@ -5,9 +5,11 @@ const apiUrl = process.env.API_URL ?? "http://localhost:8080";
 /** Leaves oversized-upload refusal to the API. */
 const uploadBodyCeiling = "34mb";
 
-/** Keeps link credentials out of request logs. */
+/** Keeps account and linking credentials out of request logs. */
 const privateRequestPaths = [
   /^\/link(?:\?|$)/,
+  /^\/(?:verify-email|reset-password)(?:\/|\?|$)/,
+  /^\/(?:api\/)?v1\/auth\/discord\/callback(?:\/|\?|$)/,
   /^\/api\/v1\/link\/requests\/[^/]+/,
   /^\/api\/v1\/link\/authorizations\/[^/]+/,
 ];
