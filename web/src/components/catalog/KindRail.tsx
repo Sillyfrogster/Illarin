@@ -31,10 +31,10 @@ export function KindRail({
 
   return (
     <nav aria-label="Kind" className="min-w-0">
-      <div className="overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="overflow-x-auto p-1 [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [&::-webkit-scrollbar]:hidden">
         <TravellingHighlight
           chosen={chosen}
-          className="flex w-max gap-1"
+          className="flex w-max gap-1 max-md:pr-10"
           onLit={setLit}
         >
           {KINDS.map((one) => (

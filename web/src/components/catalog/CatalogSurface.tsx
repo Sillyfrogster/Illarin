@@ -21,10 +21,11 @@ import {
   readSessionVisibility,
   writeSessionVisibility,
 } from "@/lib/nsfw-visibility";
+import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
 import { CatalogPoster } from "./CatalogPoster";
 import { CatalogSearch } from "./CatalogSearch";
 import { KindRail } from "./KindRail";
-import { RefinePanel } from "./RefinePanel";
+import { RefineDrawer, RefinePanel } from "./RefinePanel";
 import { useCatalogNavigation } from "./use-catalog-navigation";
 
 const PAGE = 24;
@@ -51,6 +52,8 @@ export function CatalogSurface({
   const { account } = useAuth();
   const { navigate, pending } = useCatalogNavigation(basePath);
   const panel = useId();
+  const phone = useMediaQuery(PHONE_WIDTH);
+  const filtering = (filters.platform ? 1 : 0) + (filters.facet?.length ?? 0);
 
   const [refining, setRefining] = useState(false);
   const [visibilityOverride, setVisibilityOverride] =
@@ -99,6 +102,18 @@ export function CatalogSurface({
       ? `${JSON.stringify(filters)}:${overview.suppressed}`
       : undefined;
 
+  const choices = {
+    account,
+    filters,
+    id: panel,
+    navigate,
+    overview,
+    preferenceError,
+    savingPreference,
+    setPreference: (next: NsfwVisibility) => void setPreference(next),
+    visibility,
+  };
+
   function openContentSetting() {
     setRefining(true);
     requestAnimationFrame(() => {
@@ -137,19 +152,23 @@ export function CatalogSurface({
         <div className="min-w-0 flex-1">
           <KindRail basePath={basePath} filters={filters} navigate={navigate} />
         </div>
-        <Button
-          aria-controls={panel}
-          aria-expanded={refining}
-          className={cn("shrink-0", refining && "bg-accent-wash text-accent")}
+        <FiltersButton
+          className="max-md:hidden"
+          controls={panel}
+          inUse={filtering}
           onClick={() => setRefining((open) => !open)}
-          variant="secondary"
-        >
-          <SlidersHorizontal aria-hidden="true" />
-          Filters
-        </Button>
+          open={refining}
+        />
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+        <FiltersButton
+          className="order-2 ml-auto md:hidden"
+          controls={panel}
+          inUse={filtering}
+          onClick={() => setRefining(true)}
+          open={refining}
+        />
         <p aria-live="polite" className="order-1 font-ui text-ui text-mute">
           {overview ? (
             <>
@@ -208,20 +227,24 @@ export function CatalogSurface({
         </ul>
       ) : null}
 
-      <div className="mt-6">
-        <RefinePanel
-          account={account}
-          filters={filters}
-          id={panel}
-          navigate={navigate}
+      {phone ? (
+        <RefineDrawer
+          {...choices}
+          clear={
+            filtering
+              ? () => navigate({ kind: filters.kind, q: filters.q })
+              : null
+          }
+          onOpenChange={setRefining}
           open={refining}
-          overview={overview}
-          preferenceError={preferenceError}
-          savingPreference={savingPreference}
-          setPreference={(next) => void setPreference(next)}
-          visibility={visibility}
+          pending={pending || query.isFetching}
+          total={overview?.total}
         />
-      </div>
+      ) : (
+        <div className="mt-6">
+          <RefinePanel {...choices} open={refining} />
+        </div>
+      )}
 
       <div aria-busy={pending || undefined} className="mt-6 pb-chapter">
         {suppressionKey && suppressionKey !== dismissedSuppression ? (
@@ -300,6 +323,43 @@ export function CatalogSurface({
         ) : null}
       </div>
     </Shell>
+  );
+}
+
+function FiltersButton({
+  className,
+  controls,
+  inUse,
+  onClick,
+  open,
+}: {
+  className?: string;
+  controls: string;
+  inUse: number;
+  onClick: () => void;
+  open: boolean;
+}) {
+  return (
+    <Button
+      aria-controls={controls}
+      aria-expanded={open}
+      className={cn(
+        "shrink-0",
+        open && "bg-accent-wash text-accent",
+        className,
+      )}
+      onClick={onClick}
+      variant="secondary"
+    >
+      <SlidersHorizontal aria-hidden="true" />
+      Filters
+      {inUse ? (
+        <span className="grid min-w-5 place-items-center rounded-full bg-action px-1.5 text-label text-on-accent tabular-nums">
+          {inUse}
+          <span className="sr-only"> in use</span>
+        </span>
+      ) : null}
+    </Button>
   );
 }
 

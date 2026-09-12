@@ -13,6 +13,13 @@ overridden under reduced motion.
 - https://ui.shadcn.com/r/styles/new-york/sheet.json
 - https://github.com/shadcn-ui/ui/blob/main/LICENSE.md
 
+`ui/drawer.tsx` adapts shadcn/ui's drawer, retrieved 12 September 2026, which
+wraps vaul. It keeps the bottom edge, the drag handle and drag to dismiss, drops
+the other three edges and the header and footer parts, and uses the Studio
+tokens. The global reduced-motion rule holds vaul's slide still.
+
+- https://ui.shadcn.com/r/styles/new-york-v4/drawer.json
+
 `layout/Notch.tsx` adapts Vengeance UI's notch navbar: its five-slice row, its
 clip-path corner geometry and its taller centre section. It replaces the source's
 two 5-per-cent outline strokes with one line at 3:1 that traces the whole
@@ -56,5 +63,21 @@ resizes, and skips the slide on its first placement.
 - https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/highlight-grid.json
 - https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE
 
-Both sources use the MIT license. Copyright shadcn and Ashutoshx7 respectively.
-Their licenses are kept here as LICENSE-shadcn and LICENSE-vengeance.
+`ui/expanding-panel.tsx` adapts Cult UI's expandable screen, retrieved
+12 September 2026: the trigger's background and the open surface share one
+layout id, so the card grows into the panel and shrinks back. It puts a Radix
+dialog underneath for focus, Escape and the scroll lock, sizes the open surface
+to its content on a desktop rather than the whole window, keeps the trigger in
+place while the panel is open, and holds still under reduced motion.
+
+`ui/timeline.tsx` follows the shape of Dice UI's timeline, retrieved the same
+day: a list of items, each with a dot, a connector and its content. It drops the
+horizontal and alternating variants and the step status, and draws the
+connector from one dot to the next.
+
+- https://raw.githubusercontent.com/nolly-studio/cult-ui/main/apps/www/public/r/expandable-screen.json
+- https://diceui.com/r/new-york/timeline.json
+
+Every source uses the MIT license. Copyright shadcn, Ashutoshx7, Jordan-Gilliam
+and Sadman Sakib respectively. Their licenses are kept here as LICENSE-shadcn,
+LICENSE-vengeance, LICENSE-cult and LICENSE-dice.
