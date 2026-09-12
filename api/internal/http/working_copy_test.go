@@ -69,8 +69,8 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &working); err != nil || response.Code != http.StatusOK {
 		t.Fatalf("working copy: %d, %v", response.Code, err)
 	}
-	if len(working.Media) != 2 || working.Media[0].ID == public.Media[0].ID {
-		t.Fatal("working copy did not retain the new cover")
+	if len(working.Media) != 1 || working.Media[0].ID == public.Media[0].ID {
+		t.Fatalf("working copy did not take the new cover: %+v", working.Media)
 	}
 	for _, signed := range []string{working.Media[0].DetailURL, working.Media[0].ThumbURL} {
 		unsigned, _, _ := strings.Cut(signed, "?")
