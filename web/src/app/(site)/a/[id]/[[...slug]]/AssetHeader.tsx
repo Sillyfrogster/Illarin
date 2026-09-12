@@ -211,6 +211,9 @@ export function AssetHeader({
             <AssetMedia
               id={asset.id}
               isNsfw={asset.isNsfw}
+              key={
+                asset.media.find((image) => image.isCover)?.id ?? "coverless"
+              }
               kind={asset.kind}
               kindLabel={kind.toLowerCase()}
               media={asset.media}
