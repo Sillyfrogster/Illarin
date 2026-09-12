@@ -167,6 +167,9 @@ func (s *Service) announceOnDiscord(
 	payload []byte,
 	now time.Time,
 ) error {
+	if held.Reclaimed {
+		return s.ledger.Record(ctx, held, outbox.DiscordUnconfirmed, now)
+	}
 	var summary sent
 	if err := json.Unmarshal(payload, &summary); err != nil {
 		return fmt.Errorf("read the announcement to render: %w", err)
@@ -185,7 +188,7 @@ func (s *Service) announceOnDiscord(
 	}
 	answer, err := s.sender.Post(ctx, capability.Confirming(), nil, body)
 	if err != nil {
-		return s.ledger.Record(ctx, held, outbox.Unreachable, now)
+		return s.ledger.Record(ctx, held, outbox.DiscordUnconfirmed, now)
 	}
 	said, message := outbox.ReadAnnouncement(answer)
 	said.Status, said.Took = &answer.Status, answer.Took
@@ -194,7 +197,13 @@ func (s *Service) announceOnDiscord(
 			return err
 		}
 	}
-	return s.ledger.Record(ctx, held, said, now)
+	if err := s.ledger.Record(ctx, held, said, now); err != nil {
+		return err
+	}
+	if said.Gone {
+		return s.retire(ctx, destinationID)
+	}
+	return nil
 }
 
 func noticeOf(said sent) discord.Announcement {

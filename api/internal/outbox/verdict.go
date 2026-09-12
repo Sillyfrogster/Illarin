@@ -79,6 +79,11 @@ var Unreachable = Verdict{
 	Outcome: OutcomeUnreachable, Detail: "Illarin could not reach the destination.", Retry: true,
 }
 
+var DiscordUnconfirmed = Verdict{
+	Outcome: OutcomeUnconfirmed, Reason: Unconfirmed,
+	Detail: "Discord may have posted this announcement, but did not confirm it. Check the channel before sending again; another send may create a duplicate.",
+}
+
 // ReadAnswer turns an endpoint's response into what happens to the delivery next.
 func ReadAnswer(answer outbound.Answer) Verdict {
 	said := fmt.Sprintf("It answered %d.", answer.Status)
@@ -107,16 +112,19 @@ func ReadAnswer(answer outbound.Answer) Verdict {
 
 // ReadAnnouncement reads a confirming Discord send, returning the message it made.
 func ReadAnnouncement(answer outbound.Answer) (Verdict, string) {
+	if answer.Status == http.StatusNotFound {
+		return Verdict{Outcome: OutcomeRefused, Reason: Disabled, Gone: true,
+			Detail: "The Discord webhook is missing. This destination has been disabled."}, ""
+	}
+	if answer.Status >= http.StatusInternalServerError || answer.Status == http.StatusRequestTimeout {
+		return DiscordUnconfirmed, ""
+	}
 	if answer.Status < http.StatusOK || answer.Status >= http.StatusMultipleChoices {
 		return ReadAnswer(answer), ""
 	}
 	message := discord.MessageID(answer.Body)
 	if message == "" {
-		return Verdict{
-			Outcome: OutcomeUnconfirmed,
-			Detail:  "Discord accepted the request without returning a message ID.",
-			Reason:  Unconfirmed,
-		}, ""
+		return DiscordUnconfirmed, ""
 	}
 	return ArrivedVerdict, message
 }
@@ -135,5 +143,5 @@ var whyStopped = map[string]string{
 	Removed:  "The destination was removed.",
 	Disabled: "The destination was disabled.",
 	Moved:    "The destination moved to another address.",
-	Gone:     "The destination answered 410 and receives nothing further.",
+	Gone:     "The destination no longer exists and receives no further announcements.",
 }

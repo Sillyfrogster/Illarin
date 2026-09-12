@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -79,7 +80,7 @@ func (s *Service) PublishPost(
 	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
-	err = makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug, captured{
+	err = s.makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug, captured{
 		Chosen: chosen, Note: note,
 	})
 	if err != nil {
@@ -108,7 +109,7 @@ type captured struct {
 	Note   string
 }
 
-func makePublic(
+func (s *Service) makePublic(
 	ctx context.Context,
 	tx pgx.Tx,
 	locked working,
@@ -150,7 +151,7 @@ func makePublic(
 	if err != nil {
 		return fmt.Errorf("record the publication event: %w", err)
 	}
-	return queueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
+	return s.queueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
 }
 
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
@@ -254,11 +255,15 @@ func (s *Service) attachRevisionMedia(
 }
 
 func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*Release, error) {
+	return s.publishedReleaseWith(ctx, s.pool, revisionID)
+}
+
+func (s *Service) publishedReleaseWith(ctx context.Context, q db.DBTX, revisionID uuid.UUID) (*Release, error) {
 	var app App
 	var version, address *string
 	var markID *uuid.UUID
 	var width, height *int
-	err := s.pool.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		select app.id, app.slug, app.name, app.home_url, app.position,
 		       app.retired_at is not null, mark.id, mark.width, mark.height,
 		       revision.release_version, revision.release_url

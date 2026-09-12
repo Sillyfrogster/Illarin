@@ -7,12 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -156,6 +158,9 @@ type Caller struct {
 
 	transport *http.Transport
 	client    *http.Client
+	rates     sync.Mutex
+	buckets   map[string]string
+	nextSend  map[string]time.Time
 }
 
 func NewCaller(limits Limits) *Caller {
@@ -205,6 +210,10 @@ func (c *Caller) Get(ctx context.Context, address string) (Answer, error) {
 	return c.send(ctx, http.MethodGet, address, nil, nil)
 }
 
+func (c *Caller) Request(ctx context.Context, method, address string, body []byte) (Answer, error) {
+	return c.send(ctx, method, address, nil, body)
+}
+
 func (c *Caller) send(
 	ctx context.Context,
 	method, address string,
@@ -217,6 +226,16 @@ func (c *Caller) send(
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.Limits.Request)
 	defer cancel()
+	route := ""
+	if checked.Host == "discord.com" {
+		if _, rest, found := strings.Cut(checked.URL.Path, "/webhooks/"); found {
+			id, _, _ := strings.Cut(rest, "/")
+			route = method + "/" + id
+			if delay := c.discordDelay(route); delay > 0 {
+				return Answer{Status: http.StatusTooManyRequests, RetryAfter: delay}, nil
+			}
+		}
+	}
 	var carried io.Reader
 	if body != nil {
 		carried = bytes.NewReader(body)
@@ -238,6 +257,9 @@ func (c *Caller) send(
 		return Answer{}, fmt.Errorf("reach %s: %w", checked.Host, err)
 	}
 	defer response.Body.Close()
+	if route != "" {
+		c.recordDiscordRate(route, response.Header)
+	}
 	read, err := io.ReadAll(io.LimitReader(response.Body, c.Limits.ReadBytes))
 	if err != nil {
 		return Answer{}, fmt.Errorf("read what %s said back: %w", checked.Host, err)
@@ -254,8 +276,8 @@ func RetryAfter(header string, from time.Time) time.Duration {
 		return 0
 	}
 	wait := time.Duration(0)
-	if seconds, err := strconv.Atoi(header); err == nil {
-		wait = time.Duration(seconds) * time.Second
+	if seconds, err := strconv.ParseFloat(header, 64); err == nil && !math.IsNaN(seconds) && !math.IsInf(seconds, 0) {
+		wait = time.Duration(min(max(seconds, 0), MaxRetryAfter.Seconds()) * float64(time.Second))
 	} else if at, err := http.ParseTime(header); err == nil {
 		wait = at.Sub(from)
 	}
@@ -263,6 +285,46 @@ func RetryAfter(header string, from time.Time) time.Duration {
 		return 0
 	}
 	return min(wait, MaxRetryAfter)
+}
+
+func (c *Caller) discordDelay(route string) time.Duration {
+	c.rates.Lock()
+	next := c.nextSend[c.buckets[route]]
+	global := c.nextSend["global"]
+	c.rates.Unlock()
+	if global.After(next) {
+		next = global
+	}
+	return max(0, time.Until(next))
+}
+
+func (c *Caller) recordDiscordRate(route string, headers http.Header) {
+	c.rates.Lock()
+	defer c.rates.Unlock()
+	if c.buckets == nil {
+		c.buckets = make(map[string]string)
+		c.nextSend = make(map[string]time.Time)
+	}
+	_, id, _ := strings.Cut(route, "/")
+	bucket := c.buckets[route]
+	if name := headers.Get("X-RateLimit-Bucket"); name != "" {
+		bucket = name + "/" + id
+	}
+	if bucket == "" {
+		bucket = route
+	}
+	c.buckets[route] = bucket
+	now := time.Now()
+	delay := RetryAfter(headers.Get("Retry-After"), now)
+	if headers.Get("X-RateLimit-Remaining") == "0" {
+		delay = max(delay, RetryAfter(headers.Get("X-RateLimit-Reset-After"), now))
+	}
+	if headers.Get("X-RateLimit-Global") == "true" {
+		bucket = "global"
+	}
+	if until := now.Add(delay); until.After(c.nextSend[bucket]) {
+		c.nextSend[bucket] = until
+	}
 }
 
 func (c *Caller) trust(config *tls.Config) { c.transport.TLSClientConfig = config }

@@ -2085,6 +2085,48 @@ func (e DenyLinkRequestParamsXIllarinRequest) Valid() bool {
 	}
 }
 
+// Defines values for RepairDiscordAnnouncementJSONBodyAction.
+const (
+	Correction RepairDiscordAnnouncementJSONBodyAction = "correction"
+	Delete     RepairDiscordAnnouncementJSONBodyAction = "delete"
+	Edit       RepairDiscordAnnouncementJSONBodyAction = "edit"
+)
+
+// Valid indicates whether the value is a known member of the RepairDiscordAnnouncementJSONBodyAction enum.
+func (e RepairDiscordAnnouncementJSONBodyAction) Valid() bool {
+	switch e {
+	case Correction:
+		return true
+	case Delete:
+		return true
+	case Edit:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RepairDiscordAnnouncement200JSONResponseBodyState.
+const (
+	RepairDiscordAnnouncement200JSONResponseBodyStateCompleted   RepairDiscordAnnouncement200JSONResponseBodyState = "completed"
+	RepairDiscordAnnouncement200JSONResponseBodyStateRefused     RepairDiscordAnnouncement200JSONResponseBodyState = "refused"
+	RepairDiscordAnnouncement200JSONResponseBodyStateUnconfirmed RepairDiscordAnnouncement200JSONResponseBodyState = "unconfirmed"
+)
+
+// Valid indicates whether the value is a known member of the RepairDiscordAnnouncement200JSONResponseBodyState enum.
+func (e RepairDiscordAnnouncement200JSONResponseBodyState) Valid() bool {
+	switch e {
+	case RepairDiscordAnnouncement200JSONResponseBodyStateCompleted:
+		return true
+	case RepairDiscordAnnouncement200JSONResponseBodyStateRefused:
+		return true
+	case RepairDiscordAnnouncement200JSONResponseBodyStateUnconfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
 // AcceptedTargets defines model for AcceptedTargets.
 type AcceptedTargets = []ExportTargetId
 
@@ -5081,6 +5123,20 @@ type ListPublicationDeliveriesParams struct {
 	Limit *int               `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// RepairDiscordAnnouncementJSONBody defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncementJSONBody struct {
+	Action    RepairDiscordAnnouncementJSONBodyAction `json:"action"`
+	MessageId *string                                 `json:"messageId,omitempty"`
+	RequestId openapi_types.UUID                      `json:"requestId"`
+	Text      *string                                 `json:"text,omitempty"`
+}
+
+// RepairDiscordAnnouncementJSONBodyAction defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncementJSONBodyAction string
+
+// RepairDiscordAnnouncement200JSONResponseBodyState defines parameters for RepairDiscordAnnouncement.
+type RepairDiscordAnnouncement200JSONResponseBodyState string
+
 // ListPostsParams defines parameters for ListPosts.
 type ListPostsParams struct {
 	// Deleted Ask for the deleted posts still inside their recovery window instead of the active ones.
@@ -5377,6 +5433,9 @@ type AddPublicationChannelJSONRequestBody = PublicationChannelRequest
 
 // UpdatePublicationChannelJSONRequestBody defines body for UpdatePublicationChannel for application/json ContentType.
 type UpdatePublicationChannelJSONRequestBody = PublicationChannelRequest
+
+// RepairDiscordAnnouncementJSONRequestBody defines body for RepairDiscordAnnouncement for application/json ContentType.
+type RepairDiscordAnnouncementJSONRequestBody RepairDiscordAnnouncementJSONBody
 
 // AddPublicationDestinationJSONRequestBody defines body for AddPublicationDestination for application/json ContentType.
 type AddPublicationDestinationJSONRequestBody = AddPublicationDestinationRequest
@@ -6134,6 +6193,9 @@ type ServerInterface interface {
 
 	// (GET /v1/publication/deliveries/{id}/attempts)
 	ListPublicationDeliveryAttempts(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/publication/deliveries/{id}/repair)
+	RepairDiscordAnnouncement(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/publication/deliveries/{id}/replay)
 	ReplayPublicationDelivery(c *gin.Context, id openapi_types.UUID)
@@ -9486,6 +9548,31 @@ func (siw *ServerInterfaceWrapper) ListPublicationDeliveryAttempts(c *gin.Contex
 	siw.Handler.ListPublicationDeliveryAttempts(c, id)
 }
 
+// RepairDiscordAnnouncement operation middleware
+func (siw *ServerInterfaceWrapper) RepairDiscordAnnouncement(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RepairDiscordAnnouncement(c, id)
+}
+
 // ReplayPublicationDelivery operation middleware
 func (siw *ServerInterfaceWrapper) ReplayPublicationDelivery(c *gin.Context) {
 
@@ -10865,6 +10952,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/publication/deliveries", wrapper.ListPublicationDeliveries)
 	router.GET(options.BaseURL+"/v1/publication/deliveries/:id/attempts", wrapper.ListPublicationDeliveryAttempts)
 	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/replay", wrapper.ReplayPublicationDelivery)
+	router.POST(options.BaseURL+"/v1/publication/deliveries/:id/repair", wrapper.RepairDiscordAnnouncement)
 	router.PUT(options.BaseURL+"/v1/publication/apps/:id/destinations", wrapper.SetPublicationAppDestinations)
 	router.PUT(options.BaseURL+"/v1/publication/grants/:id/destinations", wrapper.SetPublicationGrantDestinations)
 	router.GET(options.BaseURL+"/v1/publication/posts/:id/destinations", wrapper.ListPostDestinations)

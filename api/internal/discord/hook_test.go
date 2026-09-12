@@ -279,6 +279,11 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	one.Title = strings.Repeat("t", TitleLimit+50)
 	one.Summary = strings.Repeat("s", DescriptionLimit+50)
 	one.Note = strings.Repeat("n", ContentLimit+50)
+	one.Category = strings.Repeat("c", FieldLimit+50)
+	one.Version = strings.Repeat("v", FieldLimit+50)
+	one.Update = strings.Repeat("u", FieldLimit+50)
+	one.Footer = strings.Repeat("f", FooterLimit+50)
+	one.Author.Name = strings.Repeat("🐦", TitleLimit)
 
 	read := announced(t, one)
 
@@ -290,5 +295,16 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	}
 	if len([]rune(read.Content)) > ContentLimit {
 		t.Errorf("content is %d runes", len([]rune(read.Content)))
+	}
+	shown := read.Embeds[0]
+	total := textLength(shown.Title) + textLength(shown.Description) + textLength(shown.Author.Name) + textLength(shown.Footer.Text)
+	for _, field := range shown.Fields {
+		total += textLength(field.Name) + textLength(field.Value)
+	}
+	if total > EmbedLimit {
+		t.Errorf("embed is %d characters", total)
+	}
+	if textLength(cut(strings.Repeat("🐦", ContentLimit), ContentLimit)) > ContentLimit {
+		t.Fatal("emoji content exceeds Discord's limit")
 	}
 }

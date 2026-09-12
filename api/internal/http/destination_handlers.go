@@ -241,6 +241,24 @@ func (h *Handlers) ReplayPublicationDelivery(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIDelivery(queued))
 }
 
+func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context, id types.UUID) {
+	authority, ok := h.publicationAuthority(c, "repairing a Discord announcement")
+	if !ok {
+		return
+	}
+	var body publication.DiscordRepair
+	if err := c.ShouldBindJSON(&body); err != nil {
+		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send the repair as JSON.", "repair")
+		return
+	}
+	result, err := h.publications.RepairDiscord(c.Request.Context(), authority.ID, uuid.UUID(id), body)
+	if err != nil {
+		h.destinationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 func (h *Handlers) SetPublicationAppDestinations(c *gin.Context, id types.UUID) {
 	authority, ok := h.publicationAuthority(c, "setting an app's destinations")
 	if !ok {

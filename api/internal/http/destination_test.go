@@ -106,6 +106,8 @@ type attemptList struct {
 }
 
 type arrived struct {
+	Method  string
+	Path    string
 	Headers http.Header
 	Body    []byte
 }
@@ -205,6 +207,10 @@ func (t throughLoopback) Check(address string) (string, error) {
 
 func (t throughLoopback) Get(ctx context.Context, address string) (outbound.Answer, error) {
 	return t.send(ctx, http.MethodGet, address, nil, nil)
+}
+
+func (t throughLoopback) Request(ctx context.Context, method, address string, body []byte) (outbound.Answer, error) {
+	return t.send(ctx, method, address, nil, body)
 }
 
 func (t throughLoopback) Post(

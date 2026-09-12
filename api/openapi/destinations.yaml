@@ -357,6 +357,55 @@ paths:
           description: The signed-in account is not the publication authority
         '404':
           description: No such delivery
+  /v1/publication/deliveries/{id}/repair:
+    post:
+      operationId: repairDiscordAnnouncement
+      description: >-
+        Explicitly edit a Discord message's note, delete the named message,
+        or send a separate correction. Requires publication authority.
+        Reusing a request ID returns the recorded result without another send.
+        The post, event and original delivery attempts remain unchanged.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, action]
+              properties:
+                requestId: { type: string, format: uuid }
+                action: { type: string, enum: [edit, delete, correction] }
+                messageId: { type: string, pattern: '^[0-9]{17,20}$' }
+                text: { type: string, maxLength: 1800 }
+      responses:
+        '200':
+          description: The recorded repair outcome; unconfirmed results need a channel check
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [action, messageId, state, detail]
+                properties:
+                  action: { type: string }
+                  messageId: { type: string }
+                  state: { type: string, enum: [completed, refused, unconfirmed] }
+                  detail: { type: string }
+        '400':
+          $ref: ./publication.yaml#/components/responses/PublicationInvalid
+        '401':
+          description: No account is signed in
+        '403':
+          description: The account does not have publication authority
+        '404':
+          description: No such delivery or destination
   /v1/publication/apps/{id}/destinations:
     put:
       operationId: setPublicationAppDestinations

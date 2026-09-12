@@ -345,7 +345,7 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 	if err != nil {
 		return err
 	}
-	err = makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug, captured{
+	err = s.makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug, captured{
 		Chosen: chosen, Note: held.Note,
 	})
 	if err != nil {

@@ -15,6 +15,28 @@ import type {
 } from "@/lib/api/query";
 import { ask, json } from "./request";
 
+export type DiscordRepair = {
+  requestId: string;
+  action: "edit" | "delete" | "correction";
+  messageId: string;
+  text: string;
+};
+
+export type DiscordRepairResult = {
+  action: string;
+  messageId: string;
+  state: "completed" | "refused" | "unconfirmed";
+  detail: string;
+};
+
+export function repairDiscordAnnouncement(id: string, repair: DiscordRepair) {
+  return json<DiscordRepairResult>(
+    `/publication/deliveries/${id}/repair`,
+    "POST",
+    repair,
+  );
+}
+
 export function readApps() {
   return json<{ apps: PublicationApp[] }>("/publication/apps", "GET");
 }

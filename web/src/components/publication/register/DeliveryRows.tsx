@@ -33,6 +33,7 @@ import {
 } from "@/lib/delivery-standing";
 import { eventWord } from "@/lib/publication-delivery";
 import { canReplay, nothingDelivered } from "@/lib/publication-register";
+import { DiscordRepairControls } from "./DiscordRepairControls";
 
 export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =
   [
@@ -134,7 +135,7 @@ export function DeliveryRows({
             return (
               <Row
                 aside={
-                  canReplay(one) ? (
+                  canReplay(one) && one.kind !== "discord" ? (
                     <RowAction
                       busy={working === one.id}
                       onClick={() => void again(one)}
@@ -162,6 +163,9 @@ export function DeliveryRows({
                 standing={deliveryStanding(one)}
                 title={one.postTitle}
               >
+                {one.kind === "discord" && one.settledAt && !one.removed ? (
+                  <DiscordRepairControls delivery={one} />
+                ) : null}
                 {one.attempts > 0 ? (
                   <div
                     className="relative mt-3"

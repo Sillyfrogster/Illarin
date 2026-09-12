@@ -151,6 +151,8 @@ paths:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries~1{id}~1attempts
   /v1/publication/deliveries/{id}/replay:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries~1{id}~1replay
+  /v1/publication/deliveries/{id}/repair:
+    $ref: ./destinations.yaml#/paths/~1v1~1publication~1deliveries~1{id}~1repair
   /v1/publication/apps/{id}/destinations:
     $ref: ./destinations.yaml#/paths/~1v1~1publication~1apps~1{id}~1destinations
   /v1/publication/grants/{id}/destinations:

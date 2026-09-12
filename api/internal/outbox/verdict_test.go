@@ -72,8 +72,8 @@ func TestDiscordIsOnlyDeliveredWhenItNamesTheMessageItMade(t *testing.T) {
 		t.Errorf("an unconfirmed send read as %+v with message %q", said, message)
 	}
 	said, _ = ReadAnnouncement(outbound.Answer{Status: http.StatusBadGateway})
-	if !said.Retry {
-		t.Errorf("a Discord 502 read as %+v, want a retry", said)
+	if said.Retry || said.Outcome != OutcomeUnconfirmed {
+		t.Errorf("a Discord 502 read as %+v, want an unconfirmed send", said)
 	}
 }
 

@@ -45,6 +45,7 @@ type Work struct {
 	Run           int
 	Attempts      int
 	Made          int
+	Reclaimed     bool
 }
 
 type Attempt struct {
@@ -63,7 +64,7 @@ func (l Ledger) Lease(ctx context.Context, now time.Time) (Work, bool, error) {
 	held.Token = uuid.New()
 	err := l.pool.QueryRow(ctx, fmt.Sprintf(`
 		with candidate as (
-			select id
+			select id, state = $5 as reclaimed
 			  from %[1]s
 			 where due_at <= $1
 			   and (state = $4 or (state = $5 and lease_expires_at <= $1))
@@ -77,11 +78,11 @@ func (l Ledger) Lease(ctx context.Context, now time.Time) (Work, bool, error) {
 		  from candidate
 		 where work.id = candidate.id
 		returning work.id, work.event_id, work.destination_id, work.run, work.attempts,
-		          (select count(*) from %[2]s made
+		          candidate.reclaimed, (select count(*) from %[2]s made
 		            where made.delivery_id = work.id and made.run = work.run)
 	`, l.tables.Deliveries, l.tables.Attempts),
 		now, held.Token, now.Add(Lease), Pending, Sending,
-	).Scan(&held.ID, &held.EventID, &held.DestinationID, &held.Run, &held.Attempts, &held.Made)
+	).Scan(&held.ID, &held.EventID, &held.DestinationID, &held.Run, &held.Attempts, &held.Reclaimed, &held.Made)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Work{}, false, nil
 	}

@@ -794,6 +794,16 @@ type PublicationDestination struct {
 	RoleName            pgtype.Text
 }
 
+type PublicationDiscordRepair struct {
+	ID              pgtype.UUID
+	ActorID         pgtype.UUID
+	DeliveryID      pgtype.UUID
+	TargetMessageID string
+	Fingerprint     string
+	Result          []byte
+	CreatedAt       pgtype.Timestamptz
+}
+
 type PublicationEvent struct {
 	ID         pgtype.UUID
 	PostID     pgtype.UUID

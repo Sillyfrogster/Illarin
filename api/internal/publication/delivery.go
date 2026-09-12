@@ -171,6 +171,9 @@ func (s *Service) ReplayDelivery(
 	if held.Removed {
 		return Delivery{}, ErrDeliveryUnsendable
 	}
+	if held.Kind == KindDiscord && (held.State == DeliveryUnconfirmed || held.MessageID != "") {
+		return Delivery{}, FieldError{Field: "delivery", Message: "Check the Discord message and use an explicit repair action."}
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Delivery{}, fmt.Errorf("begin delivery replay: %w", err)
@@ -208,7 +211,7 @@ func (s *Service) ReplayDelivery(
 	return s.Delivery(ctx, id)
 }
 
-func queueDeliveries(
+func (s *Service) queueDeliveries(
 	ctx context.Context,
 	tx pgx.Tx,
 	postID uuid.UUID,
@@ -217,6 +220,21 @@ func queueDeliveries(
 	chosen []sending,
 ) error {
 	for _, one := range chosen {
+		if one.Kind == KindDiscord && event == EventPublished {
+			summary, err := s.summaryWith(ctx, tx, eventID)
+			if err != nil {
+				return err
+			}
+			role := ""
+			if one.Ping {
+				if err := tx.QueryRow(ctx, `select coalesce(role_id, '') from publication_destinations where id = $1`, one.ID).Scan(&role); err != nil {
+					return err
+				}
+			}
+			if _, err := announcementOf(summary, role).Body(); err != nil {
+				return err
+			}
+		}
 		_, err := tx.Exec(ctx, `
 			insert into publication_deliveries
 			       (id, event_id, destination_id, destination_name, mention_role)

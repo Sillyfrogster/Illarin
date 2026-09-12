@@ -1152,6 +1152,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/publication/deliveries/{id}/repair": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Explicitly edit a Discord message's note, delete the named message, or send a separate correction. Requires publication authority. Reusing a request ID returns the recorded result without another send. The post, event and original delivery attempts remain unchanged. */
+    post: operations["repairDiscordAnnouncement"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/publication/apps/{id}/destinations": {
     parameters: {
       query?: never;
@@ -8285,6 +8302,67 @@ export interface operations {
         content?: never;
       };
       /** @description No such delivery */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  repairDiscordAnnouncement: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          requestId: string;
+          /** @enum {string} */
+          action: "edit" | "delete" | "correction";
+          messageId?: string;
+          text?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description The recorded repair outcome; unconfirmed results need a channel check */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            action: string;
+            messageId: string;
+            /** @enum {string} */
+            state: "completed" | "refused" | "unconfirmed";
+            detail: string;
+          };
+        };
+      };
+      400: components["responses"]["PublicationInvalid"];
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The account does not have publication authority */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such delivery or destination */
       404: {
         headers: {
           [name: string]: unknown;

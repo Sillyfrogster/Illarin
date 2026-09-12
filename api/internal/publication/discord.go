@@ -224,6 +224,9 @@ func (s *Service) announceOnDiscord(
 	destinationID uuid.UUID,
 	now time.Time,
 ) error {
+	if held.Reclaimed {
+		return s.ledger.Record(ctx, held.Work, outbox.DiscordUnconfirmed, now)
+	}
 	summary, err := s.summary(ctx, held.EventID)
 	if err != nil {
 		return err
@@ -241,7 +244,7 @@ func (s *Service) announceOnDiscord(
 	}
 	answer, err := s.sender.Post(ctx, capability.Confirming(), nil, body)
 	if err != nil {
-		return s.ledger.Record(ctx, held.Work, outbox.Unreachable, now)
+		return s.ledger.Record(ctx, held.Work, outbox.DiscordUnconfirmed, now)
 	}
 	said, message := outbox.ReadAnnouncement(answer)
 	said.Status, said.Took = &answer.Status, answer.Took
@@ -250,7 +253,13 @@ func (s *Service) announceOnDiscord(
 			return err
 		}
 	}
-	return s.ledger.Record(ctx, held.Work, said, now)
+	if err := s.ledger.Record(ctx, held.Work, said, now); err != nil {
+		return err
+	}
+	if said.Gone {
+		return s.retireDestination(ctx, destinationID)
+	}
+	return nil
 }
 
 func announcementOf(said sent, role string) discord.Announcement {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -72,11 +73,15 @@ func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, err
 }
 
 func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
+	return s.summaryWith(ctx, s.pool, eventID)
+}
+
+func (s *Service) summaryWith(ctx context.Context, q db.DBTX, eventID uuid.UUID) (sent, error) {
 	var held sent
 	var post sentPost
 	var slug, categorySlug, categoryLabel string
 	var socialID *uuid.UUID
-	err := s.pool.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		select event.id, event.type, event.occurred_at, event.note,
 		       post.id, revision.id, revision.title, revision.summary,
 		       category.slug, category.label, post.slug,
@@ -103,18 +108,18 @@ func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) 
 	if socialID != nil {
 		post.SocialImage = s.postAddress(slug) + "/card.png"
 	}
-	if post.Release, err = s.sentRelease(ctx, post.RevisionID); err != nil {
+	if post.Release, err = s.sentRelease(ctx, q, post.RevisionID); err != nil {
 		return sent{}, err
 	}
-	if post.Byline, err = s.sentByline(ctx, post.ID); err != nil {
+	if post.Byline, err = s.sentByline(ctx, q, post.ID); err != nil {
 		return sent{}, err
 	}
 	held.Post = post
 	return held, nil
 }
 
-func (s *Service) sentRelease(ctx context.Context, revisionID uuid.UUID) (*sentRelease, error) {
-	release, err := s.publishedRelease(ctx, revisionID)
+func (s *Service) sentRelease(ctx context.Context, q db.DBTX, revisionID uuid.UUID) (*sentRelease, error) {
+	release, err := s.publishedReleaseWith(ctx, q, revisionID)
 	if err != nil || release == nil {
 		return nil, err
 	}
@@ -125,8 +130,8 @@ func (s *Service) sentRelease(ctx context.Context, revisionID uuid.UUID) (*sentR
 	}, nil
 }
 
-func (s *Service) sentByline(ctx context.Context, postID uuid.UUID) (sentByline, error) {
-	byline, err := readByline(ctx, s.pool, postID)
+func (s *Service) sentByline(ctx context.Context, q db.DBTX, postID uuid.UUID) (sentByline, error) {
+	byline, err := readByline(ctx, q, postID)
 	if err != nil {
 		return sentByline{}, err
 	}

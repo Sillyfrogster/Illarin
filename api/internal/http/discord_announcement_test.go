@@ -41,9 +41,9 @@ func newDiscordServer(t *testing.T) *discordServer {
 		if err != nil {
 			t.Errorf("read what arrived at Discord: %v", err)
 		}
-		one := arrived{Headers: r.Header.Clone(), Body: body}
+		one := arrived{Method: r.Method, Path: r.URL.Path, Headers: r.Header.Clone(), Body: body}
 		held.mu.Lock()
-		if r.Method == http.MethodPost {
+		if r.Method != http.MethodGet {
 			held.got = append(held.got, one)
 		}
 		reading, sending := held.webhook, held.send
@@ -62,6 +62,15 @@ func newDiscordServer(t *testing.T) *discordServer {
 			if sending != nil {
 				status, said = sending(one)
 			}
+		}
+		if status == 0 {
+			connection, _, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			connection.Close()
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)

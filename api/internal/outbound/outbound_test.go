@@ -8,7 +8,33 @@ import (
 	"net/netip"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestDiscordBucketHeadersDeferTheNextSend(t *testing.T) {
+	reached := 0
+	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached++
+		w.Header().Set("X-RateLimit-Bucket", "announcement")
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		w.Header().Set("X-RateLimit-Reset-After", "30.5")
+		w.Write([]byte(`{"id":"444444444444444444"}`))
+	}))
+	defer receiver.Close()
+	caller := receiverCaller(t, receiver)
+	address := "https://discord.com/api/webhooks/1234567890123456789/test-token"
+	caller.transport.TLSClientConfig.ServerName = "example.com"
+	if _, err := caller.Post(t.Context(), address, nil, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := caller.Post(t.Context(), address, nil, []byte(`{}`))
+	if err != nil || answer.Status != http.StatusTooManyRequests || answer.RetryAfter < 29*time.Second || reached != 1 {
+		t.Fatalf("bucket allowed another send: %+v, %v, calls %d", answer, err, reached)
+	}
+	if RetryAfter("1.25", time.Now()) != 1250*time.Millisecond {
+		t.Fatal("fractional Retry-After was lost")
+	}
+}
 
 func TestAPlainPublicAddressIsAccepted(t *testing.T) {
 	for _, raw := range []string{

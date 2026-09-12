@@ -16,6 +16,8 @@ const (
 	TitleLimit       = 256
 	DescriptionLimit = 4096
 	FieldLimit       = 1024
+	FooterLimit      = 2048
+	EmbedLimit       = 6000
 )
 
 const (
@@ -47,6 +49,11 @@ type Announcement struct {
 }
 
 func (a Announcement) Body() ([]byte, error) {
+	if a.Role != "" {
+		if err := CheckRole(a.Role); err != nil {
+			return nil, err
+		}
+	}
 	body, err := json.Marshal(message{
 		Content:  a.content(),
 		Embeds:   []embed{a.embed()},
@@ -104,6 +111,14 @@ func (a Announcement) embed() embed {
 	if a.Image != "" {
 		shown.Image = &picture{URL: a.Image}
 	}
+	used := textLength(shown.Title) + textLength(shown.Footer.Text)
+	if shown.Author != nil {
+		used += textLength(shown.Author.Name)
+	}
+	for _, field := range shown.Fields {
+		used += textLength(field.Name) + textLength(field.Value)
+	}
+	shown.Description = cut(shown.Description, max(0, EmbedLimit-used))
 	return shown
 }
 
@@ -111,15 +126,39 @@ func (a Announcement) footer() string {
 	if a.Footer == "" {
 		return Publication
 	}
-	return a.Footer
+	return cut(a.Footer, FooterLimit)
 }
 
 func cut(said string, limit int) string {
-	held := []rune(said)
-	if len(held) <= limit {
+	if textLength(said) <= limit {
 		return said
 	}
-	return strings.TrimRight(string(held[:limit-1]), " ") + "…"
+	if limit <= 0 {
+		return ""
+	}
+	used := 0
+	for index, one := range said {
+		size := 1
+		if one > 0xffff {
+			size = 2
+		}
+		if used+size > limit-1 {
+			return strings.TrimRight(said[:index], " ") + "…"
+		}
+		used += size
+	}
+	return said
+}
+
+func textLength(said string) int {
+	length := 0
+	for _, one := range said {
+		length++
+		if one > 0xffff {
+			length++
+		}
+	}
+	return length
 }
 
 type message struct {
