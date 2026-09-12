@@ -39,7 +39,7 @@ function versionInAddress(): number | null {
   return found ? Number(found[1]) : null;
 }
 
-/** UpdateHistory is the latest-update card, which grows into every recorded version. */
+/** Opens the latest update into the full version history. */
 export function UpdateHistory({
   asset,
   download,
@@ -184,7 +184,7 @@ export function UpdateHistory({
                 variant="ghost"
               >
                 <ArrowLeft aria-hidden="true" />
-                Every version
+                All versions
               </Button>
             ) : null}
             {shown ? (
@@ -214,8 +214,8 @@ export function UpdateHistory({
             ) : null}
             {shown && asset.linkedInstallOnly && published ? (
               <p className="mt-4 max-w-[60ch] font-ui text-meta text-mute">
-                This {kind} installs only through a linked app, so Illarin
-                writes no file of any version of it. Allowed apps:{" "}
+                This {kind} can only be installed through a linked app. File
+                downloads are unavailable for all versions. Allowed apps:{" "}
                 {asset.allowedApps.map(protectedAppLabel).join(", ")}.
               </p>
             ) : null}

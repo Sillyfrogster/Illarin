@@ -12,7 +12,7 @@ export type DocCollection = {
   pages: readonly DocPage[];
 };
 
-/** The one public reference: the versioned Publication API and nothing else. */
+/** Describes the public Publication API pages. */
 export const PUBLICATION_DOCS: DocCollection = {
   name: "Publication API",
   href: "/developers/publication",
@@ -21,21 +21,22 @@ export const PUBLICATION_DOCS: DocCollection = {
     {
       slug: "",
       title: "Overview",
-      summary: "What the API is for, how to authenticate and how a post moves.",
+      summary:
+        "Get access, create a draft, save it and publish your first post.",
       file: "overview.md",
     },
     {
       slug: "writing",
       title: "Writing",
       summary:
-        "List, read, create and save posts, upload pictures and keep editions.",
+        "Create and edit drafts, upload pictures, and restore saved revisions.",
       file: "writing.md",
     },
     {
       slug: "publishing",
       title: "Publishing",
       summary:
-        "Publish now, schedule, withdraw, delete and read what was sent.",
+        "Publish or schedule a post, withdraw it, and check announcements.",
       file: "publishing.md",
     },
     {
@@ -48,7 +49,7 @@ export const PUBLICATION_DOCS: DocCollection = {
     {
       slug: "markdown",
       title: "Markdown import",
-      summary: "The Markdown subset an import reads once, and what it refuses.",
+      summary: "Write a post body in Markdown and check import warnings.",
       file: "markdown.md",
     },
     {
@@ -68,7 +69,7 @@ export const PUBLICATION_DOCS: DocCollection = {
   ],
 };
 
-/** Every collection the developer portal carries, in sidebar order. */
+/** Lists documentation collections in sidebar order. */
 export const DOCS: readonly DocCollection[] = [PUBLICATION_DOCS];
 
 export function docHref(collection: DocCollection, page: DocPage): string {

@@ -112,7 +112,7 @@ export function RunItem({
       {children}
       {open ? (
         <button
-          aria-label="Open in the browser"
+          aria-label="Open item details"
           className="absolute top-2.5 right-2.5 inline-flex size-9 items-center justify-center rounded-control text-mute opacity-0 outline-offset-2 transition-[opacity,background-color,color] duration-200 group-hover/row:opacity-100 hover:bg-accent-wash hover:text-accent focus-visible:opacity-100 motion-reduce:transition-none"
           onClick={() => open(itemKey)}
           type="button"

@@ -46,13 +46,13 @@ export function ApiDesk() {
           Publication API
         </h1>
         <p className="mt-3 font-prose text-prose text-mute">
-          Tokens for your tools, and requests filled in with your own ids. The
-          full reference is at{" "}
+          Create a token to publish blog posts from your own tools. The examples
+          below use your app and permissions. Start with the{" "}
           <Link
             className="text-accent underline decoration-accent/40 underline-offset-[3px] hover:decoration-accent"
             href={PUBLICATION_DOCS.href}
           >
-            {PUBLICATION_DOCS.href}
+            Publication API guide
           </Link>
           .
         </p>
@@ -88,7 +88,7 @@ function Inside({
         action="Sign in"
         heading="Sign in to manage API tokens"
         href="/sign-in?returnTo=%2Fadmin%2Fblog%2Fapi"
-        line="Tokens and examples are shown for the approvals your account holds."
+        line="Use the account approved to publish for your app."
       />
     );
   }
@@ -108,7 +108,7 @@ function Inside({
         action="Read the reference"
         heading="No active publishing approval"
         href={PUBLICATION_DOCS.href}
-        line="Tokens belong to an approval. Ask the account that manages blog access to approve you as a contributor."
+        line="Ask Illarin to approve your account as a contributor for your app. Once approved, you can create a token here."
       />
     );
   }
@@ -151,16 +151,19 @@ function Approval({ grant }: { grant: PublicationGrant }) {
 
       <div className="min-w-0 max-w-[46rem]">
         <h3 className="font-display text-ui font-semibold text-ink">
-          Your ids
+          IDs for your app
         </h3>
         <Ids grant={grant} />
 
         <h3 className="mt-10 font-display text-ui font-semibold text-ink">
-          Requests filled in for {grant.app.name}
+          Create and publish a post for {grant.app.name}
         </h3>
         <p className="mt-1 font-prose text-meta text-mute">
-          Replace <code className="font-mono">&lt;token&gt;</code> with a token
-          from the list. Every other value is already yours.
+          Send these requests to the main site, in order. Replace{" "}
+          <code className="font-mono">&lt;token&gt;</code> with the secret you
+          copied when creating a token. Replace the post ID, version and sample
+          writing as each step explains. Generate a new idempotency key for each
+          action and reuse it when retrying that action.
         </p>
         {grantExamples(grant).map((example) => (
           <div className="mt-6" key={example.title}>
@@ -203,7 +206,7 @@ function Ids({ grant }: { grant: PublicationGrant }) {
       <table className="w-full min-w-[28rem] border-collapse text-left">
         <thead>
           <tr className="border-b border-rule">
-            {["Kind", "Name", "Id"].map((head) => (
+            {["Kind", "Name", "ID"].map((head) => (
               <th
                 className="px-3 py-2.5 font-ui text-meta font-semibold text-ink"
                 key={head}

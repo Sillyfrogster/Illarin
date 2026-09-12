@@ -44,7 +44,7 @@ const STOPPED_WORDS: Record<string, string> = {
   withheld: "Cancelled: this asset is withheld.",
   withdrawn: "Cancelled: this update was withdrawn.",
   unlisted:
-    "Cancelled: this asset is unlisted and the update was not cleared to send its link.",
+    "Cancelled: this asset is unlisted and sharing its link was not approved.",
   deleted: "Cancelled: this asset is no longer published.",
 };
 
@@ -53,13 +53,13 @@ export function deliveryStanding(one: Sending, now = new Date()): string {
     return `Delivered ${shortMoment(one.settledAt ?? one.occurredAt)}`;
   }
   if (one.state === "unconfirmed") {
-    return "Discord accepted the request without confirming a message. Check the channel before retrying.";
+    return "Discord did not confirm which message was posted. Check the channel before sending another announcement.";
   }
   if (one.state === "failed") {
     const stopped = STOPPED_WORDS[one.settledReason ?? ""];
     if (stopped) return stopped;
     if (one.settledReason === "exhausted") {
-      return `Gave up after ${tries(one.attempts)}`;
+      return `Stopped after ${tries(one.attempts)}`;
     }
     return `Delivery rejected. ${one.last?.detail ?? "The destination rejected the announcement."}`;
   }

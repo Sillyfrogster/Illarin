@@ -78,7 +78,7 @@ export function CoverControl({
         )}
       >
         {trouble ||
-          `It stands for this ${kindLabel} in the catalog and on shared links.`}
+          `Shown for this ${kindLabel} in the catalog and on shared links.`}
       </p>
     </div>
   );

@@ -150,7 +150,7 @@ function ExcerptedElementContent({
   );
 }
 
-/** A long run shows its opening rows and opens the rest in a browser. */
+/** Shows a preview of long collections with a button to open the full list. */
 function BrowsedElementContent({
   element,
   images,

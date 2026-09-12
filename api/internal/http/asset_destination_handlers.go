@@ -178,7 +178,7 @@ func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context, id types.UU
 		return
 	}
 	if request.DestinationIds == nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send a destination list, or an empty list for quiet defaults.", "destinationIds")
+		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send destination IDs, or an empty list to disable default announcements.", "destinationIds")
 		return
 	}
 	if err := h.assets.SetUpdateDestinations(c.Request.Context(), owner.ID, id, readIDs(&request.DestinationIds)); err != nil {

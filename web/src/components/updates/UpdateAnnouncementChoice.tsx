@@ -78,16 +78,17 @@ export function UpdateAnnouncementChoice({
 
       {error ? (
         <Line>
-          {error} Publishing still works, and this update goes to whatever the
-          asset already remembers.
+          {error} A listed asset will use its saved announcement destinations.
+          An unlisted asset will publish without an announcement.
         </Line>
       ) : offered === null ? (
         <output className="text-meta text-mute">
-          Reading your destinations…
+          Loading your destinations…
         </output>
       ) : offered.length === 0 ? (
         <Line>
-          You have no destination connected, so this update announces nowhere.
+          No active destinations are available. This update will publish without
+          an announcement.
         </Line>
       ) : (
         <>
@@ -159,7 +160,7 @@ export function UpdateAnnouncementChoice({
                 Send this unlisted page’s link
                 <span className="mt-1 block text-meta text-mute">
                   Anyone reading the announcement can open it. Unlisted updates
-                  stay quiet unless you tick this.
+                  are not announced unless you select this.
                 </span>
               </span>
             </label>
@@ -167,8 +168,8 @@ export function UpdateAnnouncementChoice({
 
           <Line>
             {chosen.length === 0
-              ? "Nothing is announced. The update still appears on the page and in its history."
-              : "They receive the name, the update number, your summary and a link to the history. Never your notes or the changes themselves."}
+              ? "No announcement will be sent. The update still appears on the page and in its history."
+              : "Selected destinations receive the asset name, update number, summary and history link. They do not receive the full notes or content changes."}
           </Line>
         </>
       )}

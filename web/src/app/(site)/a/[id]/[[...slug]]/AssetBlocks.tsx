@@ -266,7 +266,7 @@ export function AssetBlocks({
             summary="Model instructions"
             trailing={
               <span className="font-ui text-meta text-mute">
-                What the creator tells the model, kept out of the reading order
+                Instructions the creator includes for the model
               </span>
             }
           >

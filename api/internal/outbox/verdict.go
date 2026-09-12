@@ -76,7 +76,7 @@ type Verdict struct {
 var ArrivedVerdict = Verdict{Outcome: OutcomeDelivered, Reason: Arrived}
 
 var Unreachable = Verdict{
-	Outcome: OutcomeUnreachable, Detail: "Illarin could not reach it.", Retry: true,
+	Outcome: OutcomeUnreachable, Detail: "Illarin could not reach the destination.", Retry: true,
 }
 
 // ReadAnswer turns an endpoint's response into what happens to the delivery next.
@@ -87,7 +87,7 @@ func ReadAnswer(answer outbound.Answer) Verdict {
 		return ArrivedVerdict
 	case answer.Status == http.StatusTooManyRequests:
 		return Verdict{
-			Outcome: OutcomeRefused, Detail: "It asked Illarin to wait.",
+			Outcome: OutcomeRefused, Detail: "The destination asked Illarin to retry later.",
 			Retry: true, After: answer.RetryAfter,
 		}
 	case answer.Status == http.StatusGone:
@@ -114,7 +114,7 @@ func ReadAnnouncement(answer outbound.Answer) (Verdict, string) {
 	if message == "" {
 		return Verdict{
 			Outcome: OutcomeUnconfirmed,
-			Detail:  "Discord took it without saying which message it made.",
+			Detail:  "Discord accepted the request without returning a message ID.",
 			Reason:  Unconfirmed,
 		}, ""
 	}

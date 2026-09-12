@@ -3,7 +3,7 @@ import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
   "Publication API",
-  "API tokens and requests filled in for your approvals.",
+  "Create API tokens and use examples for your app's publishing permissions.",
 );
 
 export default function PublicationApiPage() {

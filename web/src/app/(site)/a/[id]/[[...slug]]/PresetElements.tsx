@@ -154,13 +154,13 @@ export function PromptFragmentBody({
       {note ? <p className={ITEM_META}>{note}</p> : null}
       {sealed && roomy ? (
         <p className={cn(ITEM_BODY, "mt-1 max-w-[52ch] text-mute")}>
-          The creator sealed this fragment, so its wording stays with them. The
-          app still receives it in full when the preset is installed.
+          This prompt is sealed. Its text is hidden here, but an allowed app
+          still receives it in full when the preset is installed.
         </p>
       ) : null}
       {sealed ? null : fragment.marker ? (
         <p className={cn(ITEM_META, "italic")}>
-          The app splices its own content in here.
+          The app inserts its own content here.
         </p>
       ) : (
         <Paragraphs text={fragment.text} />
@@ -193,7 +193,9 @@ export function SettingGroup({
           <SettingBody setting={setting} />
         </RunItem>
       ))}
-      {raw.length > 0 ? <RunHeading>As the file names them</RunHeading> : null}
+      {raw.length > 0 ? (
+        <RunHeading>Other settings from the file</RunHeading>
+      ) : null}
       {raw.map((setting) => (
         <RunItem
           as="div"

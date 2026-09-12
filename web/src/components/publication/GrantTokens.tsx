@@ -61,7 +61,7 @@ export function GrantTokens({
 
       {tokens === null ? (
         <p aria-live="polite" className="font-prose text-meta text-mute">
-          Reading {mine ? "your" : "their"} tokens…
+          Loading {mine ? "your" : "their"} tokens…
         </p>
       ) : live.length === 0 ? (
         <p className="max-w-[52ch] font-prose text-meta text-mute">
@@ -82,7 +82,7 @@ export function GrantTokens({
         mine ? (
           <MorphingDisclosure
             className="rounded-plate bg-deep px-4 py-3"
-            summary={`${spent.length} no longer works`}
+            summary={`${spent.length} inactive ${spent.length === 1 ? "token" : "tokens"}`}
           >
             <div className="mt-2">
               <TokenRows
@@ -152,7 +152,7 @@ function NewToken({
           </p>
         </div>
         <RevealOnce
-          carry="Send it as a bearer credential on the publication API. Keep it out of anything you commit or share."
+          carry="Use it in the Authorization header for the Publication API. Store it as a secret in your tool."
           copied={copied}
           onCopied={setCopied}
           value={made.value}
@@ -177,8 +177,8 @@ function NewToken({
       }}
     >
       <p className="max-w-[52ch] font-prose text-meta text-mute">
-        One token for one tool. It publishes for {appName} exactly as you can,
-        and reaches nothing else on Illarin.
+        Create a separate token for each tool. It can manage posts for {appName}{" "}
+        within your publishing approval.
       </p>
       <Field
         hint="Name the tool or machine that will carry it, so you know which one to revoke later."

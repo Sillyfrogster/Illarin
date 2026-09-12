@@ -262,7 +262,7 @@ func TestAnEndpointAskingIllarinToWaitIsWaitedFor(t *testing.T) {
 	if asked.State != "pending" {
 		t.Fatalf("the delivery is %q, want pending", asked.State)
 	}
-	if asked.Last.Detail != "It asked Illarin to wait." {
+	if asked.Last.Detail != "The destination asked Illarin to retry later." {
 		t.Errorf("attempt detail = %q", asked.Last.Detail)
 	}
 }

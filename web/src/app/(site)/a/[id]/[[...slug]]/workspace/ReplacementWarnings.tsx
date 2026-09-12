@@ -13,9 +13,9 @@ export function ReplacementWarnings({
     <>
       {preview.seals > 0 ? (
         <p className="rounded-control bg-accent-wash p-3 text-meta text-ink">
-          This file keeps the wording of {preview.seals} prompt
-          {preview.seals === 1 ? "" : "s"} back. Applying it means readers can
-          only install this asset through a linked app.
+          This file seals {preview.seals} prompt
+          {preview.seals === 1 ? "" : "s"}. Applying it means readers can only
+          install this asset through a linked app.
         </p>
       ) : null}
       {missingWording.length > 0 ? (

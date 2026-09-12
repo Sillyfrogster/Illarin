@@ -153,7 +153,7 @@ function DestinationManager() {
               </div>
             ) : destinations === null ? (
               <output className="block rounded-plate bg-deep px-6 py-6 text-ui text-mute">
-                Reading your destinations…
+                Loading your destinations…
               </output>
             ) : held.length === 0 ? (
               <div className="flex flex-wrap items-center gap-4 rounded-plate bg-deep px-6 py-6">
@@ -163,9 +163,8 @@ function DestinationManager() {
                   strokeWidth={1.5}
                 />
                 <p className="min-w-0 flex-1 basis-64 font-prose text-ui text-mute">
-                  Nothing connected. Add the Discord channel your readers watch,
-                  or an endpoint you run, and it becomes a choice the next time
-                  you publish an update.
+                  No destinations connected. Add a Discord channel or a webhook
+                  you run, then select it when you publish an update.
                 </p>
               </div>
             ) : (
@@ -194,7 +193,7 @@ function DestinationManager() {
             description={
               editing.id
                 ? "Changes take effect on the next update you publish."
-                : "Connecting a destination sends nothing. You name it when you publish an update."
+                : "Connecting a destination sends no announcement. Select it when you publish an update."
             }
             key={editing.key}
             onClose={close}
@@ -300,7 +299,7 @@ const NOTES: { said: string; title: string }[] = [
     title: "If a destination is down",
   },
   {
-    said: "Two announcements can arrive in either order, so compare occurredAt and the update number rather than the order they land in. A generic endpoint signs with your own secret.",
+    said: "Two announcements can arrive in either order, so compare occurredAt and the update number rather than arrival order. Verify Illarin's signature with the signing secret saved on your server.",
     title: "What a receiver should check",
   },
 ];

@@ -420,7 +420,7 @@ export function AssetChooser({
   );
 }
 
-/** WrittenToday says what a file of an older version is, and is not. */
+/** Explains how historical downloads are generated. */
 function WrittenToday({ version }: { version: RecordedVersion }) {
   return (
     <p className="mb-4 max-w-[42ch] text-meta text-mute">
@@ -569,7 +569,7 @@ function AppChip({
   );
 }
 
-/** WhatTravels says what reaches the reader, in the named app's terms where one is chosen. */
+/** Lists the content included in the selected download. */
 function WhatTravels({
   choice,
   images,

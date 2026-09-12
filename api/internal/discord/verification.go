@@ -37,7 +37,7 @@ func whyRefused(status int) string {
 	case http.StatusNotFound:
 		return "Discord does not recognize that webhook. Check it still exists and that the whole address was copied."
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return "Discord turned that address away. Its token is no longer good."
+		return "Discord rejected this webhook. Check that it is still active and copy its full URL again."
 	default:
 		return fmt.Sprintf("Discord answered %d for that webhook.", status)
 	}

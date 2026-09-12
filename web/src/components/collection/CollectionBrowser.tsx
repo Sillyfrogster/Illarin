@@ -31,7 +31,7 @@ type Row =
 const HEADING_HEIGHT = 34;
 const ITEM_HEIGHT = 44;
 
-/** CollectionBrowser opens a long run in a plate of its own, indexed and searchable. */
+/** Opens a searchable list of collection items and their details. */
 export function CollectionBrowser({
   count,
   items,
@@ -149,7 +149,7 @@ function Browser({
           {rows.length === 0 ? (
             <p className="px-5 py-6 font-ui text-ui text-mute sm:px-7">
               {search.trim()
-                ? `Nothing here is called ${search.trim()}.`
+                ? `No items match ${search.trim()}.`
                 : `All ${noun} are off.`}
             </p>
           ) : (
@@ -274,7 +274,7 @@ function Controls({
           onChange={(event) => onOrder(event.target.value as CollectionOrder)}
           value={order}
         >
-          <option value="given">As written</option>
+          <option value="given">Original order</option>
           <option value="name">By name, A to Z</option>
         </select>
       </div>

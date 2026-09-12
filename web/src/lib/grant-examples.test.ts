@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import type { components } from "@/lib/api/schema";
+import { type Contract, checkDoc, readHttpExample } from "./docs/contract";
+import { readDoc } from "./docs/read-doc";
 import { grantExamples } from "./grant-examples";
 
 const CATEGORY = {
@@ -65,14 +67,11 @@ test("examples carry the grant's own category, app and default destinations", ()
   expect(examples.map((one) => one.title)).toEqual([
     "Check the token",
     "Create a post",
-    "Release fields",
+    "Save the post",
     "Publish now",
   ]);
   expect(examples[1].source).toContain(CATEGORY.id);
-  expect(examples[2].source).toContain(GRANT.app.id);
-  expect(examples[2].source).toContain(
-    "https://paperlantern.example/releases/1.0.0",
-  );
+  expect(examples[2].source).toContain(CATEGORY.id);
   expect(examples[3].source).toContain("e5f6a7b8-c9d0-4e1f-a2b3-c4d5e6f7a8b9");
   expect(examples[3].source).not.toContain(
     "f6a7b8c9-d0e1-4f2a-b3c4-d5e6f7a8b9c0",
@@ -80,9 +79,27 @@ test("examples carry the grant's own category, app and default destinations", ()
   expect(examples[3].note).toContain("Community");
 });
 
-test("a grant without the release category gets no release example", () => {
-  const examples = grantExamples({ ...GRANT, categories: [CATEGORY] });
-  expect(examples.map((one) => one.title)).not.toContain("Release fields");
+test("the create, save and publish examples agree with the contract for each default category", async () => {
+  const contract = Bun.YAML.parse(
+    await Bun.file("../api/openapi/openapi.gen.yaml").text(),
+  ) as Contract;
+  for (const category of [CATEGORY, RELEASE]) {
+    const examples = grantExamples({ ...GRANT, defaultCategory: category });
+    const doc = readDoc(
+      "# Examples\n\nPublication workflow.\n\n" +
+        examples
+          .map((example) => `\`\`\`http\n${example.source}\n\`\`\``)
+          .join("\n\n"),
+    );
+    expect(checkDoc(doc, contract)).toEqual([]);
+    const saved = readHttpExample(examples[2].source)
+      .body as components["schemas"]["SavePostRequest"];
+    expect(saved.categoryId).toBe(category.id);
+    expect(saved.release?.appId ?? null).toBe(
+      category === RELEASE ? GRANT.app.id : null,
+    );
+    expect(saved.release?.address).toBeUndefined();
+  }
 });
 
 test("no example carries a token value, an address or a secret", () => {

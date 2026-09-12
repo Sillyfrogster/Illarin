@@ -22,8 +22,9 @@ export default function UpdateDestinationsPage() {
           Update destinations
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          A Discord channel or an endpoint of your own, ready to name when you
-          publish an update. Connecting one announces nothing by itself.
+          Connect a Discord channel or your own endpoint, then choose it when
+          publishing an update. Connecting a destination does not send an
+          announcement.
         </p>
       </header>
       <UpdateDestinationSettings />

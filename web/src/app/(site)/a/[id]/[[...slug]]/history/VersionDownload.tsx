@@ -25,7 +25,7 @@ type Reading =
 
 async function noRefresh(): Promise<void> {}
 
-/** VersionDownload offers an older recorded version as a file, reading what it can be today only when asked. */
+/** Loads a historical version's download choices when the chooser opens. */
 export function VersionDownload({
   assetId,
   kind,
@@ -91,7 +91,7 @@ function VersionChoices({
   if (reading.state === "unread" || reading.state === "reading") {
     return (
       <p aria-busy="true" className="text-meta text-mute">
-        Reading what this version can be written as…
+        Loading download options…
       </p>
     );
   }
@@ -106,15 +106,15 @@ function VersionChoices({
   if (offered.linkedInstallOnly) {
     return (
       <Refusal onRetry={null}>
-        This version keeps a prompt that was sealed when it was recorded, so
-        Illarin writes no file of it.
+        File downloads are unavailable because this version contains protected
+        prompt content.
       </Refusal>
     );
   }
   if (offered.downloads.length === 0) {
     return (
       <Refusal onRetry={null}>
-        No format Illarin writes today can hold what this version recorded.
+        This version cannot be exported in any currently supported format.
       </Refusal>
     );
   }

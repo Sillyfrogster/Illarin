@@ -30,7 +30,7 @@ export type HistoryOwner = {
   workingCopyVersion: number;
 };
 
-/** VersionDetail reads one recorded version: its notes, its changes, its file and its owner's controls. */
+/** Shows a version's notes, changes, downloads and owner controls. */
 export function VersionDetail({
   assetId,
   kind,
@@ -131,8 +131,8 @@ export function VersionDetail({
               />
             ) : (
               <p className="mt-3 max-w-[60ch] text-meta text-mute">
-                Illarin recorded nothing before this, so there is nothing to
-                compare it with.
+                This is the first recorded version, so there is no earlier
+                version to compare it with.
               </p>
             )}
           </section>
@@ -305,7 +305,7 @@ function VersionManagement({
       {mode === "withdraw" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            Readers will keep the version number, date and this explanation. Its
+            Readers will see the version number, date and this explanation. Its
             content, comparisons and downloads will be blocked.
           </p>
           <label className="grid gap-1 text-meta text-mute">

@@ -41,14 +41,14 @@ export function VersionChanges({
     <div className="mt-4 max-w-[70ch]">
       {compared.promptsWithheld ? (
         <p className="mb-4 max-w-[60ch] text-meta text-mute">
-          This {kind} keeps its prompts for linked applications, so their
-          wording is not shown here.
+          This {kind} has sealed prompts for linked applications. Their wording
+          is not shown here.
         </p>
       ) : null}
 
       {compared.groups.length === 0 ? (
         <p className="text-meta text-mute">
-          Nothing differs between these two versions.
+          No changes between these versions.
         </p>
       ) : (
         <ChangeList groups={compared.groups} />

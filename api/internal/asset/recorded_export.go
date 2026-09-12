@@ -53,7 +53,7 @@ func (s *Service) OpenRecordedExport(
 	return subject.export(written, target, module.Declaration().Label, viewerID), nil
 }
 
-// RecordedDownloads is what a file of one recorded version can carry today.
+// RecordedDownloads lists the formats and media available for a historical download.
 type RecordedDownloads struct {
 	Version           Version
 	Kind              string
@@ -64,7 +64,7 @@ type RecordedDownloads struct {
 	Media             []DetailImage
 }
 
-// RecordedDownloads reads the formats, pictures and protection standing of one recorded version.
+// RecordedDownloads reads a historical version's download choices under current protection.
 func (s *Service) RecordedDownloads(
 	ctx context.Context,
 	assetID uuid.UUID,
@@ -148,7 +148,7 @@ func (s *Service) recordedPictures(
 	return pictures, rows.Err()
 }
 
-// recordedExportSubject reads a recorded version as an export subject held to the asset's current access and protection.
+// recordedExportSubject loads a historical version under current access and protection.
 func (s *Service) recordedExportSubject(
 	ctx context.Context,
 	tx pgx.Tx,

@@ -91,7 +91,7 @@ describe("what a delivery is doing", () => {
     expect(deliveryStanding(arrived, noon)).toContain("Delivered");
   });
 
-  test("says how many tries it gave up after", () => {
+  test("says how many tries it stopped after", () => {
     const spent = delivery({
       state: "failed",
       settledReason: "exhausted",
@@ -99,7 +99,7 @@ describe("what a delivery is doing", () => {
       settledAt: "2026-09-06T11:30:00Z",
     });
 
-    expect(deliveryStanding(spent, noon)).toBe("Gave up after 10 tries");
+    expect(deliveryStanding(spent, noon)).toBe("Stopped after 10 tries");
   });
 
   test("says what turned it away", () => {
