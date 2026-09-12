@@ -30,7 +30,7 @@ import { useCatalogNavigation } from "./use-catalog-navigation";
 const PAGE = 24;
 
 const GRID =
-  "m-0 grid list-none grid-cols-2 items-stretch gap-x-5 gap-y-10 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+  "m-0 grid list-none grid-cols-2 items-stretch gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 xl:grid-cols-5";
 
 export function CatalogSurface({
   basePath = "/browse",
@@ -133,7 +133,21 @@ export function CatalogSurface({
         {heading}
       </h2>
 
-      <KindRail basePath={basePath} filters={filters} navigate={navigate} />
+      <div className="flex min-w-0 items-center gap-3 border-b border-rule pt-6 pb-5 sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <KindRail basePath={basePath} filters={filters} navigate={navigate} />
+        </div>
+        <Button
+          aria-controls={panel}
+          aria-expanded={refining}
+          className={cn("shrink-0", refining && "bg-accent-wash text-accent")}
+          onClick={() => setRefining((open) => !open)}
+          variant="secondary"
+        >
+          <SlidersHorizontal aria-hidden="true" />
+          Filters
+        </Button>
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
         <p aria-live="polite" className="order-1 font-ui text-ui text-mute">
@@ -160,16 +174,6 @@ export function CatalogSurface({
             />
           </div>
         ) : null}
-        <Button
-          aria-controls={panel}
-          aria-expanded={refining}
-          className={cn("order-2 ml-auto md:order-3", refining && "bg-rule/45")}
-          onClick={() => setRefining((open) => !open)}
-          variant="secondary"
-        >
-          <SlidersHorizontal aria-hidden="true" />
-          Filters
-        </Button>
       </div>
 
       {narrowings.length ? (
@@ -177,7 +181,7 @@ export function CatalogSurface({
           {narrowings.map((one) => (
             <li key={one.id}>
               <button
-                className="group inline-flex min-h-9 max-w-full items-center gap-2 rounded-control bg-accent-wash py-1 pr-2 pl-3 font-ui text-meta text-accent outline-offset-2 transition-colors duration-200 hover:bg-accent hover:text-on-accent motion-reduce:transition-none"
+                className="group inline-flex min-h-11 max-w-full items-center gap-2 rounded-control bg-accent-wash py-1 pr-2 pl-3 font-ui text-meta text-accent outline-offset-2 transition-colors duration-200 hover:bg-action hover:text-on-accent motion-reduce:transition-none"
                 onClick={() => navigate(one.without)}
                 type="button"
               >
@@ -193,7 +197,7 @@ export function CatalogSurface({
           {narrowings.length > 1 ? (
             <li>
               <button
-                className="inline-flex min-h-9 items-center rounded-control px-3 font-ui text-meta font-medium text-mute outline-offset-2 hover:text-ink"
+                className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-meta font-medium text-mute outline-offset-2 hover:text-ink"
                 onClick={() => navigate({})}
                 type="button"
               >
@@ -219,7 +223,7 @@ export function CatalogSurface({
         />
       </div>
 
-      <div aria-busy={pending || undefined} className="mt-8 pb-chapter">
+      <div aria-busy={pending || undefined} className="mt-6 pb-chapter">
         {suppressionKey && suppressionKey !== dismissedSuppression ? (
           <output className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-plate bg-deep px-5 py-4">
             <span className="font-ui text-ui text-ink">

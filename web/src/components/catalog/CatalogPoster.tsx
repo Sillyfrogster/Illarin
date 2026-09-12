@@ -63,9 +63,9 @@ export function CatalogPoster({
   );
 
   return (
-    <li className="group relative flex min-w-0 flex-col">
+    <li className="group relative flex min-w-0 flex-col rounded-plate outline-offset-4 focus-within:outline-2 focus-within:outline-accent">
       {face === "art" ? (
-        <div className={cn(PLATE, "relative aspect-5/6 bg-media")}>
+        <div className={cn(PLATE, "relative aspect-5/6 bg-inset")}>
           {asset.cover ? (
             <Image
               alt=""
@@ -83,33 +83,36 @@ export function CatalogPoster({
         <div
           className={cn(
             PLATE,
-            "grid aspect-5/6 grid-cols-[minmax(0,1fr)] content-end",
+            "flex aspect-5/6 min-w-0 flex-col justify-between p-5",
             groundFor(asset.id).plate,
           )}
         >
-          <h3
+          <KindMark
+            aria-hidden="true"
+            className="size-6 text-accent"
+            kind={asset.kind}
+          />
+          <p
+            aria-hidden="true"
             className={cn(
-              "min-w-0 p-5 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-300 motion-reduce:transition-none",
+              "min-w-0 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-300 motion-reduce:transition-none",
               groundFor(asset.id).title,
               SETTING[typeSetting(name)],
             )}
           >
-            {title}
-          </h3>
+            {name}
+          </p>
         </div>
       )}
 
       <div className="pt-4">
-        {face === "art" ? (
-          <h3 className="font-display text-[clamp(1.05rem,1.25vw,1.2rem)] leading-[1.25] font-medium tracking-[-0.02em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
-            {title}
-          </h3>
-        ) : null}
+        <h3 className="min-h-[2.6em] font-display text-[clamp(1.05rem,1.25vw,1.2rem)] leading-[1.3] font-medium tracking-[-0.02em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
+          {title}
+        </h3>
 
         <p
           className={cn(
-            "flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute",
-            face === "art" && "mt-2",
+            "mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute",
           )}
         >
           <KindMark
@@ -119,7 +122,7 @@ export function CatalogPoster({
           {KIND_LABELS[asset.kind]}
           <span aria-hidden="true">·</span>
           <Link
-            className="relative z-1 py-3 [overflow-wrap:anywhere] hover:text-ink hover:underline"
+            className="relative z-1 inline-flex min-h-11 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
             href={`/@${asset.creator}`}
           >
             @{asset.creator}

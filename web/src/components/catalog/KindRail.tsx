@@ -30,8 +30,8 @@ export function KindRail({
   const [lit, setLit] = useState(chosen);
 
   return (
-    <nav aria-label="Kind" className="-mx-[var(--gutter)]">
-      <div className="overflow-x-auto px-[var(--gutter)] pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <nav aria-label="Kind" className="min-w-0">
+      <div className="overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <TravellingHighlight
           chosen={chosen}
           className="flex w-max gap-1"
