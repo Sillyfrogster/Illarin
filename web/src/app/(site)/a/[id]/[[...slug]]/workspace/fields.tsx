@@ -169,14 +169,14 @@ export function Note({ children }: { children: ReactNode }) {
 
 export function InlineItem({
   children,
-  moves,
+  handle,
   name,
   onRemove,
   pending,
   removeLabel,
 }: {
   children: ReactNode;
-  moves?: ItemMoves;
+  handle?: ReactNode;
   name: string;
   onRemove: () => void;
   pending: boolean;
@@ -184,10 +184,12 @@ export function InlineItem({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-display text-ui font-medium text-ink">{name}</p>
+      <div className="flex items-center gap-1">
+        {handle}
+        <p className="font-display text-ui font-medium text-ink">{name}</p>
+      </div>
       {children}
       <div className="flex flex-wrap items-center gap-1">
-        {moves ? <ItemMoveActions moves={moves} pending={pending} /> : null}
         <RemoveAction disabled={pending} onClick={onRemove}>
           {removeLabel}
         </RemoveAction>

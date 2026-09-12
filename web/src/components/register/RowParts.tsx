@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import { SortableItem } from "@/components/ui/sortable";
 import { cn } from "@/lib/cn";
 
 export type Tone = "quiet" | "accent" | "stop";
@@ -46,6 +47,7 @@ export function Row({
   lead,
   onOpen,
   open,
+  sortableId,
   standing,
   title,
   trailing,
@@ -56,12 +58,13 @@ export function Row({
   lead?: ReactNode;
   onOpen?: () => void;
   open?: string;
+  sortableId?: string;
   standing?: ReactNode;
   title: ReactNode;
   trailing?: ReactNode;
 }) {
-  return (
-    <li className="group relative flex min-w-0 gap-4 rounded-plate px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
+  const row = (
+    <li className="group relative flex min-w-0 gap-4 rounded-plate bg-plane px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none data-dragging:border-transparent data-dragging:shadow-popover sm:px-5">
       {lead}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
@@ -97,6 +100,12 @@ export function Row({
         <div className="relative flex shrink-0 items-start gap-1">{aside}</div>
       ) : null}
     </li>
+  );
+  if (!sortableId) return row;
+  return (
+    <SortableItem asChild id={sortableId}>
+      {row}
+    </SortableItem>
   );
 }
 
@@ -142,30 +151,6 @@ export function Mark({
       ) : null}
       {children}
     </span>
-  );
-}
-
-export function RowMove({
-  disabled,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  disabled?: boolean;
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="inline-flex size-11 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-plane hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="size-4" strokeWidth={1.9} />
-    </button>
   );
 }
 

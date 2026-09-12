@@ -9,6 +9,11 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  Sortable,
+  SortableItem,
+  SortableItemHandle,
+} from "@/components/ui/sortable";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import { cn } from "@/lib/cn";
 import { chosenIndex, itemKeys, keyAfterMove } from "./collection";
@@ -124,6 +129,7 @@ export function CollectionStep({
           onChoose(`new:${rows.length}`);
         }}
         onChoose={onChoose}
+        onMove={onMove}
         pending={pending}
         rows={rows}
       />
@@ -139,6 +145,7 @@ function CollectionList({
   nouns,
   onAdd,
   onChoose,
+  onMove,
   pending,
   rows,
 }: {
@@ -149,6 +156,7 @@ function CollectionList({
   nouns: string;
   onAdd: () => void;
   onChoose: (key: string | null) => void;
+  onMove?: (from: number, to: number) => void;
   pending: boolean;
   rows: CollectionRow[];
 }) {
@@ -204,40 +212,58 @@ function CollectionList({
       )}
 
       {matching.length > 0 ? (
-        <ol className="-mx-2 flex list-none flex-col gap-0.5">
-          {matching.map(({ index, row }) => (
-            <li key={keys[index]}>
-              <button
-                className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left outline-offset-3 hover:bg-deep"
-                onClick={() => onChoose(keys[index])}
-                ref={keys[index] === lastOpened ? showRow : undefined}
-                type="button"
+        <Sortable
+          disabled={!onMove || pending || wanted !== ""}
+          ids={keys}
+          labels={(key) => rows[keys.indexOf(String(key))]?.name ?? noun}
+          onMove={(from, to) => onMove?.(from, to)}
+        >
+          <ol className="-mx-2 flex list-none flex-col gap-0.5">
+            {matching.map(({ index, row }) => (
+              <SortableItem
+                className="flex items-center gap-1"
+                disabled={!onMove || pending || wanted !== ""}
+                id={keys[index]}
+                key={keys[index]}
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-ui font-medium text-ink wrap-anywhere">
-                    {row.name}
+                {onMove ? (
+                  <SortableItemHandle
+                    disabled={pending || wanted !== ""}
+                    label={`Move ${row.name}`}
+                  />
+                ) : null}
+                <button
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-control px-2 py-2.5 text-left outline-offset-3 hover:bg-deep"
+                  onClick={() => onChoose(keys[index])}
+                  ref={keys[index] === lastOpened ? showRow : undefined}
+                  type="button"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-ui font-medium text-ink wrap-anywhere">
+                      {row.name}
+                    </span>
+                    {row.detail ? (
+                      <span className="mt-0.5 block text-meta text-mute wrap-anywhere">
+                        {row.detail}
+                      </span>
+                    ) : null}
+                    {row.off || row.sealed ? (
+                      <span className="mt-1.5 flex flex-wrap gap-1.5">
+                        {row.off ? <RowBadge>Switched off</RowBadge> : null}
+                        {row.sealed ? <RowBadge accent>Sealed</RowBadge> : null}
+                      </span>
+                    ) : null}
                   </span>
-                  {row.detail ? (
-                    <span className="mt-0.5 block text-meta text-mute wrap-anywhere">
-                      {row.detail}
-                    </span>
-                  ) : null}
-                  {row.off || row.sealed ? (
-                    <span className="mt-1.5 flex flex-wrap gap-1.5">
-                      {row.off ? <RowBadge>Switched off</RowBadge> : null}
-                      {row.sealed ? <RowBadge accent>Sealed</RowBadge> : null}
-                    </span>
-                  ) : null}
-                </span>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-mute"
-                  size={16}
-                />
-              </button>
-            </li>
-          ))}
-        </ol>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-mute"
+                    size={16}
+                  />
+                </button>
+              </SortableItem>
+            ))}
+          </ol>
+        </Sortable>
       ) : null}
     </div>
   );

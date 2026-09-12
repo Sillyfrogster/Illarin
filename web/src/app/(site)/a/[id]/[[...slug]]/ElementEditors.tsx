@@ -4,6 +4,11 @@ import { ImagePlus } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import {
+  Sortable,
+  SortableItem,
+  SortableItemHandle,
+} from "@/components/ui/sortable";
+import {
   type AssetElement,
   type AssetImage,
   addAssetImage,
@@ -285,72 +290,94 @@ function ImageEditor({
       {items.length === 0 ? (
         <Note>No images are in this block yet.</Note>
       ) : (
-        <ol className="flex flex-col gap-7">
-          {items.map((item, index) => {
-            const stored = imagesById.get(item.mediaId);
-            const source = previews[item.mediaId] ?? stored?.thumbUrl;
-            return (
-              <li key={item.mediaId}>
-                <InlineItem
-                  moves={movesFor(items, index, onChange)}
-                  name={item.name?.trim() || `Image ${index + 1}`}
-                  onRemove={() => onChange(without(items, index))}
-                  pending={pending}
-                  removeLabel="Remove image"
+        <Sortable
+          disabled={pending}
+          ids={items.map((item) => item.mediaId)}
+          labels={(id) => {
+            const index = items.findIndex((item) => item.mediaId === id);
+            return items[index]?.name?.trim() || `Image ${index + 1}`;
+          }}
+          onMove={(from, to) => onChange(moveItem(items, from, to))}
+        >
+          <ol className="m-0 flex list-none flex-col gap-7 p-0">
+            {items.map((item, index) => {
+              const stored = imagesById.get(item.mediaId);
+              const source = previews[item.mediaId] ?? stored?.thumbUrl;
+              const name = item.name?.trim() || `Image ${index + 1}`;
+              return (
+                <SortableItem
+                  disabled={pending}
+                  id={item.mediaId}
+                  key={item.mediaId}
                 >
-                  <div className="flex flex-wrap items-start gap-4">
-                    <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-plate bg-media">
-                      {source ? (
-                        <Image
-                          alt=""
-                          height={stored?.height ?? 200}
-                          sizes="120px"
-                          src={source}
-                          unoptimized
-                          width={stored?.width ?? 200}
-                        />
-                      ) : (
-                        <span className="text-label text-on-media">
-                          Missing
-                        </span>
-                      )}
+                  <InlineItem
+                    handle={
+                      <SortableItemHandle
+                        disabled={pending || items.length < 2}
+                        label={`Move ${name}`}
+                      />
+                    }
+                    name={name}
+                    onRemove={() => onChange(without(items, index))}
+                    pending={pending}
+                    removeLabel="Remove image"
+                  >
+                    <div className="flex flex-wrap items-start gap-4">
+                      <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-plate bg-media">
+                        {source ? (
+                          <Image
+                            alt=""
+                            height={stored?.height ?? 200}
+                            sizes="120px"
+                            src={source}
+                            unoptimized
+                            width={stored?.width ?? 200}
+                          />
+                        ) : (
+                          <span className="text-label text-on-media">
+                            Missing
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col gap-4">
+                        <Field hint="optional" label="Name">
+                          <TextField
+                            disabled={pending}
+                            onChange={(event) =>
+                              onChange(
+                                replaceAt(items, index, {
+                                  name: event.target.value || undefined,
+                                }),
+                              )
+                            }
+                            value={item.name ?? ""}
+                          />
+                        </Field>
+                        {isGallery ? (
+                          <Switch
+                            checked={item.omitFromDownloads !== true}
+                            hint="Readers can change this for their own copy."
+                            label="Include in downloads"
+                            onChange={(included) =>
+                              onChange(
+                                replaceAt(items, index, {
+                                  omitFromDownloads: included
+                                    ? undefined
+                                    : true,
+                                }),
+                              )
+                            }
+                            pending={pending}
+                          />
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-4">
-                      <Field hint="optional" label="Name">
-                        <TextField
-                          disabled={pending}
-                          onChange={(event) =>
-                            onChange(
-                              replaceAt(items, index, {
-                                name: event.target.value || undefined,
-                              }),
-                            )
-                          }
-                          value={item.name ?? ""}
-                        />
-                      </Field>
-                      {isGallery ? (
-                        <Switch
-                          checked={item.omitFromDownloads !== true}
-                          hint="Readers can change this for their own copy."
-                          label="Include in downloads"
-                          onChange={(included) =>
-                            onChange(
-                              replaceAt(items, index, {
-                                omitFromDownloads: included ? undefined : true,
-                              }),
-                            )
-                          }
-                          pending={pending}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                </InlineItem>
-              </li>
-            );
-          })}
-        </ol>
+                  </InlineItem>
+                </SortableItem>
+              );
+            })}
+          </ol>
+        </Sortable>
       )}
       {message ? (
         <p className="text-meta text-stop" role="alert">
@@ -371,19 +398,6 @@ function ImageEditor({
       </label>
     </div>
   );
-}
-
-function movesFor<T>(
-  items: T[],
-  index: number,
-  onChange: (items: T[]) => void,
-) {
-  return {
-    onEarlier: () => onChange(moveItem(items, index, index - 1)),
-    onLater: () => onChange(moveItem(items, index, index + 1)),
-    position: index,
-    total: items.length,
-  };
 }
 
 export function elementHint(type: AssetElement["type"]): string {

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpRight,
-  ImageUp,
-  Package,
-  Plus,
-} from "lucide-react";
+import { ArrowUpRight, ImageUp, Package, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import {
@@ -17,12 +10,12 @@ import {
   PastRow,
   Row,
   RowMark,
-  RowMove,
   Rows,
   StartAction,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
 import { Field, TextInput } from "@/components/ui/field";
+import { Sortable, SortableItemHandle } from "@/components/ui/sortable";
 import {
   configureApp,
   orderApps,
@@ -51,16 +44,16 @@ export function AppRows({
   const current = apps.filter((one) => !one.retired);
   const retired = apps.filter((one) => one.retired);
 
-  async function reorder(index: number, step: number) {
-    const target = index + step;
-    if (target < 0 || target >= current.length) return;
+  const [placing, setPlacing] = useState<PublicationApp[] | null>(null);
+  const shown = placing ?? current;
+
+  async function reorder(from: number, to: number) {
+    const next = moved(current, from, to);
+    setPlacing(next);
     const answer = await orderApps(
-      moved(
-        apps.map((one) => one.id),
-        apps.indexOf(current[index]),
-        apps.indexOf(current[target]),
-      ),
+      next.map((one) => one.id).concat(retired.map((one) => one.id)),
     );
+    setPlacing(null);
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "");
       return;
@@ -94,59 +87,57 @@ export function AppRows({
       {current.length === 0 ? (
         <Nothing>{nothingIn("apps", { apps })}</Nothing>
       ) : (
-        <Rows>
-          {current.map((app, index) => (
-            <Row
-              aside={
-                <>
-                  <RowMove
-                    disabled={index === 0}
-                    icon={ArrowUp}
-                    label={`Move ${app.name} up`}
-                    onClick={() => reorder(index, -1)}
+        <Sortable
+          disabled={placing !== null}
+          ids={shown.map((one) => one.id)}
+          labels={(id) => shown.find((one) => one.id === id)?.name ?? "app"}
+          onMove={(from, to) => void reorder(from, to)}
+        >
+          <Rows>
+            {shown.map((app) => (
+              <Row
+                aside={
+                  <SortableItemHandle
+                    disabled={placing !== null || shown.length < 2}
+                    label={`Move ${app.name}`}
                   />
-                  <RowMove
-                    disabled={index === current.length - 1}
-                    icon={ArrowDown}
-                    label={`Move ${app.name} down`}
-                    onClick={() => reorder(index, 1)}
-                  />
-                </>
-              }
-              facts={
-                <>
-                  <span className="font-mono text-label">{app.slug}</span>
-                  <span>{app.home.replace(/^https:\/\//, "")}</span>
-                  <span>{announces(app)}</span>
-                </>
-              }
-              key={app.id}
-              lead={
-                <RowMark>
-                  {app.mark ? (
-                    <Image
-                      alt=""
-                      className="size-11 object-contain"
-                      height={44}
-                      src={app.mark.url}
-                      unoptimized
-                      width={44}
-                    />
-                  ) : (
-                    <Package
-                      aria-hidden="true"
-                      className="size-5"
-                      strokeWidth={1.6}
-                    />
-                  )}
-                </RowMark>
-              }
-              onOpen={() => onOpen(app)}
-              open={`Edit ${app.name}`}
-              title={app.name}
-            />
-          ))}
-        </Rows>
+                }
+                facts={
+                  <>
+                    <span className="font-mono text-label">{app.slug}</span>
+                    <span>{app.home.replace(/^https:\/\//, "")}</span>
+                    <span>{announces(app)}</span>
+                  </>
+                }
+                key={app.id}
+                lead={
+                  <RowMark>
+                    {app.mark ? (
+                      <Image
+                        alt=""
+                        className="size-11 object-contain"
+                        height={44}
+                        src={app.mark.url}
+                        unoptimized
+                        width={44}
+                      />
+                    ) : (
+                      <Package
+                        aria-hidden="true"
+                        className="size-5"
+                        strokeWidth={1.6}
+                      />
+                    )}
+                  </RowMark>
+                }
+                onOpen={() => onOpen(app)}
+                open={`Edit ${app.name}`}
+                sortableId={app.id}
+                title={app.name}
+              />
+            ))}
+          </Rows>
+        </Sortable>
       )}
 
       {retired.length > 0 ? (

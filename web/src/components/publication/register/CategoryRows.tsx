@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { useState } from "react";
 import {
   Nothing,
@@ -8,11 +7,11 @@ import {
   Past,
   PastRow,
   Row,
-  RowMove,
   Rows,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
 import { Field, TextInput } from "@/components/ui/field";
+import { Sortable, SortableItemHandle } from "@/components/ui/sortable";
 import { orderCategories, updateCategory } from "@/lib/api/publication";
 import type { PublicationCategory } from "@/lib/api/query";
 import { nothingIn } from "@/lib/publication-register";
@@ -34,16 +33,16 @@ export function CategoryRows({
   const current = categories.filter((one) => !one.retired);
   const retired = categories.filter((one) => one.retired);
 
-  async function reorder(index: number, step: number) {
-    const target = index + step;
-    if (target < 0 || target >= current.length) return;
+  const [placing, setPlacing] = useState<PublicationCategory[] | null>(null);
+  const shown = placing ?? current;
+
+  async function reorder(from: number, to: number) {
+    const next = moved(current, from, to);
+    setPlacing(next);
     const answer = await orderCategories(
-      moved(
-        categories.map((one) => one.id),
-        categories.indexOf(current[index]),
-        categories.indexOf(current[target]),
-      ),
+      next.map((one) => one.id).concat(retired.map((one) => one.id)),
     );
+    setPlacing(null);
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "");
       return;
@@ -69,35 +68,35 @@ export function CategoryRows({
       {current.length === 0 ? (
         <Nothing>{nothingIn("categories", { apps: [] })}</Nothing>
       ) : (
-        <Rows>
-          {current.map((category, index) => (
-            <Row
-              aside={
-                <>
-                  <RowMove
-                    disabled={index === 0}
-                    icon={ArrowUp}
-                    label={`Move ${category.label} up`}
-                    onClick={() => reorder(index, -1)}
+        <Sortable
+          disabled={placing !== null}
+          ids={shown.map((one) => one.id)}
+          labels={(id) =>
+            shown.find((one) => one.id === id)?.label ?? "category"
+          }
+          onMove={(from, to) => void reorder(from, to)}
+        >
+          <Rows>
+            {shown.map((category) => (
+              <Row
+                aside={
+                  <SortableItemHandle
+                    disabled={placing !== null || shown.length < 2}
+                    label={`Move ${category.label}`}
                   />
-                  <RowMove
-                    disabled={index === current.length - 1}
-                    icon={ArrowDown}
-                    label={`Move ${category.label} down`}
-                    onClick={() => reorder(index, 1)}
-                  />
-                </>
-              }
-              facts={
-                <span className="font-mono text-label">{category.slug}</span>
-              }
-              key={category.id}
-              onOpen={() => onOpen(category)}
-              open={`Rename ${category.label}`}
-              title={category.label}
-            />
-          ))}
-        </Rows>
+                }
+                facts={
+                  <span className="font-mono text-label">{category.slug}</span>
+                }
+                key={category.id}
+                onOpen={() => onOpen(category)}
+                open={`Rename ${category.label}`}
+                sortableId={category.id}
+                title={category.label}
+              />
+            ))}
+          </Rows>
+        </Sortable>
       )}
 
       {retired.length > 0 ? (
