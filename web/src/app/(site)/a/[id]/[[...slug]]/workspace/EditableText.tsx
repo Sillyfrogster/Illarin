@@ -91,7 +91,6 @@ export function EditableText({
         }}
         onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
           if (event.key === "Escape") {
-            event.stopPropagation();
             byKeyboard.current = true;
             done();
           }

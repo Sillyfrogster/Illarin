@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Command, LockKeyhole } from "lucide-react";
+import { Command, LockKeyhole } from "lucide-react";
 import { Dock, DockAction, DockTool } from "@/components/workspace/Dock";
 import type { SaveState } from "./state";
 import { useWorkspace } from "./state";
@@ -28,6 +28,7 @@ export function WorkspaceDock({
     <Dock
       actions={
         <>
+          <DockAction onClick={workspace.stopEditing}>Stop editing</DockAction>
           <DockAction
             disabled={workspace.busy || !workspace.dirty}
             onClick={workspace.save}
@@ -48,11 +49,6 @@ export function WorkspaceDock({
       state={workspace.saveState}
       tools={
         <>
-          <DockTool
-            icon={BookOpen}
-            label="Preview"
-            onClick={workspace.stopEditing}
-          />
           <DockTool icon={Command} label="Go to content" onClick={onJump} />
           <DockTool
             active={workspace.pane?.kind === "access"}

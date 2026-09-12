@@ -341,6 +341,37 @@ export function AssetWorkspace({
     say: setMessage,
   });
 
+  const stopEditing = useCallback(() => {
+    lastCursor.current = cursor;
+    setEditing(false);
+    setCursor(null);
+    setPane(null);
+  }, [cursor]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        event.isComposing ||
+        unsealing
+      )
+        return;
+      if (
+        document.querySelector(
+          'dialog[open], [role="dialog"], [role="menu"], [role="listbox"]',
+        )
+      )
+        return;
+      event.preventDefault();
+      if (pane) setPane(null);
+      else stopEditing();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [editing, pane, stopEditing, unsealing]);
+
   const value: Workspace = {
     addableBlocks,
     arrangement,
@@ -366,12 +397,7 @@ export function AssetWorkspace({
       setSweep((count) => count + 1);
       setCursor(lastCursor.current);
     },
-    stopEditing: () => {
-      lastCursor.current = cursor;
-      setEditing(false);
-      setCursor(null);
-      setPane(null);
-    },
+    stopEditing,
     setCursor,
     chooseItem: (elementId, key) =>
       setChosenItems((current) => {
