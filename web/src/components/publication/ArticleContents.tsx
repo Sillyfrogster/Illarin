@@ -6,14 +6,20 @@ import { cn } from "@/lib/cn";
 import type { PostContentsEntry } from "@/lib/post-contents";
 import { useReadingMark } from "@/lib/use-reading-mark";
 
-export function ArticleContents({ entries }: { entries: PostContentsEntry[] }) {
+export function ArticleContents({
+  entries,
+  label = "In this article",
+}: {
+  entries: PostContentsEntry[];
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const here = useReadingMark(entries.map((entry) => entry.anchor));
 
   return (
     <nav aria-label="Contents" className="group" data-open={open}>
       <p aria-hidden="true" className="hidden text-meta font-medium lg:block">
-        In this article
+        {label}
       </p>
       <button
         aria-controls="article-contents"
@@ -22,7 +28,7 @@ export function ArticleContents({ entries }: { entries: PostContentsEntry[] }) {
         onClick={() => setOpen(!open)}
         type="button"
       >
-        In this article
+        {label}
         <ChevronDown
           aria-hidden="true"
           className="size-4 transition-transform duration-200 group-data-[open=true]:rotate-180 motion-reduce:transition-none"
