@@ -1,3 +1,4 @@
+import { ArrowUpRight, KeyRound, Plug, Send } from "lucide-react";
 import Link from "next/link";
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { Shell } from "@/components/layout/Shell";
@@ -31,43 +32,70 @@ export default async function SettingsPage({
     : query.discord;
 
   return (
-    <Shell className="pt-10 pb-chapter lg:pt-14">
+    <Shell className="max-w-[78rem] pt-12 pb-chapter lg:pt-14">
       <header className="max-w-[52ch]">
-        <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+        <h1 className="font-display text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
           Account settings
         </h1>
-        <p className="mt-4 font-prose text-lede text-mute">
+        <p className="mt-3 font-prose text-ui text-mute">
           Manage your sign-in methods and linked applications.
         </p>
       </header>
 
-      <div className="mt-10 grid gap-section lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-16">
-        <section
-          aria-labelledby="ways-in"
-          className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:self-start"
-        >
+      <div className="mt-9 grid gap-10 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
+        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:self-start">
           <PublicProfileCard />
-          <h2
-            className="mt-8 font-display text-section font-medium tracking-tight text-ink"
-            id="ways-in"
+          <nav
+            aria-label="Account settings"
+            className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-1"
           >
-            Sign-in methods
-          </h2>
-          <div className="mt-5">
-            <AccountSettings
-              discordNotice={discord ? DISCORD_NOTICES[discord] : undefined}
-            />
-          </div>
-        </section>
+            <a
+              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#ways-in"
+            >
+              <KeyRound aria-hidden="true" className="size-4 text-accent" />
+              Sign-in methods
+            </a>
+            <a
+              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#linked-applications"
+            >
+              <Plug aria-hidden="true" className="size-4 text-accent" />
+              Linked applications
+            </a>
+            <a
+              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#update-destinations"
+            >
+              <Send aria-hidden="true" className="size-4 text-accent" />
+              Update destinations
+            </a>
+          </nav>
+        </aside>
 
         <div className="min-w-0">
-          <LinkedInstances />
+          <section aria-labelledby="ways-in">
+            <h2
+              className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
+              id="ways-in"
+            >
+              Sign-in methods
+            </h2>
+            <div className="mt-5">
+              <AccountSettings
+                discordNotice={discord ? DISCORD_NOTICES[discord] : undefined}
+              />
+            </div>
+          </section>
+          <div className="mt-12 border-t border-rule pt-9 [&_#linked-applications]:scroll-mt-[calc(var(--header-height)+3rem)]">
+            <LinkedInstances />
+          </div>
           <section
             aria-labelledby="update-destinations"
             className="mt-12 border-t border-rule pt-8"
           >
             <h2
-              className="font-display text-section font-medium tracking-tight text-ink"
+              className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
               id="update-destinations"
             >
               Asset update destinations
@@ -79,6 +107,7 @@ export default async function SettingsPage({
             <Button asChild className="mt-5" variant="secondary">
               <Link href="/settings/update-destinations">
                 Manage destinations
+                <ArrowUpRight aria-hidden="true" />
               </Link>
             </Button>
           </section>

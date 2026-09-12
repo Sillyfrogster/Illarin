@@ -42,7 +42,7 @@ export function PublicProfileCard() {
   });
 
   return (
-    <section className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-plate bg-deep px-5 py-5">
+    <section className="flex flex-wrap items-center gap-x-4 gap-y-4 rounded-plate bg-inset px-5 py-5">
       <CreatorPortrait
         className="size-14"
         handle={profile.handle}
@@ -58,7 +58,7 @@ export function PublicProfileCard() {
             : "Only your handle is public so far."}
         </p>
       </div>
-      <Button asChild variant="secondary">
+      <Button asChild className="w-full justify-between" variant="secondary">
         <Link href="/settings/profile">
           Edit profile
           <ArrowRight aria-hidden="true" />
