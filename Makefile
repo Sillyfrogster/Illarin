@@ -2,6 +2,7 @@ GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
 SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 ACTIONLINT := go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+GOTESTSUM := go run gotest.tools/gotestsum@v1.13.0
 SHADCN := bunx --bun shadcn@4.21.0
 COMPONENT ?=
 WEB_PORT ?= 3000
@@ -11,8 +12,13 @@ SERVICE ?=
 OUTPUT ?= illarin-release.tar.gz
 PROD_ENV ?= $(or $(ILLARIN_ENV_FILE),/etc/illarin/production.env)
 NGINX_IMAGE ?= nginx:alpine
-# Serialize tests because packages share one database.
-GO_TEST_FLAGS := -p 1
+TEST_JSON ?=
+TEST_TIMEOUT ?= 4m
+# The test Postgres keeps its data in memory and skips durability, since every test database is thrown away.
+TEST_POSTGRES := illarin-test-postgres
+TEST_POSTGRES_IMAGE := postgres:18.6-alpine3.23
+TEST_POSTGRES_PORT ?= 55432
+TEST_POSTGRES_URL := postgres://postgres:postgres@127.0.0.1:$(TEST_POSTGRES_PORT)/illarin_test?sslmode=disable
 NGINX := docker run --rm --network host -v "$(CURDIR):/work:ro" -w /work $(NGINX_IMAGE) \
 	nginx -p /work/ -c nginx/local.conf
 
@@ -36,7 +42,7 @@ setup: ## Get a fresh clone ready to run
 		sed -i "s/^PUBLICATION_SECRET_KEY=$$/PUBLICATION_SECRET_KEY=$$publication_key/" api/.env; \
 		echo "Wrote api/.env from the example. Check the database URLs in it."; }
 	$(MAKE) web-install
-	$(MAKE) migrate migrate-test
+	$(MAKE) migrate
 
 .PHONY: production-setup
 production-setup: ## Walk through the reference production integrations
@@ -125,20 +131,47 @@ release-package: ## Package the production control files for a host
 
 # Checking
 
-.PHONY: check
-check: fmt-check vet test test-web lint openapi-check workflow-check ## Everything CI would run
+.PHONY: check check-go check-web
+check: check-go check-web workflow-check ## Everything CI runs
 
-.PHONY: test
-test: need-test-db ## Run the Go tests
-	cd api && go test $(GO_TEST_FLAGS) $(TEST)
+check-go: fmt-check vet test ## Check the Go code and run its tests
+
+check-web: test-web lint openapi-check ## Check the site and run its tests
+
+.PHONY: test test-all test-postgres test-postgres-stop
+test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/http/...
+	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
+		$(if $(TEST_JSON),--jsonfile "$(TEST_JSON)") -- -short -timeout $(TEST_TIMEOUT) $(TEST)
+
+test-all: test-postgres ## Run every Go test, including the ones that read the local v1 dump
+	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
+		-- -timeout 30m $(TEST)
+
+test-postgres: ## Start the in-memory Postgres the Go tests run against
+	@docker container inspect -f '{{.State.Running}}' $(TEST_POSTGRES) 2>/dev/null | grep -qx true || { \
+		docker rm -f $(TEST_POSTGRES) >/dev/null 2>&1; \
+		docker run --detach --name $(TEST_POSTGRES) --tmpfs /var/lib/postgresql \
+			--publish 127.0.0.1:$(TEST_POSTGRES_PORT):5432 \
+			--env POSTGRES_PASSWORD=postgres --env POSTGRES_DB=illarin_test \
+			$(TEST_POSTGRES_IMAGE) -c fsync=off -c synchronous_commit=off \
+			-c full_page_writes=off -c max_connections=200 >/dev/null; }
+	@for attempt in $$(seq 60); do \
+		docker exec $(TEST_POSTGRES) pg_isready --quiet --host 127.0.0.1 --username postgres && exit 0; \
+		sleep 0.5; \
+	done; \
+	echo "The test Postgres did not become ready:"; docker logs --tail 20 $(TEST_POSTGRES); exit 1
+
+test-postgres-stop: ## Remove the in-memory test Postgres and every database in it
+	docker rm -f $(TEST_POSTGRES)
 
 .PHONY: test-web
 test-web: ## Run the site tests
 	cd web && bun test
 
 .PHONY: cover
-cover: need-test-db ## Report Go test coverage per package
-	cd api && go test $(GO_TEST_FLAGS) -cover ./...
+cover: test-postgres ## Report Go test coverage per package
+	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
+		-- -short -cover ./...
 
 .PHONY: vet
 vet: ## Report suspicious Go code
@@ -194,10 +227,6 @@ production-stack-test: images ## Run an isolated smoke test against the producti
 migrate: need-db ## Apply migrations to the dev database
 	cd api && $(GOOSE) -dir migrations postgres "$(DATABASE_URL)" up
 
-.PHONY: migrate-test
-migrate-test: need-test-db ## Apply migrations to the test database
-	cd api && $(GOOSE) -dir migrations postgres "$(TEST_DATABASE_URL)" up
-
 .PHONY: migrate-down
 migrate-down: need-db ## Roll the dev database back one migration
 	cd api && $(GOOSE) -dir migrations postgres "$(DATABASE_URL)" down
@@ -251,9 +280,6 @@ direction-fixtures: ## Draw the synthetic art the visual direction prototype rea
 
 # Guards
 
-.PHONY: need-db need-test-db
+.PHONY: need-db
 need-db:
 	@test -n "$(DATABASE_URL)" || { echo "DATABASE_URL is not set. Run make setup."; exit 1; }
-
-need-test-db:
-	@test -n "$(TEST_DATABASE_URL)" || { echo "TEST_DATABASE_URL is not set. Run make setup."; exit 1; }
