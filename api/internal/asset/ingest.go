@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -96,6 +99,7 @@ type preparedIngest struct {
 	Remainder     []format.Remainder
 	Protected     format.ProtectedImport
 	Media         []preparedMedia
+	Vault         []VaultPicture
 	CreatedAt     *time.Time
 	MediaType     string
 }
@@ -105,6 +109,7 @@ type preparedImport struct {
 	Blocks    []block.Block
 	Elements  []block.Element
 	Media     []preparedMedia
+	Vault     []VaultPicture
 	MediaType string
 }
 
@@ -137,6 +142,12 @@ func (s *Service) readImport(
 			"%s reads payloads up to %d bytes; this payload has %d bytes%s",
 			resolution.Module.ID(), declaration.Limits.PayloadBytes, payloadBytes,
 			heaviestNamespace(payload, declaration),
+		))
+	}
+
+	if files := len(inspected.ZIPEntries); declaration.Limits.ArchiveFiles > 0 && files > declaration.Limits.ArchiveFiles {
+		return preparedImport{}, format.LimitExceeded(fmt.Errorf(
+			"the archive holds %d files, and one may hold %d", files, declaration.Limits.ArchiveFiles,
 		))
 	}
 
@@ -212,6 +223,20 @@ func heaviestNamespace(payload probe.Payload, declaration format.Declaration) st
 	return fmt.Sprintf(". The largest part of it is the %s data, at %d bytes", heaviest, size)
 }
 
+// refusal words why a file was refused as the sentence its creator reads.
+func refusal(err error) string {
+	message := err.Error()
+	if _, cause, ok := format.Explain(err); ok {
+		message = cause
+	}
+	first, size := utf8.DecodeRuneInString(message)
+	message = string(unicode.ToUpper(first)) + message[size:]
+	if !strings.HasSuffix(message, ".") {
+		message += "."
+	}
+	return message
+}
+
 func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	job, ok, err := s.leaseNextIngest(ctx)
 	if err != nil || !ok {
@@ -222,6 +247,10 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		ctx, s.store, job.BlobID, job.ByteSize, job.Filename, s.ingest.ProbeLimits,
 	)
 	if err != nil {
+		if violation := (probe.SafetyViolation{}); errors.As(err, &violation) {
+			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation,
+				"The file breaks an archive safety rule: "+violation.Rule+".")
+		}
 		if errors.Is(err, probe.ErrSafetyViolation) {
 			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation)
 		}
@@ -249,7 +278,12 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if classified, ok := format.FailureOf(err); ok {
 			reason = classified
 		}
-		return true, s.finishIngestFailure(ctx, job, reason, err.Error())
+		return true, s.finishIngestFailure(ctx, job, reason, refusal(err))
+	}
+	if job.Target == nil {
+		if read, err = s.seedFromReadme(ctx, inspected, read); err != nil {
+			return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
+		}
 	}
 
 	prepared, err := prepareIngest(job, read.Parsed)
@@ -262,6 +296,7 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	prepared.Blocks = read.Blocks
 	prepared.SuppliedRoles = suppliedRoles(read.Elements)
 	prepared.Media = read.Media
+	prepared.Vault = read.Vault
 	prepared.MediaType = read.MediaType
 	finish := s.finalizeIngest
 	if job.Target != nil {
@@ -664,6 +699,9 @@ func (s *Service) writeIngestResultWithDecisions(
 	if err := writeRevision(ctx, tx, assetID, 1, job, prepared); err != nil {
 		return uuid.Nil, err
 	}
+	if err := insertVaultPictures(ctx, tx, assetID, prepared.Vault); err != nil {
+		return uuid.Nil, err
+	}
 	return assetID, s.writeProjections(ctx, tx, assetID)
 }
 
@@ -728,7 +766,7 @@ func writeRevision(
 	revisionID := uuid.New()
 	if err := insertRevision(ctx, tx, revisionID, assetID, revisionRow{
 		Revision: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
-		Format: prepared.Format,
+		Format: prepared.Format, Identifier: prepared.Header.Identifier,
 	}); err != nil {
 		return err
 	}

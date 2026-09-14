@@ -41,8 +41,8 @@ export function EditableElementSection({
 }) {
   const tools = <ElementTools block={block} element={element} />;
 
-  if (!writesInPlace(element)) {
-    return (
+  if (element.locked || !writesInPlace(element)) {
+    const body = (
       <ElementBody
         blockElements={block.elements.length}
         blockTitle={block.title}
@@ -52,6 +52,15 @@ export function EditableElementSection({
         markEmpty={markEmpty}
         tools={tools}
       />
+    );
+    if (!element.locked) return body;
+    return (
+      <div className="flex min-w-0 flex-col gap-2">
+        {body}
+        <p className="text-meta text-mute">
+          Read from the uploaded archive. Upload a new archive to change it.
+        </p>
+      </div>
     );
   }
 

@@ -68,6 +68,18 @@ function Block({ block }: { block: RichBlock }) {
     );
   }
 
+  if (block.kind === "code") {
+    return (
+      <pre className="overflow-x-auto rounded-control bg-deep px-4 py-3 font-mono text-[0.86em] leading-relaxed text-ink/90">
+        {block.text}
+      </pre>
+    );
+  }
+
+  if (block.kind === "table") {
+    return <Table block={block} />;
+  }
+
   if (block.kind === "quote") {
     return (
       <blockquote className="border-rule border-l-2 pl-[1em] text-mute italic">
@@ -98,6 +110,49 @@ function Block({ block }: { block: RichBlock }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+const CELL = "px-3 py-2 align-top first:pl-0 last:pr-0";
+
+function Table({ block }: { block: Extract<RichBlock, { kind: "table" }> }) {
+  return (
+    <div className="max-w-full overflow-x-auto">
+      <table className="w-full border-collapse text-left">
+        {block.head ? (
+          <thead>
+            <tr className="border-rule border-b">
+              {block.head.map((cell, index) => (
+                <th
+                  className={cn(CELL, "font-semibold text-ink")}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Cells follow the writing and hold no local state.
+                  key={index}
+                  scope="col"
+                >
+                  <Inline nodes={cell} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+        ) : null}
+        <tbody>
+          {block.rows.map((row, index) => (
+            <tr
+              className="border-rule/60 border-b last:border-b-0"
+              // biome-ignore lint/suspicious/noArrayIndexKey: Rows follow the writing and hold no local state.
+              key={index}
+            >
+              {row.map((cell, at) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: Cells follow the writing and hold no local state.
+                <td className={CELL} key={at}>
+                  <Inline nodes={cell} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

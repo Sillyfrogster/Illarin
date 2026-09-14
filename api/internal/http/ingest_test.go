@@ -896,16 +896,17 @@ func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
 		name       string
 		file       func(t *testing.T) []byte
 		wantReason string
+		wantRule   string
 	}{
 		{"traversal", func(t *testing.T) []byte {
 			return makeZIP(t, &zip.FileHeader{Name: "../escape", Method: zip.Store})
-		}, "safety_violation"},
+		}, "safety_violation", `"../escape" leads outside the archive`},
 		{"absolute path", func(t *testing.T) []byte {
 			return makeZIP(t, &zip.FileHeader{Name: "/escape", Method: zip.Store})
-		}, "safety_violation"},
-		{"symlink", func(t *testing.T) []byte { return makeZIP(t, symlink) }, "safety_violation"},
-		{"encrypted", encryptedZIP, "safety_violation"},
-		{"malformed", func(*testing.T) []byte { return []byte("PK\x03\x04broken") }, "malformed_input"},
+		}, "safety_violation", `"/escape" leads outside the archive`},
+		{"symlink", func(t *testing.T) []byte { return makeZIP(t, symlink) }, "safety_violation", `"theme.json" is a symbolic link`},
+		{"encrypted", encryptedZIP, "safety_violation", "is encrypted"},
+		{"malformed", func(*testing.T) []byte { return []byte("PK\x03\x04broken") }, "malformed_input", ""},
 	}
 
 	for _, test := range cases {
@@ -922,7 +923,8 @@ func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
 			))
 			var operation struct {
 				Failure *struct {
-					Reason string `json:"reason"`
+					Reason  string `json:"reason"`
+					Message string `json:"message"`
 				} `json:"failure"`
 			}
 			if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
@@ -930,6 +932,9 @@ func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
 			}
 			if operation.Failure == nil || operation.Failure.Reason != test.wantReason {
 				t.Fatalf("failure = %#v, want %s", operation.Failure, test.wantReason)
+			}
+			if !strings.Contains(operation.Failure.Message, test.wantRule) {
+				t.Errorf("refusal = %q, want it to name the rule %q", operation.Failure.Message, test.wantRule)
 			}
 		})
 	}

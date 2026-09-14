@@ -1159,8 +1159,9 @@ paths:
       operationId: collectDeliveries
       description: >-
         Acknowledge finished deliveries and wait, briefly, for more. Illarin
-        holds the request for 25 to 30 seconds and answers 204 when the wait
-        ends empty. A second request supersedes the first rather than both
+        holds the request for 25 to 30 seconds and answers as soon as it has
+        work or a withheld notice for this instance, or 204 when the wait ends
+        with neither. A second request supersedes the first rather than both
         hanging. This is a durable queue read and never carries an authorization
         result.
       security:
@@ -1173,13 +1174,13 @@ paths:
               $ref: '#/components/schemas/CollectDeliveries'
       responses:
         '200':
-          description: The work released to this instance
+          description: The work released to this instance and any withheld notices
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeliveryWorkList'
         '204':
-          description: The wait ended with nothing queued
+          description: The wait ended with nothing queued and nothing withheld to report
         '400':
           description: The acknowledgement list is not valid
         '401':
@@ -1232,10 +1233,11 @@ paths:
     post:
       operationId: syncLibrary
       description: >-
-        Report what this instance has installed. A snapshot replaces the whole
-        mirror for this instance; an incremental report adds, updates and
-        removes what it names. Assets are named by immutable id, never by
-        address.
+        Report what this instance has installed and the version of the
+        application it runs. A snapshot replaces the whole mirror for this
+        instance; an incremental report adds, updates and removes what it names.
+        Assets are named by immutable id, never by address. The answer carries
+        any withheld notice waiting for this instance.
       security:
         - instanceToken: []
       requestBody:
@@ -1270,7 +1272,9 @@ paths:
       operationId: getAssetInstances
       description: >-
         Where the signed-in account could send this asset, what is already
-        waiting, and what each of their instances reports having installed.
+        waiting or was delivered, and what each of their instances reports
+        having installed. An extension can be sent only to an instance that
+        declares its app's extension-install capability.
       security:
         - sessionCookie: []
       parameters:
@@ -1332,8 +1336,9 @@ paths:
           description: No asset that can be sent, or no live instance of yours, has that id
         '409':
           description: >-
-            That instance already holds as many waiting deliveries as it may, or
-            accepts no format this asset can be written in
+            That instance already holds as many waiting deliveries as it may,
+            accepts no format this asset can be written in, or does not declare
+            the capability an extension needs
         '429':
           description: Too many deliveries were queued
           headers:
@@ -3546,6 +3551,7 @@ paths:
               - preset
               - theme
               - pack
+              - extension
         - name: platform
           in: query
           description: >-
@@ -4134,6 +4140,135 @@ paths:
           description: The signed-in account has not verified its email
         '404':
           description: The asset does not belong to the creator
+        '409':
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
+  /v1/assets/{id}/vault:
+    get:
+      operationId: listVaultPictures
+      description: >-
+        The pictures an uploaded README showed, waiting for the creator to place
+        each one on the page or let it go. A picture the archive held has a copy
+        ready; one shown from another site is listed by address, since Illarin
+        never fetches, and needs the creator's own copy.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The waiting pictures, in the order the README showed them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultPictureList'
+        '401':
+          description: No account is signed in
+        '404':
+          description: The asset does not belong to the creator
+  /v1/assets/{id}/vault/{pictureId}:
+    delete:
+      operationId: discardVaultPicture
+      description: Let a waiting picture go, along with the copy the archive gave it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pictureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The picture is gone from the vault
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No such picture waits in this creator's vault
+        '409':
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
+  /v1/assets/{id}/vault/{pictureId}/place:
+    post:
+      operationId: placeVaultPicture
+      description: >-
+        Put a waiting picture into the image set of the block its README section
+        became, giving the block one when it has none. A picture from another
+        site needs the id of a gallery picture the creator uploaded.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: '#/components/parameters/WorkingCopyVersion'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pictureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceVaultPictureRequest'
+      responses:
+        '200':
+          description: The whole page with the picture placed
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetBlock'
+        '400':
+          description: The picture needs an uploaded copy, or its block cannot hold it
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No such picture waits in this creator's vault
         '409':
           description: The working copy changed or the asset is frozen
           content:
@@ -5403,7 +5538,10 @@ components:
       pattern: ^[a-z][a-z0-9.-]*:[a-z][a-z0-9._-]*$
       description: >-
         A namespaced interoperability claim. It never grants permission and
-        unknown values have no effect.
+        unknown values have no effect. Illarin recognises
+        chat.lumiverse:extension-install and app.sillytavern:extension-install,
+        which an app declares once it installs the extensions Illarin lists for
+        it.
     InstanceCapabilities:
       type: array
       maxItems: 32
@@ -7159,6 +7297,7 @@ components:
         - slot
         - label
         - pinned
+        - locked
         - isEmpty
         - facts
         - content
@@ -7178,6 +7317,11 @@ components:
         pinned:
           type: boolean
           description: A pinned element can be neither removed nor moved out of its block.
+        locked:
+          type: boolean
+          description: >-
+            A locked element is read from the uploaded file. It can be moved and
+            hidden with its block, and only a new upload changes it.
         display:
           type: string
           enum:
@@ -7975,6 +8119,8 @@ components:
         - createdAt
         - blocks
         - media
+        - extensionDependencies
+        - installedAppVersions
         - preview
         - visibility
       properties:
@@ -8000,6 +8146,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         name:
           type: string
         blurb:
@@ -8013,6 +8160,30 @@ components:
             $ref: '#/components/schemas/AssetTag'
         creator:
           type: string
+        identifier:
+          type: string
+          description: >-
+            The identifier the uploaded file declares for itself, such as an
+            extension's. Illarin does not reserve it, so two assets may share
+            one.
+        extensionDependencies:
+          type: array
+          description: >-
+            The extensions this one names as dependencies, in the order its
+            manifest lists them, each with the listed Illarin extensions whose
+            identifier matches. Empty for every other kind.
+          items:
+            $ref: '#/components/schemas/ExtensionDependency'
+        installedAppVersions:
+          type: array
+          description: >-
+            The versions of its app an extension is installed on, as linked
+            instances declaring the app's extension-install capability report
+            them in library:sync. A version is listed only once at least five
+            installations report it, so no single installation can be picked
+            out. Empty for every other kind.
+          items:
+            type: string
         isNsfw:
           description: >-
             Null while a draft has not been asked the adult content question.
@@ -8345,6 +8516,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         deletedAt:
           type: string
           format: date-time
@@ -8502,6 +8674,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         isNsfw:
           description: >-
             Null on a draft whose creator has not answered the adult content
@@ -8767,6 +8940,72 @@ components:
       anyOf:
         - $ref: '#/components/schemas/CandidateConflict'
         - $ref: '#/components/schemas/SealedExposureRefusal'
+    VaultPictureList:
+      type: object
+      required:
+        - pictures
+      properties:
+        pictures:
+          type: array
+          items:
+            $ref: '#/components/schemas/VaultPicture'
+    VaultPicture:
+      type: object
+      required:
+        - id
+        - address
+        - name
+        - section
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          description: >-
+            Where the README showed the picture from, an archive entry or
+            another site
+          type: string
+        name:
+          description: The words the README wrote for the picture
+          type: string
+        section:
+          description: >-
+            The README section the picture came from, which names its block when
+            none stands
+          type: string
+        blockId:
+          description: The block the picture's section became, when that block still stands
+          type: string
+          format: uuid
+        media:
+          description: >-
+            The copy the archive held, absent for a picture shown from another
+            site
+          type: object
+          required:
+            - id
+            - thumbUrl
+            - width
+            - height
+          properties:
+            id:
+              type: string
+              format: uuid
+            thumbUrl:
+              type: string
+            width:
+              type: integer
+            height:
+              type: integer
+    PlaceVaultPictureRequest:
+      type: object
+      properties:
+        mediaId:
+          description: >-
+            A gallery picture the creator uploaded to stand in for one shown
+            from another site
+          type: string
+          format: uuid
     SealedExposureRefusal:
       type: object
       required:
@@ -9361,7 +9600,9 @@ components:
           description: >-
             The deliveries this instance has durably installed since its last
             request. Delivery is at least once, so treat the ids as stable and
-            acknowledge only after the work is safely stored.
+            acknowledge only after the work is safely stored. An acknowledged
+            delivery is recorded as delivered, which the asset page shows the
+            owner.
           items:
             type: string
             format: uuid
@@ -9439,16 +9680,43 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryArtifact'
+    WithheldNotice:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - name
+        - withheldAt
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        withheldAt:
+          type: string
+          format: date-time
+          description: When Illarin withheld it.
     DeliveryWorkList:
       type: object
       additionalProperties: false
       required:
         - deliveries
+        - withheld
       properties:
         deliveries:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryWork'
+        withheld:
+          type: array
+          description: >-
+            Extensions this instance reports installed that were withheld since
+            it was last told. Each withhold is told once, on a delivery wait or
+            a library report, whichever comes first. A wait with a notice and no
+            work answers 200 with an empty list of deliveries.
+          items:
+            $ref: '#/components/schemas/WithheldNotice'
     LibraryEntry:
       type: object
       additionalProperties: false
@@ -9477,6 +9745,17 @@ components:
           description: >-
             True to replace the whole mirror for this instance. A snapshot
             carries no removals, because anything absent from it is removed.
+        applicationVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: >-
+            The version of the application this instance runs, replaced by each
+            report. An extension page lists the versions of its app it is
+            installed on once five installations that declare the app's
+            extension-install capability report the same one. Leave it out and
+            this instance counts under the applicationVersion in its
+            declaration, or under no version if the declaration has none.
         entries:
           type: array
           maxItems: 2000
@@ -9496,6 +9775,7 @@ components:
         - accepted
         - removed
         - ignored
+        - withheld
       properties:
         accepted:
           type: integer
@@ -9504,6 +9784,15 @@ components:
         ignored:
           type: integer
           description: Entries naming an asset Illarin cannot offer.
+        withheld:
+          type: array
+          description: >-
+            Extensions this instance reports installed that were withheld since
+            it was last told. Each withhold is told once, on a library report or
+            a delivery wait, whichever comes first. Show each one to the owner,
+            who decides whether to disable it.
+          items:
+            $ref: '#/components/schemas/WithheldNotice'
     QueuedDelivery:
       type: object
       additionalProperties: false
@@ -9513,7 +9802,9 @@ components:
         - assetId
         - state
         - queuedAt
+        - settledAt
         - expiresAt
+        - updatesInstall
       properties:
         id:
           type: string
@@ -9529,7 +9820,12 @@ components:
           enum:
             - queued
             - released
+            - delivered
             - failed
+          description: >-
+            Queued until the instance collects it, released while the instance
+            holds it, delivered once the instance acknowledged installing it,
+            and failed when it stopped for the reason given.
         reason:
           type:
             - string
@@ -9543,9 +9839,20 @@ components:
         queuedAt:
           type: string
           format: date-time
+        settledAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: When the delivery was acknowledged or stopped.
         expiresAt:
           type: string
           format: date-time
+        updatesInstall:
+          type: boolean
+          description: >-
+            True when the instance already reported the asset installed at the
+            time this delivery was queued.
     AssetInstance:
       type: object
       additionalProperties: false
@@ -10411,6 +10718,37 @@ components:
           anyOf:
             - $ref: '#/components/schemas/PublicationApp'
             - type: 'null'
+    DependencyAsset:
+      type: object
+      required:
+        - id
+        - name
+        - creator
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        creator:
+          type: string
+    ExtensionDependency:
+      type: object
+      required:
+        - name
+        - assets
+      properties:
+        name:
+          type: string
+          description: The dependency exactly as the manifest names it.
+        assets:
+          type: array
+          description: >-
+            Listed extensions for the same app whose identifier matches the
+            name. Empty when none does, such as for an extension built into the
+            app.
+          items:
+            $ref: '#/components/schemas/DependencyAsset'
     AppTarget:
       type: object
       required:
@@ -10569,6 +10907,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         linkedInstallOnly:
           type: boolean
           description: >-

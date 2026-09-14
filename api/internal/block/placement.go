@@ -2,6 +2,7 @@ package block
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +20,7 @@ func Place(kind string, tagged []Element) ([]Block, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(elements) == 0 && !definition.Required {
+		if len(elements) == 0 && (!definition.Required || definition.readFromUpload()) {
 			continue
 		}
 		layout, ok := definition.layoutFor(len(elements))
@@ -60,7 +61,7 @@ func (d Definition) fill(tagged []Element, placed []bool) ([]Element, error) {
 			return nil, err
 		}
 		if found < 0 {
-			if !defined.Pinned {
+			if !defined.Pinned || defined.Locked {
 				continue
 			}
 			content, err := defined.Type.Empty()
@@ -107,6 +108,13 @@ func (d Definition) take(defined DefinedElement, tagged []Element, placed []bool
 	return found, nil
 }
 
+// readFromUpload says whether every element of the block comes only from an uploaded file.
+func (d Definition) readFromUpload() bool {
+	return len(d.Elements) > 0 && !slices.ContainsFunc(d.Elements, func(defined DefinedElement) bool {
+		return !defined.Locked
+	})
+}
+
 func (b Block) Pinned(role Role, kind string) bool {
 	definition, ok := b.Definition.Definition(kind)
 	if !ok {
@@ -114,4 +122,14 @@ func (b Block) Pinned(role Role, kind string) bool {
 	}
 	defined, ok := definition.element(role)
 	return ok && defined.Pinned
+}
+
+// Locked says whether the element is read from an upload and never edited on Illarin.
+func (b Block) Locked(role Role, kind string) bool {
+	definition, ok := b.Definition.Definition(kind)
+	if !ok {
+		return false
+	}
+	defined, ok := definition.element(role)
+	return ok && defined.Locked
 }

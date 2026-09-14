@@ -1,6 +1,6 @@
 "use client";
 
-import { Command, LockKeyhole } from "lucide-react";
+import { Command, Images, LockKeyhole } from "lucide-react";
 import { Dock, DockAction, DockTool } from "@/components/workspace/Dock";
 import type { SaveState } from "./state";
 import { useWorkspace } from "./state";
@@ -17,10 +17,12 @@ export function WorkspaceDock({
   detail,
   onJump,
   publicationLabel,
+  waiting = 0,
 }: {
   detail: string;
   onJump: () => void;
   publicationLabel: string;
+  waiting?: number;
 }) {
   const workspace = useWorkspace();
 
@@ -50,6 +52,15 @@ export function WorkspaceDock({
       tools={
         <>
           <DockTool icon={Command} label="Go to content" onClick={onJump} />
+          {waiting > 0 ? (
+            <DockTool
+              active={workspace.pane?.kind === "vault"}
+              count={waiting}
+              icon={Images}
+              label={`${waiting} ${waiting === 1 ? "picture" : "pictures"} waiting from the README`}
+              onClick={() => workspace.openPane({ kind: "vault" })}
+            />
+          ) : null}
           <DockTool
             active={workspace.pane?.kind === "access"}
             icon={LockKeyhole}

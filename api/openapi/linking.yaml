@@ -509,7 +509,9 @@ components:
       pattern: ^[a-z][a-z0-9.-]*:[a-z][a-z0-9._-]*$
       description: >-
         A namespaced interoperability claim. It never grants permission and
-        unknown values have no effect.
+        unknown values have no effect. Illarin recognises
+        chat.lumiverse:extension-install and app.sillytavern:extension-install, which
+        an app declares once it installs the extensions Illarin lists for it.
     InstanceCapabilities:
       type: array
       maxItems: 32

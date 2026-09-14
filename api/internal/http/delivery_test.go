@@ -42,17 +42,20 @@ type deliveryWork struct {
 }
 
 type deliveryWorkList struct {
-	Deliveries []deliveryWork `json:"deliveries"`
+	Deliveries []deliveryWork   `json:"deliveries"`
+	Withheld   []withheldNotice `json:"withheld"`
 }
 
 type queuedDelivery struct {
-	ID         string    `json:"id"`
-	InstanceID string    `json:"instanceId"`
-	AssetID    string    `json:"assetId"`
-	State      string    `json:"state"`
-	Reason     *string   `json:"reason"`
-	QueuedAt   time.Time `json:"queuedAt"`
-	ExpiresAt  time.Time `json:"expiresAt"`
+	ID             string     `json:"id"`
+	InstanceID     string     `json:"instanceId"`
+	AssetID        string     `json:"assetId"`
+	State          string     `json:"state"`
+	Reason         *string    `json:"reason"`
+	QueuedAt       time.Time  `json:"queuedAt"`
+	SettledAt      *time.Time `json:"settledAt"`
+	ExpiresAt      time.Time  `json:"expiresAt"`
+	UpdatesInstall bool       `json:"updatesInstall"`
 }
 
 type assetInstance struct {
@@ -73,9 +76,10 @@ type assetInstanceList struct {
 }
 
 type libraryResult struct {
-	Accepted int `json:"accepted"`
-	Removed  int `json:"removed"`
-	Ignored  int `json:"ignored"`
+	Accepted int              `json:"accepted"`
+	Removed  int              `json:"removed"`
+	Ignored  int              `json:"ignored"`
+	Withheld []withheldNotice `json:"withheld"`
 }
 
 const receiveScope = "asset:receive"
@@ -269,7 +273,7 @@ func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 	}
 }
 
-func TestAnAcknowledgedDeliveryLeavesTheQueue(t *testing.T) {
+func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *testing.T) {
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -282,9 +286,24 @@ func TestAnAcknowledgedDeliveryLeavesTheQueue(t *testing.T) {
 	if again.Code != http.StatusNoContent {
 		t.Fatalf("wait after acknowledgement status = %d, want 204: %s", again.Code, again.Body.String())
 	}
-	state := assetInstances(t, router, session, assetID)
-	if state.Items[0].Delivery != nil {
-		t.Fatalf("delivery = %+v, want none once acknowledged", state.Items[0].Delivery)
+	delivered := assetInstances(t, router, session, assetID).Items[0].Delivery
+	if delivered == nil || delivered.State != "delivered" || delivered.SettledAt == nil || delivered.UpdatesInstall {
+		t.Fatalf("delivery = %+v, want it on record as delivered", delivered)
+	}
+	if fetched := fetchSigned(t, router, work.Artifacts[0].URL); fetched.Code != http.StatusNotFound {
+		t.Fatalf("the export address still answers %d after acknowledgement", fetched.Code)
+	}
+
+	resent := decodeResponse[queuedDelivery](t, sendToInstance(t, router, session, assetID, grant.Instance.ID))
+	if resent.ID == work.ID || resent.State != "queued" {
+		t.Fatalf("sending again = %+v, want a new queued delivery", resent)
+	}
+	dismissed := send(t, router, browserRequest(t, http.MethodDelete, "/v1/deliveries/"+resent.ID, nil, session))
+	if dismissed.Code != http.StatusNoContent {
+		t.Fatalf("dismiss status = %d, want 204: %s", dismissed.Code, dismissed.Body.String())
+	}
+	if after := assetInstances(t, router, session, assetID).Items[0].Delivery; after == nil || after.ID != work.ID {
+		t.Fatalf("delivery = %+v, want the delivered record back once the new one is dismissed", after)
 	}
 }
 
@@ -420,14 +439,19 @@ func rowCount(t *testing.T, pool *pgxpool.Pool, query string, args ...any) int {
 
 func declareTargets(t *testing.T, r *gin.Engine, token string, targets []string) {
 	t.Helper()
+	declare(t, r, token, []string{}, targets)
+}
+
+func declare(t *testing.T, r *gin.Engine, token string, capabilities, targets []string) {
+	t.Helper()
 	rec := send(t, r, asInstance(t, http.MethodPut, "/v1/instances/me", token, map[string]any{
 		"applicationVersion": "1.0.0",
 		"protocolVersion":    1,
-		"capabilities":       []string{},
+		"capabilities":       capabilities,
 		"acceptedTargets":    targets,
 	}))
 	if rec.Code != http.StatusOK {
-		t.Fatalf("declare targets status = %d, want 200: %s", rec.Code, rec.Body.String())
+		t.Fatalf("declare status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
 }
 

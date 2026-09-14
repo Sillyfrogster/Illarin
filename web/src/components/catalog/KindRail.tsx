@@ -15,6 +15,7 @@ const KINDS: { key: string; kind?: BrowseKind; label: string }[] = [
   { key: "preset", kind: "preset", label: "Presets" },
   { key: "theme", kind: "theme", label: "Themes" },
   { key: "pack", kind: "pack", label: "Packs" },
+  { key: "extension", kind: "extension", label: "Extensions" },
 ];
 
 export function KindRail({

@@ -7,6 +7,7 @@ import { type AssetDetail, fetchAsset } from "@/lib/api/query";
 import { assetMetadata } from "@/lib/asset-metadata";
 import { assetHoldsNothing } from "@/lib/asset-page-content";
 import { assetRedirect, isAssetId } from "@/lib/asset-url";
+import { ExtensionDependenciesProvider } from "@/lib/extension-dependencies";
 import { KIND_LABELS } from "@/lib/kinds";
 import { readableForMetadata } from "@/lib/site-metadata";
 import { WorkingCopyProvider } from "@/lib/working-copy";
@@ -68,23 +69,27 @@ export default async function AssetPage({
         isOwner={asset.isOwner}
         unpublishedChanges={Boolean(asset.unpublishedChanges)}
       >
-        <div className="relative isolate overflow-x-clip pb-chapter">
-          <article>
-            <AssetHeader
-              asset={asset}
-              holdsNothing={assetHoldsNothing(asset.blocks)}
-              kind={kind}
-              sharedDate={sharedDate}
-              shellClassName={shellClasses}
-            />
-            <AssetBlocks
-              images={asset.media}
-              isOwner={asset.isOwner}
-              kind={asset.kind}
-              shellClassName={shellClasses}
-            />
-          </article>
-        </div>
+        <ExtensionDependenciesProvider
+          dependencies={asset.extensionDependencies}
+        >
+          <div className="relative isolate overflow-x-clip pb-chapter">
+            <article>
+              <AssetHeader
+                asset={asset}
+                holdsNothing={assetHoldsNothing(asset.blocks)}
+                kind={kind}
+                sharedDate={sharedDate}
+                shellClassName={shellClasses}
+              />
+              <AssetBlocks
+                images={asset.media}
+                isOwner={asset.isOwner}
+                kind={asset.kind}
+                shellClassName={shellClasses}
+              />
+            </article>
+          </div>
+        </ExtensionDependenciesProvider>
         <WorkspaceSurfaces
           creator={asset.creator}
           discovery={asset.discovery}

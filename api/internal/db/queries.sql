@@ -20,8 +20,8 @@ select id, definition, title, position, hidden, layout, width, elements
 
 -- name: InsertRevision :exec
 insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format)
-values ($1, $2, $3, $4, $5, $6);
+  (id, asset_id, revision, blob_id, media_type, format, identifier)
+values ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: SetCurrentRevision :exec
 update assets set current_revision_id = $2, updated_at = now() where id = $1;
@@ -217,6 +217,7 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        a.lifecycle, a.created_at,
        revision.format as original_format, revision.media_type as original_media_type,
        revision.created_at as original_arrived_at,
+       coalesce(revision.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
        a.withheld_reason, a.withheld_at, actor.username as withheld_by
@@ -284,12 +285,21 @@ select withheld_at, lifecycle
   from assets
  where id = $1 and owner_id = $2 and deleted_at is null;
 
--- name: WithholdAsset :execrows
-update assets
-   set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
-       updated_at = now()
- where id = $1 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null;
+-- name: WithholdAsset :one
+with withheld as (
+    update assets as asset
+       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
+           updated_at = now()
+     where asset.id = $1 and asset.lifecycle = 'published'
+       and asset.withheld_at is null and asset.deleted_at is null
+    returning asset.id
+), stopped as (
+    update instance_deliveries as delivery
+       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
+     where delivery.asset_id in (select withheld.id from withheld)
+       and delivery.state = 'queued'
+)
+select exists(select 1 from withheld) as withheld;
 
 -- name: ClearAssetWithhold :execrows
 update assets
@@ -903,6 +913,7 @@ with revoked as (
     update linked_instances as instance
        set refresh_token_hash = null,
            application_version = null,
+           library_application_version = null,
            protocol_version = null,
            capabilities = '{}',
            accepted_targets = '{}',
@@ -928,6 +939,7 @@ with revoked as (
     update linked_instances as instance
        set refresh_token_hash = null,
            application_version = null,
+           library_application_version = null,
            protocol_version = null,
            capabilities = '{}',
            accepted_targets = '{}',
@@ -1038,16 +1050,22 @@ select id, user_id, application_name, instance_name, application_version,
    and revoked_at is null;
 
 -- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at)
-values (
-    sqlc.arg('id'), sqlc.arg('instance_id'), sqlc.arg('asset_id'),
-    sqlc.arg('expires_at')
-)
+insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
+select sqlc.arg('id'), sqlc.arg('instance_id'), sqlc.arg('asset_id'),
+       sqlc.arg('expires_at'),
+       exists (
+           select 1
+             from instance_library_entries as entry
+            where entry.instance_id = sqlc.arg('instance_id')
+              and entry.asset_id = sqlc.arg('asset_id')
+       )
 on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, expires_at;
+returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+          expires_at, updates_install;
 
 -- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, expires_at
+select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+       expires_at, updates_install
   from instance_deliveries
  where instance_id = sqlc.arg('instance_id')
    and asset_id = sqlc.arg('asset_id')
@@ -1105,7 +1123,8 @@ update instance_deliveries
  where id = sqlc.arg('id');
 
 -- name: AcknowledgeDeliveries :execrows
-delete from instance_deliveries
+update instance_deliveries
+   set state = 'delivered', settled_at = now(), lease_expires_at = null
  where instance_id = sqlc.arg('instance_id')
    and id = any(sqlc.arg('delivery_ids')::uuid[])
    and state = 'released';
@@ -1152,19 +1171,24 @@ select content_generation
 
 -- name: AssetInstanceStates :many
 select instance.id, instance.application_name, instance.instance_name,
-       instance.last_seen_at, instance.scopes, instance.accepted_targets,
+       instance.last_seen_at, instance.scopes, instance.capabilities,
+       instance.accepted_targets,
        delivery.id as delivery_id,
        coalesce(delivery.state, '')::text as delivery_state,
-       delivery.settled_reason, delivery.queued_at, delivery.expires_at,
+       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
+       delivery.expires_at,
+       coalesce(delivery.updates_install, false)::boolean as updates_install,
        entry.content_generation as installed_generation
   from linked_instances as instance
   left join lateral (
       select waiting.id, waiting.state, waiting.settled_reason,
-             waiting.queued_at, waiting.expires_at
+             waiting.queued_at, waiting.settled_at, waiting.expires_at,
+             waiting.updates_install
         from instance_deliveries as waiting
        where waiting.instance_id = instance.id
          and waiting.asset_id = sqlc.arg('asset_id')
-       order by (waiting.state <> 'failed') desc, waiting.queued_at desc
+       order by (waiting.state in ('queued', 'released')) desc,
+                waiting.queued_at desc
        limit 1
   ) as delivery on true
   left join instance_library_entries as entry
@@ -1190,7 +1214,8 @@ select entry.instance_id,
  group by entry.instance_id;
 
 -- name: ReportLibraryEntries :execrows
-insert into instance_library_entries (instance_id, asset_id, content_generation, reported_at)
+insert into instance_library_entries
+    (instance_id, asset_id, content_generation, reported_at)
 select sqlc.arg('instance_id'), asset.id,
        coalesce(nullif(reported.generation, 0), asset.content_generation), now()
   from (
@@ -1214,3 +1239,34 @@ delete from instance_library_entries
 delete from instance_library_entries
  where instance_id = sqlc.arg('instance_id')
    and not (asset_id = any(sqlc.arg('asset_ids')::uuid[]));
+
+-- name: TakeWithheldNotices :many
+update instance_library_entries as entry
+   set notified_withheld_at = asset.withheld_at
+  from asset_public.assets as asset
+ where entry.instance_id = sqlc.arg('instance_id')
+   and asset.id = entry.asset_id
+   and asset.kind = any(sqlc.arg('kinds')::text[])
+   and asset.withheld_at is not null
+   and asset.deleted_at is null
+   and entry.notified_withheld_at is distinct from asset.withheld_at
+returning entry.asset_id, asset.name::text as name, asset.withheld_at;
+
+-- name: RecordLibraryApplicationVersion :exec
+update linked_instances
+   set library_application_version = nullif(sqlc.arg('application_version')::text, '')
+ where id = sqlc.arg('instance_id');
+
+-- name: InstalledApplicationVersions :many
+select coalesce(instance.library_application_version,
+                instance.application_version)::text as application_version
+  from instance_library_entries as entry
+  join linked_instances as instance
+    on instance.id = entry.instance_id
+   and instance.revoked_at is null
+   and instance.capabilities && sqlc.arg('capabilities')::text[]
+ where entry.asset_id = sqlc.arg('asset_id')
+   and coalesce(instance.library_application_version, instance.application_version) is not null
+ group by coalesce(instance.library_application_version, instance.application_version)
+having count(*) >= sqlc.arg('minimum_group_size')::bigint
+ order by coalesce(instance.library_application_version, instance.application_version);

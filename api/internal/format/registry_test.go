@@ -130,3 +130,17 @@ func TestRegisterRejectsDuplicateIDs(t *testing.T) {
 		t.Fatal("expected an error registering the same id twice")
 	}
 }
+
+func TestValidationRequiresAFileLimitOfAModuleThatReadsArchives(t *testing.T) {
+	declaration := testReaderDeclaration("archived", "character")
+	declaration.Recognition = []Recognition{{
+		Kind: RecognitionEntry, Containers: []probe.Container{probe.ZIP}, Entry: "card.json",
+	}}
+	registry := NewRegistry()
+	if err := registry.Register(declarationModule{stubModule: stubModule{id: "archived"}, declaration: declaration}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := registry.ValidateDeclarations(); err == nil || !strings.Contains(err.Error(), "limit on their files") {
+		t.Fatalf("validation error = %v, want an archive reader without a file limit rejected", err)
+	}
+}

@@ -102,6 +102,10 @@ The limits are part of the wire contract:
 - The whole JSON request body may not exceed 4 KiB. Unknown JSON fields are
   rejected.
 
+Protocol version 1 changes only by adding optional request fields and new
+response fields. An installation written before a field was added can leave it
+out, and every installation must ignore response fields it does not recognise.
+
 Use a stable reverse-domain namespace for capabilities you own. A capability is
 only a claim about interoperability. It does not grant a permission, make an
 unknown server feature available, or cause Illarin to run application code.
@@ -385,15 +389,16 @@ Content-Type: application/json
 ```
 
 Illarin holds the request for 25 to 30 seconds. It answers `200` as soon as
-there is work and `204` when the wait ends with nothing queued. Send
-`"acknowledge": []` when there is nothing to confirm; the field is required.
+there is work or a withheld notice, and `204` when the wait ends with neither.
+Send `"acknowledge": []` when there is nothing to confirm; the field is required.
 
 This is a durable queue read, not authorization polling, and the two never share
 a request. Illarin checks the credential, the `asset:receive` scope and the
 asset's own visibility again at the moment work is released, so an asset
 withdrawn after it was queued never arrives.
 
-A `200` carries one entry per released delivery:
+A `200` carries one entry per released delivery, and the
+[withheld notices](#withheld-notices) waiting for this installation:
 
 ```json
 {
@@ -414,7 +419,8 @@ A `200` carries one entry per released delivery:
          "role": "expression", "isCover": false}
       ]
     }
-  ]
+  ],
+  "withheld": []
 }
 ```
 
@@ -438,6 +444,29 @@ Rules for a conforming client:
 - Store `contentGeneration` against `assetId`. A larger one later means the file
   changed.
 
+An acknowledged delivery stays on record as delivered for a week, so the owner
+sees on the asset page that it arrived.
+
+### Install extensions
+
+An extension is delivered only to an installation that declares the capability
+of the app it is written for: `chat.lumiverse:extension-install` for a Spindle
+extension, `app.sillytavern:extension-install` for a SillyTavern one. Without it the
+page offers a download only, and a delivery queued before the capability was
+withdrawn stops as `unsupported`. The artifact is the developer's archive exactly
+as uploaded, with `kind` set to `extension`; accept the matching format id
+(`extension_spindle` or `extension_sillytavern`) so `format` names it rather
+than `raw`. The archive holds the manifest at its root or inside the one folder
+that wraps everything else, as a repository download does.
+
+The install rules the capability commits you to are on the developer site under
+"Connect an app to Illarin", at `/developers/apps`: install a first delivery
+disabled and ask for its permissions before first run, keep an update enabled and
+ask only about permissions the new manifest adds, refuse a delivery that would
+replace an extension installed from another source, and show the owner a
+[withheld notice](#withheld-notices). Report the extension in your library once it
+is installed.
+
 ## Report your library
 
 `library:sync` mirrors what an installation holds so the site can show its owner
@@ -451,10 +480,26 @@ Content-Type: application/json
 
 {
   "snapshot": false,
-  "entries": [{"assetId": "…", "contentGeneration": 4}],
+  "applicationVersion": "4.3.0",
+  "entries": [
+    {"assetId": "…", "contentGeneration": 4},
+    {"assetId": "…", "contentGeneration": 1}
+  ],
   "removed": ["…"]
 }
 ```
+
+`applicationVersion` is the version of the application this installation runs,
+as printable text of at most 64 characters. Send it with every report, because
+each report replaces the one before. An extension page lists the versions of its
+app it is installed on, counting only installations that declare that app's
+`extension-install` capability. A version appears only once five of them report
+it, so no single installation can be picked out.
+
+An installation written before this field leaves it out, and the protocol stays
+at version 1 for it: the report is accepted, and the installation counts under
+the `applicationVersion` in its declaration, or under no version if the
+declaration has none.
 
 Set `snapshot` to `true` to replace the whole mirror for this installation;
 anything absent is removed, so a snapshot may not also carry `removed`. Leave it
@@ -472,18 +517,41 @@ change and a full snapshot occasionally, so a missed update repairs itself.
 The response counts what was recorded:
 
 ```json
-{"accepted": 142, "removed": 3, "ignored": 1}
+{"accepted": 142, "removed": 3, "ignored": 1, "withheld": []}
 ```
 
 `ignored` counts entries naming an asset Illarin cannot offer, such as one that
 has since been deleted.
 
+### Withheld notices
+
+When Illarin withholds an extension this installation reports installed, the
+next library report or delivery wait carries a notice naming it, whichever comes
+first:
+
+```json
+{"accepted": 0, "removed": 0, "ignored": 0,
+ "withheld": [{"assetId": "…", "name": "Quiet Toolbox",
+               "withheldAt": "2026-09-14T06:00:00Z"}]}
+```
+
+Each withhold is carried once, so keep the notice when it arrives and show the
+owner which extension it names. Whether to switch the extension off is the
+owner's call. Illarin never contacts the installation to tell it: the notice
+only rides on a request the installation makes. A delivery of that extension
+still waiting to be collected stops as `withdrawn`.
+
+An extension withheld again after its withhold was cleared carries a new notice.
+Only an extension carries one, because every other kind is content an
+application reads rather than code it runs.
+
 ## Revocation and multiple instances
 
 The account settings page lists and revokes installations independently.
 Revoking one invalidates both of its credential classes immediately, wipes its
-declaration, and deletes its pending deliveries and its library mirror. Another
-installation on the same account keeps all three.
+declaration and the application version it reported, and deletes its pending
+deliveries, its library mirror and any withheld notice it has not yet collected.
+Another installation on the same account keeps all of them.
 
 Your application should provide a local unlink action too. Until a public remote
 revocation endpoint is specified, local unlink removes local credentials and
@@ -512,12 +580,15 @@ Before calling an integration complete, verify all of these:
 - Two installations of the same application can link, refresh, update, and
   unlink without sharing state.
 - Unknown capabilities and targets produce no privileged behavior.
+- Response fields the installation does not recognise are ignored.
 - One delivery wait is open at a time, `204` is handled, artifacts are fetched
   as ordinary retryable `GET`s, and deliveries are acknowledged only after they
   are durably installed.
 - Delivery ids are deduplicated, so the same delivery arriving twice installs once.
-- Library reports name immutable asset ids, stay inside every bound, and a
-  snapshot carries no removals.
+- Library reports name immutable asset ids, stay inside every bound, carry the
+  application's `applicationVersion`, and a snapshot carries no removals.
+- An installation that declares an `extension-install` capability passes every
+  item of the extension checklist at `/developers/apps/checklist`.
 - All tests use synthetic accounts, names, codes, and assets.
 
 For exact schemas, error bodies, and status codes, use `/openapi.yaml` as the

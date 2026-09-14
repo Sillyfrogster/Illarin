@@ -32,6 +32,13 @@ type Parsed struct {
 	Elements  []block.Element
 	Remainder []Remainder
 	Protected ProtectedImport
+	Readme    *Readme
+}
+
+// Readme is the README a repository shows, with the archive folder the repository sits in and the README's own folder inside it.
+type Readme struct {
+	Text         string
+	Root, Folder string
 }
 
 type ProtectedImport struct {
@@ -52,6 +59,7 @@ type Header struct {
 	AssetVersion   string
 	CreditedAuthor string
 	Nickname       string
+	Identifier     string
 }
 
 const MaxBlurbRunes = 400
@@ -135,6 +143,7 @@ type RecognitionKind string
 const (
 	RecognitionDiscriminator RecognitionKind = "discriminator"
 	RecognitionSignature     RecognitionKind = "signature"
+	RecognitionEntry         RecognitionKind = "entry"
 )
 
 type ValueType string
@@ -151,6 +160,7 @@ type Recognition struct {
 	Kind         RecognitionKind
 	Containers   []probe.Container
 	Path         []string
+	Entry        string
 	Values       []string
 	Required     map[string]ValueType
 	LegacyOnly   bool
@@ -183,6 +193,10 @@ func ClaimByDeclaration(file probe.Inspection, declaration Declaration) (Claim, 
 					}
 				}
 				if signatureMatches(payload.Root, recognition.Required) {
+					return CompatibilityClaim(payload), true
+				}
+			case RecognitionEntry:
+				if payload.Locator.Name == file.ArchiveBase+recognition.Entry {
 					return CompatibilityClaim(payload), true
 				}
 			}
@@ -295,10 +309,14 @@ type SlotDeclaration struct {
 	Constraints []string
 }
 
+// MaxArchiveFiles is how many files an archive a module reads may hold, unless the module allows more.
+const MaxArchiveFiles = 512
+
 type ContentLimits struct {
 	PayloadBytes    int
 	CollectionItems int
 	ItemBytes       int
+	ArchiveFiles    int
 }
 
 type Boilerplate struct {
@@ -393,6 +411,7 @@ type Declaration struct {
 	TestedOrigins    []string
 	PreservesOrigins []string
 	CrossPlatform    bool
+	KeepsUpload      bool
 }
 
 func ValidateDeclaration(d Declaration) error {
@@ -441,6 +460,9 @@ func validateDeclarationShape(d Declaration) error {
 	}
 	if !d.Direction.Read && !d.Direction.Write {
 		return errors.New("at least one direction is required")
+	}
+	if d.KeepsUpload && (!d.Direction.Read || !d.Direction.Write || !slices.Equal(d.TestedOrigins, []string{d.ID})) {
+		return errors.New("a module that keeps the upload reads and writes only its own files")
 	}
 	if d.Direction.Read && d.Input == InputFile && len(d.Recognition) == 0 {
 		return errors.New("a reader needs declared recognition")
@@ -536,6 +558,10 @@ func validateRecognition(d Declaration) error {
 					return fmt.Errorf("structural key %q has type %q", key, valueType)
 				}
 			}
+		case RecognitionEntry:
+			if recognition.Entry == "" || !slices.Equal(recognition.Containers, []probe.Container{probe.ZIP}) {
+				return errors.New("an entry recognition needs an archive and the entry it reads")
+			}
 		default:
 			return fmt.Errorf("unknown recognition kind %q", recognition.Kind)
 		}
@@ -581,6 +607,12 @@ func validateSlots(d Declaration) error {
 func validateStorageContract(d Declaration) error {
 	if d.Limits.PayloadBytes <= 0 || d.Limits.CollectionItems <= 0 || d.Limits.ItemBytes <= 0 {
 		return errors.New("payload, collection and item limits are required")
+	}
+	readsArchives := slices.ContainsFunc(d.Recognition, func(recognition Recognition) bool {
+		return slices.Contains(recognition.Containers, probe.ZIP)
+	})
+	if readsArchives && d.Limits.ArchiveFiles <= 0 {
+		return errors.New("a module that reads archives needs a limit on their files")
 	}
 	if d.Input == InputFile && len(d.ConsumedKeys) == 0 {
 		return errors.New("consumed keys are required")

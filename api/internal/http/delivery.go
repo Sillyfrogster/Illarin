@@ -26,22 +26,24 @@ func (h *Handlers) CollectDeliveries(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	work, err := h.deliveries.Collect(
+	collected, err := h.deliveries.Collect(
 		c.Request.Context(), instance, uuidsFrom(request.Acknowledge),
 	)
 	if err != nil {
 		h.deliveryError(c, err)
 		return
 	}
-	if len(work) == 0 {
+	if len(collected.Work) == 0 && len(collected.Withheld) == 0 {
 		c.Status(http.StatusNoContent)
 		return
 	}
-	items := make([]DeliveryWork, 0, len(work))
-	for _, released := range work {
+	items := make([]DeliveryWork, 0, len(collected.Work))
+	for _, released := range collected.Work {
 		items = append(items, toAPIDeliveryWork(released))
 	}
-	c.JSON(http.StatusOK, DeliveryWorkList{Deliveries: items})
+	c.JSON(http.StatusOK, DeliveryWorkList{
+		Deliveries: items, Withheld: toAPIWithheldNotices(collected.Withheld),
+	})
 }
 
 func (h *Handlers) SyncLibrary(c *gin.Context) {
@@ -61,6 +63,7 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, LibraryReportResult{
 		Accepted: result.Accepted, Removed: result.Removed, Ignored: result.Ignored,
+		Withheld: toAPIWithheldNotices(result.Withheld),
 	})
 }
 
@@ -181,6 +184,10 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "That application accepts no format this asset can be written in.",
 		})
+	case errors.Is(err, delivery.ErrCannotInstall):
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "That application does not install extensions from Illarin.",
+		})
 	case errors.Is(err, delivery.ErrQueueFull):
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "That application already has as many deliveries waiting as it may hold.",
@@ -193,6 +200,10 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 		})
 	case errors.Is(err, delivery.ErrLibraryReport):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "That report is not valid."})
+	case errors.Is(err, delivery.ErrLibraryVersion):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "The application version must be printable text of at most 64 characters.",
+		})
 	case errors.Is(err, delivery.ErrAcknowledgement):
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Acknowledge at most 32 deliveries in one request.",
@@ -215,9 +226,13 @@ func toLibraryReport(request LibraryReport) delivery.LibraryReport {
 	if request.Removed != nil {
 		removed = uuidsFrom(*request.Removed)
 	}
-	return delivery.LibraryReport{
+	report := delivery.LibraryReport{
 		Snapshot: request.Snapshot, Entries: entries, Removed: removed,
 	}
+	if request.ApplicationVersion != nil {
+		report.ApplicationVersion = *request.ApplicationVersion
+	}
+	return report
 }
 
 func toAPIDeliveryWork(released delivery.Work) DeliveryWork {
@@ -246,7 +261,8 @@ func toAPIQueuedDelivery(queued delivery.Delivery) QueuedDelivery {
 	item := QueuedDelivery{
 		Id: types.UUID(queued.ID), InstanceId: types.UUID(queued.InstanceID),
 		AssetId: types.UUID(queued.AssetID), State: QueuedDeliveryState(queued.State),
-		QueuedAt: queued.QueuedAt, ExpiresAt: queued.ExpiresAt,
+		QueuedAt: queued.QueuedAt, SettledAt: queued.SettledAt, ExpiresAt: queued.ExpiresAt,
+		UpdatesInstall: queued.UpdatesInstall,
 	}
 	if queued.Reason != "" {
 		reason := QueuedDeliveryReason(queued.Reason)
@@ -268,6 +284,16 @@ func toAPIAssetInstance(state delivery.InstanceState) AssetInstance {
 		item.Delivery = &queued
 	}
 	return item
+}
+
+func toAPIWithheldNotices(notices []delivery.WithheldNotice) []WithheldNotice {
+	items := make([]WithheldNotice, 0, len(notices))
+	for _, notice := range notices {
+		items = append(items, WithheldNotice{
+			AssetId: types.UUID(notice.AssetID), Name: notice.Name, WithheldAt: notice.WithheldAt,
+		})
+	}
+	return items
 }
 
 func uuidsFrom(values []types.UUID) []uuid.UUID {

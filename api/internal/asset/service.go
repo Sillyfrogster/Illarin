@@ -314,7 +314,7 @@ func (s *Service) StartFromNothing(
 	kind string,
 	app string,
 ) (uuid.UUID, error) {
-	if _, ok := block.Catalog(kind); !ok {
+	if _, ok := block.Catalog(kind); !ok || !s.reg.BuildsFromNothing(kind) {
 		return uuid.Nil, ErrKindNotBuildable
 	}
 	seeded, err := seedElements(kind, app)
@@ -369,6 +369,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 	if err != nil {
 		return Asset{}, fmt.Errorf("read upload: %w", err)
 	}
+	if read, err = s.seedFromReadme(ctx, inspected, read); err != nil {
+		return Asset{}, fmt.Errorf("seed the page from the README: %w", err)
+	}
 	parsed := read.Parsed
 	kind := parsed.Kind
 	discovery := in.Discovery
@@ -416,6 +419,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 		return Asset{}, err
 	}
 	if err := insertBlocks(ctx, tx, a.ID, blocks); err != nil {
+		return Asset{}, err
+	}
+	if err := insertVaultPictures(ctx, tx, a.ID, read.Vault); err != nil {
 		return Asset{}, err
 	}
 	if err := replacePreservedData(ctx, tx, a.ID, parsed.Remainder); err != nil {

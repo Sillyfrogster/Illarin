@@ -19,6 +19,7 @@ function element(id: string, extra: Partial<AssetElement> = {}): AssetElement {
     isEmpty: true,
     label: id,
     pinned: false,
+    locked: false,
     slot: "main",
     type: "prose",
     ...extra,

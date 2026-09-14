@@ -2,6 +2,7 @@ import {
   BookOpen,
   PackageOpen,
   Palette,
+  Puzzle,
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const ICONS = {
   preset: SlidersHorizontal,
   theme: Palette,
   pack: PackageOpen,
+  extension: Puzzle,
 } as const;
 
 const SHARD = "polygon(18% 0, 100% 0, 82% 100%, 0 100%)";
@@ -55,6 +57,12 @@ const KINDS: Record<
     ink: "text-on-media",
     shard: "-top-[18%] -right-[2%] h-[52%] w-[58%] rotate-[34deg]",
     star: "-bottom-[32%] -left-[20%] w-[72%] rotate-[12deg]",
+  },
+  extension: {
+    ground: "bg-media brightness-[1.03]",
+    ink: "text-on-media/80",
+    shard: "top-[6%] -left-[24%] h-[52%] w-[80%] rotate-[-28deg]",
+    star: "-right-[22%] -bottom-[40%] w-[72%] rotate-[33deg]",
   },
 };
 

@@ -10,6 +10,12 @@ function lines(blocks: RichBlock[]): string[] {
   return blocks.flatMap((block) => {
     if (block.kind === "quote") return lines(block.children);
     if (block.kind === "list") return block.items.flatMap(lines);
+    if (block.kind === "code") return [block.text];
+    if (block.kind === "table") {
+      return [...(block.head ? [block.head] : []), ...block.rows].map((row) =>
+        row.map(words).join(" | "),
+      );
+    }
     return [words(block.children)];
   });
 }
@@ -118,17 +124,63 @@ describe("restricted markdown", () => {
     expect(lines(image.blocks)).toEqual(["a portrait of her"]);
     expect(image.formattingRemoved).toBe(true);
 
-    const fence = readRichText('```json\n{ "a": 1 }\n```');
-    expect(lines(fence.blocks)).toEqual(['{ "a": 1 }']);
-    expect(fence.formattingRemoved).toBe(true);
-
-    const table = readRichText("| a | b |\n| - | - |\n| 1 | 2 |");
-    expect(lines(table.blocks)).toEqual(["| a | b |\n| - | - |\n| 1 | 2 |"]);
-    expect(table.formattingRemoved).toBe(false);
-
     const struck = readRichText("~~gone~~");
     expect(lines(struck.blocks)).toEqual(["~~gone~~"]);
     expect(struck.formattingRemoved).toBe(false);
+  });
+
+  test("a fenced block is code, with markup inside it kept as written", () => {
+    const rich = readRichText(
+      'Run it:\n\n```html\n<div class="x">Hi</div>\n<script>alert(1)</script>\n```\n\n<b>after</b>',
+    );
+    expect(rich.blocks).toEqual([
+      { kind: "paragraph", children: [{ kind: "text", text: "Run it:" }] },
+      {
+        kind: "code",
+        text: '<div class="x">Hi</div>\n<script>alert(1)</script>',
+      },
+      { kind: "paragraph", children: [{ kind: "text", text: "after" }] },
+    ]);
+    expect(rich.formattingRemoved).toBe(true);
+  });
+
+  test("a fence opened with more backticks closes only on as many", () => {
+    const rich = readRichText("````\n```\n<b>kept</b>\n````\n\nafter");
+    expect(lines(rich.blocks)).toEqual(["```\n<b>kept</b>", "after"]);
+    expect(rich.formattingRemoved).toBe(false);
+  });
+
+  test("a table keeps its header and its rows", () => {
+    const rich = readRichText(
+      "| Command | Does |\n| --- | --- |\n| `/roll` | Rolls **dice** |",
+    );
+    expect(rich.blocks).toEqual([
+      {
+        kind: "table",
+        head: [
+          [{ kind: "text", text: "Command" }],
+          [{ kind: "text", text: "Does" }],
+        ],
+        rows: [
+          [
+            [{ kind: "code", text: "/roll" }],
+            [
+              { kind: "text", text: "Rolls " },
+              { kind: "strong", children: [{ kind: "text", text: "dice" }] },
+            ],
+          ],
+        ],
+      },
+    ]);
+    expect(rich.formattingRemoved).toBe(false);
+  });
+
+  test("a table whose header is blank has no header", () => {
+    const rich = readRichText(
+      "| | |\n|---|---|\n| **Timeline** | Tracks edits |",
+    );
+    expect(rich.blocks[0]).toMatchObject({ kind: "table", head: null });
+    expect(lines(rich.blocks)).toEqual(["Timeline | Tracks edits"]);
   });
 
   test("a rule between scenes stays the characters the creator typed", () => {

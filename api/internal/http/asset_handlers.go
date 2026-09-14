@@ -532,6 +532,11 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
 		return
 	}
+	page.InstalledAppVersions, err = h.deliveries.InstalledAppVersions(c.Request.Context(), found.ID, found.InstallCapabilities)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+		return
+	}
 	c.JSON(http.StatusOK, page)
 }
 
@@ -576,35 +581,50 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	}
 	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
 	return AssetDetail{
-		WorkingCopyVersion: found.WorkingCopyVersion,
-		UnpublishedChanges: found.UnpublishedChanges,
-		Id:                 types.UUID(found.ID),
-		Kind:               AssetDetailKind(found.Kind),
-		Name:               found.Name,
-		Blurb:              found.Blurb,
-		Tags:               tags,
-		Creator:            found.Creator,
-		IsNsfw:             found.IsNSFW,
-		Discovery:          AssetDetailDiscovery(found.Discovery),
-		Lifecycle:          AssetDetailLifecycle(found.Lifecycle),
-		IsOwner:            found.IsOwner,
-		LinkedInstallOnly:  found.LinkedInstallOnly,
-		AllowedApps:        apiAllowedApps(found.AllowedApps),
-		EligibleApps:       apiEligibleApps(found.EligibleApps),
-		Downloads:          toAPIDownloads(found.Downloads),
-		AppTargets:         toAPIAppTargets(found.AppTargets),
-		Original:           toAPIOriginalUpload(found.Original),
-		CreatedAt:          found.CreatedAt,
-		Blocks:             blocks,
-		Media:              media,
-		Preview:            found.Preview,
-		Readiness:          toAPIReadiness(found.Readiness),
-		SealedBlocks:       countOrAbsent(found.SealedBlocks),
-		AddableBlocks:      addable,
-		Visibility:         AssetDetailVisibility(visibility),
-		LatestUpdate:       toAPILatestUpdate(found.LatestUpdate),
-		Withhold:           toAPIWithhold(found.Withhold),
+		WorkingCopyVersion:    found.WorkingCopyVersion,
+		UnpublishedChanges:    found.UnpublishedChanges,
+		Id:                    types.UUID(found.ID),
+		Kind:                  AssetDetailKind(found.Kind),
+		Name:                  found.Name,
+		Blurb:                 found.Blurb,
+		Tags:                  tags,
+		Creator:               found.Creator,
+		Identifier:            found.Identifier,
+		ExtensionDependencies: toAPIExtensionDependencies(found.Dependencies),
+		InstalledAppVersions:  []string{},
+		IsNsfw:                found.IsNSFW,
+		Discovery:             AssetDetailDiscovery(found.Discovery),
+		Lifecycle:             AssetDetailLifecycle(found.Lifecycle),
+		IsOwner:               found.IsOwner,
+		LinkedInstallOnly:     found.LinkedInstallOnly,
+		AllowedApps:           apiAllowedApps(found.AllowedApps),
+		EligibleApps:          apiEligibleApps(found.EligibleApps),
+		Downloads:             toAPIDownloads(found.Downloads),
+		AppTargets:            toAPIAppTargets(found.AppTargets),
+		Original:              toAPIOriginalUpload(found.Original),
+		CreatedAt:             found.CreatedAt,
+		Blocks:                blocks,
+		Media:                 media,
+		Preview:               found.Preview,
+		Readiness:             toAPIReadiness(found.Readiness),
+		SealedBlocks:          countOrAbsent(found.SealedBlocks),
+		AddableBlocks:         addable,
+		Visibility:            AssetDetailVisibility(visibility),
+		LatestUpdate:          toAPILatestUpdate(found.LatestUpdate),
+		Withhold:              toAPIWithhold(found.Withhold),
 	}, nil
+}
+
+func toAPIExtensionDependencies(dependencies []asset.ExtensionDependency) []ExtensionDependency {
+	out := make([]ExtensionDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		assets := make([]DependencyAsset, 0, len(dependency.Assets))
+		for _, found := range dependency.Assets {
+			assets = append(assets, DependencyAsset{Id: types.UUID(found.ID), Name: found.Name, Creator: found.Creator})
+		}
+		out = append(out, ExtensionDependency{Name: dependency.Name, Assets: assets})
+	}
+	return out
 }
 
 func toAPIImages(images []asset.DetailImage) []AssetImage {

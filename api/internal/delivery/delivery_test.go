@@ -104,3 +104,20 @@ func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
 		t.Fatal("the live wait lost its wake-up when a superseded one was released")
 	}
 }
+
+func TestAnAssetThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
+	if !installs(nil, asset.Deliverable{}) {
+		t.Fatal("an asset with no install capability was refused")
+	}
+}
+
+func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
+	sendable := asset.Deliverable{InstallCapabilities: []string{"chat.lumiverse:extension-install"}}
+
+	if installs([]string{"app.sillytavern:extension-install", "org.example:extension-install"}, sendable) {
+		t.Fatal("another app's capability, or an unknown one, let the extension through")
+	}
+	if !installs([]string{"org.example:media-sidecars", "chat.lumiverse:extension-install"}, sendable) {
+		t.Fatal("the declared capability did not let the extension through")
+	}
+}

@@ -4,8 +4,9 @@ paths:
       operationId: collectDeliveries
       description: >-
         Acknowledge finished deliveries and wait, briefly, for more. Illarin
-        holds the request for 25 to 30 seconds and answers 204 when the wait
-        ends empty. A second request supersedes the first rather than both
+        holds the request for 25 to 30 seconds and answers as soon as it has
+        work or a withheld notice for this instance, or 204 when the wait ends
+        with neither. A second request supersedes the first rather than both
         hanging. This is a durable queue read and never carries an
         authorization result.
       security:
@@ -18,13 +19,13 @@ paths:
               $ref: '#/components/schemas/CollectDeliveries'
       responses:
         '200':
-          description: The work released to this instance
+          description: The work released to this instance and any withheld notices
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeliveryWorkList'
         '204':
-          description: The wait ended with nothing queued
+          description: The wait ended with nothing queued and nothing withheld to report
         '400':
           description: The acknowledgement list is not valid
         '401':
@@ -49,10 +50,11 @@ paths:
     post:
       operationId: syncLibrary
       description: >-
-        Report what this instance has installed. A snapshot replaces the whole
-        mirror for this instance; an incremental report adds, updates and
-        removes what it names. Assets are named by immutable id, never by
-        address.
+        Report what this instance has installed and the version of the
+        application it runs. A snapshot replaces the whole mirror for this
+        instance; an incremental report adds, updates and removes what it
+        names. Assets are named by immutable id, never by address. The answer
+        carries any withheld notice waiting for this instance.
       security:
         - instanceToken: []
       requestBody:
@@ -87,7 +89,9 @@ paths:
       operationId: getAssetInstances
       description: >-
         Where the signed-in account could send this asset, what is already
-        waiting, and what each of their instances reports having installed.
+        waiting or was delivered, and what each of their instances reports
+        having installed. An extension can be sent only to an instance that
+        declares its app's extension-install capability.
       security:
         - sessionCookie: []
       parameters:
@@ -150,8 +154,9 @@ paths:
           description: No asset that can be sent, or no live instance of yours, has that id
         '409':
           description: >-
-            That instance already holds as many waiting deliveries as it may, or
-            accepts no format this asset can be written in
+            That instance already holds as many waiting deliveries as it may,
+            accepts no format this asset can be written in, or does not declare
+            the capability an extension needs
         '429':
           description: Too many deliveries were queued
           headers:
@@ -263,7 +268,9 @@ components:
           description: >-
             The deliveries this instance has durably installed since its last
             request. Delivery is at least once, so treat the ids as stable and
-            acknowledge only after the work is safely stored.
+            acknowledge only after the work is safely stored. An acknowledged
+            delivery is recorded as delivered, which the asset page shows the
+            owner.
           items:
             type: string
             format: uuid
@@ -272,11 +279,21 @@ components:
       additionalProperties: false
       required:
         - deliveries
+        - withheld
       properties:
         deliveries:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryWork'
+        withheld:
+          type: array
+          description: >-
+            Extensions this instance reports installed that were withheld since
+            it was last told. Each withhold is told once, on a delivery wait or
+            a library report, whichever comes first. A wait with a notice and no
+            work answers 200 with an empty list of deliveries.
+          items:
+            $ref: '#/components/schemas/WithheldNotice'
     DeliveryWork:
       type: object
       additionalProperties: false
@@ -363,6 +380,17 @@ components:
           description: >-
             True to replace the whole mirror for this instance. A snapshot
             carries no removals, because anything absent from it is removed.
+        applicationVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: >-
+            The version of the application this instance runs, replaced by each
+            report. An extension page lists the versions of its app it is
+            installed on once five installations that declare the app's
+            extension-install capability report the same one. Leave it
+            out and this instance counts under the applicationVersion in its
+            declaration, or under no version if the declaration has none.
         entries:
           type: array
           maxItems: 2000
@@ -398,6 +426,7 @@ components:
         - accepted
         - removed
         - ignored
+        - withheld
       properties:
         accepted:
           type: integer
@@ -406,6 +435,32 @@ components:
         ignored:
           type: integer
           description: Entries naming an asset Illarin cannot offer.
+        withheld:
+          type: array
+          description: >-
+            Extensions this instance reports installed that were withheld since
+            it was last told. Each withhold is told once, on a library report or
+            a delivery wait, whichever comes first. Show each one to the owner,
+            who decides whether to disable it.
+          items:
+            $ref: '#/components/schemas/WithheldNotice'
+    WithheldNotice:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - name
+        - withheldAt
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        withheldAt:
+          type: string
+          format: date-time
+          description: When Illarin withheld it.
     SendAssetRequest:
       type: object
       additionalProperties: false
@@ -424,7 +479,9 @@ components:
         - assetId
         - state
         - queuedAt
+        - settledAt
         - expiresAt
+        - updatesInstall
       properties:
         id:
           type: string
@@ -440,7 +497,12 @@ components:
           enum:
             - queued
             - released
+            - delivered
             - failed
+          description: >-
+            Queued until the instance collects it, released while the instance
+            holds it, delivered once the instance acknowledged installing it,
+            and failed when it stopped for the reason given.
         reason:
           type:
             - string
@@ -454,9 +516,20 @@ components:
         queuedAt:
           type: string
           format: date-time
+        settledAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: When the delivery was acknowledged or stopped.
         expiresAt:
           type: string
           format: date-time
+        updatesInstall:
+          type: boolean
+          description: >-
+            True when the instance already reported the asset installed at the
+            time this delivery was queued.
     AssetInstanceList:
       type: object
       additionalProperties: false

@@ -267,6 +267,7 @@ func (e AssetDetailEligibleApps) Valid() bool {
 // Defines values for AssetDetailKind.
 const (
 	AssetDetailKindCharacter AssetDetailKind = "character"
+	AssetDetailKindExtension AssetDetailKind = "extension"
 	AssetDetailKindLorebook  AssetDetailKind = "lorebook"
 	AssetDetailKindPack      AssetDetailKind = "pack"
 	AssetDetailKindPreset    AssetDetailKind = "preset"
@@ -277,6 +278,8 @@ const (
 func (e AssetDetailKind) Valid() bool {
 	switch e {
 	case AssetDetailKindCharacter:
+		return true
+	case AssetDetailKindExtension:
 		return true
 	case AssetDetailKindLorebook:
 		return true
@@ -597,6 +600,7 @@ func (e AssetUpdateEventType) Valid() bool {
 // Defines values for BrowseAssetKind.
 const (
 	BrowseAssetKindCharacter BrowseAssetKind = "character"
+	BrowseAssetKindExtension BrowseAssetKind = "extension"
 	BrowseAssetKindLorebook  BrowseAssetKind = "lorebook"
 	BrowseAssetKindPack      BrowseAssetKind = "pack"
 	BrowseAssetKindPreset    BrowseAssetKind = "preset"
@@ -607,6 +611,8 @@ const (
 func (e BrowseAssetKind) Valid() bool {
 	switch e {
 	case BrowseAssetKindCharacter:
+		return true
+	case BrowseAssetKindExtension:
 		return true
 	case BrowseAssetKindLorebook:
 		return true
@@ -681,6 +687,7 @@ func (e CreateAssetRequestDiscovery) Valid() bool {
 // Defines values for DeletedAssetKind.
 const (
 	DeletedAssetKindCharacter DeletedAssetKind = "character"
+	DeletedAssetKindExtension DeletedAssetKind = "extension"
 	DeletedAssetKindLorebook  DeletedAssetKind = "lorebook"
 	DeletedAssetKindPack      DeletedAssetKind = "pack"
 	DeletedAssetKindPreset    DeletedAssetKind = "preset"
@@ -691,6 +698,8 @@ const (
 func (e DeletedAssetKind) Valid() bool {
 	switch e {
 	case DeletedAssetKindCharacter:
+		return true
+	case DeletedAssetKindExtension:
 		return true
 	case DeletedAssetKindLorebook:
 		return true
@@ -1412,14 +1421,17 @@ func (e QueuedDeliveryReason) Valid() bool {
 
 // Defines values for QueuedDeliveryState.
 const (
-	QueuedDeliveryStateFailed   QueuedDeliveryState = "failed"
-	QueuedDeliveryStateQueued   QueuedDeliveryState = "queued"
-	QueuedDeliveryStateReleased QueuedDeliveryState = "released"
+	QueuedDeliveryStateDelivered QueuedDeliveryState = "delivered"
+	QueuedDeliveryStateFailed    QueuedDeliveryState = "failed"
+	QueuedDeliveryStateQueued    QueuedDeliveryState = "queued"
+	QueuedDeliveryStateReleased  QueuedDeliveryState = "released"
 )
 
 // Valid indicates whether the value is a known member of the QueuedDeliveryState enum.
 func (e QueuedDeliveryState) Valid() bool {
 	switch e {
+	case QueuedDeliveryStateDelivered:
+		return true
 	case QueuedDeliveryStateFailed:
 		return true
 	case QueuedDeliveryStateQueued:
@@ -1470,6 +1482,7 @@ func (e RecordListContentSchema) Valid() bool {
 // Defines values for RecordedVersionDownloadsKind.
 const (
 	RecordedVersionDownloadsKindCharacter RecordedVersionDownloadsKind = "character"
+	RecordedVersionDownloadsKindExtension RecordedVersionDownloadsKind = "extension"
 	RecordedVersionDownloadsKindLorebook  RecordedVersionDownloadsKind = "lorebook"
 	RecordedVersionDownloadsKindPack      RecordedVersionDownloadsKind = "pack"
 	RecordedVersionDownloadsKindPreset    RecordedVersionDownloadsKind = "preset"
@@ -1480,6 +1493,8 @@ const (
 func (e RecordedVersionDownloadsKind) Valid() bool {
 	switch e {
 	case RecordedVersionDownloadsKindCharacter:
+		return true
+	case RecordedVersionDownloadsKindExtension:
 		return true
 	case RecordedVersionDownloadsKindLorebook:
 		return true
@@ -1854,6 +1869,7 @@ func (e GetMediaVariantParamsVariant) Valid() bool {
 // Defines values for ListAssetsParamsKind.
 const (
 	ListAssetsParamsKindCharacter ListAssetsParamsKind = "character"
+	ListAssetsParamsKindExtension ListAssetsParamsKind = "extension"
 	ListAssetsParamsKindLorebook  ListAssetsParamsKind = "lorebook"
 	ListAssetsParamsKindPack      ListAssetsParamsKind = "pack"
 	ListAssetsParamsKindPreset    ListAssetsParamsKind = "preset"
@@ -1864,6 +1880,8 @@ const (
 func (e ListAssetsParamsKind) Valid() bool {
 	switch e {
 	case ListAssetsParamsKindCharacter:
+		return true
+	case ListAssetsParamsKindExtension:
 		return true
 	case ListAssetsParamsKindLorebook:
 		return true
@@ -2328,7 +2346,16 @@ type AssetDetail struct {
 
 	// EligibleApps The applications with a target this asset can currently export to.
 	EligibleApps []AssetDetailEligibleApps `json:"eligibleApps"`
-	Id           openapi_types.UUID        `json:"id"`
+
+	// ExtensionDependencies The extensions this one names as dependencies, in the order its manifest lists them, each with the listed Illarin extensions whose identifier matches. Empty for every other kind.
+	ExtensionDependencies []ExtensionDependency `json:"extensionDependencies"`
+	Id                    openapi_types.UUID    `json:"id"`
+
+	// Identifier The identifier the uploaded file declares for itself, such as an extension's. Illarin does not reserve it, so two assets may share one.
+	Identifier *string `json:"identifier,omitempty"`
+
+	// InstalledAppVersions The versions of its app an extension is installed on, as linked instances declaring the app's extension-install capability report them in library:sync. A version is listed only once at least five installations report it, so no single installation can be picked out. Empty for every other kind.
+	InstalledAppVersions []string `json:"installedAppVersions"`
 
 	// IsNsfw Null while a draft has not been asked the adult content question. Nothing answers it on the creator's behalf.
 	IsNsfw *bool `json:"isNsfw"`
@@ -2412,6 +2439,9 @@ type AssetElement struct {
 	// ItemSize How large the images inside an element are drawn. It names what it controls, and no element type declares a measurement of its own.
 	ItemSize *ItemSize `json:"itemSize,omitempty"`
 	Label    string    `json:"label"`
+
+	// Locked A locked element is read from the uploaded file. It can be moved and hidden with its block, and only a new upload changes it.
+	Locked bool `json:"locked"`
 
 	// Pinned A pinned element can be neither removed nor moved out of its block.
 	Pinned bool `json:"pinned"`
@@ -2783,7 +2813,7 @@ type CandidateConflict struct {
 // CandidateConflictCode defines model for CandidateConflict.Code.
 type CandidateConflictCode string
 
-// CapabilityId A namespaced interoperability claim. It never grants permission and unknown values have no effect.
+// CapabilityId A namespaced interoperability claim. It never grants permission and unknown values have no effect. Illarin recognises chat.lumiverse:extension-install and app.sillytavern:extension-install, which an app declares once it installs the extensions Illarin lists for it.
 type CapabilityId = string
 
 // ChangeEmailRequest defines model for ChangeEmailRequest.
@@ -2793,7 +2823,7 @@ type ChangeEmailRequest struct {
 
 // CollectDeliveries defines model for CollectDeliveries.
 type CollectDeliveries struct {
-	// Acknowledge The deliveries this instance has durably installed since its last request. Delivery is at least once, so treat the ids as stable and acknowledge only after the work is safely stored.
+	// Acknowledge The deliveries this instance has durably installed since its last request. Delivery is at least once, so treat the ids as stable and acknowledge only after the work is safely stored. An acknowledged delivery is recorded as delivered, which the asset page shows the owner.
 	Acknowledge []openapi_types.UUID `json:"acknowledge"`
 }
 
@@ -2916,6 +2946,16 @@ type DeliveryWork struct {
 // DeliveryWorkList defines model for DeliveryWorkList.
 type DeliveryWorkList struct {
 	Deliveries []DeliveryWork `json:"deliveries"`
+
+	// Withheld Extensions this instance reports installed that were withheld since it was last told. Each withhold is told once, on a delivery wait or a library report, whichever comes first. A wait with a notice and no work answers 200 with an empty list of deliveries.
+	Withheld []WithheldNotice `json:"withheld"`
+}
+
+// DependencyAsset defines model for DependencyAsset.
+type DependencyAsset struct {
+	Creator string             `json:"creator"`
+	Id      openapi_types.UUID `json:"id"`
+	Name    string             `json:"name"`
 }
 
 // DestinationPolicyRequest defines model for DestinationPolicyRequest.
@@ -3031,6 +3071,15 @@ type ExchangeLinkAuthorization struct {
 // ExportTargetId A format-module identifier accepted by the instance. Unknown values do not make a target available.
 type ExportTargetId = string
 
+// ExtensionDependency defines model for ExtensionDependency.
+type ExtensionDependency struct {
+	// Assets Listed extensions for the same app whose identifier matches the name. Empty when none does, such as for an extension built into the app.
+	Assets []DependencyAsset `json:"assets"`
+
+	// Name The dependency exactly as the manifest names it.
+	Name string `json:"name"`
+}
+
 // FieldListContent defines model for FieldListContent.
 type FieldListContent struct {
 	Fields []struct {
@@ -3134,8 +3183,10 @@ type LibraryEntry struct {
 
 // LibraryReport defines model for LibraryReport.
 type LibraryReport struct {
-	Entries []LibraryEntry        `json:"entries"`
-	Removed *[]openapi_types.UUID `json:"removed,omitempty"`
+	// ApplicationVersion The version of the application this instance runs, replaced by each report. An extension page lists the versions of its app it is installed on once five installations that declare the app's extension-install capability report the same one. Leave it out and this instance counts under the applicationVersion in its declaration, or under no version if the declaration has none.
+	ApplicationVersion *string               `json:"applicationVersion,omitempty"`
+	Entries            []LibraryEntry        `json:"entries"`
+	Removed            *[]openapi_types.UUID `json:"removed,omitempty"`
 
 	// Snapshot True to replace the whole mirror for this instance. A snapshot carries no removals, because anything absent from it is removed.
 	Snapshot bool `json:"snapshot"`
@@ -3148,6 +3199,9 @@ type LibraryReportResult struct {
 	// Ignored Entries naming an asset Illarin cannot offer.
 	Ignored int `json:"ignored"`
 	Removed int `json:"removed"`
+
+	// Withheld Extensions this instance reports installed that were withheld since it was last told. Each withhold is told once, on a library report or a delivery wait, whichever comes first. Show each one to the owner, who decides whether to disable it.
+	Withheld []WithheldNotice `json:"withheld"`
 }
 
 // LinkAuthorization defines model for LinkAuthorization.
@@ -3365,6 +3419,12 @@ type PendingLinkPollResult struct {
 
 // PendingLinkPollResultStatus defines model for PendingLinkPollResult.Status.
 type PendingLinkPollResultStatus string
+
+// PlaceVaultPictureRequest defines model for PlaceVaultPictureRequest.
+type PlaceVaultPictureRequest struct {
+	// MediaId A gallery picture the creator uploaded to stand in for one shown from another site
+	MediaId *openapi_types.UUID `json:"mediaId,omitempty"`
+}
 
 // PollLinkRequest defines model for PollLinkRequest.
 type PollLinkRequest struct {
@@ -4180,13 +4240,21 @@ type QueuedDelivery struct {
 
 	// Reason Why a failed delivery stopped.
 	Reason *QueuedDeliveryReason `json:"reason,omitempty"`
-	State  QueuedDeliveryState   `json:"state"`
+
+	// SettledAt When the delivery was acknowledged or stopped.
+	SettledAt *time.Time `json:"settledAt"`
+
+	// State Queued until the instance collects it, released while the instance holds it, delivered once the instance acknowledged installing it, and failed when it stopped for the reason given.
+	State QueuedDeliveryState `json:"state"`
+
+	// UpdatesInstall True when the instance already reported the asset installed at the time this delivery was queued.
+	UpdatesInstall bool `json:"updatesInstall"`
 }
 
 // QueuedDeliveryReason Why a failed delivery stopped.
 type QueuedDeliveryReason string
 
-// QueuedDeliveryState defines model for QueuedDelivery.State.
+// QueuedDeliveryState Queued until the instance collects it, released while the instance holds it, delivered once the instance acknowledged installing it, and failed when it stopped for the reason given.
 type QueuedDeliveryState string
 
 // ReadinessItem One thing publication waits on, and whether the asset carries it.
@@ -4722,6 +4790,35 @@ type VariableSchemaContent struct {
 // VariableSchemaContentVariablesWidget defines model for VariableSchemaContent.Variables.Widget.
 type VariableSchemaContentVariablesWidget string
 
+// VaultPicture defines model for VaultPicture.
+type VaultPicture struct {
+	// Address Where the README showed the picture from, an archive entry or another site
+	Address string `json:"address"`
+
+	// BlockId The block the picture's section became, when that block still stands
+	BlockId *openapi_types.UUID `json:"blockId,omitempty"`
+	Id      openapi_types.UUID  `json:"id"`
+
+	// Media The copy the archive held, absent for a picture shown from another site
+	Media *struct {
+		Height   int                `json:"height"`
+		Id       openapi_types.UUID `json:"id"`
+		ThumbUrl string             `json:"thumbUrl"`
+		Width    int                `json:"width"`
+	} `json:"media,omitempty"`
+
+	// Name The words the README wrote for the picture
+	Name string `json:"name"`
+
+	// Section The README section the picture came from, which names its block when none stands
+	Section string `json:"section"`
+}
+
+// VaultPictureList defines model for VaultPictureList.
+type VaultPictureList struct {
+	Pictures []VaultPicture `json:"pictures"`
+}
+
 // VerifyEmailRequest defines model for VerifyEmailRequest.
 type VerifyEmailRequest struct {
 	Token string `json:"token"`
@@ -4788,6 +4885,15 @@ type WithdrawPostRequest struct {
 type WithdrawnPost struct {
 	Explanation string `json:"explanation"`
 	Slug        string `json:"slug"`
+}
+
+// WithheldNotice defines model for WithheldNotice.
+type WithheldNotice struct {
+	AssetId openapi_types.UUID `json:"assetId"`
+	Name    string             `json:"name"`
+
+	// WithheldAt When Illarin withheld it.
+	WithheldAt time.Time `json:"withheldAt"`
 }
 
 // WithholdAssetRequest defines model for WithholdAssetRequest.
@@ -5023,6 +5129,18 @@ type GetRecordedVersionDownloadsParamsNsfw string
 
 // RestoreAssetVersionParams defines parameters for RestoreAssetVersion.
 type RestoreAssetVersionParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// DiscardVaultPictureParams defines parameters for DiscardVaultPicture.
+type DiscardVaultPictureParams struct {
+	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
+	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
+}
+
+// PlaceVaultPictureParams defines parameters for PlaceVaultPicture.
+type PlaceVaultPictureParams struct {
 	// XWorkingCopyVersion The workingCopyVersion returned with the candidate the creator reviewed
 	XWorkingCopyVersion WorkingCopyVersion `json:"X-Working-Copy-Version"`
 }
@@ -5355,6 +5473,9 @@ type ResolvePromptCorrespondenceJSONRequestBody = PromptCorrespondenceRequest
 
 // WithdrawAssetVersionJSONRequestBody defines body for WithdrawAssetVersion for application/json ContentType.
 type WithdrawAssetVersionJSONRequestBody = AssetVersionWithdrawalRequest
+
+// PlaceVaultPictureJSONRequestBody defines body for PlaceVaultPicture for application/json ContentType.
+type PlaceVaultPictureJSONRequestBody = PlaceVaultPictureRequest
 
 // WithholdAssetJSONRequestBody defines body for WithholdAsset for application/json ContentType.
 type WithholdAssetJSONRequestBody = WithholdAssetRequest
@@ -6031,6 +6152,15 @@ type ServerInterface interface {
 
 	// (POST /v1/assets/{id}/updates/{number}/withdraw)
 	WithdrawAssetVersion(c *gin.Context, id openapi_types.UUID, number int)
+
+	// (GET /v1/assets/{id}/vault)
+	ListVaultPictures(c *gin.Context, id openapi_types.UUID)
+
+	// (DELETE /v1/assets/{id}/vault/{pictureId})
+	DiscardVaultPicture(c *gin.Context, id openapi_types.UUID, pictureId openapi_types.UUID, params DiscardVaultPictureParams)
+
+	// (POST /v1/assets/{id}/vault/{pictureId}/place)
+	PlaceVaultPicture(c *gin.Context, id openapi_types.UUID, pictureId openapi_types.UUID, params PlaceVaultPictureParams)
 
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
@@ -8269,6 +8399,153 @@ func (siw *ServerInterfaceWrapper) WithdrawAssetVersion(c *gin.Context) {
 	}
 
 	siw.Handler.WithdrawAssetVersion(c, id, number)
+}
+
+// ListVaultPictures operation middleware
+func (siw *ServerInterfaceWrapper) ListVaultPictures(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListVaultPictures(c, id)
+}
+
+// DiscardVaultPicture operation middleware
+func (siw *ServerInterfaceWrapper) DiscardVaultPicture(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "pictureId" -------------
+	var pictureId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pictureId", c.Param("pictureId"), &pictureId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter pictureId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DiscardVaultPictureParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DiscardVaultPicture(c, id, pictureId, params)
+}
+
+// PlaceVaultPicture operation middleware
+func (siw *ServerInterfaceWrapper) PlaceVaultPicture(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "pictureId" -------------
+	var pictureId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pictureId", c.Param("pictureId"), &pictureId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter pictureId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PlaceVaultPictureParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "X-Working-Copy-Version" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Working-Copy-Version")]; found {
+		var XWorkingCopyVersion WorkingCopyVersion
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for X-Working-Copy-Version, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Working-Copy-Version", valueList[0], &XWorkingCopyVersion, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "integer", Format: "int64"})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter X-Working-Copy-Version: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.XWorkingCopyVersion = XWorkingCopyVersion
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter X-Working-Copy-Version is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PlaceVaultPicture(c, id, pictureId, params)
 }
 
 // ClearAssetWithhold operation middleware
@@ -10991,6 +11268,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/v1/assets/:id/blocks/:blockId", wrapper.SaveAssetBlock)
 	router.POST(options.BaseURL+"/v1/assets/:id/blocks", wrapper.AddAssetBlock)
 	router.PUT(options.BaseURL+"/v1/assets/:id/blocks", wrapper.ArrangeAssetBlocks)
+	router.GET(options.BaseURL+"/v1/assets/:id/vault", wrapper.ListVaultPictures)
+	router.DELETE(options.BaseURL+"/v1/assets/:id/vault/:pictureId", wrapper.DiscardVaultPicture)
+	router.POST(options.BaseURL+"/v1/assets/:id/vault/:pictureId/place", wrapper.PlaceVaultPicture)
 	router.POST(options.BaseURL+"/v1/assets/:id/blocks/:blockId/move-and-remove", wrapper.MoveAssetBlockContent)
 	router.GET(options.BaseURL+"/v1/assets/:id/preserved", wrapper.ListPreservedNamespaces)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/preserved/:namespace", wrapper.DeletePreservedNamespace)

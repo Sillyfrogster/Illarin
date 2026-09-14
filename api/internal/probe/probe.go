@@ -28,6 +28,24 @@ var (
 	ErrRangeRead       = errors.New("blob range read failed")
 )
 
+// SafetyViolation names the archive safety rule a file breaks.
+type SafetyViolation struct{ Rule string }
+
+func (v SafetyViolation) Error() string        { return ErrSafetyViolation.Error() + ": " + v.Rule }
+func (v SafetyViolation) Is(target error) bool { return target == ErrSafetyViolation }
+
+func violates(rule string, args ...any) error {
+	return SafetyViolation{Rule: fmt.Sprintf(rule, args...)}
+}
+
+// byteCount writes a byte count in the largest whole unit it fills.
+func byteCount(count uint64) string {
+	if count >= 1<<20 && count%(1<<20) == 0 {
+		return fmt.Sprintf("%d MB", count>>20)
+	}
+	return fmt.Sprintf("%d bytes", count)
+}
+
 type Limits struct {
 	MaxArchiveEntries   int
 	MaxEntryBytes       uint64
@@ -37,7 +55,7 @@ type Limits struct {
 
 func DefaultLimits() Limits {
 	return Limits{
-		MaxArchiveEntries:   512,
+		MaxArchiveEntries:   4096,
 		MaxEntryBytes:       32 << 20,
 		MaxArchiveBytes:     128 << 20,
 		MaxCompressionRatio: 100,
@@ -66,6 +84,8 @@ type Inspection struct {
 	Images     []Image
 	PNGChunks  []PNGChunk
 	ZIPEntries []ZIPEntry
+	// ArchiveBase is the folder every file in a ZIP sits inside, such as a repository download's, or empty.
+	ArchiveBase string
 
 	source blobSource
 }
@@ -391,35 +411,32 @@ func inspectZIP(reader *rangeReaderAt, result *Inspection, limits Limits) error 
 		return fmt.Errorf("inspect ZIP: %w", err)
 	}
 	if len(archive.File) > limits.MaxArchiveEntries {
-		return fmt.Errorf("%w: archive has %d entries, limit is %d",
-			ErrSafetyViolation, len(archive.File), limits.MaxArchiveEntries)
+		return violates("it holds %d files, and an archive may hold %d", len(archive.File), limits.MaxArchiveEntries)
 	}
+	result.ArchiveBase = archiveBase(archive.File)
 	var archiveBytes uint64
 	for _, entry := range archive.File {
 		if unsafeArchivePath(entry.Name) {
-			return fmt.Errorf("%w: unsafe archive path %q", ErrSafetyViolation, entry.Name)
+			return violates("%q leads outside the archive", entry.Name)
 		}
 		if entry.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("%w: archive entry %q is a symlink", ErrSafetyViolation, entry.Name)
+			return violates("%q is a symbolic link", entry.Name)
 		}
 		if entry.Flags&1 != 0 {
-			return fmt.Errorf("%w: archive entry %q is encrypted", ErrSafetyViolation, entry.Name)
+			return violates("%q is encrypted", entry.Name)
 		}
 		if entry.UncompressedSize64 > limits.MaxEntryBytes {
-			return fmt.Errorf("%w: archive entry %q is too large", ErrSafetyViolation, entry.Name)
+			return violates("%q unpacks to %s, and one file may unpack to %s",
+				entry.Name, byteCount(entry.UncompressedSize64), byteCount(limits.MaxEntryBytes))
 		}
 		if entry.UncompressedSize64 > 0 && (entry.CompressedSize64 == 0 ||
 			float64(entry.UncompressedSize64)/float64(entry.CompressedSize64) > limits.MaxCompressionRatio) {
-			return fmt.Errorf("%w: archive entry %q exceeds the compression ratio",
-				ErrSafetyViolation, entry.Name)
+			return violates("%q unpacks to more than %v times its packed size", entry.Name, limits.MaxCompressionRatio)
 		}
-		if ^uint64(0)-archiveBytes < entry.UncompressedSize64 {
-			return fmt.Errorf("%w: archive size overflow", ErrSafetyViolation)
+		if ^uint64(0)-archiveBytes < entry.UncompressedSize64 || archiveBytes+entry.UncompressedSize64 > limits.MaxArchiveBytes {
+			return violates("it unpacks to more than %s", byteCount(limits.MaxArchiveBytes))
 		}
 		archiveBytes += entry.UncompressedSize64
-		if archiveBytes > limits.MaxArchiveBytes {
-			return fmt.Errorf("%w: archive expands beyond its limit", ErrSafetyViolation)
-		}
 		offset, err := entry.DataOffset()
 		if err != nil {
 			return fmt.Errorf("inspect ZIP entry %q: %w", entry.Name, err)
@@ -439,7 +456,8 @@ func inspectZIP(reader *rangeReaderAt, result *Inspection, limits Limits) error 
 			result.addImage(Locator{Container: ZIP, Name: entry.Name, Offset: offset})
 		}
 		if !strings.EqualFold(entry.Name, "card.json") &&
-			!strings.EqualFold(entry.Name, "theme.json") {
+			!strings.EqualFold(entry.Name, "theme.json") &&
+			entry.Name != result.ArchiveBase+"spindle.json" && entry.Name != result.ArchiveBase+"manifest.json" {
 			continue
 		}
 		opened, err := entry.Open()
@@ -460,6 +478,32 @@ func inspectZIP(reader *rangeReaderAt, result *Inspection, limits Limits) error 
 		)
 	}
 	return nil
+}
+
+// archiveBase finds the folders every file is nested in, leaving out what macOS adds when it zips a folder.
+func archiveBase(files []*zip.File) string {
+	names := make([]string, 0, len(files))
+	for _, entry := range files {
+		if entry.FileInfo().IsDir() || strings.HasPrefix(entry.Name, "__MACOSX/") || path.Base(entry.Name) == ".DS_Store" {
+			continue
+		}
+		names = append(names, entry.Name)
+	}
+	base := ""
+	for len(names) > 0 {
+		folder, _, nested := strings.Cut(strings.TrimPrefix(names[0], base), "/")
+		if !nested {
+			return base
+		}
+		inside := base + folder + "/"
+		for _, name := range names {
+			if !strings.HasPrefix(name, inside) {
+				return base
+			}
+		}
+		base = inside
+	}
+	return base
 }
 
 func unsafeArchivePath(name string) bool {

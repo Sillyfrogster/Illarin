@@ -36,6 +36,8 @@ type Deliverable struct {
 	Targets           []DeliveryTarget
 	HasOriginal       bool
 	Pictures          []DeliveryPicture
+	// InstallCapabilities lists what an instance must declare, any one of them, before the asset is sent to it.
+	InstallCapabilities []string
 }
 
 func (s *Service) DeliverableAsset(
@@ -98,7 +100,16 @@ func (s *Service) DeliverableAsset(
 	if err != nil {
 		return Deliverable{}, err
 	}
+	found.InstallCapabilities = format.InstallCapabilities(found.Kind, targetFormats(found.Targets))
 	return found, nil
+}
+
+func targetFormats(targets []DeliveryTarget) []string {
+	formats := make([]string, 0, len(targets))
+	for _, target := range targets {
+		formats = append(formats, target.Format)
+	}
+	return formats
 }
 
 func deliveryTargets(

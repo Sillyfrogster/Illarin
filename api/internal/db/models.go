@@ -168,13 +168,14 @@ type AssetPublicProtectedContent struct {
 }
 
 type AssetRevision struct {
-	ID        pgtype.UUID
-	AssetID   pgtype.UUID
-	Revision  int32
-	MediaType string
-	CreatedAt pgtype.Timestamptz
-	BlobID    pgtype.UUID
-	Format    string
+	ID         pgtype.UUID
+	AssetID    pgtype.UUID
+	Revision   int32
+	MediaType  string
+	CreatedAt  pgtype.Timestamptz
+	BlobID     pgtype.UUID
+	Format     string
+	Identifier string
 }
 
 type AssetSnapshot struct {
@@ -280,6 +281,18 @@ type AssetUpdateEvent struct {
 	Payload         []byte
 }
 
+type AssetVaultPicture struct {
+	ID        pgtype.UUID
+	AssetID   pgtype.UUID
+	MediaID   pgtype.UUID
+	Address   string
+	Name      string
+	BlockID   pgtype.UUID
+	Section   string
+	Position  int32
+	CreatedAt pgtype.Timestamptz
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte
@@ -360,13 +373,15 @@ type InstanceDelivery struct {
 	SettledAt      pgtype.Timestamptz
 	SettledReason  pgtype.Text
 	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
 }
 
 type InstanceLibraryEntry struct {
-	InstanceID        pgtype.UUID
-	AssetID           pgtype.UUID
-	ContentGeneration int32
-	ReportedAt        pgtype.Timestamptz
+	InstanceID         pgtype.UUID
+	AssetID            pgtype.UUID
+	ContentGeneration  int32
+	ReportedAt         pgtype.Timestamptz
+	NotifiedWithheldAt pgtype.Timestamptz
 }
 
 type InstanceRefreshHistory struct {
@@ -430,20 +445,21 @@ type LinkRequest struct {
 }
 
 type LinkedInstance struct {
-	ID                 pgtype.UUID
-	UserID             pgtype.UUID
-	InstanceName       string
-	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
-	LastSeenAt         pgtype.Timestamptz
-	RevokedAt          pgtype.Timestamptz
-	RefreshTokenHash   []byte
-	ApplicationName    string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
+	ID                        pgtype.UUID
+	UserID                    pgtype.UUID
+	InstanceName              string
+	RefreshTokenPrefix        string
+	Scopes                    []string
+	LinkedAt                  pgtype.Timestamptz
+	LastSeenAt                pgtype.Timestamptz
+	RevokedAt                 pgtype.Timestamptz
+	RefreshTokenHash          []byte
+	ApplicationName           string
+	ApplicationVersion        pgtype.Text
+	ProtocolVersion           pgtype.Int4
+	Capabilities              []string
+	AcceptedTargets           []string
+	LibraryApplicationVersion pgtype.Text
 }
 
 type MigrationException struct {

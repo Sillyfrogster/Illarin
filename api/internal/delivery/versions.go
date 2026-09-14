@@ -1,0 +1,29 @@
+package delivery
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/db"
+	"github.com/google/uuid"
+)
+
+// minimumGroupSize is how many installations must report one app version before a page lists it.
+const minimumGroupSize = 5
+
+// InstalledAppVersions lists the app versions an asset is installed on, counting only instances that declare one of the capabilities that install it.
+func (s *Service) InstalledAppVersions(ctx context.Context, assetID uuid.UUID, installCapabilities []string) ([]string, error) {
+	if len(installCapabilities) == 0 {
+		return []string{}, nil
+	}
+	versions, err := db.New(s.pool).InstalledApplicationVersions(ctx, db.InstalledApplicationVersionsParams{
+		AssetID: uuidValue(assetID), Capabilities: installCapabilities, MinimumGroupSize: minimumGroupSize,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read installed application versions: %w", err)
+	}
+	if versions == nil {
+		return []string{}, nil
+	}
+	return versions, nil
+}

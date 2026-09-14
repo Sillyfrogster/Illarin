@@ -62,6 +62,14 @@ var contentFloors = map[string][]Requirement{
 			Role:   RolePackItems,
 		},
 	},
+	"extension": {
+		{
+			ID:     "archive",
+			Label:  "Archive",
+			Detail: "Upload the extension's archive.",
+			Role:   RoleExtensionDetails,
+		},
+	},
 }
 
 func ContentFloor(kind string, blocks []Block) []Check {

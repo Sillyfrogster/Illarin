@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
@@ -11,9 +12,10 @@ import (
 type State string
 
 const (
-	StateQueued   State = "queued"
-	StateReleased State = "released"
-	StateFailed   State = "failed"
+	StateQueued    State = "queued"
+	StateReleased  State = "released"
+	StateDelivered State = "delivered"
+	StateFailed    State = "failed"
 )
 
 type Reason string
@@ -30,23 +32,27 @@ var (
 	ErrAssetNotFound     = errors.New("no such asset")
 	ErrAssetNotSendable  = errors.New("only a published asset can be sent to an instance")
 	ErrNoTarget          = errors.New("that instance accepts no format this asset can be written in")
+	ErrCannotInstall     = errors.New("that instance does not install what this asset is")
 	ErrQueueFull         = errors.New("that instance already has as many waiting deliveries as it may hold")
 	ErrDeliveryNotFound  = errors.New("no waiting delivery of yours has that id")
 	ErrTooManyRequests   = errors.New("too many requests")
 	ErrTooManyCollectors = errors.New("too many instances are waiting for work at once")
 	ErrLibraryTooLarge   = errors.New("the library report is larger than one request may carry")
 	ErrLibraryReport     = errors.New("the library report is not valid")
+	ErrLibraryVersion    = errors.New("the library report names an application version that is not short printable text")
 	ErrAcknowledgement   = errors.New("the acknowledgement list is not valid")
 )
 
 type Delivery struct {
-	ID         uuid.UUID
-	InstanceID uuid.UUID
-	AssetID    uuid.UUID
-	State      State
-	Reason     Reason
-	QueuedAt   time.Time
-	ExpiresAt  time.Time
+	ID             uuid.UUID
+	InstanceID     uuid.UUID
+	AssetID        uuid.UUID
+	State          State
+	Reason         Reason
+	QueuedAt       time.Time
+	SettledAt      *time.Time
+	ExpiresAt      time.Time
+	UpdatesInstall bool
 }
 
 type Work struct {
@@ -98,9 +104,10 @@ type LibraryCounts struct {
 }
 
 type LibraryReport struct {
-	Snapshot bool
-	Entries  []LibraryEntry
-	Removed  []uuid.UUID
+	Snapshot           bool
+	ApplicationVersion string
+	Entries            []LibraryEntry
+	Removed            []uuid.UUID
 }
 
 type LibraryEntry struct {
@@ -112,6 +119,18 @@ type LibraryResult struct {
 	Accepted int
 	Removed  int
 	Ignored  int
+	Withheld []WithheldNotice
+}
+
+type WithheldNotice struct {
+	AssetID    uuid.UUID
+	Name       string
+	WithheldAt time.Time
+}
+
+type Collected struct {
+	Work     []Work
+	Withheld []WithheldNotice
 }
 
 func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal bool) (string, string, bool) {
@@ -134,3 +153,16 @@ func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal
 }
 
 const rawLabel = "The creator's own file"
+
+// installs says whether the instance declared one of the capabilities the asset needs, or the asset needs none.
+func installs(capabilities []string, sendable asset.Deliverable) bool {
+	if len(sendable.InstallCapabilities) == 0 {
+		return true
+	}
+	for _, needed := range sendable.InstallCapabilities {
+		if slices.Contains(capabilities, needed) {
+			return true
+		}
+	}
+	return false
+}

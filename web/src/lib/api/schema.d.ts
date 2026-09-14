@@ -625,7 +625,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** @description Acknowledge finished deliveries and wait, briefly, for more. Illarin holds the request for 25 to 30 seconds and answers 204 when the wait ends empty. A second request supersedes the first rather than both hanging. This is a durable queue read and never carries an authorization result. */
+    /** @description Acknowledge finished deliveries and wait, briefly, for more. Illarin holds the request for 25 to 30 seconds and answers as soon as it has work or a withheld notice for this instance, or 204 when the wait ends with neither. A second request supersedes the first rather than both hanging. This is a durable queue read and never carries an authorization result. */
     post: operations["collectDeliveries"];
     delete?: never;
     options?: never;
@@ -659,7 +659,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** @description Report what this instance has installed. A snapshot replaces the whole mirror for this instance; an incremental report adds, updates and removes what it names. Assets are named by immutable id, never by address. */
+    /** @description Report what this instance has installed and the version of the application it runs. A snapshot replaces the whole mirror for this instance; an incremental report adds, updates and removes what it names. Assets are named by immutable id, never by address. The answer carries any withheld notice waiting for this instance. */
     post: operations["syncLibrary"];
     delete?: never;
     options?: never;
@@ -674,7 +674,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Where the signed-in account could send this asset, what is already waiting, and what each of their instances reports having installed. */
+    /** @description Where the signed-in account could send this asset, what is already waiting or was delivered, and what each of their instances reports having installed. An extension can be sent only to an instance that declares its app's extension-install capability. */
     get: operations["getAssetInstances"];
     put?: never;
     post?: never;
@@ -1668,6 +1668,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/vault": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The pictures an uploaded README showed, waiting for the creator to place each one on the page or let it go. A picture the archive held has a copy ready; one shown from another site is listed by address, since Illarin never fetches, and needs the creator's own copy. */
+    get: operations["listVaultPictures"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/vault/{pictureId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Let a waiting picture go, along with the copy the archive gave it. */
+    delete: operations["discardVaultPicture"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/vault/{pictureId}/place": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Put a waiting picture into the image set of the block its README section became, giving the block one when it has none. A picture from another site needs the id of a gallery picture the creator uploaded. */
+    post: operations["placeVaultPicture"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/assets/{id}/blocks/{blockId}/move-and-remove": {
     parameters: {
       query?: never;
@@ -2160,7 +2211,7 @@ export interface components {
     ApplicationVersion: string | null;
     /** @enum {integer} */
     LinkProtocolVersion: 1;
-    /** @description A namespaced interoperability claim. It never grants permission and unknown values have no effect. */
+    /** @description A namespaced interoperability claim. It never grants permission and unknown values have no effect. Illarin recognises chat.lumiverse:extension-install and app.sillytavern:extension-install, which an app declares once it installs the extensions Illarin lists for it. */
     CapabilityId: string;
     InstanceCapabilities: components["schemas"]["CapabilityId"][];
     /** @description A format-module identifier accepted by the instance. Unknown values do not make a target available. */
@@ -2836,6 +2887,8 @@ export interface components {
       label: string;
       /** @description A pinned element can be neither removed nor moved out of its block. */
       pinned: boolean;
+      /** @description A locked element is read from the uploaded file. It can be moved and hidden with its block, and only a new upload changes it. */
+      locked: boolean;
       /** @enum {string} */
       display?: "rich" | "verbatim";
       itemSize?: components["schemas"]["ItemSize"];
@@ -3221,12 +3274,24 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** @enum {string} */
-      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      kind:
+        | "character"
+        | "lorebook"
+        | "preset"
+        | "theme"
+        | "pack"
+        | "extension";
       name: string;
       /** @description The catalog blurb the creator wrote for a person. Never the file's own description, which is a prompt written for a model. */
       blurb: string;
       tags: components["schemas"]["AssetTag"][];
       creator: string;
+      /** @description The identifier the uploaded file declares for itself, such as an extension's. Illarin does not reserve it, so two assets may share one. */
+      identifier?: string;
+      /** @description The extensions this one names as dependencies, in the order its manifest lists them, each with the listed Illarin extensions whose identifier matches. Empty for every other kind. */
+      extensionDependencies: components["schemas"]["ExtensionDependency"][];
+      /** @description The versions of its app an extension is installed on, as linked instances declaring the app's extension-install capability report them in library:sync. A version is listed only once at least five installations report it, so no single installation can be picked out. Empty for every other kind. */
+      installedAppVersions: string[];
       /** @description Null while a draft has not been asked the adult content question. Nothing answers it on the creator's behalf. */
       isNsfw: boolean | null;
       /** @enum {string} */
@@ -3350,7 +3415,13 @@ export interface components {
       id: string;
       name: string;
       /** @enum {string} */
-      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      kind:
+        | "character"
+        | "lorebook"
+        | "preset"
+        | "theme"
+        | "pack"
+        | "extension";
       /** Format: date-time */
       deletedAt: string;
       /** Format: date-time */
@@ -3408,7 +3479,13 @@ export interface components {
       name: string;
       creator: string;
       /** @enum {string} */
-      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      kind:
+        | "character"
+        | "lorebook"
+        | "preset"
+        | "theme"
+        | "pack"
+        | "extension";
       /** @description Null on a draft whose creator has not answered the adult content question. */
       isNsfw: boolean | null;
       /**
@@ -3534,6 +3611,39 @@ export interface components {
     BlockSaveConflict:
       | components["schemas"]["CandidateConflict"]
       | components["schemas"]["SealedExposureRefusal"];
+    VaultPictureList: {
+      pictures: components["schemas"]["VaultPicture"][];
+    };
+    VaultPicture: {
+      /** Format: uuid */
+      id: string;
+      /** @description Where the README showed the picture from, an archive entry or another site */
+      address: string;
+      /** @description The words the README wrote for the picture */
+      name: string;
+      /** @description The README section the picture came from, which names its block when none stands */
+      section: string;
+      /**
+       * Format: uuid
+       * @description The block the picture's section became, when that block still stands
+       */
+      blockId?: string;
+      /** @description The copy the archive held, absent for a picture shown from another site */
+      media?: {
+        /** Format: uuid */
+        id: string;
+        thumbUrl: string;
+        width: number;
+        height: number;
+      };
+    };
+    PlaceVaultPictureRequest: {
+      /**
+       * Format: uuid
+       * @description A gallery picture the creator uploaded to stand in for one shown from another site
+       */
+      mediaId?: string;
+    };
     SealedExposureRefusal: {
       error: string;
       /** @enum {string} */
@@ -3783,7 +3893,7 @@ export interface components {
       updatesAvailable: number;
     };
     CollectDeliveries: {
-      /** @description The deliveries this instance has durably installed since its last request. Delivery is at least once, so treat the ids as stable and acknowledge only after the work is safely stored. */
+      /** @description The deliveries this instance has durably installed since its last request. Delivery is at least once, so treat the ids as stable and acknowledge only after the work is safely stored. An acknowledged delivery is recorded as delivered, which the asset page shows the owner. */
       acknowledge: string[];
     };
     DeliveryArtifact: {
@@ -3820,8 +3930,20 @@ export interface components {
       leaseExpiresAt: string;
       artifacts: components["schemas"]["DeliveryArtifact"][];
     };
+    WithheldNotice: {
+      /** Format: uuid */
+      assetId: string;
+      name: string;
+      /**
+       * Format: date-time
+       * @description When Illarin withheld it.
+       */
+      withheldAt: string;
+    };
     DeliveryWorkList: {
       deliveries: components["schemas"]["DeliveryWork"][];
+      /** @description Extensions this instance reports installed that were withheld since it was last told. Each withhold is told once, on a delivery wait or a library report, whichever comes first. A wait with a notice and no work answers 200 with an empty list of deliveries. */
+      withheld: components["schemas"]["WithheldNotice"][];
     };
     LibraryEntry: {
       /** Format: uuid */
@@ -3832,6 +3954,8 @@ export interface components {
     LibraryReport: {
       /** @description True to replace the whole mirror for this instance. A snapshot carries no removals, because anything absent from it is removed. */
       snapshot: boolean;
+      /** @description The version of the application this instance runs, replaced by each report. An extension page lists the versions of its app it is installed on once five installations that declare the app's extension-install capability report the same one. Leave it out and this instance counts under the applicationVersion in its declaration, or under no version if the declaration has none. */
+      applicationVersion?: string;
       entries: components["schemas"]["LibraryEntry"][];
       removed?: string[];
     };
@@ -3840,6 +3964,8 @@ export interface components {
       removed: number;
       /** @description Entries naming an asset Illarin cannot offer. */
       ignored: number;
+      /** @description Extensions this instance reports installed that were withheld since it was last told. Each withhold is told once, on a library report or a delivery wait, whichever comes first. Show each one to the owner, who decides whether to disable it. */
+      withheld: components["schemas"]["WithheldNotice"][];
     };
     QueuedDelivery: {
       /** Format: uuid */
@@ -3848,8 +3974,11 @@ export interface components {
       instanceId: string;
       /** Format: uuid */
       assetId: string;
-      /** @enum {string} */
-      state: "queued" | "released" | "failed";
+      /**
+       * @description Queued until the instance collects it, released while the instance holds it, delivered once the instance acknowledged installing it, and failed when it stopped for the reason given.
+       * @enum {string}
+       */
+      state: "queued" | "released" | "delivered" | "failed";
       /**
        * @description Why a failed delivery stopped.
        * @enum {string|null}
@@ -3857,8 +3986,15 @@ export interface components {
       reason?: "withdrawn" | "unsupported" | "abandoned" | null;
       /** Format: date-time */
       queuedAt: string;
+      /**
+       * Format: date-time
+       * @description When the delivery was acknowledged or stopped.
+       */
+      settledAt: string | null;
       /** Format: date-time */
       expiresAt: string;
+      /** @description True when the instance already reported the asset installed at the time this delivery was queued. */
+      updatesInstall: boolean;
     };
     AssetInstance: {
       /** Format: uuid */
@@ -4251,6 +4387,18 @@ export interface components {
       category?: components["schemas"]["PublicationCategory"] | null;
       app?: components["schemas"]["PublicationApp"] | null;
     };
+    DependencyAsset: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      creator: string;
+    };
+    ExtensionDependency: {
+      /** @description The dependency exactly as the manifest names it. */
+      name: string;
+      /** @description Listed extensions for the same app whose identifier matches the name. Empty when none does, such as for an extension built into the app. */
+      assets: components["schemas"]["DependencyAsset"][];
+    };
     AppTarget: {
       /** @description The application id, matching the ids allowedApps uses. */
       id: string;
@@ -4314,7 +4462,13 @@ export interface components {
     RecordedVersionDownloads: {
       version: components["schemas"]["RecordedVersion"];
       /** @enum {string} */
-      kind: "character" | "lorebook" | "preset" | "theme" | "pack";
+      kind:
+        | "character"
+        | "lorebook"
+        | "preset"
+        | "theme"
+        | "pack"
+        | "extension";
       /** @description Whether protected content keeps this version out of any file. True while the asset installs only through a linked app, and for a version that recorded a sealed prompt the asset no longer carries. */
       linkedInstallOnly: boolean;
       /** @description The formats the current writers offer for the content this version recorded, with the loss each one costs it. Empty while linkedInstallOnly is true. */
@@ -6389,7 +6543,7 @@ export interface operations {
       };
     };
     responses: {
-      /** @description The work released to this instance */
+      /** @description The work released to this instance and any withheld notices */
       200: {
         headers: {
           [name: string]: unknown;
@@ -6398,7 +6552,7 @@ export interface operations {
           "application/json": components["schemas"]["DeliveryWorkList"];
         };
       };
-      /** @description The wait ended with nothing queued */
+      /** @description The wait ended with nothing queued and nothing withheld to report */
       204: {
         headers: {
           [name: string]: unknown;
@@ -6653,7 +6807,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description That instance already holds as many waiting deliveries as it may, or accepts no format this asset can be written in */
+      /** @description That instance already holds as many waiting deliveries as it may, accepts no format this asset can be written in, or does not declare the capability an extension needs */
       409: {
         headers: {
           [name: string]: unknown;
@@ -9352,7 +9506,13 @@ export interface operations {
   listAssets: {
     parameters: {
       query?: {
-        kind?: "character" | "lorebook" | "preset" | "theme" | "pack";
+        kind?:
+          | "character"
+          | "lorebook"
+          | "preset"
+          | "theme"
+          | "pack"
+          | "extension";
         /** @description An app, from the platforms list. An app matches an asset when any of the asset's offered download formats is one that app reads. */
         platform?: string;
         /** @description Scope the listing to one creator's public profile. */
@@ -10047,6 +10207,167 @@ export interface operations {
         content?: never;
       };
       /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed or the asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
+      };
+    };
+  };
+  listVaultPictures: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The waiting pictures, in the order the README showed them */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VaultPictureList"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The asset does not belong to the creator */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  discardVaultPicture: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        pictureId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The picture is gone from the vault */
+      204: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such picture waits in this creator's vault */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The working copy changed or the asset is frozen */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CandidateConflict"];
+        };
+      };
+    };
+  };
+  placeVaultPicture: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The workingCopyVersion returned with the candidate the creator reviewed */
+        "X-Working-Copy-Version": components["parameters"]["WorkingCopyVersion"];
+      };
+      path: {
+        id: string;
+        pictureId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PlaceVaultPictureRequest"];
+      };
+    };
+    responses: {
+      /** @description The whole page with the picture placed */
+      200: {
+        headers: {
+          /** @description The version committed by this request */
+          "X-Working-Copy-Version"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetBlock"][];
+        };
+      };
+      /** @description The picture needs an uploaded copy, or its block cannot hold it */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has not verified its email */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No such picture waits in this creator's vault */
       404: {
         headers: {
           [name: string]: unknown;

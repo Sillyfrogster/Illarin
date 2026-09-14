@@ -13,6 +13,8 @@ function asset(over: Partial<AssetDetail> = {}): AssetDetail {
     blurb: "She closes the book on a ribbon.",
     tags: [],
     creator: "nimhloth",
+    extensionDependencies: [],
+    installedAppVersions: [],
     isNsfw: false,
     discovery: "listed",
     lifecycle: "published",
@@ -115,6 +117,7 @@ test("does not copy protected prompt text into page or social metadata", () => {
               slot: "main",
               label: "Prompt fragments",
               pinned: true,
+              locked: false,
               isEmpty: false,
               facts: ["1 fragment"],
               content: {

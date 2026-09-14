@@ -13,6 +13,7 @@ paths:
               - preset
               - theme
               - pack
+              - extension
         - name: platform
           in: query
           description: >-
@@ -657,6 +658,135 @@ paths:
           description: The signed-in account has not verified its email
         '404':
           description: The asset or either block does not belong to the creator
+        '409':
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
+  /v1/assets/{id}/vault:
+    get:
+      operationId: listVaultPictures
+      description: >-
+        The pictures an uploaded README showed, waiting for the creator to
+        place each one on the page or let it go. A picture the archive held
+        has a copy ready; one shown from another site is listed by address,
+        since Illarin never fetches, and needs the creator's own copy.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The waiting pictures, in the order the README showed them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultPictureList'
+        '401':
+          description: No account is signed in
+        '404':
+          description: The asset does not belong to the creator
+  /v1/assets/{id}/vault/{pictureId}:
+    delete:
+      operationId: discardVaultPicture
+      description: Let a waiting picture go, along with the copy the archive gave it.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pictureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The picture is gone from the vault
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No such picture waits in this creator's vault
+        '409':
+          description: The working copy changed or the asset is frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateConflict'
+  /v1/assets/{id}/vault/{pictureId}/place:
+    post:
+      operationId: placeVaultPicture
+      description: >-
+        Put a waiting picture into the image set of the block its README
+        section became, giving the block one when it has none. A picture from
+        another site needs the id of a gallery picture the creator uploaded.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - $ref: "#/components/parameters/WorkingCopyVersion"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pictureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceVaultPictureRequest'
+      responses:
+        '200':
+          description: The whole page with the picture placed
+          headers:
+            X-Working-Copy-Version:
+              description: The version committed by this request
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ./blocks.yaml#/components/schemas/AssetBlock
+        '400':
+          description: The picture needs an uploaded copy, or its block cannot hold it
+        '401':
+          description: No account is signed in
+        '403':
+          description: The signed-in account has not verified its email
+        '404':
+          description: No such picture waits in this creator's vault
         '409':
           description: The working copy changed or the asset is frozen
           content:
@@ -1644,6 +1774,55 @@ components:
         format: int64
         minimum: 1
   schemas:
+    VaultPictureList:
+      type: object
+      required: [pictures]
+      properties:
+        pictures:
+          type: array
+          items:
+            $ref: '#/components/schemas/VaultPicture'
+    VaultPicture:
+      type: object
+      required: [id, address, name, section]
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          description: Where the README showed the picture from, an archive entry or another site
+          type: string
+        name:
+          description: The words the README wrote for the picture
+          type: string
+        section:
+          description: The README section the picture came from, which names its block when none stands
+          type: string
+        blockId:
+          description: The block the picture's section became, when that block still stands
+          type: string
+          format: uuid
+        media:
+          description: The copy the archive held, absent for a picture shown from another site
+          type: object
+          required: [id, thumbUrl, width, height]
+          properties:
+            id:
+              type: string
+              format: uuid
+            thumbUrl:
+              type: string
+            width:
+              type: integer
+            height:
+              type: integer
+    PlaceVaultPictureRequest:
+      type: object
+      properties:
+        mediaId:
+          description: A gallery picture the creator uploaded to stand in for one shown from another site
+          type: string
+          format: uuid
     CandidateConflict:
       type: object
       required: [error, code]
@@ -1761,6 +1940,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         linkedInstallOnly:
           type: boolean
           description: >-
@@ -1976,6 +2156,8 @@ components:
         - createdAt
         - blocks
         - media
+        - extensionDependencies
+        - installedAppVersions
         - preview
         - visibility
       properties:
@@ -1999,6 +2181,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         name:
           type: string
         blurb:
@@ -2012,6 +2195,29 @@ components:
             $ref: '#/components/schemas/AssetTag'
         creator:
           type: string
+        identifier:
+          type: string
+          description: >-
+            The identifier the uploaded file declares for itself, such as an
+            extension's. Illarin does not reserve it, so two assets may share one.
+        extensionDependencies:
+          type: array
+          description: >-
+            The extensions this one names as dependencies, in the order its
+            manifest lists them, each with the listed Illarin extensions whose
+            identifier matches. Empty for every other kind.
+          items:
+            $ref: '#/components/schemas/ExtensionDependency'
+        installedAppVersions:
+          type: array
+          description: >-
+            The versions of its app an extension is installed on, as linked
+            instances declaring the app's extension-install capability report
+            them in library:sync. A version is listed only
+            once at least five installations report it, so no single
+            installation can be picked out. Empty for every other kind.
+          items:
+            type: string
         isNsfw:
           description: >-
             Null while a draft has not been asked the adult content question.
@@ -2446,6 +2652,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         deletedAt:
           type: string
           format: date-time
@@ -2476,6 +2683,37 @@ components:
         at:
           type: string
           format: date-time
+    ExtensionDependency:
+      type: object
+      required:
+        - name
+        - assets
+      properties:
+        name:
+          type: string
+          description: The dependency exactly as the manifest names it.
+        assets:
+          type: array
+          description: >-
+            Listed extensions for the same app whose identifier matches the
+            name. Empty when none does, such as for an extension built into the
+            app.
+          items:
+            $ref: '#/components/schemas/DependencyAsset'
+    DependencyAsset:
+      type: object
+      required:
+        - id
+        - name
+        - creator
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        creator:
+          type: string
     AssetTag:
       type: object
       required:
@@ -2603,6 +2841,7 @@ components:
             - preset
             - theme
             - pack
+            - extension
         isNsfw:
           description: >-
             Null on a draft whose creator has not answered the adult content

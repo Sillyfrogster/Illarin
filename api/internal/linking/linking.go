@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,10 @@ func (i Instance) Grants(scope Scope) bool {
 	return false
 }
 
+func (i Instance) Declares(capability string) bool {
+	return slices.Contains(i.Capabilities, capability)
+}
+
 type TokenGrant struct {
 	Instance             Instance
 	AccessToken          string
@@ -164,11 +169,9 @@ func validateDeclaration(in Declaration) (Declaration, error) {
 	if err != nil {
 		return Declaration{}, ErrInvalidName
 	}
-	version := strings.TrimSpace(in.ApplicationVersion)
-	if version != "" {
-		if _, err := validateText(version, maxVersionLength); err != nil {
-			return Declaration{}, ErrInvalidDeclaration
-		}
+	version, err := ApplicationVersion(in.ApplicationVersion)
+	if err != nil {
+		return Declaration{}, ErrInvalidDeclaration
 	}
 	if in.ProtocolVersion != protocolVersion || in.Capabilities == nil || in.AcceptedTargets == nil {
 		return Declaration{}, ErrInvalidDeclaration
@@ -186,6 +189,15 @@ func validateDeclaration(in Declaration) (Declaration, error) {
 		ApplicationVersion: version, ProtocolVersion: protocolVersion,
 		Capabilities: capabilities, AcceptedTargets: targets,
 	}, nil
+}
+
+// ApplicationVersion trims a reported version, which may be empty, and refuses one that is not printable text of at most 64 characters.
+func ApplicationVersion(raw string) (string, error) {
+	version := strings.TrimSpace(raw)
+	if version == "" {
+		return "", nil
+	}
+	return validateText(version, maxVersionLength)
 }
 
 func validateText(raw string, limit int) (string, error) {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/lorebook"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/pack"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
@@ -16,6 +17,7 @@ import (
 func All() []format.Module {
 	readers := slices.Concat(
 		character.Modules(), lorebook.Modules(), preset.Modules(), theme.Modules(), pack.Modules(),
+		extension.Modules(),
 	)
 	all := make([]format.Module, 0, len(readers)+1)
 	for _, module := range readers {

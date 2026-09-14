@@ -20,6 +20,7 @@ type ExportAsset struct {
 	Cover     *ExportMedia
 	Images    map[uuid.UUID]ExportMedia
 	Preserved []Remainder
+	Upload    []byte
 }
 
 type ExportMedia struct {

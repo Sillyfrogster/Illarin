@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   BROWSE_THRESHOLD,
+  BROWSE_WEIGHT,
   browsable,
   type CollectionItem,
   type CollectionView,
@@ -39,6 +40,27 @@ describe("when a run earns a browser", () => {
   test("a long run that cannot name its items is a sequence, not a collection", () => {
     const turns = Array.from({ length: 40 }, (_, n) => item(`${n}`, ""));
     expect(browsable(turns)).toBe(false);
+  });
+
+  test("a few named passages that outweigh a page open in a browser", () => {
+    const passages = Array.from({ length: 4 }, (_, n) =>
+      item(`${n}`, `Part ${n}`, { weight: BROWSE_WEIGHT / 3 }),
+    );
+    expect(browsable(passages)).toBe(true);
+  });
+
+  test("a few short named passages stay on the page", () => {
+    const passages = Array.from({ length: 4 }, (_, n) =>
+      item(`${n}`, `Part ${n}`, { weight: 40 }),
+    );
+    expect(browsable(passages)).toBe(false);
+  });
+
+  test("heavy passages that cannot all be named stay on the page", () => {
+    const greetings = Array.from({ length: 4 }, (_, n) =>
+      item(`${n}`, "", { weight: BROWSE_WEIGHT }),
+    );
+    expect(browsable(greetings)).toBe(false);
   });
 
   test("one unnamed item is enough to keep a run on the page", () => {

@@ -55,6 +55,13 @@ const (
 	RoleThemeControls           Role = "theme_controls"
 	RoleStylesheets             Role = "stylesheets"
 	RolePackItems               Role = "pack_items"
+
+	RoleExtensionGrantedPermissions  Role = "extension_granted_permissions"
+	RoleExtensionApprovedPermissions Role = "extension_approved_permissions"
+	RoleExtensionDetails             Role = "extension_details"
+	RoleExtensionLinks               Role = "extension_links"
+	RoleExtensionDependencies        Role = "extension_dependencies"
+	RoleExtensionAdditions           Role = "extension_additions"
 )
 
 func Roles() []Role {
@@ -66,7 +73,8 @@ func Roles() []Role {
 		RolePromptFragments, RolePromptVariables, RoleSamplerSettings,
 		RoleCompletionSettings, RoleAdvancedSettings, RolePromptNudges,
 		RoleRegexScripts, RoleThemeTokens, RoleThemeControls, RoleStylesheets,
-		RolePackItems,
+		RolePackItems, RoleExtensionGrantedPermissions, RoleExtensionApprovedPermissions,
+		RoleExtensionDetails, RoleExtensionLinks, RoleExtensionDependencies, RoleExtensionAdditions,
 	}
 }
 
@@ -78,7 +86,9 @@ func (r Role) Known() bool {
 		RoleExpressions, RoleLorebookEntries, RolePromptFragments,
 		RolePromptVariables, RoleSamplerSettings, RoleCompletionSettings,
 		RoleAdvancedSettings, RolePromptNudges, RoleRegexScripts,
-		RoleThemeTokens, RoleThemeControls, RoleStylesheets, RolePackItems:
+		RoleThemeTokens, RoleThemeControls, RoleStylesheets, RolePackItems,
+		RoleExtensionGrantedPermissions, RoleExtensionApprovedPermissions,
+		RoleExtensionDetails, RoleExtensionLinks, RoleExtensionDependencies, RoleExtensionAdditions:
 		return true
 	default:
 		return false
@@ -490,6 +500,13 @@ var labels = map[Role]string{
 	RoleThemeControls:      "Theme controls",
 	RoleStylesheets:        "Stylesheets",
 	RolePackItems:          "Items",
+
+	RoleExtensionGrantedPermissions:  "Granted on install",
+	RoleExtensionApprovedPermissions: "Needs an admin to approve",
+	RoleExtensionDetails:             "Details",
+	RoleExtensionLinks:               "Links",
+	RoleExtensionDependencies:        "Dependencies",
+	RoleExtensionAdditions:           "What it adds",
 }
 
 var typeLabels = map[Type]string{
@@ -542,6 +559,13 @@ var roleTypes = map[Role][]Type{
 	RoleThemeControls:      {TypeSettingGroup},
 	RoleStylesheets:        {TypeStylesheetSet},
 	RolePackItems:          {TypeRecordList},
+
+	RoleExtensionGrantedPermissions:  {TypeTextSet},
+	RoleExtensionApprovedPermissions: {TypeTextSet},
+	RoleExtensionDetails:             {TypeFieldList},
+	RoleExtensionLinks:               {TypeLinkList},
+	RoleExtensionDependencies:        {TypeTextSet},
+	RoleExtensionAdditions:           {TypeFieldList},
 }
 
 func (r Role) Label() string { return labels[r] }

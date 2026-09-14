@@ -6,6 +6,7 @@ const KINDS = new Set<BrowseKind>([
   "preset",
   "theme",
   "pack",
+  "extension",
 ]);
 
 function first(value: string | string[] | undefined) {

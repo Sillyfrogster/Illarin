@@ -236,7 +236,7 @@ func TestAssetKindIsClosedToKnownValues(t *testing.T) {
 	pool := Connect(t)
 	ctx := context.Background()
 
-	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
+	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack", "extension"} {
 		_, err := pool.Exec(ctx,
 			`insert into assets (id, kind, name, lifecycle)
 			 values (gen_random_uuid(), $1, $2, 'published')`,

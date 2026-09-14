@@ -5,29 +5,33 @@ import "slices"
 type DefinitionID string
 
 const (
-	CharacterCore     DefinitionID = "character_core"
-	LorebookCore      DefinitionID = "lorebook_core"
-	PresetCore        DefinitionID = "preset_core"
-	PresetSettings    DefinitionID = "settings"
-	PresetVariables   DefinitionID = "variables"
-	PresetScripts     DefinitionID = "scripts"
-	PresetNudges      DefinitionID = "nudges"
-	ThemeCore         DefinitionID = "theme_core"
-	ThemeStylesheet   DefinitionID = "stylesheet"
-	PackCore          DefinitionID = "pack_core"
-	Messages          DefinitionID = "messages"
-	Expressions       DefinitionID = "expressions"
-	Lorebook          DefinitionID = "lorebook"
-	ImagePrompts      DefinitionID = "image_prompts"
-	ModelInstructions DefinitionID = "model_instructions"
-	Relationships     DefinitionID = "relationships"
-	Gallery           DefinitionID = "gallery"
-	Usage             DefinitionID = "usage"
-	Changelog         DefinitionID = "changelog"
-	Attributes        DefinitionID = "attributes"
-	AuthorNotes       DefinitionID = "author_notes"
-	RunsBestWith      DefinitionID = "runs_best_with"
-	CustomBlock       DefinitionID = "custom_block"
+	CharacterCore         DefinitionID = "character_core"
+	LorebookCore          DefinitionID = "lorebook_core"
+	PresetCore            DefinitionID = "preset_core"
+	PresetSettings        DefinitionID = "settings"
+	PresetVariables       DefinitionID = "variables"
+	PresetScripts         DefinitionID = "scripts"
+	PresetNudges          DefinitionID = "nudges"
+	ThemeCore             DefinitionID = "theme_core"
+	ThemeStylesheet       DefinitionID = "stylesheet"
+	PackCore              DefinitionID = "pack_core"
+	ExtensionPermissions  DefinitionID = "extension_permissions"
+	ExtensionSource       DefinitionID = "extension_source"
+	ExtensionDependencies DefinitionID = "extension_dependencies"
+	ExtensionAdditions    DefinitionID = "extension_additions"
+	Messages              DefinitionID = "messages"
+	Expressions           DefinitionID = "expressions"
+	Lorebook              DefinitionID = "lorebook"
+	ImagePrompts          DefinitionID = "image_prompts"
+	ModelInstructions     DefinitionID = "model_instructions"
+	Relationships         DefinitionID = "relationships"
+	Gallery               DefinitionID = "gallery"
+	Usage                 DefinitionID = "usage"
+	Changelog             DefinitionID = "changelog"
+	Attributes            DefinitionID = "attributes"
+	AuthorNotes           DefinitionID = "author_notes"
+	RunsBestWith          DefinitionID = "runs_best_with"
+	CustomBlock           DefinitionID = "custom_block"
 )
 
 type Group string
@@ -93,6 +97,7 @@ type DefinedElement struct {
 	Type    Type
 	Options Options
 	Pinned  bool
+	Locked  bool
 }
 
 var character = []Definition{
@@ -288,6 +293,55 @@ var pack = []Definition{
 	},
 }
 
+var extension = []Definition{
+	{
+		ID:       ExtensionPermissions,
+		Title:    "Permissions",
+		Required: true,
+		Hideable: true,
+		Elements: []DefinedElement{
+			{Role: RoleExtensionGrantedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, Locked: true},
+			{Role: RoleExtensionApprovedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, Locked: true},
+		},
+		Layouts: []Layout{Duo, Stack2},
+		Width:   Full,
+	},
+	{
+		ID:       ExtensionAdditions,
+		Title:    "What it adds",
+		Required: true,
+		Hideable: true,
+		Elements: []DefinedElement{
+			{Role: RoleExtensionAdditions, Type: TypeFieldList, Pinned: true, Locked: true},
+		},
+		Layouts: []Layout{Single},
+		Width:   TwoThirds,
+	},
+	{
+		ID:       ExtensionDependencies,
+		Title:    "Dependencies",
+		Required: true,
+		Hideable: true,
+		Elements: []DefinedElement{
+			{Role: RoleExtensionDependencies, Type: TypeTextSet, Options: Options{Display: DisplayVerbatim}, Pinned: true, Locked: true},
+		},
+		Layouts: []Layout{Single},
+		Width:   Third,
+	},
+	{
+		ID:       ExtensionSource,
+		Title:    "Version and source",
+		Required: true,
+		Hideable: true,
+		Elements: []DefinedElement{
+			{Role: RoleExtensionDetails, Type: TypeFieldList, Pinned: true, Locked: true},
+			{Role: RoleExtensionLinks, Type: TypeLinkList, Pinned: true, Locked: true},
+		},
+		Layouts: []Layout{Stack2, Duo},
+		Width:   Third,
+	},
+}
+
 var shared = []Definition{
 	{
 		ID:       Gallery,
@@ -368,6 +422,7 @@ var catalogs = map[string][]Definition{
 	"preset":    preset,
 	"theme":     theme,
 	"pack":      pack,
+	"extension": extension,
 }
 
 func Catalog(kind string) ([]Definition, bool) {

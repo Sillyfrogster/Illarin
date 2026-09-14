@@ -10,6 +10,7 @@ function element(id: string, label: string): AssetElement {
     isEmpty: false,
     label,
     pinned: false,
+    locked: false,
     slot: id,
     type: "prose",
   };

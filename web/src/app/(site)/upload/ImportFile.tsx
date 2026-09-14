@@ -93,8 +93,8 @@ export function ImportFile({
         Import a file
       </h2>
       <p className="mt-2 text-ui text-mute">
-        Upload a character card, lorebook, preset, theme or pack. Illarin
-        detects the format and imports its details.
+        Upload a character card, lorebook, preset, theme, pack or extension zip.
+        Illarin detects the format and imports its details.
       </p>
 
       <input

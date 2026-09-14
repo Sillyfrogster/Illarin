@@ -10,7 +10,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { browserFetch } from "@/lib/api/browser-mutation";
@@ -34,7 +34,9 @@ import {
   type FormatLoss,
   fileSize,
   formatChoices,
+  installsOnInstance,
   instanceStanding,
+  isWaiting,
   MAX_DOWNLOAD_BYTES,
   sendActionLabel,
   type TravellingImage,
@@ -42,9 +44,7 @@ import {
 } from "@/lib/asset-delivery";
 import { versionDate } from "@/lib/asset-updates";
 import { cn } from "@/lib/cn";
-
-const WATCH_INTERVAL_MS = 8000;
-const WATCH_LIMIT = 20;
+import { shortMoment } from "@/lib/dates";
 
 function fileWord(mediaType: string): string {
   if (mediaType.startsWith("image/")) {
@@ -65,6 +65,7 @@ function arrivalDate(when: string): string {
 
 export type AssetChooserProps = {
   assetId: string;
+  kind: string;
   kindLabel: string;
   blocks: AssetBlock[];
   downloads: DownloadTarget[];
@@ -79,6 +80,7 @@ export type AssetChooserProps = {
 /** AssetChooser is the body of the download chooser, from formats and images to the file itself. */
 export function AssetChooser({
   assetId,
+  kind,
   blocks,
   downloads,
   appTargets,
@@ -89,16 +91,24 @@ export function AssetChooser({
   linkedInstallOnly,
   instances,
   refresh,
+  onSent,
   version = null,
 }: AssetChooserProps & {
   instances: AssetInstance[];
   refresh: () => Promise<void>;
+  onSent?: () => void;
   version?: RecordedVersion | null;
 }) {
+  const installs = installsOnInstance(kind);
   const [format, setFormat] = useState("");
   const [app, setApp] = useState(appTargets[0]?.id ?? "");
   const [openFormats, setOpenFormats] = useState(false);
-  const [destination, setDestination] = useState(DOWNLOAD_DESTINATION);
+  const [destination, setDestination] = useState(
+    installs
+      ? (instances.find((one) => one.canReceive)?.instanceId ??
+          DOWNLOAD_DESTINATION)
+      : DOWNLOAD_DESTINATION,
+  );
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   const gallery = useMemo(
@@ -106,7 +116,6 @@ export function AssetChooser({
     [blocks, images],
   );
   const [taken, setTaken] = useState<string[] | null>(null);
-  const watched = useRef(0);
 
   const choices = formatChoices({
     downloads,
@@ -125,9 +134,7 @@ export function AssetChooser({
   const instance = instances.find(
     (one) => one.instanceId === goingTo?.id && one.canReceive,
   );
-  const pending = Boolean(
-    instance?.delivery && instance.delivery.state !== "failed",
-  );
+  const pending = isWaiting(instance?.delivery);
   const carriesGallery = chosen?.carriesGallery ?? false;
   const included =
     taken ?? gallery.filter((one) => one.chosen).map((one) => one.mediaId);
@@ -139,19 +146,6 @@ export function AssetChooser({
     carries: carriesGallery,
   });
   const oversized = bytes > MAX_DOWNLOAD_BYTES;
-
-  useEffect(() => {
-    if (!pending) {
-      watched.current = 0;
-      return;
-    }
-    if (watched.current >= WATCH_LIMIT) return;
-    const timer = setTimeout(() => {
-      watched.current += 1;
-      void refresh();
-    }, WATCH_INTERVAL_MS);
-    return () => clearTimeout(timer);
-  }, [pending, refresh]);
 
   async function act(path: string, method: string, body?: unknown) {
     setBusy(true);
@@ -176,6 +170,7 @@ export function AssetChooser({
         return;
       }
       await refresh();
+      return true;
     } catch {
       setFailure(
         "We could not reach Illarin. Check your connection and try again.",
@@ -258,7 +253,7 @@ export function AssetChooser({
             className="mt-5 block text-meta font-medium text-ink"
             htmlFor="get-asset-destination"
           >
-            Send to
+            {installs ? "Install on" : "Send to"}
           </label>
           <Select
             className="mt-2"
@@ -332,11 +327,14 @@ export function AssetChooser({
             className="flex-1"
             disabled={pending}
             loading={busy}
-            onClick={() =>
-              act(`/api/v1/assets/${assetId}/deliveries`, "POST", {
-                instanceId: instance.instanceId,
-              })
-            }
+            onClick={async () => {
+              const sent = await act(
+                `/api/v1/assets/${assetId}/deliveries`,
+                "POST",
+                { instanceId: instance.instanceId },
+              );
+              if (sent) onSent?.();
+            }}
             variant="primary"
           >
             {pending ? (
@@ -344,7 +342,7 @@ export function AssetChooser({
             ) : (
               <Send aria-hidden="true" />
             )}
-            {sendActionLabel(instance)}
+            {sendActionLabel(instance, installs)}
           </Button>
           {instance.delivery ? (
             <Button
@@ -684,7 +682,7 @@ function Sample({
 function InstanceStanding({ instance }: { instance: AssetInstance }) {
   const delivery = instance.delivery;
 
-  if (delivery && delivery.state !== "failed") {
+  if (isWaiting(delivery)) {
     return (
       <p className="mt-4 flex items-start gap-2 text-meta text-mute">
         <Clock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
@@ -701,6 +699,11 @@ function InstanceStanding({ instance }: { instance: AssetInstance }) {
     );
   }
   return (
-    <p className="mt-4 text-meta text-mute">{instanceStanding(instance)}</p>
+    <p className="mt-4 text-meta text-mute">
+      {delivery?.state === "delivered" && delivery.settledAt
+        ? `Delivered ${shortMoment(delivery.settledAt)}. `
+        : ""}
+      {instanceStanding(instance)}
+    </p>
   );
 }

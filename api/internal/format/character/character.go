@@ -131,7 +131,7 @@ func declaration(id string) format.Declaration {
 		Recognition: recognition, Roles: roles, Header: header,
 		Limits: format.ContentLimits{
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
-			ItemBytes: block.MaxItemBytes,
+			ItemBytes: block.MaxItemBytes, ArchiveFiles: format.MaxArchiveFiles,
 		},
 		ConsumedKeys: consumedKeys,
 		Boilerplate: []format.Boilerplate{

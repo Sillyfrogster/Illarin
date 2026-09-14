@@ -48,11 +48,13 @@ export function StatusLight({ state }: { state: DockState }) {
 
 export function DockTool({
   active,
+  count,
   icon: Icon,
   label,
   onClick,
 }: {
   active?: boolean;
+  count?: number;
   icon: LucideIcon;
   label: string;
   onClick: () => void;
@@ -67,6 +69,14 @@ export function DockTool({
       type="button"
     >
       <Icon aria-hidden="true" size={18} />
+      {count ? (
+        <span
+          aria-hidden="true"
+          className="absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 font-ui text-[0.62rem] leading-4 font-semibold text-on-accent tabular-nums"
+        >
+          {count}
+        </span>
+      ) : null}
     </button>
   );
 }

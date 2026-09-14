@@ -1,5 +1,7 @@
 import type { PhrasingContent, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmTableFromMarkdown } from "mdast-util-gfm-table";
+import { gfmTable } from "micromark-extension-gfm-table";
 
 export type RichInline =
   | { kind: "text"; text: string }
@@ -13,7 +15,13 @@ export type RichBlock =
   | { kind: "paragraph"; children: RichInline[] }
   | { kind: "heading"; depth: number; children: RichInline[] }
   | { kind: "quote"; children: RichBlock[] }
-  | { kind: "list"; ordered: boolean; start: number; items: RichBlock[][] };
+  | { kind: "list"; ordered: boolean; start: number; items: RichBlock[][] }
+  | { kind: "code"; text: string }
+  | {
+      kind: "table";
+      head: RichInline[][] | null;
+      rows: RichInline[][][];
+    };
 
 export type RichText = {
   blocks: RichBlock[];
@@ -23,7 +31,10 @@ export type RichText = {
 export function readRichText(source: string): RichText {
   const stripped = stripHtml(source);
   const removed = { formatting: stripped.removed };
-  const tree = fromMarkdown(stripped.text, { extensions: [DISABLED] });
+  const tree = fromMarkdown(stripped.text, {
+    extensions: [DISABLED, gfmTable()],
+    mdastExtensions: [gfmTableFromMarkdown()],
+  });
   const blocks = readBlocks(tree.children, removed);
   const shallowest = shallowestHeading(blocks) ?? 1;
   return {
@@ -155,8 +166,20 @@ function readBlocks(nodes: RootContent[], removed: Removed): RichBlock[] {
         break;
       }
       case "code": {
-        removed.formatting = true;
-        blocks.push({ kind: "paragraph", children: readLines(node.value) });
+        if (node.value.trim() !== "") {
+          blocks.push({ kind: "code", text: node.value });
+        }
+        break;
+      }
+      case "table": {
+        const [head = [], ...rows] = node.children.map((row) =>
+          row.children.map((cell) => readInline(cell.children, removed)),
+        );
+        blocks.push({
+          kind: "table",
+          head: head.every(isBlank) ? null : head,
+          rows,
+        });
         break;
       }
       case "definition":
@@ -271,7 +294,20 @@ const DISCARDED = /<(script|style|svg)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi;
 const COMMENT_OR_TAG =
   /<!--[\s\S]*?-->|<\/?([a-zA-Z][a-zA-Z0-9-]*)(?:\s(?:"[^"]*"|'[^']*'|[^'">])*)?\/?>/g;
 
+/** Reduces HTML to its words everywhere except inside a fenced code block. */
 function stripHtml(source: string): { text: string; removed: boolean } {
+  let removed = false;
+  const runs = fencedRuns(source).map((run) => {
+    if (run.fenced) return run.text;
+    const reduced = reduceHtml(run.text);
+    removed ||= reduced.removed;
+    return reduced.text;
+  });
+  if (!removed) return { text: source, removed: false };
+  return { text: runs.join("\n").trim(), removed };
+}
+
+function reduceHtml(source: string): { text: string; removed: boolean } {
   let removed = false;
   let text = source.replace(DISCARDED, () => {
     removed = true;
@@ -292,7 +328,31 @@ function stripHtml(source: string): { text: string; removed: boolean } {
     .split("\n")
     .map((line) => line.trim())
     .join("\n");
-  return { text: flat.replace(/\n{3,}/g, "\n\n").trim(), removed };
+  return { text: flat.replace(/\n{3,}/g, "\n\n"), removed };
+}
+
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+/** Splits writing into runs of lines inside and outside fenced code blocks. */
+function fencedRuns(source: string): { text: string; fenced: boolean }[] {
+  const runs: { lines: string[]; fenced: boolean }[] = [];
+  let open: string | null = null;
+  for (const line of source.split("\n")) {
+    const fence = FENCE.exec(line)?.[1];
+    const fenced = open !== null || fence !== undefined;
+    const last = runs.at(-1);
+    if (last?.fenced === fenced) last.lines.push(line);
+    else runs.push({ lines: [line], fenced });
+    if (open === null) {
+      open = fence ?? null;
+    } else if (fence?.[0] === open[0] && fence.length >= open.length) {
+      open = line.trim() === fence ? null : open;
+    }
+  }
+  return runs.map((run) => ({
+    text: run.lines.join("\n"),
+    fenced: run.fenced,
+  }));
 }
 
 const HTML_ELEMENTS = new Set(

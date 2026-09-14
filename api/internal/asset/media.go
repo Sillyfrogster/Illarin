@@ -71,6 +71,7 @@ type preparedMedia struct {
 	Name        string
 	Width       int
 	Height      int
+	Seeded      bool
 }
 
 type sourceErrorReader struct {
@@ -296,8 +297,8 @@ func insertAssetMedia(
 		_, err := tx.Exec(ctx, `
 			insert into asset_media
 			  (id, asset_id, role, width, height, blob_id, is_extracted)
-			values ($1, $2, $3, $4, $5, $6, true)
-		`, item.ID, assetID, item.Role, item.Width, item.Height, item.BlobID)
+			values ($1, $2, $3, $4, $5, $6, $7)
+		`, item.ID, assetID, item.Role, item.Width, item.Height, item.BlobID, !item.Seeded)
 		if err != nil {
 			return fmt.Errorf("record extracted media: %w", err)
 		}

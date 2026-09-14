@@ -38,6 +38,7 @@ export function Arrive({
       here.getBoundingClientRect().top <
       window.innerHeight * BELOW_THE_FOLD
     ) {
+      setWaiting(false);
       return;
     }
 

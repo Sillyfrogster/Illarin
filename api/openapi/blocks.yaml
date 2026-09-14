@@ -239,6 +239,7 @@ components:
         - slot
         - label
         - pinned
+        - locked
         - isEmpty
         - facts
         - content
@@ -258,6 +259,11 @@ components:
         pinned:
           type: boolean
           description: A pinned element can be neither removed nor moved out of its block.
+        locked:
+          type: boolean
+          description: >-
+            A locked element is read from the uploaded file. It can be moved and
+            hidden with its block, and only a new upload changes it.
         display:
           type: string
           enum:

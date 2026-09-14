@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   type CSSProperties,
   type ReactNode,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -28,6 +29,8 @@ import { contentItemCount, excerptDefinition } from "@/lib/page-arrangement";
 import { nameSlot } from "@/lib/preset-slots";
 import { formattingWasRemoved, richTextsOf } from "@/lib/rich-text";
 import { collectionItems } from "./collection-items";
+import { DependencyList } from "./DependencyList";
+import { ExtensionAdditions } from "./ExtensionAdditions";
 import {
   CODE,
   ELEMENT_NAME,
@@ -137,7 +140,9 @@ function ExcerptedElementContent({
         images={images}
         isOwner={isOwner}
         items={items}
-        title={element.label.trim() || blockTitle || "Contents"}
+        title={
+          (element.role && element.label.trim()) || blockTitle || "Contents"
+        }
       />
     );
   }
@@ -320,6 +325,7 @@ function excerptNoun(element: AssetElement): string {
     case "text_set":
       return element.role === "prompt_nudges" ? "nudges" : "items";
     case "field_list":
+      if (element.role === "extension_additions") return "additions";
       return element.label.toLocaleLowerCase().includes("attribute")
         ? "attributes"
         : "fields";
@@ -350,6 +356,39 @@ function excerptNoun(element: AssetElement): string {
   }
 }
 
+/** Passages reads a list of writing in full, or as the opening lines of each when a browser holds the rest. */
+function Passages({ texts }: { texts: { name?: string; text: string }[] }) {
+  const browsed = useContext(RunOpenContext) !== null;
+  if (!browsed) {
+    return (
+      <ol className={PASSAGE}>
+        {texts.map((item, index) => (
+          <li className="min-w-0" key={`${index}-${item.name ?? ""}`}>
+            {item.name ? <p className={PASSAGE_NAME}>{item.name}</p> : null}
+            <RichText className={cn(PROSE, "max-w-[70ch]")} text={item.text} />
+          </li>
+        ))}
+      </ol>
+    );
+  }
+  return (
+    <Run as="ol">
+      {texts.map((item, index) => (
+        <RunItem itemKey={`${index}`} key={`${index}-${item.name ?? ""}`}>
+          <p className={ITEM_NAME}>{item.name}</p>
+          <RichText
+            className={cn(
+              ITEM_BODY,
+              "max-h-21 max-w-[70ch] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]",
+            )}
+            text={item.text}
+          />
+        </RunItem>
+      ))}
+    </Run>
+  );
+}
+
 export function ElementContent({
   element,
   images,
@@ -371,6 +410,14 @@ export function ElementContent({
     );
   }
 
+  if (element.role === "extension_dependencies" && "texts" in content) {
+    return <DependencyList itemLimit={itemLimit} texts={content.texts} />;
+  }
+
+  if (element.role === "extension_additions" && "fields" in content) {
+    return <ExtensionAdditions fields={content.fields} itemLimit={itemLimit} />;
+  }
+
   if (element.type === "text_set" && "texts" in content) {
     const verbatim = element.display === "verbatim";
     const named = element.role === "prompt_nudges";
@@ -388,14 +435,7 @@ export function ElementContent({
         ))}
       </ol>
     ) : (
-      <ol className={PASSAGE}>
-        {content.texts.slice(0, itemLimit).map((item, index) => (
-          <li className="min-w-0" key={`${index}-${item.name ?? ""}`}>
-            {item.name ? <p className={PASSAGE_NAME}>{item.name}</p> : null}
-            <RichText className={cn(PROSE, "max-w-[70ch]")} text={item.text} />
-          </li>
-        ))}
-      </ol>
+      <Passages texts={content.texts.slice(0, itemLimit)} />
     );
   }
 

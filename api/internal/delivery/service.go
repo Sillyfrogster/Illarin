@@ -121,6 +121,9 @@ func (s *Service) Queue(
 	if err != nil {
 		return Delivery{}, err
 	}
+	if !installs(instance.Capabilities, sendable) {
+		return Delivery{}, ErrCannotInstall
+	}
 	if _, _, chosen := chooseTarget(
 		instance.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
 	); !chosen {
@@ -149,7 +152,7 @@ func (s *Service) Queue(
 	s.waiting.signal(instanceID)
 	return deliveryFrom(
 		row.ID, row.InstanceID, row.AssetID, row.State, row.SettledReason,
-		row.QueuedAt, row.ExpiresAt,
+		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
 
@@ -169,7 +172,7 @@ func (s *Service) liveDelivery(
 	}
 	return deliveryFrom(
 		row.ID, row.InstanceID, row.AssetID, row.State, row.SettledReason,
-		row.QueuedAt, row.ExpiresAt,
+		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
 
@@ -222,13 +225,15 @@ func (s *Service) AssetInstances(
 			ApplicationName: row.ApplicationName,
 			InstanceName:    row.InstanceName,
 			LastSeenAt:      optionalTime(row.LastSeenAt),
-			CanReceive:      holdsScope(row.Scopes, linking.ScopeReceiveAssets) && canReceive,
-			ReportsLibrary:  holdsScope(row.Scopes, linking.ScopeSyncLibrary),
+			CanReceive: holdsScope(row.Scopes, linking.ScopeReceiveAssets) &&
+				installs(row.Capabilities, sendable) && canReceive,
+			ReportsLibrary: holdsScope(row.Scopes, linking.ScopeSyncLibrary),
 		}
 		if row.DeliveryID.Valid {
 			waiting := deliveryFrom(
 				row.DeliveryID, row.ID, uuidValue(assetID), row.DeliveryState,
-				row.SettledReason, row.QueuedAt, row.ExpiresAt,
+				row.SettledReason, row.QueuedAt, row.SettledAt, row.ExpiresAt,
+				row.UpdatesInstall,
 			)
 			state.Delivery = &waiting
 		}
@@ -258,13 +263,16 @@ func deliveryFrom(
 	state string,
 	reason pgtype.Text,
 	queuedAt pgtype.Timestamptz,
+	settledAt pgtype.Timestamptz,
 	expiresAt pgtype.Timestamptz,
+	updatesInstall bool,
 ) Delivery {
 	return Delivery{
 		ID: uuid.UUID(id.Bytes), InstanceID: uuid.UUID(instanceID.Bytes),
 		AssetID: uuid.UUID(assetID.Bytes), State: State(state),
 		Reason: Reason(reason.String), QueuedAt: queuedAt.Time,
-		ExpiresAt: expiresAt.Time,
+		SettledAt: optionalTime(settledAt), ExpiresAt: expiresAt.Time,
+		UpdatesInstall: updatesInstall,
 	}
 }
 

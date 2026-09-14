@@ -32,6 +32,8 @@ import { PublicationRail } from "./PublicationRail";
 import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
+import { VaultPanel } from "./VaultPanel";
+import { useVault } from "./vault";
 import { WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
@@ -52,6 +54,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const { account } = useAuth();
   const reduced = useReducedMotion();
   const [jumping, setJumping] = useState(false);
+  const vault = useVault(workspace.assetId, workspace.isOwner);
   const canWithhold = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.withheld,
   );
@@ -142,6 +145,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           detail={detail(props, workspace.isDraft, workspace.saveState)}
           onJump={() => setJumping(true)}
           publicationLabel={workspace.isDraft ? "Publish" : "Review update"}
+          waiting={vault.pictures.length}
         />
       ) : null}
 
@@ -228,6 +232,21 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             tone="stop"
           >
             <RemoveBlock block={removed} />
+          </WorkspaceRail>
+        ) : null}
+
+        {pane?.kind === "vault" ? (
+          <WorkspaceRail
+            description="The README showed these pictures. Place each one into the block its section became, or let it go."
+            key="vault"
+            onClose={workspace.closePane}
+            title="Pictures from the README"
+          >
+            <VaultPanel
+              onRelease={vault.release}
+              onReload={vault.reload}
+              pictures={vault.pictures}
+            />
           </WorkspaceRail>
         ) : null}
 

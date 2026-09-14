@@ -10,6 +10,7 @@ import { assetDisplayName } from "@/lib/asset-name";
 import { cn } from "@/lib/cn";
 import { protectedAppLabel } from "@/lib/protected-apps";
 import { formattingWasRemoved } from "@/lib/rich-text";
+import type { AssetChooserProps } from "./AssetChooser";
 import { AssetMedia, coverMedia } from "./AssetMedia";
 import { GetAsset } from "./GetAsset";
 import { UpdateHistory } from "./history/UpdateHistory";
@@ -63,20 +64,20 @@ export function AssetHeader({
   const blurbTrouble = blurbLimitMessage(workspace.identity.blurb);
   const covers = coverMedia(asset.media);
   const showsMedia = covers.length > 0 || (asset.isOwner && writing);
-  const download = (
-    <GetAsset
-      assetId={asset.id}
-      blocks={asset.blocks}
-      downloads={asset.downloads}
-      appTargets={asset.appTargets}
-      holdsNothing={holdsNothing}
-      images={asset.media}
-      isOwner={asset.isOwner}
-      kindLabel={kind.toLowerCase()}
-      linkedInstallOnly={asset.linkedInstallOnly}
-      original={asset.original}
-    />
-  );
+  const chooser: AssetChooserProps = {
+    assetId: asset.id,
+    blocks: asset.blocks,
+    downloads: asset.downloads,
+    appTargets: asset.appTargets,
+    holdsNothing,
+    images: asset.media,
+    isOwner: asset.isOwner,
+    kind: asset.kind,
+    kindLabel: kind.toLowerCase(),
+    linkedInstallOnly: asset.linkedInstallOnly,
+    original: asset.original,
+  };
+  const download = <GetAsset {...chooser} />;
 
   return (
     <div className={shellClassName}>
@@ -200,6 +201,11 @@ export function AssetHeader({
             >
               {asset.creator}
             </Link>
+            {asset.identifier ? (
+              <span className="ml-2 font-mono text-meta">
+                {asset.identifier}
+              </span>
+            ) : null}
             <span className="ml-2">
               {isDraft ? `Created ${sharedDate}` : `Published ${sharedDate}`}
             </span>
@@ -288,7 +294,14 @@ export function AssetHeader({
             />
           ) : null}
 
-          {isDraft ? null : <div className="mt-7">{download}</div>}
+          {isDraft ? null : (
+            <div className="mt-7">
+              <GetAsset
+                {...chooser}
+                installedAppVersions={asset.installedAppVersions}
+              />
+            </div>
+          )}
 
           {asset.linkedInstallOnly ? (
             <p className="mt-4 max-w-[42ch] text-meta text-mute">

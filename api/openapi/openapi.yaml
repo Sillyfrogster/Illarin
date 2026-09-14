@@ -211,6 +211,12 @@ paths:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1blocks~1{blockId}
   /v1/assets/{id}/blocks:
     $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1blocks
+  /v1/assets/{id}/vault:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1vault
+  /v1/assets/{id}/vault/{pictureId}:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1vault~1{pictureId}
+  /v1/assets/{id}/vault/{pictureId}/place:
+    $ref: ./assets.yaml#/paths/~1v1~1assets~1{id}~1vault~1{pictureId}~1place
   /v1/assets/{id}/blocks/{blockId}/move-and-remove:
     $ref: >-
       ./assets.yaml#/paths/~1v1~1assets~1{id}~1blocks~1{blockId}~1move-and-remove
@@ -590,6 +596,12 @@ components:
       $ref: ./assets.yaml#/components/schemas/ReplacementAcceptance
     BlockSaveConflict:
       $ref: ./assets.yaml#/components/schemas/BlockSaveConflict
+    VaultPictureList:
+      $ref: ./assets.yaml#/components/schemas/VaultPictureList
+    VaultPicture:
+      $ref: ./assets.yaml#/components/schemas/VaultPicture
+    PlaceVaultPictureRequest:
+      $ref: ./assets.yaml#/components/schemas/PlaceVaultPictureRequest
     SealedExposureRefusal:
       $ref: ./assets.yaml#/components/schemas/SealedExposureRefusal
     RecordedVersion:

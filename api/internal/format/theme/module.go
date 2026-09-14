@@ -131,7 +131,7 @@ func themeDeclaration(
 		Slots:  append(declaredColorSlots(colors), declaredControlSlots(controls)...),
 		Limits: format.ContentLimits{
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
-			ItemBytes: block.MaxItemBytes,
+			ItemBytes: block.MaxItemBytes, ArchiveFiles: format.MaxArchiveFiles,
 		},
 		ConsumedKeys:  themeConsumedKeys(id, colors, controls),
 		Boilerplate:   themeBoilerplate(id),

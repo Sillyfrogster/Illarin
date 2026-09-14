@@ -13,6 +13,7 @@ const KIND_PLURALS: Record<BrowseKind, string> = {
   preset: "Presets",
   theme: "Themes",
   pack: "Packs",
+  extension: "Extensions",
 };
 
 function settled(filters: BrowseFilters): BrowseFilters {

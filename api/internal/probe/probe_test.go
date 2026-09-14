@@ -9,6 +9,7 @@ import (
 	"errors"
 	"hash/crc32"
 	"io"
+	"path"
 	"strings"
 	"testing"
 
@@ -106,6 +107,44 @@ func TestInspectRejectsAWebPSignatureWithoutAnImage(t *testing.T) {
 	}
 }
 
+func TestInspectFindsTheFolderAnArchiveIsWrappedIn(t *testing.T) {
+	cases := map[string]struct {
+		entries  []string
+		base     string
+		payloads int
+	}{
+		"files at the top":    {entries: []string{"spindle.json", "dist/frontend.js"}, base: "", payloads: 1},
+		"repository download": {entries: []string{"Tool-main/", "Tool-main/spindle.json", "Tool-main/dist/frontend.js"}, base: "Tool-main/", payloads: 1},
+		"folder zipped on a Mac": {
+			entries: []string{"Tool/manifest.json", "Tool/index.js", "Tool/.DS_Store", "__MACOSX/Tool/._manifest.json"},
+			base:    "Tool/", payloads: 1,
+		},
+		"folders inside folders": {entries: []string{"downloads/Tool-main/spindle.json", "downloads/Tool-main/src/backend.ts"}, base: "downloads/Tool-main/", payloads: 1},
+		"two folders":            {entries: []string{"one/spindle.json", "two/index.js"}, base: "", payloads: 0},
+		"a file beside a folder": {entries: []string{"README.md", "tool/spindle.json"}, base: "", payloads: 0},
+	}
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			entries := make([]zipEntry, 0, len(test.entries))
+			for _, entry := range test.entries {
+				body := ""
+				if path.Ext(entry) == ".json" && !strings.Contains(entry, "__MACOSX") {
+					body = `{"name":"Tool"}`
+				}
+				entries = append(entries, zipEntry{name: entry, body: body, method: zip.Store})
+			}
+			file := zipEntries(t, entries...)
+			got, err := Inspect(context.Background(), &recordingStore{data: file}, uuid.New(), int64(len(file)), "tool.zip")
+			if err != nil {
+				t.Fatalf("Inspect: %v", err)
+			}
+			if got.ArchiveBase != test.base || len(got.Payloads) != test.payloads {
+				t.Fatalf("base %q with %d payloads, want %q with %d", got.ArchiveBase, len(got.Payloads), test.base, test.payloads)
+			}
+		})
+	}
+}
+
 func TestInspectTellsRootZIPEntriesApart(t *testing.T) {
 	for _, test := range []struct {
 		name      string
@@ -115,6 +154,8 @@ func TestInspectTellsRootZIPEntriesApart(t *testing.T) {
 	}{
 		{name: "theme", entryName: "theme.json", body: `{"name":"Midnight"}`, payloads: 1},
 		{name: "character", entryName: "card.json", body: `{"spec":"chara_card_v3"}`, payloads: 1},
+		{name: "Spindle extension", entryName: "spindle.json", body: `{"identifier":"quiet"}`, payloads: 1},
+		{name: "SillyTavern extension", entryName: "manifest.json", body: `{"js":"index.js"}`, payloads: 1},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			file := zipFile(t, test.entryName, test.body)
@@ -173,9 +214,11 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 		name   string
 		file   func(t *testing.T) []byte
 		limits func() Limits
+		rule   string
 	}{
 		{
 			name: "entry count",
+			rule: "it holds 2 files, and an archive may hold 1",
 			file: func(t *testing.T) []byte {
 				return zipEntries(t, zipEntry{"one", "1", zip.Store}, zipEntry{"two", "2", zip.Store})
 			},
@@ -187,6 +230,7 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 		},
 		{
 			name: "entry bytes",
+			rule: `"large" unpacks to 5 bytes, and one file may unpack to 4 bytes`,
 			file: func(t *testing.T) []byte {
 				return zipEntries(t, zipEntry{"large", "12345", zip.Store})
 			},
@@ -198,6 +242,7 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 		},
 		{
 			name: "total bytes",
+			rule: "it unpacks to more than 5 bytes",
 			file: func(t *testing.T) []byte {
 				return zipEntries(t, zipEntry{"one", "123", zip.Store}, zipEntry{"two", "456", zip.Store})
 			},
@@ -209,6 +254,7 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 		},
 		{
 			name: "compression ratio",
+			rule: `"compressed" unpacks to more than 2 times its packed size`,
 			file: func(t *testing.T) []byte {
 				return zipEntries(t, zipEntry{"compressed", strings.Repeat("0", 4096), zip.Deflate})
 			},
@@ -227,8 +273,9 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 				context.Background(), &recordingStore{data: file}, uuid.New(),
 				int64(len(file)), "bundle.zip", test.limits(),
 			)
-			if !errors.Is(err, ErrSafetyViolation) {
-				t.Fatalf("InspectWithLimits error = %v, want ErrSafetyViolation", err)
+			var violation SafetyViolation
+			if !errors.Is(err, ErrSafetyViolation) || !errors.As(err, &violation) || violation.Rule != test.rule {
+				t.Fatalf("InspectWithLimits error = %v, want the safety rule %q", err, test.rule)
 			}
 		})
 	}

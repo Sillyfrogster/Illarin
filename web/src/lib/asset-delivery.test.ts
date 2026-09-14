@@ -14,6 +14,7 @@ import {
   downloadBytes,
   fileSize,
   formatChoices,
+  installsOnInstance,
   instanceStanding,
   sendActionLabel,
   travellingGallery,
@@ -162,11 +163,43 @@ test("the send action says what sending would do this time", () => {
           assetId: "a",
           state: "queued",
           queuedAt: "",
+          settledAt: null,
           expiresAt: "",
+          updatesInstall: false,
         },
       }),
     ),
   ).toBe("Waiting to be collected");
+});
+
+test("a delivered delivery no longer blocks sending, and an extension is installed rather than sent", () => {
+  const delivered = instance({
+    delivery: {
+      id: "d",
+      instanceId: "i1",
+      assetId: "a",
+      state: "delivered",
+      queuedAt: "",
+      settledAt: "2026-09-13T10:01:00Z",
+      expiresAt: "",
+      updatesInstall: false,
+    },
+    installedGeneration: 1,
+  });
+  expect(sendActionLabel(delivered)).toBe("Send again");
+  expect(sendActionLabel(instance(), true)).toBe("Install on Desk");
+  expect(sendActionLabel(delivered, true)).toBe("Install again on Desk");
+  expect(
+    sendActionLabel(
+      instance({ installedGeneration: 1, updateAvailable: true }),
+      true,
+    ),
+  ).toBe("Update on Desk");
+});
+
+test("only an extension is installed on an instance", () => {
+  expect(installsOnInstance("extension")).toBe(true);
+  expect(installsOnInstance("character")).toBe(false);
 });
 
 test("an installation that reports nothing does not pretend to know what it holds", () => {

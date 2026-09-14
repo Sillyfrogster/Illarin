@@ -69,11 +69,51 @@ export const PUBLICATION_DOCS: DocCollection = {
   ],
 };
 
+/** Describes the contract an app follows to install the extensions readers send it. */
+export const APP_DOCS: DocCollection = {
+  name: "Connect an app to Illarin",
+  href: "/developers/apps",
+  directory: "apps",
+  pages: [
+    {
+      slug: "",
+      title: "Overview",
+      summary:
+        "Declare that your app installs extensions and receive the ones readers send it.",
+      file: "overview.md",
+    },
+    {
+      slug: "installing",
+      title: "Installing and updating",
+      summary:
+        "Install switched off, ask before first run, and keep grants through an update.",
+      file: "installing.md",
+    },
+    {
+      slug: "reporting",
+      title: "Reporting back",
+      summary:
+        "Report where an extension opens and your app version, and show withheld notices.",
+      file: "reporting.md",
+    },
+    {
+      slug: "checklist",
+      title: "Conformance checklist",
+      summary: "Every rule an app that installs extensions must pass.",
+      file: "checklist.md",
+    },
+  ],
+};
+
 /** Lists documentation collections in sidebar order. */
-export const DOCS: readonly DocCollection[] = [PUBLICATION_DOCS];
+export const DOCS: readonly DocCollection[] = [PUBLICATION_DOCS, APP_DOCS];
 
 export function docHref(collection: DocCollection, page: DocPage): string {
   return page.slug ? `${collection.href}/${page.slug}` : collection.href;
+}
+
+export function findDocCollection(directory: string): DocCollection | null {
+  return DOCS.find((collection) => collection.directory === directory) ?? null;
 }
 
 export function findDocPage(

@@ -2,6 +2,7 @@ import {
   BookOpen,
   PackageOpen,
   Palette,
+  Puzzle,
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
@@ -13,6 +14,7 @@ export const KIND_MARKS = {
   preset: SlidersHorizontal,
   theme: Palette,
   pack: PackageOpen,
+  extension: Puzzle,
 } as const satisfies Record<BrowseKind, unknown>;
 
 export function KindMark({

@@ -9,6 +9,7 @@ import { api } from "./client";
 import type { components, paths } from "./schema";
 
 export type AssetDetail = components["schemas"]["AssetDetail"];
+export type ExtensionDependency = components["schemas"]["ExtensionDependency"];
 export type AssetIdentityRequest =
   components["schemas"]["AssetIdentityRequest"];
 export type AssetImage = components["schemas"]["AssetImage"];
@@ -372,6 +373,62 @@ export async function arrangeAssetBlocks(
     throw writeRefusal(error, "The block order could not be saved. Try again.");
   }
   return data;
+}
+
+export type VaultPicture = components["schemas"]["VaultPicture"];
+
+/** The pictures a README showed, waiting for the creator to place or let go. */
+export async function fetchVault(assetId: string): Promise<VaultPicture[]> {
+  const { data, error } = await api.GET("/v1/assets/{id}/vault", {
+    params: { path: { id: assetId } },
+  });
+  if (error || !data) {
+    throw new Error("The waiting pictures could not be read. Try again.");
+  }
+  return data.pictures;
+}
+
+export async function placeVaultPicture(
+  candidate: Candidate,
+  assetId: string,
+  pictureId: string,
+  mediaId?: string,
+): Promise<AssetBlock[]> {
+  const { data, error, response } = await api.POST(
+    "/v1/assets/{id}/vault/{pictureId}/place",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, pictureId },
+      },
+      body: mediaId ? { mediaId } : undefined,
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error || !data) {
+    throw writeRefusal(error, "The picture could not be placed. Try again.");
+  }
+  return data;
+}
+
+export async function discardVaultPicture(
+  candidate: Candidate,
+  assetId: string,
+  pictureId: string,
+) {
+  const { error, response } = await api.DELETE(
+    "/v1/assets/{id}/vault/{pictureId}",
+    {
+      params: {
+        header: { "X-Working-Copy-Version": candidate.version },
+        path: { id: assetId, pictureId },
+      },
+    },
+  );
+  acceptCandidateVersion(candidate, response);
+  if (error) {
+    throw writeRefusal(error, "The picture could not be discarded. Try again.");
+  }
 }
 
 export async function removeAssetBlock(

@@ -19,6 +19,10 @@ func (s *Service) Sync(
 	if err != nil {
 		return LibraryResult{}, err
 	}
+	version, err := linking.ApplicationVersion(report.ApplicationVersion)
+	if err != nil {
+		return LibraryResult{}, ErrLibraryVersion
+	}
 	action, limit := actionSyncPart, int32(syncPartLimit)
 	if report.Snapshot {
 		action, limit = actionSyncWhole, int32(syncWholeLimit)
@@ -53,6 +57,11 @@ func (s *Service) Sync(
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("record a library report: %w", err)
 	}
+	if err := queries.RecordLibraryApplicationVersion(ctx, db.RecordLibraryApplicationVersionParams{
+		ApplicationVersion: version, InstanceID: uuidValue(instance.ID),
+	}); err != nil {
+		return LibraryResult{}, fmt.Errorf("record the reported application version: %w", err)
+	}
 	var dropped int64
 	if report.Snapshot {
 		dropped, err = queries.PruneLibraryToSnapshot(ctx, db.PruneLibraryToSnapshotParams{
@@ -66,12 +75,16 @@ func (s *Service) Sync(
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("remove library entries: %w", err)
 	}
+	withheld, err := takeWithheldNotices(ctx, queries, instance.ID)
+	if err != nil {
+		return LibraryResult{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return LibraryResult{}, fmt.Errorf("commit a library report: %w", err)
 	}
 	return LibraryResult{
 		Accepted: int(accepted), Removed: int(dropped),
-		Ignored: len(entries) - int(accepted),
+		Ignored: len(entries) - int(accepted), Withheld: withheld,
 	}, nil
 }
 

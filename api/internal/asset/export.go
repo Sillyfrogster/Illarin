@@ -224,6 +224,12 @@ func (s *Service) writeExport(
 	if err != nil {
 		return format.Artifact{}, err
 	}
+	if declaration, known := s.reg.Declaration(writer.ID()); known && declaration.KeepsUpload {
+		asset.Upload, err = s.readUpload(ctx, q, subject)
+		if err != nil {
+			return format.Artifact{}, err
+		}
+	}
 	written, err := writer.Write(ctx, asset)
 	if err != nil {
 		return format.Artifact{}, fmt.Errorf("write %s: %w", writer.ID(), err)
@@ -232,6 +238,25 @@ func (s *Service) writeExport(
 		return format.Artifact{}, ErrExportTooLarge
 	}
 	return written, nil
+}
+
+// readUpload reads the file behind the version being exported.
+func (s *Service) readUpload(ctx context.Context, q db.DBTX, subject exportSubject) ([]byte, error) {
+	if subject.revisionID == nil {
+		return nil, fmt.Errorf("%w: no upload is recorded for this version", ErrTargetNotOffered)
+	}
+	var blobID uuid.UUID
+	if err := q.QueryRow(ctx,
+		`select blob_id from asset_revisions where id = $1 and asset_id = $2`,
+		*subject.revisionID, subject.assetID,
+	).Scan(&blobID); err != nil {
+		return nil, fmt.Errorf("find the upload to export: %w", err)
+	}
+	upload, err := s.readBlob(ctx, blobID)
+	if err != nil {
+		return nil, fmt.Errorf("read the upload to export: %w", err)
+	}
+	return upload.Data, nil
 }
 
 func (subject exportSubject) elements() []block.Element {

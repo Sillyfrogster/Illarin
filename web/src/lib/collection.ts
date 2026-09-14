@@ -8,6 +8,8 @@ export type CollectionItem = {
   group?: string;
   off?: boolean;
   terms?: readonly string[];
+  /** How many characters of reading matter the item carries. */
+  weight?: number;
   detail: ReactNode;
 };
 
@@ -22,10 +24,14 @@ export type CollectionView = {
 /** Past this many named items a run is longer than a page wants to carry. */
 export const BROWSE_THRESHOLD = 16;
 
-/** A run earns a browser once it is long and its items answer to names. */
+/** Past this many characters, named passages are more reading than a page wants to carry. */
+export const BROWSE_WEIGHT = 3000;
+
+/** A run earns a browser once its items answer to names and it is long or heavy. */
 export function browsable(items: readonly CollectionItem[]): boolean {
-  if (items.length <= BROWSE_THRESHOLD) return false;
-  return items.every((item) => item.name.trim() !== "");
+  if (!items.every((item) => item.name.trim() !== "")) return false;
+  const weight = items.reduce((total, item) => total + (item.weight ?? 0), 0);
+  return items.length > BROWSE_THRESHOLD || weight > BROWSE_WEIGHT;
 }
 
 /** viewCollection narrows and orders the items the way a reader asked. */

@@ -13,21 +13,25 @@ import (
 type App struct {
 	ID    string
 	Label string
-	Reads []string
+	// Namespace is the reverse domain the app puts before the capabilities it declares.
+	Namespace string
+	Reads     []string
 }
 
 func Apps() []App {
 	return []App{
-		{ID: "sillytavern", Label: "SillyTavern", Reads: []string{
+		{ID: "sillytavern", Label: "SillyTavern", Namespace: "app.sillytavern", Reads: []string{
 			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook_sillytavern", "preset_sillytavern", "theme_sillytavern",
+			"extension_sillytavern",
 		}},
-		{ID: "risu", Label: "RisuAI", Reads: []string{
+		{ID: "risu", Label: "RisuAI", Namespace: "net.risuai", Reads: []string{
 			"chara_card_v2", "chara_card_v3", "charx", "lorebook_sillytavern",
 		}},
-		{ID: "lumiverse", Label: "Lumiverse", Reads: []string{
+		{ID: "lumiverse", Label: "Lumiverse", Namespace: "chat.lumiverse", Reads: []string{
 			"chara_card_v2", "chara_card_v3", "charx",
 			"lorebook", "preset_lumiverse", "theme_lumiverse", "pack_lumiverse",
+			"extension_spindle",
 		}},
 	}
 }
@@ -133,6 +137,17 @@ func (r *Registry) WritesKind(kind string) bool {
 	return false
 }
 
+// BuildsFromNothing says whether a kind can exist without an upload for its writer to hand back.
+func (r *Registry) BuildsFromNothing(kind string) bool {
+	for _, module := range r.modules {
+		declaration := module.Declaration()
+		if declaration.Direction.Write && declaration.Kind == kind && declaration.KeepsUpload {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
@@ -166,6 +181,9 @@ func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 }
 
 func lossReport(declaration Declaration, subject CapabilitySubject) ([]RoleLoss, bool) {
+	if declaration.KeepsUpload {
+		return []RoleLoss{}, true
+	}
 	required := block.RequiredRoles(subject.Kind)
 	report := make([]RoleLoss, 0, len(block.Roles()))
 	for _, role := range block.Roles() {

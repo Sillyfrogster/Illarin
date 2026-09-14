@@ -1,9 +1,11 @@
 package asset
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -13,6 +15,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
@@ -198,5 +201,61 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 	}
 	if status != "success" {
 		t.Errorf("operation status = %q, want success", status)
+	}
+}
+
+func TestAThemeArchiveOverItsFileLimitIsRefusedByName(t *testing.T) {
+	pool := testdb.Connect(t)
+	ownerID := uuid.New()
+	if _, err := pool.Exec(context.Background(),
+		`insert into users (id, username) values ($1, 'file.limit.owner')`, ownerID); err != nil {
+		t.Fatalf("insert owner: %v", err)
+	}
+	blobs, err := storage.NewStore(pool, t.TempDir())
+	if err != nil {
+		t.Fatalf("storage: %v", err)
+	}
+	registry := format.NewRegistry()
+	for _, module := range theme.Modules() {
+		if err := registry.Register(module); err != nil {
+			t.Fatalf("register %s: %v", module.ID(), err)
+		}
+	}
+	var bundle bytes.Buffer
+	archive := zip.NewWriter(&bundle)
+	for index := range format.MaxArchiveFiles + 1 {
+		name, content := fmt.Sprintf("assets/%d.css", index), ""
+		if index == 0 {
+			name, content = "theme.json", `{"format":3}`
+		}
+		entry, err := archive.Create(name)
+		if err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatalf("close bundle: %v", err)
+	}
+	service := NewService(pool, registry, blobs)
+	operation, err := service.AcceptIngest(context.Background(), IngestInput{
+		OwnerID: ownerID, Filename: "crowded.lumitheme", File: bytes.NewReader(bundle.Bytes()),
+	})
+	if err != nil {
+		t.Fatalf("AcceptIngest: %v", err)
+	}
+	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	}
+	got, err := service.GetIngest(context.Background(), ownerID, operation.ID)
+	if err != nil {
+		t.Fatalf("GetIngest: %v", err)
+	}
+	want := fmt.Sprintf("holds %d files, and one may hold %d", format.MaxArchiveFiles+1, format.MaxArchiveFiles)
+	if got.Failure == nil || got.Failure.Reason != string(format.FailureLimitExceeded) ||
+		!strings.Contains(got.Failure.Message, want) || strings.Contains(got.Failure.Message, "limit_exceeded") {
+		t.Fatalf("failure = %+v, want the file limit named: %q", got.Failure, want)
 	}
 }

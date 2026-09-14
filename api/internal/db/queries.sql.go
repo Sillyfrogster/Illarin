@@ -35,7 +35,8 @@ func (q *Queries) AbandonExhaustedDeliveries(ctx context.Context, arg AbandonExh
 }
 
 const acknowledgeDeliveries = `-- name: AcknowledgeDeliveries :execrows
-delete from instance_deliveries
+update instance_deliveries
+   set state = 'delivered', settled_at = now(), lease_expires_at = null
  where instance_id = $1
    and id = any($2::uuid[])
    and state = 'released'
@@ -261,19 +262,24 @@ func (q *Queries) AssetDeletionState(ctx context.Context, arg AssetDeletionState
 
 const assetInstanceStates = `-- name: AssetInstanceStates :many
 select instance.id, instance.application_name, instance.instance_name,
-       instance.last_seen_at, instance.scopes, instance.accepted_targets,
+       instance.last_seen_at, instance.scopes, instance.capabilities,
+       instance.accepted_targets,
        delivery.id as delivery_id,
        coalesce(delivery.state, '')::text as delivery_state,
-       delivery.settled_reason, delivery.queued_at, delivery.expires_at,
+       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
+       delivery.expires_at,
+       coalesce(delivery.updates_install, false)::boolean as updates_install,
        entry.content_generation as installed_generation
   from linked_instances as instance
   left join lateral (
       select waiting.id, waiting.state, waiting.settled_reason,
-             waiting.queued_at, waiting.expires_at
+             waiting.queued_at, waiting.settled_at, waiting.expires_at,
+             waiting.updates_install
         from instance_deliveries as waiting
        where waiting.instance_id = instance.id
          and waiting.asset_id = $1
-       order by (waiting.state <> 'failed') desc, waiting.queued_at desc
+       order by (waiting.state in ('queued', 'released')) desc,
+                waiting.queued_at desc
        limit 1
   ) as delivery on true
   left join instance_library_entries as entry
@@ -294,12 +300,15 @@ type AssetInstanceStatesRow struct {
 	InstanceName        string
 	LastSeenAt          pgtype.Timestamptz
 	Scopes              []string
+	Capabilities        []string
 	AcceptedTargets     []string
 	DeliveryID          pgtype.UUID
 	DeliveryState       string
 	SettledReason       pgtype.Text
 	QueuedAt            pgtype.Timestamptz
+	SettledAt           pgtype.Timestamptz
 	ExpiresAt           pgtype.Timestamptz
+	UpdatesInstall      bool
 	InstalledGeneration pgtype.Int4
 }
 
@@ -318,12 +327,15 @@ func (q *Queries) AssetInstanceStates(ctx context.Context, arg AssetInstanceStat
 			&i.InstanceName,
 			&i.LastSeenAt,
 			&i.Scopes,
+			&i.Capabilities,
 			&i.AcceptedTargets,
 			&i.DeliveryID,
 			&i.DeliveryState,
 			&i.SettledReason,
 			&i.QueuedAt,
+			&i.SettledAt,
 			&i.ExpiresAt,
+			&i.UpdatesInstall,
 			&i.InstalledGeneration,
 		); err != nil {
 			return nil, err
@@ -341,6 +353,7 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        a.lifecycle, a.created_at,
        revision.format as original_format, revision.media_type as original_media_type,
        revision.created_at as original_arrived_at,
+       coalesce(revision.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
        a.withheld_reason, a.withheld_at, actor.username as withheld_by
@@ -372,6 +385,7 @@ type AssetPageRow struct {
 	OriginalFormat    pgtype.Text
 	OriginalMediaType pgtype.Text
 	OriginalArrivedAt pgtype.Timestamptz
+	Identifier        string
 	Creator           string
 	IsOwner           bool
 	WithheldReason    pgtype.Text
@@ -395,6 +409,7 @@ func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPage
 		&i.OriginalFormat,
 		&i.OriginalMediaType,
 		&i.OriginalArrivedAt,
+		&i.Identifier,
 		&i.Creator,
 		&i.IsOwner,
 		&i.WithheldReason,
@@ -1894,17 +1909,18 @@ func (q *Queries) InsertRetiredHandle(ctx context.Context, handle string) error 
 
 const insertRevision = `-- name: InsertRevision :exec
 insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format)
-values ($1, $2, $3, $4, $5, $6)
+  (id, asset_id, revision, blob_id, media_type, format, identifier)
+values ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertRevisionParams struct {
-	ID        pgtype.UUID
-	AssetID   pgtype.UUID
-	Revision  int32
-	BlobID    pgtype.UUID
-	MediaType string
-	Format    string
+	ID         pgtype.UUID
+	AssetID    pgtype.UUID
+	Revision   int32
+	BlobID     pgtype.UUID
+	MediaType  string
+	Format     string
+	Identifier string
 }
 
 func (q *Queries) InsertRevision(ctx context.Context, arg InsertRevisionParams) error {
@@ -1915,6 +1931,7 @@ func (q *Queries) InsertRevision(ctx context.Context, arg InsertRevisionParams) 
 		arg.BlobID,
 		arg.MediaType,
 		arg.Format,
+		arg.Identifier,
 	)
 	return err
 }
@@ -1970,6 +1987,47 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 		&i.EmailVerifiedAt,
 	)
 	return i, err
+}
+
+const installedApplicationVersions = `-- name: InstalledApplicationVersions :many
+select coalesce(instance.library_application_version,
+                instance.application_version)::text as application_version
+  from instance_library_entries as entry
+  join linked_instances as instance
+    on instance.id = entry.instance_id
+   and instance.revoked_at is null
+   and instance.capabilities && $1::text[]
+ where entry.asset_id = $2
+   and coalesce(instance.library_application_version, instance.application_version) is not null
+ group by coalesce(instance.library_application_version, instance.application_version)
+having count(*) >= $3::bigint
+ order by coalesce(instance.library_application_version, instance.application_version)
+`
+
+type InstalledApplicationVersionsParams struct {
+	Capabilities     []string
+	AssetID          pgtype.UUID
+	MinimumGroupSize int64
+}
+
+func (q *Queries) InstalledApplicationVersions(ctx context.Context, arg InstalledApplicationVersionsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, installedApplicationVersions, arg.Capabilities, arg.AssetID, arg.MinimumGroupSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var application_version string
+		if err := rows.Scan(&application_version); err != nil {
+			return nil, err
+		}
+		items = append(items, application_version)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const instanceForUsedRefreshToken = `-- name: InstanceForUsedRefreshToken :one
@@ -2258,7 +2316,8 @@ func (q *Queries) ListLinkedInstances(ctx context.Context, userID pgtype.UUID) (
 }
 
 const liveDeliveryForAsset = `-- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, expires_at
+select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+       expires_at, updates_install
   from instance_deliveries
  where instance_id = $1
    and asset_id = $2
@@ -2271,13 +2330,15 @@ type LiveDeliveryForAssetParams struct {
 }
 
 type LiveDeliveryForAssetRow struct {
-	ID            pgtype.UUID
-	InstanceID    pgtype.UUID
-	AssetID       pgtype.UUID
-	State         string
-	SettledReason pgtype.Text
-	QueuedAt      pgtype.Timestamptz
-	ExpiresAt     pgtype.Timestamptz
+	ID             pgtype.UUID
+	InstanceID     pgtype.UUID
+	AssetID        pgtype.UUID
+	State          string
+	SettledReason  pgtype.Text
+	QueuedAt       pgtype.Timestamptz
+	SettledAt      pgtype.Timestamptz
+	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
 }
 
 func (q *Queries) LiveDeliveryForAsset(ctx context.Context, arg LiveDeliveryForAssetParams) (LiveDeliveryForAssetRow, error) {
@@ -2290,7 +2351,9 @@ func (q *Queries) LiveDeliveryForAsset(ctx context.Context, arg LiveDeliveryForA
 		&i.State,
 		&i.SettledReason,
 		&i.QueuedAt,
+		&i.SettledAt,
 		&i.ExpiresAt,
+		&i.UpdatesInstall,
 	)
 	return i, err
 }
@@ -2769,13 +2832,18 @@ func (q *Queries) PruneLibraryToSnapshot(ctx context.Context, arg PruneLibraryTo
 }
 
 const queueDelivery = `-- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at)
-values (
-    $1, $2, $3,
-    $4
-)
+insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
+select $1, $2, $3,
+       $4,
+       exists (
+           select 1
+             from instance_library_entries as entry
+            where entry.instance_id = $2
+              and entry.asset_id = $3
+       )
 on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, expires_at
+returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+          expires_at, updates_install
 `
 
 type QueueDeliveryParams struct {
@@ -2786,13 +2854,15 @@ type QueueDeliveryParams struct {
 }
 
 type QueueDeliveryRow struct {
-	ID            pgtype.UUID
-	InstanceID    pgtype.UUID
-	AssetID       pgtype.UUID
-	State         string
-	SettledReason pgtype.Text
-	QueuedAt      pgtype.Timestamptz
-	ExpiresAt     pgtype.Timestamptz
+	ID             pgtype.UUID
+	InstanceID     pgtype.UUID
+	AssetID        pgtype.UUID
+	State          string
+	SettledReason  pgtype.Text
+	QueuedAt       pgtype.Timestamptz
+	SettledAt      pgtype.Timestamptz
+	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
 }
 
 func (q *Queries) QueueDelivery(ctx context.Context, arg QueueDeliveryParams) (QueueDeliveryRow, error) {
@@ -2810,7 +2880,9 @@ func (q *Queries) QueueDelivery(ctx context.Context, arg QueueDeliveryParams) (Q
 		&i.State,
 		&i.SettledReason,
 		&i.QueuedAt,
+		&i.SettledAt,
 		&i.ExpiresAt,
+		&i.UpdatesInstall,
 	)
 	return i, err
 }
@@ -2839,6 +2911,22 @@ func (q *Queries) RecordDeviceLinkPoll(ctx context.Context, arg RecordDeviceLink
 	var poll_interval_seconds int32
 	err := row.Scan(&poll_interval_seconds)
 	return poll_interval_seconds, err
+}
+
+const recordLibraryApplicationVersion = `-- name: RecordLibraryApplicationVersion :exec
+update linked_instances
+   set library_application_version = nullif($1::text, '')
+ where id = $2
+`
+
+type RecordLibraryApplicationVersionParams struct {
+	ApplicationVersion string
+	InstanceID         pgtype.UUID
+}
+
+func (q *Queries) RecordLibraryApplicationVersion(ctx context.Context, arg RecordLibraryApplicationVersionParams) error {
+	_, err := q.db.Exec(ctx, recordLibraryApplicationVersion, arg.ApplicationVersion, arg.InstanceID)
+	return err
 }
 
 const recordStagedMedia = `-- name: RecordStagedMedia :exec
@@ -2938,7 +3026,8 @@ func (q *Queries) ReplacePassword(ctx context.Context, arg ReplacePasswordParams
 }
 
 const reportLibraryEntries = `-- name: ReportLibraryEntries :execrows
-insert into instance_library_entries (instance_id, asset_id, content_generation, reported_at)
+insert into instance_library_entries
+    (instance_id, asset_id, content_generation, reported_at)
 select $1, asset.id,
        coalesce(nullif(reported.generation, 0), asset.content_generation), now()
   from (
@@ -3087,6 +3176,7 @@ with revoked as (
     update linked_instances as instance
        set refresh_token_hash = null,
            application_version = null,
+           library_application_version = null,
            protocol_version = null,
            capabilities = '{}',
            accepted_targets = '{}',
@@ -3125,6 +3215,7 @@ with revoked as (
     update linked_instances as instance
        set refresh_token_hash = null,
            application_version = null,
+           library_application_version = null,
            protocol_version = null,
            capabilities = '{}',
            accepted_targets = '{}',
@@ -3435,6 +3526,50 @@ func (q *Queries) TakePasswordReset(ctx context.Context, tokenHash []byte) (pgty
 	var user_id pgtype.UUID
 	err := row.Scan(&user_id)
 	return user_id, err
+}
+
+const takeWithheldNotices = `-- name: TakeWithheldNotices :many
+update instance_library_entries as entry
+   set notified_withheld_at = asset.withheld_at
+  from asset_public.assets as asset
+ where entry.instance_id = $1
+   and asset.id = entry.asset_id
+   and asset.kind = any($2::text[])
+   and asset.withheld_at is not null
+   and asset.deleted_at is null
+   and entry.notified_withheld_at is distinct from asset.withheld_at
+returning entry.asset_id, asset.name::text as name, asset.withheld_at
+`
+
+type TakeWithheldNoticesParams struct {
+	InstanceID pgtype.UUID
+	Kinds      []string
+}
+
+type TakeWithheldNoticesRow struct {
+	AssetID    pgtype.UUID
+	Name       string
+	WithheldAt pgtype.Timestamptz
+}
+
+func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNoticesParams) ([]TakeWithheldNoticesRow, error) {
+	rows, err := q.db.Query(ctx, takeWithheldNotices, arg.InstanceID, arg.Kinds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TakeWithheldNoticesRow
+	for rows.Next() {
+		var i TakeWithheldNoticesRow
+		if err := rows.Scan(&i.AssetID, &i.Name, &i.WithheldAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const touchLinkedInstanceByAccessToken = `-- name: TouchLinkedInstanceByAccessToken :one
@@ -4000,12 +4135,21 @@ func (q *Queries) VerifyUserEmail(ctx context.Context, arg VerifyUserEmailParams
 	return i, err
 }
 
-const withholdAsset = `-- name: WithholdAsset :execrows
-update assets
-   set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
-       updated_at = now()
- where id = $1 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null
+const withholdAsset = `-- name: WithholdAsset :one
+with withheld as (
+    update assets as asset
+       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
+           updated_at = now()
+     where asset.id = $1 and asset.lifecycle = 'published'
+       and asset.withheld_at is null and asset.deleted_at is null
+    returning asset.id
+), stopped as (
+    update instance_deliveries as delivery
+       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
+     where delivery.asset_id in (select withheld.id from withheld)
+       and delivery.state = 'queued'
+)
+select exists(select 1 from withheld) as withheld
 `
 
 type WithholdAssetParams struct {
@@ -4014,10 +4158,9 @@ type WithholdAssetParams struct {
 	WithheldReason pgtype.Text
 }
 
-func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (int64, error) {
-	result, err := q.db.Exec(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (bool, error) {
+	row := q.db.QueryRow(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
+	var withheld bool
+	err := row.Scan(&withheld)
+	return withheld, err
 }

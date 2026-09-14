@@ -360,6 +360,36 @@ func ValidateBuilderConstraints(kind string, before []Block, after []Block) erro
 			)
 		}
 	}
+	return validateLockedContent(kind, before, after)
+}
+
+// validateLockedContent keeps every locked element exactly as its upload wrote it.
+func validateLockedContent(kind string, before []Block, after []Block) error {
+	written := make(map[uuid.UUID]Element)
+	for _, holder := range before {
+		for _, element := range holder.Elements {
+			written[element.ID] = element
+		}
+	}
+	for _, holder := range after {
+		for _, element := range holder.Elements {
+			if !holder.Locked(element.Role, kind) {
+				continue
+			}
+			original, held := written[element.ID]
+			if !held || original.Role != element.Role {
+				return fmt.Errorf("%s comes only from an uploaded archive", element.Role.Label())
+			}
+			was, wasErr := original.ContentJSON()
+			now, nowErr := element.ContentJSON()
+			if wasErr != nil || nowErr != nil || string(was) != string(now) {
+				return fmt.Errorf(
+					"%s is read from the uploaded archive. Upload a new archive to change it",
+					element.Role.Label(),
+				)
+			}
+		}
+	}
 	return nil
 }
 

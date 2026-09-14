@@ -21,26 +21,26 @@ func (s *Service) Collect(
 	ctx context.Context,
 	instance linking.Instance,
 	acknowledged []uuid.UUID,
-) ([]Work, error) {
+) (Collected, error) {
 	if len(acknowledged) > s.settings.MaxAcknowledged {
-		return nil, ErrAcknowledgement
+		return Collected{}, ErrAcknowledgement
 	}
 	if err := s.instances.Throttle(
 		ctx, actionCollect, instance.ID.String(), collectLimit, time.Hour,
 	); err != nil {
-		return nil, throttled(err)
+		return Collected{}, throttled(err)
 	}
 	if len(acknowledged) > 0 {
 		if _, err := db.New(s.pool).AcknowledgeDeliveries(ctx, db.AcknowledgeDeliveriesParams{
 			InstanceID: uuidValue(instance.ID), DeliveryIds: uuidValues(acknowledged),
 		}); err != nil {
-			return nil, fmt.Errorf("acknowledge deliveries: %w", err)
+			return Collected{}, fmt.Errorf("acknowledge deliveries: %w", err)
 		}
 	}
 
 	held, admitted := s.waiting.hold(instance.ID)
 	if !admitted {
-		return nil, ErrTooManyCollectors
+		return Collected{}, ErrTooManyCollectors
 	}
 	defer s.waiting.release(instance.ID, held)
 
@@ -49,22 +49,22 @@ func (s *Service) Collect(
 	waitedOut := time.NewTimer(s.hold(ctx))
 	defer waitedOut.Stop()
 	for {
-		work, err := s.claim(ctx, instance)
+		collected, err := s.claim(ctx, instance)
 		if err != nil {
-			return nil, err
+			return Collected{}, err
 		}
-		if len(work) > 0 {
-			return work, nil
+		if len(collected.Work) > 0 || len(collected.Withheld) > 0 {
+			return collected, nil
 		}
 		select {
 		case <-held.work:
 		case <-recheck.C:
 		case <-held.superseded:
-			return []Work{}, nil
+			return Collected{}, nil
 		case <-waitedOut.C:
-			return []Work{}, nil
+			return Collected{}, nil
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return Collected{}, ctx.Err()
 		}
 	}
 }
@@ -89,17 +89,17 @@ func (s *Service) hold(ctx context.Context) time.Duration {
 	return wait
 }
 
-func (s *Service) claim(ctx context.Context, instance linking.Instance) ([]Work, error) {
+func (s *Service) claim(ctx context.Context, instance linking.Instance) (Collected, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin a delivery claim: %w", err)
+		return Collected{}, fmt.Errorf("begin a delivery claim: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 	if _, err := queries.AbandonExhaustedDeliveries(ctx, db.AbandonExhaustedDeliveriesParams{
 		InstanceID: uuidValue(instance.ID), MaxAttempts: int32(s.settings.MaxAttempts),
 	}); err != nil {
-		return nil, fmt.Errorf("abandon exhausted deliveries: %w", err)
+		return Collected{}, fmt.Errorf("abandon exhausted deliveries: %w", err)
 	}
 	claimed, err := queries.ClaimDeliveries(ctx, db.ClaimDeliveriesParams{
 		LeaseExpiresAt: timestamptz(s.now().Add(s.settings.Lease)),
@@ -108,22 +108,26 @@ func (s *Service) claim(ctx context.Context, instance linking.Instance) ([]Work,
 		BatchSize:      int32(s.settings.Batch),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("claim deliveries: %w", err)
+		return Collected{}, fmt.Errorf("claim deliveries: %w", err)
 	}
 	work := make([]Work, 0, len(claimed))
 	for _, row := range claimed {
 		released, err := s.release(ctx, tx, instance, row)
 		if err != nil {
-			return nil, err
+			return Collected{}, err
 		}
 		if released != nil {
 			work = append(work, *released)
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit a delivery claim: %w", err)
+	withheld, err := takeWithheldNotices(ctx, queries, instance.ID)
+	if err != nil {
+		return Collected{}, err
 	}
-	return work, nil
+	if err := tx.Commit(ctx); err != nil {
+		return Collected{}, fmt.Errorf("commit a delivery claim: %w", err)
+	}
+	return Collected{Work: work, Withheld: withheld}, nil
 }
 
 func (s *Service) release(
@@ -145,7 +149,7 @@ func (s *Service) release(
 	target, label, chosen := chooseTarget(
 		instance.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
 	)
-	if !chosen {
+	if !chosen || !installs(instance.Capabilities, sendable) {
 		return nil, stop(ctx, queries, row.ID, ReasonUnsupported)
 	}
 	if err := queries.SetDeliveryTarget(ctx, db.SetDeliveryTargetParams{

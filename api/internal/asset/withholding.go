@@ -17,7 +17,7 @@ func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason st
 	if reason == "" {
 		return ErrInvalidWithholdReason
 	}
-	changed, err := db.New(s.pool).WithholdAsset(ctx, db.WithholdAssetParams{
+	withheld, err := db.New(s.pool).WithholdAsset(ctx, db.WithholdAssetParams{
 		ID:             uuidToPgtype(id),
 		WithheldBy:     uuidToPgtype(actorID),
 		WithheldReason: textToNullable(&reason),
@@ -25,7 +25,7 @@ func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason st
 	if err != nil {
 		return fmt.Errorf("withhold asset: %w", err)
 	}
-	if changed == 0 {
+	if !withheld {
 		return ErrNotFound
 	}
 	return nil

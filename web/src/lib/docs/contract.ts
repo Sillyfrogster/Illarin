@@ -2,8 +2,12 @@ import type { Doc } from "./read-doc";
 
 export type Schema = {
   $ref?: string;
-  type?: string;
+  type?: string | string[];
   format?: string;
+  pattern?: string;
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
   enum?: unknown[];
   nullable?: boolean;
   required?: string[];
@@ -153,12 +157,46 @@ function check(
       check(value, branch, path, contract),
     );
   }
+  const types = typesOf(shape);
   if (value === null) {
-    return shape.nullable || shape.type === "null"
+    return shape.nullable || types.includes("null")
       ? []
       : [`${path || "it"} is not allowed to be null.`];
   }
-  const type = shape.type ?? (shape.properties ? "object" : undefined);
+  if (!Array.isArray(shape.type)) {
+    return checkAs(types[0], value, shape, path, contract);
+  }
+  const type = types.find((listed) => fitsType(value, listed));
+  if (!type) return [`${path || "it"} is not a ${types.join(" or ")}.`];
+  return checkAs(type, value, shape, path, contract);
+}
+
+function typesOf(shape: Schema): string[] {
+  if (Array.isArray(shape.type)) return shape.type;
+  if (shape.type) return [shape.type];
+  return shape.properties ? ["object"] : [];
+}
+
+function fitsType(value: unknown, type: string): boolean {
+  switch (type) {
+    case "object":
+      return typeof value === "object" && !Array.isArray(value);
+    case "array":
+      return Array.isArray(value);
+    case "integer":
+      return Number.isInteger(value);
+    default:
+      return typeof value === type;
+  }
+}
+
+function checkAs(
+  type: string | undefined,
+  value: unknown,
+  shape: Schema,
+  path: string,
+  contract: Contract,
+): string[] {
   switch (type) {
     case "object":
       return checkObject(value, shape, path, contract);
@@ -167,9 +205,13 @@ function check(
     case "string":
       return checkString(value, shape, path);
     case "integer":
-      return Number.isInteger(value) ? [] : [`${path} is not an integer.`];
+      return Number.isInteger(value)
+        ? checkMinimum(value as number, shape, path)
+        : [`${path} is not an integer.`];
     case "number":
-      return typeof value === "number" ? [] : [`${path} is not a number.`];
+      return typeof value === "number"
+        ? checkMinimum(value, shape, path)
+        : [`${path} is not a number.`];
     case "boolean":
       return typeof value === "boolean" ? [] : [`${path} is not a boolean.`];
     case "null":
@@ -177,6 +219,12 @@ function check(
     default:
       return [];
   }
+}
+
+function checkMinimum(value: number, shape: Schema, path: string): string[] {
+  return shape.minimum !== undefined && value < shape.minimum
+    ? [`${path} is below ${shape.minimum}.`]
+    : [];
 }
 
 function checkObject(
@@ -233,6 +281,16 @@ function checkString(value: unknown, shape: Schema, path: string): string[] {
   }
   if (shape.format === "date-time" && Number.isNaN(Date.parse(value))) {
     return [`${path} is not a date-time.`];
+  }
+  const length = [...value].length;
+  if (shape.minLength !== undefined && length < shape.minLength) {
+    return [`${path} is shorter than ${shape.minLength} characters.`];
+  }
+  if (shape.maxLength !== undefined && length > shape.maxLength) {
+    return [`${path} is longer than ${shape.maxLength} characters.`];
+  }
+  if (shape.pattern && !new RegExp(shape.pattern, "u").test(value)) {
+    return [`${path} does not match ${shape.pattern}.`];
   }
   return [];
 }

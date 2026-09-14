@@ -45,6 +45,9 @@ func (s *Service) contentFingerprint(
 		return "", fmt.Errorf("read the asset to fingerprint: %w", err)
 	}
 	fmt.Fprintf(digest, "asset\x00%s\x00%s\n", kind, origin.String)
+	if err := s.fingerprintUpload(ctx, q, assetID, origin.String, digest); err != nil {
+		return "", err
+	}
 
 	values := map[format.HeaderField]string{
 		format.HeaderName:           name,
@@ -110,6 +113,30 @@ func (s *Service) contentFingerprint(
 		return "", err
 	}
 	return hex.EncodeToString(digest.Sum(nil)), nil
+}
+
+// fingerprintUpload counts the uploaded bytes as content where the export hands them back unchanged.
+func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, assetID uuid.UUID, origin string, digest hash.Hash) error {
+	declaration, known := s.reg.Declaration(origin)
+	if !known || !declaration.KeepsUpload {
+		return nil
+	}
+	var sum []byte
+	err := q.QueryRow(ctx, `
+		select blob.sha256
+		  from assets asset
+		  join asset_revisions revision on revision.id = asset.current_revision_id
+		  join blobs blob on blob.id = revision.blob_id
+		 where asset.id = $1
+	`, assetID).Scan(&sum)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read the upload to fingerprint: %w", err)
+	}
+	fmt.Fprintf(digest, "upload\x00%x\n", sum)
+	return nil
 }
 
 // fingerprintNames gives imported elements, items and pictures stable comparison keys.

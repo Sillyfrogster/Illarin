@@ -6,6 +6,7 @@ export const KIND_LABELS: Record<BrowseKind, string> = {
   preset: "Preset",
   theme: "Theme",
   pack: "Pack",
+  extension: "Extension",
 };
 
 export const BUILDABLE_KINDS: BrowseKind[] = [

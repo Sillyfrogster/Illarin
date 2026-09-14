@@ -22,6 +22,7 @@ function element(
     isEmpty: false,
     label: id,
     pinned: false,
+    locked: false,
     slot: id,
     type,
   };

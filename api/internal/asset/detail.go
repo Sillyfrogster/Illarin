@@ -32,32 +32,35 @@ type DetailImage struct {
 }
 
 type Detail struct {
-	WorkingCopyVersion *int64
-	UnpublishedChanges *bool
-	ID                 uuid.UUID
-	Kind               string
-	Name               string
-	Blurb              string
-	Tags               []DetailTag
-	Creator            string
-	IsNSFW             *bool
-	Discovery          Discovery
-	Lifecycle          Lifecycle
-	IsOwner            bool
-	Downloads          []format.Target
-	AppTargets         []format.AppTarget
-	Original           *OriginalUpload
-	CreatedAt          time.Time
-	Blocks             []block.Block
-	Media              []DetailImage
-	Preview            *string
-	LatestUpdate       *Version
-	Readiness          []ReadinessItem
-	SealedBlocks       int
-	LinkedInstallOnly  bool
-	AllowedApps        []string
-	EligibleApps       []string
-	Withhold           *Withhold
+	WorkingCopyVersion  *int64
+	UnpublishedChanges  *bool
+	ID                  uuid.UUID
+	Kind                string
+	Name                string
+	Blurb               string
+	Tags                []DetailTag
+	Creator             string
+	Identifier          *string
+	Dependencies        []ExtensionDependency
+	IsNSFW              *bool
+	Discovery           Discovery
+	Lifecycle           Lifecycle
+	IsOwner             bool
+	Downloads           []format.Target
+	AppTargets          []format.AppTarget
+	Original            *OriginalUpload
+	CreatedAt           time.Time
+	Blocks              []block.Block
+	Media               []DetailImage
+	Preview             *string
+	LatestUpdate        *Version
+	Readiness           []ReadinessItem
+	SealedBlocks        int
+	LinkedInstallOnly   bool
+	AllowedApps         []string
+	EligibleApps        []string
+	InstallCapabilities []string
+	Withhold            *Withhold
 }
 
 type Withhold struct {
@@ -122,6 +125,9 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		CreatedAt: timeFromPgtype(row.CreatedAt),
 		Media:     []DetailImage{},
 	}
+	if row.Identifier != "" {
+		found.Identifier = &row.Identifier
+	}
 	if working || (found.IsOwner && found.Lifecycle == LifecycleDraft) {
 		var version int64
 		if err := tx.QueryRow(ctx, `select working_copy_version from public.assets where id = $1`, id).Scan(&version); err != nil {
@@ -134,6 +140,12 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		return Detail{}, err
 	}
 	found.Blocks, err = readBlocks(ctx, tx, id)
+	if err != nil {
+		return Detail{}, err
+	}
+	found.Dependencies, err = extensionDependencies(ctx, tx, dependencySubject{
+		assetID: id, kind: found.Kind, format: row.OriginalFormat.String, visibility: visibility,
+	}, found.Blocks)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -208,6 +220,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		offered[i] = target.Format
 	}
 	found.EligibleApps = protected.EligibleApps(found.Kind, offered)
+	found.InstallCapabilities = format.InstallCapabilities(found.Kind, offered)
 	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {
 		found.Downloads = []format.Target{}

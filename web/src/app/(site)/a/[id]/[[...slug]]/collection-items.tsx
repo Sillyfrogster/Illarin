@@ -4,7 +4,13 @@ import { cn } from "@/lib/cn";
 import type { CollectionItem } from "@/lib/collection";
 import { readEntries } from "@/lib/lorebook-entry";
 import { nameSlot, orderSettings } from "@/lib/preset-slots";
-import { ITEM_BODY, ITEM_NAME, PASSAGE_NAME, PROSE } from "./element-runs";
+import {
+  ITEM_BODY,
+  ITEM_META,
+  ITEM_NAME,
+  PASSAGE_NAME,
+  PROSE,
+} from "./element-runs";
 import { EntryBody } from "./Lorebook";
 import {
   fragmentName,
@@ -94,6 +100,20 @@ export function collectionItems(
     }));
   }
 
+  if (element.role === "extension_additions" && "fields" in content) {
+    return content.fields.map((field, index) => ({
+      detail: (
+        <>
+          <p className={ITEM_META}>{field.name}</p>
+          <p className={ITEM_NAME}>{field.value}</p>
+        </>
+      ),
+      group: field.name,
+      key: `${index}`,
+      name: field.value,
+    }));
+  }
+
   if (element.type === "field_list" && "fields" in content) {
     return content.fields.map((field, index) => ({
       detail: (
@@ -148,6 +168,7 @@ export function collectionItems(
         key: `${index}`,
         name,
         terms: item.name ? [item.name] : [],
+        weight: item.text.length,
       };
     });
   }

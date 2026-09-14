@@ -4,6 +4,7 @@ import type {
   AssetImage,
   AssetInstance,
   DownloadTarget,
+  QueuedDelivery,
 } from "@/lib/api/query";
 
 type RoleVerdict = DownloadTarget["roles"][number];
@@ -31,6 +32,13 @@ export type DeliveryDestination = {
 };
 
 export const DOWNLOAD_DESTINATION = "file";
+
+/** isWaiting says whether a delivery is still on its way to the instance. */
+export function isWaiting(
+  delivery: QueuedDelivery | null | undefined,
+): boolean {
+  return delivery?.state === "queued" || delivery?.state === "released";
+}
 
 /** The largest file Illarin will produce, matching the API's own ceiling. */
 export const MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024;
@@ -209,9 +217,22 @@ export function deliveryDestinations(
   ];
 }
 
-export function sendActionLabel(instance: AssetInstance): string {
-  if (instance.delivery && instance.delivery.state !== "failed") {
-    return "Waiting to be collected";
+/** installsOnInstance says whether an app installs this kind rather than reading it as content. */
+export function installsOnInstance(kind: string): boolean {
+  return kind === "extension";
+}
+
+export function sendActionLabel(
+  instance: AssetInstance,
+  installs = false,
+): string {
+  if (isWaiting(instance.delivery)) return "Waiting to be collected";
+  if (installs) {
+    if (instance.updateAvailable) return `Update on ${instance.instanceName}`;
+    if (instance.installedGeneration !== null) {
+      return `Install again on ${instance.instanceName}`;
+    }
+    return `Install on ${instance.instanceName}`;
   }
   if (instance.updateAvailable) return "Send the update";
   if (instance.installedGeneration !== null) return "Send again";

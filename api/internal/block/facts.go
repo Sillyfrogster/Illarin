@@ -110,6 +110,12 @@ func (e Element) itemNoun() (string, string) {
 		return "nudge", "nudges"
 	case RolePackItems:
 		return "item", "items"
+	case RoleExtensionGrantedPermissions, RoleExtensionApprovedPermissions:
+		return "permission", "permissions"
+	case RoleExtensionDependencies:
+		return "dependency", "dependencies"
+	case RoleExtensionAdditions:
+		return "addition", "additions"
 	}
 	switch e.Type {
 	case TypeImageSet:

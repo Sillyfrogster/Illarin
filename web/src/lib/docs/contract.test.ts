@@ -207,6 +207,86 @@ Lede.
   ]);
 });
 
+test("a value is held to the pattern, length and minimum its schema sets", () => {
+  const bounded: Contract = {
+    ...CONTRACT,
+    components: {
+      schemas: {
+        Report: {
+          type: "object",
+          properties: {
+            capability: {
+              type: "string",
+              minLength: 3,
+              maxLength: 64,
+              pattern: "^[a-z][a-z0-9.-]*:[a-z][a-z0-9._-]*$",
+            },
+            version: { type: "string", minLength: 1, maxLength: 5 },
+            generation: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+  };
+  const doc = readDoc(`# T
+
+Lede.
+
+\`\`\`json Report
+{"capability": "chat.lumiverse:extension-install", "version": "1.2.0", "generation": 1}
+\`\`\`
+
+\`\`\`json Report
+{"capability": "lumiverse-extension-install", "version": "", "generation": 0}
+\`\`\`
+
+\`\`\`json Report
+{"version": "1.2.0-beta"}
+\`\`\`
+`);
+  expect(checkDoc(doc, bounded)).toEqual([
+    "json Report: capability does not match ^[a-z][a-z0-9.-]*:[a-z][a-z0-9._-]*$.",
+    "json Report: version is shorter than 1 characters.",
+    "json Report: generation is below 1.",
+    "json Report: version is longer than 5 characters.",
+  ]);
+});
+
+test("a type given as a list accepts any type it names", () => {
+  const listed: Contract = {
+    ...CONTRACT,
+    components: {
+      schemas: {
+        Instance: {
+          type: "object",
+          properties: {
+            applicationVersion: { type: ["string", "null"], maxLength: 64 },
+          },
+        },
+      },
+    },
+  };
+  const doc = readDoc(`# T
+
+Lede.
+
+\`\`\`json Instance
+{"applicationVersion": "1.2.0"}
+\`\`\`
+
+\`\`\`json Instance
+{"applicationVersion": null}
+\`\`\`
+
+\`\`\`json Instance
+{"applicationVersion": 12}
+\`\`\`
+`);
+  expect(checkDoc(doc, listed)).toEqual([
+    "json Instance: applicationVersion is not a string or null.",
+  ]);
+});
+
 test("a request Illarin sends is checked against the webhook it carries", () => {
   const outbound: Contract = {
     ...CONTRACT,

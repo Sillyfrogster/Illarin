@@ -47,6 +47,7 @@ export type SaveState =
 
 export type Pane =
   | { kind: "access" }
+  | { kind: "vault" }
   | { kind: "publication" }
   | { kind: "conflict" }
   | { kind: "catalog" }

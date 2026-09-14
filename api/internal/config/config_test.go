@@ -264,8 +264,8 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 	if cfg.MaxUploadBytes != 32<<20 {
 		t.Errorf("upload limit = %d, want 32 MB", cfg.MaxUploadBytes)
 	}
-	if cfg.ProbeLimits.MaxArchiveEntries != 512 {
-		t.Errorf("archive entries = %d, want 512", cfg.ProbeLimits.MaxArchiveEntries)
+	if cfg.ProbeLimits.MaxArchiveEntries != 4096 {
+		t.Errorf("archive entries = %d, want 4096", cfg.ProbeLimits.MaxArchiveEntries)
 	}
 	if cfg.ProbeLimits.MaxEntryBytes != 32<<20 {
 		t.Errorf("entry limit = %d, want 32 MB", cfg.ProbeLimits.MaxEntryBytes)
