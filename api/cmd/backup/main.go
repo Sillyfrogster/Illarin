@@ -67,7 +67,10 @@ func (l postgresLock) acquire(ctx context.Context) (func() error, error) {
 	return func() error {
 		closeContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := connection.Close(closeContext); err != nil {
+		_, unlockErr := connection.Exec(closeContext,
+			`select pg_advisory_unlock(hashtextextended($1, 0))`, backupLockName)
+		closeErr := connection.Close(closeContext)
+		if err := errors.Join(unlockErr, closeErr); err != nil {
 			return fmt.Errorf("release backup lock: %w", err)
 		}
 		return nil
