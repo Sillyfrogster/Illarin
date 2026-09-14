@@ -42,6 +42,7 @@ func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cooki
 }
 
 func TestAssetUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	creator := verifiedSignUp(t, stack.router, stack.outbox, "creator@example.com", "asset.creator")
 	made := stack.addUpdateDestination(t, creator, "webhook", stack.to.address())
@@ -83,6 +84,7 @@ func TestAssetUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 }
 
 func TestAssetUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	path := updateDestinationsPath + "/" + made.Destination.ID + "/verification"
@@ -118,6 +120,7 @@ func TestAssetUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T
 }
 
 func TestAssetUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	creator := verifiedSignUp(t, stack.router, stack.outbox, "updates@example.com", "updates.creator")
 	made := stack.addUpdateDestination(t, creator, "webhook", stack.to.address())
@@ -186,6 +189,7 @@ func TestAssetUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
 }
 
 func TestAssetUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	if made.Secret != "" || made.Destination.State != "active" || made.Destination.Channel == nil || made.Destination.Channel.ChannelID != discordChannelID {
@@ -226,6 +230,7 @@ func TestAssetUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(
 }
 
 func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	first := startCharacter(t, stack.router, stack.editor)
 	second := startCharacter(t, stack.router, stack.editor)
@@ -283,6 +288,7 @@ func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *
 }
 
 func TestAssetUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T) {
+	t.Parallel()
 	private := false
 	stack := newDestinationStackThrough(t, func(string) ([]netip.Addr, error) {
 		if private {
@@ -321,6 +327,7 @@ func TestAssetUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T)
 }
 
 func TestAssetUpdateVerificationCannotReactivateADisabledDestination(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	path := updateDestinationsPath + "/" + made.Destination.ID
@@ -347,6 +354,7 @@ func TestAssetUpdateVerificationCannotReactivateADisabledDestination(t *testing.
 }
 
 func TestAssetUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	path := updateDestinationsPath + "/" + made.Destination.ID
@@ -381,6 +389,7 @@ func TestAssetUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
 }
 
 func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	for _, target := range []struct{ kind, address string }{
 		{"webhook", stack.to.address()},
@@ -418,6 +427,7 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 }
 
 func TestAssetUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	started := startCharacter(t, stack.router, stack.editor)
 	writeCharacterFloor(t, stack.router, stack.editor, started)

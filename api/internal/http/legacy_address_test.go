@@ -13,6 +13,7 @@ import (
 )
 
 func TestAV1AddressResolvesToTheAssetThatHeldIt(t *testing.T) {
+	t.Parallel()
 	router, pool, session := legacyAddressStack(t)
 	assetID := publishedCharacter(t, router, session)
 	storeLegacyAddress(t, pool, "old-author/old-name", assetID)
@@ -42,6 +43,7 @@ func TestAV1AddressResolvesToTheAssetThatHeldIt(t *testing.T) {
 }
 
 func TestAnUnknownV1AddressIsAPlainMiss(t *testing.T) {
+	t.Parallel()
 	router, _, _ := legacyAddressStack(t)
 	response := send(t, router,
 		httptest.NewRequest(http.MethodGet, "/v1/legacy-assets/nobody/nothing", nil))
@@ -51,6 +53,7 @@ func TestAnUnknownV1AddressIsAPlainMiss(t *testing.T) {
 }
 
 func TestAV1AddressForAWithheldAssetSaysNothing(t *testing.T) {
+	t.Parallel()
 	router, pool, session := legacyAddressStack(t)
 	assetID := publishedCharacter(t, router, session)
 	storeLegacyAddress(t, pool, "old-author/old-name", assetID)
@@ -72,6 +75,7 @@ func TestAV1AddressForAWithheldAssetSaysNothing(t *testing.T) {
 }
 
 func TestAV1AddressForADraftIsAPlainMiss(t *testing.T) {
+	t.Parallel()
 	router, pool, session := legacyAddressStack(t)
 	started := startCharacter(t, router, session)
 	storeLegacyAddress(t, pool, "old-author/old-name", started.ID)
@@ -84,6 +88,7 @@ func TestAV1AddressForADraftIsAPlainMiss(t *testing.T) {
 }
 
 func TestEveryUnavailableV1AddressAnswersTheSame(t *testing.T) {
+	t.Parallel()
 	router, pool, session := legacyAddressStack(t)
 	withheldID := publishedCharacter(t, router, session)
 	deletedID := publishedCharacter(t, router, session)

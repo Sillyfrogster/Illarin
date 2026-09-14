@@ -35,6 +35,7 @@ func readWorkingCopyStanding(
 }
 
 func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -66,6 +67,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 }
 
 func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"

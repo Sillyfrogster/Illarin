@@ -26,6 +26,7 @@ func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) 
 }
 
 func TestAThemeAsksWhichAppsNamesItUsesAndSeedsThoseNames(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",

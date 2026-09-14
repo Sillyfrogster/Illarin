@@ -62,6 +62,7 @@ func losses(target downloadTarget) []roleVerdict {
 }
 
 func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 
@@ -89,6 +90,7 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 }
 
 func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -130,6 +132,7 @@ func roleVerdictNamed(t *testing.T, target downloadTarget, role string) roleVerd
 }
 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	publishCharacter(t, r, session, assetID)
@@ -151,6 +154,7 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 }
 
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	publishCharacter(t, r, session, assetID)
@@ -172,6 +176,7 @@ func mustJSON(t *testing.T, value any) []byte {
 }
 
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 
@@ -199,6 +204,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 }
 
 func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 
@@ -216,6 +222,7 @@ func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *test
 }
 
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -311,6 +318,7 @@ func containsBytes(haystack, needle []byte) bool {
 }
 
 func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	givePictures(t, r, session, assetID, "gallery", "gallery")
@@ -327,6 +335,7 @@ func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 }
 
 func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	givePictures(t, r, session, assetID, "gallery", "gallery")

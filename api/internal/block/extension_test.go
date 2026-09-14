@@ -32,6 +32,7 @@ func placedExtension(t *testing.T) []Block {
 }
 
 func TestAnExtensionPlacesItsArchiveReadingsInLockedBlocks(t *testing.T) {
+	t.Parallel()
 	blocks := placedExtension(t)
 	if len(blocks) != 2 || blocks[0].Definition != ExtensionPermissions || blocks[1].Definition != ExtensionSource {
 		t.Fatalf("placed blocks = %+v, want permissions then source", blocks)
@@ -56,6 +57,7 @@ func TestAnExtensionPlacesItsArchiveReadingsInLockedBlocks(t *testing.T) {
 }
 
 func TestAnExtensionPlacesOnlyTheBlocksItsArchiveSupplies(t *testing.T) {
+	t.Parallel()
 	blocks, err := Place("extension", []Element{
 		{Type: TypeTextSet, Role: RoleExtensionDependencies, Content: TextSet{Texts: []TextItem{
 			{ID: NewItemID(), Text: "third-party/SillyTavern-LALib"},
@@ -82,6 +84,7 @@ func TestAnExtensionPlacesOnlyTheBlocksItsArchiveSupplies(t *testing.T) {
 }
 
 func TestWhatAnExtensionAddsSitsInALockedBlockAfterItsPermissions(t *testing.T) {
+	t.Parallel()
 	blocks, err := Place("extension", append(extensionElements(), Element{
 		Type: TypeFieldList, Role: RoleExtensionAdditions, Content: FieldList{Fields: []FieldItem{
 			{ID: NewItemID(), Name: "Tools", Value: "search_notes"},
@@ -112,6 +115,7 @@ func TestWhatAnExtensionAddsSitsInALockedBlockAfterItsPermissions(t *testing.T) 
 }
 
 func TestALockedElementMovesAndHidesButKeepsItsContent(t *testing.T) {
+	t.Parallel()
 	before := placedExtension(t)
 	after := cloneBlocks(before)
 	after[0].Hidden = true
@@ -132,6 +136,7 @@ func TestALockedElementMovesAndHidesButKeepsItsContent(t *testing.T) {
 }
 
 func TestALockedElementCannotArriveThroughAnEdit(t *testing.T) {
+	t.Parallel()
 	before := placedExtension(t)
 	after := cloneBlocks(before)
 	after[1].Elements[0].ID = uuid.New()

@@ -8,6 +8,7 @@ import (
 )
 
 func TestCredentialCookiesCarryTheProductName(t *testing.T) {
+	t.Parallel()
 	cookies := []struct {
 		role string
 		got  string
@@ -25,6 +26,7 @@ func TestCredentialCookiesCarryTheProductName(t *testing.T) {
 }
 
 func TestContractNamesTheSessionCookieTheHandlersSet(t *testing.T) {
+	t.Parallel()
 	var document struct {
 		Components struct {
 			SecuritySchemes struct {

@@ -10,6 +10,7 @@ import (
 const capability = "https://discord.com/api/webhooks/1234567890123456789/a-long-webhook-token"
 
 func TestACapabilityIsReadIntoItsIdAndToken(t *testing.T) {
+	t.Parallel()
 	read, err := ReadCapability(capability)
 
 	if err != nil {
@@ -24,6 +25,7 @@ func TestACapabilityIsReadIntoItsIdAndToken(t *testing.T) {
 }
 
 func TestOnlyADiscordWebhookAddressIsACapability(t *testing.T) {
+	t.Parallel()
 	for _, raw := range []string{
 		"https://example.com/api/webhooks/123/token",
 		"http://discord.com/api/webhooks/123/token",
@@ -40,6 +42,7 @@ func TestOnlyADiscordWebhookAddressIsACapability(t *testing.T) {
 }
 
 func TestConfirmingModeAsksDiscordForTheMessage(t *testing.T) {
+	t.Parallel()
 	read, err := ReadCapability(capability)
 	if err != nil {
 		t.Fatalf("read capability: %v", err)
@@ -51,6 +54,7 @@ func TestConfirmingModeAsksDiscordForTheMessage(t *testing.T) {
 }
 
 func TestAWebhookReadKeepsOnlySafeIdentity(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{
 		"id": "1234567890123456789",
 		"token": "a-long-webhook-token",
@@ -78,6 +82,7 @@ func TestAWebhookReadKeepsOnlySafeIdentity(t *testing.T) {
 }
 
 func TestAWebhookWithoutAGuildOrChannelIsRefused(t *testing.T) {
+	t.Parallel()
 	for _, body := range []string{
 		`{"id":"1","channel_id":"2"}`,
 		`{"id":"1","guild_id":"2"}`,
@@ -91,6 +96,7 @@ func TestAWebhookWithoutAGuildOrChannelIsRefused(t *testing.T) {
 }
 
 func TestAMessageIdIsReadBackFromAConfirmedSend(t *testing.T) {
+	t.Parallel()
 	if got := MessageID([]byte(`{"id":"444444444444444444","channel_id":"2"}`)); got != "444444444444444444" {
 		t.Errorf("message id = %q", got)
 	}
@@ -102,6 +108,7 @@ func TestAMessageIdIsReadBackFromAConfirmedSend(t *testing.T) {
 }
 
 func TestARoleIsOnlyEverASnowflake(t *testing.T) {
+	t.Parallel()
 	if err := CheckRole("111111111111111111"); err != nil {
 		t.Errorf("a snowflake was refused: %v", err)
 	}
@@ -173,6 +180,7 @@ func aRelease() Announcement {
 }
 
 func TestTheAnnouncementCarriesWhatIllarinDecidedToSay(t *testing.T) {
+	t.Parallel()
 	read := announced(t, aRelease())
 
 	if len(read.Embeds) != 1 {
@@ -209,6 +217,7 @@ func TestTheAnnouncementCarriesWhatIllarinDecidedToSay(t *testing.T) {
 }
 
 func TestAnAnnouncementWithoutAVersionOrPictureLeavesThemOut(t *testing.T) {
+	t.Parallel()
 	one := aRelease()
 	one.Version = ""
 	one.Image = ""
@@ -224,6 +233,7 @@ func TestAnAnnouncementWithoutAVersionOrPictureLeavesThemOut(t *testing.T) {
 }
 
 func TestTheNoteIsTheOnlyTextAContributorPutsInTheMessage(t *testing.T) {
+	t.Parallel()
 	one := aRelease()
 	one.Note = "Worth a read if you keep worldbooks."
 
@@ -235,6 +245,7 @@ func TestTheNoteIsTheOnlyTextAContributorPutsInTheMessage(t *testing.T) {
 }
 
 func TestNoAnnouncementParsesAMentionOutOfItsText(t *testing.T) {
+	t.Parallel()
 	one := aRelease()
 	one.Note = "@everyone <@&999999999999999999> <@111111111111111111>"
 
@@ -249,6 +260,7 @@ func TestNoAnnouncementParsesAMentionOutOfItsText(t *testing.T) {
 }
 
 func TestOnlyTheConfiguredRoleIsEverMentioned(t *testing.T) {
+	t.Parallel()
 	one := aRelease()
 	one.Note = "<@&999999999999999999>"
 	one.Role = "111111111111111111"
@@ -267,6 +279,7 @@ func TestOnlyTheConfiguredRoleIsEverMentioned(t *testing.T) {
 }
 
 func TestAnAnnouncementNeverCarriesAnIdentityOrThreadOverride(t *testing.T) {
+	t.Parallel()
 	read := announced(t, aRelease())
 
 	if read.Username != "" || read.AvatarURL != "" || read.ThreadID != "" {
@@ -275,6 +288,7 @@ func TestAnAnnouncementNeverCarriesAnIdentityOrThreadOverride(t *testing.T) {
 }
 
 func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
+	t.Parallel()
 	one := aRelease()
 	one.Title = strings.Repeat("t", TitleLimit+50)
 	one.Summary = strings.Repeat("s", DescriptionLimit+50)

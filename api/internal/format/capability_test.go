@@ -91,6 +91,7 @@ func targetNamed(targets []Target, id string) (Target, bool) {
 }
 
 func TestAnUntestedOriginOffersNoTarget(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, writerDeclaration("preset_lumiverse", fullCharacterGrades()))
 	targets := registry.OfferedTargets(CapabilitySubject{
 		Kind: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
@@ -101,6 +102,7 @@ func TestAnUntestedOriginOffersNoTarget(t *testing.T) {
 }
 
 func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t,
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
 		writerDeclaration("chara_card_v3", fullCharacterGrades()),
@@ -114,6 +116,7 @@ func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *test
 }
 
 func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
+	t.Parallel()
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
 	registry := registryOf(t,
@@ -132,6 +135,7 @@ func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 }
 
 func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
+	t.Parallel()
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
 	registry := registryOf(t, writerDeclaration("chara_card_v2", grades))
@@ -148,6 +152,7 @@ func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
 }
 
 func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
+	t.Parallel()
 	grades := map[block.Role]SupportGrade{
 		block.RoleDescription: SupportFull,
 		block.RoleGreetings:   SupportFull,
@@ -175,6 +180,7 @@ func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 }
 
 func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
+	t.Parallel()
 	grades := fullCharacterGrades()
 	declaration := writerDeclaration("chara_card_v2", grades)
 	declaration.Roles[block.RoleGreetings] = DirectionalRoleSupport{
@@ -225,6 +231,7 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 }
 
 func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
+	t.Parallel()
 	declaration := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	declaration.Roles[block.RoleCreatorNotes] = DirectionalRoleSupport{
 		Read: RoleSupport{Grade: SupportNone},
@@ -252,6 +259,7 @@ func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 }
 
 func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
+	t.Parallel()
 	wide := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	wide.Roles[block.RoleGallery] = DirectionalRoleSupport{
 		Read: RoleSupport{Grade: SupportNone}, Write: RoleSupport{Grade: SupportNone},
@@ -284,6 +292,7 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 }
 
 func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
+	t.Parallel()
 	declaration := writerDeclaration("preset_sillytavern", fullCharacterGrades())
 	declaration.CrossPlatform = true
 	declaration.TestedOrigins = append(declaration.TestedOrigins, "chara_card_v2")
@@ -301,6 +310,7 @@ func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
 }
 
 func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
+	t.Parallel()
 	card := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	card.Preservation = PreservationDeclaration{Body: "card", Container: []string{"extensions"}}
 	sibling := writerDeclaration("charx", fullCharacterGrades())
@@ -317,6 +327,7 @@ func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 }
 
 func TestTheCapabilityStampMovesWithADeclaration(t *testing.T) {
+	t.Parallel()
 	before := registryOf(t, writerDeclaration("chara_card_v2", fullCharacterGrades()))
 	grades := fullCharacterGrades()
 	grades[block.RoleGallery] = SupportNone
@@ -333,6 +344,7 @@ func TestTheCapabilityStampMovesWithADeclaration(t *testing.T) {
 }
 
 func TestTheRecommendationPrefersTheFormatWhoseContentActuallyArrives(t *testing.T) {
+	t.Parallel()
 	noted := writerDeclaration("chara_card_v3", fullCharacterGrades())
 	gallerySupport := noted.Roles[block.RoleGallery]
 	gallerySupport.Write.Destination = "Only one app unpacks them."

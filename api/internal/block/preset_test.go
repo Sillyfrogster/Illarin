@@ -8,6 +8,7 @@ import (
 )
 
 func TestThePresetElementTypesAreFourSeparateTypes(t *testing.T) {
+	t.Parallel()
 	for _, elementType := range []Type{
 		TypePromptList, TypeVariableSchema, TypeSettingGroup, TypeScriptList,
 	} {
@@ -32,6 +33,7 @@ func TestThePresetElementTypesAreFourSeparateTypes(t *testing.T) {
 }
 
 func TestAStringListSettingKeepsItsItemsVerbatimAndInOrder(t *testing.T) {
+	t.Parallel()
 	raw := json.RawMessage(`{"settings":[
 		{"name":"customStopStrings","type":"string_list",
 		 "value":{"strings":["</end>","  ","</end>","\n"]}},
@@ -74,6 +76,7 @@ func TestAStringListSettingKeepsItsItemsVerbatimAndInOrder(t *testing.T) {
 }
 
 func TestASettingNobodySuppliedSurvivesStorage(t *testing.T) {
+	t.Parallel()
 	group := SettingGroup{Settings: []Setting{
 		{ID: NewItemID(), Name: "temperature", Type: SettingNumber},
 		{ID: NewItemID(), Name: "customStopStrings", Type: SettingStrings,
@@ -101,6 +104,7 @@ func TestASettingNobodySuppliedSurvivesStorage(t *testing.T) {
 }
 
 func TestThePresetRolesBindToTheirOwnElementTypes(t *testing.T) {
+	t.Parallel()
 	bindings := map[Role]Type{
 		RolePromptFragments:    TypePromptList,
 		RolePromptVariables:    TypeVariableSchema,
@@ -133,6 +137,7 @@ func TestThePresetRolesBindToTheirOwnElementTypes(t *testing.T) {
 }
 
 func TestAPromptListCountsItsFragmentsAndNeverItsTokens(t *testing.T) {
+	t.Parallel()
 	element := Element{
 		Type: TypePromptList,
 		Role: RolePromptFragments,
@@ -160,6 +165,7 @@ func TestAPromptListCountsItsFragmentsAndNeverItsTokens(t *testing.T) {
 }
 
 func TestEveryPresetItemIsGivenAnIDWhenItIsRead(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		elementType Type
 		raw         string
@@ -190,6 +196,7 @@ func TestEveryPresetItemIsGivenAnIDWhenItIsRead(t *testing.T) {
 }
 
 func TestAPromptFragmentSitsUnderTheGroupItNames(t *testing.T) {
+	t.Parallel()
 	raw := json.RawMessage(`{
 		"groups":[{"id":"3f1a3d3a-0b1e-4e2f-9a3c-1f0e2d3c4b5a","name":"Style"}],
 		"fragments":[{"id":"5c2b4e6d-7a8f-4c1d-9e0b-2a3f4d5e6c7b",
@@ -214,6 +221,7 @@ func TestAPromptFragmentSitsUnderTheGroupItNames(t *testing.T) {
 }
 
 func TestAFragmentCannotNameAGroupThatIsNotThere(t *testing.T) {
+	t.Parallel()
 	raw := json.RawMessage(`{"groups":[],
 		"fragments":[{"role":"system","text":"one","enabled":true,
 			"groupId":"3f1a3d3a-0b1e-4e2f-9a3c-1f0e2d3c4b5a"}]}`)
@@ -227,6 +235,7 @@ func TestAFragmentCannotNameAGroupThatIsNotThere(t *testing.T) {
 }
 
 func TestThePresetVocabulariesAreClosed(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name        string
 		elementType Type
@@ -251,6 +260,7 @@ func TestThePresetVocabulariesAreClosed(t *testing.T) {
 }
 
 func TestAnEmptyPresetIsOneRequiredBlockHoldingItsPromptFragments(t *testing.T) {
+	t.Parallel()
 	blocks, err := Place("preset", nil)
 	if err != nil {
 		t.Fatalf("place a preset: %v", err)
@@ -292,6 +302,7 @@ func TestAnEmptyPresetIsOneRequiredBlockHoldingItsPromptFragments(t *testing.T) 
 }
 
 func TestThePresetCatalogCarriesItsFourOptionalBlocks(t *testing.T) {
+	t.Parallel()
 	type slot struct {
 		role        Role
 		elementType Type
@@ -342,6 +353,7 @@ func TestThePresetCatalogCarriesItsFourOptionalBlocks(t *testing.T) {
 }
 
 func TestAPresetListsTheSevenSharedBlocks(t *testing.T) {
+	t.Parallel()
 	definitions, ok := Catalog("preset")
 	if !ok {
 		t.Fatal("there is no preset catalog")
@@ -357,6 +369,7 @@ func TestAPresetListsTheSevenSharedBlocks(t *testing.T) {
 }
 
 func TestAPresetNeedsOnePromptFragmentBeforeItPublishes(t *testing.T) {
+	t.Parallel()
 	blocks, err := Place("preset", nil)
 	if err != nil {
 		t.Fatalf("place a preset: %v", err)
@@ -384,6 +397,7 @@ func TestAPresetNeedsOnePromptFragmentBeforeItPublishes(t *testing.T) {
 }
 
 func TestASettingGroupCountsWhatSomebodyFilledIn(t *testing.T) {
+	t.Parallel()
 	group := SettingGroup{Settings: []Setting{
 		{ID: NewItemID(), Name: "temperature", Type: SettingNumber,
 			Value: &Value{Number: floatOf(0.9)}},

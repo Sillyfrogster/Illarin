@@ -123,6 +123,7 @@ func publishTwoCoveredVersions(
 }
 
 func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newCharacterIngestRouterWithPool(t)
 	started, firstCover, secondCover := publishTwoCoveredVersions(t, r, session)
 
@@ -156,6 +157,7 @@ func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *tes
 }
 
 func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
@@ -179,6 +181,7 @@ func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 }
 
 func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newCharacterIngestRouterWithPool(t)
 	started, firstCover, secondCover := publishTwoCoveredVersions(t, r, session)
 	describeBlock(t, r, session, started, "She is thinking about the north shelf.")
@@ -212,6 +215,7 @@ func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 }
 
 func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 	publishCharacter(t, r, session, assetID)
@@ -242,6 +246,7 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 }
 
 func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const firstSecret = "The first private instruction."
@@ -300,6 +305,7 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 }
 
 func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Words that were sealed when version 1 was recorded."
@@ -337,6 +343,7 @@ const aLumiverseBook = `{"name":"Zenless lore","entries":[{"keys":["Timeline"],
 	"content":"It is widely believed the story takes place in 2167.","enabled":true,"insertion_order":100}]}`
 
 func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range lorebook.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -406,6 +413,7 @@ func noisyPNG(t *testing.T, side int, seed int64) []byte {
 }
 
 func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testing.T) {
+	t.Parallel()
 	firstCover, secondCover, third := noisyPNG(t, 52, 1), noisyPNG(t, 37, 2), noisyPNG(t, 41, 3)
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
@@ -448,6 +456,7 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 }
 
 func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
@@ -551,6 +560,7 @@ func offeredFormats(targets []downloadTarget) []string {
 }
 
 func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range lorebook.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -591,6 +601,7 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 }
 
 func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	setupRouter, router, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Not for a file."
@@ -621,6 +632,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 }
 
 func TestAVersionListsThePicturesItRecorded(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newCharacterIngestRouterWithPool(t)
 	started, _, _ := publishTwoCoveredVersions(t, r, session)
 

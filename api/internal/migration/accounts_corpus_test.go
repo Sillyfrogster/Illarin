@@ -15,8 +15,9 @@ import (
 )
 
 func TestEveryRealCreatorArrivesWithNothingLostSilently(t *testing.T) {
-	target := testdb.Connect(t)
+	t.Parallel()
 	source := restoredV1Dump(t)
+	target := testdb.Connect(t)
 
 	report, err := MigrateAccounts(context.Background(), source, target)
 	if err != nil {
@@ -175,6 +176,9 @@ func handles(t *testing.T, pool *pgxpool.Pool, query string) []string {
 
 func restoredV1Dump(t *testing.T) *pgxpool.Pool {
 	t.Helper()
+	if testing.Short() {
+		t.Skip("the corpus tests run without -short")
+	}
 	dump := repositoryFile(t, ".ai", "dump", "db_backup.sql")
 	if _, err := os.Stat(dump); errors.Is(err, os.ErrNotExist) {
 		t.Skip("the local v1 dump is absent")

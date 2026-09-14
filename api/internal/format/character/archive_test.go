@@ -18,6 +18,7 @@ import (
 )
 
 func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
+	t.Parallel()
 	modules := []byte(`{"scripts":[{"type":"regex","in":"a","out":"b"}]}`)
 	parsed := resolveAndParse(t, charxWithMembers(t, plainCard, map[string][]byte{
 		"lumiverse_modules.json": modules,
@@ -35,6 +36,7 @@ func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
 }
 
 func TestACharXGivesBackTheFilesIllarinReadsNothingFrom(t *testing.T) {
+	t.Parallel()
 	modules := []byte(`{"scripts":[{"type":"regex","in":"a","out":"b"}]}`)
 	parsed := resolveAndParse(t, charxWithMembers(t, plainCard, map[string][]byte{
 		"lumiverse_modules.json": modules,
@@ -50,6 +52,7 @@ func TestACharXGivesBackTheFilesIllarinReadsNothingFrom(t *testing.T) {
 }
 
 func TestACardBodyNeverCarriesAnArchivedFile(t *testing.T) {
+	t.Parallel()
 	parsed := resolveAndParse(t, charxWithMembers(t, plainCard, map[string][]byte{
 		"lumiverse_modules.json": []byte(`{"scripts":[]}`),
 	}))
@@ -66,6 +69,7 @@ func TestACardBodyNeverCarriesAnArchivedFile(t *testing.T) {
 }
 
 func TestAnArchivedFileTooLargeToKeepTurnsTheCardAway(t *testing.T) {
+	t.Parallel()
 	file := charxWithMembers(t, plainCard, map[string][]byte{
 		"huge.bin": incompressible(maxArchiveMemberBytes + 1),
 	})
@@ -93,6 +97,7 @@ func incompressible(size int) []byte {
 }
 
 func TestAnArchivedFileNeverClaimsAPathTheWriterProduces(t *testing.T) {
+	t.Parallel()
 	written := []archivedFile{{path: "assets/icon/image/main.png", data: []byte("picture")}}
 	preserved := []format.Remainder{
 		archived("card.json", "card"),

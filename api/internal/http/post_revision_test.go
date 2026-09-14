@@ -144,6 +144,7 @@ func taken(done []postAction) []string {
 }
 
 func TestACheckpointKeepsTheEditionAndPublishesNothing(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "keeper@example.com", "illarin.keeper")
 	draft := stack.illarinDraft(t, session, "The week in Illarin")
@@ -170,6 +171,7 @@ func TestACheckpointKeepsTheEditionAndPublishesNothing(t *testing.T) {
 }
 
 func TestEditingAPublishedPostLeavesReadersOnTheEditionTheyHave(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.quiet")
 	draft := stack.illarinDraft(t, session, "Illarin ships weekly")
@@ -202,6 +204,7 @@ func TestEditingAPublishedPostLeavesReadersOnTheEditionTheyHave(t *testing.T) {
 }
 
 func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "restore@example.com", "illarin.restore")
 	draft := stack.illarinDraft(t, session, "The first shape of it")
@@ -244,6 +247,7 @@ func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
 }
 
 func TestARestoredEditionBecomesTheNextPublishedOne(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "forward@example.com", "illarin.forward")
 	draft := stack.illarinDraft(t, session, "Take two")
@@ -274,6 +278,7 @@ func TestARestoredEditionBecomesTheNextPublishedOne(t *testing.T) {
 }
 
 func TestStaleCheckpointRestoreAndPublishChangeNothing(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "stale@example.com", "illarin.stale")
 	draft := stack.illarinDraft(t, session, "Two people, one post")
@@ -310,6 +315,7 @@ func TestStaleCheckpointRestoreAndPublishChangeNothing(t *testing.T) {
 }
 
 func TestTheHistoryNamesWhatHappenedAndNeverTheWriting(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "history@example.com", "illarin.history")
 	draft := stack.illarinDraft(t, session, "A post with a past")
@@ -346,6 +352,7 @@ func TestTheHistoryNamesWhatHappenedAndNeverTheWriting(t *testing.T) {
 }
 
 func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	mine := stack.contributor(t, "mine@example.com", "mine.dev")
 	sillytavern := stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
@@ -386,6 +393,7 @@ func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
 }
 
 func TestAnEditionOfAnotherPostIsNotRestorable(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "elsewhere@example.com", "illarin.elsewhere")
 	first := stack.illarinDraft(t, session, "The post with the edition")
@@ -405,6 +413,7 @@ func TestAnEditionOfAnotherPostIsNotRestorable(t *testing.T) {
 }
 
 func TestACheckpointedPictureStaysBehindItsSignature(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "signed@example.com", "illarin.signed")
 	draft := stack.illarinDraft(t, session, "A draft with a picture in it")
@@ -421,6 +430,7 @@ func TestACheckpointedPictureStaysBehindItsSignature(t *testing.T) {
 }
 
 func TestRestoringBringsBackThePicturesTheEditionUsed(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "pictured@example.com", "illarin.pictured")
 	draft := stack.illarinDraft(t, session, "The post that had a picture")

@@ -114,6 +114,7 @@ func (s publicationStack) events(t *testing.T, postID string) []string {
 }
 
 func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post we took down")
@@ -165,6 +166,7 @@ func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 }
 
 func TestAWithdrawnPostLeavesEveryPlaceAReaderCouldFindIt(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -195,6 +197,7 @@ func TestAWithdrawnPostLeavesEveryPlaceAReaderCouldFindIt(t *testing.T) {
 }
 
 func TestAFormerAddressOfAWithdrawnPostReachesTheSameTombstone(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post that moved and went")
@@ -214,6 +217,7 @@ func TestAFormerAddressOfAWithdrawnPostReachesTheSameTombstone(t *testing.T) {
 }
 
 func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post that came back")
@@ -250,6 +254,7 @@ func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
 }
 
 func TestRepublishingACorrectedEditionSetsThePublicUpdatedDate(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post we fixed while it was down")
@@ -277,6 +282,7 @@ func TestRepublishingACorrectedEditionSetsThePublicUpdatedDate(t *testing.T) {
 }
 
 func TestWithdrawalKeepsThePrivateReasonApartFromWhatReadersSee(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a private reason")
@@ -313,6 +319,7 @@ func TestWithdrawalKeepsThePrivateReasonApartFromWhatReadersSee(t *testing.T) {
 }
 
 func TestOnlyThePostsOwnPeopleWithdrawItAndOnlyAtTheVersionTheyHold(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "dev@example.com", "illarin.dev")
 	stranger := stack.contributor(t, "other@example.com", "other.dev")
@@ -348,6 +355,7 @@ func TestOnlyThePostsOwnPeopleWithdrawItAndOnlyAtTheVersionTheyHold(t *testing.T
 }
 
 func TestAWithdrawnPostIsPutBackByRepublishingAndNotByPublishing(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with one way back")
@@ -381,6 +389,7 @@ func TestAWithdrawnPostIsPutBackByRepublishingAndNotByPublishing(t *testing.T) {
 }
 
 func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with an update on the way")
@@ -402,6 +411,7 @@ func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 }
 
 func TestARetriedWithdrawalThroughTheApiChangesNothingTwice(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "robot@example.com", "release.robot")
 	draft := stack.startedByTool(t, kit, fmt.Sprintf(
@@ -440,6 +450,7 @@ func TestARetriedWithdrawalThroughTheApiChangesNothingTwice(t *testing.T) {
 }
 
 func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post the record follows")
@@ -482,6 +493,7 @@ func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
 }
 
 func TestAStaleOrUnknownEditionNeverPutsAPostBack(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	other := stack.livePost(t, session, "Another post entirely")
@@ -506,6 +518,7 @@ func TestAStaleOrUnknownEditionNeverPutsAPostBack(t *testing.T) {
 }
 
 func TestWhatIsSaidAboutAWithdrawalIsKeptAsOneParagraph(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a wordy reason")

@@ -12,6 +12,7 @@ import (
 )
 
 func TestOnlyAnAllowlistedHostIsFetched(t *testing.T) {
+	t.Parallel()
 	server := imageServer(t, func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "image/png")
 		_, _ = writer.Write([]byte("bytes"))
@@ -27,6 +28,7 @@ func TestOnlyAnAllowlistedHostIsFetched(t *testing.T) {
 }
 
 func TestARedirectOffTheAllowlistIsRefused(t *testing.T) {
+	t.Parallel()
 	server := imageServer(t, func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/moved.png" {
 			http.Redirect(writer, request, "https://elsewhere.example/art.png", http.StatusFound)
@@ -42,6 +44,7 @@ func TestARedirectOffTheAllowlistIsRefused(t *testing.T) {
 }
 
 func TestAResponseThatIsNotAnImageIsRefused(t *testing.T) {
+	t.Parallel()
 	server := imageServer(t, func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "text/html")
 		_, _ = writer.Write([]byte("<html>gone</html>"))
@@ -53,6 +56,7 @@ func TestAResponseThatIsNotAnImageIsRefused(t *testing.T) {
 }
 
 func TestAnOversizedImageIsRefused(t *testing.T) {
+	t.Parallel()
 	server := imageServer(t, func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "image/png")
 		_, _ = writer.Write([]byte(strings.Repeat("x", 64)))
@@ -65,6 +69,7 @@ func TestAnOversizedImageIsRefused(t *testing.T) {
 }
 
 func TestTheHostsOfASetOfAddressesAreNamed(t *testing.T) {
+	t.Parallel()
 	hosts := FetchHosts([]string{
 		"https://one.example/a.png", "https://one.example/b.png",
 		"https://two.example/c.png", "not a url at all",

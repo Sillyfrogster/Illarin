@@ -18,6 +18,7 @@ import (
 )
 
 func TestSweepRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	root := t.TempDir()
@@ -56,6 +57,7 @@ func TestSweepRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *test
 }
 
 func TestSweepRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	root := t.TempDir()
@@ -98,6 +100,7 @@ func TestSweepRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T
 }
 
 func TestSweeperRunsWithoutAnExternalCaller(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testdb.Connect(t)
@@ -137,6 +140,7 @@ func TestSweeperRunsWithoutAnExternalCaller(t *testing.T) {
 }
 
 func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -182,6 +186,7 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 }
 
 func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -270,6 +275,7 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 }
 
 func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -313,6 +319,7 @@ func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
 }
 
 func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -353,6 +360,7 @@ func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
 }
 
 func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -402,6 +410,7 @@ func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
 }
 
 func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())

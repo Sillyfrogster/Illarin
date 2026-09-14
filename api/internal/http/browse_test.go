@@ -49,6 +49,7 @@ func (browseModule) Parse(_ context.Context, file probe.Inspection, _ format.Cla
 }
 
 func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Velvet Night")
 	metadata["filename"] = "velvet-night.lumitheme"
@@ -106,6 +107,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 }
 
 func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	entries := []struct {
 		name        string
@@ -230,6 +232,7 @@ func facetGroup(t *testing.T, groups []browseFacetGroup, key string) browseFacet
 }
 
 func TestFacetsAreKindScopedAndFilterOnElementContent(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(browseModule{}); err != nil {
 		t.Fatalf("register browse module: %v", err)
@@ -272,6 +275,7 @@ func TestFacetsAreKindScopedAndFilterOnElementContent(t *testing.T) {
 }
 
 func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	givePictures(t, r, session, assetID, "gallery", "gallery")
@@ -325,6 +329,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 }
 
 func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, router, session)
 	writeCharacterFloor(t, router, session, started)
@@ -350,6 +355,7 @@ func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 }
 
 func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	addedBlock(t, addBlock(t, r, session, assetID, "expressions", "image_set"))
@@ -366,6 +372,7 @@ func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
 }
 
 func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -416,6 +423,7 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time
 }
 
 func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	giveExpressions(t, r, session, assetID)
@@ -472,6 +480,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 }
 
 func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Veiled Garden")
 	metadata["_keepDraft"] = true

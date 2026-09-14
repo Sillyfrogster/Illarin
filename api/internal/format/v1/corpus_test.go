@@ -36,6 +36,10 @@ import (
 )
 
 func TestTheRealCorpusCrossesTheV1Reader(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("the corpus tests run without -short")
+	}
 	dump := repositoryFile(t, ".ai", "dump", "db_backup.sql")
 	if _, err := os.Stat(dump); errors.Is(err, os.ErrNotExist) {
 		t.Skip("the local v1 dump is absent")

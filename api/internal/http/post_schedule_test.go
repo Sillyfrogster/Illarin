@@ -99,6 +99,7 @@ func (s publicationStack) scheduledDraft(
 }
 
 func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -142,6 +143,7 @@ func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 }
 
 func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -183,6 +185,7 @@ func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T
 }
 
 func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -230,6 +233,7 @@ func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *tes
 }
 
 func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -262,6 +266,7 @@ func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
 }
 
 func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -277,6 +282,7 @@ func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
 }
 
 func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -298,6 +304,7 @@ func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 }
 
 func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -329,6 +336,7 @@ func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) 
 }
 
 func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
@@ -351,6 +359,7 @@ func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *test
 }
 
 func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -379,6 +388,7 @@ func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testi
 }
 
 func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -406,6 +416,7 @@ func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *test
 }
 
 func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -447,6 +458,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 }
 
 func TestSchedulingRecordsWhatHappenedWithoutCopyingTheArticle(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -509,6 +521,7 @@ func firstWords(document postDocument) string {
 }
 
 func TestToolingSchedulesReplacesAndCancelsWithoutRepeatingItself(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "robot@example.com", "release.robot")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -561,6 +574,7 @@ func TestToolingSchedulesReplacesAndCancelsWithoutRepeatingItself(t *testing.T) 
 }
 
 func TestSchedulingRefusesAWorkingCopySomeoneElseHasMovedPast(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -596,6 +610,7 @@ func scheduleCount(t *testing.T, stack publicationStack, postID string) int {
 }
 
 func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -624,6 +639,7 @@ func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 }
 
 func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	ctx, stop := context.WithCancel(t.Context())
 	stopped := make(chan struct{})

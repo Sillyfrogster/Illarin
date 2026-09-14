@@ -118,6 +118,7 @@ func (s publicationStack) bearing(t *testing.T, value string) *httptest.Response
 }
 
 func TestATokenValueIsShownOnceAndNeverKeptWhole(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
@@ -153,6 +154,7 @@ func TestATokenValueIsShownOnceAndNeverKeptWhole(t *testing.T) {
 }
 
 func TestOneGrantCarriesSeveralTokensAndRevokingOneLeavesTheRest(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
@@ -185,6 +187,7 @@ func TestOneGrantCarriesSeveralTokensAndRevokingOneLeavesTheRest(t *testing.T) {
 }
 
 func TestAnExpiredTokenStopsAuthenticatingWhileItsHashStillMatches(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
@@ -236,6 +239,7 @@ func TestAnExpiredTokenStopsAuthenticatingWhileItsHashStillMatches(t *testing.T)
 }
 
 func TestRevokingAGrantStopsEveryTokenBeneathIt(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
@@ -257,6 +261,7 @@ func TestRevokingAGrantStopsEveryTokenBeneathIt(t *testing.T) {
 }
 
 func TestTheAuthorityRevokesAnyTokenAndAnAdminCannot(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	outsider := stack.member(t, "outsider@example.com", "publication.outsider")
@@ -289,6 +294,7 @@ func TestTheAuthorityRevokesAnyTokenAndAnAdminCannot(t *testing.T) {
 }
 
 func TestOneContributorNeverReachesAnothersTokens(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -316,6 +322,7 @@ func TestOneContributorNeverReachesAnothersTokens(t *testing.T) {
 }
 
 func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
@@ -362,6 +369,7 @@ func TestAPublicationTokenReachesNothingOutsideThePublication(t *testing.T) {
 }
 
 func TestOnlyAPublicationTokenOfTheRightShapeAuthenticates(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
@@ -403,6 +411,7 @@ func TestOnlyAPublicationTokenOfTheRightShapeAuthenticates(t *testing.T) {
 }
 
 func TestAnUnnamedOrBadlyDatedTokenIsRefused(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 
@@ -424,6 +433,7 @@ func TestAnUnnamedOrBadlyDatedTokenIsRefused(t *testing.T) {
 }
 
 func TestIssuingAndRevokingATokenIsAuditedWithoutItsValue(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
@@ -464,6 +474,7 @@ func TestIssuingAndRevokingATokenIsAuditedWithoutItsValue(t *testing.T) {
 }
 
 func TestNothingCarryingATokenIsCacheable(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")
@@ -486,6 +497,7 @@ func TestNothingCarryingATokenIsCacheable(t *testing.T) {
 }
 
 func TestUsingATokenRecordsThatItWasUsed(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	who := stack.contributor(t, "writer@example.com", "publication.writer")
 	made := stack.issued(t, who, "Release robot")

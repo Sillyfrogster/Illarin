@@ -17,6 +17,7 @@ type corpusCase struct {
 }
 
 func TestEveryValidCorpusDocumentReadsBackUnchanged(t *testing.T) {
+	t.Parallel()
 	for name, one := range corpus(t, "valid") {
 		t.Run(name, func(t *testing.T) {
 			read, err := postdoc.Read(one.Document)
@@ -50,6 +51,7 @@ func TestEveryValidCorpusDocumentReadsBackUnchanged(t *testing.T) {
 }
 
 func TestEveryInvalidCorpusDocumentIsRefusedWhereItSaysSo(t *testing.T) {
+	t.Parallel()
 	for name, one := range corpus(t, "invalid") {
 		t.Run(name, func(t *testing.T) {
 			_, err := postdoc.Read(one.Document)
@@ -71,6 +73,7 @@ func TestEveryInvalidCorpusDocumentIsRefusedWhereItSaysSo(t *testing.T) {
 }
 
 func TestAnEmptyBodyIsReadableButNotPublishable(t *testing.T) {
+	t.Parallel()
 	empty, err := postdoc.Read([]byte(`{"version":1,"content":[]}`))
 	if err != nil {
 		t.Fatalf("read an empty body: %v", err)

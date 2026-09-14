@@ -9,6 +9,7 @@ import (
 )
 
 func TestNestingStopsBeforeItCanBeUsedToExhaustAReader(t *testing.T) {
+	t.Parallel()
 	body := `{"type":"paragraph","content":[{"type":"text","text":"Deep"}]}`
 	for range 12 {
 		body = `{"type":"bulletList","content":[{"type":"listItem","content":[` + body + `]}]}`
@@ -23,6 +24,7 @@ func TestNestingStopsBeforeItCanBeUsedToExhaustAReader(t *testing.T) {
 }
 
 func TestADocumentWithTooManyBlocksIsRefused(t *testing.T) {
+	t.Parallel()
 	paragraph := `{"type":"paragraph","content":[{"type":"text","text":"x"}]}`
 	body := strings.Repeat(paragraph+",", 2000) + paragraph
 	_, err := postdoc.Read([]byte(`{"version":1,"content":[` + body + `]}`))
@@ -35,6 +37,7 @@ func TestADocumentWithTooManyBlocksIsRefused(t *testing.T) {
 }
 
 func TestWhitespaceAloneDoesNotCountAsWriting(t *testing.T) {
+	t.Parallel()
 	blank, err := postdoc.Read([]byte(
 		`{"version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":"   "}]}]}`,
 	))
@@ -47,6 +50,7 @@ func TestWhitespaceAloneDoesNotCountAsWriting(t *testing.T) {
 }
 
 func TestATableIsBoundedInBothDirections(t *testing.T) {
+	t.Parallel()
 	cells := func(count int) string {
 		one := `{"type":"tableCell","content":[{"type":"paragraph","content":[]}]}`
 		return `{"type":"tableRow","content":[` + strings.Repeat(one+",", count-1) + one + `]}`
@@ -63,6 +67,7 @@ func TestATableIsBoundedInBothDirections(t *testing.T) {
 }
 
 func TestCodeCannotCarryAControlCharacter(t *testing.T) {
+	t.Parallel()
 	_, err := postdoc.Read([]byte(
 		`{"version":2,"content":[{"type":"codeBlock","language":"go","source":"one\u0007two"}]}`,
 	))
@@ -75,6 +80,7 @@ func TestCodeCannotCarryAControlCharacter(t *testing.T) {
 }
 
 func TestAChosenHeadingAddressCannotTakeAWrittenOne(t *testing.T) {
+	t.Parallel()
 	_, err := postdoc.Read([]byte(`{"version":2,"content":[
 		{"type":"heading","level":2,"content":[{"type":"text","text":"Notes"}]},
 		{"type":"heading","level":3,"anchor":"notes","content":[{"type":"text","text":"Later"}]}
@@ -88,6 +94,7 @@ func TestAChosenHeadingAddressCannotTakeAWrittenOne(t *testing.T) {
 }
 
 func TestEveryVocabularySetIsClosed(t *testing.T) {
+	t.Parallel()
 	for _, name := range postdoc.Languages {
 		body := fmt.Sprintf(
 			`{"version":2,"content":[{"type":"codeBlock","language":%q,"source":"x"}]}`, name)

@@ -54,6 +54,7 @@ func subjectsOf(groups []ChangeGroup) []string {
 func number(value float64) *block.Value { return &block.Value{Number: &value} }
 
 func TestComparisonGroupsEachKindsContentByWhatItMeans(t *testing.T) {
+	t.Parallel()
 	page := uuid.New()
 	greeting := uuid.New()
 	entry := uuid.New()
@@ -132,6 +133,7 @@ func TestComparisonGroupsEachKindsContentByWhatItMeans(t *testing.T) {
 }
 
 func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
+	t.Parallel()
 	page := uuid.New()
 	first, second := uuid.New(), uuid.New()
 	greetings := func(texts ...block.TextItem) recordedVersion {
@@ -156,6 +158,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 }
 
 func TestRenamesReadAsEditsOnlyWithIdentity(t *testing.T) {
+	t.Parallel()
 	page, kept := uuid.New(), uuid.New()
 	earlier := recordedVersionOf("character",
 		recordedBlock(page, block.CharacterCore, recordedElement("", block.TypeFieldList,
@@ -179,6 +182,7 @@ func TestRenamesReadAsEditsOnlyWithIdentity(t *testing.T) {
 }
 
 func TestRemovedTextKeepsTheWordsItTookAway(t *testing.T) {
+	t.Parallel()
 	page := uuid.New()
 	earlier := recordedVersionOf("character",
 		recordedBlock(page, block.CharacterCore, recordedElement(block.RoleScenario, block.TypeProse,
@@ -194,6 +198,7 @@ func TestRemovedTextKeepsTheWordsItTookAway(t *testing.T) {
 }
 
 func TestChangedPicturesNameTheOldAndNewMedia(t *testing.T) {
+	t.Parallel()
 	page, image := uuid.New(), uuid.New()
 	was, now := uuid.New(), uuid.New()
 	earlier := recordedVersionOf("character",
@@ -210,6 +215,7 @@ func TestChangedPicturesNameTheOldAndNewMedia(t *testing.T) {
 }
 
 func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
+	t.Parallel()
 	owner := uuid.New()
 	earlier := recordedVersionOf("character")
 	earlier.preserved = []versionPreserved{
@@ -229,6 +235,7 @@ func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
 }
 
 func TestPresentationOnlyUpdateExplainsThePage(t *testing.T) {
+	t.Parallel()
 	page := uuid.New()
 	core := recordedBlock(page, block.CharacterCore, recordedElement(block.RoleDescription, block.TypeProse,
 		block.Prose{Text: "A quiet scout."}))
@@ -253,6 +260,7 @@ func TestPresentationOnlyUpdateExplainsThePage(t *testing.T) {
 }
 
 func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "compare.owner")
@@ -301,6 +309,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 }
 
 func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "gated.owner")

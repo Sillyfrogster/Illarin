@@ -19,6 +19,7 @@ func snapshotExec(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 }
 
 func TestSnapshotMediaBelongsToItsAssetAndKeepsItsBytes(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	id, other, mediaID := uuid.New(), uuid.New(), uuid.New()
@@ -68,6 +69,7 @@ func TestSnapshotMediaBelongsToItsAssetAndKeepsItsBytes(t *testing.T) {
 }
 
 func TestFirstPublicationRecordsTheDraftInTheSameTransaction(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	owner, draft := startedDraft(t, svc)
 	saveDescription(t, svc, owner, draft, pool, "Original description")
@@ -93,6 +95,7 @@ func TestFirstPublicationRecordsTheDraftInTheSameTransaction(t *testing.T) {
 }
 
 func TestSnapshotRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	owner, draft := startedDraft(t, svc)
 	saveDescription(t, svc, owner, draft, pool, "Description")
@@ -117,6 +120,7 @@ func TestSnapshotRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
 }
 
 func TestSnapshotHistoryEndsWithExpiredDeletion(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	id := uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle) values ($1, 'preset', 'Temporary history', 'published')`, id)
@@ -133,6 +137,7 @@ func TestSnapshotHistoryEndsWithExpiredDeletion(t *testing.T) {
 }
 
 func TestSnapshotMediaStillObeysPurgeAndAssetDeletion(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	id, mediaID := uuid.New(), uuid.New()
@@ -162,6 +167,7 @@ func TestSnapshotMediaStillObeysPurgeAndAssetDeletion(t *testing.T) {
 }
 
 func TestConcurrentBaselineCreatesOnlyOneRecordedVersion(t *testing.T) {
+	t.Parallel()
 	_, pool := newTestService(t)
 	id := uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle) values ($1, 'preset', 'Concurrent baseline', 'published')`, id)
@@ -184,6 +190,7 @@ func TestConcurrentBaselineCreatesOnlyOneRecordedVersion(t *testing.T) {
 }
 
 func TestSnapshotRetainsAnImageReferencedOnlyByABlock(t *testing.T) {
+	t.Parallel()
 	_, pool := newTestService(t)
 	id, media := uuid.New(), uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle) values ($1, 'character', 'Gallery history', 'published')`, id)
@@ -202,6 +209,7 @@ func TestSnapshotRetainsAnImageReferencedOnlyByABlock(t *testing.T) {
 }
 
 func TestInitialSnapshotIsRepeatableAndLeavesDraftsPrivate(t *testing.T) {
+	t.Parallel()
 	_, pool := newTestService(t)
 	published, draft := uuid.New(), uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle, content_generation, asset_version)
@@ -231,6 +239,7 @@ func TestInitialSnapshotIsRepeatableAndLeavesDraftsPrivate(t *testing.T) {
 }
 
 func TestSnapshotRetainsExactContentAndCannotBeRewritten(t *testing.T) {
+	t.Parallel()
 	_, pool := newTestService(t)
 	id, blockID, promptID := uuid.New(), uuid.New(), uuid.New()
 	snapshotExec(t, pool, `insert into assets (id, kind, name, lifecycle, blurb, tags, is_nsfw,

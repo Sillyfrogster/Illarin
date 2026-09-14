@@ -12,6 +12,7 @@ import (
 )
 
 func TestDiscordBucketHeadersDeferTheNextSend(t *testing.T) {
+	t.Parallel()
 	reached := 0
 	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reached++
@@ -37,6 +38,7 @@ func TestDiscordBucketHeadersDeferTheNextSend(t *testing.T) {
 }
 
 func TestAPlainPublicAddressIsAccepted(t *testing.T) {
+	t.Parallel()
 	for _, raw := range []string{
 		"https://hooks.example.com/publication",
 		"https://hooks.example.com:443/publication?source=illarin",
@@ -49,6 +51,7 @@ func TestAPlainPublicAddressIsAccepted(t *testing.T) {
 }
 
 func TestAnAddressOutsideThePolicyIsRefused(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"plain http":      "http://hooks.example.com/publication",
 		"another scheme":  "ftp://hooks.example.com/publication",
@@ -71,6 +74,7 @@ func TestAnAddressOutsideThePolicyIsRefused(t *testing.T) {
 }
 
 func TestPublicSpaceRefusesEveryReservedRange(t *testing.T) {
+	t.Parallel()
 	refused := []string{
 		"0.0.0.0", "127.0.0.1", "10.1.2.3", "172.16.9.9", "192.168.1.1",
 		"169.254.169.254", "100.64.0.1", "192.0.2.5", "198.18.0.1",
@@ -93,6 +97,7 @@ func TestPublicSpaceRefusesEveryReservedRange(t *testing.T) {
 }
 
 func TestACallReachesTheReceiverItResolvedTo(t *testing.T) {
+	t.Parallel()
 	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host != "example.com" {
 			t.Errorf("Host = %q, want the original host", r.Host)
@@ -119,6 +124,7 @@ func TestACallReachesTheReceiverItResolvedTo(t *testing.T) {
 }
 
 func TestARedirectIsReportedAndNeverFollowed(t *testing.T) {
+	t.Parallel()
 	var reached int
 	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reached++
@@ -143,6 +149,7 @@ func TestARedirectIsReportedAndNeverFollowed(t *testing.T) {
 }
 
 func TestAHostResolvingOutsidePublicSpaceIsRefused(t *testing.T) {
+	t.Parallel()
 	reaching := Reaching{Resolve: func(context.Context, string) ([]netip.Addr, error) {
 		return []netip.Addr{
 			netip.MustParseAddr("10.0.0.7"),
@@ -158,6 +165,7 @@ func TestAHostResolvingOutsidePublicSpaceIsRefused(t *testing.T) {
 }
 
 func TestAHostResolvingNowhereIsRefused(t *testing.T) {
+	t.Parallel()
 	reaching := Reaching{Resolve: func(context.Context, string) ([]netip.Addr, error) {
 		return nil, nil
 	}}
@@ -170,6 +178,7 @@ func TestAHostResolvingNowhereIsRefused(t *testing.T) {
 }
 
 func TestOnePrivateResultAmongPublicOnesIsRefused(t *testing.T) {
+	t.Parallel()
 	reaching := Reaching{Resolve: func(context.Context, string) ([]netip.Addr, error) {
 		return []netip.Addr{
 			netip.MustParseAddr("93.184.216.34"),
@@ -185,6 +194,7 @@ func TestOnePrivateResultAmongPublicOnesIsRefused(t *testing.T) {
 }
 
 func TestAResolverFailureIsRefused(t *testing.T) {
+	t.Parallel()
 	reaching := Reaching{Resolve: func(context.Context, string) ([]netip.Addr, error) {
 		return nil, errors.New("no such host")
 	}}
@@ -195,6 +205,7 @@ func TestAResolverFailureIsRefused(t *testing.T) {
 }
 
 func TestAnOversizedAnswerIsCutOff(t *testing.T) {
+	t.Parallel()
 	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(strings.Repeat("x", 4096)))
 	}))
@@ -215,6 +226,7 @@ func TestAnOversizedAnswerIsCutOff(t *testing.T) {
 }
 
 func TestAnUnreachableReceiverIsAnError(t *testing.T) {
+	t.Parallel()
 	receiver := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	caller := receiverCaller(t, receiver)
 	receiver.Close()

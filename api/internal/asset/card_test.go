@@ -17,6 +17,7 @@ import (
 )
 
 func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {

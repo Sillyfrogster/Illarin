@@ -21,6 +21,7 @@ import (
 )
 
 func TestEveryModuleDeclaresTheCharacterKind(t *testing.T) {
+	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		if declaration.Kind != Kind {
@@ -36,6 +37,7 @@ func TestEveryModuleDeclaresTheCharacterKind(t *testing.T) {
 }
 
 func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
+	t.Parallel()
 	v2 := CCv2Module{}.Declaration()
 	for _, role := range []block.Role{
 		block.RoleGroupGreetings, block.RoleGallery, block.RoleExpressions,
@@ -65,6 +67,7 @@ func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
 }
 
 func TestDeclarationRejectsARoleOutsideTheSharedVocabulary(t *testing.T) {
+	t.Parallel()
 	declaration := CCv3Module{}.Declaration()
 	declaration.Roles[block.Role("invented_role")] = format.DirectionalRoleSupport{
 		Read:  format.RoleSupport{Grade: format.SupportFull},
@@ -77,6 +80,7 @@ func TestDeclarationRejectsARoleOutsideTheSharedVocabulary(t *testing.T) {
 }
 
 func TestCharacterReaderReturnsHeaderFieldsAndRoleTaggedElements(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{
@@ -146,6 +150,7 @@ func elementContent(elements []block.Element, role block.Role) (block.Content, b
 }
 
 func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name   string
 		file   probe.Inspection
@@ -173,6 +178,7 @@ func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 }
 
 func TestAnEmbeddedLorebookStaysPartOfTheCard(t *testing.T) {
+	t.Parallel()
 	withBook := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","character_book":{"name":"Ana's world","entries":[
@@ -207,6 +213,7 @@ func TestAnEmbeddedLorebookStaysPartOfTheCard(t *testing.T) {
 }
 
 func TestACardsDescriptionNeverBecomesTheBlurb(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v2","spec_version":"2.0",
 		"data":{
@@ -223,6 +230,7 @@ func TestACardsDescriptionNeverBecomesTheBlurb(t *testing.T) {
 }
 
 func TestAPictureCarryingACardIsExtractedAsTheAvatar(t *testing.T) {
+	t.Parallel()
 	file := pngCard(t, "chara", `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`)
 
 	parsed := resolveAndParse(t, file)
@@ -235,6 +243,7 @@ func TestAPictureCarryingACardIsExtractedAsTheAvatar(t *testing.T) {
 }
 
 func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
+	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","assets":[
@@ -275,6 +284,7 @@ func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
 }
 
 func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrAssets(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v2","spec_version":"2.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -293,6 +303,7 @@ func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrAssets(t *testing.T) {
 }
 
 func TestAVersionPastTheOneWeImplementIsRefusedRatherThanGuessedAt(t *testing.T) {
+	t.Parallel()
 	later := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"4.0","data":{"name":"Ana"}}`)
 	_, err := CCv3Module{}.Parse(context.Background(), later, claimFor(t, CCv3Module{}, later))
 	reason, classified := format.FailureOf(err)
@@ -311,6 +322,7 @@ func TestAVersionPastTheOneWeImplementIsRefusedRatherThanGuessedAt(t *testing.T)
 }
 
 func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":17,"first_mes":"Hello"}
@@ -323,6 +335,7 @@ func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T
 }
 
 func TestARecognizedCardWithNoReadableDataNamesTheModuleAndPart(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":17}`)
 	_, err := CCv3Module{}.Parse(context.Background(), file, claimFor(t, CCv3Module{}, file))
 	if err == nil || !strings.Contains(err.Error(), V3) || !strings.Contains(err.Error(), "data") ||
@@ -332,6 +345,7 @@ func TestARecognizedCardWithNoReadableDataNamesTheModuleAndPart(t *testing.T) {
 }
 
 func TestAnOptionalValueWithTheWrongTypeDegradesIntoTheRemainder(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{
@@ -351,6 +365,7 @@ func TestAnOptionalValueWithTheWrongTypeDegradesIntoTheRemainder(t *testing.T) {
 }
 
 func TestBadLorebookValuesCostOnlyThoseValues(t *testing.T) {
+	t.Parallel()
 	entries := make([]map[string]any, 285)
 	for index := range entries {
 		entries[index] = map[string]any{
@@ -405,6 +420,7 @@ func TestBadLorebookValuesCostOnlyThoseValues(t *testing.T) {
 }
 
 func TestAChunkNameNeverOverridesWhatTheCardSaysItIs(t *testing.T) {
+	t.Parallel()
 	file := pngCard(t, "ccv3", `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`)
 	if parsed := resolveAndParse(t, file); parsed.Format != V2 {
 		t.Errorf("format = %q, want %q from the card's own spec", parsed.Format, V2)
@@ -412,6 +428,7 @@ func TestAChunkNameNeverOverridesWhatTheCardSaysItIs(t *testing.T) {
 }
 
 func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
+	t.Parallel()
 	file := pngCardChunks(t,
 		textChunk{name: "ccv3", body: `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`},
 		textChunk{name: "chara", body: `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`},
@@ -425,6 +442,7 @@ func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
 }
 
 func TestAV2CardWithNoV3CopyIsStillReadAsV2(t *testing.T) {
+	t.Parallel()
 	file := pngCardChunks(t,
 		textChunk{name: "chara", body: `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`},
 	)
@@ -434,6 +452,7 @@ func TestAV2CardWithNoV3CopyIsStillReadAsV2(t *testing.T) {
 }
 
 func TestAV3CardInAnArchiveIsCharXAndNotCCv3(t *testing.T) {
+	t.Parallel()
 	file := charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`, nil)
 	if _, ok := (CCv3Module{}).Claim(file); ok {
 		t.Error("CCv3 claimed a card inside an archive")
@@ -542,6 +561,7 @@ func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
 }
 
 func TestCharXGivesEveryBundledImageAHomeAndKeepsGalleryNamesInOrder(t *testing.T) {
+	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","assets":[
@@ -587,6 +607,7 @@ func TestCharXGivesEveryBundledImageAHomeAndKeepsGalleryNamesInOrder(t *testing.
 }
 
 func TestCharXLeavesAPersonaIconOutRatherThanCallingItGallery(t *testing.T) {
+	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","assets":[
@@ -600,6 +621,7 @@ func TestCharXLeavesAPersonaIconOutRatherThanCallingItGallery(t *testing.T) {
 }
 
 func TestACharXThatNamesNoAssetsIsReadFromItsArchiveLayout(t *testing.T) {
+	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello"}

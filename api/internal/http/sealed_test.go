@@ -79,6 +79,7 @@ func (stack sealedStack) seal(t *testing.T, version, key, content string) {
 }
 
 func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
+	t.Parallel()
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 	stack.seal(t, "1.0.0", "authors_note", "The other one.")
@@ -132,6 +133,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 }
 
 func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
+	t.Parallel()
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
@@ -154,6 +156,7 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 }
 
 func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "sillytavern")
 
@@ -166,6 +169,7 @@ func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
 }
 
 func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
+	t.Parallel()
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 

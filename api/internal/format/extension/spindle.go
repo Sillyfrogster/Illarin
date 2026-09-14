@@ -8,6 +8,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -21,7 +22,10 @@ const SpindleID = "extension_spindle"
 
 var spindleIdentifier = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
-type Spindle struct{}
+// Spindle reads Spindle extension archives, reading their code for readingTime or the default when that is zero
+type Spindle struct {
+	readingTime time.Duration
+}
 
 func (Spindle) ID() string { return SpindleID }
 
@@ -68,7 +72,7 @@ type spindleManifestFields struct {
 	Permissions                                         []string
 }
 
-func (Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (s Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
@@ -91,7 +95,11 @@ func (Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.Cl
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	adds, err := readAdditions(ctx, file, code, spindleRules)
+	limit := s.readingTime
+	if limit == 0 {
+		limit = readingTime
+	}
+	adds, err := readAdditions(ctx, file, code, spindleRules, limit)
 	if err != nil {
 		return format.Parsed{}, err
 	}

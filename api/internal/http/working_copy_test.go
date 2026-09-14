@@ -13,6 +13,7 @@ import (
 )
 
 func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
+	t.Parallel()
 	_, router, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	id := publishedCharacter(t, router, session)
 	before := fetchAssetPage(t, router, "/v1/assets/"+id)
@@ -47,6 +48,7 @@ func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 }
 
 func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, router, session)
 	writeCharacterFloor(t, router, session, started)
@@ -87,6 +89,7 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 }
 
 func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 	id := publishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
 	owner := fetchStartedAsset(t, router, session, id)

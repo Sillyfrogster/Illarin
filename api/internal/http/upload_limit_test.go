@@ -3,6 +3,7 @@ package http
 import "testing"
 
 func TestAnOverSizedUploadIsRefusedInASizeAPersonReads(t *testing.T) {
+	t.Parallel()
 	for _, row := range []struct {
 		bytes int64
 		want  string

@@ -6,6 +6,7 @@ import (
 )
 
 func TestAKindsExportedHeaderFieldsAreEveryOneItsWritersPutInAFile(t *testing.T) {
+	t.Parallel()
 	older := writerDeclaration("card_old", fullCharacterGrades())
 	older.Header = []HeaderField{HeaderName, HeaderCreditedAuthor}
 	newer := writerDeclaration("card_new", fullCharacterGrades())
@@ -22,6 +23,7 @@ func TestAKindsExportedHeaderFieldsAreEveryOneItsWritersPutInAFile(t *testing.T)
 }
 
 func TestAFieldOneKindWritesIsNotExportedOnAnother(t *testing.T) {
+	t.Parallel()
 	card := writerDeclaration("card", fullCharacterGrades())
 	card.Header = []HeaderField{HeaderName}
 	bundle := writerDeclaration("bundle", fullCharacterGrades())
@@ -38,6 +40,7 @@ func TestAFieldOneKindWritesIsNotExportedOnAnother(t *testing.T) {
 }
 
 func TestAWriterThatNamesAnUnknownHeaderFieldIsRefused(t *testing.T) {
+	t.Parallel()
 	declaration := writerDeclaration("card", fullCharacterGrades())
 	declaration.Header = []HeaderField{"favourite_colour"}
 

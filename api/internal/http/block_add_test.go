@@ -43,6 +43,7 @@ func addedBlock(t *testing.T, response *httptest.ResponseRecorder) startedBlock 
 }
 
 func TestTheOwnerIsOfferedTheSharedBlocksGroupedByDestination(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -75,6 +76,7 @@ func TestTheOwnerIsOfferedTheSharedBlocksGroupedByDestination(t *testing.T) {
 }
 
 func TestAddingABlockPutsItAtTheFootOfThePageHoldingItsElement(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -103,6 +105,7 @@ func TestAddingABlockPutsItAtTheFootOfThePageHoldingItsElement(t *testing.T) {
 }
 
 func TestABlockThatCannotRepeatIsRefusedTwice(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -118,6 +121,7 @@ func TestABlockThatCannotRepeatIsRefusedTwice(t *testing.T) {
 }
 
 func TestACustomBlockRepeatsAndTakesTheElementTheCreatorChose(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -133,6 +137,7 @@ func TestACustomBlockRepeatsAndTakesTheElementTheCreatorChose(t *testing.T) {
 }
 
 func TestARequiredBlockAndAnUnofferedElementAreBothRefused(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -148,6 +153,7 @@ func TestARequiredBlockAndAnUnofferedElementAreBothRefused(t *testing.T) {
 }
 
 func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "runs_best_with", "link_list"))
@@ -174,6 +180,7 @@ func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
 }
 
 func TestABlockSavedWithAScriptAddressIsRefused(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "runs_best_with", "link_list"))
@@ -190,6 +197,7 @@ func TestABlockSavedWithAScriptAddressIsRefused(t *testing.T) {
 }
 
 func TestSavingAnEmptyAddedBlockKeepsEveryDefinition(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		definition  string
 		elementType string
@@ -227,6 +235,7 @@ func TestSavingAnEmptyAddedBlockKeepsEveryDefinition(t *testing.T) {
 }
 
 func TestOnlyTheOwnerIsOfferedBlocksToAdd(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 

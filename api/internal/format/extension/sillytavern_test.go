@@ -26,6 +26,7 @@ const tavernManifest = `{
 }`
 
 func TestSillyTavernDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
+	t.Parallel()
 	declaration := SillyTavern{}.Declaration()
 	if declaration.ID != SillyTavernID || declaration.Kind != Kind || !declaration.KeepsUpload {
 		t.Fatalf("declaration = %+v, want an extension writer that keeps the upload", declaration)
@@ -36,6 +37,7 @@ func TestSillyTavernDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 }
 
 func TestSillyTavernReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
+	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"manifest.json": tavernManifest, "dist/index.js": "export {}",
 	}))
@@ -79,6 +81,7 @@ func TestSillyTavernReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T)
 }
 
 func TestSillyTavernLeavesOutWhatTheManifestDoesNotSay(t *testing.T) {
+	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"manifest.json": `{"display_name":"Bare","js":"index.js","author":"A developer"}`,
 		"index.js":      "",
@@ -100,6 +103,7 @@ func TestSillyTavernLeavesOutWhatTheManifestDoesNotSay(t *testing.T) {
 }
 
 func TestSillyTavernNamesTheFolderAfterTheRepository(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		`"homePage": "https://github.com/example/SillyTavern-LALib"`:  "SillyTavern-LALib",
 		`"homepage": "https://github.com/example/SillyTavern-LALib/"`: "SillyTavern-LALib",
@@ -116,6 +120,7 @@ func TestSillyTavernNamesTheFolderAfterTheRepository(t *testing.T) {
 }
 
 func TestSillyTavernRefusesAnArchiveSillyTavernWouldNotLoad(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		files   map[string]string
@@ -165,6 +170,7 @@ func TestSillyTavernRefusesAnArchiveSillyTavernWouldNotLoad(t *testing.T) {
 }
 
 func TestAnArchiveWithBothManifestsIsRefusedAsAmbiguous(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range Modules() {
 		if err := registry.Register(module); err != nil {
@@ -187,6 +193,7 @@ func TestAnArchiveWithBothManifestsIsRefusedAsAmbiguous(t *testing.T) {
 }
 
 func TestSillyTavernReadsAnArchiveWrappedInOneFolder(t *testing.T) {
+	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"Extension-CustomSliders-main/manifest.json": tavernManifest,
 		"Extension-CustomSliders-main/dist/index.js": "",
@@ -197,6 +204,7 @@ func TestSillyTavernReadsAnArchiveWrappedInOneFolder(t *testing.T) {
 }
 
 func TestSillyTavernSaysWhereAMisplacedManifestIs(t *testing.T) {
+	t.Parallel()
 	_, err := tryParseTavern(t, spindleZip(t, map[string]string{
 		"README.md": "# Sliders", "extension/manifest.json": tavernManifest, "extension/dist/index.js": "",
 	}))
@@ -207,6 +215,7 @@ func TestSillyTavernSaysWhereAMisplacedManifestIs(t *testing.T) {
 }
 
 func TestSillyTavernWritesTheUploadedArchiveUnchanged(t *testing.T) {
+	t.Parallel()
 	upload := spindleZip(t, map[string]string{"manifest.json": tavernManifest, "dist/index.js": ""})
 	written, err := SillyTavern{}.Write(context.Background(), format.ExportAsset{Kind: Kind, Upload: upload})
 	if err != nil {

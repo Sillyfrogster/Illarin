@@ -93,6 +93,7 @@ func addRevision(
 }
 
 func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.T) {
+	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
 		Elements: []block.Element{
@@ -143,6 +144,7 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 }
 
 func TestARevisionResolvingToADifferentKindIsRejected(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range []format.Module{
 		kindModule{id: "as_character", kind: "character"},
@@ -181,6 +183,7 @@ func TestARevisionResolvingToADifferentKindIsRejected(t *testing.T) {
 }
 
 func TestAReplacementFileBecomesTheAssetsOrigin(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -212,6 +215,7 @@ func TestAReplacementFileBecomesTheAssetsOrigin(t *testing.T) {
 }
 
 func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheAsset(t *testing.T) {
+	t.Parallel()
 	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "unsupported.revision.owner")
@@ -241,6 +245,7 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheAsset(t *testing.T) {
 }
 
 func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
+	t.Parallel()
 	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "guard.owner")
@@ -270,6 +275,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 }
 
 func TestReimportedMediaFillsTheAsset(t *testing.T) {
+	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized",
 		Media: []format.Media{{Role: MediaAvatar, ImageID: 0}},

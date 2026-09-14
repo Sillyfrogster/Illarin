@@ -8,6 +8,7 @@ import (
 )
 
 func TestEveryItemInsideAnElementGetsAnIDWhenItIsSaved(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		elementType Type
 		body        string
@@ -42,6 +43,7 @@ func TestEveryItemInsideAnElementGetsAnIDWhenItIsSaved(t *testing.T) {
 }
 
 func TestASavedItemKeepsTheIDItArrivedWith(t *testing.T) {
+	t.Parallel()
 	kept := uuid.New()
 	content, err := DecodeContent(TypeTextSet, []byte(
 		`{"texts":[{"id":"`+kept.String()+`","text":"Hello again."},{"text":"New."}]}`,
@@ -59,6 +61,7 @@ func TestASavedItemKeepsTheIDItArrivedWith(t *testing.T) {
 }
 
 func TestItemsWrittenBeforeIDsExistedAreReadForward(t *testing.T) {
+	t.Parallel()
 	stored := `{"id":"` + uuid.New().String() + `","type":"entry_table","slot":"main",` +
 		`"version":1,"options":{},"content":{"entries":[` +
 		`{"keys":["ledger"],"enabled":true,"text":"A debt."},` +
@@ -81,6 +84,7 @@ func TestItemsWrittenBeforeIDsExistedAreReadForward(t *testing.T) {
 }
 
 func TestItemIDsReportsEveryItemInAnElement(t *testing.T) {
+	t.Parallel()
 	first, second := uuid.New(), uuid.New()
 	content := TextSet{Texts: []TextItem{{ID: first, Text: "One"}, {ID: second, Text: "Two"}}}
 	ids := ItemIDs(content)

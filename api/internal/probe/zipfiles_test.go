@@ -13,6 +13,7 @@ import (
 )
 
 func TestOpenZIPFilesReadsManyEntriesWithoutRereadingTheArchive(t *testing.T) {
+	t.Parallel()
 	entries := make([]zipEntry, 0, 120)
 	for index := range 120 {
 		entries = append(entries, zipEntry{

@@ -8,6 +8,7 @@ import (
 )
 
 func TestAStoredReplacementPreviewReturnsArraysInsteadOfNull(t *testing.T) {
+	t.Parallel()
 	response := toAPIIngest(asset.IngestOperation{
 		Status:  asset.IngestPreview,
 		Preview: &asset.ReplacementPreview{},

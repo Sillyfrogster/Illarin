@@ -30,6 +30,7 @@ func privateMediaQuery(svc *Service, id uuid.UUID, key string) string {
 }
 
 func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
+	t.Parallel()
 	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
 	svc := &Service{}
 	if got := svc.variantURL(id, "grid", false, false); got != "/media/"+id.String()+"/grid/2" {
@@ -44,6 +45,7 @@ func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
 }
 
 func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
+	t.Parallel()
 	if !localImageReadFailure(zip.ErrChecksum) {
 		t.Error("a corrupt optional ZIP image did not degrade locally")
 	}
@@ -56,6 +58,7 @@ func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
 }
 
 func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ownerID := uuid.New()
 	created, err := svc.Create(context.Background(), CreateInput{
@@ -129,6 +132,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 }
 
 func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
+	t.Parallel()
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()
 	created, err := svc.Create(context.Background(), CreateInput{
@@ -170,6 +174,7 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 }
 
 func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
+	t.Parallel()
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()
 	created, err := svc.Create(context.Background(), CreateInput{
@@ -210,6 +215,7 @@ func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
 }
 
 func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
+	t.Parallel()
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()
 	created, err := svc.Create(context.Background(), CreateInput{
@@ -266,6 +272,7 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 }
 
 func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
+	t.Parallel()
 	svc, _ := newTestService(t)
 	ownerID := uuid.New()
 	created, err := svc.Create(context.Background(), CreateInput{
@@ -316,6 +323,7 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 }
 
 func TestCreatorCannotAddMediaToSomebodyElsesAsset(t *testing.T) {
+	t.Parallel()
 	svc, _ := newTestService(t)
 	created, err := svc.Create(context.Background(), CreateInput{
 		OwnerID: uuid.New(), Kind: "theme", Filename: "theme.bin",
@@ -334,6 +342,7 @@ func TestCreatorCannotAddMediaToSomebodyElsesAsset(t *testing.T) {
 }
 
 func TestIngestStoresExtractedMediaOnTheAsset(t *testing.T) {
+	t.Parallel()
 	archive := archiveWithImage(t, testPNG(t, 90, 45, color.White))
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized",
@@ -383,6 +392,7 @@ func TestIngestStoresExtractedMediaOnTheAsset(t *testing.T) {
 }
 
 func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
 	if err != nil {

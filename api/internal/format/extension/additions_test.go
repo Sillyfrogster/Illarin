@@ -38,6 +38,7 @@ export function setup(ctx) {
 `
 
 func TestSpindleListsWhatItsCodeAddsToLumiverse(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json":     sampleManifest,
 		"dist/backend.js":  spindleBackend,
@@ -61,6 +62,7 @@ func TestSpindleListsWhatItsCodeAddsToLumiverse(t *testing.T) {
 }
 
 func TestNamesBuiltWhileTheCodeRunsAreNotListed(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json": sampleManifest,
 		"dist/backend.js": "spindle.registerTool({ name: toolName })\n" +
@@ -78,6 +80,7 @@ func TestNamesBuiltWhileTheCodeRunsAreNotListed(t *testing.T) {
 }
 
 func TestAnExtensionWhoseCodeRegistersNothingListsNoAdditions(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json": sampleManifest, "dist/frontend.js": "export default {}",
 	}))
@@ -89,6 +92,7 @@ func TestAnExtensionWhoseCodeRegistersNothingListsNoAdditions(t *testing.T) {
 }
 
 func TestSpindleFollowsTheImportsOfTheSourceLumiverseBuilds(t *testing.T) {
+	t.Parallel()
 	manifest := strings.Replace(sampleManifest, `"entry_frontend": "dist/frontend.js",`, "", 1)
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json":        manifest,
@@ -106,6 +110,7 @@ func TestSpindleFollowsTheImportsOfTheSourceLumiverseBuilds(t *testing.T) {
 }
 
 func TestSpindleReadsTheBuiltCodeRatherThanTheSourceBesideIt(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json":     sampleManifest,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Built" }) }`,
@@ -139,6 +144,7 @@ export function rollCommands() {
 `
 
 func TestSillyTavernListsWhatItsCodeAddsToSillyTavern(t *testing.T) {
+	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"manifest.json":   strings.Replace(tavernManifest, "dist/index.js", "index.js", 1),
 		"index.js":        tavernEntry,
@@ -160,13 +166,23 @@ func TestSillyTavernListsWhatItsCodeAddsToSillyTavern(t *testing.T) {
 }
 
 func TestTheCodeIsReadNoFurtherThanTheLargestArchiveHolds(t *testing.T) {
+	t.Parallel()
 	half := MaxArchiveBytes/2 + 1<<20
-	parsed := parseSpindle(t, spindleZip(t, map[string]string{
+	file := inspectZip(t, spindleZip(t, map[string]string{
 		"spindle.json":    sampleManifest,
 		"dist/backend.js": "spindle.registerTool({ name: \"near_the_start\" })\n" + padding(half),
 		"dist/frontend.js": "export function setup(ctx) {\n\tctx.ui.registerDrawerTab({ title: \"Within reach\" })\n" +
 			padding(half) + "\tctx.ui.registerInputBarAction({ label: \"Past the limit\" })\n}\n",
 	}))
+	reader := Spindle{readingTime: time.Hour}
+	claim, ok := reader.Claim(file)
+	if !ok {
+		t.Fatal("the archive was not claimed")
+	}
+	parsed, err := reader.Parse(context.Background(), file, claim)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
 
 	want := []string{"Tools | near_the_start", "UI surfaces | Drawer tab: Within reach"}
 	if got := additions(t, parsed); !slices.Equal(got, want) {
@@ -175,6 +191,7 @@ func TestTheCodeIsReadNoFurtherThanTheLargestArchiveHolds(t *testing.T) {
 }
 
 func TestReadingThatRunsOutOfTimeKeepsWhatItFound(t *testing.T) {
+	t.Parallel()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)
 	put(t, archive, "spindle.json", []byte(sampleManifest), zip.Deflate)

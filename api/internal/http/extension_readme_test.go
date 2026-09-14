@@ -40,6 +40,7 @@ type seededBlock struct {
 }
 
 func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := uploadExtension(t, r, session, assets, extensionZip(t, map[string]string{
 		"spindle.json": toolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
@@ -85,6 +86,7 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 }
 
 func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := uploadExtension(t, r, session, assets, extensionZip(t, map[string]string{
 		"spindle.json": toolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
@@ -208,6 +210,7 @@ func readVault(t *testing.T, r http.Handler, session *http.Cookie, assetID strin
 }
 
 func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishExtension(t, r, session, assets, "Quiet Toolbox", extensionZip(t, map[string]string{
 		"spindle.json": toolboxManifest, "dist/frontend.js": "one", "README.md": seededReadme,

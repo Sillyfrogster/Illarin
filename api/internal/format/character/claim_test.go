@@ -8,6 +8,7 @@ import (
 )
 
 func TestCCv2UsesTheSpecRepresentationWithoutShadowFields(t *testing.T) {
+	t.Parallel()
 	file := document(object(`{
 		"spec":"chara_card_v2",
 		"data":{"description":"canonical"},
@@ -32,6 +33,7 @@ func TestCCv2UsesTheSpecRepresentationWithoutShadowFields(t *testing.T) {
 }
 
 func TestCCv2UsesLegacyShapeOnlyWithoutARecognizedSpec(t *testing.T) {
+	t.Parallel()
 	legacy := object(`{
 		"name":"Legacy",
 		"description":"Description",

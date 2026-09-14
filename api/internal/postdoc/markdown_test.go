@@ -24,6 +24,7 @@ type expectedNote struct {
 }
 
 func TestEveryCarriedImportBecomesItsCanonicalDocument(t *testing.T) {
+	t.Parallel()
 	for name, one := range imports(t, "carried") {
 		t.Run(name, func(t *testing.T) {
 			document, warnings, err := postdoc.FromMarkdown(one.Markdown)
@@ -42,6 +43,7 @@ func TestEveryCarriedImportBecomesItsCanonicalDocument(t *testing.T) {
 }
 
 func TestEveryRefusedImportNamesWhatStoppedIt(t *testing.T) {
+	t.Parallel()
 	for name, one := range imports(t, "refused") {
 		t.Run(name, func(t *testing.T) {
 			document, _, err := postdoc.FromMarkdown(one.Markdown)
@@ -61,6 +63,7 @@ func TestEveryRefusedImportNamesWhatStoppedIt(t *testing.T) {
 }
 
 func TestAnImportKeepsNoMarkdownBesideTheDocument(t *testing.T) {
+	t.Parallel()
 	source := "## Release notes\n\nIllarin ships **bold** prose.\n"
 	document, _, err := postdoc.FromMarkdown(source)
 	if err != nil {
@@ -74,6 +77,7 @@ func TestAnImportKeepsNoMarkdownBesideTheDocument(t *testing.T) {
 }
 
 func TestAnImportRefusesMoreMarkdownThanAPostCanHold(t *testing.T) {
+	t.Parallel()
 	_, _, err := postdoc.FromMarkdown(strings.Repeat("word ", 200000))
 	if err == nil {
 		t.Fatal("an oversized import was accepted")

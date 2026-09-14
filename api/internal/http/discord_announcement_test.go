@@ -190,6 +190,7 @@ func choosing(post blogPost, choice string) string {
 }
 
 func TestOnlyThePublicationAuthorityConfiguresADiscordChannel(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")
 
@@ -203,6 +204,7 @@ func TestOnlyThePublicationAuthorityConfiguresADiscordChannel(t *testing.T) {
 }
 
 func TestOnlyADiscordWebhookAddressBecomesAChannel(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	for _, address := range []string{
@@ -221,6 +223,7 @@ func TestOnlyADiscordWebhookAddressBecomesAChannel(t *testing.T) {
 }
 
 func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusUnauthorized, `{}` })
 
@@ -237,6 +240,7 @@ func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
 }
 
 func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusNotFound, `{}` })
 
@@ -253,6 +257,7 @@ func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
 }
 
 func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.discord.answersReadWith(func() (int, string) {
 		return http.StatusOK, `{"id":"1234567890123456789","name":"Somewhere"}`
@@ -268,6 +273,7 @@ func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
 }
 
 func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	made := stack.channelWithRole(t, "Blog readers")
@@ -304,6 +310,7 @@ func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 }
 
 func TestOnlyASnowflakeRoleIsApproved(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
@@ -317,6 +324,7 @@ func TestOnlyASnowflakeRoleIsApproved(t *testing.T) {
 }
 
 func TestADiscordChannelHasNoSigningSecretToRotate(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 
@@ -328,6 +336,7 @@ func TestADiscordChannelHasNoSigningSecretToRotate(t *testing.T) {
 }
 
 func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 	post := stack.readyPost(t)
@@ -353,6 +362,7 @@ func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
 }
 
 func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 
@@ -395,6 +405,7 @@ func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
 }
 
 func TestAnAnnouncementNeverCarriesContributorSuppliedDiscordFields(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 
@@ -410,6 +421,7 @@ func TestAnAnnouncementNeverCarriesContributorSuppliedDiscordFields(t *testing.T
 }
 
 func TestMentionsAreClosedUnlessTheApprovedRoleIsChosen(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 
@@ -427,6 +439,7 @@ func TestMentionsAreClosedUnlessTheApprovedRoleIsChosen(t *testing.T) {
 }
 
 func TestChoosingTheRoleMentionsThatOneAndOnlyThatOne(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 
@@ -444,6 +457,7 @@ func TestChoosingTheRoleMentionsThatOneAndOnlyThatOne(t *testing.T) {
 }
 
 func TestARoleCannotBeChosenWhereTheAuthorityApprovedNone(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 	post := stack.readyPost(t)
@@ -458,6 +472,7 @@ func TestARoleCannotBeChosenWhereTheAuthorityApprovedNone(t *testing.T) {
 }
 
 func TestARoleCannotBeChosenOnADestinationNothingIsSentTo(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 	post := stack.readyPost(t)
@@ -472,6 +487,7 @@ func TestARoleCannotBeChosenOnADestinationNothingIsSentTo(t *testing.T) {
 }
 
 func TestQuietPublicationAnnouncesNothingOnDiscord(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.channelWithRole(t, "")
 
@@ -483,6 +499,7 @@ func TestQuietPublicationAnnouncesNothingOnDiscord(t *testing.T) {
 }
 
 func TestAnAcceptedAnnouncementDiscordNeverConfirmsIsNotCalledDelivered(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 	stack.discord.answersSendWith(func(arrived) (int, string) { return http.StatusNoContent, "" })
@@ -509,6 +526,7 @@ func TestAnAcceptedAnnouncementDiscordNeverConfirmsIsNotCalledDelivered(t *testi
 }
 
 func TestAPostAnnouncesOnDiscordOnceAcrossItsWholeLife(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 	chosen := fmt.Sprintf(`"destinationIds":[%q]`, made.ID)
@@ -539,6 +557,7 @@ func TestAPostAnnouncesOnDiscordOnceAcrossItsWholeLife(t *testing.T) {
 }
 
 func TestAWithdrawnAndRepublishedPostAnnouncesNothingFurther(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 	chosen := fmt.Sprintf(`"destinationIds":[%q]`, made.ID)
@@ -566,6 +585,7 @@ func TestAWithdrawnAndRepublishedPostAnnouncesNothingFurther(t *testing.T) {
 }
 
 func TestADiscordAnnouncementNeverDelaysPublication(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.channelWithRole(t, "")
 	stack.discord.answersSendWith(func(arrived) (int, string) {

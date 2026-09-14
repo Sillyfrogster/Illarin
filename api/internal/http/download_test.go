@@ -51,6 +51,7 @@ func rasterSources(t *testing.T) map[string][]byte {
 }
 
 func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 
 	original := []byte{0x00, 0xff, 0xfe, 0x10, 0x80}
@@ -86,6 +87,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 }
 
 func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
@@ -134,6 +136,7 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 }
 
 func TestExportFromAnAssetMadeInIllarinRecordsTheHandoff(t *testing.T) {
+	t.Parallel()
 	router, session, _, pool := newCharacterIngestRouterWithPool(t)
 	started := startCharacter(t, router, session)
 	writeCharacterFloor(t, router, session, started)
@@ -180,6 +183,7 @@ func (s *blockingRedirectStore) InternalRedirect(ctx context.Context, id uuid.UU
 }
 
 func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
+	t.Parallel()
 	var blocker *blockingRedirectStore
 	router, session, assets, pool := newVerifiedIngestRouterWithStore(
 		t,
@@ -227,6 +231,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 }
 
 func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
@@ -258,6 +263,7 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 }
 
 func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
@@ -270,6 +276,7 @@ func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 }
 
 func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
+	t.Parallel()
 	router, ownerSession, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, ownerSession, assets, asset.DiscoveryListed)
 	readerSession := signUp(t, router, "reader@example.com", "signed.reader")
@@ -309,6 +316,7 @@ func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 }
 
 func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
+	t.Parallel()
 	router, ownerSession, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	unlistedID := uploadDiscoveryTestAsset(
 		t, router, ownerSession, assets, asset.DiscoveryUnlisted,
@@ -362,6 +370,7 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
 }
 
 func TestDownloadUnknownAssetIs404(t *testing.T) {
+	t.Parallel()
 	r, pool := newTestRouterWithSenderAndPool(
 		t, 1<<20, DefaultDeadlines(), &verificationOutbox{},
 	)
@@ -382,6 +391,7 @@ func TestDownloadUnknownAssetIs404(t *testing.T) {
 }
 
 func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -452,6 +462,7 @@ func compactJSON(t *testing.T, raw json.RawMessage) []byte {
 }
 
 func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 
 	payload := []byte(`<script>alert(1)</script>`)
@@ -490,6 +501,7 @@ func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 }
 
 func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
+	t.Parallel()
 	for wantType, source := range rasterSources(t) {
 		t.Run(wantType, func(t *testing.T) {
 			r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
@@ -526,6 +538,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 }
 
 func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(neverClaimsModule{}); err != nil {
 		t.Fatalf("register non-claiming module: %v", err)

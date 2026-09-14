@@ -25,6 +25,7 @@ func newTestStore(t *testing.T) Store {
 }
 
 func TestPutComputesTheBlobDigestAndSize(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("abc")))
@@ -43,6 +44,7 @@ func TestPutComputesTheBlobDigestAndSize(t *testing.T) {
 }
 
 func TestPutMakesTheBlobReadableByTheByteServer(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	store, err := NewStore(testdb.Connect(t), root)
 	if err != nil {
@@ -64,6 +66,7 @@ func TestPutMakesTheBlobReadableByTheByteServer(t *testing.T) {
 }
 
 func TestConcurrentIdenticalWritesConvergeOnOneBlob(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 
 	const writers = 8
@@ -100,6 +103,7 @@ func TestConcurrentIdenticalWritesConvergeOnOneBlob(t *testing.T) {
 }
 
 func TestReadRangeReturnsOnlyTheRequestedBytes(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("0123456789")))
 	if err != nil {
@@ -122,6 +126,7 @@ func TestReadRangeReturnsOnlyTheRequestedBytes(t *testing.T) {
 }
 
 func TestReadRangeRejectsEmptyAndOutOfBoundsRequests(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("0123456789")))
 	if err != nil {
@@ -146,6 +151,7 @@ func TestReadRangeRejectsEmptyAndOutOfBoundsRequests(t *testing.T) {
 }
 
 func TestOpenReturnsTheWholeBlob(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	want := []byte{0x00, 0xff, 0x50, 0x4e, 0x47, 0x80}
 	stored, err := store.Put(context.Background(), bytes.NewReader(want))
@@ -168,6 +174,7 @@ func TestOpenReturnsTheWholeBlob(t *testing.T) {
 }
 
 func TestDerivativesAreDisposableWithoutTouchingSourceBlobs(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("source")))
 	if err != nil {
@@ -205,6 +212,7 @@ func TestDerivativesAreDisposableWithoutTouchingSourceBlobs(t *testing.T) {
 }
 
 func TestDerivativeIdentityIncludesSourceVariantAndVersion(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	first, err := store.Put(context.Background(), bytes.NewReader([]byte("first source")))
 	if err != nil {
@@ -248,6 +256,7 @@ func TestDerivativeIdentityIncludesSourceVariantAndVersion(t *testing.T) {
 }
 
 func TestDerivativeCanBeHandedToTheInternalByteServer(t *testing.T) {
+	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("source")))
 	if err != nil {

@@ -138,6 +138,7 @@ func (s restrictionStack) publicProfile(t *testing.T, handle string) restrictedP
 }
 
 func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
 	createProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed)
@@ -177,6 +178,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 }
 
 func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
@@ -195,6 +197,7 @@ func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testin
 }
 
 func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	outsider := stack.member(t, "outsider@example.com", "ordinary.member")
 
@@ -224,6 +227,7 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 }
 
 func TestARestrictionNeedsAReasonOnlyAnAdminEverReads(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 
 	if blank := stack.restrict(t, stack.admin, ownerHandle, "   "); blank.Code != http.StatusBadRequest {
@@ -261,6 +265,7 @@ func TestARestrictionNeedsAReasonOnlyAnAdminEverReads(t *testing.T) {
 }
 
 func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
 	published := createProfileAsset(
@@ -356,6 +361,7 @@ func (s restrictionStack) expectAssetUntouched(t *testing.T, assetID uuid.UUID) 
 }
 
 func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
@@ -389,6 +395,7 @@ func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
 }
 
 func TestRestrictionAndRestorationBothLeaveAnAuditRecord(t *testing.T) {
+	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	stack.restore(t, stack.admin, ownerHandle)

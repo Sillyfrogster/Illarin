@@ -101,6 +101,7 @@ func namespaceNames(rows []struct {
 }
 
 func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
@@ -118,6 +119,7 @@ func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 }
 
 func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
@@ -145,6 +147,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 }
 
 func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
@@ -167,6 +170,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 }
 
 func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 	before := preservedNamespaces(t, r, session, assetID)
@@ -192,6 +196,7 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 }
 
 func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
@@ -279,6 +284,7 @@ func (smallLimitModule) Parse(
 }
 
 func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(smallLimitModule{}); err != nil {
 		t.Fatalf("register the small-limit module: %v", err)
@@ -331,6 +337,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 }
 
 func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	metadata := exampleMetadata("Ana")
 	metadata["filename"] = "ana.json"

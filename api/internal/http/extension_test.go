@@ -58,6 +58,7 @@ type extensionPage struct {
 }
 
 func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	upload := extensionZip(t, map[string]string{
 		"spindle.json": toolboxManifest, "dist/frontend.js": "export default {}",
@@ -133,6 +134,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 }
 
 func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedArchive(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	library := extensionZip(t, map[string]string{
 		"manifest.json": `{"display_name":"LALib","js":"index.js","author":"A developer",` +
@@ -195,6 +197,7 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 }
 
 func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	upload := extensionZip(t, map[string]string{
 		"quiet_toolbox-main/":                 "",
@@ -227,6 +230,7 @@ func publishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets
 }
 
 func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	first := extensionZip(t, map[string]string{"spindle.json": toolboxManifest, "dist/frontend.js": "one"})
 	assetID := uploadExtension(t, r, session, assets, first)
@@ -272,6 +276,7 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 }
 
 func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	first := extensionZip(t, map[string]string{
 		"spindle.json":     toolboxManifest,
@@ -349,6 +354,7 @@ func additionsOnPage(t *testing.T, r http.Handler, assetID string) string {
 }
 
 func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		files  map[string]string
 		reason string
@@ -401,6 +407,7 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 }
 
 func TestAnExtensionBuiltIntoManyFilesIsAccepted(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	files := map[string]string{"spindle.json": toolboxManifest, "dist/frontend.js": ""}
 	for index := range 600 {
@@ -410,6 +417,7 @@ func TestAnExtensionBuiltIntoManyFilesIsAccepted(t *testing.T) {
 }
 
 func TestAnExtensionCannotBeStartedWithoutAnArchive(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newExtensionRouter(t)
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(`{"kind":"extension"}`))
 	request.Header.Set("Content-Type", "application/json")

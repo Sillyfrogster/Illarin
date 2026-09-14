@@ -9,6 +9,7 @@ import (
 )
 
 func TestAWriterStampsTheCurrentSchemaVersion(t *testing.T) {
+	t.Parallel()
 	written, err := json.Marshal(Element{
 		ID: uuid.New(), Type: TypeProse, Role: RoleDescription, Slot: "top",
 		Options: Options{Display: DisplayRich},
@@ -48,6 +49,7 @@ func TestAWriterStampsTheCurrentSchemaVersion(t *testing.T) {
 }
 
 func TestContentFromANewerBuildIsRefusedRatherThanRead(t *testing.T) {
+	t.Parallel()
 	stored := `{"id":"` + uuid.New().String() + `","type":"prose","slot":"top",` +
 		`"version":99,"options":{},"content":{"text":"From the future."}}`
 
@@ -62,6 +64,7 @@ func TestContentFromANewerBuildIsRefusedRatherThanRead(t *testing.T) {
 }
 
 func TestAReaderUpgradesContentWrittenAtAnOlderVersion(t *testing.T) {
+	t.Parallel()
 	versioned := schema{
 		upgrade: []func(json.RawMessage) (json.RawMessage, error){
 			func(old json.RawMessage) (json.RawMessage, error) {
@@ -98,6 +101,7 @@ func TestAReaderUpgradesContentWrittenAtAnOlderVersion(t *testing.T) {
 }
 
 func TestAnEmptyElementCarriesNothingAReaderWouldSee(t *testing.T) {
+	t.Parallel()
 	for _, elementType := range []Type{TypeProse, TypeTextSet, TypeDialogueSample, TypeImageSet} {
 		content, err := elementType.Empty()
 		if err != nil {
@@ -119,6 +123,7 @@ func TestAnEmptyElementCarriesNothingAReaderWouldSee(t *testing.T) {
 }
 
 func TestAFieldListAndALinkListCarryTheirOwnItems(t *testing.T) {
+	t.Parallel()
 	fields := FieldList{Fields: []FieldItem{{Name: "Height", Value: "Six feet"}}}
 	if fields.Empty() {
 		t.Errorf("a field list holding a value reads as empty")
@@ -137,6 +142,7 @@ func TestAFieldListAndALinkListCarryTheirOwnItems(t *testing.T) {
 }
 
 func TestALinkListRefusesAnAddressThatIsNotAWebLink(t *testing.T) {
+	t.Parallel()
 	_, err := DecodeContent(TypeLinkList, []byte(
 		`{"links":[{"label":"Tap me","url":"javascript:alert(1)"}]}`,
 	))
@@ -159,6 +165,7 @@ func TestALinkListRefusesAnAddressThatIsNotAWebLink(t *testing.T) {
 }
 
 func TestAnImageSetItemCarriesOneNameAndNoSeparateCaption(t *testing.T) {
+	t.Parallel()
 	content, err := DecodeContent(TypeImageSet, []byte(
 		`{"images":[{"mediaId":"`+uuid.New().String()+`","name":"joy"},`+
 			`{"mediaId":"`+uuid.New().String()+`","caption":"the second"}]}`,

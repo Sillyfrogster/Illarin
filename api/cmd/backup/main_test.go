@@ -51,6 +51,7 @@ func (r *fakeRunner) run(_ context.Context, name string, args, _ []string) error
 }
 
 func TestTakeBackupKeepsDeletionLockedThroughDumpAndBlobCopy(t *testing.T) {
+	t.Parallel()
 	uploadsDir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(uploadsDir, "blobs"), 0o700); err != nil {
 		t.Fatal(err)
@@ -87,6 +88,7 @@ func TestTakeBackupKeepsDeletionLockedThroughDumpAndBlobCopy(t *testing.T) {
 }
 
 func TestTakeBackupReleasesLockAfterDumpFailure(t *testing.T) {
+	t.Parallel()
 	uploadsDir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(uploadsDir, "blobs"), 0o700); err != nil {
 		t.Fatal(err)
@@ -108,6 +110,7 @@ func TestTakeBackupReleasesLockAfterDumpFailure(t *testing.T) {
 }
 
 func TestLoadSettingsUsesThirtyDayRetention(t *testing.T) {
+	t.Parallel()
 	values := map[string]string{
 		"DATABASE_URL":         "postgres://db/illarin",
 		"UPLOADS_DIR":          "/uploads",
@@ -130,6 +133,7 @@ func TestLoadSettingsUsesThirtyDayRetention(t *testing.T) {
 }
 
 func TestPostgresLockBlocksBlobDeletionLock(t *testing.T) {
+	t.Parallel()
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("TEST_DATABASE_URL is not set")

@@ -15,6 +15,7 @@ import (
 )
 
 func TestOnlyAnAdminCanWithholdAnAssetAndTheDecisionIsRecordedTogether(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
 
@@ -85,6 +86,7 @@ func TestOnlyAnAdminCanWithholdAnAssetAndTheDecisionIsRecordedTogether(t *testin
 }
 
 func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
 	mediaID := addWithholdingTestMedia(t, router, session, assetID)
@@ -142,6 +144,7 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 }
 
 func TestUnavailableAssetsAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	withheldID := uploadDiscoveryTestAsset(t, router, session, assets, "")
 	deletedID := uploadDiscoveryTestAsset(t, router, session, assets, "")
@@ -208,6 +211,7 @@ func TestUnavailableAssetsAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 }
 
 func TestWithheldAssetRefusesCreatorMutations(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
 	if _, err := pool.Exec(context.Background(), `
@@ -245,6 +249,7 @@ func TestWithheldAssetRefusesCreatorMutations(t *testing.T) {
 }
 
 func TestWithheldAssetRefusesEveryProtectedPromptMutation(t *testing.T) {
+	t.Parallel()
 	_, router, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
 	coreBlock := blockNamed(t, started.Blocks, "preset_core")

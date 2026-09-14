@@ -21,6 +21,7 @@ func deadlines(json time.Duration) Deadlines {
 }
 
 func TestAListingPastItsDeadlineFailsRatherThanAnswers(t *testing.T) {
+	t.Parallel()
 	answered := list(t, newTestRouterWith(t, 1<<20, deadlines(5*time.Second)))
 	if answered.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 with time to spare. body: %s",
@@ -42,6 +43,7 @@ func list(t *testing.T, r *gin.Engine) *httptest.ResponseRecorder {
 }
 
 func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
+	t.Parallel()
 	err := Register(
 		gin.New(),
 		NewHandlers(nil, nil, nil, nil, nil, nil, 1<<20),
@@ -55,6 +57,7 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 }
 
 func TestAnUploadIsNotHeldToTheListingDeadline(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouterWith(t, 1<<20, deadlines(alreadyPast))
 
 	rec := send(t, r, authorized(
@@ -67,6 +70,7 @@ func TestAnUploadIsNotHeldToTheListingDeadline(t *testing.T) {
 }
 
 func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
+	t.Parallel()
 	setup, r, session, assets := newVerifiedTestRoutersWithService(t, 1<<20, deadlines(alreadyPast))
 
 	file := []byte("bytes worth waiting for")

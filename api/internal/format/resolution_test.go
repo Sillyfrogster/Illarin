@@ -40,6 +40,7 @@ func (m claimingModule) Claim(file probe.Inspection) (Claim, bool) {
 }
 
 func TestResolveReturnsNoModuleWhenNothingClaimsTheFile(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 
 	_, ok, err := registry.Resolve(probe.Inspection{Container: probe.Unknown})
@@ -52,6 +53,7 @@ func TestResolveReturnsNoModuleWhenNothingClaimsTheFile(t *testing.T) {
 }
 
 func TestResolveRejectsAPayloadThatNamesAnUnsupportedFormat(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	if err := registry.Register(claimingModule{
 		id: "chara_card_v3", spec: "chara_card_v3", authoritative: true,
@@ -69,6 +71,7 @@ func TestResolveRejectsAPayloadThatNamesAnUnsupportedFormat(t *testing.T) {
 }
 
 func TestResolvePrefersAnAuthoritativeClaimRegardlessOfRegistrationOrder(t *testing.T) {
+	t.Parallel()
 	file := probedPayload("chara_card_v3", "ccv3")
 	compatible := claimingModule{id: "compatible_reader", spec: "chara_card_v3"}
 	authority := claimingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true}
@@ -95,6 +98,7 @@ func TestResolvePrefersAnAuthoritativeClaimRegardlessOfRegistrationOrder(t *test
 }
 
 func TestResolveRejectsTwoAuthoritativeClaimsOnOnePayload(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	for _, id := range []string{"first", "second"} {
 		if err := registry.Register(forcedAuthoritativeModule{id: id}); err != nil {
@@ -109,6 +113,7 @@ func TestResolveRejectsTwoAuthoritativeClaimsOnOnePayload(t *testing.T) {
 }
 
 func TestResolveUsesThePayloadDiscriminatorRatherThanItsLocator(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	for _, module := range []Module{
 		claimingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true},
@@ -146,6 +151,7 @@ func (m forcedAuthoritativeModule) Parse(context.Context, probe.Inspection, Clai
 }
 
 func TestResolveRejectsAuthorityForADifferentDiscriminator(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	if err := registry.Register(claimingModule{
 		id: "chara_card_v3", spec: "chara_card_v2", authoritative: true,
@@ -177,6 +183,7 @@ type containerModule struct{ claimingModule }
 func (containerModule) OwnedSpecs() []string { return []string{"chara_card_v3"} }
 
 func TestResolveAcceptsAuthorityForASpecTheModuleOwns(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	if err := registry.Register(containerModule{claimingModule{
 		id: "charx", spec: "chara_card_v3", authoritative: true,
@@ -194,6 +201,7 @@ func TestResolveAcceptsAuthorityForASpecTheModuleOwns(t *testing.T) {
 }
 
 func TestResolveStillRejectsAuthorityForASpecNobodyOwns(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	if err := registry.Register(containerModule{claimingModule{
 		id: "charx", spec: "chara_card_v2", authoritative: true,

@@ -40,6 +40,7 @@ func clearWithhold(t *testing.T, r http.Handler, session *http.Cookie, assetID s
 }
 
 func TestTheNextLibrarySyncFromAnInstanceReportingAWithheldExtensionCarriesANoticeNamingIt(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 2)
@@ -62,6 +63,7 @@ func TestTheNextLibrarySyncFromAnInstanceReportingAWithheldExtensionCarriesANoti
 }
 
 func TestTheNextDeliveryWaitFromAnInstanceReportingAWithheldExtensionCarriesTheNoticeOnce(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
@@ -87,6 +89,7 @@ func TestTheNextDeliveryWaitFromAnInstanceReportingAWithheldExtensionCarriesTheN
 }
 
 func TestAnExtensionWithheldAgainAfterBeingClearedIsNoticedAgain(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
@@ -108,6 +111,7 @@ func TestAnExtensionWithheldAgainAfterBeingClearedIsNoticedAgain(t *testing.T) {
 }
 
 func TestOnlyAWithheldExtensionIsNoticed(t *testing.T) {
+	t.Parallel()
 	r, session, pool := newLinkingRouter(t)
 	assetID := publishedTestAsset(t, r, session)
 	install := linkInstallations(t, r, session, 1)[0]
@@ -124,6 +128,7 @@ func TestOnlyAWithheldExtensionIsNoticed(t *testing.T) {
 }
 
 func TestWithholdingAnExtensionStopsItsQueuedDeliveriesAsWithdrawn(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]

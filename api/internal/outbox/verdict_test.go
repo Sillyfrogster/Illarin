@@ -9,6 +9,7 @@ import (
 )
 
 func TestTheScheduleSpansTenAttemptsWithinTenPercentJitter(t *testing.T) {
+	t.Parallel()
 	if Attempts != 10 {
 		t.Fatalf("Attempts = %d, want 10", Attempts)
 	}
@@ -32,6 +33,7 @@ func TestTheScheduleSpansTenAttemptsWithinTenPercentJitter(t *testing.T) {
 }
 
 func TestWhatAnEndpointAnswersDecidesTheVerdict(t *testing.T) {
+	t.Parallel()
 	for _, one := range []struct {
 		status  int
 		outcome string
@@ -61,6 +63,7 @@ func TestWhatAnEndpointAnswersDecidesTheVerdict(t *testing.T) {
 }
 
 func TestDiscordIsOnlyDeliveredWhenItNamesTheMessageItMade(t *testing.T) {
+	t.Parallel()
 	said, message := ReadAnnouncement(outbound.Answer{
 		Status: http.StatusOK, Body: []byte(`{"id":"123456789012345678"}`),
 	})
@@ -78,6 +81,7 @@ func TestDiscordIsOnlyDeliveredWhenItNamesTheMessageItMade(t *testing.T) {
 }
 
 func TestAStoppedVerdictNamesItsReason(t *testing.T) {
+	t.Parallel()
 	said := Stopped(Disabled)
 	if said.Reason != Disabled || said.Outcome != OutcomeRefused || said.Detail == "" || said.Retry {
 		t.Errorf("Stopped(disabled) = %+v", said)

@@ -131,6 +131,7 @@ func postTitles(listed []blogPost) []string {
 }
 
 func TestAContributorDeletesTheirOwnDraftAndGetsItBack(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -191,6 +192,7 @@ func TestAContributorDeletesTheirOwnDraftAndGetsItBack(t *testing.T) {
 }
 
 func TestADeletedPostIsListedToItsOwnerAndToAnAdminAndNobodyElse(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	stranger := stack.contributor(t, "stranger@example.com", "stranger.dev")
@@ -214,6 +216,7 @@ func TestADeletedPostIsListedToItsOwnerAndToAnAdminAndNobodyElse(t *testing.T) {
 }
 
 func TestOnlyAnAdminDeletesAPostThatHasPublishedAndOnlyOnceItIsDown(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -249,6 +252,7 @@ func TestOnlyAnAdminDeletesAPostThatHasPublishedAndOnlyOnceItIsDown(t *testing.T
 }
 
 func TestADeletedPostIsNeitherWrittenNorPublished(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A post out of the workspace")
@@ -274,6 +278,7 @@ func TestADeletedPostIsNeitherWrittenNorPublished(t *testing.T) {
 }
 
 func TestDeletingAPostStopsTheEditionItHadWaiting(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	waiting, due := stack.scheduledDraft(t, session, "An edition nobody wants", "The first words.")
@@ -298,6 +303,7 @@ func TestDeletingAPostStopsTheEditionItHadWaiting(t *testing.T) {
 }
 
 func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A draft nobody came back for")
@@ -342,6 +348,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 }
 
 func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	same := httpTestPNG(t, 800, 400)
@@ -376,6 +383,7 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 }
 
 func TestAnOfficialAddressIsNeverGivenBackAfterCleanup(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a history")

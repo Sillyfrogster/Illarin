@@ -31,6 +31,7 @@ func appSlugsOf(found []publicationApp) []string {
 }
 
 func TestOnlyAnAppWithPublishedWritingIsReadable(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -55,6 +56,7 @@ func TestOnlyAnAppWithPublishedWritingIsReadable(t *testing.T) {
 }
 
 func TestAPostKeepsTheAddressItFirstPublishedUnder(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.May, 4, 9, 0, 0, 0, time.UTC)

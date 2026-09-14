@@ -12,6 +12,7 @@ import (
 )
 
 func TestCoreTablesExist(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 
 	want := []string{
@@ -46,6 +47,7 @@ func TestCoreTablesExist(t *testing.T) {
 }
 
 func TestBlobRowsContainOnlyContentAndLocation(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	rows, err := pool.Query(context.Background(),
 		`select column_name
@@ -67,6 +69,7 @@ func TestBlobRowsContainOnlyContentAndLocation(t *testing.T) {
 }
 
 func TestBlobDigestIsUnique(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	digest := make([]byte, 32)
 
@@ -85,6 +88,7 @@ func TestBlobDigestIsUnique(t *testing.T) {
 }
 
 func TestSchemaHasNoMutableReferenceCount(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	var count int
 	if err := pool.QueryRow(context.Background(), `
@@ -101,6 +105,7 @@ func TestSchemaHasNoMutableReferenceCount(t *testing.T) {
 }
 
 func TestIngestFailureReasonsStayAtTheClosedFive(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	var definition string
 	if err := pool.QueryRow(context.Background(), `
@@ -124,6 +129,7 @@ func TestIngestFailureReasonsStayAtTheClosedFive(t *testing.T) {
 }
 
 func TestDurableRecordsReferenceBlobs(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 
 	for _, table := range []string{"asset_revisions", "asset_media"} {
@@ -171,6 +177,7 @@ func rowsToStrings(rows stringRows) ([]string, error) {
 }
 
 func TestBlockRowsCarryOnlyWhatTheCreatorDid(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	rows, err := pool.Query(context.Background(),
 		`select column_name
@@ -208,6 +215,7 @@ func TestBlockRowsCarryOnlyWhatTheCreatorDid(t *testing.T) {
 }
 
 func TestTwoBlocksOnOneAssetCannotShareAPosition(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 	assetID := uuid.New()
@@ -233,6 +241,7 @@ func TestTwoBlocksOnOneAssetCannotShareAPosition(t *testing.T) {
 }
 
 func TestAssetKindIsClosedToKnownValues(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 
@@ -255,6 +264,7 @@ func TestAssetKindIsClosedToKnownValues(t *testing.T) {
 }
 
 func TestDiscoveryDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 
@@ -286,6 +296,7 @@ func TestDiscoveryDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
 }
 
 func TestWithholdingFieldsPopulateTogether(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 
@@ -340,6 +351,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 }
 
 func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 
 	assetColumns, err := tableColumns(pool, "assets")
@@ -375,6 +387,7 @@ func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
 }
 
 func TestRevisionIdentityCanBackACompositeForeignKey(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 	_, err := pool.Exec(ctx, `drop table if exists revision_reference_probe`)
@@ -398,6 +411,7 @@ func TestRevisionIdentityCanBackACompositeForeignKey(t *testing.T) {
 }
 
 func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, revisionID, _ := insertAssetRevision(t, pool)
 
@@ -429,6 +443,7 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 }
 
 func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID := uuid.New()
 	ctx := context.Background()
@@ -449,6 +464,7 @@ func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
 }
 
 func TestDownloadEventsAreImmutable(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, revisionID, _ := insertAssetRevision(t, pool)
 	ctx := context.Background()
@@ -478,6 +494,7 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 }
 
 func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, _, _ := insertAssetRevision(t, pool)
 	ctx := context.Background()
@@ -520,6 +537,7 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 }
 
 func TestDownloadEventRevisionMustBelongToItsAsset(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	firstAssetID, firstRevisionID, _ := insertAssetRevision(t, pool)
 	secondAssetID, _, _ := insertAssetRevision(t, pool)
@@ -536,6 +554,7 @@ func TestDownloadEventRevisionMustBelongToItsAsset(t *testing.T) {
 }
 
 func TestDownloadEventVocabularyIsClosed(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, revisionID, _ := insertAssetRevision(t, pool)
 	ctx := context.Background()
@@ -572,6 +591,7 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 }
 
 func TestTheProjectionCarriesTwoIndependentHalves(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, _, _ := insertAssetRevision(t, pool)
 
@@ -607,6 +627,7 @@ func TestTheProjectionCarriesTwoIndependentHalves(t *testing.T) {
 }
 
 func TestMediaBelongsToOneAsset(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, _, blobID := insertAssetRevision(t, pool)
 	ctx := context.Background()
@@ -656,6 +677,7 @@ func TestMediaBelongsToOneAsset(t *testing.T) {
 }
 
 func TestCoverIsAnOptionalAssetReference(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 	assetID, _, blobID := insertAssetRevision(t, pool)
 	ctx := context.Background()
@@ -693,6 +715,7 @@ func TestCoverIsAnOptionalAssetReference(t *testing.T) {
 }
 
 func TestBrowseIndexStartsWithCreationTimeAndCarriesTheCatalogPredicate(t *testing.T) {
+	t.Parallel()
 	pool := Connect(t)
 
 	var columns []string

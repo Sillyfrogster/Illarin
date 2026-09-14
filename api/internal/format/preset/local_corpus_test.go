@@ -12,6 +12,7 @@ import (
 )
 
 func TestEveryLocalPresetSurvivesADownload(t *testing.T) {
+	t.Parallel()
 	root := os.Getenv("ILLARIN_LOCAL_CORPUS")
 	if root == "" {
 		t.Skip("the local corpus is not configured")

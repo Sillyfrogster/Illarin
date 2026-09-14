@@ -12,6 +12,7 @@ import (
 )
 
 func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -68,6 +69,7 @@ func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T
 }
 
 func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -118,6 +120,7 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 }
 
 func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
 	publicID, sealedID := uuid.New(), uuid.New()
 	started := publishTwoPromptPreset(t, r, session, publicID, sealedID,
@@ -161,6 +164,7 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 }
 
 func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -213,6 +217,7 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 }
 
 func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -249,6 +254,7 @@ func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 }
 
 func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)

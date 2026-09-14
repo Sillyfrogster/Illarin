@@ -27,6 +27,7 @@ func contentGeneration(t *testing.T, pool *pgxpool.Pool, assetID string) int {
 }
 
 func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	if got := contentGeneration(t, pool, started.ID); got != 1 {
@@ -68,6 +69,7 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 }
 
 func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
+	t.Parallel()
 	_, router, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
 	coreBlock := blockNamed(t, started.Blocks, "preset_core")

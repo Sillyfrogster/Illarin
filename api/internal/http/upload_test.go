@@ -78,6 +78,7 @@ func send(t *testing.T, r http.Handler, req *http.Request) *httptest.ResponseRec
 }
 
 func TestUploadOverTheCeilingIsRefused(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouterWith(t, 64, DefaultDeadlines())
 
 	rec := send(t, r, authorized(
@@ -90,6 +91,7 @@ func TestUploadOverTheCeilingIsRefused(t *testing.T) {
 }
 
 func TestUploadAtTheCeilingIsAccepted(t *testing.T) {
+	t.Parallel()
 	req := uploadRequest(t, exampleMetadata("Exactly"), bytes.Repeat([]byte("a"), 1024))
 	r, session := newVerifiedTestRouterWith(t, 1024, DefaultDeadlines())
 
@@ -102,6 +104,7 @@ func TestUploadAtTheCeilingIsAccepted(t *testing.T) {
 }
 
 func TestUploadIsCutOffWhenItsLengthIsUnknown(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouterWith(t, 512, DefaultDeadlines())
 
 	req := uploadRequest(t, exampleMetadata("Unstated"), bytes.Repeat([]byte("a"), 4096))
@@ -129,6 +132,7 @@ func formRequest(t *testing.T, write func(*multipart.Writer)) *http.Request {
 }
 
 func TestFormDataThatCannotBeReadIsRefused(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		request func(t *testing.T) *http.Request

@@ -39,6 +39,7 @@ func withReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 }
 
 func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
 	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
@@ -52,6 +53,7 @@ func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 }
 
 func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) {
+	t.Parallel()
 	for _, publish := range []bool{false, true} {
 		name := "two editors"
 		if publish {

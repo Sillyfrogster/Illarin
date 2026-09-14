@@ -9,6 +9,7 @@ import (
 )
 
 func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheAssetInIt(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"), plainDeclaration("charx"))
 	targets := registry.OfferedTargets(galleryCharacter())
 	byFormat := make(map[string]Target, len(targets))
@@ -28,6 +29,7 @@ func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheAssetInIt(t *testing.T) {
 }
 
 func TestNoAppIsSentAFormatOthersWillNotShowWhenOneReadsEverywhere(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"), plainDeclaration("charx"))
 	targets := registry.OfferedTargets(galleryCharacter())
 
@@ -39,6 +41,7 @@ func TestNoAppIsSentAFormatOthersWillNotShowWhenOneReadsEverywhere(t *testing.T)
 }
 
 func TestAnAppThatUnpacksTheNoteIsOfferedTheFormatCarryingIt(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
 	targets := registry.OfferedTargets(galleryCharacter())
 
@@ -54,6 +57,7 @@ func TestAnAppThatUnpacksTheNoteIsOfferedTheFormatCarryingIt(t *testing.T) {
 }
 
 func TestAnAppThatReadsNoOfferedFormatIsOfferedNothing(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, plainDeclaration("byaf"))
 	targets := registry.OfferedTargets(galleryCharacter())
 
@@ -63,6 +67,7 @@ func TestAnAppThatReadsNoOfferedFormatIsOfferedNothing(t *testing.T) {
 }
 
 func TestAFormatOnlySomeAppsUnpackCountsAsALossToTheRest(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
 	target := registry.OfferedTargets(galleryCharacter())[0]
 
@@ -75,6 +80,7 @@ func TestAFormatOnlySomeAppsUnpackCountsAsALossToTheRest(t *testing.T) {
 }
 
 func TestARoleCarriesTheAppsThatShowIt(t *testing.T) {
+	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
 	target := registry.OfferedTargets(galleryCharacter())[0]
 

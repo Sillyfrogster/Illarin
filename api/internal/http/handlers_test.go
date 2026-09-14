@@ -27,7 +27,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
+
+func init() {
+	gin.SetMode(gin.TestMode)
+}
 
 func testRegistry(t *testing.T) *format.Registry {
 	t.Helper()
@@ -47,6 +52,7 @@ func newTestRouter(t *testing.T) *gin.Engine {
 }
 
 func TestFormatRegistryInvariantIsNotAnUploaderRefusal(t *testing.T) {
+	t.Parallel()
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
 
@@ -111,8 +117,6 @@ func newTestHandlers(
 	sender account.EmailSender,
 ) *Handlers {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
-
 	pool := testdb.Connect(t)
 	return newTestHandlersWithPool(t, pool, maxUploadBytes, sender)
 }
@@ -139,14 +143,12 @@ func newTestHandlersWithDelivery(
 	to publication.Sender,
 ) *Handlers {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
-
 	blob, err := storage.NewStore(pool, t.TempDir())
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
 	svc := asset.NewService(pool, testRegistry(t), blob)
-	accounts := account.NewService(pool, sender, nil, testMediaLibrary(blob), "http://localhost:3000")
+	accounts := newTestAccounts(pool, sender, nil, testMediaLibrary(blob))
 	links := newTestLinkingService(pool)
 	deliveries := delivery.NewService(pool, svc, links, settings)
 	updateDestinations := assetdestination.NewService(
@@ -192,9 +194,7 @@ func newDiscordTestStack(
 	}
 	assets := asset.NewService(pool, testRegistry(t), blob)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(
-		pool, outbox, provider, testMediaLibrary(blob), "http://localhost:3000",
-	)
+	accounts := newTestAccounts(pool, outbox, provider, testMediaLibrary(blob))
 	links := newTestLinkingService(pool)
 	updateDestinations := newTestUpdateDestinations(pool)
 	assets.OnUpdatePublished(updateDestinations.Announce)
@@ -203,6 +203,16 @@ func newDiscordTestStack(
 		newTestPublicationService(pool, blob), updateDestinations, 1<<20,
 	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
+}
+
+func newTestAccounts(
+	pool *pgxpool.Pool,
+	sender account.EmailSender,
+	provider account.DiscordProvider,
+	library *mediaproc.Library,
+) *account.Service {
+	return account.NewService(pool, sender, provider, library, "http://localhost:3000").
+		WithPasswordCost(bcrypt.MinCost)
 }
 
 func testMediaLibrary(store storage.Store) *mediaproc.Library {
@@ -430,6 +440,7 @@ func get(t *testing.T, r *gin.Engine, url string) []listedAsset {
 }
 
 func TestCreateThenListRoundTrip(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 
 	rec := post(t, r, session, assets, "Mystery")
@@ -456,6 +467,7 @@ func TestCreateThenListRoundTrip(t *testing.T) {
 }
 
 func TestListPagesFromWhereTheLastPageEnded(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	for _, name := range []string{"first", "second", "third"} {
 		if rec := post(t, r, session, assets, name); rec.Code != http.StatusOK {
@@ -479,6 +491,7 @@ func TestListPagesFromWhereTheLastPageEnded(t *testing.T) {
 }
 
 func TestListRefusesHalfACursor(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 
 	for _, query := range []string{

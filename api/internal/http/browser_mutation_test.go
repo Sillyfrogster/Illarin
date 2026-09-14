@@ -7,6 +7,7 @@ import (
 )
 
 func TestCookieAuthenticatedMutationsRequireTheIllarinBrowserOrigin(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 
 	request := func(origin, marker string) *httptest.ResponseRecorder {
@@ -36,6 +37,7 @@ func TestCookieAuthenticatedMutationsRequireTheIllarinBrowserOrigin(t *testing.T
 }
 
 func TestBrowserMutationGuardLeavesPublicAccountEntryPointsAvailable(t *testing.T) {
+	t.Parallel()
 	router := newTestRouter(t)
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-in", nil)
 	req.Header.Set("Content-Type", "application/json")

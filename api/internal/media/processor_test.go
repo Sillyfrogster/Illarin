@@ -15,6 +15,7 @@ import (
 )
 
 func TestNamedVariantsAreTheRelaunchSet(t *testing.T) {
+	t.Parallel()
 	want := []string{
 		"grid", "grid_blurred",
 		"detail", "detail_blurred",
@@ -32,6 +33,7 @@ func TestNamedVariantsAreTheRelaunchSet(t *testing.T) {
 }
 
 func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
+	t.Parallel()
 	source := image.NewRGBA(image.Rect(0, 0, 1200, 600))
 	encoded := encodePNG(t, source)
 
@@ -72,6 +74,7 @@ func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
 }
 
 func TestOversizedHeaderIsRejectedBeforePixelDecode(t *testing.T) {
+	t.Parallel()
 	limits := DefaultLimits()
 	_, err := NewProcessor(limits).Prepare(
 		context.Background(), bytes.NewReader(pngHeader(40_000, 40_000)),
@@ -82,6 +85,7 @@ func TestOversizedHeaderIsRejectedBeforePixelDecode(t *testing.T) {
 }
 
 func TestBlurredCounterpartDoesNotCarryClearPixels(t *testing.T) {
+	t.Parallel()
 	source := image.NewRGBA(image.Rect(0, 0, 640, 320))
 	for y := range 320 {
 		for x := range 640 {
@@ -118,6 +122,7 @@ func TestBlurredCounterpartDoesNotCarryClearPixels(t *testing.T) {
 }
 
 func TestEncoderCanBeReplaced(t *testing.T) {
+	t.Parallel()
 	encoder := &recordingEncoder{}
 	processor := NewProcessorWithEncoder(DefaultLimits(), encoder)
 	prepared, err := processor.Prepare(
@@ -140,6 +145,7 @@ func TestEncoderCanBeReplaced(t *testing.T) {
 }
 
 func TestOGIsASeparateComposedPreview(t *testing.T) {
+	t.Parallel()
 	source := image.NewRGBA(image.Rect(0, 0, 100, 200))
 	for y := range 200 {
 		for x := range 100 {
@@ -227,6 +233,7 @@ func writePNGChunk(out *bytes.Buffer, kind string, data []byte) {
 }
 
 func TestSocialPreviewOfFlaggedWorkIsBlurred(t *testing.T) {
+	t.Parallel()
 	source := image.NewRGBA(image.Rect(0, 0, 400, 400))
 	for y := range 400 {
 		for x := range 400 {

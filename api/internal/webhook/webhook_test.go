@@ -10,6 +10,7 @@ import (
 )
 
 func TestAMintedSecretIsMarkedAndFullLength(t *testing.T) {
+	t.Parallel()
 	secret, err := MintSecret()
 
 	if err != nil {
@@ -25,6 +26,7 @@ func TestAMintedSecretIsMarkedAndFullLength(t *testing.T) {
 }
 
 func TestTwoMintedSecretsDiffer(t *testing.T) {
+	t.Parallel()
 	first, _ := MintSecret()
 	second, _ := MintSecret()
 
@@ -34,6 +36,7 @@ func TestTwoMintedSecretsDiffer(t *testing.T) {
 }
 
 func TestTheSignatureIsOverIdTimestampAndBody(t *testing.T) {
+	t.Parallel()
 	key := make([]byte, SecretBytes)
 	secret := Prefix + base64.StdEncoding.EncodeToString(key)
 	at := time.Unix(1700000000, 0)
@@ -53,6 +56,7 @@ func TestTheSignatureIsOverIdTimestampAndBody(t *testing.T) {
 }
 
 func TestAChangedBodyChangesTheSignature(t *testing.T) {
+	t.Parallel()
 	secret, _ := MintSecret()
 	at := time.Unix(1700000000, 0)
 
@@ -65,6 +69,7 @@ func TestAChangedBodyChangesTheSignature(t *testing.T) {
 }
 
 func TestHeadersCarryTheIdTimestampAndSignature(t *testing.T) {
+	t.Parallel()
 	secret, _ := MintSecret()
 	at := time.Unix(1700000000, 0)
 
@@ -86,6 +91,7 @@ func TestHeadersCarryTheIdTimestampAndSignature(t *testing.T) {
 }
 
 func TestAValueThatIsNotASigningSecretIsRefused(t *testing.T) {
+	t.Parallel()
 	for _, secret := range []string{"", "abc", "whsec_not-base64!!", "whsec_" + base64.StdEncoding.EncodeToString([]byte("short"))} {
 		if _, err := Sign(secret, "msg_1", time.Unix(0, 0), nil); err == nil {
 			t.Errorf("Sign(%q) was accepted", secret)

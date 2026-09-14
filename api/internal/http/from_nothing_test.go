@@ -136,6 +136,7 @@ func blockNamed(t *testing.T, blocks []startedBlock, definition string) startedB
 }
 
 func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	started := startCharacter(t, r, session)
@@ -198,6 +199,7 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 }
 
 func TestAnAssetBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	started := startCharacter(t, r, session)
@@ -214,6 +216,7 @@ func TestAnAssetBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
 }
 
 func TestADraftResolvesForItsOwnerAndReturnsTheUniform404ForEveryoneElse(t *testing.T) {
+	t.Parallel()
 	setup, r, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 
@@ -237,6 +240,7 @@ func TestADraftResolvesForItsOwnerAndReturnsTheUniform404ForEveryoneElse(t *test
 }
 
 func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -256,6 +260,7 @@ func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
 }
 
 func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	for _, body := range []string{`{"kind":"nonsense"}`, `{"kind":""}`, `{}`} {
@@ -269,6 +274,7 @@ func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 }
 
 func TestStartingAnAssetNeedsAVerifiedAccount(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",

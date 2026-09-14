@@ -19,6 +19,7 @@ func testPolicy() []format.AnomalyDeclaration {
 }
 
 func TestAToleratedAnomalyIsRecordedAndTheRunCarriesOn(t *testing.T) {
+	t.Parallel()
 	ledger, err := NewLedger(testPolicy())
 	if err != nil {
 		t.Fatalf("declare the policy: %v", err)
@@ -37,6 +38,7 @@ func TestAToleratedAnomalyIsRecordedAndTheRunCarriesOn(t *testing.T) {
 }
 
 func TestAFatalAnomalyStopsTheRunAndIsNotRecorded(t *testing.T) {
+	t.Parallel()
 	ledger, err := NewLedger(testPolicy())
 	if err != nil {
 		t.Fatalf("declare the policy: %v", err)
@@ -59,6 +61,7 @@ func TestAFatalAnomalyStopsTheRunAndIsNotRecorded(t *testing.T) {
 }
 
 func TestAnUnresolvedOwnerErrorKeepsSourceIdentityPrivate(t *testing.T) {
+	t.Parallel()
 	ledger, err := NewLedger(v1.Module{}.Declaration().Anomalies)
 	if err != nil {
 		t.Fatalf("declare the policy: %v", err)
@@ -79,6 +82,7 @@ func TestAnUnresolvedOwnerErrorKeepsSourceIdentityPrivate(t *testing.T) {
 }
 
 func TestAnAnomalyKindOutsideThePolicyIsRefused(t *testing.T) {
+	t.Parallel()
 	ledger, err := NewLedger(testPolicy())
 	if err != nil {
 		t.Fatalf("declare the policy: %v", err)
@@ -95,6 +99,7 @@ func TestAnAnomalyKindOutsideThePolicyIsRefused(t *testing.T) {
 }
 
 func TestAPolicyThatDoesNotClassifyEveryKindIsRefused(t *testing.T) {
+	t.Parallel()
 	if _, err := NewLedger([]format.AnomalyDeclaration{
 		{Kind: "kept", Disposition: "maybe", Reason: "unclear"},
 	}); err == nil {
@@ -103,6 +108,7 @@ func TestAPolicyThatDoesNotClassifyEveryKindIsRefused(t *testing.T) {
 }
 
 func TestTheLedgerPersistsWhatTheRunRecorded(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	ledger, err := NewLedger(testPolicy())
 	if err != nil {

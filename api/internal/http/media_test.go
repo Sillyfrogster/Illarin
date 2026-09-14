@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -22,6 +21,7 @@ import (
 )
 
 func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	metadata := exampleMetadata("Theme with screenshots")
 	metadata["_keepDraft"] = true
@@ -123,6 +123,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 }
 
 func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	for _, path := range []string{
 		"/media/11111111-1111-1111-1111-111111111111/1200x630/1",
@@ -136,6 +137,7 @@ func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
 }
 
 func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	r, session, assets, pool := newVerifiedIngestRouterWithStoreFactory(
 		t, format.NewRegistry(), asset.DefaultIngestSettings(),
@@ -199,7 +201,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), limited, asset.DefaultIngestSettings(),
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(limited), "http://localhost:3000")
+	accounts := newTestAccounts(pool, &verificationOutbox{}, nil, testMediaLibrary(limited))
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
@@ -220,6 +222,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 }
 
 func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	var blobs storage.Store
 	r, session, assets, pool := newVerifiedIngestRouterWithStoreFactory(
@@ -242,7 +245,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
-	accounts := account.NewService(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs), "http://localhost:3000")
+	accounts := newTestAccounts(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs))
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),

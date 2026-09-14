@@ -12,6 +12,7 @@ import (
 )
 
 func TestAV1AddressIsTheAuthorAndTheName(t *testing.T) {
+	t.Parallel()
 	candidate := legacyCandidate{
 		AssetID: uuid.New(), Author: "Rosa Hendricks", Handle: "rosa.h",
 		Name: "Liz and Eric — Torn Between Two",
@@ -22,6 +23,7 @@ func TestAV1AddressIsTheAuthorAndTheName(t *testing.T) {
 }
 
 func TestAnAssetWithNoCreditedAuthorIsAddressedByItsOwner(t *testing.T) {
+	t.Parallel()
 	candidate := legacyCandidate{AssetID: uuid.New(), Handle: "rosa.h", Name: "Vellum Faewild"}
 	if got := candidate.address(); got != "rosa-h/vellum-faewild" {
 		t.Errorf("address = %q", got)
@@ -29,6 +31,7 @@ func TestAnAssetWithNoCreditedAuthorIsAddressedByItsOwner(t *testing.T) {
 }
 
 func TestANameThatSlugifiesToNothingHasNoAddress(t *testing.T) {
+	t.Parallel()
 	candidate := legacyCandidate{AssetID: uuid.New(), Handle: "rosa.h", Name: "≽^•⩊•^≼"}
 	if got := candidate.address(); got != "" {
 		t.Errorf("address = %q, want none", got)
@@ -36,6 +39,7 @@ func TestANameThatSlugifiesToNothingHasNoAddress(t *testing.T) {
 }
 
 func TestTheOlderAssetKeepsAContestedAddress(t *testing.T) {
+	t.Parallel()
 	older := legacyCandidate{
 		AssetID: uuid.New(), Author: "Rosa", Name: "Liz and Eric",
 		CreatedAt: time.Date(2026, 6, 16, 0, 0, 0, 0, time.UTC),
@@ -54,6 +58,7 @@ func TestTheOlderAssetKeepsAContestedAddress(t *testing.T) {
 }
 
 func TestNoRuntimePathReadsTheLegacyCounters(t *testing.T) {
+	t.Parallel()
 	frozen := []string{"migration_legacy_counters", "v1_downloads", "v1_views"}
 	root := repositoryFile(t, "api")
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {

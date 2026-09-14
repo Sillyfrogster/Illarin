@@ -28,6 +28,7 @@ func startPack(t *testing.T, r http.Handler, session *http.Cookie) startedAsset 
 }
 
 func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startPack(t, r, session)
 
@@ -77,6 +78,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 }
 
 func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range packformat.Modules() {
 		if err := registry.Register(module); err != nil {

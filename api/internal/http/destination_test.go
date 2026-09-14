@@ -474,6 +474,7 @@ func (s destinationStack) readyPost(t *testing.T) blogPost {
 }
 
 func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")
 
@@ -491,6 +492,7 @@ func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
 }
 
 func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	for _, address := range []string{
@@ -511,6 +513,7 @@ func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 }
 
 func TestASigningSecretIsShownOnceAndNeverAgain(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	made := stack.added(t, "Release feed", stack.to.address())
@@ -539,6 +542,7 @@ func TestASigningSecretIsShownOnceAndNeverAgain(t *testing.T) {
 }
 
 func TestTheEndpointAndSecretAreSealedInTheDatabase(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	made := stack.added(t, "Release feed", stack.to.address())
@@ -559,6 +563,7 @@ func TestTheEndpointAndSecretAreSealedInTheDatabase(t *testing.T) {
 }
 
 func TestAnEndpointIsActiveOnlyAfterItReturnsTheChallenge(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.added(t, "Release feed", stack.to.address())
 
@@ -584,6 +589,7 @@ func TestAnEndpointIsActiveOnlyAfterItReturnsTheChallenge(t *testing.T) {
 }
 
 func TestTheVerificationRequestIsSigned(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.to.answers(echoesTheChallenge)
 	made := stack.added(t, "Release feed", stack.to.address())
@@ -600,6 +606,7 @@ func TestTheVerificationRequestIsSigned(t *testing.T) {
 }
 
 func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -652,6 +659,7 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 }
 
 func TestPublishingChangesToALivePostSendsNothing(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	live := stack.publishedTo(t, stack.readyPost(t), made.Destination.ID, "")
@@ -675,6 +683,7 @@ func TestPublishingChangesToALivePostSendsNothing(t *testing.T) {
 }
 
 func TestTheWebhookIdIsTheDeliveryAndTheBodyIsWhatWasSigned(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -690,6 +699,7 @@ func TestTheWebhookIdIsTheDeliveryAndTheBodyIsWhatWasSigned(t *testing.T) {
 }
 
 func TestQuietPublicationSendsNothing(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -712,6 +722,7 @@ func TestQuietPublicationSendsNothing(t *testing.T) {
 }
 
 func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusInternalServerError, "" })
@@ -739,6 +750,7 @@ func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
 }
 
 func TestADeliveryRecordCarriesNoSecretOrAddress(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusTeapot, "go away" })
@@ -759,6 +771,7 @@ func TestADeliveryRecordCarriesNoSecretOrAddress(t *testing.T) {
 }
 
 func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
@@ -799,6 +812,7 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 }
 
 func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
@@ -820,6 +834,7 @@ func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
 }
 
 func TestADisabledEndpointStopsReceiving(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	response := send(t, stack.router, authorized(httptest.NewRequest(
@@ -847,6 +862,7 @@ func TestADisabledEndpointStopsReceiving(t *testing.T) {
 }
 
 func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 
@@ -868,6 +884,7 @@ func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
 }
 
 func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -932,6 +949,7 @@ func checkSignature(t *testing.T, one arrived, secret string) {
 }
 
 func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -967,6 +985,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 }
 
 func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
@@ -995,6 +1014,7 @@ func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
 }
 
 func TestAContributorNeverSeesAnotherPostsDeliveries(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)

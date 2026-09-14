@@ -25,6 +25,7 @@ func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cooki
 }
 
 func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})
@@ -58,6 +59,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 }
 
 func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})
@@ -96,6 +98,7 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 }
 
 func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope})
@@ -124,6 +127,7 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 }
 
 func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})

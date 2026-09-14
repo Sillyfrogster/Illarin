@@ -12,6 +12,7 @@ import (
 )
 
 func TestAV1UserAddressResolvesThroughTheDiscordLink(t *testing.T) {
+	t.Parallel()
 	router, pool := legacyProfileStack(t)
 	linkDiscordSubject(t, pool, "verified.creator", "314159265358979323")
 
@@ -32,6 +33,7 @@ func TestAV1UserAddressResolvesThroughTheDiscordLink(t *testing.T) {
 }
 
 func TestAnUnknownV1UserAddressIsAPlainMiss(t *testing.T) {
+	t.Parallel()
 	router, _ := legacyProfileStack(t)
 
 	response := send(t, router,

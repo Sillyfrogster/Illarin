@@ -7,6 +7,7 @@ import (
 )
 
 func TestEveryV1TableHasADeclaredDisposition(t *testing.T) {
+	t.Parallel()
 	source := restoredV1Dump(t)
 	rows, err := source.Query(context.Background(),
 		`select tablename from pg_tables where schemaname = 'public'`)

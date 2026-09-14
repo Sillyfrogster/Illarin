@@ -27,6 +27,7 @@ func (s corpusStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 }
 
 func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range slices.Concat(character.Modules(), lorebook.Modules(), preset.Modules(), theme.Modules(), pack.Modules()) {
 		if err := registry.Register(module); err != nil {

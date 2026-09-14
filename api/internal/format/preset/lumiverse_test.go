@@ -17,6 +17,7 @@ import (
 )
 
 func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name     string
 		body     string
@@ -70,6 +71,7 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 }
 
 func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	if parsed.Kind != Kind || parsed.Format != LumiverseID {
 		t.Fatalf("parsed kind %q format %q", parsed.Kind, parsed.Format)
@@ -182,6 +184,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 }
 
 func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, `{
 		"schemaVersion": 1,
 		"name": "Bundled scripts",
@@ -247,6 +250,7 @@ func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
 }
 
 func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	list := promptList(t, parsed.Elements)
 	const restored = "Delivered only to the linked application."
@@ -269,6 +273,7 @@ func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
 }
 
 func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
+	t.Parallel()
 	const privateText = "Private publisher prompt\nwith exact whitespace. "
 	parsed := parse(t, `{
 		"schemaVersion": 1,
@@ -340,6 +345,7 @@ func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
 }
 
 func TestReadingAKeyedPlaceholderMarksItForReuse(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, `{
 		"schemaVersion": 1,
 		"name": "Re-uploaded preset",
@@ -367,6 +373,7 @@ func TestReadingAKeyedPlaceholderMarksItForReuse(t *testing.T) {
 }
 
 func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		blocks string
@@ -418,6 +425,7 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 }
 
 func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
 	offered := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind, Origin: SillyTavernID, Elements: parsed.Elements,
@@ -432,6 +440,7 @@ func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.
 }
 
 func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
+	t.Parallel()
 	const wanted = 1_060_000
 	blocks := make([]string, 0, 512)
 	filler := strings.Repeat("a scene that keeps going. ", 80)
@@ -462,6 +471,7 @@ func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
 }
 
 func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
+	t.Parallel()
 	file := document(t, `{"schemaVersion": 1, "blocks": {"0": {}}}`)
 	claim, claimed := (LumiverseModule{}).Claim(file)
 	if !claimed {
@@ -475,6 +485,7 @@ func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
 }
 
 func TestADescriptionTooLongToBindStaysInTheFile(t *testing.T) {
+	t.Parallel()
 	long := strings.Repeat("a long README of a description. ", 40)
 	if len([]rune(long)) <= format.MaxBlurbRunes {
 		t.Fatalf("the fixture is %d runes, want more than %d",
@@ -511,6 +522,7 @@ func mustEncode(t *testing.T, value any) json.RawMessage {
 }
 
 func TestTheBlurbBindsBothWaysForALumiversePreset(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	if parsed.Header.Blurb != "A calm narrator with a short leash." {
 		t.Fatalf("blurb = %q, want the file's description", parsed.Header.Blurb)
@@ -536,6 +548,7 @@ func TestTheBlurbBindsBothWaysForALumiversePreset(t *testing.T) {
 }
 
 func TestAVariableComesBackOnTheFragmentItBelongsTo(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	written := write(t, LumiverseModule{}, parsed)
 	again := parse(t, string(written.Body))

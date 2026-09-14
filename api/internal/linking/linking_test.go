@@ -14,6 +14,7 @@ import (
 )
 
 func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
+	t.Parallel()
 	both, err := canonicalScopes([]Scope{ScopeSyncLibrary, ScopeReceiveAssets})
 	if err != nil {
 		t.Fatalf("both scopes: %v", err)
@@ -40,6 +41,7 @@ func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
 }
 
 func TestDeclarationIdentifiersAreNamespacedBoundedAndOrdered(t *testing.T) {
+	t.Parallel()
 	declaration, err := validateDeclaration(testDeclaration())
 	if err != nil {
 		t.Fatalf("valid declaration: %v", err)
@@ -66,6 +68,7 @@ func TestDeclarationIdentifiersAreNamespacedBoundedAndOrdered(t *testing.T) {
 }
 
 func TestAUserCodeIsReadTheWayACreatorTypesIt(t *testing.T) {
+	t.Parallel()
 	code, err := newCode(codeLength)
 	if err != nil {
 		t.Fatalf("new code: %v", err)
@@ -88,6 +91,7 @@ func TestAUserCodeIsReadTheWayACreatorTypesIt(t *testing.T) {
 }
 
 func TestOpaqueInputsAreRejectedBeforeDecodingUnboundedText(t *testing.T) {
+	t.Parallel()
 	code, _, err := newOpaqueCode()
 	if err != nil {
 		t.Fatalf("new opaque code: %v", err)
@@ -109,6 +113,7 @@ func TestOpaqueInputsAreRejectedBeforeDecodingUnboundedText(t *testing.T) {
 }
 
 func TestCredentialsHaveSeparateKindsAndRejectMalformedValues(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{accessTokenKind, refreshTokenKind} {
 		token, prefix, hash, err := newCredential(kind)
 		if err != nil {
@@ -138,6 +143,7 @@ func TestCredentialsHaveSeparateKindsAndRejectMalformedValues(t *testing.T) {
 }
 
 func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
+	t.Parallel()
 	verifier := strings.Repeat("v", 64)
 	digest := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(digest[:])
@@ -189,6 +195,7 @@ func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
 }
 
 func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	service := NewService(

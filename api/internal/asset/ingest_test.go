@@ -29,6 +29,7 @@ type leasedModule struct {
 }
 
 func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
 	if _, err := pool.Exec(context.Background(),
@@ -80,6 +81,7 @@ func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
 }
 
 func TestUnrecognisedImportFailsTerminallyAndReleasesItsBlobReference(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
 	if _, err := pool.Exec(context.Background(),
@@ -139,6 +141,7 @@ func (m *leasedModule) Parse(context.Context, probe.Inspection, format.Claim) (f
 }
 
 func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
 	if _, err := pool.Exec(context.Background(),
@@ -205,6 +208,7 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 }
 
 func TestAThemeArchiveOverItsFileLimitIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
 	if _, err := pool.Exec(context.Background(),

@@ -95,7 +95,7 @@ func (SillyTavern) Parse(ctx context.Context, file probe.Inspection, claim forma
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	adds, err := readAdditions(ctx, file, []string{script}, sillyTavernRules)
+	adds, err := readAdditions(ctx, file, []string{script}, sillyTavernRules, readingTime)
 	if err != nil {
 		return format.Parsed{}, err
 	}

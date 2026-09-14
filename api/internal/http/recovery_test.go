@@ -12,6 +12,7 @@ import (
 )
 
 func TestRecoveryLogsTheRouteWithoutASecretPathValue(t *testing.T) {
+	t.Parallel()
 	var output bytes.Buffer
 	router := gin.New()
 	router.Use(Recovery(log.New(&output, "", 0)))

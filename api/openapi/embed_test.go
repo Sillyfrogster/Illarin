@@ -9,6 +9,7 @@ import (
 )
 
 func TestContractPublishesThePublicAPIBase(t *testing.T) {
+	t.Parallel()
 	document := contractDocument(t)
 	servers := contractList(t, document["servers"], "servers")
 	if len(servers) != 1 {
@@ -21,6 +22,7 @@ func TestContractPublishesThePublicAPIBase(t *testing.T) {
 }
 
 func TestContractRequiresBrowserProofForCookieMutations(t *testing.T) {
+	t.Parallel()
 	document := contractDocument(t)
 	components := contractMap(t, document["components"], "components")
 	parameters := contractMap(t, components["parameters"], "components.parameters")
@@ -66,6 +68,7 @@ func TestContractRequiresBrowserProofForCookieMutations(t *testing.T) {
 }
 
 func TestContractBoundsLinkSecrets(t *testing.T) {
+	t.Parallel()
 	document := contractDocument(t)
 	components := contractMap(t, document["components"], "components")
 	schemas := contractMap(t, components["schemas"], "components.schemas")
@@ -95,6 +98,7 @@ func TestContractBoundsLinkSecrets(t *testing.T) {
 }
 
 func TestContractDiscriminatesPendingAndLinkedPolls(t *testing.T) {
+	t.Parallel()
 	document := contractDocument(t)
 	components := contractMap(t, document["components"], "components")
 	schemas := contractMap(t, components["schemas"], "components.schemas")

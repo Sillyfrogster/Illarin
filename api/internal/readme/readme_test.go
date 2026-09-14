@@ -26,6 +26,7 @@ func titles(page Page) []string {
 }
 
 func TestSectionsFollowTheShallowestHeadingUnderTheTitle(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# Quiet Toolbox",
 		"",
@@ -58,6 +59,7 @@ func TestSectionsFollowTheShallowestHeadingUnderTheTitle(t *testing.T) {
 }
 
 func TestSeveralTopHeadingsAreAllSections(t *testing.T) {
+	t.Parallel()
 	page := Read("# Setup\n\nOne.\n\n# Usage\n\nTwo.", archive())
 	if got := titles(page); !reflect.DeepEqual(got, []string{"Setup", "Usage"}) {
 		t.Fatalf("sections = %v, want both level-one headings", got)
@@ -68,6 +70,7 @@ func TestSeveralTopHeadingsAreAllSections(t *testing.T) {
 }
 
 func TestAReadmeWithoutSectionsIsAllOpening(t *testing.T) {
+	t.Parallel()
 	page := Read("# Dice\n\nRolls dice.\nTwo lines.", archive())
 	if len(page.Sections) != 0 || page.Opening.Text != "Rolls dice.\nTwo lines." {
 		t.Fatalf("page = %+v, want one opening", page)
@@ -75,6 +78,7 @@ func TestAReadmeWithoutSectionsIsAllOpening(t *testing.T) {
 }
 
 func TestANearlyEmptyReadmeSeedsNothing(t *testing.T) {
+	t.Parallel()
 	for _, source := range []string{"", "   \n", "# Randomizer\n", "# Randomizer\n\n## Notes\n"} {
 		page := Read(source, archive())
 		if page.Opening.Text != "" || len(page.Opening.Images) != 0 || len(page.Sections) != 0 || page.Cover != nil {
@@ -84,6 +88,7 @@ func TestANearlyEmptyReadmeSeedsNothing(t *testing.T) {
 }
 
 func TestCodeAndTablesStayAsWritten(t *testing.T) {
+	t.Parallel()
 	fence := "```\n## not a heading\n/roll 2d6\n```"
 	table := "| Command | Does |\n| --- | --- |\n| `/roll` | Rolls |"
 	page := Read("# Dice\n\n## Commands\n\n"+fence+"\n\n"+table+"\n\n~~~js\nroll()\n~~~", archive())
@@ -96,6 +101,7 @@ func TestCodeAndTablesStayAsWritten(t *testing.T) {
 }
 
 func TestRulesBetweenSectionsAreLeftOutAndUnderlinedHeadingsKept(t *testing.T) {
+	t.Parallel()
 	page := Read("# Setup\n\nIntro.\n\n---\n\n# Usage\n\nSettings\n--------\n\nOpen them.\n\n***\n", archive())
 	if got := titles(page); !reflect.DeepEqual(got, []string{"Setup", "Usage"}) {
 		t.Fatalf("sections = %v", got)
@@ -109,6 +115,7 @@ func TestRulesBetweenSectionsAreLeftOutAndUnderlinedHeadingsKept(t *testing.T) {
 }
 
 func TestImagesInTheArchiveMoveBesideTheirSection(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# Model",
 		"",
@@ -142,6 +149,7 @@ func TestImagesInTheArchiveMoveBesideTheirSection(t *testing.T) {
 }
 
 func TestHTMLWithWordsStaysAndBareMarkupGoes(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		`<div align="center">`,
 		"",
@@ -157,6 +165,7 @@ func TestHTMLWithWordsStaysAndBareMarkupGoes(t *testing.T) {
 }
 
 func TestTheFirstPictureBeforeAnySectionIsTheCover(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		`<img src="https://example.com/badge.svg" alt="version">`,
 		"",
@@ -185,6 +194,7 @@ func TestTheFirstPictureBeforeAnySectionIsTheCover(t *testing.T) {
 }
 
 func TestAPictureOnlyInASectionIsNeverTheCover(t *testing.T) {
+	t.Parallel()
 	page := Read("# Suite\n\nIntro.\n\n## Library\n\n![Library](art/library.png)", archive("art/library.png"))
 	if page.Cover != nil {
 		t.Errorf("cover = %+v, want none", page.Cover)
@@ -195,6 +205,7 @@ func TestAPictureOnlyInASectionIsNeverTheCover(t *testing.T) {
 }
 
 func TestAContentsListOfLinksWithinTheReadmeIsLeftOut(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# Mind",
 		"",
@@ -214,6 +225,7 @@ func TestAContentsListOfLinksWithinTheReadmeIsLeftOut(t *testing.T) {
 }
 
 func TestHeadingsBecomePlainTitles(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# T",
 		"## The `/roll` and [link](https://example.com) *em* <b>bold</b> \\* &amp; more",
@@ -228,6 +240,7 @@ func TestHeadingsBecomePlainTitles(t *testing.T) {
 }
 
 func TestAnAddressIsFoundBesideAReadmeInAFolderOfItsOwn(t *testing.T) {
+	t.Parallel()
 	find := InArchive("tool-main/", ".github/", func(entry string) bool {
 		return entry == "tool-main/.github/shot.png" || entry == "tool-main/art/logo.png"
 	})
@@ -245,6 +258,7 @@ func TestAnAddressIsFoundBesideAReadmeInAFolderOfItsOwn(t *testing.T) {
 }
 
 func TestAnAddressIsFoundOnlyInsideTheArchiveFolder(t *testing.T) {
+	t.Parallel()
 	find := InArchive("tool-main/", "", func(entry string) bool {
 		return entry == "tool-main/docs/a b.png" || entry == "outside.png"
 	})
@@ -268,6 +282,7 @@ func TestAnAddressIsFoundOnlyInsideTheArchiveFolder(t *testing.T) {
 }
 
 func TestATableOfPicturesMovesIntoTheSectionPictures(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# Tool",
 		"",
@@ -296,6 +311,7 @@ func TestATableOfPicturesMovesIntoTheSectionPictures(t *testing.T) {
 }
 
 func TestARemotePictureIsListedByItsAddress(t *testing.T) {
+	t.Parallel()
 	page := Read(strings.Join([]string{
 		"# Tool",
 		"",
@@ -322,6 +338,7 @@ func TestARemotePictureIsListedByItsAddress(t *testing.T) {
 }
 
 func TestAnAnchorWithNoWordsIsLeftOut(t *testing.T) {
+	t.Parallel()
 	page := Read("<a name=\"top\"></a>\n\nHello there.\n\n<a name=\"top\">Jump</a>\n", archive())
 	if page.Opening.Text != "Hello there.\n\n<a name=\"top\">Jump</a>" {
 		t.Errorf("opening = %q, want the bare anchor gone and the worded one kept", page.Opening.Text)

@@ -30,6 +30,7 @@ func (failingStore) ReadRange(context.Context, uuid.UUID, int64, int64) (io.Read
 }
 
 func TestInspectDistinguishesMalformedInputFromAStorageFailure(t *testing.T) {
+	t.Parallel()
 	malformed := []byte(`{"broken":`)
 	_, malformedErr := Inspect(
 		context.Background(), &recordingStore{data: malformed}, uuid.New(), int64(len(malformed)), "card.json",
@@ -48,6 +49,7 @@ func TestInspectDistinguishesMalformedInputFromAStorageFailure(t *testing.T) {
 }
 
 func TestInspectStreamsAJSONRootThroughRangeReads(t *testing.T) {
+	t.Parallel()
 	file := []byte(`{"padding":"` + strings.Repeat("x", 128*1024) + `","spec":"chara_card_v3"}`)
 	store := &recordingStore{data: file}
 
@@ -72,6 +74,7 @@ func TestInspectStreamsAJSONRootThroughRangeReads(t *testing.T) {
 }
 
 func TestJSONFilenameDoesNotTurnOpaqueBytesIntoJSON(t *testing.T) {
+	t.Parallel()
 	file := []byte{0x00, 0xff, 0xfe, 0x10}
 	store := &recordingStore{data: file}
 
@@ -85,6 +88,7 @@ func TestJSONFilenameDoesNotTurnOpaqueBytesIntoJSON(t *testing.T) {
 }
 
 func TestJSONFilenameAllowsWhitespaceBeyondTheSignatureRead(t *testing.T) {
+	t.Parallel()
 	file := []byte(strings.Repeat(" ", 32) + `{"spec":"chara_card_v3"}`)
 	store := &recordingStore{data: file}
 
@@ -98,6 +102,7 @@ func TestJSONFilenameAllowsWhitespaceBeyondTheSignatureRead(t *testing.T) {
 }
 
 func TestInspectRejectsAWebPSignatureWithoutAnImage(t *testing.T) {
+	t.Parallel()
 	file := []byte("RIFF\x0c\x00\x00\x00WEBPVP8X\x00\x00\x00\x00")
 	_, err := Inspect(
 		context.Background(), &recordingStore{data: file}, uuid.New(), int64(len(file)), "image.webp",
@@ -108,6 +113,7 @@ func TestInspectRejectsAWebPSignatureWithoutAnImage(t *testing.T) {
 }
 
 func TestInspectFindsTheFolderAnArchiveIsWrappedIn(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		entries  []string
 		base     string
@@ -146,6 +152,7 @@ func TestInspectFindsTheFolderAnArchiveIsWrappedIn(t *testing.T) {
 }
 
 func TestInspectTellsRootZIPEntriesApart(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name      string
 		entryName string
@@ -182,6 +189,7 @@ func TestInspectTellsRootZIPEntriesApart(t *testing.T) {
 }
 
 func TestAThemeBundleExposesItsJSONAndReferencedFiles(t *testing.T) {
+	t.Parallel()
 	file := zipEntries(t,
 		zipEntry{"theme.json", `{"format":3,"assets":[{"archivePath":"assets/host.woff2"}]}`, zip.Store},
 		zipEntry{"assets/host.woff2", "font fixture", zip.Store},
@@ -210,6 +218,7 @@ func TestAThemeBundleExposesItsJSONAndReferencedFiles(t *testing.T) {
 }
 
 func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name   string
 		file   func(t *testing.T) []byte
@@ -292,6 +301,7 @@ func (s *recordingStore) ReadRange(_ context.Context, _ uuid.UUID, offset, lengt
 }
 
 func TestInspectFindsAJSONPayloadInALatePNGChunk(t *testing.T) {
+	t.Parallel()
 	payload := base64.StdEncoding.EncodeToString([]byte(`{"spec":"chara_card_v2","name":"Late card"}`))
 	file := pngFile(
 		pngChunk("IHDR", make([]byte, 13)),
@@ -375,6 +385,7 @@ func zipEntries(t *testing.T, entries ...zipEntry) []byte {
 }
 
 func TestInspectOffersARasterFileAsItsOwnImage(t *testing.T) {
+	t.Parallel()
 	file := pngFile(
 		pngChunk("IHDR", make([]byte, 13)),
 		pngChunk("tEXt", append([]byte("chara\x00"), []byte(`{"spec":"chara_card_v2"}`)...)),
@@ -408,6 +419,7 @@ func TestInspectOffersARasterFileAsItsOwnImage(t *testing.T) {
 }
 
 func TestInspectListsArchivedImagesAndLeavesOtherEntriesAlone(t *testing.T) {
+	t.Parallel()
 	picture := pngFile(pngChunk("IHDR", make([]byte, 13)), pngChunk("IEND", nil))
 	file := zipEntries(t,
 		zipEntry{name: "card.json", body: `{"spec":"chara_card_v3"}`, method: zip.Store},
@@ -442,6 +454,7 @@ func TestInspectListsArchivedImagesAndLeavesOtherEntriesAlone(t *testing.T) {
 }
 
 func TestOpenImageRefusesAnIDTheProbeNeverIssued(t *testing.T) {
+	t.Parallel()
 	file := []byte(`{"spec":"chara_card_v3"}`)
 	got, err := Inspect(context.Background(), &recordingStore{data: file}, uuid.New(), int64(len(file)), "card.json")
 	if err != nil {

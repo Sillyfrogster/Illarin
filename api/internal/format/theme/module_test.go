@@ -102,6 +102,7 @@ const lumiverseTheme = `{
 }`
 
 func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
+	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		if declaration.Kind != Kind || declaration.ID != module.ID() {
@@ -135,6 +136,7 @@ func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
 }
 
 func TestSillyTavernThemeReadsAndWritesItsFlatVocabulary(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, inspect(t, []byte(sillyTavernTheme), "theme.json"))
 	if parsed.Header.Name != "Midnight violet" {
 		t.Errorf("name = %q, want the theme name", parsed.Header.Name)
@@ -164,6 +166,7 @@ func TestSillyTavernThemeReadsAndWritesItsFlatVocabulary(t *testing.T) {
 }
 
 func TestSillyTavernReportsAndAvoidsFlatteningExtraColourModes(t *testing.T) {
+	t.Parallel()
 	registry := testRegistry(t)
 	palette := block.ColorSet{Modes: []block.ColorMode{
 		{Name: "dark", Colors: []block.Color{{
@@ -196,6 +199,7 @@ func TestSillyTavernReportsAndAvoidsFlatteningExtraColourModes(t *testing.T) {
 }
 
 func TestLumiverseEmptyTSXIsDeclaredAsDisplayBoilerplate(t *testing.T) {
+	t.Parallel()
 	declaration := (LumiverseModule{}).Declaration()
 	if !declaration.RecordsNothing(LumiverseID, []byte(`{"theme":{"tsx":""}}`)) {
 		t.Error("an empty tsx stamp would appear in the creator's preserved-data panel")
@@ -209,6 +213,7 @@ func TestLumiverseEmptyTSXIsDeclaredAsDisplayBoilerplate(t *testing.T) {
 }
 
 func TestLumiverseThemeKeepsItsHeaderPaletteComponentsAndFont(t *testing.T) {
+	t.Parallel()
 	bundle := themeBundle(t, lumiverseTheme, map[string][]byte{
 		"assets/archive.woff2": []byte("font fixture"),
 	})
@@ -249,6 +254,7 @@ func TestLumiverseThemeKeepsItsHeaderPaletteComponentsAndFont(t *testing.T) {
 }
 
 func TestSillyTavernStylesheetLossMatchesWhatItCanWrite(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range Modules() {
 		if err := registry.Register(module); err != nil {
@@ -312,6 +318,7 @@ func TestSillyTavernStylesheetLossMatchesWhatItCanWrite(t *testing.T) {
 }
 
 func TestSillyTavernJoinsOnlyEnabledComponentStylesheetsAfterTheMainSheet(t *testing.T) {
+	t.Parallel()
 	written := write(t, SillyTavernModule{}, format.Parsed{
 		Header: format.Header{Name: "Violet archive"},
 		Elements: []block.Element{{
@@ -341,6 +348,7 @@ func TestSillyTavernJoinsOnlyEnabledComponentStylesheetsAfterTheMainSheet(t *tes
 }
 
 func TestLumiverseMarkerOutsideTheDeclaredSetIsNotClaimed(t *testing.T) {
+	t.Parallel()
 	file := inspect(t, themeBundle(t, strings.Replace(lumiverseTheme, `"format":3`, `"format":4`, 1), nil), "future.lumitheme")
 	if _, claimed := (LumiverseModule{}).Claim(file); claimed {
 		t.Error("format marker 4 was claimed as though it were 3")

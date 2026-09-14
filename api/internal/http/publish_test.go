@@ -78,6 +78,7 @@ func itemNamed(t *testing.T, items []readinessItem, id string) readinessItem {
 }
 
 func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -117,6 +118,7 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 }
 
 func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -152,6 +154,7 @@ func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
 }
 
 func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	if got := saveIdentity(t, r, session, started.ID,
@@ -202,6 +205,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 }
 
 func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
+	t.Parallel()
 	setup, r, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 
@@ -232,6 +236,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 }
 
 func TestADraftHasNoDownloadNoDeliveryAndNoDiscoveryToSet(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -256,6 +261,7 @@ func TestADraftHasNoDownloadNoDeliveryAndNoDiscoveryToSet(t *testing.T) {
 }
 
 func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -313,6 +319,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 }
 
 func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -344,6 +351,7 @@ func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
 }
 
 func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -381,6 +389,7 @@ func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
 }
 
 func TestAPublishedAssetKeepsItsAdultContentAnswer(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -402,6 +411,7 @@ func TestAPublishedAssetKeepsItsAdultContentAnswer(t *testing.T) {
 }
 
 func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -435,6 +445,7 @@ func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
 }
 
 func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -477,6 +488,7 @@ func publishAssetUpdate(
 }
 
 func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)

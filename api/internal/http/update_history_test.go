@@ -39,6 +39,7 @@ func readUpdateHistory(
 }
 
 func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)
@@ -85,6 +86,7 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 }
 
 func TestUpdateHistoryFollowsTheAssetsCurrentAccess(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	writeCharacterFloor(t, r, session, started)

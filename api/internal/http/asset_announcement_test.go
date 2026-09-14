@@ -133,6 +133,7 @@ func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, a
 }
 
 func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
@@ -248,6 +249,7 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 }
 
 func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := startCharacter(t, stack.router, stack.editor)
@@ -305,6 +307,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 }
 
 func TestAnExplicitSelectionIsRememberedAndAnEmptyOnePublishesQuietly(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
@@ -341,6 +344,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOnePublishesQuietly(t *testing
 }
 
 func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
@@ -390,6 +394,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 }
 
 func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	other := verifiedSignUp(t, stack.router, stack.outbox, "other@example.com", "other.creator")
 	theirs := stack.creatorWebhook(t, other)
@@ -423,6 +428,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 }
 
 func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
@@ -472,6 +478,7 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 }
 
 func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
+	t.Parallel()
 	type revoke func(t *testing.T, stack destinationStack, started startedAsset, hook addedDestination)
 	for name, one := range map[string]struct {
 		reason string
@@ -560,6 +567,7 @@ func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
 }
 
 func TestAnUnconfirmedDiscordAnnouncementStaysVisibleAndIsNotSentAgain(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	started := stack.publishedCharacter(t, stack.editor)
@@ -580,6 +588,7 @@ func TestAnUnconfirmedDiscordAnnouncementStaysVisibleAndIsNotSentAgain(t *testin
 }
 
 func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
@@ -613,6 +622,7 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 }
 
 func TestARotatedSecretSignsAnnouncementsTwiceDuringTheOverlap(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	rotated := stack.updateDestinationRequest(t, stack.editor, http.MethodPost,

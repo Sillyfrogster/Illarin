@@ -13,6 +13,7 @@ import (
 )
 
 func TestMicrosoftGraphSendsIllarinMailAndReusesItsToken(t *testing.T) {
+	t.Parallel()
 	var tokens atomic.Int32
 	var messages atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +85,7 @@ func TestMicrosoftGraphSendsIllarinMailAndReusesItsToken(t *testing.T) {
 }
 
 func TestMicrosoftGraphDoesNotHideARefusal(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/token") {
 			w.Header().Set("Content-Type", "application/json")

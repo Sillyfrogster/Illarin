@@ -46,6 +46,7 @@ const twoEntries = `{
 }`
 
 func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
+	t.Parallel()
 	declaration := Module{}.Declaration()
 	if declaration.Kind != Kind || declaration.ID != ID {
 		t.Errorf("declaration identity = %q/%q, want %q/%q",
@@ -75,12 +76,14 @@ func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
 }
 
 func TestTheSignatureDoesNotOverlapAnotherModules(t *testing.T) {
+	t.Parallel()
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
 	}
 }
 
 func TestOnlyADocumentHoldingEntriesIsClaimed(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name     string
 		body     string
@@ -117,6 +120,7 @@ func TestOnlyADocumentHoldingEntriesIsClaimed(t *testing.T) {
 }
 
 func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, twoEntries)
 
 	if parsed.Kind != Kind || parsed.Format != ID {
@@ -158,6 +162,7 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 }
 
 func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, `{
 		"entries": [
 			{"keys": "Timeline", "content": "kept", "insertion_order": 100},
@@ -202,6 +207,7 @@ func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
 }
 
 func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
+	t.Parallel()
 	file := document(t, `{"entries": {"0": {"content": "x"}}}`)
 	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityClaim(file.Payloads[0]))
 	if reason, classified := format.FailureOf(err); !classified ||
@@ -211,6 +217,7 @@ func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 }
 
 func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, twoEntries)
 	written, err := Module{}.Write(context.Background(), format.ExportAsset{
 		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements,
@@ -265,6 +272,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 }
 
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
+	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind, Origin: ID,
 		Elements: []block.Element{
@@ -294,6 +302,7 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 }
 
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
+	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: "character", Origin: ID,
 	})
@@ -303,6 +312,7 @@ func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 }
 
 func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, twoEntries)
 	blocks, err := block.Place(parsed.Kind, parsed.Elements)
 	if err != nil {

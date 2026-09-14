@@ -20,6 +20,7 @@ func currentCandidate(t *testing.T, svc *Service, id uuid.UUID) *Candidate {
 }
 
 func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	owner := revisionOwner(t, svc, "candidate.owner")
 	id, err := svc.StartFromNothing(context.Background(), owner, "character", "")
@@ -77,6 +78,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 }
 
 func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
+	t.Parallel()
 	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
 	svc, _ := newTestServiceWithRegistry(t, registry)
 	owner := revisionOwner(t, svc, "queued.owner")

@@ -14,6 +14,7 @@ import (
 )
 
 func TestSignUpStartsAnUnverifiedSessionAndSendsAVerificationLink(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r := newTestRouterWithSender(t, 1<<20, DefaultDeadlines(), outbox)
 
@@ -68,6 +69,7 @@ func TestSignUpStartsAnUnverifiedSessionAndSendsAVerificationLink(t *testing.T) 
 }
 
 func TestAccountEntryPointsLimitRepeatedAttemptsFromOneSource(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	tests := []struct {
 		name  string
@@ -107,6 +109,7 @@ func accountAttempt(t *testing.T, r http.Handler, path, remoteAddress string) *h
 }
 
 func TestSignUpAcceptsAnyNonemptyPassword(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 
 	short := sendJSON(t, r, http.MethodPost, "/v1/auth/sign-up", `{
@@ -150,6 +153,7 @@ func TestSignUpAcceptsAnyNonemptyPassword(t *testing.T) {
 }
 
 func TestSignUpAcceptsOnlyTheHandleVocabulary(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	invalid := []string{
 		"ab",
@@ -184,6 +188,7 @@ func sendJSON(t *testing.T, handler http.Handler, method, target, body string) *
 }
 
 func TestTheFirstAccountToVerifyAnAddressClaimsIt(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r := newTestRouterWithSender(t, 1<<20, DefaultDeadlines(), outbox)
 
@@ -230,6 +235,7 @@ func TestTheFirstAccountToVerifyAnAddressClaimsIt(t *testing.T) {
 }
 
 func TestConcurrentVerificationProducesOneWinnerWithoutDeadlock(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r, pool := newTestRouterWithSenderAndPool(t, 1<<20, DefaultDeadlines(), outbox)
 	signUp(t, r, "race@example.com", "race.first")
@@ -353,6 +359,7 @@ func sessionState(t *testing.T, r http.Handler, session *http.Cookie) accountSta
 }
 
 func TestAnUnverifiedAccountCanSignOutAndBackIn(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	session := signUp(t, r, "Return.Reader@example.com", "return.reader")
 
@@ -391,6 +398,7 @@ func TestAnUnverifiedAccountCanSignOutAndBackIn(t *testing.T) {
 }
 
 func TestRenamingAHandleRetiresTheOldProfileWithoutARedirect(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r := newTestRouterWithSender(t, 1<<20, DefaultDeadlines(), outbox)
 	session := signUp(t, r, "rename@example.com", "first.handle")
@@ -442,6 +450,7 @@ func TestRenamingAHandleRetiresTheOldProfileWithoutARedirect(t *testing.T) {
 }
 
 func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r, _, handlers := newTestRouterWithSenderPoolAndHandlers(
 		t, 1<<20, DefaultDeadlines(), outbox,
@@ -495,6 +504,7 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 }
 
 func TestAnUnverifiedAccountCanCorrectItsEmail(t *testing.T) {
+	t.Parallel()
 	outbox := &verificationOutbox{}
 	r := newTestRouterWithSender(t, 1<<20, DefaultDeadlines(), outbox)
 	session := signUp(t, r, "mistyped@example.com", "careful.creator")

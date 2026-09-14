@@ -100,6 +100,7 @@ func orEmptyList(value string) string {
 }
 
 func TestEveryAccountArrivesWithItsHandleAndPreferencesUnchanged(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	banner := "https://cdn.discordapp.com/banners/1/deadbeef.png?size=1024"
 	custom := "Marbleframe"
@@ -143,6 +144,7 @@ func TestEveryAccountArrivesWithItsHandleAndPreferencesUnchanged(t *testing.T) {
 }
 
 func TestTheDiscordIdentityCarriesSoAnExistingCreatorSignsBackIn(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "tallowmoth", DiscordID: "100000000000000002", Role: "user"},
@@ -167,6 +169,7 @@ func TestTheDiscordIdentityCarriesSoAnExistingCreatorSignsBackIn(t *testing.T) {
 }
 
 func TestNoEmailAddressOrPasswordIsMigrated(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "pinegloss", DiscordID: "100000000000000003", Role: "user"},
@@ -190,6 +193,7 @@ func TestNoEmailAddressOrPasswordIsMigrated(t *testing.T) {
 }
 
 func TestAPureDigitHandleIsGrandfatheredRatherThanRewritten(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "4820193", DiscordID: "1", Role: "user"},
@@ -214,6 +218,7 @@ func TestAPureDigitHandleIsGrandfatheredRatherThanRewritten(t *testing.T) {
 }
 
 func TestTheNSFWPairCollapsesToOneVisibility(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "hides.it", DiscordID: "1", Role: "user"},
@@ -235,6 +240,7 @@ func TestTheNSFWPairCollapsesToOneVisibility(t *testing.T) {
 }
 
 func TestAContradictoryNSFWPairKeepsTheSaferAnswerAndIsRecorded(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "contra.dicts", DiscordID: "1", Role: "user", NSFWUnblurred: true},
@@ -254,6 +260,7 @@ func TestAContradictoryNSFWPairKeepsTheSaferAnswerAndIsRecorded(t *testing.T) {
 }
 
 func TestTheDroppedColumnsAreNamedInTheLedger(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	token := "a-live-discord-refresh-token"
 	source := v1Source(t, []v1AccountFixture{
@@ -286,6 +293,7 @@ func TestTheDroppedColumnsAreNamedInTheLedger(t *testing.T) {
 }
 
 func TestAnUndeclaredSourceColumnStopsTheRun(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "surprise.me", DiscordID: "1", Role: "user"},
@@ -303,6 +311,7 @@ func TestAnUndeclaredSourceColumnStopsTheRun(t *testing.T) {
 }
 
 func TestARoleOutsideTheThreeStopsTheRun(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "self.promoted", DiscordID: "1", Role: "owner"},
@@ -315,6 +324,7 @@ func TestARoleOutsideTheThreeStopsTheRun(t *testing.T) {
 }
 
 func TestMigrationRefusesATargetThatAlreadyHoldsAccounts(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	if _, err := target.Exec(context.Background(),
 		`insert into users (id, username) values ($1, 'already.here')`, uuid.New()); err != nil {
@@ -340,6 +350,7 @@ func TestMigrationRefusesATargetThatAlreadyHoldsAccounts(t *testing.T) {
 }
 
 func TestRetiredHandlesShipEmpty(t *testing.T) {
+	t.Parallel()
 	target := testdb.Connect(t)
 	source := v1Source(t, []v1AccountFixture{
 		{Handle: "keeps.it", DiscordID: "1", Role: "user"},

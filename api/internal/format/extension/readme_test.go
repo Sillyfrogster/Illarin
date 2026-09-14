@@ -7,6 +7,7 @@ import (
 )
 
 func TestTheReadmeBesideTheManifestIsReadForThePage(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		files  map[string]string
 		text   string
@@ -52,6 +53,7 @@ func TestTheReadmeBesideTheManifestIsReadForThePage(t *testing.T) {
 }
 
 func TestNoReadmeIsReadWhereThereIsNoneToRead(t *testing.T) {
+	t.Parallel()
 	cases := map[string]map[string]string{
 		"none":                 {},
 		"deeper in a folder":   {"notes/README.md": "# Deeper"},
@@ -72,6 +74,7 @@ func TestNoReadmeIsReadWhereThereIsNoneToRead(t *testing.T) {
 }
 
 func TestSillyTavernReadsItsReadme(t *testing.T) {
+	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"manifest.json": `{"display_name":"Dice","js":"index.js","author":"A developer"}`,
 		"index.js":      "", "README.md": "# Dice\n\nRolls dice.",

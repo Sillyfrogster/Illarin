@@ -6,6 +6,7 @@ import (
 )
 
 func TestReadFindsACallToANamedMethodWithItsLiteralArgument(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`spindle.registerTool({ name: "search_notes", description: "Searches notes" })`), "registerTool")
 
 	if len(file.Calls) != 1 {
@@ -21,6 +22,7 @@ func TestReadFindsACallToANamedMethodWithItsLiteralArgument(t *testing.T) {
 }
 
 func TestReadPassesOverCommentsAndStringsThatOnlyMentionACall(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		// spindle.registerTool({ name: "in_a_line_comment" })
 		/* spindle.registerTool({ name: "in_a_block_comment" }) */
@@ -34,6 +36,7 @@ func TestReadPassesOverCommentsAndStringsThatOnlyMentionACall(t *testing.T) {
 }
 
 func TestReadTakesATemplateAsLiteralOnlyWhenItSubstitutesNothing(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte("spindle.registerTool({ name: `plain` })\n"+
 		"spindle.registerTool({ name: `tool_${suffix}` })\n"+
 		"const label = `${spindle.registerTool({ name: \"inside\" })} it's // not a comment`\n"+
@@ -45,6 +48,7 @@ func TestReadTakesATemplateAsLiteralOnlyWhenItSubstitutesNothing(t *testing.T) {
 }
 
 func TestReadTellsARegularExpressionFromDivision(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		const stars = /[/*]/g, quotes = /['"]/
 		spindle.registerTool({ name: "after_the_patterns" })
@@ -59,6 +63,7 @@ func TestReadTellsARegularExpressionFromDivision(t *testing.T) {
 }
 
 func TestReadListsTheModulesAFileImportsByLiteralName(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		import { alpha } from "./alpha"
 		import './side-effect.js'
@@ -77,6 +82,7 @@ func TestReadListsTheModulesAFileImportsByLiteralName(t *testing.T) {
 }
 
 func TestReadLeavesOutModulesImportedOnlyForTheirTypes(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		import type { Beta, Gamma as G } from './types'
 		import type Settings from "./settings"
@@ -99,6 +105,7 @@ func TestReadLeavesOutModulesImportedOnlyForTheirTypes(t *testing.T) {
 }
 
 func TestReadFollowsAValueIntoArraysMemberNamesAndNestedCalls(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		spindle.commands.register([
 			{ id: "summarize-chat", label: "Summarize Chat" },
@@ -142,6 +149,7 @@ func TestReadFollowsAValueIntoArraysMemberNamesAndNestedCalls(t *testing.T) {
 }
 
 func TestReadSpellsOutTheEscapesInALiteral(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		spindle.registerTool({ name: 'it\'s' })
 		spindle.registerTool({ name: "tab\tand\nline" })
@@ -157,6 +165,7 @@ func TestReadSpellsOutTheEscapesInALiteral(t *testing.T) {
 }
 
 func TestReadTakesAnObjectLiteralThatTypeScriptCastsToAType(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		spindle.registerTool({ name: "cast" } as ToolDefinition)
 		spindle.registerTool({ name: "checked" } satisfies ToolDefinition)
@@ -170,6 +179,7 @@ func TestReadTakesAnObjectLiteralThatTypeScriptCastsToAType(t *testing.T) {
 }
 
 func TestReadFindsCallsMadeThroughOptionalChainingButNotFunctionsBeingDeclared(t *testing.T) {
+	t.Parallel()
 	file := Read([]byte(`
 		function registerTool(options) { return options }
 		spindle?.registerTool({ name: "optional_owner" })

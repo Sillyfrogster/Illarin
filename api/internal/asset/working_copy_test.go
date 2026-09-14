@@ -14,6 +14,7 @@ import (
 )
 
 func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -141,6 +142,7 @@ func TestPublishedAssetKeepsPrivateEditsOutOfPublicReads(t *testing.T) {
 }
 
 func TestPublishedSnapshotIsolatesEveryStoredHeaderAndPreservedValue(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := startedDraft(t, svc)

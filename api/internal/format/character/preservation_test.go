@@ -10,6 +10,7 @@ import (
 )
 
 func TestEachExtensionKeyIsPreservedAsItsOwnNamespace(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -35,6 +36,7 @@ func TestEachExtensionKeyIsPreservedAsItsOwnNamespace(t *testing.T) {
 }
 
 func TestValuesThatRecordNothingAreStoredAnyway(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -61,6 +63,7 @@ func TestValuesThatRecordNothingAreStoredAnyway(t *testing.T) {
 }
 
 func TestBoilerplateHidesOnlyWhatRecordsNothing(t *testing.T) {
+	t.Parallel()
 	declaration := CCv3Module{}.Declaration()
 	cases := []struct {
 		namespace string
@@ -88,6 +91,7 @@ func TestBoilerplateHidesOnlyWhatRecordsNothing(t *testing.T) {
 }
 
 func TestALorebookHeldAsContentIsNotPreservedASecondTime(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -113,6 +117,7 @@ func TestALorebookHeldAsContentIsNotPreservedASecondTime(t *testing.T) {
 }
 
 func TestAHalfUnderstoodBookSplitsRatherThanDuplicates(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -151,6 +156,7 @@ func TestAHalfUnderstoodBookSplitsRatherThanDuplicates(t *testing.T) {
 }
 
 func TestEachEntryGetsItsOwnIDAndItsOwnPreservedFields(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -178,6 +184,7 @@ func TestEachEntryGetsItsOwnIDAndItsOwnPreservedFields(t *testing.T) {
 }
 
 func TestAnExtensionNamedForTheCardBodyStaysInsideIt(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -205,6 +212,7 @@ func namespaces(parsed format.Parsed) map[string][]byte {
 }
 
 func TestEveryImportedItemArrivesWithAnIDOfItsOwn(t *testing.T) {
+	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Welcome back.",

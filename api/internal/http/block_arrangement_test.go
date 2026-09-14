@@ -52,6 +52,7 @@ func insertEmptyGallery(t *testing.T, pool *pgxpool.Pool, assetID string) string
 }
 
 func TestCreatorReordersAndHidesBlocksAsOneArrangement(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	core := blockNamed(t, started.Blocks, "character_core")
@@ -75,6 +76,7 @@ func TestCreatorReordersAndHidesBlocksAsOneArrangement(t *testing.T) {
 }
 
 func TestArrangementRefusesToHideTheAlwaysShownBlock(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	core := blockNamed(t, started.Blocks, "character_core")
@@ -91,6 +93,7 @@ func TestArrangementRefusesToHideTheAlwaysShownBlock(t *testing.T) {
 }
 
 func TestArrangementRequiresEveryCurrentBlockExactlyOnce(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	core := blockNamed(t, started.Blocks, "character_core")
@@ -106,6 +109,7 @@ func TestArrangementRequiresEveryCurrentBlockExactlyOnce(t *testing.T) {
 }
 
 func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	galleryID := insertEmptyGallery(t, pool, started.ID)
@@ -133,6 +137,7 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 }
 
 func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	insertEmptyGallery(t, pool, started.ID)
@@ -153,6 +158,7 @@ func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
 }
 
 func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startCharacter(t, r, session)
 	galleryID := insertEmptyGallery(t, pool, started.ID)

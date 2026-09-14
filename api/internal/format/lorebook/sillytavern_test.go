@@ -48,6 +48,7 @@ const worldInfo = `{
 }`
 
 func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
+	t.Parallel()
 	registry := testRegistry(t)
 
 	resolution, claimed, err := registry.Resolve(document(t, worldInfo))
@@ -68,6 +69,7 @@ func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
 }
 
 func TestSillyTavernEntriesKeepTheirKeysAndTheirNames(t *testing.T) {
+	t.Parallel()
 	table := onlyEntryTable(t, parse(t, worldInfo).Elements)
 	if len(table.Entries) != 2 {
 		t.Fatalf("read %d entries, want two", len(table.Entries))
@@ -98,6 +100,7 @@ func TestSillyTavernEntriesKeepTheirKeysAndTheirNames(t *testing.T) {
 }
 
 func TestSillyTavernDisableIsReadAsTheOppositeOfEnabled(t *testing.T) {
+	t.Parallel()
 	table := onlyEntryTable(t, parse(t, worldInfo).Elements)
 	if !table.Entries[0].Enabled {
 		t.Error("an entry the file did not disable came back switched off")
@@ -113,6 +116,7 @@ func TestSillyTavernDisableIsReadAsTheOppositeOfEnabled(t *testing.T) {
 }
 
 func TestASillyTavernPlacementIllarinHasNoWordingForIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
 
@@ -130,6 +134,7 @@ func TestASillyTavernPlacementIllarinHasNoWordingForIsLeftAlone(t *testing.T) {
 }
 
 func TestWhatSillyTavernCarriesBeyondTheEntryTableIsPreserved(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
 
@@ -147,6 +152,7 @@ func TestWhatSillyTavernCarriesBeyondTheEntryTableIsPreserved(t *testing.T) {
 }
 
 func TestARoundTripThroughSillyTavernComesBackTheSame(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
 

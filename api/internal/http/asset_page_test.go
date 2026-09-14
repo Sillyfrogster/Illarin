@@ -57,6 +57,7 @@ func fetchAssetPage(t *testing.T, r http.Handler, path string) assetPageResponse
 }
 
 func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("The Quiet Archivist")
 	metadata["_keepDraft"] = true
@@ -129,6 +130,7 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 }
 
 func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Coverless Gallery")
 	metadata["_keepDraft"] = true
@@ -153,6 +155,7 @@ func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 }
 
 func TestAssetPageShowsNoTotals(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Countless")
 	metadata["filename"] = "countless.lumitheme"
@@ -181,6 +184,7 @@ func TestAssetPageShowsNoTotals(t *testing.T) {
 }
 
 func TestAssetPageAnswersNormallyForAnUnlistedAsset(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Kept Back")
 	metadata["filename"] = "kept-back.lumitheme"
@@ -195,6 +199,7 @@ func TestAssetPageAnswersNormallyForAnUnlistedAsset(t *testing.T) {
 }
 
 func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	withhold := assetIDFromIngest(t, uploadAndFinish(
 		t, r, session, assets, withFilename(exampleMetadata("Withheld"), "withheld"), []byte("a"),
@@ -237,6 +242,7 @@ func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
 }
 
 func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("After Dark")
 	metadata["_keepDraft"] = true

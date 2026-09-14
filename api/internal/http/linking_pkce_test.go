@@ -31,6 +31,7 @@ type pendingAuthorization struct {
 }
 
 func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	verifier := strings.Repeat("A", 43)
 	digest := sha256.Sum256([]byte(verifier))
@@ -169,6 +170,7 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 }
 
 func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t *testing.T) {
+	t.Parallel()
 	r, firstSession, pool := newLinkingRouter(t)
 	secondSession := addVerifiedLinkingUser(
 		t, r, pool, "second.browser@example.com", "second.browser",
@@ -248,6 +250,7 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 }
 
 func TestSameDeviceLinkingRejectsNonLoopbackRedirects(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newLinkingRouter(t)
 	verifier := strings.Repeat("A", 43)
 	digest := sha256.Sum256([]byte(verifier))

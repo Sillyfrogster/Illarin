@@ -20,6 +20,7 @@ func imageBlock(size ItemSize) Block {
 }
 
 func TestItemSizeControlsTheImagesInsideAnElement(t *testing.T) {
+	t.Parallel()
 	if err := ValidateStructure(imageBlock(ItemLarge)); err != nil {
 		t.Errorf("a gallery drawing large images was refused: %v", err)
 	}
@@ -38,6 +39,7 @@ func TestItemSizeControlsTheImagesInsideAnElement(t *testing.T) {
 }
 
 func TestOnlyImagesTakeAnItemSize(t *testing.T) {
+	t.Parallel()
 	holder := Block{
 		ID: uuid.New(), Definition: Usage, Layout: Single, Width: Half,
 		Elements: []Element{{
@@ -52,6 +54,7 @@ func TestOnlyImagesTakeAnItemSize(t *testing.T) {
 }
 
 func TestEverySavePathSharesTheCollectionLimit(t *testing.T) {
+	t.Parallel()
 	texts := make([]TextItem, MaxCollectionItems+1)
 	holder := Block{
 		ID: uuid.New(), Definition: Messages, Layout: Stack2, Width: Full,
@@ -67,6 +70,7 @@ func TestEverySavePathSharesTheCollectionLimit(t *testing.T) {
 }
 
 func TestEverySavePathSharesThePayloadLimit(t *testing.T) {
+	t.Parallel()
 	text := strings.Repeat("x", MaxPayloadBytes)
 	element := Element{
 		Type: TypeProse, Role: RoleDescription, Content: Prose{Text: text},

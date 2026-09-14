@@ -19,6 +19,7 @@ func aBookOf(entries int) json.RawMessage {
 }
 
 func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -83,6 +84,7 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 }
 
 func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -105,6 +107,7 @@ func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
 }
 
 func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 

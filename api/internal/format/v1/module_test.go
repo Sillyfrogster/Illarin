@@ -23,6 +23,7 @@ import (
 )
 
 func TestV1IsAnInternalReadOnlyModule(t *testing.T) {
+	t.Parallel()
 	declaration := (Module{}).Declaration()
 	if declaration.ID != ID || !declaration.Direction.Read || declaration.Direction.Write {
 		t.Fatalf("declaration = %+v, want an internal reader", declaration)
@@ -60,6 +61,7 @@ func TestV1IsAnInternalReadOnlyModule(t *testing.T) {
 }
 
 func TestEveryOfferedWriterSerializesV1Content(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	modules := []format.Module{Module{}}
 	for _, reader := range characterformat.Modules() {
@@ -176,6 +178,7 @@ func TestEveryOfferedWriterSerializesV1Content(t *testing.T) {
 }
 
 func TestCharacterImagesAndRemaindersAreReadOnce(t *testing.T) {
+	t.Parallel()
 	result, err := (Module{}).Read(context.Background(), CharacterRow{
 		Common: CommonRow{
 			ID:      uuid.MustParse("00000000-0000-0000-0000-000000000102"),
@@ -268,6 +271,7 @@ func TestCharacterImagesAndRemaindersAreReadOnce(t *testing.T) {
 }
 
 func TestALorebookRowBecomesAnEntryTable(t *testing.T) {
+	t.Parallel()
 	created := time.Date(2025, time.February, 3, 4, 5, 6, 0, time.UTC)
 	result, err := (Module{}).Read(context.Background(), LorebookRow{
 		Common: CommonRow{
@@ -316,6 +320,7 @@ func TestALorebookRowBecomesAnEntryTable(t *testing.T) {
 }
 
 func TestAPresetRowUsesTheRowHeaderAndKeepsVersionsAndSealedBlocks(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.MustParse("00000000-0000-0000-0000-000000000112")
 	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000212")
 	longDescription := strings.Repeat("Read the setup carefully. ", 22)
@@ -394,6 +399,7 @@ func TestAPresetRowUsesTheRowHeaderAndKeepsVersionsAndSealedBlocks(t *testing.T)
 }
 
 func TestAPresetRowActivatesCurrentSealedPlaceholders(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.MustParse("00000000-0000-0000-0000-000000000115")
 	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000215")
 	result, err := (Module{}).Read(context.Background(), PresetRow{
@@ -435,6 +441,7 @@ func TestAPresetRowActivatesCurrentSealedPlaceholders(t *testing.T) {
 }
 
 func TestAPresetRowRefusesAnUnaccountedCurrentPlaceholder(t *testing.T) {
+	t.Parallel()
 	valid := SealedBlockRow{
 		Version: pointerTo("2"), Key: "private-rule", Content: "hello",
 		SHA256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
@@ -482,6 +489,7 @@ func TestAPresetRowRefusesAnUnaccountedCurrentPlaceholder(t *testing.T) {
 }
 
 func TestAPresetRowDoesNotActivateInlineTextWithoutAPreservedSource(t *testing.T) {
+	t.Parallel()
 	_, err := (Module{}).Read(context.Background(), PresetRow{
 		Common: CommonRow{
 			ID: uuid.New(), OwnerID: uuid.New(), Name: "Sealed preset", CreatedAt: time.Now(),
@@ -501,6 +509,7 @@ func TestAPresetRowDoesNotActivateInlineTextWithoutAPreservedSource(t *testing.T
 }
 
 func TestAPresetRowRefusesAKeySharedByInlineTextAndAPlaceholder(t *testing.T) {
+	t.Parallel()
 	_, err := (Module{}).Read(context.Background(), PresetRow{
 		Common: CommonRow{
 			ID: uuid.New(), OwnerID: uuid.New(), Name: "Sealed preset", CreatedAt: time.Now(),
@@ -525,6 +534,7 @@ func TestAPresetRowRefusesAKeySharedByInlineTextAndAPlaceholder(t *testing.T) {
 }
 
 func TestAThemeRowRecoversOnlyFontsFromItsGeneratedBundle(t *testing.T) {
+	t.Parallel()
 	result, err := (Module{}).Read(context.Background(), ThemeRow{
 		Common: CommonRow{
 			ID:      uuid.MustParse("00000000-0000-0000-0000-000000000113"),
@@ -576,6 +586,7 @@ func TestAThemeRowRecoversOnlyFontsFromItsGeneratedBundle(t *testing.T) {
 }
 
 func TestAPackRowBecomesLumiaRecordsWithoutFetchingItsImages(t *testing.T) {
+	t.Parallel()
 	result, err := (Module{}).Read(context.Background(), PackRow{
 		Common: CommonRow{
 			ID:      uuid.MustParse("00000000-0000-0000-0000-000000000114"),
@@ -676,6 +687,7 @@ func preservedObject(t *testing.T, rows []format.Remainder, namespace string) ma
 }
 
 func TestACharacterRowBecomesHeaderFieldsAndSemanticRoles(t *testing.T) {
+	t.Parallel()
 	created := time.Date(2025, time.January, 4, 5, 6, 7, 0, time.UTC)
 	assetID := uuid.MustParse("00000000-0000-0000-0000-000000000101")
 	ownerID := uuid.MustParse("00000000-0000-0000-0000-000000000201")
@@ -763,6 +775,7 @@ func TestACharacterRowBecomesHeaderFieldsAndSemanticRoles(t *testing.T) {
 }
 
 func TestOnlyAnExplicitlyVerifiedMissingGreetingIsRecovered(t *testing.T) {
+	t.Parallel()
 	row := CharacterRow{
 		Common: CommonRow{
 			ID:      uuid.MustParse("00000000-0000-0000-0000-000000000115"),

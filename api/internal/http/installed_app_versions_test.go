@@ -48,6 +48,7 @@ func installedAppVersions(t *testing.T, r http.Handler, assetID string) []string
 }
 
 func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
@@ -66,6 +67,7 @@ func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *te
 }
 
 func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
@@ -94,6 +96,7 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 }
 
 func TestOnlyAnExtensionPageListsInstalledAppVersions(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	assetID := publishedTestAsset(t, r, session)
 	for _, install := range linkInstallations(t, r, session, 5) {
@@ -106,6 +109,7 @@ func TestOnlyAnExtensionPageListsInstalledAppVersions(t *testing.T) {
 }
 
 func TestAnAppVersionCountsOnlyFromInstallationsThatCanInstallTheExtensionsApp(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	for _, install := range linkInstallations(t, r, session, 5) {
@@ -132,6 +136,7 @@ func declareApplicationVersion(t *testing.T, r http.Handler, token, version stri
 }
 
 func TestAnInstallationThatLeavesOutItsAppVersionCountsUnderTheVersionItDeclared(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
@@ -151,6 +156,7 @@ func TestAnInstallationThatLeavesOutItsAppVersionCountsUnderTheVersionItDeclared
 }
 
 func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing.T) {
+	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]

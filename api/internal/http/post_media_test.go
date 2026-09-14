@@ -81,6 +81,7 @@ func (s publicationStack) fetch(t *testing.T, address string) *httptest.Response
 }
 
 func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "pictures@example.com", "illarin.pictures")
 	draft := stack.illarinDraft(t, session, "The workspace has pictures")
@@ -124,6 +125,7 @@ func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
 }
 
 func TestAPostCannotPlaceAPictureAnotherPostOwns(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "foreign@example.com", "illarin.foreign")
 	theirs := stack.illarinDraft(t, session, "The post that owns the picture")
@@ -143,6 +145,7 @@ func TestAPostCannotPlaceAPictureAnotherPostOwns(t *testing.T) {
 }
 
 func TestAPictureIsPlacedOnlyWhereItWasUploadedFor(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "purpose@example.com", "illarin.purpose")
 	draft := stack.illarinDraft(t, session, "One picture, one job")
@@ -161,6 +164,7 @@ func TestAPictureIsPlacedOnlyWhereItWasUploadedFor(t *testing.T) {
 }
 
 func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "alt@example.com", "illarin.alt")
 	draft := stack.illarinDraft(t, session, "Pictures say what they show")
@@ -191,6 +195,7 @@ func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
 }
 
 func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "replace@example.com", "illarin.replace")
 	draft := stack.illarinDraft(t, session, "The picture that was replaced")
@@ -223,6 +228,7 @@ func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
 }
 
 func TestAnUploadRefusesBytesThatAreNotAPicture(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "notapicture@example.com", "illarin.notapicture")
 	draft := stack.illarinDraft(t, session, "Only pictures go here")
@@ -238,6 +244,7 @@ func TestAnUploadRefusesBytesThatAreNotAPicture(t *testing.T) {
 }
 
 func TestOnlyTheEditorOfAPostUploadsPicturesToIt(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "owner@example.com", "illarin.owner")
 	outsider := stack.member(t, "outsider@example.com", "outsider.account")

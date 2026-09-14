@@ -65,6 +65,7 @@ func withdrawalsAmong(held []arrived) []arrived {
 }
 
 func TestADestinationTakesPublishedEventsAndNothingElseByDefault(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	made := stack.active(t, "Release feed")
@@ -83,6 +84,7 @@ func TestADestinationTakesPublishedEventsAndNothingElseByDefault(t *testing.T) {
 }
 
 func TestChangingALivePostReachesOnlyWhoeverAsksForUpdates(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	announcements := stack.active(t, "Announcements")
 	changes := stack.activeFor(t, "Change log", []string{publication.EventUpdated})
@@ -107,6 +109,7 @@ func TestChangingALivePostReachesOnlyWhoeverAsksForUpdates(t *testing.T) {
 }
 
 func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	announcements := stack.active(t, "Announcements")
 	removals := stack.activeFor(t, "Takedowns", []string{publication.EventWithdrawn})
@@ -149,6 +152,7 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 }
 
 func TestAWithdrawalCanSendNothing(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	removals := stack.activeFor(t, "Takedowns", []string{publication.EventWithdrawn})
 	ready := stack.readyPost(t)
@@ -167,6 +171,7 @@ func TestAWithdrawalCanSendNothing(t *testing.T) {
 }
 
 func TestARepublicationCarriesItsOwnChoice(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -197,6 +202,7 @@ func TestARepublicationCarriesItsOwnChoice(t *testing.T) {
 }
 
 func TestTheEventNamesAreExactlyTheThreeIllarinPromises(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	ready := stack.readyPost(t)
 	live := stack.quietlyPublished(t, ready)
@@ -223,6 +229,7 @@ func TestTheEventNamesAreExactlyTheThreeIllarinPromises(t *testing.T) {
 }
 
 func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.activeFor(t, "Everything", []string{
 		publication.EventPublished, publication.EventUpdated, publication.EventWithdrawn,
@@ -257,6 +264,7 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 }
 
 func TestWhatArrivesIsWhatTheContractDocuments(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -288,6 +296,7 @@ func TestWhatArrivesIsWhatTheContractDocuments(t *testing.T) {
 }
 
 func TestASubscriptionIsRefusedForAnEventIllarinDoesNotSend(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 
 	response := send(t, stack.router, authorized(jsonRequest(t,
@@ -303,6 +312,7 @@ func TestASubscriptionIsRefusedForAnEventIllarinDoesNotSend(t *testing.T) {
 }
 
 func TestASubscriptionCanBeNarrowedAfterwards(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 

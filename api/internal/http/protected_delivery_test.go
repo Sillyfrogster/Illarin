@@ -81,6 +81,7 @@ func settledDelivery(t *testing.T, pool *pgxpool.Pool, assetID string) (string, 
 }
 
 func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 	metadata := exampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
@@ -115,6 +116,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 }
 
 func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 	metadata := exampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
@@ -147,6 +149,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 }
 
 func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	assetID := publishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
 	borrowedName := linkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{receiveScope})
@@ -178,6 +181,7 @@ func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 }
 
 func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 	metadata := exampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"

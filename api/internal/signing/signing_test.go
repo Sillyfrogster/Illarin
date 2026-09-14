@@ -21,6 +21,7 @@ func parse(t *testing.T, signed string) (string, string, string) {
 }
 
 func TestASignedURLIsGoodUntilItRunsOut(t *testing.T) {
+	t.Parallel()
 	key := NewKey()
 	now := time.Unix(1_700_000_000, 0)
 
@@ -38,6 +39,7 @@ func TestASignedURLIsGoodUntilItRunsOut(t *testing.T) {
 }
 
 func TestASignatureIsGoodForOnePathAndOneKey(t *testing.T) {
+	t.Parallel()
 	key := NewKey()
 	other := NewKey()
 	now := time.Unix(1_700_000_000, 0)

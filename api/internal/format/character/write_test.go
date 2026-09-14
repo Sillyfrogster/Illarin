@@ -19,6 +19,7 @@ import (
 )
 
 func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
+	t.Parallel()
 	asset := format.ExportAsset{
 		Kind:   Kind,
 		Header: format.Header{Name: "Ana", AssetVersion: "1.2", CreditedAuthor: "Wren"},
@@ -50,6 +51,7 @@ func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 }
 
 func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
+	t.Parallel()
 	asset := format.ExportAsset{
 		Kind:   Kind,
 		Header: format.Header{Name: "Ana", Nickname: "Archivist"},
@@ -81,6 +83,7 @@ func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 }
 
 func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
+	t.Parallel()
 	picture := testPNG(t)
 	withCover := format.ExportAsset{
 		Kind:     Kind,
@@ -109,6 +112,7 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 }
 
 func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
+	t.Parallel()
 	asset := format.ExportAsset{
 		Kind:     Kind,
 		Header:   format.Header{Name: "Ana"},
@@ -126,6 +130,7 @@ func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
 }
 
 func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
+	t.Parallel()
 	expressionID, galleryID := uuid.New(), uuid.New()
 	asset := format.ExportAsset{
 		Kind:   Kind,
@@ -176,6 +181,7 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 }
 
 func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
+	t.Parallel()
 	expressionID, galleryID := uuid.New(), uuid.New()
 	asset := format.ExportAsset{
 		Kind:   Kind,
@@ -208,6 +214,7 @@ func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
 }
 
 func TestACardWrittenBackReadsAsTheSameContent(t *testing.T) {
+	t.Parallel()
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Keeps the archive.","personality":"Dry",
@@ -354,6 +361,7 @@ func images(role block.Role, items ...block.ImageItem) block.Element {
 }
 
 func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
+	t.Parallel()
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],
 		"character_book":{"entries":[{"keys":["ledger"],"content":"A debt."}]}`
@@ -387,6 +395,7 @@ func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
 }
 
 func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
+	t.Parallel()
 	asset := format.ExportAsset{
 		Kind:     Kind,
 		Header:   format.Header{Name: "Ana", Nickname: "Archivist"},
@@ -425,6 +434,7 @@ func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 }
 
 func TestAV3DocumentRepeatsTheFieldsAnOlderReaderLooksFor(t *testing.T) {
+	t.Parallel()
 	asset := format.ExportAsset{
 		Kind:     Kind,
 		Header:   format.Header{Name: "Ana"},
@@ -489,6 +499,7 @@ func decodeObject(t *testing.T, source []byte) map[string]json.RawMessage {
 }
 
 func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
+	t.Parallel()
 	written := map[format.HeaderField]string{
 		format.HeaderName:           "name",
 		format.HeaderCreditedAuthor: "creator",
@@ -524,6 +535,7 @@ func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 }
 
 func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
+	t.Parallel()
 	travelling, left := uuid.New(), uuid.New()
 	asset := format.ExportAsset{
 		Kind:   Kind,

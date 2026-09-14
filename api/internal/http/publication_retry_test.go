@@ -138,6 +138,7 @@ func (s destinationStack) onlyDelivery(t *testing.T, postID string) postDelivery
 }
 
 func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -180,6 +181,7 @@ func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
 }
 
 func TestWhatAnEndpointAnswersDecidesWhetherIllarinTriesAgain(t *testing.T) {
+	t.Parallel()
 	for _, one := range []struct {
 		status int
 		state  string
@@ -218,6 +220,7 @@ func TestWhatAnEndpointAnswersDecidesWhetherIllarinTriesAgain(t *testing.T) {
 }
 
 func TestAnEndpointAnsweringGoneReceivesNothingFurther(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	first := stack.readyPost(t)
@@ -246,6 +249,7 @@ func TestAnEndpointAnsweringGoneReceivesNothingFurther(t *testing.T) {
 }
 
 func TestAnEndpointAskingIllarinToWaitIsWaitedFor(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -268,6 +272,7 @@ func TestAnEndpointAskingIllarinToWaitIsWaitedFor(t *testing.T) {
 }
 
 func TestARetryAfterHeaderIsHonoredOverTheAgreedGap(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -285,6 +290,7 @@ func TestARetryAfterHeaderIsHonoredOverTheAgreedGap(t *testing.T) {
 }
 
 func TestOneDeliveryKeepsItsWebhookIdAndSignsEachAttemptAfresh(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -319,6 +325,7 @@ func TestOneDeliveryKeepsItsWebhookIdAndSignsEachAttemptAfresh(t *testing.T) {
 }
 
 func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 
@@ -380,6 +387,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 }
 
 func TestOnlyTheAuthorityRotatesASigningSecret(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 
@@ -391,6 +399,7 @@ func TestOnlyTheAuthorityRotatesASigningSecret(t *testing.T) {
 }
 
 func TestAHostThatLeavesPublicSpaceIsRefusedOnTheNextAttempt(t *testing.T) {
+	t.Parallel()
 	public := []netip.Addr{netip.MustParseAddr("93.184.216.34")}
 	private := []netip.Addr{netip.MustParseAddr("10.0.0.9")}
 	resolved := public
@@ -421,6 +430,7 @@ func TestAHostThatLeavesPublicSpaceIsRefusedOnTheNextAttempt(t *testing.T) {
 }
 
 func TestAnExhaustedDeliveryReplaysWithoutErasingWhatItTried(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -468,6 +478,7 @@ func TestAnExhaustedDeliveryReplaysWithoutErasingWhatItTried(t *testing.T) {
 }
 
 func TestAContributorReadsItsOwnDeliveriesAndReplaysNothing(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -495,6 +506,7 @@ func TestAContributorReadsItsOwnDeliveriesAndReplaysNothing(t *testing.T) {
 }
 
 func TestAnUnsettledDeliveryIsNotReplayed(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -511,6 +523,7 @@ func TestAnUnsettledDeliveryIsNotReplayed(t *testing.T) {
 }
 
 func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
@@ -542,6 +555,7 @@ func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
 }
 
 func TestAnInterruptedAttemptIsTakenOverWithoutSpendingItsPlace(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)

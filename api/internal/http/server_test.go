@@ -24,6 +24,7 @@ func serve(t *testing.T, handler http.Handler, timeouts Timeouts) string {
 }
 
 func TestAConnectionThatNeverFinishesItsHeadersIsCutOff(t *testing.T) {
+	t.Parallel()
 	base := serve(t, http.NotFoundHandler(), Timeouts{
 		ReadHeader: 200 * time.Millisecond,
 		Idle:       time.Minute,
@@ -48,6 +49,7 @@ func TestAConnectionThatNeverFinishesItsHeadersIsCutOff(t *testing.T) {
 }
 
 func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouterWith(t, 1<<20, Deadlines{
 		JSON:     300 * time.Millisecond,
 		Upload:   30 * time.Second,

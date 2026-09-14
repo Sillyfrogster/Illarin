@@ -54,6 +54,7 @@ func (s publicationStack) livePost(t *testing.T, session *http.Cookie, title str
 }
 
 func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Choose the address")
@@ -78,6 +79,7 @@ func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
 }
 
 func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Reserved words")
@@ -96,6 +98,7 @@ func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
 }
 
 func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -127,6 +130,7 @@ func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
 }
 
 func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Illarin 3 is heer")
@@ -154,6 +158,7 @@ func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
 }
 
 func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "The first name")
@@ -174,6 +179,7 @@ func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
 }
 
 func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -210,6 +216,7 @@ func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
 }
 
 func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -278,6 +285,7 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 }
 
 func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Still private")
@@ -291,6 +299,7 @@ func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
 }
 
 func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Somebody wrote this")
@@ -308,6 +317,7 @@ func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
 }
 
 func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	saveProfile(t, stack.router, writer.session, `{"displayName":"The Writer","links":[]}`)
@@ -355,6 +365,7 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 }
 
 func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "One hop only")
@@ -388,6 +399,7 @@ func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
 }
 
 func TestACorrectedAddressIsRefusedWhenItIsAlreadyTheCurrentOne(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Stay where you are")

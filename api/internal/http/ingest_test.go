@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -135,6 +134,7 @@ func (parseFailureModule) Parse(context.Context, probe.Inspection, format.Claim)
 }
 
 func TestUploadReturnsAPendingOperation(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	rec := send(t, r, authorized(
@@ -166,6 +166,7 @@ func TestUploadReturnsAPendingOperation(t *testing.T) {
 }
 
 func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	var filesystem unix.Statfs_t
 	if err := unix.Statfs(root, &filesystem); err != nil {
@@ -208,6 +209,7 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 }
 
 func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testing.T) {
+	t.Parallel()
 	shared := []byte("shared canonical bytes")
 	root := t.TempDir()
 	var blobs storage.Store
@@ -236,7 +238,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
+	accounts := newTestAccounts(pool, outbox, nil, testMediaLibrary(blobs))
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
@@ -383,7 +385,6 @@ func newVerifiedIngestRouterWithStoreFactory(
 	storeFactory func(*pgxpool.Pool) (storage.Store, error),
 ) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 	pool := testdb.Connect(t)
 	blobs, err := storeFactory(pool)
 	if err != nil {
@@ -396,7 +397,7 @@ func newVerifiedIngestRouterWithStoreFactory(
 	}
 	assets := asset.NewServiceWithIngestSettings(pool, registry, blobs, settings)
 	outbox := &verificationOutbox{}
-	accounts := account.NewService(pool, outbox, nil, testMediaLibrary(blobs), "http://localhost:3000")
+	accounts := newTestAccounts(pool, outbox, nil, testMediaLibrary(blobs))
 	links := newTestLinkingService(pool)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
@@ -417,6 +418,7 @@ func newVerifiedIngestRouterWithStoreFactory(
 }
 
 func TestCreatorCanPollTheirPendingIngest(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	upload := send(t, r, authorized(
 		uploadRequest(t, exampleMetadata("Evening Theme"), []byte("theme bytes")),
@@ -441,6 +443,7 @@ func TestCreatorCanPollTheirPendingIngest(t *testing.T) {
 }
 
 func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -518,6 +521,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 }
 
 func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
+	t.Parallel()
 	cardBody := func(spec, description string) []byte {
 		version := "3.0"
 		if spec == character.V2 {
@@ -582,6 +586,7 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 }
 
 func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -634,6 +639,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 }
 
 func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
 		if err := registry.Register(module); err != nil {
@@ -715,6 +721,7 @@ func zipCharacterCardWithFiles(t *testing.T, card []byte, files map[string][]byt
 }
 
 func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(neverClaimsModule{}); err != nil {
 		t.Fatalf("register non-claiming module: %v", err)
@@ -753,6 +760,7 @@ func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
 }
 
 func TestClaimedFileThatFailsToParseIsRejectedWithoutAnAsset(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(parseFailureModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
@@ -793,6 +801,7 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnAsset(t *testing.T) {
 }
 
 func TestTerminalIngestFailuresStayDistinct(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name       string
 		registry   func(t *testing.T) *format.Registry
@@ -890,6 +899,7 @@ func encryptedZIP(t *testing.T) []byte {
 }
 
 func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
+	t.Parallel()
 	symlink := &zip.FileHeader{Name: "theme.json", Method: zip.Store}
 	symlink.SetMode(os.ModeSymlink | 0o777)
 	cases := []struct {
@@ -1006,6 +1016,7 @@ func (m *internalFailureModule) Parse(context.Context, probe.Inspection, format.
 }
 
 func TestOnlyInternalFailuresRetry(t *testing.T) {
+	t.Parallel()
 	settings := asset.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
@@ -1055,6 +1066,7 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 }
 
 func TestExhaustedInternalFailureIsReported(t *testing.T) {
+	t.Parallel()
 	settings := asset.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
@@ -1090,6 +1102,7 @@ func TestExhaustedInternalFailureIsReported(t *testing.T) {
 }
 
 func TestAClaimedKindWithoutABlockCatalogIsRefused(t *testing.T) {
+	t.Parallel()
 	settings := asset.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
@@ -1126,6 +1139,7 @@ func TestAClaimedKindWithoutABlockCatalogIsRefused(t *testing.T) {
 }
 
 func TestCatalogMetadataSeedsFromParseWithoutChangingTheFile(t *testing.T) {
+	t.Parallel()
 	registry := format.NewRegistry()
 	if err := registry.Register(catalogModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
@@ -1205,6 +1219,7 @@ func (m *blockingModule) Parse(context.Context, probe.Inspection, format.Claim) 
 }
 
 func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
+	t.Parallel()
 	module := &blockingModule{started: make(chan struct{}), release: make(chan struct{})}
 	registry := format.NewRegistry()
 	if err := registry.Register(module); err != nil {
@@ -1242,6 +1257,7 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 }
 
 func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	workerContext, stopWorkers := context.WithCancel(context.Background())
 	workersDone := make(chan struct{})
@@ -1296,6 +1312,7 @@ func revisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 }
 
 func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
@@ -1349,6 +1366,7 @@ func servedSourcePath(t *testing.T, r *gin.Engine, assetID string) string {
 }
 
 func TestARevisionForSomebodyElsesAssetIsNotFound(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := exampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"

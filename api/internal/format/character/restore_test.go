@@ -10,6 +10,7 @@ import (
 )
 
 func TestEveryPreservedKeyComesBackByteIdentical(t *testing.T) {
+	t.Parallel()
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{
@@ -80,6 +81,7 @@ func TestEveryPreservedKeyComesBackByteIdentical(t *testing.T) {
 }
 
 func TestADeletedEntryTakesItsPreservedKeysWithIt(t *testing.T) {
+	t.Parallel()
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -161,6 +163,7 @@ func compact(t *testing.T, raw json.RawMessage) any {
 }
 
 func TestTheGrandfatheredArtDisplayKeyComesBackByteIdentical(t *testing.T) {
+	t.Parallel()
 	source := `{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{

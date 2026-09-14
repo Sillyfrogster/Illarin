@@ -22,9 +22,10 @@ import (
 )
 
 func TestTheRealCorpusBecomesTheIllarinCatalog(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	target := testdb.Connect(t)
 	source := restoredV1Dump(t)
+	target := testdb.Connect(t)
 	settings := migrationSettings(t, source, target)
 
 	aborted, err := Run(ctx, settings)
@@ -66,6 +67,7 @@ func TestTheRealCorpusBecomesTheIllarinCatalog(t *testing.T) {
 }
 
 func TestAChangedCurrentSealedSourceAbortsBeforeCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	source := restoredV1Dump(t)
 	target := testdb.Connect(t)

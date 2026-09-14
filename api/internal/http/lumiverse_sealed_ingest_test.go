@@ -52,6 +52,7 @@ func promptListFromPage(t *testing.T, page startedAsset) promptListResponse {
 }
 
 func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
+	t.Parallel()
 	router, session, assets, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
 	metadata := exampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
@@ -86,6 +87,7 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 }
 
 func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
+	t.Parallel()
 	router, session, assets, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
 	metadata := exampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
@@ -126,6 +128,7 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 }
 
 func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T) {
+	t.Parallel()
 	for _, sealedAfterPublication := range []bool{false, true} {
 		name := "sealed on upload"
 		if sealedAfterPublication {
@@ -195,6 +198,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 }
 
 func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		file       string
@@ -268,6 +272,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 }
 
 func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
+	t.Parallel()
 	router, session, assets, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
 	metadata := exampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"

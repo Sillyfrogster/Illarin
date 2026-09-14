@@ -84,6 +84,7 @@ func compareVersions(t *testing.T, router *gin.Engine, assetID, query string, se
 }
 
 func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
+	t.Parallel()
 	setupRouter, router, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
 	publicID, sealedID := uuid.New(), uuid.New()
 	const firstSecret = "Never hand these words to a reader."
@@ -185,6 +186,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 }
 
 func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "The reader must never receive these words."
@@ -304,6 +306,7 @@ func resolveCorrespondence(
 }
 
 func TestMediaRecordedInAnOlderVersionStaysPublic(t *testing.T) {
+	t.Parallel()
 	router, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, router, session)
 	writeCharacterFloor(t, router, session, started)

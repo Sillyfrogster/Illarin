@@ -86,7 +86,6 @@ func newLinkingRouterWith(
 	settings delivery.Settings,
 ) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	handlers := newTestHandlersWithDelivery(
@@ -301,6 +300,7 @@ func instanceByID(t *testing.T, instances []linkedInstance, id string) linkedIns
 }
 
 func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	started, raw := startLink(t, r,
 		linkStartBody("Example client", "studio workstation", []string{"asset:receive"}))
@@ -370,6 +370,7 @@ func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 }
 
 func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T) {
+	t.Parallel()
 	r, firstSession, pool := newLinkingRouter(t)
 	secondSession := addVerifiedLinkingUser(
 		t, r, pool, "second.creator@example.com", "second.creator",
@@ -424,6 +425,7 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 }
 
 func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
+	t.Parallel()
 	t.Run("denial", func(t *testing.T) {
 		r, session, _ := newLinkingRouter(t)
 		started, _ := startLink(t, r,
@@ -466,6 +468,7 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 }
 
 func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	initial := linkDeviceInstance(
 		t, r, session, "Example client", "refresh test", []string{"asset:receive"},
@@ -504,6 +507,7 @@ func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
 }
 
 func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
+	t.Parallel()
 	r, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(
 		t, r, session, "Example client", "idle refresh test", []string{"asset:receive"},
@@ -530,6 +534,7 @@ func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 }
 
 func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	first := linkDeviceInstance(
 		t, r, session, "Example client", "studio workstation", []string{"asset:receive"},
@@ -605,6 +610,7 @@ func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *te
 }
 
 func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
+	t.Parallel()
 	r, session, pool := newLinkingRouter(t)
 	started, _ := startLink(t, r,
 		linkStartBody("Example client", "storage test", []string{"asset:receive"}))
@@ -663,6 +669,7 @@ func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
 }
 
 func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
+	t.Parallel()
 	r, _, _ := newLinkingRouter(t)
 	body := `{"applicationName":"` + strings.Repeat("x", maxLinkBodyBytes) + `"}`
 	rec := sendJSON(t, r, http.MethodPost, "/v1/link/requests", body)
@@ -679,6 +686,7 @@ func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 }
 
 func TestFiveCodeReviewsCannotBeResetByAValidCode(t *testing.T) {
+	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
 	started, _ := startLink(t, r,
 		linkStartBody("Example client", "attempt test", []string{"asset:receive"}))

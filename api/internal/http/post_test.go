@@ -264,6 +264,7 @@ func (s publicationStack) illarinDraft(t *testing.T, session *http.Cookie, title
 }
 
 func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -307,6 +308,7 @@ func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 }
 
 func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -344,6 +346,7 @@ func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
 }
 
 func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	first := stack.contributor(t, "first@example.com", "first.dev")
 	sillytavern := stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
@@ -381,6 +384,7 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 }
 
 func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -410,6 +414,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 }
 
 func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Two editors one post")
@@ -447,6 +452,7 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
 }
 
 func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -464,6 +470,7 @@ func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
 }
 
 func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
@@ -494,6 +501,7 @@ func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
 }
 
 func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
@@ -516,6 +524,7 @@ func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
 }
 
 func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Nothing dangerous here")
@@ -545,6 +554,7 @@ func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
 }
 
 func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "First edition")
@@ -584,6 +594,7 @@ func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.
 }
 
 func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	saveProfile(t, stack.router, session, `{"displayName":"The Editor","links":[]}`)
@@ -605,6 +616,7 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 }
 
 func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "On the record")
@@ -653,6 +665,7 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 }
 
 func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -673,6 +686,7 @@ func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
 }
 
 func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -701,6 +715,7 @@ func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
 }
 
 func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Held still")
@@ -731,6 +746,7 @@ func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
 }
 
 func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Not ready yet")
@@ -762,6 +778,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 }
 
 func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A title that goes away")
@@ -783,6 +800,7 @@ func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
 }
 
 func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Written a version ago")
@@ -812,6 +830,7 @@ func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
 }
 
 func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Every structure at once")

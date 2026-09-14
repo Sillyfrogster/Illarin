@@ -12,6 +12,7 @@ import (
 )
 
 func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name      string
 		discovery asset.Discovery
@@ -33,6 +34,7 @@ func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
 }
 
 func TestCreatorChangesAssetDiscovery(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
@@ -54,6 +56,7 @@ func TestCreatorChangesAssetDiscovery(t *testing.T) {
 }
 
 func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
@@ -68,6 +71,7 @@ func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 }
 
 func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	var ownerID uuid.UUID

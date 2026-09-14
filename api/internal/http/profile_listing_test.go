@@ -31,6 +31,7 @@ type profileListingResponse struct {
 }
 
 func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
+	t.Parallel()
 	router, _, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var firstID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
@@ -62,6 +63,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 }
 
 func TestCreatorProfileKeepsCreatorAndReaderAdultContentChoicesSeparate(t *testing.T) {
+	t.Parallel()
 	router, _, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
@@ -103,6 +105,7 @@ func TestCreatorProfileKeepsCreatorAndReaderAdultContentChoicesSeparate(t *testi
 }
 
 func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),

@@ -7,6 +7,7 @@ import (
 )
 
 func TestEveryAppOfferedHasSlotNamesForEveryGroup(t *testing.T) {
+	t.Parallel()
 	for _, app := range Apps() {
 		if !app.Known() || app.Label() == "" {
 			t.Errorf("%s is offered and has no name of its own", app)
@@ -41,6 +42,7 @@ func TestEveryAppOfferedHasSlotNamesForEveryGroup(t *testing.T) {
 }
 
 func TestTheSeedSuppliesNamesAndNoValues(t *testing.T) {
+	t.Parallel()
 	elements, err := Seed(SillyTavern)
 	if err != nil {
 		t.Fatalf("seed SillyTavern: %v", err)
@@ -66,12 +68,14 @@ func TestTheSeedSuppliesNamesAndNoValues(t *testing.T) {
 }
 
 func TestAnAppWithNoSlotNamesIsRefused(t *testing.T) {
+	t.Parallel()
 	if _, err := Seed(App("koboldcpp")); err == nil {
 		t.Error("an app Illarin knows nothing about was seeded anyway")
 	}
 }
 
 func TestTheTwoAppsShareAlmostNoSettingsNames(t *testing.T) {
+	t.Parallel()
 	names := map[App]map[string]struct{}{}
 	for _, app := range Apps() {
 		elements, err := Seed(app)

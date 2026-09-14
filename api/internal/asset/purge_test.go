@@ -25,6 +25,7 @@ func (failingDeleteStore) Delete(context.Context, uuid.UUID) error {
 }
 
 func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -92,6 +93,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 }
 
 func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	pool := testdb.Connect(t)
@@ -173,6 +175,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 }
 
 func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())
@@ -241,6 +244,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 }
 
 func TestPurgedBytesCannotBeStoredAgain(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
 	store, err := storage.NewStore(pool, t.TempDir())

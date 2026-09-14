@@ -14,7 +14,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
-	"github.com/gin-gonic/gin"
 )
 
 type publicationRefusal struct {
@@ -120,7 +119,6 @@ func refusalOf(t *testing.T, response *httptest.ResponseRecorder) publicationRef
 
 func newPacedPublicationStack(t *testing.T, rates publication.Rates) publicationStack {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	handlers := newTestHandlersWithDelivery(
@@ -133,6 +131,7 @@ func newPacedPublicationStack(t *testing.T, rates publication.Rates) publication
 }
 
 func TestATokenRunsTheWholeContributorWorkflow(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -194,6 +193,7 @@ func TestATokenRunsTheWholeContributorWorkflow(t *testing.T) {
 }
 
 func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -231,6 +231,7 @@ func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
 }
 
 func TestATokenWritesUnderItsOwnGrantAndNoOther(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	other := stack.contributor(t, "another@example.com", "publication.another")
@@ -268,6 +269,7 @@ func TestATokenWritesUnderItsOwnGrantAndNoOther(t *testing.T) {
 }
 
 func TestATokenReachesOnlyThePostsUnderItsOwnGrant(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	mine := stack.tooling(t, "writer@example.com", "publication.writer")
 	theirs := stack.contributor(t, "another@example.com", "publication.another")
@@ -302,6 +304,7 @@ func TestATokenReachesOnlyThePostsUnderItsOwnGrant(t *testing.T) {
 }
 
 func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -331,6 +334,7 @@ func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
 }
 
 func TestARetriedMutationReturnsItsFirstOutcome(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -355,6 +359,7 @@ func TestARetriedMutationReturnsItsFirstOutcome(t *testing.T) {
 }
 
 func TestAReusedKeyWithADifferentRequestConflicts(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -378,6 +383,7 @@ func TestAReusedKeyWithADifferentRequestConflicts(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyBelongsToOneCredentialAndOperation(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	mine := stack.tooling(t, "writer@example.com", "publication.writer")
 	theirs := stack.tooling(t, "another@example.com", "publication.another")
@@ -403,6 +409,7 @@ func TestAnIdempotencyKeyBelongsToOneCredentialAndOperation(t *testing.T) {
 }
 
 func TestThePaceHoldsATokenAndLeavesTheEditorAlone(t *testing.T) {
+	t.Parallel()
 	rates := publication.Rates{
 		Read:   publication.Rate{Attempts: 2, Window: time.Minute},
 		Write:  publication.Rate{Attempts: 1, Window: time.Minute},
@@ -457,6 +464,7 @@ func TestThePaceHoldsATokenAndLeavesTheEditorAlone(t *testing.T) {
 }
 
 func TestAPublicationTokenIsRefusedFromABrowser(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -478,6 +486,7 @@ func TestAPublicationTokenIsRefusedFromABrowser(t *testing.T) {
 }
 
 func TestEveryPublicationRefusalNamesItselfAndNobodyElse(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	expiring := stack.issued(t, kit.who, "Short life")
@@ -546,6 +555,7 @@ func dropGrant(t *testing.T, stack publicationStack, id string) {
 }
 
 func TestAKeyStillRunningRefusesRatherThanRepeatingTheWork(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -566,6 +576,7 @@ func TestAKeyStillRunningRefusesRatherThanRepeatingTheWork(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyStopsBeingKeptAfterItsWindow(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -625,6 +636,7 @@ func ageEveryKey(t *testing.T, stack publicationStack) {
 }
 
 func TestATokenReadsItsContextAndSubmitsNoIdentityOfItsOwn(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -683,6 +695,7 @@ func TestATokenReadsItsContextAndSubmitsNoIdentityOfItsOwn(t *testing.T) {
 }
 
 func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -753,6 +766,7 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 }
 
 func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -773,6 +787,7 @@ func TestAnIdempotencyKeyMustBeLongEnoughToMeanSomething(t *testing.T) {
 }
 
 func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")

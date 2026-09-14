@@ -29,6 +29,7 @@ func (s *discordStub) ExchangeProfile(context.Context, string) (account.DiscordP
 }
 
 func TestDiscordSignUpSeedsAnAvailableHandleAndStartsASession(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "discord-reader-1",
 		Username:      "Storyteller",
@@ -67,6 +68,7 @@ func TestDiscordSignUpSeedsAnAvailableHandleAndStartsASession(t *testing.T) {
 }
 
 func TestDiscordResyncsItsOwnVerifiedAddress(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:  "discord-reader-2",
 		Username: "QuietReader",
@@ -99,6 +101,7 @@ func TestDiscordResyncsItsOwnVerifiedAddress(t *testing.T) {
 }
 
 func TestDiscordResyncRefusesAnAddressVerifiedOnAnotherAccount(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "discord-owner",
 		Username:      "FirstOwner",
@@ -138,6 +141,7 @@ func TestDiscordResyncRefusesAnAddressVerifiedOnAnotherAccount(t *testing.T) {
 }
 
 func TestEmailSignUpRefusesAnAddressHeldByADiscordAccount(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "discord-first",
 		Username:      "DiscordFirst",
@@ -165,6 +169,7 @@ func TestEmailSignUpRefusesAnAddressHeldByADiscordAccount(t *testing.T) {
 }
 
 func TestEmailAccountCanAttachDiscordWithoutReplacingItsAddress(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "fresh-discord-link",
 		Username:      "ConnectedCreator",
@@ -205,6 +210,7 @@ func TestEmailAccountCanAttachDiscordWithoutReplacingItsAddress(t *testing.T) {
 }
 
 func TestAttachingAnAlreadyClaimedDiscordIdentityRevealsNoAccount(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "already-claimed",
 		Username:      "FirstLink",
@@ -231,6 +237,7 @@ func TestAttachingAnAlreadyClaimedDiscordIdentityRevealsNoAccount(t *testing.T) 
 }
 
 func TestDiscordCanDetachOnlyAfterAVerifiedEmailHasAPassword(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "detachable-discord",
 		Username:      "Detachable",
@@ -307,6 +314,7 @@ func TestDiscordCanDetachOnlyAfterAVerifiedEmailHasAPassword(t *testing.T) {
 }
 
 func TestPasswordResetSetsTheFirstPasswordForADiscordAccount(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "recovery-discord",
 		Username:      "RecoveryReader",
@@ -359,6 +367,7 @@ func TestPasswordResetSetsTheFirstPasswordForADiscordAccount(t *testing.T) {
 }
 
 func TestOneAccountCanOwnSeveralDiscordIdentities(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:       "first-discord-identity",
 		Username:      "FirstIdentity",
@@ -412,6 +421,7 @@ func TestOneAccountCanOwnSeveralDiscordIdentities(t *testing.T) {
 }
 
 func TestEmailVerificationReportsExistingDiscordAndPasswordMethods(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:  "verify-methods-discord",
 		Username: "VerifyMethods",
@@ -441,6 +451,7 @@ func TestEmailVerificationReportsExistingDiscordAndPasswordMethods(t *testing.T)
 }
 
 func TestDiscordOAuthRequestsIdentifyAndEmailFromTheProvider(t *testing.T) {
+	t.Parallel()
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/api/v10/oauth2/token":
@@ -510,6 +521,7 @@ func TestDiscordOAuthRequestsIdentifyAndEmailFromTheProvider(t *testing.T) {
 }
 
 func TestDiscordCallbackBelongsToTheBrowserThatBeganSignIn(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:  "state-bound-discord",
 		Username: "StateBound",
@@ -552,6 +564,7 @@ func TestDiscordCallbackBelongsToTheBrowserThatBeganSignIn(t *testing.T) {
 }
 
 func TestDiscordSignInReturnsToTheInternalPageThatStartedIt(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject:  "returning-discord",
 		Username: "ReturningReader",
@@ -666,6 +679,7 @@ func hasResponseCookie(response *httptest.ResponseRecorder, name string) bool {
 }
 
 func TestDiscordRefreshesTheAvatarBannerAndDisplayNameAtSignIn(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject: "discord-reader-9", Username: "riverstonekeep", DisplayName: "Reed",
 		AvatarURL: "https://cdn.discordapp.com/avatars/9/first.png",
@@ -688,6 +702,7 @@ func TestDiscordRefreshesTheAvatarBannerAndDisplayNameAtSignIn(t *testing.T) {
 }
 
 func TestDiscordNeverTouchesTheDisplayNameACreatorSet(t *testing.T) {
+	t.Parallel()
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject: "discord-reader-10", Username: "tallowmoth", DisplayName: "tallowmoth",
 	}}

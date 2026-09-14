@@ -6,6 +6,7 @@ import (
 )
 
 func TestAFreshSecretReadsBackAsWhatWasStored(t *testing.T) {
+	t.Parallel()
 	minted, err := Mint(Publication)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
@@ -23,6 +24,7 @@ func TestAFreshSecretReadsBackAsWhatWasStored(t *testing.T) {
 }
 
 func TestTwoMintsShareNothing(t *testing.T) {
+	t.Parallel()
 	first, err := Mint(Publication)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
@@ -37,6 +39,7 @@ func TestTwoMintsShareNothing(t *testing.T) {
 }
 
 func TestOneKindNeverReadsAsAnother(t *testing.T) {
+	t.Parallel()
 	minted, err := Mint(InstanceAccess)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
@@ -49,6 +52,7 @@ func TestOneKindNeverReadsAsAnother(t *testing.T) {
 }
 
 func TestMalformedAndOversizedSecretsAreRefusedBeforeDecoding(t *testing.T) {
+	t.Parallel()
 	minted, err := Mint(Publication)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
@@ -69,6 +73,7 @@ func TestMalformedAndOversizedSecretsAreRefusedBeforeDecoding(t *testing.T) {
 }
 
 func TestMatchesComparesWholeDigests(t *testing.T) {
+	t.Parallel()
 	first, err := Mint(Publication)
 	if err != nil {
 		t.Fatalf("mint: %v", err)

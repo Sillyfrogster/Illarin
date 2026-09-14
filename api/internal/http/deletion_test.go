@@ -14,6 +14,7 @@ import (
 )
 
 func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := assetIDFromIngest(t, uploadAndFinish(
 		t, router, session, assets,
@@ -79,6 +80,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 }
 
 func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
+	t.Parallel()
 	_, router, session, assets, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
 	coreBlock := blockNamed(t, started.Blocks, "preset_core")
@@ -134,6 +136,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 }
 
 func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	file := []byte("bytes that cannot return")
 	assetID := assetIDFromIngest(t, uploadAndFinish(
@@ -178,6 +181,7 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 }
 
 func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
+	t.Parallel()
 	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := assetIDFromIngest(t, uploadAndFinish(
 		t, router, session, assets,

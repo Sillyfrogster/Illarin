@@ -70,6 +70,7 @@ func promptListParsed(fragment block.PromptFragment, sourceID string) format.Par
 }
 
 func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
+	t.Parallel()
 	held := block.NewItemID()
 	parsed := promptListParsed(block.PromptFragment{
 		ID: held, Name: "Setup", Text: "The wording only this asset holds", Enabled: true,
@@ -117,6 +118,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 }
 
 func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T) {
+	t.Parallel()
 	parsed := promptListParsed(block.PromptFragment{
 		ID: block.NewItemID(), Name: "Setup", Text: "Present", Enabled: true,
 	}, "setup")

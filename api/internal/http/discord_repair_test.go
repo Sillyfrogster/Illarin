@@ -12,6 +12,7 @@ import (
 )
 
 func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing.T) {
+	t.Parallel()
 	stack := newDestinationStack(t)
 	channel := stack.channelWithRole(t, "Readers")
 	post, deliveries := stack.announcedPost(t, fmt.Sprintf(`"destinationIds":[%q]`, channel.ID))
@@ -81,6 +82,7 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 }
 
 func TestDiscordAmbiguityStopsRetriesAndAMissingWebhookIsDisabled(t *testing.T) {
+	t.Parallel()
 	t.Run("abandoned worker", func(t *testing.T) {
 		stack := newDestinationStack(t)
 		channel := stack.channelWithRole(t, "")

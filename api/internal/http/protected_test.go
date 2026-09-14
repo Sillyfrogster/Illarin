@@ -14,6 +14,7 @@ import (
 )
 
 func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
@@ -83,6 +84,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 }
 
 func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	started := startPreset(t, router, session, "lumiverse")
 	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
@@ -153,6 +155,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 }
 
 func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	started := startPreset(t, router, session, "lumiverse")
 	if len(started.Downloads) == 0 {
@@ -208,6 +211,7 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 }
 
 func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
+	t.Parallel()
 	router, ownerSession, assets, pool := newVerifiedIngestRouterWithPool(
 		t, lumiverseIngestRegistry(t),
 	)
@@ -253,6 +257,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 }
 
 func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testing.T) {
+	t.Parallel()
 	_, router, session, assets, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
 	coreBlock := blockNamed(t, started.Blocks, "preset_core")

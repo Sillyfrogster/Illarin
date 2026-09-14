@@ -17,6 +17,7 @@ const oneEntry = `{"entries":[{` +
 	`"text":"Every debt in the town is written in it."}]}`
 
 func TestAnEntryKeepsItsKeyMatchingAndItsRecursionSettings(t *testing.T) {
+	t.Parallel()
 	content, err := DecodeContent(TypeEntryTable, []byte(oneEntry))
 	if err != nil {
 		t.Fatalf("read an entry: %v", err)
@@ -52,6 +53,7 @@ func TestAnEntryKeepsItsKeyMatchingAndItsRecursionSettings(t *testing.T) {
 }
 
 func TestAnEntryAtAnUnknownPositionNamesTheChoices(t *testing.T) {
+	t.Parallel()
 	_, err := DecodeContent(TypeEntryTable, []byte(
 		`{"entries":[{"keys":["ledger"],"enabled":true,"position":"at_depth_4","text":"x"}]}`,
 	))
@@ -64,6 +66,7 @@ func TestAnEntryAtAnUnknownPositionNamesTheChoices(t *testing.T) {
 }
 
 func TestAnEntryWithoutTextCountsForNothing(t *testing.T) {
+	t.Parallel()
 	empty, err := TypeEntryTable.Empty()
 	if err != nil {
 		t.Fatalf("empty entry table: %v", err)
@@ -81,6 +84,7 @@ func TestAnEntryWithoutTextCountsForNothing(t *testing.T) {
 }
 
 func TestAnElementSaysHowMuchItHoldsAndNeverHowManyTokens(t *testing.T) {
+	t.Parallel()
 	entries := make([]Entry, 1004)
 	for i := range entries {
 		entries[i] = Entry{Text: "An entry.", Enabled: i >= 6}

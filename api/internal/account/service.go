@@ -77,11 +77,12 @@ type DiscordProvider interface {
 }
 
 type Service struct {
-	pool    *pgxpool.Pool
-	sender  EmailSender
-	discord DiscordProvider
-	media   *mediaproc.Library
-	siteURL string
+	pool         *pgxpool.Pool
+	sender       EmailSender
+	discord      DiscordProvider
+	media        *mediaproc.Library
+	siteURL      string
+	passwordCost int
 }
 
 func NewService(
@@ -92,12 +93,20 @@ func NewService(
 	siteURL string,
 ) *Service {
 	return &Service{
-		pool:    pool,
-		sender:  sender,
-		discord: discord,
-		media:   library,
-		siteURL: strings.TrimRight(siteURL, "/"),
+		pool:         pool,
+		sender:       sender,
+		discord:      discord,
+		media:        library,
+		siteURL:      strings.TrimRight(siteURL, "/"),
+		passwordCost: bcrypt.DefaultCost,
 	}
+}
+
+// WithPasswordCost returns a copy that hashes new passwords at the given bcrypt cost
+func (s *Service) WithPasswordCost(cost int) *Service {
+	copied := *s
+	copied.passwordCost = cost
+	return &copied
 }
 
 func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, time.Time, error) {
@@ -115,7 +124,7 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, 
 		}
 	}
 
-	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(in.Password), bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(in.Password), s.passwordCost)
 	if err != nil {
 		return Account{}, "", time.Time{}, fmt.Errorf("hash password: %w", err)
 	}
@@ -579,7 +588,7 @@ func (s *Service) SetPassword(ctx context.Context, sessionToken, password string
 	if err != nil {
 		return Account{}, fmt.Errorf("read account for password: %w", err)
 	}
-	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(password), bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(password), s.passwordCost)
 	if err != nil {
 		return Account{}, fmt.Errorf("hash password: %w", err)
 	}
@@ -650,7 +659,7 @@ func (s *Service) CompletePasswordReset(ctx context.Context, token, password str
 	if !ok {
 		return ErrPasswordReset
 	}
-	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(password), bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(password), s.passwordCost)
 	if err != nil {
 		return fmt.Errorf("hash reset password: %w", err)
 	}

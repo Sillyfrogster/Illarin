@@ -153,6 +153,7 @@ func downloadEventCount(t *testing.T, pool *pgxpool.Pool, class string) int {
 }
 
 func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 
@@ -165,6 +166,7 @@ func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
 }
 
 func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -216,6 +218,7 @@ func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 }
 
 func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *testing.T) {
+	t.Parallel()
 	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
@@ -247,6 +250,7 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 }
 
 func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -274,6 +278,7 @@ func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 }
 
 func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -308,6 +313,7 @@ func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *test
 }
 
 func TestSendingTheSameAssetTwiceQueuesItOnce(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -326,6 +332,7 @@ func TestSendingTheSameAssetTwiceQueuesItOnce(t *testing.T) {
 }
 
 func TestAnAssetWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -358,6 +365,7 @@ func TestAnAssetWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 }
 
 func TestAnInstanceThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
@@ -371,6 +379,7 @@ func TestAnInstanceThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
 }
 
 func TestCollectingNeedsTheReceiveScope(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Reader", "desk", []string{"library:sync"})
 
@@ -382,6 +391,7 @@ func TestCollectingNeedsTheReceiveScope(t *testing.T) {
 }
 
 func TestSendingNeedsAnInstanceOfYourOwnThatCanReceive(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
@@ -397,6 +407,7 @@ func TestSendingNeedsAnInstanceOfYourOwnThatCanReceive(t *testing.T) {
 }
 
 func TestARevokedInstanceLosesItsQueueAndMirrorAndAnotherKeepsBoth(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	cut := linkDeviceInstance(t, router, session, "Paper Lantern", "cut", []string{receiveScope, "library:sync"})
 	kept := linkDeviceInstance(t, router, session, "Paper Lantern", "kept", []string{receiveScope, "library:sync"})
@@ -476,6 +487,7 @@ func syncLibrary(
 }
 
 func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk",
 		[]string{receiveScope, "library:sync"})
@@ -503,6 +515,7 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 }
 
 func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	first := publishedTestAsset(t, router, session)
@@ -526,6 +539,7 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 }
 
 func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	assetID := publishedTestAsset(t, router, session)
@@ -543,6 +557,7 @@ func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 }
 
 func TestTheAssetPageOffersTheMostRecentlySeenInstanceFirst(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	older := linkDeviceInstance(t, router, session, "Paper Lantern", "older", []string{receiveScope})
 	newer := linkDeviceInstance(t, router, session, "Paper Lantern", "newer", []string{receiveScope})
@@ -565,6 +580,7 @@ func TestTheAssetPageOffersTheMostRecentlySeenInstanceFirst(t *testing.T) {
 }
 
 func TestAnAssetNobodyMaySendHasNoInstanceState(t *testing.T) {
+	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	draft := startCharacter(t, router, session)
@@ -578,6 +594,7 @@ func TestAnAssetNobodyMaySendHasNoInstanceState(t *testing.T) {
 }
 
 func TestALeaseThatRanOutBringsTheDeliveryBack(t *testing.T) {
+	t.Parallel()
 	settings := testDeliverySettings()
 	settings.Lease = time.Millisecond
 	router, session, _ := newLinkingRouterWith(t, settings)
@@ -596,6 +613,7 @@ func TestALeaseThatRanOutBringsTheDeliveryBack(t *testing.T) {
 }
 
 func TestADeliveryTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
+	t.Parallel()
 	settings := testDeliverySettings()
 	settings.Lease = time.Millisecond
 	settings.MaxAttempts = 2
@@ -624,15 +642,18 @@ func TestADeliveryTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
 }
 
 func TestAnExpiredDeliveryIsSweptAway(t *testing.T) {
+	t.Parallel()
 	settings := testDeliverySettings()
-	settings.Retention = time.Millisecond
+	settings.Retention = 250 * time.Millisecond
 	router, session, pool := newLinkingRouterWith(t, settings)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := publishedTestAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	if queued := sendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+		t.Fatalf("queue the delivery status = %d, want 202: %s", queued.Code, queued.Body.String())
+	}
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(settings.Retention)
 	if rec := collect(t, router, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect an expired delivery status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
@@ -676,6 +697,7 @@ func changeTheAsset(t *testing.T, r *gin.Engine, session *http.Cookie, assetID s
 }
 
 func TestAnInstanceThatLostTheReceiveScopeReleasesNothing(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk",
 		[]string{receiveScope, "library:sync"})
@@ -699,6 +721,7 @@ func TestAnInstanceThatLostTheReceiveScopeReleasesNothing(t *testing.T) {
 }
 
 func TestARevokedInstanceReleasesNothingEvenWithRowsLeftBehind(t *testing.T) {
+	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
 	grant := linkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{receiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})

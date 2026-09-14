@@ -30,6 +30,7 @@ const sampleManifest = `{
 }`
 
 func TestSpindleDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
+	t.Parallel()
 	declaration := Spindle{}.Declaration()
 	if declaration.ID != SpindleID || declaration.Kind != Kind ||
 		!declaration.Direction.Read || !declaration.Direction.Write || !declaration.KeepsUpload {
@@ -41,6 +42,7 @@ func TestSpindleDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 }
 
 func TestSpindleReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json":     sampleManifest,
 		"dist/frontend.js": "export default {}",
@@ -91,6 +93,7 @@ func TestSpindleReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
 }
 
 func TestSpindleListsARepositoryOnceWhenTheHomepageIsTheSame(t *testing.T) {
+	t.Parallel()
 	manifest := strings.Replace(sampleManifest,
 		"https://example.com/quiet-toolbox", "https://github.com/example/quiet_toolbox", 1)
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
@@ -103,6 +106,7 @@ func TestSpindleListsARepositoryOnceWhenTheHomepageIsTheSame(t *testing.T) {
 }
 
 func TestSpindleAcceptsSourceThatLumiverseBuildsAndNoReadme(t *testing.T) {
+	t.Parallel()
 	manifest := strings.Replace(sampleManifest, `"entry_frontend": "dist/frontend.js",`, "", 1)
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json": manifest, "src/backend.ts": "export {}",
@@ -113,6 +117,7 @@ func TestSpindleAcceptsSourceThatLumiverseBuildsAndNoReadme(t *testing.T) {
 }
 
 func TestSpindleRefusesAnArchiveLumiverseWouldNotInstall(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		files   map[string]string
@@ -193,6 +198,7 @@ func TestSpindleRefusesAnArchiveLumiverseWouldNotInstall(t *testing.T) {
 }
 
 func TestSpindleRefusesAnArchiveOverThirtyTwoMegabytesWhole(t *testing.T) {
+	t.Parallel()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)
 	put(t, archive, "spindle.json", []byte(sampleManifest), zip.Deflate)
@@ -210,6 +216,7 @@ func TestSpindleRefusesAnArchiveOverThirtyTwoMegabytesWhole(t *testing.T) {
 }
 
 func TestSpindleAcceptsAnArchiveOfManyFiles(t *testing.T) {
+	t.Parallel()
 	files := map[string]string{"spindle.json": sampleManifest, "dist/frontend.js": ""}
 	for index := range 600 {
 		files[fmt.Sprintf("dist/chunks/%d.js", index)] = ""
@@ -221,6 +228,7 @@ func TestSpindleAcceptsAnArchiveOfManyFiles(t *testing.T) {
 }
 
 func TestSpindleReadsAnArchiveWrappedInOneFolder(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"quiet_toolbox-main/":                        "",
 		"quiet_toolbox-main/spindle.json":            sampleManifest,
@@ -233,6 +241,7 @@ func TestSpindleReadsAnArchiveWrappedInOneFolder(t *testing.T) {
 }
 
 func TestSpindleIgnoresAnotherAppsManifestDeeperInTheArchive(t *testing.T) {
+	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json": sampleManifest, "dist/frontend.js": "",
 		"node_modules/some-package/manifest.json": `{"name":"not an extension"}`,
@@ -243,6 +252,7 @@ func TestSpindleIgnoresAnotherAppsManifestDeeperInTheArchive(t *testing.T) {
 }
 
 func TestSpindleSaysWhereAMisplacedManifestIs(t *testing.T) {
+	t.Parallel()
 	_, err := tryParseSpindle(t, spindleZip(t, map[string]string{
 		"README.md": "# Quiet", "packages/quiet/spindle.json": sampleManifest, "packages/quiet/dist/frontend.js": "",
 	}))
@@ -253,6 +263,7 @@ func TestSpindleSaysWhereAMisplacedManifestIs(t *testing.T) {
 }
 
 func TestSpindleWritesTheUploadedArchiveUnchanged(t *testing.T) {
+	t.Parallel()
 	upload := spindleZip(t, map[string]string{"spindle.json": sampleManifest, "dist/frontend.js": ""})
 	written, err := Spindle{}.Write(context.Background(), format.ExportAsset{
 		Kind: Kind, Header: format.Header{Name: "A renamed listing"}, Upload: upload,

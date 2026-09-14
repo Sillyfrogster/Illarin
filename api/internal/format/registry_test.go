@@ -51,6 +51,7 @@ func (declaredDiscriminatorModule) Parse(context.Context, probe.Inspection, Clai
 }
 
 func TestDiscriminatorOutsideTheAcceptedSetNamesTheFormatAndValue(t *testing.T) {
+	t.Parallel()
 	registry := NewRegistry()
 	if err := registry.Register(declaredDiscriminatorModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
@@ -92,6 +93,7 @@ func registerSignatures(t *testing.T, signatures map[string]map[string]ValueType
 }
 
 func TestValidationRejectsASignatureThatShadowsAnother(t *testing.T) {
+	t.Parallel()
 	registry := registerSignatures(t, map[string]map[string]ValueType{
 		"looser":   {"alpha": ValueString},
 		"stricter": {"alpha": ValueString, "beta": ValueBoolean},
@@ -102,6 +104,7 @@ func TestValidationRejectsASignatureThatShadowsAnother(t *testing.T) {
 }
 
 func TestValidationAcceptsSignaturesThatEachRequireWhatTheOtherDoesNot(t *testing.T) {
+	t.Parallel()
 	registry := registerSignatures(t, map[string]map[string]ValueType{
 		"first":  {"alpha": ValueString},
 		"second": {"beta": ValueBoolean},
@@ -112,6 +115,7 @@ func TestValidationAcceptsSignaturesThatEachRequireWhatTheOtherDoesNot(t *testin
 }
 
 func TestValidationRejectsTwoModulesDeclaringOneSignature(t *testing.T) {
+	t.Parallel()
 	registry := registerSignatures(t, map[string]map[string]ValueType{
 		"first":  {"alpha": ValueString},
 		"second": {"alpha": ValueString},
@@ -122,6 +126,7 @@ func TestValidationRejectsTwoModulesDeclaringOneSignature(t *testing.T) {
 }
 
 func TestRegisterRejectsDuplicateIDs(t *testing.T) {
+	t.Parallel()
 	r := NewRegistry()
 	if err := r.Register(stubModule{id: "same"}); err != nil {
 		t.Fatalf("first register: %v", err)
@@ -132,6 +137,7 @@ func TestRegisterRejectsDuplicateIDs(t *testing.T) {
 }
 
 func TestValidationRequiresAFileLimitOfAModuleThatReadsArchives(t *testing.T) {
+	t.Parallel()
 	declaration := testReaderDeclaration("archived", "character")
 	declaration.Recognition = []Recognition{{
 		Kind: RecognitionEntry, Containers: []probe.Container{probe.ZIP}, Entry: "card.json",

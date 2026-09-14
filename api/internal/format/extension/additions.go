@@ -61,8 +61,10 @@ type rule struct {
 var codeEndings = []string{".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts", ".tsx"}
 
 // readAdditions reads what an extension's code adds to its app, from the files the app loads and the files they import.
-func readAdditions(ctx context.Context, file probe.Inspection, entries []string, rules []rule) (*block.Element, error) {
-	reading, stop := context.WithTimeout(ctx, readingTime)
+func readAdditions(
+	ctx context.Context, file probe.Inspection, entries []string, rules []rule, limit time.Duration,
+) (*block.Element, error) {
+	reading, stop := context.WithTimeout(ctx, limit)
 	defer stop()
 	archive, err := file.OpenZIPFiles(reading)
 	if err != nil {

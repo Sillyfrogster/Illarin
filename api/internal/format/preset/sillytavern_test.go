@@ -10,6 +10,7 @@ import (
 )
 
 func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
+	t.Parallel()
 	themeKeys := []string{"main_text_color", "blur_strength"}
 	recognition := (SillyTavernModule{}).Declaration().Recognition
 	if len(recognition) != 1 || recognition[0].Kind != format.RecognitionSignature {
@@ -31,6 +32,7 @@ func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 }
 
 func TestTheSillyTavernOrderDecidesTheFragmentsAndTheirSwitches(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
 	if parsed.Format != SillyTavernID {
 		t.Fatalf("parsed format = %q", parsed.Format)

@@ -16,6 +16,7 @@ func offered(ids ...string) []asset.DeliveryTarget {
 }
 
 func TestTheInstancePicksTheFirstFormatItAcceptsThatIllarinOffers(t *testing.T) {
+	t.Parallel()
 	chosen, label, found := chooseTarget(
 		[]string{"card_v3", "card_v2"}, offered("card_v2", "card_v3"), false,
 	)
@@ -26,6 +27,7 @@ func TestTheInstancePicksTheFirstFormatItAcceptsThatIllarinOffers(t *testing.T) 
 }
 
 func TestAnAcceptedFormatIllarinDoesNotOfferSelectsNothing(t *testing.T) {
+	t.Parallel()
 	chosen, _, found := chooseTarget(
 		[]string{"invented_by_the_client", "card_v2"}, offered("card_v2"), false,
 	)
@@ -36,6 +38,7 @@ func TestAnAcceptedFormatIllarinDoesNotOfferSelectsNothing(t *testing.T) {
 }
 
 func TestAnAssetWithAnUploadedFileFallsBackToRaw(t *testing.T) {
+	t.Parallel()
 	chosen, _, found := chooseTarget([]string{"card_v3"}, offered("card_v2"), true)
 
 	if !found || chosen != asset.RawDownloadTarget {
@@ -44,12 +47,14 @@ func TestAnAssetWithAnUploadedFileFallsBackToRaw(t *testing.T) {
 }
 
 func TestNothingIsChosenWhenNoFormatFitsAndThereIsNoUploadedFile(t *testing.T) {
+	t.Parallel()
 	if _, _, found := chooseTarget([]string{"card_v3"}, offered("card_v2"), false); found {
 		t.Fatal("chooseTarget found a target with nothing to fall back to")
 	}
 }
 
 func TestASecondWaitSupersedesTheFirst(t *testing.T) {
+	t.Parallel()
 	waiting := newHub(4)
 	instanceID := uuid.New()
 
@@ -75,6 +80,7 @@ func TestASecondWaitSupersedesTheFirst(t *testing.T) {
 }
 
 func TestOneInstanceNeverHoldsTwoPlacesAtOnce(t *testing.T) {
+	t.Parallel()
 	waiting := newHub(1)
 	instanceID := uuid.New()
 
@@ -90,6 +96,7 @@ func TestOneInstanceNeverHoldsTwoPlacesAtOnce(t *testing.T) {
 }
 
 func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
+	t.Parallel()
 	waiting := newHub(2)
 	instanceID := uuid.New()
 
@@ -106,12 +113,14 @@ func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
 }
 
 func TestAnAssetThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
+	t.Parallel()
 	if !installs(nil, asset.Deliverable{}) {
 		t.Fatal("an asset with no install capability was refused")
 	}
 }
 
 func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
+	t.Parallel()
 	sendable := asset.Deliverable{InstallCapabilities: []string{"chat.lumiverse:extension-install"}}
 
 	if installs([]string{"app.sillytavern:extension-install", "org.example:extension-install"}, sendable) {

@@ -32,6 +32,7 @@ func titlesOf(blocks []block.Block) []string {
 }
 
 func TestAReadmeOfFourSectionsKeepsEachAsABlock(t *testing.T) {
+	t.Parallel()
 	_, sections, _ := readmeBlocks(readme.Page{Sections: sectionsNamed(4)})
 	if got := fmt.Sprint(titlesOf(sections)); got != "[Part 1 Part 2 Part 3 Part 4]" {
 		t.Fatalf("blocks = %s, want one block for each of the four sections", got)
@@ -39,6 +40,7 @@ func TestAReadmeOfFourSectionsKeepsEachAsABlock(t *testing.T) {
 }
 
 func TestALongReadmeGathersEverySectionAfterTheThirdIntoOneList(t *testing.T) {
+	t.Parallel()
 	page := readme.Page{Opening: readme.Section{Text: "Intro"}, Sections: sectionsNamed(6)}
 	opening, sections, targets := readmeBlocks(page)
 
@@ -63,6 +65,7 @@ func TestALongReadmeGathersEverySectionAfterTheThirdIntoOneList(t *testing.T) {
 }
 
 func TestAWaitingPictureJoinsItsBlockBesideTheWriting(t *testing.T) {
+	t.Parallel()
 	title := "Install"
 	page := []block.Block{{
 		ID: uuid.New(), Definition: block.CustomBlock, Title: &title, Layout: block.Single, Width: block.Full,
@@ -99,6 +102,7 @@ func TestAWaitingPictureJoinsItsBlockBesideTheWriting(t *testing.T) {
 }
 
 func TestAWaitingPictureWhoseBlockIsGoneGetsABlockOfItsOwn(t *testing.T) {
+	t.Parallel()
 	media, gone := uuid.New(), uuid.New()
 	after, made, err := placePicture(nil, VaultPicture{MediaID: &media, Name: "Shot", BlockID: &gone, Section: "Screenshots"})
 	if err != nil {

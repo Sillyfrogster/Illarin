@@ -108,6 +108,7 @@ const sillyTavernPreset = `{
 }`
 
 func TestBothPresetModulesReadAndWriteWithAFullDeclaration(t *testing.T) {
+	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		t.Run(declaration.ID, func(t *testing.T) {
@@ -141,12 +142,14 @@ func TestBothPresetModulesReadAndWriteWithAFullDeclaration(t *testing.T) {
 }
 
 func TestRecognitionDoesNotOverlapAnotherModules(t *testing.T) {
+	t.Parallel()
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
 	}
 }
 
 func TestTheScriptSwitchIsInvertedInBothFiles(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct{ name, body string }{
 		{"lumiverse", strings.Replace(lumiversePreset, `"disabled": false`, `"disabled": true`, 2)},
 		{"sillytavern", strings.Replace(sillyTavernPreset, `"disabled": false`, `"disabled": true`, 1)},
@@ -161,6 +164,7 @@ func TestTheScriptSwitchIsInvertedInBothFiles(t *testing.T) {
 }
 
 func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name   string
 		body   string
@@ -229,6 +233,7 @@ func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
 }
 
 func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct{ name, body string }{
 		{"lumiverse", lumiversePreset},
 		{"sillytavern", sillyTavernPreset},
@@ -257,6 +262,7 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 }
 
 func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct{ origin, offered string }{
 		{LumiverseID, LumiverseID},
 		{SillyTavernID, SillyTavernID},
@@ -277,6 +283,7 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 }
 
 func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
+	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
 		Kind: Kind,
 		Elements: []block.Element{{
@@ -502,6 +509,7 @@ func (s memoryStore) ReadRange(
 }
 
 func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
+	t.Parallel()
 	declared := func(module format.Module) map[string]bool {
 		names := make(map[string]bool)
 		for _, slot := range module.Declaration().Slots {
@@ -569,6 +577,7 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 func pointerTo[T any](value T) *T { return &value }
 
 func TestAnEmptyScriptListComesBack(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, body, key string
 		module          format.Reader

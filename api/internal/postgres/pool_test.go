@@ -17,6 +17,7 @@ const (
 )
 
 func TestAQueryPastTheStatementLimitIsCutOff(t *testing.T) {
+	t.Parallel()
 	pool := testdb.ConnectWith(t, func(s *postgres.Settings) {
 		s.StatementTimeout = 200 * time.Millisecond
 	})
@@ -33,6 +34,7 @@ func TestAQueryPastTheStatementLimitIsCutOff(t *testing.T) {
 }
 
 func TestATransactionLeftIdlePastItsLimitLosesItsConnection(t *testing.T) {
+	t.Parallel()
 	pool := testdb.ConnectWith(t, func(s *postgres.Settings) {
 		s.IdleTransactionTimeout = 200 * time.Millisecond
 	})

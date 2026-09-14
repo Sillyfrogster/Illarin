@@ -26,6 +26,7 @@ func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string)
 }
 
 func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	for _, body := range []string{`{"kind":"preset"}`, `{"kind":"preset","app":""}`} {
@@ -43,6 +44,7 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 }
 
 func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
@@ -55,6 +57,7 @@ func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 }
 
 func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	named := map[string][]string{}
@@ -126,6 +129,7 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 }
 
 func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	started := startPreset(t, r, session, "sillytavern")
@@ -137,6 +141,7 @@ func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 }
 
 func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	started := startPreset(t, r, session, "lumiverse")

@@ -21,6 +21,7 @@ type carriedImage struct {
 }
 
 func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	first, second := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
@@ -205,6 +206,7 @@ func archivedCardImages(t *testing.T, archive []byte) []carriedImage {
 }
 
 func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	kept, left := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
@@ -227,6 +229,7 @@ func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 }
 
 func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	kept, left := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
@@ -259,6 +262,7 @@ func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T)
 }
 
 func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
@@ -311,6 +315,7 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 }
 
 func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
+	t.Parallel()
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
@@ -344,6 +349,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 }
 
 func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	mediaID := uploadedImageID(t, r, session, assetID, "expression", httpTestPNG(t, 64, 64))
@@ -361,6 +367,7 @@ func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 }
 
 func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
+	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	savedGallery(t, r, session, assetID, []galleryItem{

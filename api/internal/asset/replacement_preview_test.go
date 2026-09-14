@@ -14,6 +14,7 @@ import (
 )
 
 func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.T) {
+	t.Parallel()
 	parsed := format.Parsed{
 		Kind: "character", Format: "replacing",
 		Header: format.Header{Name: "Wren"},
@@ -72,6 +73,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 }
 
 func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
+	t.Parallel()
 	parsed := format.Parsed{
 		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
@@ -103,6 +105,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 }
 
 func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T) {
+	t.Parallel()
 	parsed := format.Parsed{
 		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
@@ -160,6 +163,7 @@ func hasRole(elements []block.Element, role block.Role) bool {
 }
 
 func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
+	t.Parallel()
 	parsed := format.Parsed{
 		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
@@ -195,6 +199,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 }
 
 func TestReplacementPreviewUsesStableItemIDs(t *testing.T) {
+	t.Parallel()
 	shared, removed, added := block.NewItemID(), block.NewItemID(), block.NewItemID()
 	working := []block.Block{{Elements: []block.Element{{
 		Role: block.RoleGreetings, Type: block.TypeTextSet,
@@ -227,6 +232,7 @@ func TestReplacementPreviewUsesStableItemIDs(t *testing.T) {
 }
 
 func TestReplacementPreviewShowsTheWordingOnBothSides(t *testing.T) {
+	t.Parallel()
 	item := block.NewItemID()
 	working := []block.Block{{Elements: []block.Element{{
 		Role: block.RoleGreetings, Type: block.TypeTextSet,
@@ -247,6 +253,7 @@ func TestReplacementPreviewShowsTheWordingOnBothSides(t *testing.T) {
 }
 
 func TestFilteringSuppliedRolesDoesNotAlterTheStagedBlocks(t *testing.T) {
+	t.Parallel()
 	blocks := []block.Block{{Elements: []block.Element{
 		{Role: block.RolePersonality, Type: block.TypeProse, Content: block.Prose{Text: "Keep"}},
 		{Role: block.RoleDescription, Type: block.TypeProse, Content: block.Prose{Text: "Replace"}},
@@ -261,6 +268,7 @@ func TestFilteringSuppliedRolesDoesNotAlterTheStagedBlocks(t *testing.T) {
 }
 
 func TestReplacementPreviewReportsConflictsWhenEitherSideOmitsContent(t *testing.T) {
+	t.Parallel()
 	baseline := []block.Block{{Elements: []block.Element{{
 		Role: block.RoleDescription, Type: block.TypeProse, Content: block.Prose{Text: "Published"},
 	}}}}
@@ -274,6 +282,7 @@ func TestReplacementPreviewReportsConflictsWhenEitherSideOmitsContent(t *testing
 }
 
 func TestReplacementPreviewReportsAConflictingImageReplacement(t *testing.T) {
+	t.Parallel()
 	public, local, incoming := block.NewItemID(), block.NewItemID(), block.NewItemID()
 	changes := comparePictureSets([]uuid.UUID{local}, []uuid.UUID{incoming})
 	if len(changes) != 2 {
@@ -287,6 +296,7 @@ func TestReplacementPreviewReportsAConflictingImageReplacement(t *testing.T) {
 }
 
 func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
+	t.Parallel()
 	current := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: uuid.New(), Namespace: "extension", Payload: []byte(`{"local":true}`)}}
 	public := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"published":true}`)}}
 	incoming := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"file":true}`)}}
@@ -301,6 +311,7 @@ func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
 }
 
 func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
+	t.Parallel()
 	old := namedReplacementModule{id: "old_character", parsed: format.Parsed{
 		Kind: "character", Format: "old_character", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
@@ -348,6 +359,7 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 }
 
 func TestReplacementPreviewsEveryBuildableKind(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
 		t.Run(kind, func(t *testing.T) {
 			module := kindModule{id: "preview_" + kind, kind: kind}

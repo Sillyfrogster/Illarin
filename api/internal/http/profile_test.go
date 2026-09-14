@@ -28,6 +28,7 @@ type publicProfile struct {
 }
 
 func TestOwnerFillsAPublicProfileAndAVisitorReadsIt(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	saved := saveProfile(t, r, session, `{
@@ -61,6 +62,7 @@ func TestOwnerFillsAPublicProfileAndAVisitorReadsIt(t *testing.T) {
 }
 
 func TestClearingAProfileFieldRemovesItFromPublicView(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	saveProfile(t, r, session, `{
 		"displayName":"Wren Ashdown",
@@ -92,6 +94,7 @@ func TestClearingAProfileFieldRemovesItFromPublicView(t *testing.T) {
 }
 
 func TestPublicContactIsNeverTakenFromASignInAddress(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	saveProfile(t, r, session, `{
@@ -105,6 +108,7 @@ func TestPublicContactIsNeverTakenFromASignInAddress(t *testing.T) {
 }
 
 func TestPublicProfileHidesEverySignInAndAuthorityField(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	saveProfile(t, r, session, `{
 		"displayName":"Wren","biography":"","contactEmail":"hello@example.com","links":[]
@@ -122,6 +126,7 @@ func TestPublicProfileHidesEverySignInAndAuthorityField(t *testing.T) {
 }
 
 func TestAnUnverifiedAccountCannotEditItsPublicProfile(t *testing.T) {
+	t.Parallel()
 	r := newTestRouter(t)
 	session := signUp(t, r, "unverified@example.com", "unverified.one")
 
@@ -134,6 +139,7 @@ func TestAnUnverifiedAccountCannotEditItsPublicProfile(t *testing.T) {
 }
 
 func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	tests := []struct {
 		name string
@@ -181,6 +187,7 @@ func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
 }
 
 func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) {
+	t.Parallel()
 	r, session, _, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 
 	uploaded := send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 400, 400)), session))
@@ -216,6 +223,7 @@ func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) 
 }
 
 func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
+	t.Parallel()
 	r, session, _, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 
 	first := send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 200, 200)), session))
@@ -253,6 +261,7 @@ func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 }
 
 func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
+	t.Parallel()
 	r, session, _, _ := newVerifiedIngestRouterWithPool(t, testRegistry(t))
 
 	send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 200, 200)), session))
@@ -279,6 +288,7 @@ func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
 }
 
 func TestAnAvatarUploadRefusesSomethingThatIsNotAnImage(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 
 	response := send(t, r, authorized(avatarUploadRequest(t, []byte("not a picture")), session))

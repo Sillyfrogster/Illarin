@@ -37,6 +37,7 @@ const samplePack = `{
 }`
 
 func TestPackModuleDeclaresTheLumiverseContract(t *testing.T) {
+	t.Parallel()
 	module := Module{}
 	declaration := module.Declaration()
 	if declaration.ID != ID || declaration.Kind != Kind ||
@@ -68,6 +69,7 @@ func TestPackModuleDeclaresTheLumiverseContract(t *testing.T) {
 }
 
 func TestPackReadsItemsWithoutFetchingImagesAndWritesPreservedFieldsBack(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, []byte(samplePack))
 	if parsed.Header.Name != "Archive companions" ||
 		parsed.Header.CreditedAuthor != "A creator" || parsed.Header.AssetVersion != "2" {
@@ -105,6 +107,7 @@ func TestPackReadsItemsWithoutFetchingImagesAndWritesPreservedFieldsBack(t *test
 }
 
 func TestPackWritesIllarinCoverAndItemImages(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, []byte(samplePack))
 	records := packRecords(t, parsed)
 	mediaID := uuid.New()
@@ -135,6 +138,7 @@ func TestPackWritesIllarinCoverAndItemImages(t *testing.T) {
 }
 
 func TestMalformedOptionalFieldsRoundTripUntilTheirModeledValueChanges(t *testing.T) {
+	t.Parallel()
 	parsed := parse(t, []byte(`{
 		"packName":"Archive companions",
 		"packAuthor":false,

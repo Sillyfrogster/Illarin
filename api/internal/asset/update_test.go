@@ -16,6 +16,7 @@ import (
 )
 
 func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
+	t.Parallel()
 	const initial = `{
 		"schemaVersion":1,
 		"name":"Scripted preset",
@@ -64,6 +65,7 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 }
 
 func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
+	t.Parallel()
 	parsed := format.Parsed{Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}},
@@ -133,6 +135,7 @@ func recordedUpdates(t *testing.T, pool *pgxpool.Pool, assetID uuid.UUID) int {
 }
 
 func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "update.owner")
@@ -179,6 +182,7 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 }
 
 func TestAnUpdateWithoutAChangeOrASummaryIsRefused(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "unchanged.owner")
@@ -214,6 +218,7 @@ func TestAnUpdateWithoutAChangeOrASummaryIsRefused(t *testing.T) {
 }
 
 func TestAPresentationChangePublishesWithoutMovingTheGeneration(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "presentation.owner")
@@ -243,6 +248,7 @@ func TestAPresentationChangePublishesWithoutMovingTheGeneration(t *testing.T) {
 }
 
 func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "waiting.owner")
@@ -285,6 +291,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *
 }
 
 func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	refused := errors.New("delivery refused this update")
@@ -312,6 +319,7 @@ func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
 }
 
 func TestSimultaneousPublicationRecordsOneUpdate(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "simultaneous.owner")
@@ -349,6 +357,7 @@ func TestSimultaneousPublicationRecordsOneUpdate(t *testing.T) {
 }
 
 func TestRestoringEarlierContentPublishesAFurtherUpdate(t *testing.T) {
+	t.Parallel()
 	svc, pool := newTestService(t)
 	ctx := context.Background()
 	owner, id := publishedAsset(t, svc, pool, "restore.owner")

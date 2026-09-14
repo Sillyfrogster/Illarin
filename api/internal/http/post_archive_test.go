@@ -108,6 +108,7 @@ func titlesOf(found postArchive) []string {
 }
 
 func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.March, 1, 9, 0, 0, 0, time.UTC)
@@ -149,6 +150,7 @@ func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
 }
 
 func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	illarin := stack.appBySlug(t, "illarin")
@@ -184,6 +186,7 @@ func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.
 }
 
 func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -244,6 +247,7 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 }
 
 func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 
 	if got := stack.browse(t, "?category=musings"); got.Code != http.StatusNotFound {
@@ -258,6 +262,7 @@ func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
 }
 
 func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -282,6 +287,7 @@ func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
 }
 
 func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -343,6 +349,7 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 }
 
 func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
@@ -361,6 +368,7 @@ func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
 }
 
 func TestAPostCorrectedInPublicRetakesTheLead(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.May, 1, 9, 0, 0, 0, time.UTC)

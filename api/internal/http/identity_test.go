@@ -34,6 +34,7 @@ func startIdentityAsset(
 }
 
 func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
 		t.Run(kind, func(t *testing.T) {
 			r, session := newVerifiedTestRouter(t)
@@ -63,6 +64,7 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
 }
 
 func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	accepted := strings.Repeat("界", 400)
@@ -102,6 +104,7 @@ func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 }
 
 func TestIdentityRequestMustSayWhetherToKeepOrClearTheBlurb(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	if response := saveIdentity(t, r, session, started.ID,

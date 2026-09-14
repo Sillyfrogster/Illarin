@@ -249,6 +249,7 @@ func (s publicationStack) workspace(t *testing.T, session *http.Cookie) publicat
 }
 
 func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 
 	illarin := stack.appBySlug(t, "illarin")
@@ -266,6 +267,7 @@ func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
 }
 
 func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	outsider := stack.member(t, "outsider@example.com", "publication.outsider")
 	illarin := stack.appBySlug(t, "illarin")
@@ -310,6 +312,7 @@ func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T)
 }
 
 func TestTheAuthorityConfiguresOrdersAndRetiresApps(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	illarin := stack.appBySlug(t, "illarin")
@@ -353,6 +356,7 @@ func TestTheAuthorityConfiguresOrdersAndRetiresApps(t *testing.T) {
 }
 
 func TestConfiguringAnAppGrantsNobodyAnything(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	developer := stack.member(t, "developer@example.com", "lumiverse.developer")
 	stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -369,6 +373,7 @@ func TestConfiguringAnAppGrantsNobodyAnything(t *testing.T) {
 }
 
 func TestTheAuthorityRelabelsAndOrdersCategories(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	announcement := stack.categoryBySlug(t, "announcement")
 	article := stack.categoryBySlug(t, "article")
@@ -402,6 +407,7 @@ func TestTheAuthorityRelabelsAndOrdersCategories(t *testing.T) {
 }
 
 func TestAGrantNeedsAVerifiedAccountAnAppAndABackedDefaultCategory(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	stack.member(t, "writer@example.com", "lumiverse.writer")
 	signUp(t, stack.router, "unverified@example.com", "unverified.writer")
@@ -443,6 +449,7 @@ func TestAGrantNeedsAVerifiedAccountAnAppAndABackedDefaultCategory(t *testing.T)
 }
 
 func TestAContributorSeesOnlyTheirOwnEffectiveScope(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.member(t, "scoped@example.com", "scoped.writer")
 	other := stack.member(t, "elsewhere@example.com", "other.writer")
@@ -481,6 +488,7 @@ func TestAContributorSeesOnlyTheirOwnEffectiveScope(t *testing.T) {
 }
 
 func TestSeparatePeopleForOneAppGetSeparateGrants(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	first := stack.member(t, "first@example.com", "first.developer")
 	second := stack.member(t, "second@example.com", "second.developer")
@@ -508,6 +516,7 @@ func TestSeparatePeopleForOneAppGetSeparateGrants(t *testing.T) {
 }
 
 func TestRevocationKeepsTheAccountAndTheGrantRecord(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	stack.member(t, "ended@example.com", "ended.writer")
 	illarin := stack.appBySlug(t, "illarin")
@@ -557,6 +566,7 @@ func TestRevocationKeepsTheAccountAndTheGrantRecord(t *testing.T) {
 }
 
 func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.member(t, "bounded@example.com", "bounded.writer")
 	illarin := stack.appBySlug(t, "illarin")
@@ -601,6 +611,7 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 }
 
 func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	stack.member(t, "audited@example.com", "audited.writer")
 	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -672,6 +683,7 @@ func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 }
 
 func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
+	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.member(t, "named@example.com", "named.writer")
 	illarin := stack.appBySlug(t, "illarin")

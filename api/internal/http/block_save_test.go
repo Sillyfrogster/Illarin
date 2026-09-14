@@ -33,6 +33,7 @@ type saveBlockBody struct {
 }
 
 func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
 	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
@@ -73,6 +74,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 }
 
 func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
 	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
@@ -211,6 +213,7 @@ func fetchStartedAsset(
 }
 
 func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 
@@ -253,6 +256,7 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 }
 
 func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -281,6 +285,7 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 }
 
 func TestSavingMalformedElementContentNamesWhatMustChange(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -300,6 +305,7 @@ func TestSavingMalformedElementContentNamesWhatMustChange(t *testing.T) {
 }
 
 func TestSavingAnElementOutsideTheChosenLayoutNamesTheAvailableSlots(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -319,6 +325,7 @@ func TestSavingAnElementOutsideTheChosenLayoutNamesTheAvailableSlots(t *testing.
 }
 
 func TestSavingARoleOnTheWrongElementTypeNamesTheRequiredType(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -339,6 +346,7 @@ func TestSavingARoleOnTheWrongElementTypeNamesTheRequiredType(t *testing.T) {
 }
 
 func TestASecondElementForASingularRoleIsRefusedWhereItIsCreated(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -358,6 +366,7 @@ func TestASecondElementForASingularRoleIsRefusedWhereItIsCreated(t *testing.T) {
 }
 
 func TestAPinnedElementCannotBeRemovedFromItsBlock(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -377,6 +386,7 @@ func TestAPinnedElementCannotBeRemovedFromItsBlock(t *testing.T) {
 }
 
 func TestSavingAnElementWithAnUnknownDisplayNamesTheClosedChoices(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -396,6 +406,7 @@ func TestSavingAnElementWithAnUnknownDisplayNamesTheClosedChoices(t *testing.T) 
 }
 
 func TestSavingTextWithoutDisplayNamesTheClosedChoices(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -415,6 +426,7 @@ func TestSavingTextWithoutDisplayNamesTheClosedChoices(t *testing.T) {
 }
 
 func TestSavingDuplicateElementIdentityNamesWhatMustChange(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -434,6 +446,7 @@ func TestSavingDuplicateElementIdentityNamesWhatMustChange(t *testing.T) {
 }
 
 func TestSavingAReplacementElementIdentityIsRefused(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -453,6 +466,7 @@ func TestSavingAReplacementElementIdentityIsRefused(t *testing.T) {
 }
 
 func TestMalformedElementIdentityNamesTheRequiredShape(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -472,6 +486,7 @@ func TestMalformedElementIdentityNamesTheRequiredShape(t *testing.T) {
 }
 
 func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	messagesBlock := blockNamed(t, started.Blocks, "messages")
@@ -502,6 +517,7 @@ func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
 }
 
 func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -520,6 +536,7 @@ func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
 }
 
 func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -542,6 +559,7 @@ func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
 }
 
 func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	coreBlock := blockNamed(t, started.Blocks, "character_core")
@@ -570,6 +588,7 @@ func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
 }
 
 func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) {
+	t.Parallel()
 	r, session := newVerifiedTestRouter(t)
 	started := startCharacter(t, r, session)
 	messagesBlock := blockNamed(t, started.Blocks, "messages")
@@ -592,6 +611,7 @@ func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) 
 }
 
 func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(
 		t, 1<<20, DefaultDeadlines(),
 	)
@@ -643,6 +663,7 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 }
 
 func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
+	t.Parallel()
 	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
 	started := startPreset(t, r, session, "lumiverse")
 	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
