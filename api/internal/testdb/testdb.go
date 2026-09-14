@@ -2,6 +2,8 @@ package testdb
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"testing"
 
@@ -9,77 +11,57 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var immutableTables = []string{"download_events", "migration_legacy_counters"}
-
-const seeded = `
-	truncate publication_apps, publication_categories cascade;
-
-	insert into publication_apps (id, slug, name, home_url, position)
-	values ('9d3f1c00-0000-4000-8000-000000000001', 'illarin', 'Illarin',
-	        'https://illarin.xyz', 0);
-
-	insert into publication_categories (id, slug, label, position)
-	values ('9d3f1c00-0000-4000-8000-000000000011', 'announcement', 'Announcement', 0),
-	       ('9d3f1c00-0000-4000-8000-000000000012', 'release', 'Release', 1),
-	       ('9d3f1c00-0000-4000-8000-000000000013', 'article', 'Article', 2);
-`
-
+// Connect gives the test a migrated database of its own, dropped when the test passes
 func Connect(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	return ConnectWith(t, nil)
 }
 
+// ConnectWith is Connect with the pool settings adjusted before the pool opens
 func ConnectWith(t *testing.T, tune func(*postgres.Settings)) *pgxpool.Pool {
 	t.Helper()
 
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
+	address := os.Getenv("TEST_DATABASE_URL")
+	if address == "" {
 		t.Skip("TEST_DATABASE_URL is not set")
 	}
+	ctx := context.Background()
 
-	settings := postgres.DefaultSettings(url)
+	server, err := serverAt(ctx, address)
+	if err != nil {
+		t.Fatalf("prepare the test server: %v", err)
+	}
+	name := "illarin_test_" + randomSuffix()
+	if err := server.create(ctx, name); err != nil {
+		t.Fatalf("create the test database: %v", err)
+	}
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("kept database %s for inspection", name)
+			return
+		}
+		if err := server.drop(context.Background(), name); err != nil {
+			t.Errorf("drop the test database: %v", err)
+		}
+	})
+
+	settings := postgres.DefaultSettings(server.databaseURL(name))
+	settings.MinConns = 0
 	if tune != nil {
 		tune(&settings)
 	}
-
-	pool, err := postgres.NewPool(context.Background(), settings)
+	pool, err := postgres.NewPool(ctx, settings)
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	t.Cleanup(pool.Close)
-
-	for _, frozen := range immutableTables {
-		if _, err = pool.Exec(context.Background(),
-			"alter table "+frozen+" disable trigger user"); err != nil {
-			t.Fatalf("allow %s test reset: %v", frozen, err)
-		}
-	}
-	_, truncateErr := pool.Exec(context.Background(),
-		`truncate migration_exceptions, download_events, ingest_operations,
-		          assets, asset_revisions, asset_media,
-		          migration_legacy_counters, migration_preserved_records,
-		          blob_tombstones, blob_sweep_marks, blobs,
-		          link_rate_limits, instance_access_tokens, instance_refresh_history,
-		          link_authorizations, link_requests, linked_instances,
-		          password_reset_tokens, oauth_states, oauth_identities, sessions,
-		          email_verification_tokens,
-		          retired_handles, users cascade`)
-	var enableErr error
-	for _, frozen := range immutableTables {
-		if _, err := pool.Exec(context.Background(),
-			"alter table "+frozen+" enable trigger user"); err != nil && enableErr == nil {
-			enableErr = err
-		}
-	}
-	if truncateErr != nil {
-		t.Fatalf("reset test database: %v", truncateErr)
-	}
-	if enableErr != nil {
-		t.Fatalf("restore table immutability: %v", enableErr)
-	}
-	if _, err := pool.Exec(context.Background(), seeded); err != nil {
-		t.Fatalf("restore the seeded publication rows: %v", err)
-	}
-
 	return pool
+}
+
+func randomSuffix() string {
+	var raw [8]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(raw[:])
 }
