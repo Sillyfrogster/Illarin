@@ -2411,7 +2411,9 @@ type AssetDetail struct {
 	// UnpublishedChanges Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset.
 	UnpublishedChanges *bool                 `json:"unpublishedChanges,omitempty"`
 	Visibility         AssetDetailVisibility `json:"visibility"`
-	Withhold           *AssetWithhold        `json:"withhold,omitempty"`
+
+	// Withhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
+	Withhold *AssetWithhold `json:"withhold,omitempty"`
 
 	// WorkingCopyVersion Only returned with the owner's working copy or draft, from the same read snapshot
 	WorkingCopyVersion *int64 `json:"workingCopyVersion,omitempty"`
@@ -2754,9 +2756,8 @@ type AssetVersionWithdrawalRequest struct {
 	Explanation string `json:"explanation"`
 }
 
-// AssetWithhold defines model for AssetWithhold.
+// AssetWithhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
 type AssetWithhold struct {
-	Actor  string    `json:"actor"`
 	At     time.Time `json:"at"`
 	Reason string    `json:"reason"`
 }
@@ -2782,7 +2783,9 @@ type BrowseAsset struct {
 
 	// OwnerState Present only on the owner's own listing.
 	OwnerState *BrowseAssetOwnerState `json:"ownerState,omitempty"`
-	Withhold   *AssetWithhold         `json:"withhold,omitempty"`
+
+	// Withhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
+	Withhold *AssetWithhold `json:"withhold,omitempty"`
 }
 
 // BrowseAssetKind defines model for BrowseAsset.Kind.

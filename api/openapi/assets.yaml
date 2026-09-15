@@ -2670,15 +2670,15 @@ components:
           minLength: 1
     AssetWithhold:
       type: object
+      description: >-
+        Why and when Illarin staff withheld the asset, as its owner reads it.
+        It never names the staff member who acted.
       additionalProperties: false
       required:
         - reason
-        - actor
         - at
       properties:
         reason:
-          type: string
-        actor:
           type: string
         at:
           type: string

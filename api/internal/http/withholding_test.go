@@ -116,7 +116,7 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 		t.Fatalf("decode owner page: %v", err)
 	}
 	if page.Withhold == nil || page.Withhold.Reason != "Copyright report under review" ||
-		page.Withhold.Actor != "verified.creator" || page.Withhold.At.IsZero() {
+		page.Withhold.At.IsZero() {
 		t.Fatalf("withhold shown to owner = %+v", page.Withhold)
 	}
 

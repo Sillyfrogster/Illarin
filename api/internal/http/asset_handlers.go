@@ -770,7 +770,7 @@ func toAPIWithhold(found *asset.Withhold) *AssetWithhold {
 	if found == nil {
 		return nil
 	}
-	return &AssetWithhold{Reason: found.Reason, Actor: found.Actor, At: found.At}
+	return &AssetWithhold{Reason: found.Reason, At: found.At}
 }
 
 func (h *Handlers) ListMedia(c *gin.Context, id types.UUID) {

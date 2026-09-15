@@ -3498,9 +3498,9 @@ export interface components {
     WithholdAssetRequest: {
       reason: string;
     };
+    /** @description Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted. */
     AssetWithhold: {
       reason: string;
-      actor: string;
       /** Format: date-time */
       at: string;
     };

@@ -51,11 +51,10 @@ select a.id, a.kind, revision.format, a.origin_format,
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.kind, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason, actor.username as withheld_by
+       a.discovery, a.withheld_at, a.withheld_reason
   from assets a
   left join asset_projections projection on projection.asset_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join users actor on actor.id = a.withheld_by
   left join asset_media cover
     on cover.id = a.cover_media_id and cover.asset_id = a.id
    and cover.is_current
@@ -220,10 +219,9 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        coalesce(revision.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at, actor.username as withheld_by
+       a.withheld_reason, a.withheld_at
   from assets a
   left join users owner on owner.id = a.owner_id
-  left join users actor on actor.id = a.withheld_by
   left join asset_revisions revision on revision.id = a.current_revision_id
  where a.id = $1
    and a.deleted_at is null

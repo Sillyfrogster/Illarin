@@ -168,7 +168,7 @@ function Withheld({
         {withhold.reason}
       </p>
       <p className="mt-1 font-ui text-label text-mute">
-        @{withhold.actor} ·{" "}
+        Illarin staff ·{" "}
         <time dateTime={withhold.at}>
           {new Date(withhold.at).toLocaleString("en-GB", {
             dateStyle: "medium",

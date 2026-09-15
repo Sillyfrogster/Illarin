@@ -38,7 +38,6 @@ type assetPageResponse struct {
 	Visibility string  `json:"visibility"`
 	Withhold   *struct {
 		Reason string    `json:"reason"`
-		Actor  string    `json:"actor"`
 		At     time.Time `json:"at"`
 	} `json:"withhold"`
 }
