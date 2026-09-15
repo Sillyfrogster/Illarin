@@ -22,6 +22,7 @@
     "@vengeance-ui": "https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json",
     "@cult-ui": "https://cult-ui.com/r/{name}.json",
     "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
-    "@diceui": "https://diceui.com/r/{style}/{name}.json"
+    "@diceui": "https://diceui.com/r/{style}/{name}.json",
+    "@watermelon": "https://registry.watermelon.sh/r/{name}.json"
   }
 }
