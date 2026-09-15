@@ -11,14 +11,14 @@ import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { arrivedAgo, notificationWords } from "@/lib/notification-inbox";
 
-const TAKEN = "bg-stop-wash text-stop";
-const GIVEN_BACK = "bg-accent-wash text-accent";
+const TAKEN_TONE = "bg-stop-wash text-stop";
+const GIVEN_BACK_TONE = "bg-accent-wash text-accent";
 
 const MARKS = {
-  asset_withheld: { icon: LockKeyhole, tone: TAKEN },
-  asset_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK },
-  profile_restricted: { icon: ShieldOff, tone: TAKEN },
-  profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK },
+  asset_withheld: { icon: LockKeyhole, tone: TAKEN_TONE },
+  asset_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
+  profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },
+  profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
 
 /** One inbox entry, tinted while unread, that opens what it is about when it has somewhere to go. */
