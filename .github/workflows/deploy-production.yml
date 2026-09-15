@@ -31,7 +31,7 @@ jobs:
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Check out the selected default-branch commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare the production SSH identity
         run: |
