@@ -26,8 +26,9 @@ const WATCH_LIMIT = 20;
 
 export function GetAsset({
   installedAppVersions = [],
+  sendable,
   ...props
-}: AssetChooserProps & { installedAppVersions?: string[] }) {
+}: AssetChooserProps & { installedAppVersions?: string[]; sendable: boolean }) {
   const {
     assetId,
     kind,
@@ -60,12 +61,12 @@ export function GetAsset({
   }, [assetId]);
 
   useEffect(() => {
-    if (!account) {
+    if (!account || !sendable) {
       setInstances([]);
       return;
     }
     void read();
-  }, [account, read]);
+  }, [account, sendable, read]);
 
   const waiting = instances.some((one) => isWaiting(one.delivery));
   useEffect(() => {

@@ -8,6 +8,7 @@ import type {
 } from "@/lib/api/query";
 import {
   appLabel,
+  canSendAsset,
   deliveryDestinations,
   deliveryFailureLine,
   downloadAddress,
@@ -57,6 +58,17 @@ function instance(over: Partial<AssetInstance> = {}): AssetInstance {
     ...over,
   };
 }
+
+test("only a published asset that staff have not withheld can be sent to an installation", () => {
+  const withhold = {
+    reason: "Copyright report under review",
+    actor: "night.staff",
+    at: "2026-09-14T09:00:00Z",
+  };
+  expect(canSendAsset({ lifecycle: "published" })).toBe(true);
+  expect(canSendAsset({ lifecycle: "published", withhold })).toBe(false);
+  expect(canSendAsset({ lifecycle: "draft" })).toBe(false);
+});
 
 test("the recommended format leads and every other format follows it", () => {
   const choices = formatChoices({

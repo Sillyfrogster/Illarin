@@ -6,6 +6,7 @@ import { ChipSet } from "@/components/ui/Chip";
 import { Field, TextArea } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import type { AssetDetail } from "@/lib/api/query";
+import { canSendAsset } from "@/lib/asset-delivery";
 import { assetDisplayName } from "@/lib/asset-name";
 import { cn } from "@/lib/cn";
 import { protectedAppLabel } from "@/lib/protected-apps";
@@ -77,7 +78,8 @@ export function AssetHeader({
     linkedInstallOnly: asset.linkedInstallOnly,
     original: asset.original,
   };
-  const download = <GetAsset {...chooser} />;
+  const sendable = canSendAsset(asset);
+  const download = <GetAsset {...chooser} sendable={sendable} />;
 
   return (
     <div className={shellClassName}>
@@ -299,6 +301,7 @@ export function AssetHeader({
               <GetAsset
                 {...chooser}
                 installedAppVersions={asset.installedAppVersions}
+                sendable={sendable}
               />
             </div>
           )}
