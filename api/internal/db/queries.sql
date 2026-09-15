@@ -292,20 +292,28 @@ with withheld as (
            updated_at = now()
      where asset.id = $1 and asset.lifecycle = 'published'
        and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
      where delivery.asset_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
-select exists(select 1 from withheld) as withheld;
+select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
+  from withheld
+  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id;
 
--- name: ClearAssetWithhold :execrows
-update assets
-   set withheld_at = null, withheld_by = null, withheld_reason = null,
-       updated_at = now()
- where id = $1 and withheld_at is not null and deleted_at is null;
+-- name: ClearAssetWithhold :one
+with cleared as (
+    update assets as asset
+       set withheld_at = null, withheld_by = null, withheld_reason = null,
+           updated_at = now()
+     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+)
+select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id;
 
 -- name: AssetDeletionState :one
 select withheld_at, deleted_at

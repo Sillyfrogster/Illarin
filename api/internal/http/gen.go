@@ -975,6 +975,24 @@ func (e MediaRole) Valid() bool {
 	}
 }
 
+// Defines values for NotificationType.
+const (
+	AssetRestored NotificationType = "asset_restored"
+	AssetWithheld NotificationType = "asset_withheld"
+)
+
+// Valid indicates whether the value is a known member of the NotificationType enum.
+func (e NotificationType) Valid() bool {
+	switch e {
+	case AssetRestored:
+		return true
+	case AssetWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NsfwVisibilityRequestVisibility.
 const (
 	NsfwVisibilityRequestVisibilityBlurred NsfwVisibilityRequestVisibility = "blurred"
@@ -3342,6 +3360,47 @@ type NamedPrompt struct {
 	Name string             `json:"name"`
 }
 
+// Notification One notification in the signed-in account's inbox. Its words are kept as they read when it arrived, so a later rename does not change them.
+type Notification struct {
+	Asset *NotificationAsset `json:"asset,omitempty"`
+
+	// CreatedAt When the change it describes happened
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// ReadAt When the account opened it. Absent while it is unread.
+	ReadAt *time.Time `json:"readAt,omitempty"`
+
+	// Reason Why staff withheld the asset. Present on asset_withheld.
+	Reason *string `json:"reason,omitempty"`
+
+	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+	Type NotificationType `json:"type"`
+}
+
+// NotificationAsset defines model for NotificationAsset.
+type NotificationAsset struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name The asset's name when the notification arrived
+	Name string `json:"name"`
+}
+
+// NotificationCursor defines model for NotificationCursor.
+type NotificationCursor struct {
+	Before   time.Time          `json:"before"`
+	BeforeId openapi_types.UUID `json:"beforeId"`
+}
+
+// NotificationList defines model for NotificationList.
+type NotificationList struct {
+	Items      []Notification      `json:"items"`
+	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
+}
+
+// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+type NotificationType string
+
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.
 type NsfwVisibilityRequest struct {
 	Visibility NsfwVisibilityRequestVisibility `json:"visibility"`
@@ -4703,6 +4762,11 @@ type TypedValue struct {
 	Text    *string   `json:"text,omitempty"`
 }
 
+// UnreadNotifications defines model for UnreadNotifications.
+type UnreadNotifications struct {
+	Count int `json:"count"`
+}
+
 // UpdateAssetUpdateDestinationRequest defines model for UpdateAssetUpdateDestinationRequest.
 type UpdateAssetUpdateDestinationRequest struct {
 	Address *string `json:"address,omitempty"`
@@ -5216,6 +5280,17 @@ type DenyLinkRequestParams struct {
 
 // DenyLinkRequestParamsXIllarinRequest defines parameters for DenyLinkRequest.
 type DenyLinkRequestParamsXIllarinRequest string
+
+// ListNotificationsParams defines parameters for ListNotifications.
+type ListNotificationsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Before When the last notification on the previous page arrived. Send it with beforeId or not at all.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+
+	// BeforeId The id of that same notification
+	BeforeId *openapi_types.UUID `form:"beforeId,omitempty" json:"beforeId,omitempty"`
+}
 
 // ListPublishedPostsParams defines parameters for ListPublishedPosts.
 type ListPublishedPostsParams struct {
@@ -6257,6 +6332,18 @@ type ServerInterface interface {
 
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
+
+	// (GET /v1/notifications)
+	ListNotifications(c *gin.Context, params ListNotificationsParams)
+
+	// (POST /v1/notifications/read)
+	MarkAllNotificationsRead(c *gin.Context)
+
+	// (GET /v1/notifications/unread)
+	CountUnreadNotifications(c *gin.Context)
+
+	// (POST /v1/notifications/{id}/read)
+	MarkNotificationRead(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/post-apps)
 	ListPostApps(c *gin.Context)
@@ -9343,6 +9430,100 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ListNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ListNotifications(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", c.Request.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter before: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "beforeId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "beforeId", c.Request.URL.Query(), &params.BeforeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter beforeId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListNotifications(c, params)
+}
+
+// MarkAllNotificationsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNotificationsRead(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MarkAllNotificationsRead(c)
+}
+
+// CountUnreadNotifications operation middleware
+func (siw *ServerInterfaceWrapper) CountUnreadNotifications(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CountUnreadNotifications(c)
+}
+
+// MarkNotificationRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNotificationRead(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MarkNotificationRead(c, id)
+}
+
 // ListPostApps operation middleware
 func (siw *ServerInterfaceWrapper) ListPostApps(c *gin.Context) {
 
@@ -11154,6 +11335,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.DisableAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.VerifyAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/secret", wrapper.RotateAssetUpdateDestinationSecret)
+	router.GET(options.BaseURL+"/v1/notifications", wrapper.ListNotifications)
+	router.GET(options.BaseURL+"/v1/notifications/unread", wrapper.CountUnreadNotifications)
+	router.POST(options.BaseURL+"/v1/notifications/read", wrapper.MarkAllNotificationsRead)
+	router.POST(options.BaseURL+"/v1/notifications/:id/read", wrapper.MarkNotificationRead)
 	router.DELETE(options.BaseURL+"/v1/account/discord", wrapper.DetachDiscord)
 	router.PATCH(options.BaseURL+"/v1/account/email", wrapper.ChangeUnverifiedEmail)
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)

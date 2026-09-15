@@ -46,7 +46,7 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	t.Parallel()
 	err := Register(
 		gin.New(),
-		NewHandlers(nil, nil, nil, nil, nil, nil, 1<<20),
+		NewHandlers(nil, nil, nil, nil, nil, nil, nil, 1<<20),
 		Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
 		func(context.Context) error { return nil },
 	)

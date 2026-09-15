@@ -121,6 +121,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The signed-in account's notifications, newest first. Send the cursor from the previous page to read the next one. */
+    get: operations["listNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/unread": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description How many notifications the signed-in account has not opened. */
+    get: operations["countUnreadNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Mark every notification the signed-in account has as read. */
+    post: operations["markAllNotificationsRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/{id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Mark one of the signed-in account's notifications as read. */
+    post: operations["markNotificationRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/discord": {
     parameters: {
       query?: never;
@@ -3735,6 +3803,49 @@ export interface components {
         recorded?: string;
       }[];
     };
+    /** @description One notification in the signed-in account's inbox. Its words are kept as they read when it arrived, so a later rename does not change them. */
+    Notification: {
+      /** Format: uuid */
+      id: string;
+      type: components["schemas"]["NotificationType"];
+      /**
+       * Format: date-time
+       * @description When the change it describes happened
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description When the account opened it. Absent while it is unread.
+       */
+      readAt?: string;
+      asset?: components["schemas"]["NotificationAsset"];
+      /** @description Why staff withheld the asset. Present on asset_withheld. */
+      reason?: string;
+    };
+    /**
+     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+     * @enum {string}
+     */
+    NotificationType: "asset_withheld" | "asset_restored";
+    NotificationAsset: {
+      /** Format: uuid */
+      id: string;
+      /** @description The asset's name when the notification arrived */
+      name: string;
+    };
+    NotificationList: {
+      items: components["schemas"]["Notification"][];
+      nextCursor?: components["schemas"]["NotificationCursor"];
+    };
+    NotificationCursor: {
+      /** Format: date-time */
+      before: string;
+      /** Format: uuid */
+      beforeId: string;
+    };
+    UnreadNotifications: {
+      count: number;
+    };
     /** @enum {string} */
     AssetUpdateDestinationKind: "webhook" | "discord";
     AssetUpdateDestinationChoice: {
@@ -5170,6 +5281,132 @@ export interface operations {
       };
       /** @description The destination changed; inspect it before trying again */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listNotifications: {
+    parameters: {
+      query?: {
+        limit?: number;
+        /** @description When the last notification on the previous page arrived. Send it with beforeId or not at all. */
+        before?: string;
+        /** @description The id of that same notification */
+        beforeId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description One page of the inbox */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationList"];
+        };
+      };
+      /** @description The limit is out of range, or only half a cursor was sent */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  countUnreadNotifications: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The unread count */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnreadNotifications"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  markAllNotificationsRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Every notification is read */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  markNotificationRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The notification is read */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has no such notification */
+      404: {
         headers: {
           [name: string]: unknown;
         };

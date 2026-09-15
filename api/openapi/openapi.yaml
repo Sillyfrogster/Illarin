@@ -29,6 +29,14 @@ paths:
     $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations~1{id}~1verification
   /v1/account/update-destinations/{id}/secret:
     $ref: ./asset-destinations.yaml#/paths/~1v1~1account~1update-destinations~1{id}~1secret
+  /v1/notifications:
+    $ref: ./notifications.yaml#/paths/~1v1~1notifications
+  /v1/notifications/unread:
+    $ref: ./notifications.yaml#/paths/~1v1~1notifications~1unread
+  /v1/notifications/read:
+    $ref: ./notifications.yaml#/paths/~1v1~1notifications~1read
+  /v1/notifications/{id}/read:
+    $ref: ./notifications.yaml#/paths/~1v1~1notifications~1{id}~1read
   /v1/account/discord:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1discord
   /v1/account/email:
@@ -626,3 +634,15 @@ components:
       $ref: ./assets.yaml#/components/schemas/ProtectionMismatchList
     PromptCorrespondenceRequest:
       $ref: ./assets.yaml#/components/schemas/PromptCorrespondenceRequest
+    Notification:
+      $ref: ./notifications.yaml#/components/schemas/Notification
+    NotificationType:
+      $ref: ./notifications.yaml#/components/schemas/NotificationType
+    NotificationAsset:
+      $ref: ./notifications.yaml#/components/schemas/NotificationAsset
+    NotificationList:
+      $ref: ./notifications.yaml#/components/schemas/NotificationList
+    NotificationCursor:
+      $ref: ./notifications.yaml#/components/schemas/NotificationCursor
+    UnreadNotifications:
+      $ref: ./notifications.yaml#/components/schemas/UnreadNotifications

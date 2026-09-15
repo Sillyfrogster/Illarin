@@ -20,6 +20,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
@@ -160,8 +161,13 @@ func newTestHandlersWithDelivery(
 		svc, accounts, links, deliveries,
 		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
 		updateDestinations,
+		newTestNotifications(pool),
 		maxUploadBytes,
 	)
+}
+
+func newTestNotifications(pool *pgxpool.Pool) *notification.Service {
+	return notification.NewService(pool)
 }
 
 func newTestRouterWithDiscord(
@@ -200,7 +206,7 @@ func newDiscordTestStack(
 	assets.OnUpdatePublished(updateDestinations.Announce)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
-		newTestPublicationService(pool, blob), updateDestinations, 1<<20,
+		newTestPublicationService(pool, blob), updateDestinations, newTestNotifications(pool), 1<<20,
 	)
 	return registerTestRouter(t, handlers, DefaultDeadlines()), outbox, pool
 }

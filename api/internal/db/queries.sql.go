@@ -744,19 +744,29 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 	return items, nil
 }
 
-const clearAssetWithhold = `-- name: ClearAssetWithhold :execrows
-update assets
-   set withheld_at = null, withheld_by = null, withheld_reason = null,
-       updated_at = now()
- where id = $1 and withheld_at is not null and deleted_at is null
+const clearAssetWithhold = `-- name: ClearAssetWithhold :one
+with cleared as (
+    update assets as asset
+       set withheld_at = null, withheld_by = null, withheld_reason = null,
+           updated_at = now()
+     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+)
+select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
 `
 
-func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, clearAssetWithhold, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+type ClearAssetWithholdRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (ClearAssetWithholdRow, error) {
+	row := q.db.QueryRow(ctx, clearAssetWithhold, id)
+	var i ClearAssetWithholdRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
 }
 
 const clearPendingEmailCopies = `-- name: ClearPendingEmailCopies :exec
@@ -4142,14 +4152,16 @@ with withheld as (
            updated_at = now()
      where asset.id = $1 and asset.lifecycle = 'published'
        and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
      where delivery.asset_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
-select exists(select 1 from withheld) as withheld
+select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
+  from withheld
+  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
 `
 
 type WithholdAssetParams struct {
@@ -4158,9 +4170,14 @@ type WithholdAssetParams struct {
 	WithheldReason pgtype.Text
 }
 
-func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (bool, error) {
+type WithholdAssetRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (WithholdAssetRow, error) {
 	row := q.db.QueryRow(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	var withheld bool
-	err := row.Scan(&withheld)
-	return withheld, err
+	var i WithholdAssetRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
 }

@@ -396,6 +396,95 @@ paths:
           description: No destination belonging to this creator
         '409':
           description: The destination changed; inspect it before trying again
+  /v1/notifications:
+    get:
+      operationId: listNotifications
+      description: >-
+        The signed-in account's notifications, newest first. Send the cursor
+        from the previous page to read the next one.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: before
+          in: query
+          description: >-
+            When the last notification on the previous page arrived. Send it
+            with beforeId or not at all.
+          schema:
+            type: string
+            format: date-time
+        - name: beforeId
+          in: query
+          description: The id of that same notification
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: One page of the inbox
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+        '400':
+          description: The limit is out of range, or only half a cursor was sent
+        '401':
+          description: No account is signed in
+  /v1/notifications/unread:
+    get:
+      operationId: countUnreadNotifications
+      description: How many notifications the signed-in account has not opened.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The unread count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadNotifications'
+        '401':
+          description: No account is signed in
+  /v1/notifications/read:
+    post:
+      operationId: markAllNotificationsRead
+      description: Mark every notification the signed-in account has as read.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '204':
+          description: Every notification is read
+        '401':
+          description: No account is signed in
+  /v1/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      description: Mark one of the signed-in account's notifications as read.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The notification is read
+        '401':
+          description: No account is signed in
+        '404':
+          description: The signed-in account has no such notification
   /v1/account/discord:
     delete:
       operationId: detachDiscord
@@ -9223,6 +9312,85 @@ components:
                   carries none
                 type: string
                 format: uuid
+    Notification:
+      type: object
+      description: >-
+        One notification in the signed-in account's inbox. Its words are kept as
+        they read when it arrived, so a later rename does not change them.
+      required:
+        - id
+        - type
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the change it describes happened
+        readAt:
+          type: string
+          format: date-time
+          description: When the account opened it. Absent while it is unread.
+        asset:
+          $ref: '#/components/schemas/NotificationAsset'
+        reason:
+          type: string
+          description: Why staff withheld the asset. Present on asset_withheld.
+    NotificationType:
+      type: string
+      description: >-
+        asset_withheld and asset_restored say that Illarin staff withheld or
+        restored one of the account's assets.
+      enum:
+        - asset_withheld
+        - asset_restored
+    NotificationAsset:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The asset's name when the notification arrived
+    NotificationList:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        nextCursor:
+          $ref: '#/components/schemas/NotificationCursor'
+    NotificationCursor:
+      type: object
+      required:
+        - before
+        - beforeId
+      properties:
+        before:
+          type: string
+          format: date-time
+        beforeId:
+          type: string
+          format: uuid
+    UnreadNotifications:
+      type: object
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          minimum: 0
     AssetUpdateDestinationKind:
       type: string
       enum:

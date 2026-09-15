@@ -496,6 +496,25 @@ type MigrationStagedMedium struct {
 	StagedAt pgtype.Timestamptz
 }
 
+type Notification struct {
+	ID        pgtype.UUID
+	AccountID pgtype.UUID
+	Type      string
+	AssetID   pgtype.UUID
+	Words     []byte
+	CreatedAt pgtype.Timestamptz
+	ReadAt    pgtype.Timestamptz
+}
+
+type NotificationEvent struct {
+	ID         pgtype.UUID
+	Type       string
+	AccountID  pgtype.UUID
+	AssetID    pgtype.UUID
+	Words      []byte
+	RecordedAt pgtype.Timestamptz
+}
+
 type OauthIdentity struct {
 	UserID        pgtype.UUID
 	Provider      string

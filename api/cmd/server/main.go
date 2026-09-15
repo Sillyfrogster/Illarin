@@ -24,6 +24,7 @@ import (
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
@@ -150,7 +151,20 @@ func run() error {
 	svc.OnUpdatePublished(updateDestinations.Announce)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	background.Add(7)
+	notifications := notification.NewService(pool)
+	background.Add(9)
+	go func() {
+		defer background.Done()
+		notifications.RunFanOut(runtimeContext, func(err error) {
+			log.Printf("notification fan-out: %v", err)
+		})
+	}()
+	go func() {
+		defer background.Done()
+		notifications.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("notification sweeper: %v", err)
+		})
+	}()
 	go func() {
 		defer background.Done()
 		updateDestinations.RunSweeper(runtimeContext, func(err error) {
@@ -196,7 +210,9 @@ func run() error {
 
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(svc, accounts, links, deliveries, publications, updateDestinations, cfg.MaxUploadBytes)
+	handlers := apihttp.NewHandlers(
+		svc, accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
+	)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err

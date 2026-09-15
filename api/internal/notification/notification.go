@@ -1,0 +1,47 @@
+package notification
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+)
+
+// Type names one kind of notification in the closed set Illarin sends.
+type Type string
+
+const (
+	AssetWithheld Type = "asset_withheld"
+	AssetRestored Type = "asset_restored"
+)
+
+// Words is what a notification shows, kept as it read when the change happened.
+type Words struct {
+	AssetName string `json:"assetName,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+// Event is one change an account should hear about.
+type Event struct {
+	Type    Type
+	Account uuid.UUID
+	Asset   *uuid.UUID
+	Words   Words
+}
+
+// Record writes the event in the caller's transaction, so it exists exactly when the change commits.
+func Record(ctx context.Context, tx pgx.Tx, event Event) error {
+	words, err := json.Marshal(event.Words)
+	if err != nil {
+		return fmt.Errorf("encode the notification's words: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into notification_events (id, type, account_id, asset_id, words)
+		values ($1, $2, $3, $4, $5)
+	`, uuid.New(), event.Type, event.Account, event.Asset, words); err != nil {
+		return fmt.Errorf("record a notification event: %w", err)
+	}
+	return nil
+}
