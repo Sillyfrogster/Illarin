@@ -71,6 +71,86 @@ func TestRestoringAWithheldAssetTellsItsOwnerItIsBack(t *testing.T) {
 	}
 }
 
+func TestRestrictingAProfileTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
+	t.Parallel()
+	s := newInboxStack(t)
+	s.restrictProfile(t, "Impersonating another creator")
+
+	if waiting := s.inbox(t, s.creator, ""); len(waiting.Items) != 0 {
+		t.Fatalf("recording put %d entries in the inbox before the fan-out ran", len(waiting.Items))
+	}
+	s.fanOut(t, time.Now())
+
+	page := s.inbox(t, s.creator, "")
+	if len(page.Items) != 1 {
+		t.Fatalf("inbox has %d entries, want 1", len(page.Items))
+	}
+	entry := page.Items[0]
+	if entry.Type != "profile_restricted" || entry.Asset != nil ||
+		entry.Reason != "Impersonating another creator" || entry.ReadAt != nil || entry.CreatedAt.IsZero() {
+		t.Fatalf("restricted entry = %+v", entry)
+	}
+	if staffInbox := s.inbox(t, s.staff, ""); len(staffInbox.Items) != 0 {
+		t.Fatalf("the staff member who acted has %d entries, want none", len(staffInbox.Items))
+	}
+}
+
+func TestRestoringAProfileTellsItsOwnerItIsTheirsToEditAgain(t *testing.T) {
+	t.Parallel()
+	s := newInboxStack(t)
+	s.restrictProfile(t, "Impersonating another creator")
+	if got := s.restoreProfile(t); got != http.StatusNoContent {
+		t.Fatalf("restore status = %d, want 204", got)
+	}
+	if got := s.restoreProfile(t); got != http.StatusNotFound {
+		t.Fatalf("restoring an unrestricted profile = %d, want 404", got)
+	}
+	s.fanOut(t, time.Now())
+
+	page := s.inbox(t, s.creator, "")
+	if len(page.Items) != 2 || page.Items[0].Type != "profile_restored" || page.Items[1].Type != "profile_restricted" {
+		t.Fatalf("inbox = %+v, want one restore above the restriction", page.Items)
+	}
+	if restored := page.Items[0]; restored.Asset != nil || restored.Reason != "" {
+		t.Fatalf("restored entry = %+v", restored)
+	}
+	if got := s.unread(t, s.creator); got != 2 {
+		t.Fatalf("unread = %d, want 2", got)
+	}
+}
+
+func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
+	t.Parallel()
+	s := newInboxStack(t)
+	assetID := s.upload(t, "Moonlit Archive")
+	s.withhold(t, assetID, "Copyright report under review")
+	s.restrictProfile(t, "Impersonating another creator")
+	s.fanOut(t, time.Now())
+
+	for _, path := range []string{
+		"/v1/notifications",
+		"/v1/assets/" + assetID,
+		"/v1/assets?creator=" + creatorHandle,
+		"/v1/profiles/" + creatorHandle,
+		"/v1/auth/session",
+	} {
+		response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, path, nil), s.creator))
+		if response.Code != http.StatusOK {
+			t.Fatalf("GET %s status = %d, want 200: %s", path, response.Code, response.Body.String())
+		}
+		if strings.Contains(response.Body.String(), staffHandle) {
+			t.Errorf("GET %s names the staff member: %s", path, response.Body.String())
+		}
+	}
+
+	record := send(t, s.router, authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/profiles/"+creatorHandle+"/restriction", nil,
+	), s.staff))
+	if record.Code != http.StatusOK || !strings.Contains(record.Body.String(), `"restrictedBy":"`+staffHandle+`"`) {
+		t.Fatalf("the restriction record staff read = %d %s, want it to keep the actor", record.Code, record.Body.String())
+	}
+}
+
 func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
@@ -297,6 +377,27 @@ func (s inboxStack) restore(t *testing.T, assetID string) {
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", response.Code, response.Body.String())
 	}
+}
+
+func (s inboxStack) restrictProfile(t *testing.T, reason string) {
+	t.Helper()
+	body, err := json.Marshal(map[string]string{"reason": reason})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := send(t, s.router, authorizedJSONRequest(
+		t, http.MethodPut, "/v1/profiles/"+creatorHandle+"/restriction", string(body), s.staff,
+	))
+	if response.Code != http.StatusOK {
+		t.Fatalf("restrict status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+}
+
+func (s inboxStack) restoreProfile(t *testing.T) int {
+	t.Helper()
+	return send(t, s.router, authorized(
+		httptest.NewRequest(http.MethodDelete, "/v1/profiles/"+creatorHandle+"/restriction", nil), s.staff,
+	)).Code
 }
 
 func (s inboxStack) unread(t *testing.T, session *http.Cookie) int {

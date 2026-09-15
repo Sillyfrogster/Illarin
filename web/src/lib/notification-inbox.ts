@@ -9,8 +9,9 @@ const BADGE_CEILING = 99;
 
 const relative = new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" });
 
+const PROFILE_SETTINGS = "/settings/profile";
+
 export type NotificationWords = {
-  kind: "withheld" | "restored";
   lead: string;
   subject: string;
   detail: string;
@@ -19,24 +20,38 @@ export type NotificationWords = {
 
 /** Says what an entry is about. A staff decision always reads as Illarin staff and never as the person who made it. */
 export function notificationWords(entry: Notification): NotificationWords {
-  const subject = entry.asset?.name ?? "One of your assets";
-  const href = entry.asset ? assetHref(entry.asset.id, entry.asset.name) : null;
+  const assetName = entry.asset?.name ?? "One of your assets";
+  const assetPage = entry.asset
+    ? assetHref(entry.asset.id, entry.asset.name)
+    : null;
   switch (entry.type) {
     case "asset_withheld":
       return {
-        kind: "withheld",
         lead: "Illarin staff withheld",
-        subject,
+        subject: assetName,
         detail: entry.reason ?? "",
-        href,
+        href: assetPage,
       };
     case "asset_restored":
       return {
-        kind: "restored",
         lead: "Illarin staff restored",
-        subject,
+        subject: assetName,
         detail: "Readers can reach it again.",
-        href,
+        href: assetPage,
+      };
+    case "profile_restricted":
+      return {
+        lead: "Illarin staff restricted",
+        subject: "your profile",
+        detail: entry.reason ?? "",
+        href: PROFILE_SETTINGS,
+      };
+    case "profile_restored":
+      return {
+        lead: "Illarin staff restored",
+        subject: "your profile",
+        detail: "You can edit it again.",
+        href: PROFILE_SETTINGS,
       };
   }
 }

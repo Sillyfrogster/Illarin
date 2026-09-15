@@ -94,10 +94,14 @@ components:
       type: string
       description: >-
         asset_withheld and asset_restored say that Illarin staff withheld or
-        restored one of the account's assets.
+        restored one of the account's assets. profile_restricted and
+        profile_restored say that Illarin staff restricted or restored the
+        account's public profile.
       enum:
         - asset_withheld
         - asset_restored
+        - profile_restricted
+        - profile_restored
     NotificationAsset:
       type: object
       required:
@@ -137,7 +141,9 @@ components:
           $ref: '#/components/schemas/NotificationAsset'
         reason:
           type: string
-          description: Why staff withheld the asset. Present on asset_withheld.
+          description: >-
+            Why staff withheld the asset or restricted the profile. Present on
+            asset_withheld and profile_restricted.
     NotificationCursor:
       type: object
       required:

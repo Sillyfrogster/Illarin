@@ -3819,14 +3819,18 @@ export interface components {
        */
       readAt?: string;
       asset?: components["schemas"]["NotificationAsset"];
-      /** @description Why staff withheld the asset. Present on asset_withheld. */
+      /** @description Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted. */
       reason?: string;
     };
     /**
-     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
      * @enum {string}
      */
-    NotificationType: "asset_withheld" | "asset_restored";
+    NotificationType:
+      | "asset_withheld"
+      | "asset_restored"
+      | "profile_restricted"
+      | "profile_restored";
     NotificationAsset: {
       /** Format: uuid */
       id: string;

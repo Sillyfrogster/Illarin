@@ -1,14 +1,25 @@
-import { LockKeyhole, LockKeyholeOpen } from "lucide-react";
+import {
+  LockKeyhole,
+  LockKeyholeOpen,
+  type LucideIcon,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
 import Link from "next/link";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { arrivedAgo, notificationWords } from "@/lib/notification-inbox";
 
+const TAKEN = "bg-stop-wash text-stop";
+const GIVEN_BACK = "bg-accent-wash text-accent";
+
 const MARKS = {
-  withheld: { icon: LockKeyhole, tone: "bg-stop-wash text-stop" },
-  restored: { icon: LockKeyholeOpen, tone: "bg-accent-wash text-accent" },
-} as const;
+  asset_withheld: { icon: LockKeyhole, tone: TAKEN },
+  asset_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK },
+  profile_restricted: { icon: ShieldOff, tone: TAKEN },
+  profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK },
+} satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
 
 /** One inbox entry, tinted while unread, that opens what it is about when it has somewhere to go. */
 export function NotificationEntry({
@@ -22,7 +33,7 @@ export function NotificationEntry({
 }) {
   const words = notificationWords(entry);
   const unread = !entry.readAt;
-  const mark = MARKS[words.kind];
+  const mark = MARKS[entry.type];
   const Icon = mark.icon;
   const row = cn(
     "group relative flex gap-3.5 rounded-control px-3 py-3 outline-offset-[-2px] transition-colors duration-150 motion-reduce:transition-none",

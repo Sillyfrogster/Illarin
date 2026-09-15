@@ -977,8 +977,10 @@ func (e MediaRole) Valid() bool {
 
 // Defines values for NotificationType.
 const (
-	AssetRestored NotificationType = "asset_restored"
-	AssetWithheld NotificationType = "asset_withheld"
+	AssetRestored     NotificationType = "asset_restored"
+	AssetWithheld     NotificationType = "asset_withheld"
+	ProfileRestored   NotificationType = "profile_restored"
+	ProfileRestricted NotificationType = "profile_restricted"
 )
 
 // Valid indicates whether the value is a known member of the NotificationType enum.
@@ -987,6 +989,10 @@ func (e NotificationType) Valid() bool {
 	case AssetRestored:
 		return true
 	case AssetWithheld:
+		return true
+	case ProfileRestored:
+		return true
+	case ProfileRestricted:
 		return true
 	default:
 		return false
@@ -3374,10 +3380,10 @@ type Notification struct {
 	// ReadAt When the account opened it. Absent while it is unread.
 	ReadAt *time.Time `json:"readAt,omitempty"`
 
-	// Reason Why staff withheld the asset. Present on asset_withheld.
+	// Reason Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted.
 	Reason *string `json:"reason,omitempty"`
 
-	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 	Type NotificationType `json:"type"`
 }
 
@@ -3401,7 +3407,7 @@ type NotificationList struct {
 	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
 }
 
-// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets.
+// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 type NotificationType string
 
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.

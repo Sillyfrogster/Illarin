@@ -32,7 +32,6 @@ function before(milliseconds: number): string {
 
 test("a withheld asset says Illarin staff withheld it, gives the reason and opens the asset", () => {
   expect(notificationWords(entry())).toEqual({
-    kind: "withheld",
     lead: "Illarin staff withheld",
     subject: "Moonlit Archive",
     detail: "Copyright report under review",
@@ -44,11 +43,40 @@ test("a restored asset says Illarin staff restored it and that readers can reach
   expect(
     notificationWords(entry({ type: "asset_restored", reason: undefined })),
   ).toEqual({
-    kind: "restored",
     lead: "Illarin staff restored",
     subject: "Moonlit Archive",
     detail: "Readers can reach it again.",
     href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive",
+  });
+});
+
+test("a restricted profile says Illarin staff restricted it, gives the reason and opens the profile settings", () => {
+  expect(
+    notificationWords(
+      entry({
+        type: "profile_restricted",
+        asset: undefined,
+        reason: "Impersonating another creator",
+      }),
+    ),
+  ).toEqual({
+    lead: "Illarin staff restricted",
+    subject: "your profile",
+    detail: "Impersonating another creator",
+    href: "/settings/profile",
+  });
+});
+
+test("a restored profile says Illarin staff restored it and that it can be edited again", () => {
+  expect(
+    notificationWords(
+      entry({ type: "profile_restored", asset: undefined, reason: undefined }),
+    ),
+  ).toEqual({
+    lead: "Illarin staff restored",
+    subject: "your profile",
+    detail: "You can edit it again.",
+    href: "/settings/profile",
   });
 });
 
