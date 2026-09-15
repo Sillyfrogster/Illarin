@@ -2345,6 +2345,11 @@ components:
           $ref: '#/components/schemas/RecordedVersion'
         withhold:
           $ref: '#/components/schemas/AssetWithhold'
+        watch:
+          description: >-
+            The signed-in reader's watch on this asset. Absent for a reader who
+            is signed out or owns the asset, and on a draft.
+          $ref: ./notifications.yaml#/components/schemas/AssetWatch
     AppTarget:
       type: object
       required:

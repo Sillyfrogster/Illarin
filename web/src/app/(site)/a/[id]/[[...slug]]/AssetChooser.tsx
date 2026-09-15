@@ -45,6 +45,7 @@ import {
 import { versionDate } from "@/lib/asset-updates";
 import { cn } from "@/lib/cn";
 import { shortMoment } from "@/lib/dates";
+import { WatchOffer } from "./watch/WatchOffer";
 
 function fileWord(mediaType: string): string {
   if (mediaType.startsWith("image/")) {
@@ -111,6 +112,7 @@ export function AssetChooser({
   );
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
+  const [offering, setOffering] = useState(false);
   const gallery = useMemo(
     () => travellingGallery({ blocks, images }),
     [blocks, images],
@@ -304,6 +306,7 @@ export function AssetChooser({
             </>
           ) : (
             <a
+              onClick={() => setOffering(true)}
               href={downloadAddress({
                 assetId,
                 format: chosen?.format ?? "",
@@ -333,7 +336,9 @@ export function AssetChooser({
                 "POST",
                 { instanceId: instance.instanceId },
               );
-              if (sent) onSent?.();
+              if (!sent) return;
+              setOffering(true);
+              onSent?.();
             }}
             variant="primary"
           >
@@ -363,6 +368,8 @@ export function AssetChooser({
           {failure}
         </output>
       ) : null}
+
+      {offering ? <WatchOffer /> : null}
 
       {choices.length > 1 && !linkedInstallOnly && appTargets.length > 0 ? (
         <div className="mt-4 border-rule border-t pt-3">

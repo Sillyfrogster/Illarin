@@ -597,6 +597,30 @@ func (e AssetUpdateEventType) Valid() bool {
 	}
 }
 
+// Defines values for AssetWatchState.
+const (
+	AssetWatchStateInstalled AssetWatchState = "installed"
+	AssetWatchStateNone      AssetWatchState = "none"
+	AssetWatchStateStopped   AssetWatchState = "stopped"
+	AssetWatchStateWatching  AssetWatchState = "watching"
+)
+
+// Valid indicates whether the value is a known member of the AssetWatchState enum.
+func (e AssetWatchState) Valid() bool {
+	switch e {
+	case AssetWatchStateInstalled:
+		return true
+	case AssetWatchStateNone:
+		return true
+	case AssetWatchStateStopped:
+		return true
+	case AssetWatchStateWatching:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BrowseAssetKind.
 const (
 	BrowseAssetKindCharacter BrowseAssetKind = "character"
@@ -2418,6 +2442,9 @@ type AssetDetail struct {
 	UnpublishedChanges *bool                 `json:"unpublishedChanges,omitempty"`
 	Visibility         AssetDetailVisibility `json:"visibility"`
 
+	// Watch The signed-in reader's watch on this asset. Absent for a reader who is signed out or owns the asset, and on a draft.
+	Watch *AssetWatch `json:"watch,omitempty"`
+
 	// Withhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
 	Withhold *AssetWithhold `json:"withhold,omitempty"`
 
@@ -2761,6 +2788,18 @@ type AssetVersionNotesRequest struct {
 type AssetVersionWithdrawalRequest struct {
 	Explanation string `json:"explanation"`
 }
+
+// AssetWatch Whether the signed-in account hears about an asset's updates, and why. The asset page returns it only to a signed-in reader who does not own the asset. A watch records nothing about how it was made.
+type AssetWatch struct {
+	// InstalledOn The names of the account's linked instances that report having the asset installed, whatever the state.
+	InstalledOn []string `json:"installedOn"`
+
+	// State none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+	State AssetWatchState `json:"state"`
+}
+
+// AssetWatchState none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+type AssetWatchState string
 
 // AssetWithhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
 type AssetWithhold struct {
@@ -6246,6 +6285,12 @@ type ServerInterface interface {
 	// (POST /v1/assets/{id}/vault/{pictureId}/place)
 	PlaceVaultPicture(c *gin.Context, id openapi_types.UUID, pictureId openapi_types.UUID, params PlaceVaultPictureParams)
 
+	// (DELETE /v1/assets/{id}/watch)
+	StopWatchingAsset(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/assets/{id}/watch)
+	WatchAsset(c *gin.Context, id openapi_types.UUID)
+
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
 
@@ -8642,6 +8687,56 @@ func (siw *ServerInterfaceWrapper) PlaceVaultPicture(c *gin.Context) {
 	}
 
 	siw.Handler.PlaceVaultPicture(c, id, pictureId, params)
+}
+
+// StopWatchingAsset operation middleware
+func (siw *ServerInterfaceWrapper) StopWatchingAsset(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.StopWatchingAsset(c, id)
+}
+
+// WatchAsset operation middleware
+func (siw *ServerInterfaceWrapper) WatchAsset(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WatchAsset(c, id)
 }
 
 // ClearAssetWithhold operation middleware
@@ -11348,6 +11443,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/notifications/unread", wrapper.CountUnreadNotifications)
 	router.POST(options.BaseURL+"/v1/notifications/read", wrapper.MarkAllNotificationsRead)
 	router.POST(options.BaseURL+"/v1/notifications/:id/read", wrapper.MarkNotificationRead)
+	router.DELETE(options.BaseURL+"/v1/assets/:id/watch", wrapper.StopWatchingAsset)
+	router.PUT(options.BaseURL+"/v1/assets/:id/watch", wrapper.WatchAsset)
 	router.DELETE(options.BaseURL+"/v1/account/discord", wrapper.DetachDiscord)
 	router.PATCH(options.BaseURL+"/v1/account/email", wrapper.ChangeUnverifiedEmail)
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)

@@ -4,6 +4,7 @@ import type { components } from "./schema";
 export type Notification = components["schemas"]["Notification"];
 export type NotificationList = components["schemas"]["NotificationList"];
 export type NotificationCursor = components["schemas"]["NotificationCursor"];
+export type AssetWatch = components["schemas"]["AssetWatch"];
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -51,6 +52,27 @@ export async function markNotificationRead(id: string): Promise<void> {
     async () => null,
   );
   if (answer.error) throw new Error(answer.error);
+}
+
+export function watchAsset(assetId: string): Promise<AssetWatch> {
+  return changeWatch(assetId, "PUT");
+}
+
+export function stopWatchingAsset(assetId: string): Promise<AssetWatch> {
+  return changeWatch(assetId, "DELETE");
+}
+
+async function changeWatch(
+  assetId: string,
+  method: "PUT" | "DELETE",
+): Promise<AssetWatch> {
+  const answer = await ask<AssetWatch>(
+    `/assets/${encodeURIComponent(assetId)}/watch`,
+    { method },
+    (response) => response.json() as Promise<AssetWatch>,
+  );
+  if (answer.value) return answer.value;
+  throw new Error(answer.error ?? "Your watch could not be changed.");
 }
 
 export async function markAllNotificationsRead(): Promise<void> {

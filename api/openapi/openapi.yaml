@@ -37,6 +37,8 @@ paths:
     $ref: ./notifications.yaml#/paths/~1v1~1notifications~1read
   /v1/notifications/{id}/read:
     $ref: ./notifications.yaml#/paths/~1v1~1notifications~1{id}~1read
+  /v1/assets/{id}/watch:
+    $ref: ./notifications.yaml#/paths/~1v1~1assets~1{id}~1watch
   /v1/account/discord:
     $ref: ./accounts.yaml#/paths/~1v1~1account~1discord
   /v1/account/email:
@@ -646,3 +648,5 @@ components:
       $ref: ./notifications.yaml#/components/schemas/NotificationCursor
     UnreadNotifications:
       $ref: ./notifications.yaml#/components/schemas/UnreadNotifications
+    AssetWatch:
+      $ref: ./notifications.yaml#/components/schemas/AssetWatch

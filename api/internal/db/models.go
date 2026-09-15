@@ -293,6 +293,13 @@ type AssetVaultPicture struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type AssetWatch struct {
+	AccountID pgtype.UUID
+	AssetID   pgtype.UUID
+	State     string
+	SetAt     pgtype.Timestamptz
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte

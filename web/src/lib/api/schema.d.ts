@@ -189,6 +189,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/assets/{id}/watch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Watch an asset, so the signed-in account hears when it is updated. An unlisted asset can be watched, because its address is enough to read it. A draft cannot, and neither can the account's own asset. */
+    put: operations["watchAsset"];
+    post?: never;
+    /** @description Stop watching an asset. The watch stays stopped, even while one of the account's linked instances has the asset installed, until the account watches it again. */
+    delete: operations["stopWatchingAsset"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/discord": {
     parameters: {
       query?: never;
@@ -3402,6 +3422,8 @@ export interface components {
       /** @description The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none. */
       latestUpdate?: components["schemas"]["RecordedVersion"];
       withhold?: components["schemas"]["AssetWithhold"];
+      /** @description The signed-in reader's watch on this asset. Absent for a reader who is signed out or owns the asset, and on a draft. */
+      watch?: components["schemas"]["AssetWatch"];
     };
     DownloadTarget: {
       /** @description The format id, which is also the download's target. */
@@ -3849,6 +3871,16 @@ export interface components {
     };
     UnreadNotifications: {
       count: number;
+    };
+    /** @description Whether the signed-in account hears about an asset's updates, and why. The asset page returns it only to a signed-in reader who does not own the asset. A watch records nothing about how it was made. */
+    AssetWatch: {
+      /**
+       * @description none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+       * @enum {string}
+       */
+      state: "none" | "watching" | "installed" | "stopped";
+      /** @description The names of the account's linked instances that report having the asset installed, whatever the state. */
+      installedOn: string[];
     };
     /** @enum {string} */
     AssetUpdateDestinationKind: "webhook" | "discord";
@@ -5410,6 +5442,92 @@ export interface operations {
         content?: never;
       };
       /** @description The signed-in account has no such notification */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  watchAsset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account's watch on the asset */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetWatch"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The browser proof is invalid, or the account owns the asset */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No published asset has that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  stopWatchingAsset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account's watch on the asset */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetWatch"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The browser proof is invalid, or the account owns the asset */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No published asset has that id */
       404: {
         headers: {
           [name: string]: unknown;
