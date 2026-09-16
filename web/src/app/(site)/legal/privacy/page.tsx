@@ -52,6 +52,20 @@ const CLAUSES: LegalClause[] = [
           and the browser&rsquo;s user agent string. One-time link codes are
           stripped out of that line before it is written.
         </p>
+
+        <h3>1.6 Page views</h3>
+        <p>
+          Illarin counts page views with Umami, an analytics tool we run on our
+          own servers, so the counts never go to another company. For each page
+          you open, it records the page address without anything after a
+          &ldquo;?&rdquo; or &ldquo;#&rdquo;, the page title, the address of the
+          page that linked you here, your browser, operating system, device
+          type, screen size, and language, and the country, region, and city
+          your IP address points to. It sets no cookie, stores nothing in your
+          browser, and keeps neither your IP address nor anything tied to your
+          account, so no identity is kept. Every page view record is deleted
+          after 30 days.
+        </p>
       </>
     ),
     heading: "1. What we collect",
@@ -69,9 +83,9 @@ const CLAUSES: LegalClause[] = [
             point back to a person.
           </li>
           <li>
-            <strong>There is no analytics product on the site</strong>, no
-            advertising, no advertising or cross-site tracking cookies, and no
-            third-party script watching you read.
+            <strong>There is no advertising on the site</strong>, no advertising
+            or cross-site tracking cookies, and no third-party script watching
+            you read.
           </li>
           <li>
             <strong>
@@ -92,7 +106,7 @@ const CLAUSES: LegalClause[] = [
           Illarin sets a cookie holding your session when you sign in, and two
           short-lived cookies during a Discord sign-in so that it can bring you
           back to the page you started from. All three are strictly necessary to
-          sign you in.
+          sign you in. Counting page views sets no cookie.
         </p>
         <p>
           Your browser also keeps two things locally, which never reach us: your
@@ -125,6 +139,9 @@ const CLAUSES: LegalClause[] = [
           </li>
           <li>
             To keep Illarin working and to see what broke when it does not.
+          </li>
+          <li>
+            To see which pages people read and which sites send them here.
           </li>
         </ul>
       </>
@@ -195,8 +212,9 @@ const CLAUSES: LegalClause[] = [
           until you delete it or it is removed. Deleted work sits in a 30 day
           recovery window while you can still restore it, and is destroyed after
           that. Sign-in sessions, email verification links, password reset
-          links, and application linking codes all expire on their own. Server
-          logs are kept for a short rolling window.
+          links, and application linking codes all expire on their own. Page
+          view records are deleted after 30 days. Server logs are kept for a
+          short rolling window.
         </p>
       </>
     ),

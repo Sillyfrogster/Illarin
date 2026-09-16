@@ -19,7 +19,7 @@ Internet -> DNS and TLS proxy -> Illarin gateway -> web and API -> PostgreSQL
 ```
 
 The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
-nginx gateway, and a Datadog agent. Uploaded blobs remain on the host. nginx may
+nginx gateway, Umami for page view counts, and a Datadog agent. Uploaded blobs remain on the host. nginx may
 serve a blob only after the API authorizes it with `X-Accel-Redirect`.
 
 Illarin answers on two hostnames that both reach the same gateway: the site at
@@ -28,6 +28,14 @@ hostname beginning with `blog.` gets the blog, which serves blog pages and
 media and nothing else: no API, no sign-in, no uploads. Every other hostname
 gets the site, including the catalog, accounts, the blog's editor and the
 Publication API. The site's old `/blog` addresses redirect to the blog.
+
+Umami counts page views and referrers without cookies. Both the site and the
+blog load its tracker from `/stats/script.js` on their own hostname and send
+views to `/stats/api/send`. Its dashboard answers only on a hostname beginning
+with `analytics.`, such as `analytics.illarin.example`. Umami keeps its tables
+in an `umami` schema in the same database and logs in with its own role, and a
+small `analytics-retention` service deletes its rows older than 30 days every
+night.
 
 The included deployment has these current integration requirements:
 
@@ -45,8 +53,8 @@ port instead.
 ## Prerequisites
 
 - a Linux host with Docker Engine, the Docker Compose plugin, `flock`, and SSH;
-- two DNS names, the site's and its `blog.` subdomain, and a TLS-terminating
-  reverse proxy that forwards both to the gateway;
+- three DNS names, the site's and its `blog.` and `analytics.` subdomains, and
+  a TLS-terminating reverse proxy that forwards all three to the gateway;
 - a GitHub fork or another way to build and publish both application images;
 - SMTP or Microsoft 365 credentials, and a Datadog API key;
 - enough persistent storage for PostgreSQL, uploads, image replacement, and the
@@ -78,6 +86,12 @@ Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each
 encoded as unpadded base64url. They are separate keys and never share a value.
 Use a separate, randomly generated PostgreSQL password and update both
 `POSTGRES_PASSWORD` and `DATABASE_URL` with the same value.
+
+Set `UMAMI_DATABASE_PASSWORD` to a URL-safe random value, `UMAMI_APP_SECRET` to
+a long random value, and `UMAMI_ADMIN_PASSWORD` to at least 8 characters. Each
+deploy creates Umami's role and schema if they are missing, sets the `admin`
+user's password from the env file, and creates the website the site's pages
+report to.
 
 The API accepts one mail transport. For SMTP, set `SMTP_ADDR` and `SMTP_FROM`,
 and set `SMTP_USERNAME` and `SMTP_PASSWORD` when the relay needs a login. Leave
@@ -130,7 +144,9 @@ make prod-smoke
 The smoke check speaks to both hostnames through the gateway: the site must
 answer, the blog must answer with its own canonical address, the site's `/blog`
 must redirect there, and the blog hostname must refuse every API, sign-in and
-editor address.
+editor address. It also checks that both hostnames serve the analytics tracker,
+that the `analytics.` hostname reaches Umami, and that the retention service is
+running.
 
 Useful operating commands are listed by `make help`. In particular:
 
