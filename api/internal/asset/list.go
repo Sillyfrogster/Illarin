@@ -184,7 +184,6 @@ func (s *Service) browseAssets(
 				item.OwnerState = "withheld"
 				item.Withhold = &Withhold{
 					Reason: row.WithheldReason.String,
-					Actor:  row.WithheldBy.String,
 					At:     row.WithheldAt.Time,
 				}
 			case row.Discovery == "unlisted":

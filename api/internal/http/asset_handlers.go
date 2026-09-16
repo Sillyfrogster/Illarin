@@ -537,6 +537,15 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
 		return
 	}
+	if viewerID != nil && !found.IsOwner && found.Lifecycle != asset.LifecycleDraft {
+		watch, err := h.notifications.WatchOf(c.Request.Context(), *viewerID, found.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+			return
+		}
+		shown := toAPIWatch(watch)
+		page.Watch = &shown
+	}
 	c.JSON(http.StatusOK, page)
 }
 
@@ -770,7 +779,7 @@ func toAPIWithhold(found *asset.Withhold) *AssetWithhold {
 	if found == nil {
 		return nil
 	}
-	return &AssetWithhold{Reason: found.Reason, Actor: found.Actor, At: found.At}
+	return &AssetWithhold{Reason: found.Reason, At: found.At}
 }
 
 func (h *Handlers) ListMedia(c *gin.Context, id types.UUID) {

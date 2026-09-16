@@ -194,7 +194,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params Publ
 }
 
 func announcementChoice(request AssetUpdateRequest) asset.UpdateAnnouncement {
-	choice := asset.UpdateAnnouncement{}
+	choice := asset.UpdateAnnouncement{Notify: request.Notify == nil || *request.Notify}
 	if request.DestinationIds != nil {
 		chosen := readIDs(request.DestinationIds)
 		choice.DestinationIDs = &chosen

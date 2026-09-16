@@ -63,9 +63,9 @@ type Detail struct {
 	Withhold            *Withhold
 }
 
+// Withhold is what the owner of a withheld asset reads, which never names the staff member who acted.
 type Withhold struct {
 	Reason string
-	Actor  string
 	At     time.Time
 }
 
@@ -168,7 +168,6 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	if row.WithheldAt.Valid {
 		found.Withhold = &Withhold{
 			Reason: row.WithheldReason.String,
-			Actor:  row.WithheldBy.String,
 			At:     row.WithheldAt.Time,
 		}
 	}

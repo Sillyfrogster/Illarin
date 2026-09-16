@@ -2345,6 +2345,11 @@ components:
           $ref: '#/components/schemas/RecordedVersion'
         withhold:
           $ref: '#/components/schemas/AssetWithhold'
+        watch:
+          description: >-
+            The signed-in reader's watch on this asset. Absent for a reader who
+            is signed out or owns the asset, and on a draft.
+          $ref: ./notifications.yaml#/components/schemas/AssetWatch
     AppTarget:
       type: object
       required:
@@ -2558,7 +2563,7 @@ components:
             The creator's own active destinations this update is announced to.
             Absent, a listed asset uses the destinations remembered for it and an
             unlisted asset announces nowhere. Present, the list is remembered for
-            the next update, and an empty list publishes quietly. Nothing is sent
+            the next update, and an empty list announces nowhere. Nothing is sent
             inside this request; delivery follows on its own schedule.
           type: array
           uniqueItems: true
@@ -2570,6 +2575,14 @@ components:
             Consent to send an unlisted asset's direct link. Required whenever
             destinationIds names anything for an unlisted asset; ignored for a
             listed one.
+          type: boolean
+        notify:
+          description: >-
+            Whether the accounts watching the asset, and those with it installed
+            on a linked instance, hear about this update. On when absent. They
+            hear only when the update changed the file. An unlisted asset needs
+            no consent here, because watchers already hold its address. Publishing
+            quietly means an empty destinationIds and notify off together.
           type: boolean
     AssetVersionNotesRequest:
       type: object
@@ -2670,15 +2683,15 @@ components:
           minLength: 1
     AssetWithhold:
       type: object
+      description: >-
+        Why and when Illarin staff withheld the asset, as its owner reads it.
+        It never names the staff member who acted.
       additionalProperties: false
       required:
         - reason
-        - actor
         - at
       properties:
         reason:
-          type: string
-        actor:
           type: string
         at:
           type: string

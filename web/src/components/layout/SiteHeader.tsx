@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
@@ -78,7 +79,10 @@ export function SiteHeader() {
                 {publish.label}
               </Link>
             </Button>
-            <AccountMenu />
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <AccountMenu />
+            </div>
           </>
         }
       />

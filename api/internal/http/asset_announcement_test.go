@@ -306,7 +306,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	}
 }
 
-func TestAnExplicitSelectionIsRememberedAndAnEmptyOnePublishesQuietly(t *testing.T) {
+func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
@@ -331,7 +331,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOnePublishesQuietly(t *testing
 	stack.announced(t, stack.editor, started.ID, `{"summary":"Second change","destinationIds":[]}`)
 	listed := stack.announcements(t, stack.editor, started.ID)
 	if len(listed) != 1 || listed[0].UpdateNumber != 2 {
-		t.Fatalf("a quiet publication queued something: %+v", listed)
+		t.Fatalf("an empty selection queued something: %+v", listed)
 	}
 	choices = stack.updateDestinationRequest(t, stack.editor, http.MethodGet,
 		"/v1/assets/"+started.ID+"/update-destinations", "")
@@ -339,7 +339,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOnePublishesQuietly(t *testing
 		t.Fatal(err)
 	}
 	if offered.Destinations[0].ByDefault {
-		t.Error("a quiet publication left the old selection remembered")
+		t.Error("an empty selection left the old selection remembered")
 	}
 }
 

@@ -293,6 +293,13 @@ type AssetVaultPicture struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type AssetWatch struct {
+	AccountID pgtype.UUID
+	AssetID   pgtype.UUID
+	State     string
+	SetAt     pgtype.Timestamptz
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte
@@ -327,6 +334,17 @@ type EmailVerificationToken struct {
 	UserID    pgtype.UUID
 	Email     string
 	ExpiresAt pgtype.Timestamptz
+}
+
+type InboxEntry struct {
+	ID          pgtype.UUID
+	AccountID   pgtype.UUID
+	Type        string
+	AssetID     pgtype.UUID
+	Words       []byte
+	CreatedAt   pgtype.Timestamptz
+	ReadAt      pgtype.Timestamptz
+	UpdateCount int32
 }
 
 type IngestOperation struct {
@@ -494,6 +512,26 @@ type MigrationStagedMedium struct {
 	Width    int32
 	Height   int32
 	StagedAt pgtype.Timestamptz
+}
+
+type Notification struct {
+	ID          pgtype.UUID
+	AccountID   pgtype.UUID
+	Type        string
+	AssetID     pgtype.UUID
+	Words       []byte
+	CreatedAt   pgtype.Timestamptz
+	ReadAt      pgtype.Timestamptz
+	UpdateCount int32
+}
+
+type NotificationEvent struct {
+	ID         pgtype.UUID
+	Type       string
+	AccountID  pgtype.UUID
+	AssetID    pgtype.UUID
+	Words      []byte
+	RecordedAt pgtype.Timestamptz
 }
 
 type OauthIdentity struct {

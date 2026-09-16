@@ -22,7 +22,6 @@ type profileListingResponse struct {
 		OwnerState *string `json:"ownerState"`
 		Withhold   *struct {
 			Reason string    `json:"reason"`
-			Actor  string    `json:"actor"`
 			At     time.Time `json:"at"`
 		} `json:"withhold"`
 	} `json:"items"`
@@ -163,8 +162,7 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	}
 	for _, item := range owner.Items {
 		if item.Name == "Withheld garden" &&
-			(item.Withhold == nil || item.Withhold.Reason != "testing" ||
-				item.Withhold.Actor != "verified.creator" || item.Withhold.At.IsZero()) {
+			(item.Withhold == nil || item.Withhold.Reason != "testing" || item.Withhold.At.IsZero()) {
 			t.Fatalf("owner profile withhold = %+v", item.Withhold)
 		}
 	}

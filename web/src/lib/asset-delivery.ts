@@ -1,6 +1,7 @@
 import type {
   AppTarget,
   AssetBlock,
+  AssetDetail,
   AssetImage,
   AssetInstance,
   DownloadTarget,
@@ -32,6 +33,13 @@ export type DeliveryDestination = {
 };
 
 export const DOWNLOAD_DESTINATION = "file";
+
+/** canSendAsset says whether the API will send this asset to an installation. */
+export function canSendAsset(
+  asset: Pick<AssetDetail, "lifecycle" | "withhold">,
+): boolean {
+  return asset.lifecycle === "published" && !asset.withhold;
+}
 
 /** isWaiting says whether a delivery is still on its way to the instance. */
 export function isWaiting(

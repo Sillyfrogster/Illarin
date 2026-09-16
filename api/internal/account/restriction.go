@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -81,6 +82,11 @@ func (s *Service) RestrictProfile(
 	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restrict", reason); err != nil {
 		return Restriction{}, err
 	}
+	if err := notification.Record(ctx, tx, notification.Event{
+		Type: notification.ProfileRestricted, Account: &subject, Words: notification.Words{Reason: reason},
+	}); err != nil {
+		return Restriction{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return Restriction{}, fmt.Errorf("commit profile restriction: %w", err)
 	}
@@ -105,6 +111,11 @@ func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle stri
 		return ErrNotRestricted
 	}
 	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restore", ""); err != nil {
+		return err
+	}
+	if err := notification.Record(ctx, tx, notification.Event{
+		Type: notification.ProfileRestored, Account: &subject,
+	}); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

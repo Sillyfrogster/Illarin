@@ -1,7 +1,13 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -20,14 +26,21 @@ import { installTrack } from "@/lib/install-track";
 import { installedVersionsLine } from "@/lib/installed-app-versions";
 import { AssetChooser, type AssetChooserProps } from "./AssetChooser";
 import { InstallProgress } from "./InstallProgress";
+import { WatchOffer } from "./watch/WatchOffer";
 
 const WATCH_INTERVAL_MS = 8000;
 const WATCH_LIMIT = 20;
 
 export function GetAsset({
+  aside,
   installedAppVersions = [],
+  sendable,
   ...props
-}: AssetChooserProps & { installedAppVersions?: string[] }) {
+}: AssetChooserProps & {
+  aside?: ReactNode;
+  installedAppVersions?: string[];
+  sendable: boolean;
+}) {
   const {
     assetId,
     kind,
@@ -43,6 +56,7 @@ export function GetAsset({
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [sentAway, setSentAway] = useState(false);
   const watched = useRef(0);
   const installs = installsOnInstance(kind);
 
@@ -60,12 +74,12 @@ export function GetAsset({
   }, [assetId]);
 
   useEffect(() => {
-    if (!account) {
+    if (!account || !sendable) {
       setInstances([]);
       return;
     }
     void read();
-  }, [account, read]);
+  }, [account, sendable, read]);
 
   const waiting = instances.some((one) => isWaiting(one.delivery));
   useEffect(() => {
@@ -104,8 +118,10 @@ export function GetAsset({
     apps: appTargets,
   });
   const receiving = instances.some((one) => one.canReceive);
-  if (linkedInstallOnly && !receiving) return null;
-  if (!linkedInstallOnly && choices.length === 0 && !original) return null;
+  const chooses = linkedInstallOnly
+    ? receiving
+    : choices.length > 0 || Boolean(original);
+  if (!chooses) return aside ? <div className="flex">{aside}</div> : null;
 
   const tracks = installs
     ? instances.map(installTrack).filter((track) => track !== null)
@@ -117,35 +133,46 @@ export function GetAsset({
 
   return (
     <>
-      <Popover
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (next) {
-            setOpened((count) => count + 1);
-            watched.current = 0;
-          }
-        }}
-        open={open}
-      >
-        <PopoverTrigger asChild>
-          <Button className="min-w-52 justify-between" variant="primary">
-            {installs && receiving ? "Install" : "Download"} {kindLabel}
-            <ChevronDown aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          aria-label={`${installs && receiving ? "Install" : "Download"} this ${kindLabel}`}
+      <div className="flex items-center gap-2">
+        <Popover
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (next) {
+              setOpened((count) => count + 1);
+              watched.current = 0;
+            }
+          }}
+          open={open}
         >
-          <AssetChooser
-            key={opened}
-            {...props}
-            instances={instances}
-            onSent={installs ? () => setOpen(false) : undefined}
-            refresh={read}
-          />
-        </PopoverContent>
-      </Popover>
+          <PopoverTrigger asChild>
+            <Button className="min-w-52 justify-between" variant="primary">
+              {installs && receiving ? "Install" : "Download"} {kindLabel}
+              <ChevronDown aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            aria-label={`${installs && receiving ? "Install" : "Download"} this ${kindLabel}`}
+          >
+            <AssetChooser
+              key={opened}
+              {...props}
+              instances={instances}
+              onSent={
+                installs
+                  ? () => {
+                      setOpen(false);
+                      setSentAway(true);
+                    }
+                  : undefined
+              }
+              refresh={read}
+            />
+          </PopoverContent>
+        </Popover>
+        {aside}
+      </div>
+      {sentAway ? <WatchOffer /> : null}
       {versionsLine ? (
         <p className="mt-4 max-w-[42ch] text-meta break-words text-mute">
           {versionsLine}

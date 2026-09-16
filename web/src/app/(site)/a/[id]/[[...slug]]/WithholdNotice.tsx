@@ -26,7 +26,7 @@ export function WithholdNotice({
         </h2>
         <p className="mt-1 text-meta text-ink">{withhold.reason}</p>
         <p className="mt-1 text-meta text-mute">
-          Recorded by @{withhold.actor} on {recorded}
+          Recorded by Illarin staff on {recorded}
         </p>
       </div>
     </section>

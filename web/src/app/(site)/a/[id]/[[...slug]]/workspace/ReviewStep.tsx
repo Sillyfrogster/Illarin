@@ -60,6 +60,7 @@ export function ReviewStep({
     const answer = await publishAssetUpdate(candidate, workspace.assetId, {
       announceUnlisted: announcement.announceUnlisted,
       destinationIds: announcement.destinationIds ?? undefined,
+      notify: announcement.notify,
       notes: notes.trim(),
       summary: summary.trim(),
       versionLabel: label.trim(),

@@ -597,6 +597,30 @@ func (e AssetUpdateEventType) Valid() bool {
 	}
 }
 
+// Defines values for AssetWatchState.
+const (
+	AssetWatchStateInstalled AssetWatchState = "installed"
+	AssetWatchStateNone      AssetWatchState = "none"
+	AssetWatchStateStopped   AssetWatchState = "stopped"
+	AssetWatchStateWatching  AssetWatchState = "watching"
+)
+
+// Valid indicates whether the value is a known member of the AssetWatchState enum.
+func (e AssetWatchState) Valid() bool {
+	switch e {
+	case AssetWatchStateInstalled:
+		return true
+	case AssetWatchStateNone:
+		return true
+	case AssetWatchStateStopped:
+		return true
+	case AssetWatchStateWatching:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BrowseAssetKind.
 const (
 	BrowseAssetKindCharacter BrowseAssetKind = "character"
@@ -969,6 +993,33 @@ func (e MediaRole) Valid() bool {
 	case MediaRolePackItem:
 		return true
 	case MediaRolePerspectiveLayer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationType.
+const (
+	AssetRestored     NotificationType = "asset_restored"
+	AssetUpdated      NotificationType = "asset_updated"
+	AssetWithheld     NotificationType = "asset_withheld"
+	ProfileRestored   NotificationType = "profile_restored"
+	ProfileRestricted NotificationType = "profile_restricted"
+)
+
+// Valid indicates whether the value is a known member of the NotificationType enum.
+func (e NotificationType) Valid() bool {
+	switch e {
+	case AssetRestored:
+		return true
+	case AssetUpdated:
+		return true
+	case AssetWithheld:
+		return true
+	case ProfileRestored:
+		return true
+	case ProfileRestricted:
 		return true
 	default:
 		return false
@@ -2393,7 +2444,12 @@ type AssetDetail struct {
 	// UnpublishedChanges Whether the working copy differs from the version readers see. Returned with the owner's working copy of a published asset.
 	UnpublishedChanges *bool                 `json:"unpublishedChanges,omitempty"`
 	Visibility         AssetDetailVisibility `json:"visibility"`
-	Withhold           *AssetWithhold        `json:"withhold,omitempty"`
+
+	// Watch The signed-in reader's watch on this asset. Absent for a reader who is signed out or owns the asset, and on a draft.
+	Watch *AssetWatch `json:"watch,omitempty"`
+
+	// Withhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
+	Withhold *AssetWithhold `json:"withhold,omitempty"`
 
 	// WorkingCopyVersion Only returned with the owner's working copy or draft, from the same read snapshot
 	WorkingCopyVersion *int64 `json:"workingCopyVersion,omitempty"`
@@ -2712,11 +2768,14 @@ type AssetUpdateRequest struct {
 	// AnnounceUnlisted Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one.
 	AnnounceUnlisted *bool `json:"announceUnlisted,omitempty"`
 
-	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule.
+	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list announces nowhere. Nothing is sent inside this request; delivery follows on its own schedule.
 	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
 
 	// Notes The longer explanation, where the creator writes one
 	Notes *string `json:"notes,omitempty"`
+
+	// Notify Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together.
+	Notify *bool `json:"notify,omitempty"`
 
 	// Summary A short line saying what changed, which every update needs
 	Summary string `json:"summary"`
@@ -2736,9 +2795,20 @@ type AssetVersionWithdrawalRequest struct {
 	Explanation string `json:"explanation"`
 }
 
-// AssetWithhold defines model for AssetWithhold.
+// AssetWatch Whether the signed-in account hears about an asset's updates, and why. The asset page returns it only to a signed-in reader who does not own the asset. A watch records nothing about how it was made.
+type AssetWatch struct {
+	// InstalledOn The names of the account's linked instances that report having the asset installed, whatever the state.
+	InstalledOn []string `json:"installedOn"`
+
+	// State none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+	State AssetWatchState `json:"state"`
+}
+
+// AssetWatchState none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+type AssetWatchState string
+
+// AssetWithhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
 type AssetWithhold struct {
-	Actor  string    `json:"actor"`
 	At     time.Time `json:"at"`
 	Reason string    `json:"reason"`
 }
@@ -2764,7 +2834,9 @@ type BrowseAsset struct {
 
 	// OwnerState Present only on the owner's own listing.
 	OwnerState *BrowseAssetOwnerState `json:"ownerState,omitempty"`
-	Withhold   *AssetWithhold         `json:"withhold,omitempty"`
+
+	// Withhold Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted.
+	Withhold *AssetWithhold `json:"withhold,omitempty"`
 }
 
 // BrowseAssetKind defines model for BrowseAsset.Kind.
@@ -3340,6 +3412,78 @@ type MoveAssetBlockContentRequest struct {
 type NamedPrompt struct {
 	Id   openapi_types.UUID `json:"id"`
 	Name string             `json:"name"`
+}
+
+// Notification One notification in the signed-in account's inbox. Its words are kept as they read when it arrived, so a later rename does not change them.
+type Notification struct {
+	Asset *NotificationAsset `json:"asset,omitempty"`
+
+	// CreatedAt When the change it describes happened
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// ReadAt When the account opened it. Absent while it is unread.
+	ReadAt *time.Time `json:"readAt,omitempty"`
+
+	// Reason Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted.
+	Reason *string `json:"reason,omitempty"`
+
+	// SendTargets The reader's linked instances that hold an older copy of the asset and can receive it. Only an asset_updated notification carries any.
+	SendTargets *[]NotificationSendTarget `json:"sendTargets,omitempty"`
+
+	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+	Type NotificationType `json:"type"`
+
+	// Update The update an asset_updated notification is about, as it read when it was published.
+	Update *NotificationUpdate `json:"update,omitempty"`
+}
+
+// NotificationAsset defines model for NotificationAsset.
+type NotificationAsset struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name The asset's name when the notification arrived
+	Name string `json:"name"`
+}
+
+// NotificationCursor defines model for NotificationCursor.
+type NotificationCursor struct {
+	Before   time.Time          `json:"before"`
+	BeforeId openapi_types.UUID `json:"beforeId"`
+}
+
+// NotificationList defines model for NotificationList.
+type NotificationList struct {
+	Items      []Notification      `json:"items"`
+	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
+}
+
+// NotificationSendTarget One of the reader's linked instances that holds an older copy of the asset and can receive it. The send it offers is the one the asset page offers.
+type NotificationSendTarget struct {
+	ApplicationName string             `json:"applicationName"`
+	InstanceId      openapi_types.UUID `json:"instanceId"`
+	InstanceName    string             `json:"instanceName"`
+
+	// Waiting Whether a delivery of this asset is already waiting for the instance to collect it.
+	Waiting bool `json:"waiting"`
+}
+
+// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+type NotificationType string
+
+// NotificationUpdate The update an asset_updated notification is about, as it read when it was published.
+type NotificationUpdate struct {
+	// Count How many updates the entry stands for. It goes up each time another update arrives before the entry is read, and the entry shows the latest of them.
+	Count int `json:"count"`
+
+	// Number The update's number in the asset's history
+	Number int `json:"number"`
+
+	// Summary The creator's short line saying what changed
+	Summary string `json:"summary"`
+
+	// VersionLabel The creator's own version text, absent when they wrote none
+	VersionLabel *string `json:"versionLabel,omitempty"`
 }
 
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.
@@ -4703,6 +4847,11 @@ type TypedValue struct {
 	Text    *string   `json:"text,omitempty"`
 }
 
+// UnreadNotifications defines model for UnreadNotifications.
+type UnreadNotifications struct {
+	Count int `json:"count"`
+}
+
 // UpdateAssetUpdateDestinationRequest defines model for UpdateAssetUpdateDestinationRequest.
 type UpdateAssetUpdateDestinationRequest struct {
 	Address *string `json:"address,omitempty"`
@@ -5216,6 +5365,17 @@ type DenyLinkRequestParams struct {
 
 // DenyLinkRequestParamsXIllarinRequest defines parameters for DenyLinkRequest.
 type DenyLinkRequestParamsXIllarinRequest string
+
+// ListNotificationsParams defines parameters for ListNotifications.
+type ListNotificationsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Before When the last notification on the previous page arrived. Send it with beforeId or not at all.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+
+	// BeforeId The id of that same notification
+	BeforeId *openapi_types.UUID `form:"beforeId,omitempty" json:"beforeId,omitempty"`
+}
 
 // ListPublishedPostsParams defines parameters for ListPublishedPosts.
 type ListPublishedPostsParams struct {
@@ -6162,6 +6322,12 @@ type ServerInterface interface {
 	// (POST /v1/assets/{id}/vault/{pictureId}/place)
 	PlaceVaultPicture(c *gin.Context, id openapi_types.UUID, pictureId openapi_types.UUID, params PlaceVaultPictureParams)
 
+	// (DELETE /v1/assets/{id}/watch)
+	StopWatchingAsset(c *gin.Context, id openapi_types.UUID)
+
+	// (PUT /v1/assets/{id}/watch)
+	WatchAsset(c *gin.Context, id openapi_types.UUID)
+
 	// (DELETE /v1/assets/{id}/withhold)
 	ClearAssetWithhold(c *gin.Context, id openapi_types.UUID)
 
@@ -6257,6 +6423,24 @@ type ServerInterface interface {
 
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
+
+	// (DELETE /v1/notifications)
+	ClearNotifications(c *gin.Context)
+
+	// (GET /v1/notifications)
+	ListNotifications(c *gin.Context, params ListNotificationsParams)
+
+	// (POST /v1/notifications/read)
+	MarkAllNotificationsRead(c *gin.Context)
+
+	// (GET /v1/notifications/unread)
+	CountUnreadNotifications(c *gin.Context)
+
+	// (DELETE /v1/notifications/{id})
+	RemoveNotification(c *gin.Context, id openapi_types.UUID)
+
+	// (POST /v1/notifications/{id}/read)
+	MarkNotificationRead(c *gin.Context, id openapi_types.UUID)
 
 	// (GET /v1/post-apps)
 	ListPostApps(c *gin.Context)
@@ -8548,6 +8732,56 @@ func (siw *ServerInterfaceWrapper) PlaceVaultPicture(c *gin.Context) {
 	siw.Handler.PlaceVaultPicture(c, id, pictureId, params)
 }
 
+// StopWatchingAsset operation middleware
+func (siw *ServerInterfaceWrapper) StopWatchingAsset(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.StopWatchingAsset(c, id)
+}
+
+// WatchAsset operation middleware
+func (siw *ServerInterfaceWrapper) WatchAsset(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.WatchAsset(c, id)
+}
+
 // ClearAssetWithhold operation middleware
 func (siw *ServerInterfaceWrapper) ClearAssetWithhold(c *gin.Context) {
 
@@ -9341,6 +9575,138 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	}
 
 	siw.Handler.ExchangeLinkAuthorization(c)
+}
+
+// ClearNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ClearNotifications(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ClearNotifications(c)
+}
+
+// ListNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ListNotifications(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", c.Request.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter before: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "beforeId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "beforeId", c.Request.URL.Query(), &params.BeforeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter beforeId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListNotifications(c, params)
+}
+
+// MarkAllNotificationsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNotificationsRead(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MarkAllNotificationsRead(c)
+}
+
+// CountUnreadNotifications operation middleware
+func (siw *ServerInterfaceWrapper) CountUnreadNotifications(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CountUnreadNotifications(c)
+}
+
+// RemoveNotification operation middleware
+func (siw *ServerInterfaceWrapper) RemoveNotification(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveNotification(c, id)
+}
+
+// MarkNotificationRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNotificationRead(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MarkNotificationRead(c, id)
 }
 
 // ListPostApps operation middleware
@@ -11154,6 +11520,14 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.DisableAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.VerifyAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/secret", wrapper.RotateAssetUpdateDestinationSecret)
+	router.DELETE(options.BaseURL+"/v1/notifications", wrapper.ClearNotifications)
+	router.GET(options.BaseURL+"/v1/notifications", wrapper.ListNotifications)
+	router.GET(options.BaseURL+"/v1/notifications/unread", wrapper.CountUnreadNotifications)
+	router.POST(options.BaseURL+"/v1/notifications/read", wrapper.MarkAllNotificationsRead)
+	router.DELETE(options.BaseURL+"/v1/notifications/:id", wrapper.RemoveNotification)
+	router.POST(options.BaseURL+"/v1/notifications/:id/read", wrapper.MarkNotificationRead)
+	router.DELETE(options.BaseURL+"/v1/assets/:id/watch", wrapper.StopWatchingAsset)
+	router.PUT(options.BaseURL+"/v1/assets/:id/watch", wrapper.WatchAsset)
 	router.DELETE(options.BaseURL+"/v1/account/discord", wrapper.DetachDiscord)
 	router.PATCH(options.BaseURL+"/v1/account/email", wrapper.ChangeUnverifiedEmail)
 	router.PATCH(options.BaseURL+"/v1/account/handle", wrapper.RenameHandle)

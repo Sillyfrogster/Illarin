@@ -226,7 +226,7 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 	}
 }
 
-func TestARestrictionNeedsAReasonOnlyAnAdminEverReads(t *testing.T) {
+func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 
@@ -281,7 +281,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 		t.Fatalf("restricted save status = %d, want 403: %s", blocked.Code, blocked.Body.String())
 	}
 	if strings.Contains(blocked.Body.String(), "Impersonating") {
-		t.Fatalf("the owner was told the private reason: %s", blocked.Body.String())
+		t.Fatalf("the refused save repeats the restriction reason: %s", blocked.Body.String())
 	}
 	replaced := send(t, stack.router, authorized(
 		avatarUploadRequest(t, httpTestPNG(t, 200, 200)), stack.owner,

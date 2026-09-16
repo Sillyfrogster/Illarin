@@ -121,6 +121,112 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description The signed-in account's notifications, newest first. Send the cursor from the previous page to read the next one. */
+    get: operations["listNotifications"];
+    put?: never;
+    post?: never;
+    /** @description Remove every notification from the signed-in account's inbox. */
+    delete: operations["clearNotifications"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/unread": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description How many notifications the signed-in account has not opened. */
+    get: operations["countUnreadNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Mark every notification the signed-in account has as read. */
+    post: operations["markAllNotificationsRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Remove one notification from the signed-in account's inbox. */
+    delete: operations["removeNotification"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/{id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Mark one of the signed-in account's notifications as read. */
+    post: operations["markNotificationRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/assets/{id}/watch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Watch an asset, so the signed-in account hears when it is updated. An unlisted asset can be watched, because its address is enough to read it. A draft cannot, and neither can the account's own asset. */
+    put: operations["watchAsset"];
+    post?: never;
+    /** @description Stop watching an asset. The watch stays stopped, even while one of the account's linked instances has the asset installed, until the account watches it again. */
+    delete: operations["stopWatchingAsset"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/account/discord": {
     parameters: {
       query?: never;
@@ -3334,6 +3440,8 @@ export interface components {
       /** @description The newest version this asset has recorded, and the one readers have. Absent on a draft, which has recorded none. */
       latestUpdate?: components["schemas"]["RecordedVersion"];
       withhold?: components["schemas"]["AssetWithhold"];
+      /** @description The signed-in reader's watch on this asset. Absent for a reader who is signed out or owns the asset, and on a draft. */
+      watch?: components["schemas"]["AssetWatch"];
     };
     DownloadTarget: {
       /** @description The format id, which is also the download's target. */
@@ -3430,9 +3538,9 @@ export interface components {
     WithholdAssetRequest: {
       reason: string;
     };
+    /** @description Why and when Illarin staff withheld the asset, as its owner reads it. It never names the staff member who acted. */
     AssetWithhold: {
       reason: string;
-      actor: string;
       /** Format: date-time */
       at: string;
     };
@@ -3735,6 +3843,78 @@ export interface components {
         recorded?: string;
       }[];
     };
+    /** @description One notification in the signed-in account's inbox. Its words are kept as they read when it arrived, so a later rename does not change them. */
+    Notification: {
+      /** Format: uuid */
+      id: string;
+      type: components["schemas"]["NotificationType"];
+      /**
+       * Format: date-time
+       * @description When the change it describes happened
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description When the account opened it. Absent while it is unread.
+       */
+      readAt?: string;
+      asset?: components["schemas"]["NotificationAsset"];
+      /** @description Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted. */
+      reason?: string;
+      update?: components["schemas"]["NotificationUpdate"];
+      /** @description The reader's linked instances that hold an older copy of the asset and can receive it. Only an asset_updated notification carries any. */
+      sendTargets?: components["schemas"]["NotificationSendTarget"][];
+    };
+    /**
+     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+     * @enum {string}
+     */
+    NotificationType:
+      | "asset_withheld"
+      | "asset_restored"
+      | "asset_updated"
+      | "profile_restricted"
+      | "profile_restored";
+    NotificationAsset: {
+      /** Format: uuid */
+      id: string;
+      /** @description The asset's name when the notification arrived */
+      name: string;
+    };
+    /** @description The update an asset_updated notification is about, as it read when it was published. */
+    NotificationUpdate: {
+      /** @description The update's number in the asset's history */
+      number: number;
+      /** @description How many updates the entry stands for. It goes up each time another update arrives before the entry is read, and the entry shows the latest of them. */
+      count: number;
+      /** @description The creator's own version text, absent when they wrote none */
+      versionLabel?: string;
+      /** @description The creator's short line saying what changed */
+      summary: string;
+    };
+    NotificationList: {
+      items: components["schemas"]["Notification"][];
+      nextCursor?: components["schemas"]["NotificationCursor"];
+    };
+    NotificationCursor: {
+      /** Format: date-time */
+      before: string;
+      /** Format: uuid */
+      beforeId: string;
+    };
+    UnreadNotifications: {
+      count: number;
+    };
+    /** @description Whether the signed-in account hears about an asset's updates, and why. The asset page returns it only to a signed-in reader who does not own the asset. A watch records nothing about how it was made. */
+    AssetWatch: {
+      /**
+       * @description none when the account has not watched the asset and none of its linked instances has it installed. watching when the account chose to watch it. installed when the account made no choice and one of its linked instances reports having it installed. stopped when the account stopped watching it, which holds through later installs.
+       * @enum {string}
+       */
+      state: "none" | "watching" | "installed" | "stopped";
+      /** @description The names of the account's linked instances that report having the asset installed, whatever the state. */
+      installedOn: string[];
+    };
     /** @enum {string} */
     AssetUpdateDestinationKind: "webhook" | "discord";
     AssetUpdateDestinationChoice: {
@@ -3870,6 +4050,15 @@ export interface components {
     UpdateAssetUpdateDestinationRequest: {
       name?: string;
       address?: string;
+    };
+    /** @description One of the reader's linked instances that holds an older copy of the asset and can receive it. The send it offers is the one the asset page offers. */
+    NotificationSendTarget: {
+      /** Format: uuid */
+      instanceId: string;
+      instanceName: string;
+      applicationName: string;
+      /** @description Whether a delivery of this asset is already waiting for the instance to collect it. */
+      waiting: boolean;
     };
     ProfileLink: {
       label: string;
@@ -4434,10 +4623,12 @@ export interface components {
       notes?: string;
       /** @description Free text a creator may repeat, keeping the asset's own version where it is empty */
       versionLabel?: string;
-      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule. */
+      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list announces nowhere. Nothing is sent inside this request; delivery follows on its own schedule. */
       destinationIds?: string[];
       /** @description Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one. */
       announceUnlisted?: boolean;
+      /** @description Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together. */
+      notify?: boolean;
     };
     AssetUpdate: {
       /** Format: uuid */
@@ -5170,6 +5361,277 @@ export interface operations {
       };
       /** @description The destination changed; inspect it before trying again */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listNotifications: {
+    parameters: {
+      query?: {
+        limit?: number;
+        /** @description When the last notification on the previous page arrived. Send it with beforeId or not at all. */
+        before?: string;
+        /** @description The id of that same notification */
+        beforeId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description One page of the inbox */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationList"];
+        };
+      };
+      /** @description The limit is out of range, or only half a cursor was sent */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  clearNotifications: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The inbox is empty */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  countUnreadNotifications: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The unread count */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnreadNotifications"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  markAllNotificationsRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Every notification is read */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeNotification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The notification is gone */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has no such notification */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  markNotificationRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The notification is read */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has no such notification */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  watchAsset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account's watch on the asset */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetWatch"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The browser proof is invalid, or the account owns the asset */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No published asset has that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  stopWatchingAsset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account's watch on the asset */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssetWatch"];
+        };
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The browser proof is invalid, or the account owns the asset */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No published asset has that id */
+      404: {
         headers: {
           [name: string]: unknown;
         };

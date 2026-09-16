@@ -356,10 +356,9 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        coalesce(revision.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at, actor.username as withheld_by
+       a.withheld_reason, a.withheld_at
   from assets a
   left join users owner on owner.id = a.owner_id
-  left join users actor on actor.id = a.withheld_by
   left join asset_revisions revision on revision.id = a.current_revision_id
  where a.id = $1
    and a.deleted_at is null
@@ -390,7 +389,6 @@ type AssetPageRow struct {
 	IsOwner           bool
 	WithheldReason    pgtype.Text
 	WithheldAt        pgtype.Timestamptz
-	WithheldBy        pgtype.Text
 }
 
 func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPageRow, error) {
@@ -414,7 +412,6 @@ func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPage
 		&i.IsOwner,
 		&i.WithheldReason,
 		&i.WithheldAt,
-		&i.WithheldBy,
 	)
 	return i, err
 }
@@ -521,11 +518,10 @@ const browseAssets = `-- name: BrowseAssets :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.kind, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason, actor.username as withheld_by
+       a.discovery, a.withheld_at, a.withheld_reason
   from assets a
   left join asset_projections projection on projection.asset_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join users actor on actor.id = a.withheld_by
   left join asset_media cover
     on cover.id = a.cover_media_id and cover.asset_id = a.id
    and cover.is_current
@@ -618,7 +614,6 @@ type BrowseAssetsRow struct {
 	Discovery      string
 	WithheldAt     pgtype.Timestamptz
 	WithheldReason pgtype.Text
-	WithheldBy     pgtype.Text
 }
 
 func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]BrowseAssetsRow, error) {
@@ -661,7 +656,6 @@ func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]B
 			&i.Discovery,
 			&i.WithheldAt,
 			&i.WithheldReason,
-			&i.WithheldBy,
 		); err != nil {
 			return nil, err
 		}
@@ -744,19 +738,29 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 	return items, nil
 }
 
-const clearAssetWithhold = `-- name: ClearAssetWithhold :execrows
-update assets
-   set withheld_at = null, withheld_by = null, withheld_reason = null,
-       updated_at = now()
- where id = $1 and withheld_at is not null and deleted_at is null
+const clearAssetWithhold = `-- name: ClearAssetWithhold :one
+with cleared as (
+    update assets as asset
+       set withheld_at = null, withheld_by = null, withheld_reason = null,
+           updated_at = now()
+     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+)
+select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
 `
 
-func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, clearAssetWithhold, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+type ClearAssetWithholdRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (ClearAssetWithholdRow, error) {
+	row := q.db.QueryRow(ctx, clearAssetWithhold, id)
+	var i ClearAssetWithholdRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
 }
 
 const clearPendingEmailCopies = `-- name: ClearPendingEmailCopies :exec
@@ -4142,14 +4146,16 @@ with withheld as (
            updated_at = now()
      where asset.id = $1 and asset.lifecycle = 'published'
        and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id
+    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
      where delivery.asset_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
-select exists(select 1 from withheld) as withheld
+select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
+  from withheld
+  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
 `
 
 type WithholdAssetParams struct {
@@ -4158,9 +4164,14 @@ type WithholdAssetParams struct {
 	WithheldReason pgtype.Text
 }
 
-func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (bool, error) {
+type WithholdAssetRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (WithholdAssetRow, error) {
 	row := q.db.QueryRow(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	var withheld bool
-	err := row.Scan(&withheld)
-	return withheld, err
+	var i WithholdAssetRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
 }
