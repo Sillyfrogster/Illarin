@@ -642,6 +642,8 @@ components:
       $ref: ./notifications.yaml#/components/schemas/NotificationType
     NotificationAsset:
       $ref: ./notifications.yaml#/components/schemas/NotificationAsset
+    NotificationUpdate:
+      $ref: ./notifications.yaml#/components/schemas/NotificationUpdate
     NotificationList:
       $ref: ./notifications.yaml#/components/schemas/NotificationList
     NotificationCursor:

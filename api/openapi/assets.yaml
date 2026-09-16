@@ -2563,7 +2563,7 @@ components:
             The creator's own active destinations this update is announced to.
             Absent, a listed asset uses the destinations remembered for it and an
             unlisted asset announces nowhere. Present, the list is remembered for
-            the next update, and an empty list publishes quietly. Nothing is sent
+            the next update, and an empty list announces nowhere. Nothing is sent
             inside this request; delivery follows on its own schedule.
           type: array
           uniqueItems: true
@@ -2576,6 +2576,15 @@ components:
             destinationIds names anything for an unlisted asset; ignored for a
             listed one.
           type: boolean
+        notify:
+          description: >-
+            Whether the accounts watching the asset, and those with it installed
+            on a linked instance, hear about this update. On when absent. They
+            hear only when the update changed the file. An unlisted asset needs
+            no consent here, because watchers already hold its address. Publishing
+            quietly means an empty destinationIds and notify off together.
+          type: boolean
+          default: true
     AssetVersionNotesRequest:
       type: object
       additionalProperties: false

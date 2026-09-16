@@ -15,20 +15,24 @@ type Type string
 const (
 	AssetWithheld     Type = "asset_withheld"
 	AssetRestored     Type = "asset_restored"
+	AssetUpdated      Type = "asset_updated"
 	ProfileRestricted Type = "profile_restricted"
 	ProfileRestored   Type = "profile_restored"
 )
 
 // Words is what a notification shows, kept as it read when the change happened.
 type Words struct {
-	AssetName string `json:"assetName,omitempty"`
-	Reason    string `json:"reason,omitempty"`
+	AssetName    string `json:"assetName,omitempty"`
+	Reason       string `json:"reason,omitempty"`
+	UpdateNumber int    `json:"updateNumber,omitempty"`
+	VersionLabel string `json:"versionLabel,omitempty"`
+	Summary      string `json:"summary,omitempty"`
 }
 
-// Event is one change an account should hear about.
+// Event is one change to tell people about. Without an account, the fan-out works out who hears from the asset.
 type Event struct {
 	Type    Type
-	Account uuid.UUID
+	Account *uuid.UUID
 	Asset   *uuid.UUID
 	Words   Words
 }

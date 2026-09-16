@@ -3843,14 +3843,16 @@ export interface components {
       asset?: components["schemas"]["NotificationAsset"];
       /** @description Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted. */
       reason?: string;
+      update?: components["schemas"]["NotificationUpdate"];
     };
     /**
-     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+     * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
      * @enum {string}
      */
     NotificationType:
       | "asset_withheld"
       | "asset_restored"
+      | "asset_updated"
       | "profile_restricted"
       | "profile_restored";
     NotificationAsset: {
@@ -3858,6 +3860,15 @@ export interface components {
       id: string;
       /** @description The asset's name when the notification arrived */
       name: string;
+    };
+    /** @description The update an asset_updated notification is about, as it read when it was published. */
+    NotificationUpdate: {
+      /** @description The update's number in the asset's history */
+      number: number;
+      /** @description The creator's own version text, absent when they wrote none */
+      versionLabel?: string;
+      /** @description The creator's short line saying what changed */
+      summary: string;
     };
     NotificationList: {
       items: components["schemas"]["Notification"][];
@@ -4581,10 +4592,15 @@ export interface components {
       notes?: string;
       /** @description Free text a creator may repeat, keeping the asset's own version where it is empty */
       versionLabel?: string;
-      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule. */
+      /** @description The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list announces nowhere. Nothing is sent inside this request; delivery follows on its own schedule. */
       destinationIds?: string[];
       /** @description Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one. */
       announceUnlisted?: boolean;
+      /**
+       * @description Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together.
+       * @default true
+       */
+      notify: boolean;
     };
     AssetUpdate: {
       /** Format: uuid */

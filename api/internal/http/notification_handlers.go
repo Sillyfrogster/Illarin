@@ -98,5 +98,12 @@ func toAPINotification(entry notification.Entry) Notification {
 		reason := entry.Words.Reason
 		shown.Reason = &reason
 	}
+	if entry.Type == notification.AssetUpdated {
+		shown.Update = &NotificationUpdate{Number: entry.Words.UpdateNumber, Summary: entry.Words.Summary}
+		if entry.Words.VersionLabel != "" {
+			label := entry.Words.VersionLabel
+			shown.Update.VersionLabel = &label
+		}
+	}
 	return shown
 }

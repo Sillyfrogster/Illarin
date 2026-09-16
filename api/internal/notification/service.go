@@ -73,8 +73,29 @@ func (s *Service) fanOutBatch(ctx context.Context, now time.Time) (int, error) {
 			returning event.id
 		), written as (
 			insert into notifications (id, account_id, type, asset_id, words, created_at)
-			select gen_random_uuid(), account_id, type, asset_id, words, recorded_at
+			select gen_random_uuid(), hearer.account_id, due.type, due.asset_id, due.words, due.recorded_at
 			  from due
+			  cross join lateral (
+				select due.account_id
+				 where due.account_id is not null
+				union all
+				select account_id
+				  from (
+					select account_id from asset_watches
+					 where asset_id = due.asset_id and state = 'watching'
+					union
+					select instance.user_id
+					  from instance_library_entries entry
+					  join linked_instances instance on instance.id = entry.instance_id
+					 where entry.asset_id = due.asset_id and instance.revoked_at is null
+					except
+					select account_id from asset_watches
+					 where asset_id = due.asset_id and state = 'stopped'
+					except
+					select owner_id from assets where id = due.asset_id
+				  ) watching
+				 where due.account_id is null
+			  ) hearer (account_id)
 		)
 		select count(*) from handled
 	`, now, fanOutBatch).Scan(&handled); err != nil {

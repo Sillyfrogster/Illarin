@@ -148,7 +148,7 @@ func run() error {
 	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
 	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
-	svc.OnUpdatePublished(updateDestinations.Announce)
+	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	notifications := notification.NewService(pool)

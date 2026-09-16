@@ -39,10 +39,11 @@ type UpdateRequest struct {
 	Announcement UpdateAnnouncement
 }
 
-// UpdateAnnouncement is the creator's choice of where one update is announced.
+// UpdateAnnouncement is the creator's choice of where one update is announced and whether watchers hear of it.
 type UpdateAnnouncement struct {
 	DestinationIDs   *[]uuid.UUID
 	AnnounceUnlisted bool
+	Notify           bool
 }
 
 type Update struct {
@@ -57,10 +58,11 @@ type Update struct {
 	ContentChanged    bool
 }
 
-type AnnounceUpdate func(ctx context.Context, tx pgx.Tx, published Update, choice UpdateAnnouncement) error
+// UpdateListener is called inside the publish transaction with every update, so what it records commits with the update.
+type UpdateListener func(ctx context.Context, tx pgx.Tx, published Update, choice UpdateAnnouncement) error
 
-func (s *Service) OnUpdatePublished(announce AnnounceUpdate) {
-	s.announce = announce
+func (s *Service) OnUpdatePublished(listeners ...UpdateListener) {
+	s.updateListeners = append(s.updateListeners, listeners...)
 }
 
 func (s *Service) PublishUpdate(
@@ -130,8 +132,8 @@ func (s *Service) PublishUpdate(
 	if err != nil {
 		return Update{}, nil, err
 	}
-	if s.announce != nil {
-		if err := s.announce(ctx, tx, recorded, in.Announcement); err != nil {
+	for _, listen := range s.updateListeners {
+		if err := listen(ctx, tx, recorded, in.Announcement); err != nil {
 			return Update{}, nil, err
 		}
 	}

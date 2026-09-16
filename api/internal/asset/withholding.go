@@ -79,7 +79,8 @@ func tellOwner(
 	if !owner.Valid {
 		return nil
 	}
+	account := uuid.UUID(owner.Bytes)
 	return notification.Record(ctx, tx, notification.Event{
-		Type: kind, Account: uuid.UUID(owner.Bytes), Asset: &assetID, Words: words,
+		Type: kind, Account: &account, Asset: &assetID, Words: words,
 	})
 }

@@ -35,15 +35,15 @@ var (
 )
 
 type Service struct {
-	pool     *pgxpool.Pool
-	reg      *format.Registry
-	store    storage.Store
-	media    *mediaproc.Library
-	ingest   IngestSettings
-	signer   signing.Key
-	now      func() time.Time
-	siteURL  string
-	announce AnnounceUpdate
+	pool            *pgxpool.Pool
+	reg             *format.Registry
+	store           storage.Store
+	media           *mediaproc.Library
+	ingest          IngestSettings
+	signer          signing.Key
+	now             func() time.Time
+	siteURL         string
+	updateListeners []UpdateListener
 }
 
 func (s *Service) beginReadSnapshot(ctx context.Context) (pgx.Tx, error) {

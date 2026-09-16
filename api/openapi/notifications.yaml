@@ -176,12 +176,15 @@ components:
       type: string
       description: >-
         asset_withheld and asset_restored say that Illarin staff withheld or
-        restored one of the account's assets. profile_restricted and
+        restored one of the account's assets. asset_updated says that an asset
+        the account watches, or has installed on a linked instance, published
+        an update that changed its file. profile_restricted and
         profile_restored say that Illarin staff restricted or restored the
         account's public profile.
       enum:
         - asset_withheld
         - asset_restored
+        - asset_updated
         - profile_restricted
         - profile_restored
     NotificationAsset:
@@ -196,6 +199,22 @@ components:
         name:
           type: string
           description: The asset's name when the notification arrived
+    NotificationUpdate:
+      type: object
+      description: The update an asset_updated notification is about, as it read when it was published.
+      required:
+        - number
+        - summary
+      properties:
+        number:
+          type: integer
+          description: The update's number in the asset's history
+        versionLabel:
+          type: string
+          description: The creator's own version text, absent when they wrote none
+        summary:
+          type: string
+          description: The creator's short line saying what changed
     Notification:
       type: object
       description: >-
@@ -226,6 +245,8 @@ components:
           description: >-
             Why staff withheld the asset or restricted the profile. Present on
             asset_withheld and profile_restricted.
+        update:
+          $ref: '#/components/schemas/NotificationUpdate'
     NotificationCursor:
       type: object
       required:

@@ -1002,6 +1002,7 @@ func (e MediaRole) Valid() bool {
 // Defines values for NotificationType.
 const (
 	AssetRestored     NotificationType = "asset_restored"
+	AssetUpdated      NotificationType = "asset_updated"
 	AssetWithheld     NotificationType = "asset_withheld"
 	ProfileRestored   NotificationType = "profile_restored"
 	ProfileRestricted NotificationType = "profile_restricted"
@@ -1011,6 +1012,8 @@ const (
 func (e NotificationType) Valid() bool {
 	switch e {
 	case AssetRestored:
+		return true
+	case AssetUpdated:
 		return true
 	case AssetWithheld:
 		return true
@@ -2765,11 +2768,14 @@ type AssetUpdateRequest struct {
 	// AnnounceUnlisted Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one.
 	AnnounceUnlisted *bool `json:"announceUnlisted,omitempty"`
 
-	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list publishes quietly. Nothing is sent inside this request; delivery follows on its own schedule.
+	// DestinationIds The creator's own active destinations this update is announced to. Absent, a listed asset uses the destinations remembered for it and an unlisted asset announces nowhere. Present, the list is remembered for the next update, and an empty list announces nowhere. Nothing is sent inside this request; delivery follows on its own schedule.
 	DestinationIds *[]openapi_types.UUID `json:"destinationIds,omitempty"`
 
 	// Notes The longer explanation, where the creator writes one
 	Notes *string `json:"notes,omitempty"`
+
+	// Notify Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together.
+	Notify *bool `json:"notify,omitempty"`
 
 	// Summary A short line saying what changed, which every update needs
 	Summary string `json:"summary"`
@@ -3422,8 +3428,11 @@ type Notification struct {
 	// Reason Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted.
 	Reason *string `json:"reason,omitempty"`
 
-	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 	Type NotificationType `json:"type"`
+
+	// Update The update an asset_updated notification is about, as it read when it was published.
+	Update *NotificationUpdate `json:"update,omitempty"`
 }
 
 // NotificationAsset defines model for NotificationAsset.
@@ -3446,8 +3455,20 @@ type NotificationList struct {
 	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
 }
 
-// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
+// NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 type NotificationType string
+
+// NotificationUpdate The update an asset_updated notification is about, as it read when it was published.
+type NotificationUpdate struct {
+	// Number The update's number in the asset's history
+	Number int `json:"number"`
+
+	// Summary The creator's short line saying what changed
+	Summary string `json:"summary"`
+
+	// VersionLabel The creator's own version text, absent when they wrote none
+	VersionLabel *string `json:"versionLabel,omitempty"`
+}
 
 // NsfwVisibilityRequest defines model for NsfwVisibilityRequest.
 type NsfwVisibilityRequest struct {

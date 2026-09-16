@@ -155,7 +155,7 @@ func newTestHandlersWithDelivery(
 	updateDestinations := assetdestination.NewService(
 		pool, testSealingKey(), testPublishing(to).Sender, "http://localhost:3000",
 	)
-	svc.OnUpdatePublished(updateDestinations.Announce)
+	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 
 	return NewHandlers(
 		svc, accounts, links, deliveries,
@@ -203,7 +203,7 @@ func newDiscordTestStack(
 	accounts := newTestAccounts(pool, outbox, provider, testMediaLibrary(blob))
 	links := newTestLinkingService(pool)
 	updateDestinations := newTestUpdateDestinations(pool)
-	assets.OnUpdatePublished(updateDestinations.Announce)
+	assets.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 	handlers := NewHandlers(
 		assets, accounts, links, newTestDeliveryService(pool, assets, links),
 		newTestPublicationService(pool, blob), updateDestinations, newTestNotifications(pool), 1<<20,

@@ -83,7 +83,7 @@ func (s *Service) RestrictProfile(
 		return Restriction{}, err
 	}
 	if err := notification.Record(ctx, tx, notification.Event{
-		Type: notification.ProfileRestricted, Account: subject, Words: notification.Words{Reason: reason},
+		Type: notification.ProfileRestricted, Account: &subject, Words: notification.Words{Reason: reason},
 	}); err != nil {
 		return Restriction{}, err
 	}
@@ -114,7 +114,7 @@ func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle stri
 		return err
 	}
 	if err := notification.Record(ctx, tx, notification.Event{
-		Type: notification.ProfileRestored, Account: subject,
+		Type: notification.ProfileRestored, Account: &subject,
 	}); err != nil {
 		return err
 	}

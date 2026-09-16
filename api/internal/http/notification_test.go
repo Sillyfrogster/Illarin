@@ -309,6 +309,7 @@ type inboxStack struct {
 	router        *gin.Engine
 	assets        *asset.Service
 	notifications *notification.Service
+	outbox        *verificationOutbox
 	creator       *http.Cookie
 	staff         *http.Cookie
 }
@@ -323,6 +324,11 @@ type inboxEntry struct {
 		Name string `json:"name"`
 	} `json:"asset"`
 	Reason string `json:"reason"`
+	Update *struct {
+		Number       int    `json:"number"`
+		VersionLabel string `json:"versionLabel"`
+		Summary      string `json:"summary"`
+	} `json:"update"`
 }
 
 type inboxPage struct {
@@ -344,7 +350,7 @@ func newInboxStack(t *testing.T) inboxStack {
 	}
 	return inboxStack{
 		router: router, assets: handlers.assets, notifications: handlers.notifications,
-		creator: creator, staff: staff,
+		outbox: outbox, creator: creator, staff: staff,
 	}
 }
 
