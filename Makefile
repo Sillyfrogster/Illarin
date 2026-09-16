@@ -138,14 +138,10 @@ check-go: fmt-check vet test ## Check the Go code and run its tests
 
 check-web: test-web lint openapi-check ## Check the site and run its tests
 
-.PHONY: test test-all test-postgres test-postgres-stop
+.PHONY: test test-postgres test-postgres-stop
 test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/http/...
 	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
 		$(if $(TEST_JSON),--jsonfile "$(TEST_JSON)") -- -short -timeout $(TEST_TIMEOUT) $(TEST)
-
-test-all: test-postgres ## Run every Go test, including the ones that read the local v1 dump
-	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
-		-- -timeout 30m $(TEST)
 
 test-postgres: ## Start the in-memory Postgres the Go tests run against
 	@docker container inspect -f '{{.State.Running}}' $(TEST_POSTGRES) 2>/dev/null | grep -qx true || { \
@@ -239,13 +235,6 @@ migrate-status: need-db ## Show which migrations have run
 publication-authority: need-db ## Record which account holds publication authority; set HANDLE
 	@test -n "$(HANDLE)" || { echo "Set HANDLE to the account that holds publication authority."; exit 1; }
 	cd api && go run ./cmd/publication-authority -handle "$(HANDLE)"
-
-.PHONY: migrate-v1
-migrate-v1: need-db ## Carry the v1 catalog across; set V1_SOURCE, V1_BACKUP and V1_IMAGE_HOSTS
-	@test -n "$(V1_SOURCE)" || { echo "Set V1_SOURCE to the restored v1 database URL."; exit 1; }
-	@test -n "$(V1_BACKUP)" || { echo "Set V1_BACKUP to the v1 file backup archive."; exit 1; }
-	cd api && go run ./cmd/migrate-v1 -source "$(V1_SOURCE)" -backup "$(V1_BACKUP)" \
-		-image-hosts "$(V1_IMAGE_HOSTS)"
 
 # Generated code, never hand edited
 

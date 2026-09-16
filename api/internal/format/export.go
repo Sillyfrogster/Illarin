@@ -69,10 +69,12 @@ type Writer interface {
 	Write(context.Context, ExportAsset) (Artifact, error)
 }
 
-func TravelsWithOrigin(origin, target Declaration) bool {
-	if slices.Contains(target.PreservesOrigins, origin.ID) {
+// TravelsWithOrigin says whether data preserved from origin goes into target's export, even when origin has no module left.
+func (r *Registry) TravelsWithOrigin(origin string, target Declaration) bool {
+	if slices.Contains(target.PreservesOrigins, origin) {
 		return true
 	}
-	return origin.Preservation.Body == target.Preservation.Body &&
-		slices.Equal(origin.Preservation.Container, target.Preservation.Container)
+	declared, known := r.Declaration(origin)
+	return known && declared.Preservation.Body == target.Preservation.Body &&
+		slices.Equal(declared.Preservation.Container, target.Preservation.Container)
 }

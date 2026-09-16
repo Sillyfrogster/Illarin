@@ -199,7 +199,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		if draft {
 			found.Readiness = readiness(found.Kind, found.Name, found.IsNSFW, found.Blocks)
 		} else {
-			found.Readiness = MigratedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
+			found.Readiness = publishedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
 		}
 		if viewerID != nil {
 			sealed, err := sealedBlockCount(ctx, tx, *viewerID, id)

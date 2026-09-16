@@ -964,51 +964,10 @@ with revoked as (
 )
 select exists(select 1 from revoked) as revoked;
 
--- name: InsertMigrationException :exec
-insert into migration_exceptions (id, kind, subject, detail, asset_id)
-values ($1, $2, $3, $4, sqlc.narg('asset_id')::uuid);
-
--- name: MigrationTargetIsEmpty :one
-select (not exists (select 1 from users)
-    and not exists (select 1 from retired_handles)
-    and not exists (select 1 from oauth_identities)
-    and not exists (select 1 from migration_exceptions))::boolean as empty;
-
--- name: InsertMigratedUser :exec
-insert into users
-  (id, username, role, created_at, updated_at, display_name, custom_display_name,
-   avatar_url, banner_url, nsfw_visibility, show_nsfw_contributions_on_profile,
-   default_include_tags, default_exclude_tags)
-values ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, $11, $12);
-
--- name: InsertMigratedDiscordIdentity :exec
-insert into oauth_identities (user_id, provider, subject) values ($1, 'discord', $2);
-
--- name: MigratedAccounts :many
-select u.id, u.username, u.role, u.created_at, u.display_name, u.custom_display_name,
-       u.avatar_url, u.banner_url, u.nsfw_visibility,
-       u.show_nsfw_contributions_on_profile,
-       u.default_include_tags, u.default_exclude_tags,
-       u.email, u.email_source, u.email_verified_at, u.password_hash,
-       identity.subject as discord_subject
-  from users u
-  left join oauth_identities identity
-    on identity.user_id = u.id and identity.provider = 'discord';
-
 -- name: UpdateDiscordProfile :exec
 update users
    set display_name = $2, avatar_url = $3, banner_url = $4, updated_at = now()
  where id = $1;
-
--- name: MigrationAssetTargetIsEmpty :one
-select (not exists (select 1 from assets)
-    and not exists (select 1 from asset_legacy_paths)
-    and not exists (select 1 from migration_preserved_records)
-    and not exists (select 1 from migration_legacy_counters)
-    and not exists (select 1 from migration_exceptions where asset_id is not null))::boolean as empty;
-
--- name: InsertLegacyPath :exec
-insert into asset_legacy_paths (path, asset_id) values ($1, $2);
 
 -- name: LegacyPathTarget :one
 select asset.id, asset.name
@@ -1018,25 +977,6 @@ select asset.id, asset.name
    and asset.deleted_at is null
    and asset.withheld_at is null
    and asset.lifecycle = 'published';
-
--- name: InsertPreservedRecord :exec
-insert into migration_preserved_records
-  (id, source_table, source_id, asset_id, owner_id, payload)
-values ($1, $2, $3, sqlc.narg('asset_id')::uuid, sqlc.narg('owner_id')::uuid, $4);
-
--- name: InsertLegacyCounters :exec
-insert into migration_legacy_counters (asset_id, v1_downloads, v1_views, v1_updated_at)
-values ($1, $2, $3, $4);
-
--- name: StagedMedia :many
-select source, blob_id, width, height from migration_staged_media;
-
--- name: RecordStagedMedia :exec
-insert into migration_staged_media (source, blob_id, width, height)
-values ($1, $2, $3, $4)
-on conflict (source) do update
-   set blob_id = excluded.blob_id, width = excluded.width,
-       height = excluded.height, staged_at = now();
 
 -- name: LiveLinkedInstances :many
 select id, user_id, application_name, instance_name, application_version,

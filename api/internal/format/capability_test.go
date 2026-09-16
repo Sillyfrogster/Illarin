@@ -318,11 +318,31 @@ func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 	stranger := writerDeclaration("theme_lumiverse", fullCharacterGrades())
 	stranger.Preservation = PreservationDeclaration{Body: "bundle"}
 
-	if !TravelsWithOrigin(card, sibling) {
+	registry := registryOf(t, card, sibling, stranger)
+
+	if !registry.TravelsWithOrigin(card.ID, sibling) {
 		t.Error("preserved data did not travel to its own family")
 	}
-	if TravelsWithOrigin(card, stranger) {
+	if registry.TravelsWithOrigin(card.ID, stranger) {
 		t.Error("preserved data reached another family")
+	}
+}
+
+func TestPreservedDataFromARetiredOriginTravelsWhereTheTargetKeepsIt(t *testing.T) {
+	t.Parallel()
+	keeper := writerDeclaration("lorebook_lumiverse", fullCharacterGrades())
+	keeper.Preservation = PreservationDeclaration{Body: "lorebook"}
+	keeper.PreservesOrigins = []string{"retired"}
+	keeper.TestedOrigins = append(keeper.TestedOrigins, "retired")
+	other := writerDeclaration("theme_lumiverse", fullCharacterGrades())
+	other.Preservation = PreservationDeclaration{Body: "bundle"}
+	registry := registryOf(t, keeper, other)
+
+	if !registry.TravelsWithOrigin("retired", keeper) {
+		t.Error("preserved data from a retired origin did not reach the format that keeps it")
+	}
+	if registry.TravelsWithOrigin("retired", other) {
+		t.Error("preserved data from a retired origin reached a format that does not keep it")
 	}
 }
 

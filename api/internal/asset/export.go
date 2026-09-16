@@ -361,9 +361,8 @@ func (s *Service) travellingPreservedData(
 	if subject.origin == "" {
 		return nil, nil
 	}
-	origin, known := s.reg.Declaration(subject.origin)
 	written, writes := s.reg.Declaration(target)
-	if !known || !writes || !format.TravelsWithOrigin(origin, written) {
+	if !writes || !s.reg.TravelsWithOrigin(subject.origin, written) {
 		return nil, nil
 	}
 	if subject.recorded != nil {

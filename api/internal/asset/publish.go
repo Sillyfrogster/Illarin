@@ -39,6 +39,14 @@ func Ready(items []ReadinessItem) bool {
 	return true
 }
 
+func publishedShortfall(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
+	items := readiness(kind, name, isNSFW, blocks)
+	if Ready(items) {
+		return nil
+	}
+	return items
+}
+
 func readiness(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
 	items := []ReadinessItem{
 		{

@@ -1573,42 +1573,6 @@ func (q *Queries) InsertInstanceAccessToken(ctx context.Context, arg InsertInsta
 	return i, err
 }
 
-const insertLegacyCounters = `-- name: InsertLegacyCounters :exec
-insert into migration_legacy_counters (asset_id, v1_downloads, v1_views, v1_updated_at)
-values ($1, $2, $3, $4)
-`
-
-type InsertLegacyCountersParams struct {
-	AssetID     pgtype.UUID
-	V1Downloads int32
-	V1Views     int32
-	V1UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) InsertLegacyCounters(ctx context.Context, arg InsertLegacyCountersParams) error {
-	_, err := q.db.Exec(ctx, insertLegacyCounters,
-		arg.AssetID,
-		arg.V1Downloads,
-		arg.V1Views,
-		arg.V1UpdatedAt,
-	)
-	return err
-}
-
-const insertLegacyPath = `-- name: InsertLegacyPath :exec
-insert into asset_legacy_paths (path, asset_id) values ($1, $2)
-`
-
-type InsertLegacyPathParams struct {
-	Path    string
-	AssetID pgtype.UUID
-}
-
-func (q *Queries) InsertLegacyPath(ctx context.Context, arg InsertLegacyPathParams) error {
-	_, err := q.db.Exec(ctx, insertLegacyPath, arg.Path, arg.AssetID)
-	return err
-}
-
 const insertLinkAuthorization = `-- name: InsertLinkAuthorization :exec
 insert into link_authorizations (
     request_hash, redirect_uri, state, code_challenge,
@@ -1736,85 +1700,6 @@ func (q *Queries) InsertLinkedInstance(ctx context.Context, arg InsertLinkedInst
 	return i, err
 }
 
-const insertMigratedDiscordIdentity = `-- name: InsertMigratedDiscordIdentity :exec
-insert into oauth_identities (user_id, provider, subject) values ($1, 'discord', $2)
-`
-
-type InsertMigratedDiscordIdentityParams struct {
-	UserID  pgtype.UUID
-	Subject string
-}
-
-func (q *Queries) InsertMigratedDiscordIdentity(ctx context.Context, arg InsertMigratedDiscordIdentityParams) error {
-	_, err := q.db.Exec(ctx, insertMigratedDiscordIdentity, arg.UserID, arg.Subject)
-	return err
-}
-
-const insertMigratedUser = `-- name: InsertMigratedUser :exec
-insert into users
-  (id, username, role, created_at, updated_at, display_name, custom_display_name,
-   avatar_url, banner_url, nsfw_visibility, show_nsfw_contributions_on_profile,
-   default_include_tags, default_exclude_tags)
-values ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-`
-
-type InsertMigratedUserParams struct {
-	ID                             pgtype.UUID
-	Username                       string
-	Role                           string
-	CreatedAt                      pgtype.Timestamptz
-	DisplayName                    string
-	CustomDisplayName              string
-	AvatarUrl                      string
-	BannerUrl                      string
-	NsfwVisibility                 string
-	ShowNsfwContributionsOnProfile bool
-	DefaultIncludeTags             []byte
-	DefaultExcludeTags             []byte
-}
-
-func (q *Queries) InsertMigratedUser(ctx context.Context, arg InsertMigratedUserParams) error {
-	_, err := q.db.Exec(ctx, insertMigratedUser,
-		arg.ID,
-		arg.Username,
-		arg.Role,
-		arg.CreatedAt,
-		arg.DisplayName,
-		arg.CustomDisplayName,
-		arg.AvatarUrl,
-		arg.BannerUrl,
-		arg.NsfwVisibility,
-		arg.ShowNsfwContributionsOnProfile,
-		arg.DefaultIncludeTags,
-		arg.DefaultExcludeTags,
-	)
-	return err
-}
-
-const insertMigrationException = `-- name: InsertMigrationException :exec
-insert into migration_exceptions (id, kind, subject, detail, asset_id)
-values ($1, $2, $3, $4, $5::uuid)
-`
-
-type InsertMigrationExceptionParams struct {
-	ID      pgtype.UUID
-	Kind    string
-	Subject string
-	Detail  string
-	AssetID pgtype.UUID
-}
-
-func (q *Queries) InsertMigrationException(ctx context.Context, arg InsertMigrationExceptionParams) error {
-	_, err := q.db.Exec(ctx, insertMigrationException,
-		arg.ID,
-		arg.Kind,
-		arg.Subject,
-		arg.Detail,
-		arg.AssetID,
-	)
-	return err
-}
-
 const insertOAuthIdentity = `-- name: InsertOAuthIdentity :exec
 insert into oauth_identities (user_id, provider, subject, provider_email)
 values ($1, $2, $3, $4)
@@ -1872,33 +1757,6 @@ type InsertPasswordResetParams struct {
 
 func (q *Queries) InsertPasswordReset(ctx context.Context, arg InsertPasswordResetParams) error {
 	_, err := q.db.Exec(ctx, insertPasswordReset, arg.TokenHash, arg.UserID, arg.ExpiresAt)
-	return err
-}
-
-const insertPreservedRecord = `-- name: InsertPreservedRecord :exec
-insert into migration_preserved_records
-  (id, source_table, source_id, asset_id, owner_id, payload)
-values ($1, $2, $3, $5::uuid, $6::uuid, $4)
-`
-
-type InsertPreservedRecordParams struct {
-	ID          pgtype.UUID
-	SourceTable string
-	SourceID    string
-	Payload     []byte
-	AssetID     pgtype.UUID
-	OwnerID     pgtype.UUID
-}
-
-func (q *Queries) InsertPreservedRecord(ctx context.Context, arg InsertPreservedRecordParams) error {
-	_, err := q.db.Exec(ctx, insertPreservedRecord,
-		arg.ID,
-		arg.SourceTable,
-		arg.SourceID,
-		arg.Payload,
-		arg.AssetID,
-		arg.OwnerID,
-	)
 	return err
 }
 
@@ -2665,105 +2523,6 @@ func (q *Queries) LockOAuthUser(ctx context.Context, userID pgtype.UUID) (int32,
 	return column_1, err
 }
 
-const migratedAccounts = `-- name: MigratedAccounts :many
-select u.id, u.username, u.role, u.created_at, u.display_name, u.custom_display_name,
-       u.avatar_url, u.banner_url, u.nsfw_visibility,
-       u.show_nsfw_contributions_on_profile,
-       u.default_include_tags, u.default_exclude_tags,
-       u.email, u.email_source, u.email_verified_at, u.password_hash,
-       identity.subject as discord_subject
-  from users u
-  left join oauth_identities identity
-    on identity.user_id = u.id and identity.provider = 'discord'
-`
-
-type MigratedAccountsRow struct {
-	ID                             pgtype.UUID
-	Username                       string
-	Role                           string
-	CreatedAt                      pgtype.Timestamptz
-	DisplayName                    string
-	CustomDisplayName              string
-	AvatarUrl                      string
-	BannerUrl                      string
-	NsfwVisibility                 string
-	ShowNsfwContributionsOnProfile bool
-	DefaultIncludeTags             []byte
-	DefaultExcludeTags             []byte
-	Email                          pgtype.Text
-	EmailSource                    pgtype.Text
-	EmailVerifiedAt                pgtype.Timestamptz
-	PasswordHash                   pgtype.Text
-	DiscordSubject                 pgtype.Text
-}
-
-func (q *Queries) MigratedAccounts(ctx context.Context) ([]MigratedAccountsRow, error) {
-	rows, err := q.db.Query(ctx, migratedAccounts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []MigratedAccountsRow
-	for rows.Next() {
-		var i MigratedAccountsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Username,
-			&i.Role,
-			&i.CreatedAt,
-			&i.DisplayName,
-			&i.CustomDisplayName,
-			&i.AvatarUrl,
-			&i.BannerUrl,
-			&i.NsfwVisibility,
-			&i.ShowNsfwContributionsOnProfile,
-			&i.DefaultIncludeTags,
-			&i.DefaultExcludeTags,
-			&i.Email,
-			&i.EmailSource,
-			&i.EmailVerifiedAt,
-			&i.PasswordHash,
-			&i.DiscordSubject,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const migrationAssetTargetIsEmpty = `-- name: MigrationAssetTargetIsEmpty :one
-select (not exists (select 1 from assets)
-    and not exists (select 1 from asset_legacy_paths)
-    and not exists (select 1 from migration_preserved_records)
-    and not exists (select 1 from migration_legacy_counters)
-    and not exists (select 1 from migration_exceptions where asset_id is not null))::boolean as empty
-`
-
-func (q *Queries) MigrationAssetTargetIsEmpty(ctx context.Context) (bool, error) {
-	row := q.db.QueryRow(ctx, migrationAssetTargetIsEmpty)
-	var empty bool
-	err := row.Scan(&empty)
-	return empty, err
-}
-
-const migrationTargetIsEmpty = `-- name: MigrationTargetIsEmpty :one
-select (not exists (select 1 from users)
-    and not exists (select 1 from retired_handles)
-    and not exists (select 1 from oauth_identities)
-    and not exists (select 1 from migration_exceptions))::boolean as empty
-`
-
-func (q *Queries) MigrationTargetIsEmpty(ctx context.Context) (bool, error) {
-	row := q.db.QueryRow(ctx, migrationTargetIsEmpty)
-	var empty bool
-	err := row.Scan(&empty)
-	return empty, err
-}
-
 const nSFWVisibilityBySessionHash = `-- name: NSFWVisibilityBySessionHash :one
 select u.nsfw_visibility
   from sessions session
@@ -2930,31 +2689,6 @@ type RecordLibraryApplicationVersionParams struct {
 
 func (q *Queries) RecordLibraryApplicationVersion(ctx context.Context, arg RecordLibraryApplicationVersionParams) error {
 	_, err := q.db.Exec(ctx, recordLibraryApplicationVersion, arg.ApplicationVersion, arg.InstanceID)
-	return err
-}
-
-const recordStagedMedia = `-- name: RecordStagedMedia :exec
-insert into migration_staged_media (source, blob_id, width, height)
-values ($1, $2, $3, $4)
-on conflict (source) do update
-   set blob_id = excluded.blob_id, width = excluded.width,
-       height = excluded.height, staged_at = now()
-`
-
-type RecordStagedMediaParams struct {
-	Source string
-	BlobID pgtype.UUID
-	Width  int32
-	Height int32
-}
-
-func (q *Queries) RecordStagedMedia(ctx context.Context, arg RecordStagedMediaParams) error {
-	_, err := q.db.Exec(ctx, recordStagedMedia,
-		arg.Source,
-		arg.BlobID,
-		arg.Width,
-		arg.Height,
-	)
 	return err
 }
 
@@ -3428,42 +3162,6 @@ func (q *Queries) SoftDeleteAsset(ctx context.Context, arg SoftDeleteAssetParams
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const stagedMedia = `-- name: StagedMedia :many
-select source, blob_id, width, height from migration_staged_media
-`
-
-type StagedMediaRow struct {
-	Source string
-	BlobID pgtype.UUID
-	Width  int32
-	Height int32
-}
-
-func (q *Queries) StagedMedia(ctx context.Context) ([]StagedMediaRow, error) {
-	rows, err := q.db.Query(ctx, stagedMedia)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []StagedMediaRow
-	for rows.Next() {
-		var i StagedMediaRow
-		if err := rows.Scan(
-			&i.Source,
-			&i.BlobID,
-			&i.Width,
-			&i.Height,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const takeLinkRateLimit = `-- name: TakeLinkRateLimit :one
