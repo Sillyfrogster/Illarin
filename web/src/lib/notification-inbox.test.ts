@@ -80,6 +80,39 @@ test("a restored profile says Illarin staff restored it and that it can be edite
   });
 });
 
+test("an updated asset names the update, its version and summary, and opens that update in the history", () => {
+  expect(
+    notificationWords(
+      entry({
+        type: "asset_updated",
+        reason: undefined,
+        update: {
+          number: 3,
+          versionLabel: "v2.1",
+          summary: "Rewrote her opening",
+        },
+      }),
+    ),
+  ).toEqual({
+    lead: "New update to",
+    subject: "Moonlit Archive",
+    detail: "Update 3, v2.1: Rewrote her opening",
+    href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-3",
+  });
+});
+
+test("an update without a version label leaves the label out", () => {
+  expect(
+    notificationWords(
+      entry({
+        type: "asset_updated",
+        reason: undefined,
+        update: { number: 2, summary: "Fixed a typo in her greeting" },
+      }),
+    ).detail,
+  ).toBe("Update 2: Fixed a typo in her greeting");
+});
+
 test("an entry that names no asset still reads plainly and has nowhere to send the reader", () => {
   const words = notificationWords(entry({ asset: undefined }));
   expect(words.subject).toBe("One of your assets");

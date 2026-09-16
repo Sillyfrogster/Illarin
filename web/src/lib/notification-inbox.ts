@@ -1,5 +1,5 @@
 import type { Notification, NotificationList } from "@/lib/api/notifications";
-import { assetHref } from "@/lib/asset-url";
+import { assetHistoryHref, assetHref } from "@/lib/asset-url";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -39,6 +39,19 @@ export function notificationWords(entry: Notification): NotificationWords {
         detail: "Readers can reach it again.",
         href: assetPage,
       };
+    case "asset_updated":
+      return {
+        lead: "New update to",
+        subject: assetName,
+        detail: updateDetail(entry),
+        href: entry.asset
+          ? assetHistoryHref(
+              entry.asset.id,
+              entry.asset.name,
+              entry.update?.number,
+            )
+          : null,
+      };
     case "profile_restricted":
       return {
         lead: "Illarin staff restricted",
@@ -54,6 +67,13 @@ export function notificationWords(entry: Notification): NotificationWords {
         href: PROFILE_SETTINGS,
       };
   }
+}
+
+function updateDetail(entry: Notification): string {
+  const update = entry.update;
+  if (!update) return "";
+  const label = update.versionLabel ? `, ${update.versionLabel}` : "";
+  return `Update ${update.number}${label}: ${update.summary}`;
 }
 
 /** Says how long ago an entry arrived, in words for the past week and as a date before that. */

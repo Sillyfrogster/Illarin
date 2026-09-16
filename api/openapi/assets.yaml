@@ -2584,7 +2584,6 @@ components:
             no consent here, because watchers already hold its address. Publishing
             quietly means an empty destinationIds and notify off together.
           type: boolean
-          default: true
     AssetVersionNotesRequest:
       type: object
       additionalProperties: false

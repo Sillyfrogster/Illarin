@@ -171,9 +171,10 @@ function NotificationPanel({
             </>
           ) : (
             <div className="px-6 pt-5 pb-8 text-center">
-              <p className="text-ui text-ink">No notifications yet</p>
+              <p className="text-ui text-ink">No notifications</p>
               <p className="mx-auto mt-1 max-w-[30ch] text-meta text-mute">
-                When Illarin staff act on your work, you hear about it here.
+                Updates to assets you watch, and anything Illarin staff do with
+                your work, arrive here.
               </p>
             </div>
           )

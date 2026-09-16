@@ -4596,11 +4596,8 @@ export interface components {
       destinationIds?: string[];
       /** @description Consent to send an unlisted asset's direct link. Required whenever destinationIds names anything for an unlisted asset; ignored for a listed one. */
       announceUnlisted?: boolean;
-      /**
-       * @description Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together.
-       * @default true
-       */
-      notify: boolean;
+      /** @description Whether the accounts watching the asset, and those with it installed on a linked instance, hear about this update. On when absent. They hear only when the update changed the file. An unlisted asset needs no consent here, because watchers already hold its address. Publishing quietly means an empty destinationIds and notify off together. */
+      notify?: boolean;
     };
     AssetUpdate: {
       /** Format: uuid */

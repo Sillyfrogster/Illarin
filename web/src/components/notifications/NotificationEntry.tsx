@@ -4,6 +4,7 @@ import {
   type LucideIcon,
   ShieldCheck,
   ShieldOff,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import type { Notification } from "@/lib/api/notifications";
@@ -13,10 +14,12 @@ import { arrivedAgo, notificationWords } from "@/lib/notification-inbox";
 
 const TAKEN_TONE = "bg-stop-wash text-stop";
 const GIVEN_BACK_TONE = "bg-accent-wash text-accent";
+const NEWS_TONE = "bg-deep text-ink";
 
 const MARKS = {
   asset_withheld: { icon: LockKeyhole, tone: TAKEN_TONE },
   asset_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
+  asset_updated: { icon: Sparkles, tone: NEWS_TONE },
   profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
