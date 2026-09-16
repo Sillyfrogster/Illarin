@@ -21,20 +21,19 @@ type publicationStack struct {
 	authority *http.Cookie
 }
 
-type publicationMark struct {
+type profileAvatar struct {
 	URL    string `json:"url"`
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 }
 
 type publicationApp struct {
-	ID       string           `json:"id"`
-	Slug     string           `json:"slug"`
-	Name     string           `json:"name"`
-	Home     string           `json:"home"`
-	Mark     *publicationMark `json:"mark"`
-	Position int              `json:"position"`
-	Retired  bool             `json:"retired"`
+	ID       string `json:"id"`
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	Home     string `json:"home"`
+	Position int    `json:"position"`
+	Retired  bool   `json:"retired"`
 }
 
 type publicationAppList struct {
@@ -52,8 +51,6 @@ type publicationCategory struct {
 type publicationCategoryList struct {
 	Categories []publicationCategory `json:"categories"`
 }
-
-type profileAvatar = publicationMark
 
 type publicationGrantHolder struct {
 	Handle      string         `json:"handle"`
@@ -80,6 +77,21 @@ type publicationGrantList struct {
 type publicationWorkspace struct {
 	Handle string             `json:"handle"`
 	Grants []publicationGrant `json:"grants"`
+}
+
+type contributor struct {
+	handle  string
+	session *http.Cookie
+	grant   publicationGrant
+}
+
+func (s publicationStack) contributor(t *testing.T, email, handle string) contributor {
+	t.Helper()
+	session := s.member(t, email, handle)
+	illarin := s.appBySlug(t, "illarin")
+	announcement := s.categoryBySlug(t, "announcement")
+	made := s.approved(t, handle, illarin.ID, []string{announcement.ID}, announcement.ID)
+	return contributor{handle: handle, session: session, grant: made}
 }
 
 func newPublicationStack(t *testing.T) publicationStack {
@@ -129,17 +141,24 @@ func jsonRequest(t *testing.T, method, target, body string) *http.Request {
 
 func (s publicationStack) apps(t *testing.T) []publicationApp {
 	t.Helper()
-	response := send(t, s.router, authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/apps", nil), s.authority,
-	))
-	if response.Code != http.StatusOK {
-		t.Fatalf("list apps status = %d: %s", response.Code, response.Body.String())
+	rows, err := s.pool.Query(context.Background(), `
+		select id::text, slug, name, home_url, position, retired_at is not null
+		  from publication_apps
+		 order by position, created_at
+	`)
+	if err != nil {
+		t.Fatalf("read apps: %v", err)
 	}
-	var listed publicationAppList
-	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode apps: %v", err)
+	defer rows.Close()
+	listed := []publicationApp{}
+	for rows.Next() {
+		var one publicationApp
+		if err := rows.Scan(&one.ID, &one.Slug, &one.Name, &one.Home, &one.Position, &one.Retired); err != nil {
+			t.Fatalf("read an app: %v", err)
+		}
+		listed = append(listed, one)
 	}
-	return listed.Apps
+	return listed
 }
 
 func (s publicationStack) categories(t *testing.T) []publicationCategory {
@@ -181,18 +200,15 @@ func (s publicationStack) appBySlug(t *testing.T, slug string) publicationApp {
 
 func (s publicationStack) configureApp(t *testing.T, slug, name, home string) publicationApp {
 	t.Helper()
-	response := send(t, s.router, authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/apps",
-		`{"slug":"`+slug+`","name":"`+name+`","home":"`+home+`"}`,
-	), s.authority))
-	if response.Code != http.StatusCreated {
-		t.Fatalf("configure %s status = %d: %s", slug, response.Code, response.Body.String())
+	_, err := s.pool.Exec(context.Background(), `
+		insert into publication_apps (id, slug, name, home_url, position)
+		values (gen_random_uuid(), $1, $2, $3,
+		        (select coalesce(max(position) + 1, 0) from publication_apps))
+	`, slug, name, home)
+	if err != nil {
+		t.Fatalf("configure %s: %v", slug, err)
 	}
-	var configured publicationApp
-	if err := json.Unmarshal(response.Body.Bytes(), &configured); err != nil {
-		t.Fatalf("decode app: %v", err)
-	}
-	return configured
+	return s.appBySlug(t, slug)
 }
 
 func (s publicationStack) approve(
@@ -266,7 +282,7 @@ func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
 	}
 }
 
-func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T) {
+func TestOnlyThePublicationAuthorityManagesCategoriesAndGrants(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	outsider := stack.member(t, "outsider@example.com", "publication.outsider")
@@ -274,7 +290,6 @@ func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T)
 	announcement := stack.categoryBySlug(t, "announcement")
 
 	reads := []string{
-		"/v1/publication/apps",
 		"/v1/publication/categories",
 		"/v1/publication/grants",
 	}
@@ -287,13 +302,6 @@ func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T)
 			if refused.Code != http.StatusForbidden {
 				t.Fatalf("%s read of %s = %d, want 403", role, path, refused.Code)
 			}
-		}
-		configured := send(t, stack.router, authorized(jsonRequest(t,
-			http.MethodPost, "/v1/publication/apps",
-			`{"slug":"lumiverse","name":"Lumiverse","home":"https://lumiverse.example"}`,
-		), outsider))
-		if configured.Code != http.StatusForbidden {
-			t.Fatalf("%s configure app = %d, want 403: %s", role, configured.Code, configured.Body.String())
 		}
 		relabelled := send(t, stack.router, authorized(jsonRequest(t,
 			http.MethodPatch, "/v1/publication/categories/"+announcement.ID, `{"label":"News"}`,
@@ -308,67 +316,6 @@ func TestOnlyThePublicationAuthorityManagesAppsCategoriesAndGrants(t *testing.T)
 		if granted.Code != http.StatusForbidden {
 			t.Fatalf("%s approve = %d, want 403: %s", role, granted.Code, granted.Body.String())
 		}
-	}
-}
-
-func TestTheAuthorityConfiguresOrdersAndRetiresApps(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
-	illarin := stack.appBySlug(t, "illarin")
-
-	taken := send(t, stack.router, authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/apps",
-		`{"slug":"lumiverse","name":"Lumiverse again","home":"https://lumiverse.example"}`,
-	), stack.authority))
-	if taken.Code != http.StatusConflict {
-		t.Fatalf("duplicate slug status = %d, want 409: %s", taken.Code, taken.Body.String())
-	}
-
-	insecure := send(t, stack.router, authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/apps",
-		`{"slug":"tavern","name":"Tavern","home":"http://tavern.example"}`,
-	), stack.authority))
-	if insecure.Code != http.StatusBadRequest {
-		t.Fatalf("plain http address status = %d, want 400", insecure.Code)
-	}
-
-	ordered := send(t, stack.router, authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/apps",
-		`{"appIds":["`+lumiverse.ID+`","`+illarin.ID+`"]}`,
-	), stack.authority))
-	if ordered.Code != http.StatusOK {
-		t.Fatalf("order apps status = %d: %s", ordered.Code, ordered.Body.String())
-	}
-	if listed := stack.apps(t); listed[0].Slug != "lumiverse" || listed[1].Slug != "illarin" {
-		t.Fatalf("apps after ordering = %+v", listed)
-	}
-
-	retired := send(t, stack.router, authorized(jsonRequest(t,
-		http.MethodPatch, "/v1/publication/apps/"+lumiverse.ID, `{"retired":true}`,
-	), stack.authority))
-	if retired.Code != http.StatusOK {
-		t.Fatalf("retire app status = %d: %s", retired.Code, retired.Body.String())
-	}
-	if stack.appBySlug(t, "lumiverse").Retired != true {
-		t.Fatal("the retired app does not read as retired")
-	}
-}
-
-func TestConfiguringAnAppGrantsNobodyAnything(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	developer := stack.member(t, "developer@example.com", "lumiverse.developer")
-	stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
-
-	if open := stack.workspace(t, developer); len(open.Grants) != 0 {
-		t.Fatalf("an app alone opened a workspace of %+v", open.Grants)
-	}
-	refused := send(t, stack.router, authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), developer,
-	))
-	if refused.Code != http.StatusForbidden {
-		t.Fatalf("an app alone let a developer read grants: %d", refused.Code)
 	}
 }
 
@@ -578,7 +525,7 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 		path   string
 		body   string
 	}{
-		{http.MethodPost, "/v1/publication/apps", `{"slug":"x","name":"X","home":"https://x.example"}`},
+		{http.MethodPatch, "/v1/publication/categories/" + announcement.ID, `{"label":"News"}`},
 		{http.MethodGet, "/v1/publication/grants", ""},
 	}
 	for _, refused := range elsewhere {
@@ -610,7 +557,7 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 	}
 }
 
-func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
+func TestGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	stack.member(t, "audited@example.com", "audited.writer")
@@ -641,7 +588,7 @@ func TestAppCategoryAndGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 		}
 		recorded = append(recorded, action)
 	}
-	want := []string{"app.defined", "grant.created", "grant.revoked"}
+	want := []string{"grant.created", "grant.revoked"}
 	if len(recorded) != len(want) {
 		t.Fatalf("audit actions = %v, want %v", recorded, want)
 	}

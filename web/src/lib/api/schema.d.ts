@@ -824,57 +824,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/v1/publication/apps": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description Every configured publication app, retired ones included, in the order the publication authority chose. Only the publication authority may read it. */
-    get: operations["listPublicationApps"];
-    /** @description Put the configured apps in the order they are listed. */
-    put: operations["orderPublicationApps"];
-    post: operations["definePublicationApp"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/publication/apps/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch: operations["updatePublicationApp"];
-    trace?: never;
-  };
-  "/v1/publication/apps/{id}/mark": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** @description Upload the mark Illarin hosts and serves for this app. */
-    put: operations["setPublicationAppMark"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/v1/publication/categories": {
     parameters: {
       query?: never;
@@ -946,58 +895,6 @@ export interface paths {
     patch: operations["updatePublicationGrant"];
     trace?: never;
   };
-  "/v1/publication/grants/{id}/tokens": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description Safe metadata for every token issued under one grant, revoked ones included. The contributor holding the grant and the publication authority may read it; nobody can read a token value here or anywhere. */
-    get: operations["listPublicationTokens"];
-    put?: never;
-    /** @description Issue one token under an active grant. The response is the only time Illarin can show its value. */
-    post: operations["issuePublicationToken"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/publication/tokens/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** @description Stop one token. The grant, the contributor's other tokens and everything already published are untouched. */
-    delete: operations["revokePublicationToken"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/publication/token": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description What the publication token sent with this request is, and the grant it publishes under. It is the only thing a publication token reaches today, and it reads nothing outside the publication. */
-    get: operations["getPublicationCredential"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/v1/publication/workspace": {
     parameters: {
       query?: never;
@@ -1022,10 +919,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Every post this credential may manage. An admin sees all of them, an approved contributor sees the posts under their active grants, and a publication token sees only the posts under the one grant it was issued for. Deleted posts are left out unless they are the ones asked for. */
+    /** @description Every post this account may manage. An admin sees all of them and an approved contributor sees the posts under their active grants. Deleted posts are left out unless they are the ones asked for. */
     get: operations["listPosts"];
     put?: never;
-    /** @description Start a draft. A contributor names the grant it belongs to and an admin may omit it and write as Illarin. A publication token writes under its own grant and may not name another. */
+    /** @description Start a draft. A contributor names the grant it belongs to and an admin may omit it and write as Illarin. */
     post: operations["createPost"];
     delete?: never;
     options?: never;
@@ -1269,23 +1166,6 @@ export interface paths {
     put?: never;
     /** @description Explicitly edit a Discord message's note, delete the named message, or send a separate correction. Requires publication authority. Reusing a request ID returns the recorded result without another send. The post, event and original delivery attempts remain unchanged. */
     post: operations["repairDiscordAnnouncement"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/publication/apps/{id}/destinations": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** @description Record the destinations every grant on one app may send to, and which of them a publication starts with. */
-    put: operations["setPublicationAppDestinations"];
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2494,33 +2374,13 @@ export interface components {
       slug: string;
       name: string;
       home: string;
-      mark?: components["schemas"]["PublicationAppMark"] | null;
       position: number;
       retired: boolean;
       /** @description The destinations every grant on this app follows unless the grant names its own. */
       destinations: components["schemas"]["PublicationDestinationChoice"][];
     };
-    PublicationAppMark: {
-      url: string;
-      width: number;
-      height: number;
-    };
     PublicationAppList: {
       apps: components["schemas"]["PublicationApp"][];
-    };
-    DefinePublicationAppRequest: {
-      slug: string;
-      name: string;
-      home: string;
-    };
-    UpdatePublicationAppRequest: {
-      slug?: string;
-      name?: string;
-      home?: string;
-      retired?: boolean;
-    };
-    OrderPublicationAppsRequest: {
-      appIds: string[];
     };
     PublicationCategory: {
       /** Format: uuid */
@@ -2587,45 +2447,12 @@ export interface components {
       /** @description The projects this account may name in a release. A contributor gets the apps they are approved for; an admin gets every live app. */
       apps: components["schemas"]["PublicationApp"][];
     };
-    PublicationToken: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      grantId: string;
-      name: string;
-      prefix: string;
-      /** Format: date-time */
-      createdAt: string;
-      expiresAt?: string | null;
-      lastUsedAt?: string | null;
-      revokedAt?: string | null;
-      active: boolean;
-    };
-    PublicationTokenList: {
-      tokens: components["schemas"]["PublicationToken"][];
-    };
-    IssuePublicationTokenRequest: {
-      name: string;
-      expiresAt?: string | null;
-    };
-    IssuedPublicationToken: {
-      token: components["schemas"]["PublicationToken"];
-      /** @description The token value, returned here and never again. */
-      value: string;
-    };
-    PublicationCredential: {
-      token: components["schemas"]["PublicationToken"];
-      grant: components["schemas"]["PublicationGrant"];
-    };
     /**
      * @description The stable name of a refusal. A client reads this rather than the sentence beside it, which is written for a person and may change.
      * @enum {string}
      */
     PublicationErrorCode:
       | "unauthenticated"
-      | "token_expired"
-      | "token_revoked"
-      | "grant_revoked"
       | "forbidden"
       | "not_found"
       | "invalid"
@@ -2633,11 +2460,8 @@ export interface components {
       | "stale_version"
       | "already_scheduled"
       | "schedule_running"
-      | "idempotency_mismatch"
-      | "idempotency_in_progress"
-      | "rate_limited"
       | "server_error";
-    /** @description How every publication route refuses. It never names another account, grant or token. */
+    /** @description How every publication route refuses. It never names another account or grant. */
     PublicationError: {
       error: string;
       code: components["schemas"]["PublicationErrorCode"];
@@ -2744,7 +2568,7 @@ export interface components {
     PostList: {
       posts: components["schemas"]["Post"][];
     };
-    /** @description A refusal that names the current state where there is one. A stale working copy carries the version to reload from; a reused idempotency key carries no version. */
+    /** @description A refusal that names the current state where there is one. A stale working copy carries the version to reload from. */
     PostConflict: {
       error: string;
       code: components["schemas"]["PublicationErrorCode"];
@@ -4813,17 +4637,6 @@ export interface components {
         "application/json": components["schemas"]["PublicationError"];
       };
     };
-    /** @description The credential has gone past the pace this operation allows */
-    PublicationTooManyRequests: {
-      headers: {
-        /** @description Seconds to wait before repeating the request */
-        "Retry-After"?: number;
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["PublicationError"];
-      };
-    };
     /** @description Nothing this credential may reach has that identifier */
     PublicationNotFound: {
       headers: {
@@ -4835,8 +4648,6 @@ export interface components {
     };
   };
   parameters: {
-    /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-    IdempotencyKey: string;
     /** @description Illarin's browser request proof. The value must be 1. */
     IllarinRequest: "1";
     /** @description The workingCopyVersion returned with the candidate the creator reviewed */
@@ -7325,270 +7136,6 @@ export interface operations {
       };
     };
   };
-  listPublicationApps: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The configured apps */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationAppList"];
-        };
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  orderPublicationApps: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["OrderPublicationAppsRequest"];
-      };
-    };
-    responses: {
-      /** @description The configured apps in their new order */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationAppList"];
-        };
-      };
-      /** @description The order does not name every app exactly once */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  definePublicationApp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DefinePublicationAppRequest"];
-      };
-    };
-    responses: {
-      /** @description The app as it was configured */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationApp"];
-        };
-      };
-      /** @description An app field is not valid */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Another app already uses that slug */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  updatePublicationApp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdatePublicationAppRequest"];
-      };
-    };
-    responses: {
-      /** @description The app as it now reads */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationApp"];
-        };
-      };
-      /** @description An app field is not valid */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such app */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Another app already uses that slug */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  setPublicationAppMark: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Send the image as the only form data part. */
-    requestBody: {
-      content: {
-        "multipart/form-data": {
-          /** Format: binary */
-          file: string;
-        };
-      };
-    };
-    responses: {
-      /** @description The app carrying its new mark */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationApp"];
-        };
-      };
-      /** @description The image is not valid */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such app */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The image exceeds the upload limit */
-      413: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The storage reserve cannot accept the image */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   listPublicationCategories: {
     parameters: {
       query?: never;
@@ -7910,171 +7457,6 @@ export interface operations {
       };
     };
   };
-  listPublicationTokens: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The grant's tokens */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationTokenList"];
-        };
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account neither holds the grant nor publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such grant */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  issuePublicationToken: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["IssuePublicationTokenRequest"];
-      };
-    };
-    responses: {
-      /** @description The new token and its value, shown once */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["IssuedPublicationToken"];
-        };
-      };
-      /** @description The name or expiry is not usable, or the grant is revoked */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account does not hold the grant */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such grant */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  revokePublicationToken: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The token no longer authenticates */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account neither holds the grant nor publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such live token */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  getPublicationCredential: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The calling token and its grant */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationCredential"];
-        };
-      };
-      /** @description The token is missing, expired, revoked or no longer granted */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   getPublicationWorkspace: {
     parameters: {
       query?: never;
@@ -8132,16 +7514,12 @@ export interface operations {
       };
       401: components["responses"]["PublicationUnauthenticated"];
       403: components["responses"]["PublicationForbidden"];
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   createPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path?: never;
       cookie?: never;
     };
@@ -8173,7 +7551,6 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   getPost: {
@@ -8199,16 +7576,12 @@ export interface operations {
       401: components["responses"]["PublicationUnauthenticated"];
       403: components["responses"]["PublicationForbidden"];
       404: components["responses"]["PublicationNotFound"];
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   savePost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -8242,16 +7615,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   addPostMedia: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -8299,7 +7668,6 @@ export interface operations {
           "application/json": components["schemas"]["PublicationError"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
       /** @description The storage reserve cannot accept the image */
       503: {
         headers: {
@@ -8334,16 +7702,12 @@ export interface operations {
       401: components["responses"]["PublicationUnauthenticated"];
       403: components["responses"]["PublicationForbidden"];
       404: components["responses"]["PublicationNotFound"];
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   checkpointPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -8376,16 +7740,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   restorePostRevision: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
         revisionId: string;
@@ -8419,7 +7779,6 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   listPublicationDestinations: {
@@ -8987,54 +8346,6 @@ export interface operations {
       };
     };
   };
-  setPublicationAppDestinations: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DestinationPolicyRequest"];
-      };
-    };
-    responses: {
-      /** @description The app with the destinations it now allows */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PublicationApp"];
-        };
-      };
-      400: components["responses"]["PublicationInvalid"];
-      /** @description No account is signed in */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The signed-in account is not the publication authority */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No such app or destination */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   setPublicationGrantDestinations: {
     parameters: {
       query?: never;
@@ -9156,16 +8467,12 @@ export interface operations {
       401: components["responses"]["PublicationUnauthenticated"];
       403: components["responses"]["PublicationForbidden"];
       404: components["responses"]["PublicationNotFound"];
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   importPostMarkdown: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9207,16 +8514,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   publishPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9250,16 +8553,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   withdrawPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9293,16 +8592,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   republishPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9336,16 +8631,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   deletePost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9379,16 +8670,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   recoverPost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9422,16 +8709,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   replacePostSchedule: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9465,16 +8748,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   schedulePost: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9508,16 +8787,12 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   cancelPostSchedule: {
     parameters: {
       query?: never;
-      header?: {
-        /** @description A value the client picks for one mutation. Sending it again with the same request returns the first outcome instead of doing the work twice; sending it again with a different request is refused. */
-        "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-      };
+      header?: never;
       path: {
         id: string;
       };
@@ -9546,7 +8821,6 @@ export interface operations {
           "application/json": components["schemas"]["PostConflict"];
         };
       };
-      429: components["responses"]["PublicationTooManyRequests"];
     };
   };
   correctPostAddress: {

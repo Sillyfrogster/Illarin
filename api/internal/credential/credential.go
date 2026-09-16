@@ -14,7 +14,6 @@ type Kind string
 const (
 	InstanceAccess  Kind = "ia1"
 	InstanceRefresh Kind = "ir1"
-	Publication     Kind = "ip1"
 )
 
 type Secret struct {

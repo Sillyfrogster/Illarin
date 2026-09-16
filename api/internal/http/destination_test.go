@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 )
@@ -304,7 +303,7 @@ func newDestinationStackThrough(
 	to := newReceiver(t)
 	discord := newDiscordServer(t)
 	handlers := newTestHandlersWithDelivery(
-		t, pool, 1<<20, outbox, testDeliverySettings(), publication.DefaultRates(),
+		t, pool, 1<<20, outbox, testDeliverySettings(),
 		throughLoopback{receiver: to.server.URL, discord: discord.server.URL, resolves: resolves},
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
@@ -385,21 +384,15 @@ func (s destinationStack) destinations(t *testing.T, session *http.Cookie) desti
 	return listed
 }
 
-func (s destinationStack) allowOnApp(
-	t *testing.T,
-	appID string,
-	allowed, defaults []string,
-) *httptest.ResponseRecorder {
+func (s destinationStack) allowOnApp(t *testing.T, appID, destinationID string) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{
-		"destinationIds": allowed, "defaultDestinationIds": defaults,
-	})
+	_, err := s.pool.Exec(context.Background(), `
+		insert into publication_app_destinations (app_id, destination_id, by_default)
+		values ($1, $2, true)
+	`, appID, destinationID)
 	if err != nil {
-		t.Fatalf("encode policy: %v", err)
+		t.Fatalf("allow on app: %v", err)
 	}
-	return send(t, s.router, authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/apps/"+appID+"/destinations", string(body),
-	), s.authority))
 }
 
 func (s destinationStack) postChoices(
@@ -778,9 +771,7 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
 	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	if response := stack.allowOnApp(t, app.ID, []string{made.Destination.ID}, []string{made.Destination.ID}); response.Code != http.StatusOK {
-		t.Fatalf("allow on app status = %d: %s", response.Code, response.Body.String())
-	}
+	stack.allowOnApp(t, app.ID, made.Destination.ID)
 	draft := stack.started(t, writer, fmt.Sprintf(
 		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`,
 		grant.ID, announcement.ID,
@@ -992,11 +983,7 @@ func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
 	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
 	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	if response := stack.allowOnApp(
-		t, app.ID, []string{made.Destination.ID}, []string{made.Destination.ID},
-	); response.Code != http.StatusOK {
-		t.Fatalf("allow on app status = %d: %s", response.Code, response.Body.String())
-	}
+	stack.allowOnApp(t, app.ID, made.Destination.ID)
 	draft := stack.started(t, writer, fmt.Sprintf(
 		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, grant.ID, announcement.ID,
 	))

@@ -105,9 +105,9 @@ func (s *Service) WithdrawPost(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.withdrawn",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, RevisionID: &public,
+		Actor: editor.ID, Action: "post.withdrawn",
+		GrantID: locked.GrantID,
+		PostID:  &id, RevisionID: &public,
 		Before: StatusPublished, After: StatusWithdrawn,
 	})
 	if err != nil {
@@ -181,9 +181,9 @@ func (s *Service) RepublishPost(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.republished",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, RevisionID: &revisionID,
+		Actor: editor.ID, Action: "post.republished",
+		GrantID: locked.GrantID,
+		PostID:  &id, RevisionID: &revisionID,
 		Before: StatusWithdrawn, After: StatusPublished,
 	})
 	if err != nil {

@@ -45,30 +45,19 @@ const theSameThingAsJSON = `{"version":2,"content":[
 
 func (s publicationStack) imported(
 	t *testing.T,
-	kit tooling,
+	who contributor,
 	id, markdown string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{
-		"version": s.byTool(t, kit, id).Version, "markdown": markdown,
+		"version": s.working(t, who.session, id).Version, "markdown": markdown,
 	})
 	if err != nil {
 		t.Fatalf("encode import: %v", err)
 	}
-	return s.sent(t, kit.value, jsonRequest(t,
+	return s.sent(t, who, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/import", string(body),
 	))
-}
-
-func (s publicationStack) byTool(t *testing.T, kit tooling, id string) blogPost {
-	t.Helper()
-	response := s.sent(t, kit.value, httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+id, nil,
-	))
-	if response.Code != http.StatusOK {
-		t.Fatalf("read post status = %d: %s", response.Code, response.Body.String())
-	}
-	return decodePost(t, response)
 }
 
 func decodeImport(t *testing.T, response *httptest.ResponseRecorder) importedPost {
@@ -95,26 +84,26 @@ func decodeImportRefusal(t *testing.T, response *httptest.ResponseRecorder) impo
 func TestMarkdownAndJSONReachTheSameDocument(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	start := fmt.Sprintf(`{"categoryId":%q,"title":"Lumiverse 3 is out"}`, announcement.ID)
 
-	written := stack.startedByTool(t, kit, start)
+	written := stack.startedBy(t, writer, start)
 	body, err := json.Marshal(finished(written, map[string]any{
 		"document": json.RawMessage(theSameThingAsJSON),
 	}))
 	if err != nil {
 		t.Fatalf("encode working copy: %v", err)
 	}
-	saved := stack.sent(t, kit.value, jsonRequest(t,
+	saved := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+written.ID, string(body),
 	))
 	if saved.Code != http.StatusOK {
 		t.Fatalf("save status = %d: %s", saved.Code, saved.Body.String())
 	}
 
-	converted := stack.startedByTool(t, kit, start)
-	carried := decodeImport(t, stack.imported(t, kit, converted.ID, theSameThing))
+	converted := stack.startedBy(t, writer, start)
+	carried := decodeImport(t, stack.imported(t, writer, converted.ID, theSameThing))
 
 	if len(carried.Warnings) != 0 {
 		t.Errorf("the import warned about %v", carried.Warnings)
@@ -127,10 +116,10 @@ func TestMarkdownAndJSONReachTheSameDocument(t *testing.T) {
 func TestAnImportSaysWhatItCouldNotCarryExactly(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 
-	carried := decodeImport(t, stack.imported(t, kit, draft.ID,
+	carried := decodeImport(t, stack.imported(t, writer, draft.ID,
 		"One line  \nand the next.\n\n```brainfuck\n+++++.\n```\n"))
 
 	if len(carried.Warnings) != 2 {
@@ -148,10 +137,10 @@ func TestAnImportSaysWhatItCouldNotCarryExactly(t *testing.T) {
 func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 
-	response := stack.imported(t, kit, draft.ID,
+	response := stack.imported(t, writer, draft.ID,
 		"<div>One</div>\n\n![Photo](https://example.com/photo.png)\n\n[Click](javascript:alert)\n")
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
@@ -172,7 +161,7 @@ func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 			t.Errorf("refusal %d says nothing about what to fix", at)
 		}
 	}
-	if left := stack.byTool(t, kit, draft.ID); len(left.Document.Content) != 0 {
+	if left := stack.working(t, writer.session, draft.ID); len(left.Document.Content) != 0 {
 		t.Errorf("a refused import still changed the working copy to %v", left.Document)
 	}
 }
@@ -180,12 +169,12 @@ func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	mine := stack.toolDraft(t, kit, "Lumiverse 3 is out")
-	theirs := stack.toolDraft(t, kit, "Lumiverse 2 is out")
-	picture := stack.uploadedByTool(t, kit, theirs.ID, "document", httpTestPNG(t, 900, 500))
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	mine := stack.draftBy(t, writer, "Lumiverse 3 is out")
+	theirs := stack.draftBy(t, writer, "Lumiverse 2 is out")
+	picture := stack.uploaded(t, writer.session, theirs.ID, "document", httpTestPNG(t, 900, 500))
 
-	response := stack.imported(t, kit, mine.ID, fmt.Sprintf(
+	response := stack.imported(t, writer, mine.ID, fmt.Sprintf(
 		"![A workspace](media:%s)\n", picture.ID,
 	))
 	if response.Code != http.StatusBadRequest {
@@ -199,11 +188,11 @@ func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
 func TestAnImportPlacesAPictureThePostOwns(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
-	picture := stack.uploadedByTool(t, kit, draft.ID, "document", httpTestPNG(t, 900, 500))
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
+	picture := stack.uploaded(t, writer.session, draft.ID, "document", httpTestPNG(t, 900, 500))
 
-	carried := decodeImport(t, stack.imported(t, kit, draft.ID, fmt.Sprintf(
+	carried := decodeImport(t, stack.imported(t, writer, draft.ID, fmt.Sprintf(
 		"![A workspace](media:%s \"One draft.\")\n", picture.ID,
 	)))
 	placed := carried.Post.Document.Content
@@ -218,9 +207,9 @@ func TestAnImportPlacesAPictureThePostOwns(t *testing.T) {
 func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
-	decodeImport(t, stack.imported(t, kit, draft.ID, theSameThing))
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
+	decodeImport(t, stack.imported(t, writer, draft.ID, theSameThing))
 
 	stale, err := json.Marshal(map[string]any{
 		"version": draft.Version, "markdown": theSameThing,
@@ -228,7 +217,7 @@ func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode import: %v", err)
 	}
-	response := stack.sent(t, kit.value, jsonRequest(t,
+	response := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/import", string(stale),
 	))
 	if response.Code != http.StatusConflict {
@@ -240,65 +229,24 @@ func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
 	}
 }
 
-func TestARepeatedImportKeyReturnsTheFirstOutcome(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
-	body, err := json.Marshal(map[string]any{
-		"version": draft.Version, "markdown": theSameThing,
-	})
-	if err != nil {
-		t.Fatalf("encode import: %v", err)
-	}
-	path := "/v1/publication/posts/" + draft.ID + "/import"
-
-	first := stack.sent(t, kit.value, withKey(jsonRequest(
-		t, http.MethodPost, path, string(body)), "import-the-notes"))
-	if first.Code != http.StatusOK {
-		t.Fatalf("import status = %d: %s", first.Code, first.Body.String())
-	}
-	again := stack.sent(t, kit.value, withKey(jsonRequest(
-		t, http.MethodPost, path, string(body)), "import-the-notes"))
-	if again.Code != first.Code || again.Body.String() != first.Body.String() {
-		t.Fatalf("the retry answered %d: %s", again.Code, again.Body.String())
-	}
-	if version := stack.byTool(t, kit, draft.ID).Version; version != draft.Version+1 {
-		t.Errorf("the retry did the work again and left version %d", version)
-	}
-
-	changed, err := json.Marshal(map[string]any{
-		"version": draft.Version, "markdown": "## Something else\n",
-	})
-	if err != nil {
-		t.Fatalf("encode import: %v", err)
-	}
-	other := stack.sent(t, kit.value, withKey(jsonRequest(
-		t, http.MethodPost, path, string(changed)), "import-the-notes"))
-	if other.Code != http.StatusConflict ||
-		refusalOf(t, other).Code != string(CodeIdempotencyMismatch) {
-		t.Fatalf("a changed import answered %d: %s", other.Code, other.Body.String())
-	}
-}
-
 func TestAnImportKeepsNoMarkdownAnywhere(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 	body, err := json.Marshal(map[string]any{
 		"version": draft.Version, "markdown": theSameThing,
 	})
 	if err != nil {
 		t.Fatalf("encode import: %v", err)
 	}
-	first := stack.sent(t, kit.value, withKey(jsonRequest(t,
+	first := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/import", string(body),
-	), "import-the-notes"))
+	))
 	if first.Code != http.StatusOK {
 		t.Fatalf("import status = %d: %s", first.Code, first.Body.String())
 	}
-	stack.sent(t, kit.value, jsonRequest(t,
+	stack.sent(t, writer, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/revisions",
 		fmt.Sprintf(`{"version":%d}`, draft.Version+1),
 	))
@@ -313,14 +261,9 @@ func TestAnImportKeepsNoMarkdownAnywhere(t *testing.T) {
 		{"the action log", `select coalesce(string_agg(
 		                        coalesce(before_state, '') || ' ' || coalesce(after_state, ''), ' '
 		                    ), '') from publication_audits where post_id = $1`},
-		{"a stored outcome", `select coalesce(string_agg(convert_from(response, 'UTF8'), ' '), '')
-		                        from publication_idempotency`},
 	} {
 		var held string
 		err := stack.pool.QueryRow(context.Background(), kept.query, draft.ID).Scan(&held)
-		if kept.what == "a stored outcome" {
-			err = stack.pool.QueryRow(context.Background(), kept.query).Scan(&held)
-		}
 		if err != nil {
 			t.Fatalf("read %s: %v", kept.what, err)
 		}
@@ -335,13 +278,13 @@ func TestAnImportKeepsNoMarkdownAnywhere(t *testing.T) {
 func TestOnlyTheImportOperationTakesMarkdown(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 	body, err := json.Marshal(finished(draft, map[string]any{"document": theSameThing}))
 	if err != nil {
 		t.Fatalf("encode working copy: %v", err)
 	}
-	response := stack.sent(t, kit.value, jsonRequest(t,
+	response := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
 	))
 	if response.Code != http.StatusBadRequest {
@@ -352,9 +295,9 @@ func TestOnlyTheImportOperationTakesMarkdown(t *testing.T) {
 func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	mine := stack.tooling(t, "writer@example.com", "publication.writer")
-	theirs := stack.tooling(t, "other@example.com", "publication.other")
-	draft := stack.toolDraft(t, mine, "Lumiverse 3 is out")
+	mine := stack.contributor(t, "writer@example.com", "publication.writer")
+	theirs := stack.contributor(t, "other@example.com", "publication.other")
+	draft := stack.draftBy(t, mine, "Lumiverse 3 is out")
 
 	body, err := json.Marshal(map[string]any{
 		"version": draft.Version, "markdown": theSameThing,
@@ -362,7 +305,7 @@ func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode import: %v", err)
 	}
-	response := stack.sent(t, theirs.value, jsonRequest(t,
+	response := stack.sent(t, theirs, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/import", string(body),
 	))
 	if response.Code != http.StatusForbidden {
@@ -373,15 +316,15 @@ func TestAContributorCannotImportIntoAnotherGrantsPost(t *testing.T) {
 func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 	body, err := json.Marshal(map[string]any{
 		"version": draft.Version, "markdown": strings.Repeat("word ", 500000),
 	})
 	if err != nil {
 		t.Fatalf("encode import: %v", err)
 	}
-	response := stack.sent(t, kit.value, jsonRequest(t,
+	response := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/import", string(body),
 	))
 	if response.Code != http.StatusRequestEntityTooLarge {
@@ -392,10 +335,10 @@ func TestAnImportLargerThanAPostIsRefusedBeforeItIsRead(t *testing.T) {
 func TestMarkdownLongerThanAPostRefusesTheFieldItWasSentIn(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "writer@example.com", "publication.writer")
-	draft := stack.toolDraft(t, kit, "Lumiverse 3 is out")
+	writer := stack.contributor(t, "writer@example.com", "publication.writer")
+	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 
-	response := stack.imported(t, kit, draft.ID, strings.Repeat("word ", 60000))
+	response := stack.imported(t, writer, draft.ID, strings.Repeat("word ", 60000))
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
 	}
@@ -404,10 +347,10 @@ func TestMarkdownLongerThanAPostRefusesTheFieldItWasSentIn(t *testing.T) {
 	}
 }
 
-func (s publicationStack) toolDraft(t *testing.T, kit tooling, title string) blogPost {
+func (s publicationStack) draftBy(t *testing.T, who contributor, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")
-	return s.startedByTool(t, kit, fmt.Sprintf(
+	return s.startedBy(t, who, fmt.Sprintf(
 		`{"categoryId":%q,"title":%q}`, announcement.ID, title,
 	))
 }

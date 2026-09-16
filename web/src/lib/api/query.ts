@@ -77,7 +77,6 @@ export type PublicationCategory = components["schemas"]["PublicationCategory"];
 export type PublicationGrant = components["schemas"]["PublicationGrant"];
 export type PublicationWorkspace =
   components["schemas"]["PublicationWorkspace"];
-export type PublicationToken = components["schemas"]["PublicationToken"];
 export type PublicationDestination =
   components["schemas"]["PublicationDestination"];
 export type AddedPublicationDestination =
@@ -108,8 +107,6 @@ export type PostAction = components["schemas"]["PostAction"];
 export type PostSchedule = components["schemas"]["PostSchedule"];
 export type PostWithdrawal = components["schemas"]["PostWithdrawal"];
 export type PostDeletion = components["schemas"]["PostDeletion"];
-export type IssuedPublicationToken =
-  components["schemas"]["IssuedPublicationToken"];
 export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];

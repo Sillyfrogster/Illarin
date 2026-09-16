@@ -12,116 +12,6 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListPublicationApps(c *gin.Context) {
-	if _, ok := h.publicationAuthority(c, "reading publication apps"); !ok {
-		return
-	}
-	configured, err := h.publications.Apps(c.Request.Context())
-	if err != nil {
-		h.publicationError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, PublicationAppList{Apps: toAPIApps(configured)})
-}
-
-func (h *Handlers) DefinePublicationApp(c *gin.Context) {
-	authority, ok := h.publicationAuthority(c, "configuring a publication app")
-	if !ok {
-		return
-	}
-	var request DefinePublicationAppRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the app as JSON."})
-		return
-	}
-	defined, err := h.publications.DefineApp(c.Request.Context(), authority.ID, publication.AppEdit{
-		Slug: request.Slug,
-		Name: request.Name,
-		Home: request.Home,
-	})
-	if err != nil {
-		h.publicationError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, toAPIApp(defined))
-}
-
-func (h *Handlers) UpdatePublicationApp(c *gin.Context, id types.UUID) {
-	authority, ok := h.publicationAuthority(c, "changing a publication app")
-	if !ok {
-		return
-	}
-	var request UpdatePublicationAppRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the change as JSON."})
-		return
-	}
-	updated, err := h.publications.UpdateApp(
-		c.Request.Context(), authority.ID, uuid.UUID(id), publication.AppUpdate{
-			Slug:    request.Slug,
-			Name:    request.Name,
-			Home:    request.Home,
-			Retired: request.Retired,
-		},
-	)
-	if err != nil {
-		h.publicationError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, toAPIApp(updated))
-}
-
-func (h *Handlers) OrderPublicationApps(c *gin.Context) {
-	authority, ok := h.publicationAuthority(c, "ordering publication apps")
-	if !ok {
-		return
-	}
-	var request OrderPublicationAppsRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the order as JSON."})
-		return
-	}
-	ordered, err := h.publications.OrderApps(
-		c.Request.Context(), authority.ID, toUUIDs(request.AppIds),
-	)
-	if err != nil {
-		h.publicationError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, PublicationAppList{Apps: toAPIApps(ordered)})
-}
-
-func (h *Handlers) SetPublicationAppMark(c *gin.Context, id types.UUID) {
-	authority, ok := h.publicationAuthority(c, "changing a publication app mark")
-	if !ok {
-		return
-	}
-	parts, err := c.Request.MultipartReader()
-	if err != nil {
-		h.refuseProfile(c, refusal{reason: "send the image as form data", cause: err})
-		return
-	}
-	file, err := nextPart(parts, filePart)
-	if err != nil {
-		h.refuseProfile(c, err)
-		return
-	}
-	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
-	defer limitedFile.Close()
-	marked, err := h.publications.SetAppMark(
-		c.Request.Context(), authority.ID, uuid.UUID(id), limitedFile,
-	)
-	if errors.Is(err, publication.ErrAppNotFound) {
-		h.publicationError(c, err)
-		return
-	}
-	if err != nil {
-		h.refuseProfile(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, toAPIApp(marked))
-}
-
 func (h *Handlers) ListPublicationCategories(c *gin.Context) {
 	if _, ok := h.publicationAuthority(c, "reading publication categories"); !ok {
 		return
@@ -314,9 +204,6 @@ func (h *Handlers) publicationError(c *gin.Context, err error) {
 	case errors.Is(err, publication.ErrAccountUnverified):
 		refuseField(c, http.StatusBadRequest, CodeInvalid,
 			"That account has not verified its email yet.", "handle")
-	case errors.Is(err, publication.ErrSlugTaken):
-		refuseField(c, http.StatusConflict, CodeInvalid,
-			"Another app already uses that slug.", "slug")
 	case errors.Is(err, publication.ErrAlreadyGranted):
 		refusePublication(c, http.StatusConflict, CodeInvalid,
 			"That account already publishes for that app.")
@@ -371,17 +258,6 @@ func toUUIDs(given []types.UUID) []uuid.UUID {
 	return ids
 }
 
-func toAPIMark(mark *publication.Mark) *PublicationAppMark {
-	if mark == nil {
-		return nil
-	}
-	return &PublicationAppMark{
-		Url:    publication.MarkURL(mark.MediaID, mark.DerivativeVersion),
-		Width:  mark.Width,
-		Height: mark.Height,
-	}
-}
-
 func toAPIApps(configured []publication.App) []PublicationApp {
 	listed := make([]PublicationApp, 0, len(configured))
 	for _, one := range configured {
@@ -396,7 +272,6 @@ func toAPIApp(found publication.App) PublicationApp {
 		Slug:         found.Slug,
 		Name:         found.Name,
 		Home:         found.Home,
-		Mark:         toAPIMark(found.Mark),
 		Position:     found.Position,
 		Retired:      found.Retired,
 		Destinations: toAPIChoiceRows(found.Destinations),

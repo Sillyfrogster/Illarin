@@ -1580,159 +1580,6 @@ paths:
                 format: binary
         '404':
           description: No live delivery artifact is at that address
-  /v1/publication/apps:
-    get:
-      operationId: listPublicationApps
-      description: >-
-        Every configured publication app, retired ones included, in the order
-        the publication authority chose. Only the publication authority may read
-        it.
-      security:
-        - sessionCookie: []
-      responses:
-        '200':
-          description: The configured apps
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationAppList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-    post:
-      operationId: definePublicationApp
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DefinePublicationAppRequest'
-      responses:
-        '201':
-          description: The app as it was configured
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: An app field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '409':
-          description: Another app already uses that slug
-    put:
-      operationId: orderPublicationApps
-      description: Put the configured apps in the order they are listed.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrderPublicationAppsRequest'
-      responses:
-        '200':
-          description: The configured apps in their new order
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationAppList'
-        '400':
-          description: The order does not name every app exactly once
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-  /v1/publication/apps/{id}:
-    patch:
-      operationId: updatePublicationApp
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePublicationAppRequest'
-      responses:
-        '200':
-          description: The app as it now reads
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: An app field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such app
-        '409':
-          description: Another app already uses that slug
-  /v1/publication/apps/{id}/mark:
-    put:
-      operationId: setPublicationAppMark
-      description: Upload the mark Illarin hosts and serves for this app.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        description: Send the image as the only form data part.
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: The app carrying its new mark
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: The image is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such app
-        '413':
-          description: The image exceeds the upload limit
-        '503':
-          description: The storage reserve cannot accept the image
   /v1/publication/categories:
     get:
       operationId: listPublicationCategories
@@ -1922,114 +1769,6 @@ paths:
           description: The signed-in account is not the publication authority
         '404':
           description: No such active grant
-  /v1/publication/grants/{id}/tokens:
-    get:
-      operationId: listPublicationTokens
-      description: >-
-        Safe metadata for every token issued under one grant, revoked ones
-        included. The contributor holding the grant and the publication
-        authority may read it; nobody can read a token value here or anywhere.
-      security:
-        - sessionCookie: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: The grant's tokens
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationTokenList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The account neither holds the grant nor publication authority
-        '404':
-          description: No such grant
-    post:
-      operationId: issuePublicationToken
-      description: >-
-        Issue one token under an active grant. The response is the only time
-        Illarin can show its value.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IssuePublicationTokenRequest'
-      responses:
-        '201':
-          description: The new token and its value, shown once
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IssuedPublicationToken'
-        '400':
-          description: The name or expiry is not usable, or the grant is revoked
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account does not hold the grant
-        '404':
-          description: No such grant
-  /v1/publication/tokens/{id}:
-    delete:
-      operationId: revokePublicationToken
-      description: >-
-        Stop one token. The grant, the contributor's other tokens and everything
-        already published are untouched.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: The token no longer authenticates
-        '401':
-          description: No account is signed in
-        '403':
-          description: The account neither holds the grant nor publication authority
-        '404':
-          description: No such live token
-  /v1/publication/token:
-    get:
-      operationId: getPublicationCredential
-      description: >-
-        What the publication token sent with this request is, and the grant it
-        publishes under. It is the only thing a publication token reaches today,
-        and it reads nothing outside the publication.
-      security:
-        - publicationToken: []
-      responses:
-        '200':
-          description: The calling token and its grant
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationCredential'
-        '401':
-          description: The token is missing, expired, revoked or no longer granted
   /v1/publication/workspace:
     get:
       operationId: getPublicationWorkspace
@@ -2053,13 +1792,11 @@ paths:
     get:
       operationId: listPosts
       description: >-
-        Every post this credential may manage. An admin sees all of them, an
-        approved contributor sees the posts under their active grants, and a
-        publication token sees only the posts under the one grant it was issued
-        for. Deleted posts are left out unless they are the ones asked for.
+        Every post this account may manage. An admin sees all of them and an
+        approved contributor sees the posts under their active grants. Deleted
+        posts are left out unless they are the ones asked for.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: deleted
           in: query
@@ -2080,20 +1817,14 @@ paths:
           $ref: '#/components/responses/PublicationUnauthenticated'
         '403':
           $ref: '#/components/responses/PublicationForbidden'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
     post:
       operationId: createPost
       description: >-
         Start a draft. A contributor names the grant it belongs to and an admin
-        may omit it and write as Illarin. A publication token writes under its
-        own grant and may not name another.
+        may omit it and write as Illarin.
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -2121,14 +1852,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}:
     get:
       operationId: getPost
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2149,8 +1877,6 @@ paths:
           $ref: '#/components/responses/PublicationForbidden'
         '404':
           $ref: '#/components/responses/PublicationNotFound'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
     put:
       operationId: savePost
       description: >-
@@ -2159,7 +1885,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2167,7 +1892,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -2195,8 +1919,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/media:
     post:
       operationId: addPostMedia
@@ -2207,7 +1929,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2215,7 +1936,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         description: Send the metadata part before the image file part.
@@ -2259,8 +1979,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicationError'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
         '503':
           description: The storage reserve cannot accept the image
           content:
@@ -2275,7 +1993,6 @@ paths:
         and keepers, and never compares two editions for a reader.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2296,8 +2013,6 @@ paths:
           $ref: '#/components/responses/PublicationForbidden'
         '404':
           $ref: '#/components/responses/PublicationNotFound'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
     post:
       operationId: checkpointPost
       description: >-
@@ -2306,7 +2021,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2314,7 +2028,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -2340,8 +2053,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/revisions/{revisionId}/restore:
     post:
       operationId: restorePostRevision
@@ -2351,7 +2062,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2365,7 +2075,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -2391,8 +2100,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/destinations:
     get:
       operationId: listPublicationDestinations
@@ -2829,43 +2536,6 @@ paths:
           description: The account does not have publication authority
         '404':
           description: No such delivery or destination
-  /v1/publication/apps/{id}/destinations:
-    put:
-      operationId: setPublicationAppDestinations
-      description: >-
-        Record the destinations every grant on one app may send to, and which of
-        them a publication starts with.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DestinationPolicyRequest'
-      responses:
-        '200':
-          description: The app with the destinations it now allows
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          $ref: '#/components/responses/PublicationInvalid'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such app or destination
   /v1/publication/grants/{id}/destinations:
     put:
       operationId: setPublicationGrantDestinations
@@ -2911,7 +2581,6 @@ paths:
         starts with. A contributor sees safe identities only.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2940,7 +2609,6 @@ paths:
         ended. It carries no endpoint address, secret or response body.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2969,7 +2637,6 @@ paths:
         editions and times, and never a word anyone wrote.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -2990,8 +2657,6 @@ paths:
           $ref: '#/components/responses/PublicationForbidden'
         '404':
           $ref: '#/components/responses/PublicationNotFound'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/import:
     post:
       operationId: importPostMarkdown
@@ -3002,7 +2667,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3010,7 +2674,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3042,8 +2705,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/publish:
     post:
       operationId: publishPost
@@ -3053,7 +2714,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3061,7 +2721,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3089,8 +2748,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/withdraw:
     post:
       operationId: withdrawPost
@@ -3101,7 +2758,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3109,7 +2765,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3139,8 +2794,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/republish:
     post:
       operationId: republishPost
@@ -3151,7 +2804,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3159,7 +2811,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3187,8 +2838,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/delete:
     post:
       operationId: deletePost
@@ -3201,7 +2850,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3209,7 +2857,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3239,8 +2886,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/recover:
     post:
       operationId: recoverPost
@@ -3251,7 +2896,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3259,7 +2903,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3287,8 +2930,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/schedule:
     post:
       operationId: schedulePost
@@ -3299,7 +2940,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3307,7 +2947,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3337,8 +2976,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
     put:
       operationId: replacePostSchedule
       description: >-
@@ -3347,7 +2984,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3355,7 +2991,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -3383,8 +3018,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
     delete:
       operationId: cancelPostSchedule
       description: >-
@@ -3393,7 +3026,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -3401,7 +3033,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The post with nothing waiting to publish
@@ -3421,8 +3052,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: '#/components/responses/PublicationTooManyRequests'
   /v1/publication/posts/{id}/address:
     put:
       operationId: correctPostAddress
@@ -5530,26 +5159,7 @@ components:
       type: http
       scheme: bearer
       description: A short-lived access token issued to one linked instance.
-    publicationToken:
-      type: http
-      scheme: bearer
-      description: >-
-        A publication token issued under one publication grant. It is not a
-        session, it is not an instance token, and it carries no authority
-        outside the publication it was issued for.
   parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      description: >-
-        A value the client picks for one mutation. Sending it again with the
-        same request returns the first outcome instead of doing the work twice;
-        sending it again with a different request is refused.
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 200
     IllarinRequest:
       name: X-Illarin-Request
       in: header
@@ -6184,10 +5794,6 @@ components:
           type: string
         home:
           type: string
-        mark:
-          anyOf:
-            - $ref: '#/components/schemas/PublicationAppMark'
-            - type: 'null'
         position:
           type: integer
         retired:
@@ -6199,19 +5805,6 @@ components:
             names its own.
           items:
             $ref: '#/components/schemas/PublicationDestinationChoice'
-    PublicationAppMark:
-      type: object
-      required:
-        - url
-        - width
-        - height
-      properties:
-        url:
-          type: string
-        width:
-          type: integer
-        height:
-          type: integer
     PublicationAppList:
       type: object
       required:
@@ -6221,43 +5814,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicationApp'
-    DefinePublicationAppRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - slug
-        - name
-        - home
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-        home:
-          type: string
-    UpdatePublicationAppRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-        home:
-          type: string
-        retired:
-          type: boolean
-    OrderPublicationAppsRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - appIds
-      properties:
-        appIds:
-          type: array
-          items:
-            type: string
-            format: uuid
     PublicationCategory:
       type: object
       required:
@@ -6441,89 +5997,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicationApp'
-    PublicationToken:
-      type: object
-      required:
-        - id
-        - grantId
-        - name
-        - prefix
-        - createdAt
-        - active
-      properties:
-        id:
-          type: string
-          format: uuid
-        grantId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        prefix:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        expiresAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        lastUsedAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        revokedAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        active:
-          type: boolean
-    PublicationTokenList:
-      type: object
-      required:
-        - tokens
-      properties:
-        tokens:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicationToken'
-    IssuePublicationTokenRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        expiresAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-    IssuedPublicationToken:
-      type: object
-      required:
-        - token
-        - value
-      properties:
-        token:
-          $ref: '#/components/schemas/PublicationToken'
-        value:
-          type: string
-          description: The token value, returned here and never again.
-    PublicationCredential:
-      type: object
-      required:
-        - token
-        - grant
-      properties:
-        token:
-          $ref: '#/components/schemas/PublicationToken'
-        grant:
-          $ref: '#/components/schemas/PublicationGrant'
     PublicationErrorCode:
       type: string
       description: >-
@@ -6531,9 +6004,6 @@ components:
         sentence beside it, which is written for a person and may change.
       enum:
         - unauthenticated
-        - token_expired
-        - token_revoked
-        - grant_revoked
         - forbidden
         - not_found
         - invalid
@@ -6541,15 +6011,9 @@ components:
         - stale_version
         - already_scheduled
         - schedule_running
-        - idempotency_mismatch
-        - idempotency_in_progress
-        - rate_limited
         - server_error
       x-enum-varnames:
         - CodeUnauthenticated
-        - CodeTokenExpired
-        - CodeTokenRevoked
-        - CodeGrantRevoked
         - CodeForbidden
         - CodeNotFound
         - CodeInvalid
@@ -6557,15 +6021,12 @@ components:
         - CodeStaleVersion
         - CodeAlreadyScheduled
         - CodeScheduleRunning
-        - CodeIdempotencyMismatch
-        - CodeIdempotencyInProgress
-        - CodeRateLimited
         - CodeServerError
     PublicationError:
       type: object
       description: >-
-        How every publication route refuses. It never names another account,
-        grant or token.
+        How every publication route refuses. It never names another account or
+        grant.
       required:
         - error
         - code
@@ -6848,8 +6309,7 @@ components:
       type: object
       description: >-
         A refusal that names the current state where there is one. A stale
-        working copy carries the version to reload from; a reused idempotency
-        key carries no version.
+        working copy carries the version to reload from.
       required:
         - error
         - code
@@ -11532,17 +10992,6 @@ components:
             $ref: '#/components/schemas/PublicationError'
     PublicationForbidden:
       description: The credential may not reach that
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/PublicationError'
-    PublicationTooManyRequests:
-      description: The credential has gone past the pace this operation allows
-      headers:
-        Retry-After:
-          description: Seconds to wait before repeating the request
-          schema:
-            type: integer
       content:
         application/json:
           schema:

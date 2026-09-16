@@ -410,45 +410,6 @@ func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 	}
 }
 
-func TestARetriedWithdrawalThroughTheApiChangesNothingTwice(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "robot@example.com", "release.robot")
-	draft := stack.startedByTool(t, kit, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"A tooling post"}`,
-		kit.who.grant.ID, stack.categoryBySlug(t, "announcement").ID,
-	))
-	stack.saved(t, kit.who.session, draft.ID, finished(draft, nil))
-	live := stack.published(t, kit.who.session, draft.ID)
-
-	body := fmt.Sprintf(`{"version":%d,"reason":"The build was pulled."}`, live.Version)
-	first := stack.sent(t, kit.value, withKey(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+live.ID+"/withdraw", body,
-	), "withdraw-once"))
-	if first.Code != http.StatusOK {
-		t.Fatalf("withdraw status = %d: %s", first.Code, first.Body.String())
-	}
-	again := stack.sent(t, kit.value, withKey(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+live.ID+"/withdraw", body,
-	), "withdraw-once"))
-	if again.Code != http.StatusOK || again.Body.String() != first.Body.String() {
-		t.Fatalf("a retried withdrawal returned %d: %s", again.Code, again.Body.String())
-	}
-	var withdrawals int
-	err := stack.pool.QueryRow(context.Background(), `
-		select count(*) from post_withdrawals where post_id = $1
-	`, live.ID).Scan(&withdrawals)
-	if err != nil {
-		t.Fatalf("count withdrawals: %v", err)
-	}
-	if withdrawals != 1 {
-		t.Errorf("a retried withdrawal wrote %d records", withdrawals)
-	}
-	if got := stack.events(t, live.ID); len(got) != 2 {
-		t.Errorf("events = %v, want the publication and one withdrawal", got)
-	}
-}
-
 func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)

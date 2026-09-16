@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -89,7 +88,7 @@ func newLinkingRouterWith(
 	pool := testdb.Connect(t)
 	outbox := &verificationOutbox{}
 	handlers := newTestHandlersWithDelivery(
-		t, pool, 1<<20, outbox, settings, publication.DefaultRates(), nil,
+		t, pool, 1<<20, outbox, settings, nil,
 	)
 	router := registerTestRouter(t, handlers, DefaultDeadlines())
 

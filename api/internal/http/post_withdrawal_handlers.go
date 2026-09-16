@@ -10,7 +10,7 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID, _ WithdrawPostParams) {
+func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "withdrawing a post")
 	if !ok {
 		return
@@ -35,7 +35,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID, _ WithdrawPostPar
 	c.JSON(http.StatusOK, h.toAPIPost(withdrawn))
 }
 
-func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID, _ RepublishPostParams) {
+func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "republishing a post")
 	if !ok {
 		return

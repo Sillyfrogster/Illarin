@@ -43,25 +43,6 @@ func (Stale) Error() string { return "the working copy has already moved on" }
 type Editor struct {
 	ID    uuid.UUID
 	Admin bool
-	Grant *uuid.UUID
-	Token *uuid.UUID
-}
-
-func (e Editor) Credential() string {
-	if e.Token != nil {
-		return CredentialToken
-	}
-	return CredentialSession
-}
-
-func (e Editor) writesAs(named *uuid.UUID) (*uuid.UUID, error) {
-	if e.Grant == nil {
-		return named, nil
-	}
-	if named != nil && *named != *e.Grant {
-		return nil, ErrNotPostEditor
-	}
-	return e.Grant, nil
 }
 
 type Author struct {
@@ -149,11 +130,6 @@ func (s *Service) postsFor(
 	editor Editor,
 	standingClause, orderClause string,
 ) ([]Post, error) {
-	if editor.Grant != nil {
-		return s.postsWhere(ctx, `
-			where `+standingClause+` and post.grant_id = $1 and grant_row.active
-		`+orderClause, *editor.Grant)
-	}
 	if editor.Admin {
 		return s.postsWhere(ctx, `where `+standingClause+` `+orderClause)
 	}
@@ -181,10 +157,7 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 	if category.Retired {
 		return Post{}, FieldError{Field: "categoryId", Message: "That category has been retired."}
 	}
-	grantID, err := editor.writesAs(in.GrantID)
-	if err != nil {
-		return Post{}, err
-	}
+	grantID := in.GrantID
 	if err := s.mayWriteAs(ctx, editor, grantID, category); err != nil {
 		return Post{}, err
 	}
@@ -212,8 +185,8 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 		return Post{}, fmt.Errorf("create post: %w", err)
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.created",
-		GrantID: grantID, TokenID: editor.Token,
+		Actor: editor.ID, Action: "post.created",
+		GrantID:    grantID,
 		CategoryID: &category.ID, PostID: &id, After: StatusDraft,
 	})
 	if err != nil {
@@ -521,12 +494,6 @@ func (s *Service) mayWriteAs(
 }
 
 func (s *Service) mayManage(ctx context.Context, editor Editor, found Post) error {
-	if editor.Grant != nil {
-		if found.GrantID == nil || *found.GrantID != *editor.Grant {
-			return ErrNotPostEditor
-		}
-		return nil
-	}
 	if editor.Admin {
 		return nil
 	}
@@ -804,14 +771,13 @@ func (s *Service) attachWorkingMedia(ctx context.Context, posts []Post) error {
 const selectPosts = `
 	select post.id, author.id, author.username, post.grant_id,
 	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null, mark.id, mark.width, mark.height,
+	       app.retired_at is not null,
 	       category.id, category.slug, category.label, category.position,
 	       category.retired_at is not null,
 	       post.status, post.slug, post.title, post.summary,
 	       post.document, post.document_version,
 	       release_app.id, release_app.slug, release_app.name, release_app.home_url,
 	       release_app.position, release_app.retired_at is not null,
-	       release_mark.id, release_mark.width, release_mark.height,
 	       post.release_version, post.release_url,
 	       post.header_media_id, post.header_alt, post.header_caption,
 	       post.social_media_id, post.public_revision_id,
@@ -824,18 +790,13 @@ const selectPosts = `
 	  join publication_categories category on category.id = post.category_id
 	  left join publication_grants grant_row on grant_row.id = post.grant_id
 	  left join publication_apps app on app.id = grant_row.app_id
-	  left join publication_media mark
-	         on mark.id = app.mark_media_id and mark.blob_id is not null
 	  left join publication_apps release_app on release_app.id = post.release_app_id
-	  left join publication_media release_mark
-	         on release_mark.id = release_app.mark_media_id and release_mark.blob_id is not null
 	`
 
 func scanPost(rows pgx.Rows) (Post, error) {
 	var one Post
 	var app App
-	var appID, markID, releaseID, releaseMarkID *uuid.UUID
-	var markWidth, markHeight, releaseMarkWidth, releaseMarkHeight *int
+	var appID, releaseID *uuid.UUID
 	var appSlug, appName, appHome *string
 	var appPosition *int
 	var appRetired *bool
@@ -850,14 +811,12 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	err := rows.Scan(
 		&one.ID, &one.Author.ID, &one.Author.Handle, &one.GrantID,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
-		&markID, &markWidth, &markHeight,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
 		&one.Status, &slug, &one.Title, &one.Summary,
 		&one.Document, &one.DocumentVersion,
 		&releaseID, &releaseSlug, &releaseName, &releaseHome,
 		&releasePosition, &releaseRetired,
-		&releaseMarkID, &releaseMarkWidth, &releaseMarkHeight,
 		&releaseVersion, &releaseAddress,
 		&headerID, &headerAltText, &headerCaptionText, &one.SocialMediaID,
 		&one.PublicRevision,
@@ -877,7 +836,6 @@ func scanPost(rows pgx.Rows) (Post, error) {
 		app = App{
 			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,
 			Position: *appPosition, Retired: *appRetired,
-			Mark: scanMark(markID, markWidth, markHeight),
 		}
 		one.App = &app
 	}
@@ -885,7 +843,6 @@ func scanPost(rows pgx.Rows) (Post, error) {
 		release = App{
 			ID: *releaseID, Slug: *releaseSlug, Name: *releaseName, Home: *releaseHome,
 			Position: *releasePosition, Retired: *releaseRetired,
-			Mark: scanMark(releaseMarkID, releaseMarkWidth, releaseMarkHeight),
 		}
 		one.Release = &Release{App: release}
 		if releaseVersion != nil {

@@ -1,15 +1,12 @@
 import type {
   AddedPublicationDestination,
-  IssuedPublicationToken,
   PostDelivery,
   PostDeliveryAttempt,
   PostDeliveryState,
-  PublicationApp,
   PublicationCategory,
   PublicationDestination,
   PublicationEvent,
   PublicationGrant,
-  PublicationToken,
   PublicationWorkspace,
   RotatedPublicationSecret,
 } from "@/lib/api/query";
@@ -34,41 +31,6 @@ export function repairDiscordAnnouncement(id: string, repair: DiscordRepair) {
     `/publication/deliveries/${id}/repair`,
     "POST",
     repair,
-  );
-}
-
-export function readApps() {
-  return json<{ apps: PublicationApp[] }>("/publication/apps", "GET");
-}
-
-export function configureApp(slug: string, name: string, home: string) {
-  return json<PublicationApp>("/publication/apps", "POST", {
-    slug,
-    name,
-    home,
-  });
-}
-
-export function updateApp(
-  id: string,
-  change: { slug?: string; name?: string; home?: string; retired?: boolean },
-) {
-  return json<PublicationApp>(`/publication/apps/${id}`, "PATCH", change);
-}
-
-export function orderApps(appIds: string[]) {
-  return json<{ apps: PublicationApp[] }>("/publication/apps", "PUT", {
-    appIds,
-  });
-}
-
-export function uploadAppMark(id: string, file: File) {
-  const body = new FormData();
-  body.append("file", file);
-  return ask<PublicationApp>(
-    `/publication/apps/${id}/mark`,
-    { method: "PUT", body },
-    (response) => response.json() as Promise<PublicationApp>,
   );
 }
 
@@ -224,17 +186,6 @@ export function removeDestination(id: string) {
   );
 }
 
-export function setAppDestinations(
-  appId: string,
-  policy: { destinationIds: string[]; defaultDestinationIds: string[] },
-) {
-  return json<PublicationApp>(
-    `/publication/apps/${appId}/destinations`,
-    "PUT",
-    policy,
-  );
-}
-
 export function setGrantDestinations(
   grantId: string,
   policy: {
@@ -251,30 +202,4 @@ export function setGrantDestinations(
 
 export function readWorkspace() {
   return json<PublicationWorkspace>("/publication/workspace", "GET");
-}
-
-export function readTokens(grantId: string) {
-  return json<{ tokens: PublicationToken[] }>(
-    `/publication/grants/${grantId}/tokens`,
-    "GET",
-  );
-}
-
-export function issueToken(
-  grantId: string,
-  token: { name: string; expiresAt?: string },
-) {
-  return json<IssuedPublicationToken>(
-    `/publication/grants/${grantId}/tokens`,
-    "POST",
-    token,
-  );
-}
-
-export function revokeToken(id: string) {
-  return ask<null>(
-    `/publication/tokens/${id}`,
-    { method: "DELETE" },
-    async () => null,
-  );
 }

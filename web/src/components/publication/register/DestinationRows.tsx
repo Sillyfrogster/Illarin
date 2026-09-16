@@ -99,7 +99,7 @@ export function DestinationRows({
       />
 
       {destinations.length === 0 ? (
-        <Nothing>{nothingIn("destinations", { apps: [] })}</Nothing>
+        <Nothing>{nothingIn("destinations")}</Nothing>
       ) : (
         <Rows>
           {destinations.map((one) => {

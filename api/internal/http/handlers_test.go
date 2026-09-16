@@ -130,7 +130,7 @@ func newTestHandlersWithPool(
 ) *Handlers {
 	t.Helper()
 	return newTestHandlersWithDelivery(
-		t, pool, maxUploadBytes, sender, testDeliverySettings(), publication.DefaultRates(), nil,
+		t, pool, maxUploadBytes, sender, testDeliverySettings(), nil,
 	)
 }
 
@@ -140,7 +140,6 @@ func newTestHandlersWithDelivery(
 	maxUploadBytes int64,
 	sender account.EmailSender,
 	settings delivery.Settings,
-	rates publication.Rates,
 	to publication.Sender,
 ) *Handlers {
 	t.Helper()
@@ -159,7 +158,7 @@ func newTestHandlersWithDelivery(
 
 	return NewHandlers(
 		svc, accounts, links, deliveries,
-		publication.NewService(pool, testMediaLibrary(blob), rates, testPublishing(to)),
+		publication.NewService(pool, testMediaLibrary(blob), testPublishing(to)),
 		updateDestinations,
 		newTestNotifications(pool),
 		maxUploadBytes,
@@ -227,7 +226,7 @@ func testMediaLibrary(store storage.Store) *mediaproc.Library {
 
 func newTestPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
 	return publication.NewService(
-		pool, testMediaLibrary(store), publication.DefaultRates(), testPublishing(nil),
+		pool, testMediaLibrary(store), testPublishing(nil),
 	)
 }
 

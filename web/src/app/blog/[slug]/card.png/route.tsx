@@ -54,12 +54,7 @@ async function composed(post: PublicPost): Promise<CardSubject> {
   const named = app && app.slug !== ILLARIN_APP ? app : null;
   return {
     title: post.title,
-    app: named
-      ? {
-          name: named.name,
-          mark: named.mark ? await drawable(named.mark.url) : null,
-        }
-      : null,
+    app: named ? { name: named.name } : null,
     plate: header ? await drawable(header.url) : null,
   };
 }

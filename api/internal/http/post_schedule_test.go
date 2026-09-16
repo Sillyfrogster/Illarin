@@ -520,59 +520,6 @@ func firstWords(document postDocument) string {
 	return string(written)
 }
 
-func TestToolingSchedulesReplacesAndCancelsWithoutRepeatingItself(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	kit := stack.tooling(t, "robot@example.com", "release.robot")
-	announcement := stack.categoryBySlug(t, "announcement")
-
-	draft := stack.startedByTool(t, kit, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Shipped by tooling"}`,
-		kit.who.grant.ID, announcement.ID,
-	))
-	written := stack.saved(t, kit.who.session, draft.ID, finished(draft, nil))
-	due := time.Now().Add(time.Hour).Truncate(time.Second)
-	body := fmt.Sprintf(`{"version":%d,"at":%q}`, written.Version, due.Format(time.RFC3339Nano))
-
-	first := stack.sent(t, kit.value, withKey(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/schedule", body,
-	), "schedule-key-0001"))
-	if first.Code != http.StatusCreated {
-		t.Fatalf("schedule status = %d: %s", first.Code, first.Body.String())
-	}
-	waiting := decodePost(t, first)
-
-	repeat := stack.sent(t, kit.value, withKey(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/schedule", body,
-	), "schedule-key-0001"))
-	if repeat.Code != http.StatusCreated || repeat.Body.String() != first.Body.String() {
-		t.Fatalf("a retried schedule answered %d: %s", repeat.Code, repeat.Body.String())
-	}
-	if held := scheduleCount(t, stack, draft.ID); held != 1 {
-		t.Fatalf("a retried schedule left %d schedules, want 1", held)
-	}
-
-	kept := stack.checkpointed(t, kit.who.session, draft.ID, waiting.Version)
-	later := due.Add(time.Hour)
-	replaced := stack.sent(t, kit.value, withKey(jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+draft.ID+"/schedule",
-		fmt.Sprintf(`{"revisionId":%q,"at":%q}`, kept.ID, later.Format(time.RFC3339Nano)),
-	), "schedule-key-0002"))
-	if replaced.Code != http.StatusOK {
-		t.Fatalf("replace status = %d: %s", replaced.Code, replaced.Body.String())
-	}
-
-	cancelled := stack.sent(t, kit.value, withKey(httptest.NewRequest(
-		http.MethodDelete, "/v1/publication/posts/"+draft.ID+"/schedule", nil,
-	), "schedule-key-0003"))
-	if cancelled.Code != http.StatusOK {
-		t.Fatalf("cancel status = %d: %s", cancelled.Code, cancelled.Body.String())
-	}
-	if settled := stack.runSchedules(t, later.Add(time.Second)); settled != 0 {
-		t.Fatalf("tooling's cancelled schedule published %d editions", settled)
-	}
-}
-
 func TestSchedulingRefusesAWorkingCopySomeoneElseHasMovedPast(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)

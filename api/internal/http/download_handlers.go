@@ -190,10 +190,6 @@ func (h *Handlers) sharedImageVariant(
 			return redirect, mediaType, false, err
 		},
 		func() (string, string, bool, error) {
-			redirect, mediaType, err := h.publications.MarkVariant(ctx, mediaID, variant, version)
-			return redirect, mediaType, false, err
-		},
-		func() (string, string, bool, error) {
 			return h.publications.PostMediaVariant(ctx, mediaID, variant, version,
 				valueOrEmpty(params.Expires), valueOrEmpty(params.Signature))
 		},
@@ -202,7 +198,6 @@ func (h *Handlers) sharedImageVariant(
 		redirect, mediaType, private, err := owner()
 		switch {
 		case errors.Is(err, account.ErrProfileMediaNotFound),
-			errors.Is(err, publication.ErrMarkNotFound),
 			errors.Is(err, publication.ErrPostMediaNotFound):
 			continue
 		case errors.Is(err, storage.ErrInsufficientSpace):

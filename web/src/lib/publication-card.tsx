@@ -4,7 +4,7 @@ import { CARD_SIZE } from "@/lib/publication-metadata";
 
 export type CardSubject = {
   title: string;
-  app: { name: string; mark: string | null } | null;
+  app: { name: string } | null;
   plate: string | null;
 };
 
@@ -94,9 +94,6 @@ export function PostCard({
 
         {app ? (
           <div style={{ alignItems: "center", display: "flex", gap: 14 }}>
-            {app.mark ? (
-              <img alt="" height={32} src={app.mark} width={32} />
-            ) : null}
             <span style={{ fontSize: 27, fontWeight: 500, opacity: 0.72 }}>
               {app.name}
             </span>

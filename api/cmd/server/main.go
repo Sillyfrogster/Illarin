@@ -146,13 +146,13 @@ func run() error {
 		return fmt.Errorf("publication secret key: %w", err)
 	}
 	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
-	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
+	publications := publication.NewService(pool, images, publishing)
 	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	notifications := notification.NewService(pool)
-	background.Add(9)
+	background.Add(8)
 	go func() {
 		defer background.Done()
 		notifications.RunFanOut(runtimeContext, func(err error) {
@@ -181,12 +181,6 @@ func run() error {
 		defer background.Done()
 		deliveries.RunSweeper(runtimeContext, func(err error) {
 			log.Printf("delivery sweeper: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
-		publications.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("publication sweeper: %v", err)
 		})
 	}()
 	go func() {

@@ -74,9 +74,9 @@ func (s *Service) DeletePost(
 		return Post{}, fmt.Errorf("delete the post: %w", err)
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.deleted",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, Before: locked.Status, After: StatusDeleted,
+		Actor: editor.ID, Action: "post.deleted",
+		GrantID: locked.GrantID,
+		PostID:  &id, Before: locked.Status, After: StatusDeleted,
 	})
 	if err != nil {
 		return Post{}, err
@@ -131,9 +131,9 @@ func (s *Service) RecoverPost(
 		return Post{}, fmt.Errorf("recover the post: %w", err)
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.recovered",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, Before: StatusDeleted, After: locked.Status,
+		Actor: editor.ID, Action: "post.recovered",
+		GrantID: locked.GrantID,
+		PostID:  &id, Before: StatusDeleted, After: locked.Status,
 	})
 	if err != nil {
 		return Post{}, err

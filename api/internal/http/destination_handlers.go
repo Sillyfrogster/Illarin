@@ -259,30 +259,6 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *Handlers) SetPublicationAppDestinations(c *gin.Context, id types.UUID) {
-	authority, ok := h.publicationAuthority(c, "setting an app's destinations")
-	if !ok {
-		return
-	}
-	policy, ok := readDestinationPolicy(c)
-	if !ok {
-		return
-	}
-	err := h.publications.SetAppDestinations(
-		c.Request.Context(), authority.ID, uuid.UUID(id), policy,
-	)
-	if err != nil {
-		h.destinationError(c, err)
-		return
-	}
-	app, err := h.publications.App(c.Request.Context(), uuid.UUID(id))
-	if err != nil {
-		h.destinationError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, toAPIApp(app))
-}
-
 func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID) {
 	authority, ok := h.publicationAuthority(c, "setting a contributor's destinations")
 	if !ok {

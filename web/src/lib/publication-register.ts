@@ -1,10 +1,8 @@
 import type {
   PostDelivery,
-  PublicationApp,
   PublicationCategory,
   PublicationDestination,
   PublicationGrant,
-  PublicationToken,
 } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 import { deliveryState } from "@/lib/delivery-standing";
@@ -12,14 +10,12 @@ import { EVENT_WORDS } from "@/lib/publication-delivery";
 
 export type Register =
   | "contributors"
-  | "apps"
   | "categories"
   | "destinations"
   | "deliveries";
 
 export const REGISTERS: Register[] = [
   "contributors",
-  "apps",
   "categories",
   "destinations",
   "deliveries",
@@ -27,7 +23,6 @@ export const REGISTERS: Register[] = [
 
 const NAMES: Record<Register, string> = {
   contributors: "Contributors",
-  apps: "Apps",
   categories: "Categories",
   destinations: "Destinations",
   deliveries: "Announcements",
@@ -41,14 +36,12 @@ export type RegisterStanding = { count: number | null; attention: boolean };
 
 export function registerStandings(held: {
   grants: PublicationGrant[];
-  apps: PublicationApp[];
   categories: PublicationCategory[];
   destinations: PublicationDestination[];
   stopped: number;
 }): Record<Register, RegisterStanding> {
   return {
     contributors: kept(held.grants.filter((one) => one.active).length),
-    apps: kept(held.apps.filter((one) => !one.retired).length),
     categories: kept(held.categories.filter((one) => !one.retired).length),
     destinations: kept(held.destinations.length),
     deliveries: {
@@ -62,17 +55,9 @@ function kept(count: number): RegisterStanding {
   return { attention: false, count };
 }
 
-export function nothingIn(
-  register: Register,
-  held: { apps: PublicationApp[] },
-): string {
+export function nothingIn(register: Register): string {
   if (register === "contributors") {
-    return held.apps.filter((one) => !one.retired).length === 0
-      ? "Add an app first. An approval binds one person to one app."
-      : "No app contributors approved. Team publishing remains available.";
-  }
-  if (register === "apps") {
-    return "No apps configured. Add an app before approving a contributor.";
+    return "No app contributors approved. Team publishing remains available.";
   }
   if (register === "categories") {
     return "The blog has no categories, so no post can be filed.";
@@ -143,21 +128,4 @@ export function destinationActions(one: PublicationDestination): {
 
 export function canReplay(one: PostDelivery): boolean {
   return deliveryState(one) === "gaveUp" && !one.removed;
-}
-
-export function tokenStanding(one: PublicationToken): string {
-  const said = [`Created ${readableDate(one.createdAt)}`];
-  said.push(
-    one.lastUsedAt ? `last used ${readableDate(one.lastUsedAt)}` : "never used",
-  );
-  if (one.expiresAt && one.active) {
-    said.push(`expires ${readableDate(one.expiresAt)}`);
-  }
-  return said.join(" · ");
-}
-
-export function tokenEnded(one: PublicationToken): string {
-  if (one.revokedAt) return `Revoked ${readableDate(one.revokedAt)}`;
-  if (one.expiresAt) return `Expired ${readableDate(one.expiresAt)}`;
-  return "Inactive";
 }

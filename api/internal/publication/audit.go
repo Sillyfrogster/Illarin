@@ -10,8 +10,6 @@ import (
 
 const CredentialSession = "session"
 
-const CredentialToken = "token"
-
 const CredentialSystem = "system"
 
 type change struct {
@@ -21,7 +19,6 @@ type change struct {
 	AppID      *uuid.UUID
 	CategoryID *uuid.UUID
 	GrantID    *uuid.UUID
-	TokenID    *uuid.UUID
 	PostID     *uuid.UUID
 	RevisionID *uuid.UUID
 	ScheduleID *uuid.UUID
@@ -44,11 +41,11 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 	_, err := tx.Exec(ctx, `
 		insert into publication_audits
 		       (id, actor_id, credential, action, app_id, category_id, grant_id,
-		        token_id, post_id, revision_id, schedule_id, subject_id,
+		        post_id, revision_id, schedule_id, subject_id,
 		        destination_id, delivery_id, before_state, after_state)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`, uuid.New(), actor, made.Credential, made.Action, made.AppID, made.CategoryID,
-		made.GrantID, made.TokenID, made.PostID, made.RevisionID, made.ScheduleID,
+		made.GrantID, made.PostID, made.RevisionID, made.ScheduleID,
 		made.SubjectID, made.DestinationID, made.DeliveryID,
 		nullable(made.Before), nullable(made.After))
 	if err != nil {

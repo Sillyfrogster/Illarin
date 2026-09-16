@@ -3,13 +3,11 @@ paths:
     get:
       operationId: listPosts
       description: >-
-        Every post this credential may manage. An admin sees all of them, an
-        approved contributor sees the posts under their active grants, and a
-        publication token sees only the posts under the one grant it was issued
-        for. Deleted posts are left out unless they are the ones asked for.
+        Every post this account may manage. An admin sees all of them and an
+        approved contributor sees the posts under their active grants. Deleted
+        posts are left out unless they are the ones asked for.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: deleted
           in: query
@@ -30,20 +28,14 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationUnauthenticated
         '403':
           $ref: ./publication.yaml#/components/responses/PublicationForbidden
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     post:
       operationId: createPost
       description: >-
         Start a draft. A contributor names the grant it belongs to and an admin
-        may omit it and write as Illarin. A publication token writes under its
-        own grant and may not name another.
+        may omit it and write as Illarin.
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
-      parameters:
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -71,14 +63,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}:
     get:
       operationId: getPost
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -99,8 +88,6 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
           $ref: ./publication.yaml#/components/responses/PublicationNotFound
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     put:
       operationId: savePost
       description: >-
@@ -109,7 +96,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -117,7 +103,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -145,8 +130,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/media:
     post:
       operationId: addPostMedia
@@ -157,7 +140,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -165,7 +147,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         description: Send the metadata part before the image file part.
@@ -209,8 +190,6 @@ paths:
             application/json:
               schema:
                 $ref: ./publication.yaml#/components/schemas/PublicationError
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
         '503':
           description: The storage reserve cannot accept the image
           content:
@@ -225,7 +204,6 @@ paths:
         and keepers, and never compares two editions for a reader.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -246,8 +224,6 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
           $ref: ./publication.yaml#/components/responses/PublicationNotFound
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     post:
       operationId: checkpointPost
       description: >-
@@ -256,7 +232,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -264,7 +239,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -290,8 +264,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/revisions/{revisionId}/restore:
     post:
       operationId: restorePostRevision
@@ -301,7 +273,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -315,7 +286,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -341,8 +311,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/destinations:
     get:
       operationId: listPostDestinations
@@ -351,7 +319,6 @@ paths:
         starts with. A contributor sees safe identities only.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -380,7 +347,6 @@ paths:
         ended. It carries no endpoint address, secret or response body.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -409,7 +375,6 @@ paths:
         editions and times, and never a word anyone wrote.
       security:
         - sessionCookie: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -430,8 +395,6 @@ paths:
           $ref: ./publication.yaml#/components/responses/PublicationForbidden
         '404':
           $ref: ./publication.yaml#/components/responses/PublicationNotFound
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/import:
     post:
       operationId: importPostMarkdown
@@ -442,7 +405,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -450,7 +412,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -482,8 +443,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/publish:
     post:
       operationId: publishPost
@@ -493,7 +452,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -501,7 +459,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -529,8 +486,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/withdraw:
     post:
       operationId: withdrawPost
@@ -541,7 +496,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -549,7 +503,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -579,8 +532,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/republish:
     post:
       operationId: republishPost
@@ -591,7 +542,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -599,7 +549,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -627,8 +576,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/delete:
     post:
       operationId: deletePost
@@ -641,7 +588,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -649,7 +595,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -679,8 +624,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/recover:
     post:
       operationId: recoverPost
@@ -691,7 +634,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -699,7 +641,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -727,8 +668,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/schedule:
     post:
       operationId: schedulePost
@@ -739,7 +678,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -747,7 +685,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -777,8 +714,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     put:
       operationId: replacePostSchedule
       description: >-
@@ -787,7 +722,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -795,7 +729,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       requestBody:
         required: true
         content:
@@ -823,8 +756,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
     delete:
       operationId: cancelPostSchedule
       description: >-
@@ -833,7 +764,6 @@ paths:
       security:
         - sessionCookie: []
           browserMutation: []
-        - publicationToken: []
       parameters:
         - name: id
           in: path
@@ -841,7 +771,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - $ref: ./common.yaml#/components/parameters/IdempotencyKey
       responses:
         '200':
           description: The post with nothing waiting to publish
@@ -861,8 +790,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PostConflict'
-        '429':
-          $ref: ./publication.yaml#/components/responses/PublicationTooManyRequests
   /v1/publication/posts/{id}/address:
     put:
       operationId: correctPostAddress
@@ -1300,8 +1227,7 @@ components:
       type: object
       description: >-
         A refusal that names the current state where there is one. A stale
-        working copy carries the version to reload from; a reused idempotency
-        key carries no version.
+        working copy carries the version to reload from.
       required:
         - error
         - code

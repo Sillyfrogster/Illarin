@@ -9,7 +9,7 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) DeletePost(c *gin.Context, id types.UUID, _ DeletePostParams) {
+func (h *Handlers) DeletePost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "deleting a post")
 	if !ok {
 		return
@@ -28,7 +28,7 @@ func (h *Handlers) DeletePost(c *gin.Context, id types.UUID, _ DeletePostParams)
 	c.JSON(http.StatusOK, h.toAPIPost(deleted))
 }
 
-func (h *Handlers) RecoverPost(c *gin.Context, id types.UUID, _ RecoverPostParams) {
+func (h *Handlers) RecoverPost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "recovering a post")
 	if !ok {
 		return

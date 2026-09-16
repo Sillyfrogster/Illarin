@@ -14,7 +14,7 @@ import (
 
 const maxImportBytes = 1 << 20
 
-func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID, _ ImportPostMarkdownParams) {
+func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "importing Markdown into a post")
 	if !ok {
 		return

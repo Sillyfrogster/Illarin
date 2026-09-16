@@ -30,7 +30,6 @@ import type {
 } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 import { grantAllowance, nothingIn } from "@/lib/publication-register";
-import { GrantTokens } from "../GrantTokens";
 import { CategoryChoice, DestinationChoice } from "./choices";
 
 export function ContributorRows({
@@ -63,7 +62,7 @@ export function ContributorRows({
       />
 
       {active.length === 0 ? (
-        <Nothing>{nothingIn("contributors", { apps })}</Nothing>
+        <Nothing>{nothingIn("contributors")}</Nothing>
       ) : (
         <Rows>
           {active.map((grant) => (
@@ -223,7 +222,7 @@ export function ContributorStep({
               onConfirm={revoke}
             >
               Everything @{existing.holder.handle} published stays, under their
-              name. Their tokens stop working at once.
+              name.
             </Consequence>
           ) : null
         }
@@ -285,12 +284,6 @@ export function ContributorStep({
           onInherit={setFollows}
         />
       </StepForm>
-
-      {existing ? (
-        <div className="mt-8 border-t border-rule/45 pt-6">
-          <GrantTokens grant={existing} mine={false} />
-        </div>
-      ) : null}
     </>
   );
 }

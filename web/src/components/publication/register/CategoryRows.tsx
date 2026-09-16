@@ -66,7 +66,7 @@ export function CategoryRows({
       <PanelHead id="register-heading" title="Categories" />
 
       {current.length === 0 ? (
-        <Nothing>{nothingIn("categories", { apps: [] })}</Nothing>
+        <Nothing>{nothingIn("categories")}</Nothing>
       ) : (
         <Sortable
           disabled={placing !== null}

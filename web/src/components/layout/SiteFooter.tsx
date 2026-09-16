@@ -10,8 +10,6 @@ export function SiteFooter() {
     ...primaryDestinations(blogAddress("/")),
     { label: "Publish", href: "/upload" },
     { label: "Account settings", href: "/settings" },
-    { label: "Publication API", href: "/developers/publication" },
-    { label: "Connect an app", href: "/developers/apps" },
   ];
   return (
     <footer className="mt-chapter bg-field pb-16">

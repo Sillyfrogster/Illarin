@@ -7,11 +7,11 @@ import { Trouble } from "@/components/ui/field";
 import { Waiting } from "@/components/ui/waiting";
 import { RailBack, WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
-  readApps,
   readCategories,
   readDeliveries,
   readDestinations,
   readGrants,
+  readWorkspace,
 } from "@/lib/api/publication";
 import type {
   PostDelivery,
@@ -29,7 +29,6 @@ import {
   registerName,
   registerStandings,
 } from "@/lib/publication-register";
-import { AppRows, AppStep } from "./AppRows";
 import { CategoryRows, CategoryStep } from "./CategoryRows";
 import { ContributorRows, ContributorStep } from "./ContributorRows";
 import { DeliveryRows } from "./DeliveryRows";
@@ -38,7 +37,6 @@ import { SecretStep } from "./SecretStep";
 
 type Step =
   | { what: "contributor"; grant: PublicationGrant | null }
-  | { what: "app"; app: PublicationApp | null }
   | { what: "category"; category: PublicationCategory }
   | { what: "destination"; destination: PublicationDestination | null }
   | { what: "secret"; destination: PublicationDestination };
@@ -59,9 +57,9 @@ export function PublicationRegister() {
   const [refusal, setRefusal] = useState("");
 
   const load = useCallback(async () => {
-    const [appsIn, categoriesIn, grantsIn, destinationsIn, sent, short] =
+    const [workspace, categoriesIn, grantsIn, destinationsIn, sent, short] =
       await Promise.all([
-        readApps(),
+        readWorkspace(),
         readCategories(),
         readGrants(),
         readDestinations(),
@@ -69,7 +67,7 @@ export function PublicationRegister() {
         readDeliveries("failed"),
       ]);
     const trouble =
-      appsIn.error ??
+      workspace.error ??
       categoriesIn.error ??
       grantsIn.error ??
       destinationsIn.error ??
@@ -86,7 +84,9 @@ export function PublicationRegister() {
     setDeliveries(sent.value?.deliveries ?? []);
     setStopped(countStopped(short.value?.deliveries ?? []));
     setView("all");
-    setApps(appsIn.value?.apps ?? []);
+    setApps(
+      knownApps(workspace.value?.apps ?? [], grantsIn.value?.grants ?? []),
+    );
   }, []);
 
   useEffect(() => {
@@ -110,13 +110,12 @@ export function PublicationRegister() {
   const standings = useMemo(
     () =>
       registerStandings({
-        apps: apps ?? [],
         categories,
         destinations,
         grants,
         stopped,
       }),
-    [apps, categories, destinations, grants, stopped],
+    [categories, destinations, grants, stopped],
   );
 
   function open(next: Step | null) {
@@ -138,19 +137,6 @@ export function PublicationRegister() {
     setStep((open) =>
       open?.what === "destination" && open.destination?.id === saved.id
         ? { destination: saved, what: "destination" }
-        : open,
-    );
-  }
-
-  function replaceApp(saved: PublicationApp, added: boolean) {
-    setApps((held) =>
-      added
-        ? [...(held ?? []), saved]
-        : (held ?? []).map((one) => (one.id === saved.id ? saved : one)),
-    );
-    setStep((open) =>
-      open?.what === "app" && open.app?.id === saved.id
-        ? { app: saved, what: "app" }
         : open,
     );
   }
@@ -194,16 +180,6 @@ export function PublicationRegister() {
             apps={apps}
             grants={grants}
             onOpen={(grant) => open({ grant, what: "contributor" })}
-          />
-        ) : null}
-
-        {register === "apps" ? (
-          <AppRows
-            apps={apps}
-            onFailure={setFailure}
-            onOpen={(app) => open({ app, what: "app" })}
-            onOrdered={setApps}
-            onSaved={replaceApp}
           />
         ) : null}
 
@@ -300,16 +276,6 @@ export function PublicationRegister() {
               />
             ) : null}
 
-            {step.what === "app" ? (
-              <AppStep
-                destinations={destinations}
-                existing={step.app}
-                onClose={close}
-                onFailure={setRefusal}
-                onSaved={replaceApp}
-              />
-            ) : null}
-
             {step.what === "category" ? (
               <CategoryStep
                 category={step.category}
@@ -362,6 +328,17 @@ export function PublicationRegister() {
   );
 }
 
+function knownApps(
+  named: PublicationApp[],
+  grants: PublicationGrant[],
+): PublicationApp[] {
+  const known = new Map(named.map((app) => [app.id, app]));
+  for (const grant of grants) {
+    if (!known.has(grant.app.id)) known.set(grant.app.id, grant.app);
+  }
+  return [...known.values()];
+}
+
 function countStopped(deliveries: PostDelivery[]): number {
   return deliveries.filter(
     (one) => deliveryState(one) === "gaveUp" && !one.removed,
@@ -370,7 +347,6 @@ function countStopped(deliveries: PostDelivery[]): number {
 
 function stepKey(step: Step): string {
   if (step.what === "contributor") return `contributor-${step.grant?.id ?? ""}`;
-  if (step.what === "app") return `app-${step.app?.id ?? ""}`;
   if (step.what === "category") return `category-${step.category.id}`;
   if (step.what === "secret") return `secret-${step.destination.id}`;
   return `destination-${step.destination?.id ?? ""}`;
@@ -381,9 +357,6 @@ function stepTitle(step: Step): string {
     return step.grant
       ? `What @${step.grant.holder.handle} may publish`
       : "Approve a contributor";
-  }
-  if (step.what === "app") {
-    return step.app ? step.app.name : "Add an app";
   }
   if (step.what === "category") return `Rename ${step.category.label}`;
   if (step.what === "secret") {

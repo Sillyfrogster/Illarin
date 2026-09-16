@@ -203,10 +203,8 @@ if [[ "$(umami_sql <<<"SELECT (SELECT count(*) FROM umami.website_event) + (SELE
   exit 1
 fi
 
-expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET /developers/publication "" "Save the writing"
-for page in requests writing publishing document markdown webhooks; do
-  expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET "/developers/publication/$page" "" "Publication API"
-done
+expect_through_gateway 404 "127.0.0.1:$TEST_PORT" GET /developers
+expect_through_gateway 404 "127.0.0.1:$TEST_PORT" GET /developers/publication
 compose_test exec -T api test -x /app/publication-authority
 if [[ -n "$(compose_test exec -T web find /app -path /app/node_modules -prune -o -name '.env*' -print)" ]]; then
   echo "An environment file was copied into the web image." >&2

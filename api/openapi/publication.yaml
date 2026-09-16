@@ -1,157 +1,4 @@
 paths:
-  /v1/publication/apps:
-    get:
-      operationId: listPublicationApps
-      description: >-
-        Every configured publication app, retired ones included, in the order
-        the publication authority chose. Only the publication authority may
-        read it.
-      security:
-        - sessionCookie: []
-      responses:
-        '200':
-          description: The configured apps
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationAppList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-    post:
-      operationId: definePublicationApp
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DefinePublicationAppRequest'
-      responses:
-        '201':
-          description: The app as it was configured
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: An app field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '409':
-          description: Another app already uses that slug
-    put:
-      operationId: orderPublicationApps
-      description: Put the configured apps in the order they are listed.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrderPublicationAppsRequest'
-      responses:
-        '200':
-          description: The configured apps in their new order
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationAppList'
-        '400':
-          description: The order does not name every app exactly once
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-  /v1/publication/apps/{id}:
-    patch:
-      operationId: updatePublicationApp
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePublicationAppRequest'
-      responses:
-        '200':
-          description: The app as it now reads
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: An app field is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such app
-        '409':
-          description: Another app already uses that slug
-  /v1/publication/apps/{id}/mark:
-    put:
-      operationId: setPublicationAppMark
-      description: Upload the mark Illarin hosts and serves for this app.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        description: Send the image as the only form data part.
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: The app carrying its new mark
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationApp'
-        '400':
-          description: The image is not valid
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account is not the publication authority
-        '404':
-          description: No such app
-        '413':
-          description: The image exceeds the upload limit
-        '503':
-          description: The storage reserve cannot accept the image
   /v1/publication/categories:
     get:
       operationId: listPublicationCategories
@@ -341,114 +188,6 @@ paths:
           description: The signed-in account is not the publication authority
         '404':
           description: No such active grant
-  /v1/publication/grants/{id}/tokens:
-    get:
-      operationId: listPublicationTokens
-      description: >-
-        Safe metadata for every token issued under one grant, revoked ones
-        included. The contributor holding the grant and the publication
-        authority may read it; nobody can read a token value here or anywhere.
-      security:
-        - sessionCookie: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: The grant's tokens
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationTokenList'
-        '401':
-          description: No account is signed in
-        '403':
-          description: The account neither holds the grant nor publication authority
-        '404':
-          description: No such grant
-    post:
-      operationId: issuePublicationToken
-      description: >-
-        Issue one token under an active grant. The response is the only time
-        Illarin can show its value.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IssuePublicationTokenRequest'
-      responses:
-        '201':
-          description: The new token and its value, shown once
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IssuedPublicationToken'
-        '400':
-          description: The name or expiry is not usable, or the grant is revoked
-        '401':
-          description: No account is signed in
-        '403':
-          description: The signed-in account does not hold the grant
-        '404':
-          description: No such grant
-  /v1/publication/tokens/{id}:
-    delete:
-      operationId: revokePublicationToken
-      description: >-
-        Stop one token. The grant, the contributor's other tokens and
-        everything already published are untouched.
-      security:
-        - sessionCookie: []
-          browserMutation: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: The token no longer authenticates
-        '401':
-          description: No account is signed in
-        '403':
-          description: The account neither holds the grant nor publication authority
-        '404':
-          description: No such live token
-  /v1/publication/token:
-    get:
-      operationId: getPublicationCredential
-      description: >-
-        What the publication token sent with this request is, and the grant it
-        publishes under. It is the only thing a publication token reaches
-        today, and it reads nothing outside the publication.
-      security:
-        - publicationToken: []
-      responses:
-        '200':
-          description: The calling token and its grant
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicationCredential'
-        '401':
-          description: The token is missing, expired, revoked or no longer granted
   /v1/publication/workspace:
     get:
       operationId: getPublicationWorkspace
@@ -490,10 +229,6 @@ components:
           type: string
         home:
           type: string
-        mark:
-          anyOf:
-            - $ref: '#/components/schemas/PublicationAppMark'
-            - type: 'null'
         position:
           type: integer
         retired:
@@ -505,19 +240,6 @@ components:
             names its own.
           items:
             $ref: './destinations.yaml#/components/schemas/PublicationDestinationChoice'
-    PublicationAppMark:
-      type: object
-      required:
-        - url
-        - width
-        - height
-      properties:
-        url:
-          type: string
-        width:
-          type: integer
-        height:
-          type: integer
     PublicationAppList:
       type: object
       required:
@@ -527,43 +249,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicationApp'
-    DefinePublicationAppRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - slug
-        - name
-        - home
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-        home:
-          type: string
-    UpdatePublicationAppRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-        home:
-          type: string
-        retired:
-          type: boolean
-    OrderPublicationAppsRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - appIds
-      properties:
-        appIds:
-          type: array
-          items:
-            type: string
-            format: uuid
     PublicationCategory:
       type: object
       required:
@@ -716,89 +401,6 @@ components:
         defaultCategoryId:
           type: string
           format: uuid
-    PublicationToken:
-      type: object
-      required:
-        - id
-        - grantId
-        - name
-        - prefix
-        - createdAt
-        - active
-      properties:
-        id:
-          type: string
-          format: uuid
-        grantId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        prefix:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        expiresAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        lastUsedAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        revokedAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-        active:
-          type: boolean
-    PublicationTokenList:
-      type: object
-      required:
-        - tokens
-      properties:
-        tokens:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicationToken'
-    IssuePublicationTokenRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        expiresAt:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: 'null'
-    IssuedPublicationToken:
-      type: object
-      required:
-        - token
-        - value
-      properties:
-        token:
-          $ref: '#/components/schemas/PublicationToken'
-        value:
-          type: string
-          description: The token value, returned here and never again.
-    PublicationCredential:
-      type: object
-      required:
-        - token
-        - grant
-      properties:
-        token:
-          $ref: '#/components/schemas/PublicationToken'
-        grant:
-          $ref: '#/components/schemas/PublicationGrant'
     PublicationWorkspace:
       type: object
       required:
@@ -837,9 +439,6 @@ components:
         sentence beside it, which is written for a person and may change.
       enum:
         - unauthenticated
-        - token_expired
-        - token_revoked
-        - grant_revoked
         - forbidden
         - not_found
         - invalid
@@ -847,15 +446,9 @@ components:
         - stale_version
         - already_scheduled
         - schedule_running
-        - idempotency_mismatch
-        - idempotency_in_progress
-        - rate_limited
         - server_error
       x-enum-varnames:
         - CodeUnauthenticated
-        - CodeTokenExpired
-        - CodeTokenRevoked
-        - CodeGrantRevoked
         - CodeForbidden
         - CodeNotFound
         - CodeInvalid
@@ -863,15 +456,12 @@ components:
         - CodeStaleVersion
         - CodeAlreadyScheduled
         - CodeScheduleRunning
-        - CodeIdempotencyMismatch
-        - CodeIdempotencyInProgress
-        - CodeRateLimited
         - CodeServerError
     PublicationError:
       type: object
       description: >-
-        How every publication route refuses. It never names another account,
-        grant or token.
+        How every publication route refuses. It never names another account or
+        grant.
       required:
         - error
         - code
@@ -904,17 +494,6 @@ components:
             $ref: '#/components/schemas/PublicationError'
     PublicationNotFound:
       description: Nothing this credential may reach has that identifier
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/PublicationError'
-    PublicationTooManyRequests:
-      description: The credential has gone past the pace this operation allows
-      headers:
-        Retry-After:
-          description: Seconds to wait before repeating the request
-          schema:
-            type: integer
       content:
         application/json:
           schema:

@@ -37,7 +37,7 @@ func (h *Handlers) listing(params ListPostsParams) func(
 	return h.publications.Posts
 }
 
-func (h *Handlers) CreatePost(c *gin.Context, _ CreatePostParams) {
+func (h *Handlers) CreatePost(c *gin.Context) {
 	editor, ok := h.postEditor(c, "starting a post")
 	if !ok {
 		return
@@ -72,7 +72,7 @@ func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(found))
 }
 
-func (h *Handlers) SavePost(c *gin.Context, id types.UUID, _ SavePostParams) {
+func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "saving a post")
 	if !ok {
 		return
@@ -106,7 +106,7 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID, _ SavePostParams) {
 	c.JSON(http.StatusOK, h.toAPIPost(saved))
 }
 
-func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID, _ AddPostMediaParams) {
+func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "adding a picture to a post")
 	if !ok {
 		return
@@ -149,7 +149,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID, _ AddPostMediaPar
 	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.publications.SignPrivate))
 }
 
-func (h *Handlers) PublishPost(c *gin.Context, id types.UUID, _ PublishPostParams) {
+func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "publishing a post")
 	if !ok {
 		return
@@ -291,9 +291,6 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 }
 
 func (h *Handlers) postEditor(c *gin.Context, action string) (publication.Editor, bool) {
-	if bearing, ok := publicationBearing(c); ok {
-		return bearing.Editor(), true
-	}
 	current, ok := h.verifiedAccount(c, action)
 	if !ok {
 		return publication.Editor{}, false

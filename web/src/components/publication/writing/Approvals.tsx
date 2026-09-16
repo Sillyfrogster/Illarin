@@ -1,8 +1,6 @@
 "use client";
 
 import { ArrowUpRight, Package } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type { PublicationGrant, PublicationWorkspace } from "@/lib/api/query";
 
@@ -38,22 +36,7 @@ function Approval({ grant }: { grant: PublicationGrant }) {
       lead={
         <span className="flex min-w-0 items-center gap-3">
           <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-control bg-plane text-mute">
-            {grant.app.mark ? (
-              <Image
-                alt=""
-                className="size-10 object-contain"
-                height={40}
-                src={grant.app.mark.url}
-                unoptimized
-                width={40}
-              />
-            ) : (
-              <Package
-                aria-hidden="true"
-                className="size-5"
-                strokeWidth={1.6}
-              />
-            )}
+            <Package aria-hidden="true" className="size-5" strokeWidth={1.6} />
           </span>
           <span className="min-w-0">
             <span className="block font-display text-ui font-medium text-ink wrap-anywhere">
@@ -100,14 +83,6 @@ function Approval({ grant }: { grant: PublicationGrant }) {
           {grant.app.home.replace(/^https:\/\//, "")}
           <ArrowUpRight aria-hidden="true" className="size-3.5" />
         </a>
-
-        <Link
-          className="inline-flex min-h-11 items-center gap-1.5 font-ui text-ui font-medium text-accent outline-offset-3 hover:underline"
-          href="/admin/blog/api"
-        >
-          API tokens and examples
-          <ArrowUpRight aria-hidden="true" className="size-4" />
-        </Link>
       </div>
     </MorphingDisclosure>
   );

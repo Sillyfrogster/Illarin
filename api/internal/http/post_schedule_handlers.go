@@ -10,7 +10,7 @@ import (
 	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID, _ SchedulePostParams) {
+func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "scheduling a post")
 	if !ok {
 		return
@@ -32,7 +32,7 @@ func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID, _ SchedulePostPar
 	c.JSON(http.StatusCreated, h.toAPIPost(scheduled))
 }
 
-func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID, _ ReplacePostScheduleParams) {
+func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "replacing a scheduled post")
 	if !ok {
 		return
@@ -54,7 +54,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID, _ ReplaceP
 	c.JSON(http.StatusOK, h.toAPIPost(replaced))
 }
 
-func (h *Handlers) CancelPostSchedule(c *gin.Context, id types.UUID, _ CancelPostScheduleParams) {
+func (h *Handlers) CancelPostSchedule(c *gin.Context, id types.UUID) {
 	editor, ok := h.postEditor(c, "cancelling a scheduled post")
 	if !ok {
 		return

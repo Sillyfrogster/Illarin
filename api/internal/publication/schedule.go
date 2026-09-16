@@ -111,9 +111,9 @@ func (s *Service) SchedulePost(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.scheduled",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, RevisionID: &revisionID, ScheduleID: &scheduleID,
+		Actor: editor.ID, Action: "post.scheduled",
+		GrantID: locked.GrantID,
+		PostID:  &id, RevisionID: &revisionID, ScheduleID: &scheduleID,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -180,9 +180,9 @@ func (s *Service) ReplaceSchedule(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.schedule.replaced",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, RevisionID: &revisionID, ScheduleID: &waiting,
+		Actor: editor.ID, Action: "post.schedule.replaced",
+		GrantID: locked.GrantID,
+		PostID:  &id, RevisionID: &revisionID, ScheduleID: &waiting,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -222,9 +222,9 @@ func (s *Service) CancelSchedule(ctx context.Context, editor Editor, id uuid.UUI
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.schedule.cancelled",
-		GrantID: locked.GrantID, TokenID: editor.Token,
-		PostID: &id, ScheduleID: &waiting,
+		Actor: editor.ID, Action: "post.schedule.cancelled",
+		GrantID: locked.GrantID,
+		PostID:  &id, ScheduleID: &waiting,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -611,8 +611,8 @@ func overtakeSchedule(
 		return err
 	}
 	return recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(),
-		Action: "post.schedule.cancelled", GrantID: locked.GrantID, TokenID: editor.Token,
+		Actor:  editor.ID,
+		Action: "post.schedule.cancelled", GrantID: locked.GrantID,
 		PostID: &locked.ID, ScheduleID: &waiting,
 		Before: locked.Status, After: after,
 	})

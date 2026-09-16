@@ -90,9 +90,9 @@ func (s *Service) PublishPost(
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Credential: editor.Credential(), Action: "post.published",
-		GrantID: current.GrantID, TokenID: editor.Token,
-		PostID: &id, RevisionID: &revisionID,
+		Actor: editor.ID, Action: "post.published",
+		GrantID: current.GrantID,
+		PostID:  &id, RevisionID: &revisionID,
 		Before: locked.Status, After: StatusPublished,
 	})
 	if err != nil {
@@ -261,20 +261,16 @@ func (s *Service) publishedRelease(ctx context.Context, revisionID uuid.UUID) (*
 func (s *Service) publishedReleaseWith(ctx context.Context, q db.DBTX, revisionID uuid.UUID) (*Release, error) {
 	var app App
 	var version, address *string
-	var markID *uuid.UUID
-	var width, height *int
 	err := q.QueryRow(ctx, `
 		select app.id, app.slug, app.name, app.home_url, app.position,
-		       app.retired_at is not null, mark.id, mark.width, mark.height,
+		       app.retired_at is not null,
 		       revision.release_version, revision.release_url
 		  from post_revisions revision
 		  join publication_apps app on app.id = revision.release_app_id
-		  left join publication_media mark
-		         on mark.id = app.mark_media_id and mark.blob_id is not null
 		 where revision.id = $1
 	`, revisionID).Scan(
 		&app.ID, &app.Slug, &app.Name, &app.Home, &app.Position, &app.Retired,
-		&markID, &width, &height, &version, &address,
+		&version, &address,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -282,7 +278,6 @@ func (s *Service) publishedReleaseWith(ctx context.Context, q db.DBTX, revisionI
 	if err != nil {
 		return nil, fmt.Errorf("read the release a post announces: %w", err)
 	}
-	app.Mark = scanMark(markID, width, height)
 	release := &Release{App: app}
 	if version != nil {
 		release.Version = *version

@@ -353,7 +353,7 @@ func (s *Service) withAllowedCategories(ctx context.Context, found []Grant) ([]G
 const selectGrants = `
 	select grant_row.id, holder.id, holder.username,
 	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null, mark.id, mark.width, mark.height,
+	       app.retired_at is not null,
 	       fallback.id, fallback.slug, fallback.label, fallback.position,
 	       fallback.retired_at is not null, not grant_row.destinations_overridden,
 	       grant_row.granted_by, grant_row.granted_at, grant_row.revoked_at, grant_row.active
@@ -361,8 +361,6 @@ const selectGrants = `
 	  join users holder on holder.id = grant_row.user_id
 	  join publication_apps app on app.id = grant_row.app_id
 	  join publication_categories fallback on fallback.id = grant_row.default_category_id
-	  left join publication_media mark
-	         on mark.id = app.mark_media_id and mark.blob_id is not null
 	`
 
 func collectGrants(rows pgx.Rows) ([]Grant, error) {
@@ -370,12 +368,10 @@ func collectGrants(rows pgx.Rows) ([]Grant, error) {
 	found := make([]Grant, 0, 8)
 	for rows.Next() {
 		var one Grant
-		var markID *uuid.UUID
-		var width, height *int
 		err := rows.Scan(
 			&one.ID, &one.Holder.ID, &one.Holder.Handle,
 			&one.App.ID, &one.App.Slug, &one.App.Name, &one.App.Home, &one.App.Position,
-			&one.App.Retired, &markID, &width, &height,
+			&one.App.Retired,
 			&one.DefaultCategory.ID, &one.DefaultCategory.Slug, &one.DefaultCategory.Label,
 			&one.DefaultCategory.Position, &one.DefaultCategory.Retired,
 			&one.DestinationsInherited,
@@ -384,7 +380,6 @@ func collectGrants(rows pgx.Rows) ([]Grant, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read a publication grant: %w", err)
 		}
-		one.App.Mark = scanMark(markID, width, height)
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {

@@ -4,14 +4,14 @@ import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
   "Blog administration",
-  "Manage blog contributors, apps, categories and announcements.",
+  "Manage blog contributors, categories and announcements.",
 );
 
 export default function PublicationPage() {
   return (
     <AuthorityPage
       heading="Blog administration"
-      hint="Manage blog contributors, apps, categories and announcements."
+      hint="Manage blog contributors, categories and announcements."
     >
       <PublicationRegister />
     </AuthorityPage>

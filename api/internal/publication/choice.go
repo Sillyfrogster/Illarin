@@ -89,50 +89,6 @@ func (s *Service) PostDestinations(
 	return activeAmong(allowed), nil
 }
 
-func (s *Service) SetAppDestinations(
-	ctx context.Context,
-	actor uuid.UUID,
-	appID uuid.UUID,
-	in DestinationPolicy,
-) error {
-	if _, err := s.app(ctx, appID); err != nil {
-		return err
-	}
-	allowed, err := s.checkPolicy(ctx, in)
-	if err != nil {
-		return err
-	}
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin app destination policy: %w", err)
-	}
-	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, `
-		delete from publication_app_destinations where app_id = $1
-	`, appID); err != nil {
-		return fmt.Errorf("clear the app destination policy: %w", err)
-	}
-	for id, byDefault := range allowed {
-		_, err := tx.Exec(ctx, `
-			insert into publication_app_destinations (app_id, destination_id, by_default)
-			values ($1, $2, $3)
-		`, appID, id, byDefault)
-		if err != nil {
-			return fmt.Errorf("allow an app destination: %w", err)
-		}
-	}
-	err = recordPublicationAudit(ctx, tx, change{
-		Actor: actor, Action: "app.destinations.set", AppID: &appID,
-	})
-	if err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit app destination policy: %w", err)
-	}
-	return nil
-}
-
 func (s *Service) SetGrantDestinations(
 	ctx context.Context,
 	actor uuid.UUID,

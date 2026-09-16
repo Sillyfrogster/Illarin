@@ -459,8 +459,8 @@ as uploaded, with `kind` set to `extension`; accept the matching format id
 than `raw`. The archive holds the manifest at its root or inside the one folder
 that wraps everything else, as a repository download does.
 
-The install rules the capability commits you to are on the developer site under
-"Connect an app to Illarin", at `/developers/apps`: install a first delivery
+The install rules the capability commits you to are in the
+[extension install checklist](#extension-install-checklist): install a first delivery
 disabled and ask for its permissions before first run, keep an update enabled and
 ask only about permissions the new manifest adds, refuse a delivery that would
 replace an extension installed from another source, and show the owner a
@@ -588,8 +588,48 @@ Before calling an integration complete, verify all of these:
 - Library reports name immutable asset ids, stay inside every bound, carry the
   application's `applicationVersion`, and a snapshot carries no removals.
 - An installation that declares an `extension-install` capability passes every
-  item of the extension checklist at `/developers/apps/checklist`.
+  item of the [extension install checklist](#extension-install-checklist).
 - All tests use synthetic accounts, names, codes, and assets.
+
+### Extension install checklist
+
+Declaring:
+
+- The app declares `chat.lumiverse:extension-install` for Spindle extensions or
+  `app.sillytavern:extension-install` for SillyTavern ones, and only in a release
+  that passes every item here.
+- Its accepted targets include the matching format id, `extension_spindle` or
+  `extension_sillytavern`.
+- Each copy is linked with both `asset:receive` and `library:sync`.
+
+Installing:
+
+- The manifest is read from the top of the archive, or from inside the folder
+  that holds every file.
+- The contents of the folder that holds the manifest are what gets installed.
+- Every extension installed from a delivery is recorded against its `assetId`.
+- A first delivery installs disabled.
+- A first install asks the owner to approve every permission its manifest lists
+  before it first runs.
+- An update stays enabled if it was, with every grant it had.
+- An update asks the owner only about permissions the new manifest adds.
+- An update keeps the extension's stored data, whether the owner approves the
+  added permissions or not.
+- A delivery that would replace an extension from another source, whether a
+  clone, a copy made by hand or a different Illarin asset, is refused and leaves
+  the installed extension untouched.
+- A refusal shows the owner both extensions and where each came from.
+- A delivery is acknowledged only once it is installed, and a refused delivery
+  never is.
+
+Reporting:
+
+- Each extension is reported in the library when it is installed, updated or
+  removed.
+- Every library report carries the app's `applicationVersion`.
+- A withheld notice from a library report or a delivery wait is stored and shown
+  to the owner, naming the extension.
+- A withheld extension stays as it is until the owner decides what to do with it.
 
 For exact schemas, error bodies, and status codes, use `/openapi.yaml` as the
 source of truth.

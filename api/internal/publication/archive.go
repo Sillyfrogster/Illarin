@@ -48,7 +48,7 @@ const selectSummaries = `
 	       category.id, category.slug, category.label, category.position,
 	       category.retired_at is not null,
 	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null, mark.id, mark.width, mark.height,
+	       app.retired_at is not null,
 	       revision.release_version,
 	       post.published_at, post.updated_public_at
 	  from posts post
@@ -57,8 +57,6 @@ const selectSummaries = `
 	  left join post_bylines byline on byline.post_id = post.id
 	  left join publication_apps app
 	         on app.id = coalesce(revision.release_app_id, byline.app_id)
-	  left join publication_media mark
-	         on mark.id = app.mark_media_id and mark.blob_id is not null
 	 where post.status = 'published'
 	`
 
@@ -207,15 +205,13 @@ func scanSummary(row rowScanner) (PostSummary, error) {
 	var appSlug, appName, appHome *string
 	var appPosition *int
 	var appRetired *bool
-	var markID *uuid.UUID
-	var markWidth, markHeight *int
 	var version *string
 	err := row.Scan(
 		&one.ID, &one.Slug, &one.OriginalSlug, &one.Title, &one.Summary,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
 		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
-		&markID, &markWidth, &markHeight, &version,
+		&version,
 		&one.PublishedAt, &one.UpdatedAt,
 	)
 	if err != nil {
@@ -224,7 +220,6 @@ func scanSummary(row rowScanner) (PostSummary, error) {
 	if appID != nil {
 		one.App = &App{
 			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,
-			Mark:     scanMark(markID, markWidth, markHeight),
 			Position: *appPosition, Retired: *appRetired,
 		}
 	}
@@ -249,11 +244,9 @@ func (s *Service) categoryBySlug(ctx context.Context, slug string) (Category, er
 
 func (s *Service) appBySlug(ctx context.Context, slug string) (App, error) {
 	var found App
-	var markID *uuid.UUID
-	var width, height *int
 	err := s.pool.QueryRow(ctx, selectApps+` where app.slug = $1`, slug).Scan(
 		&found.ID, &found.Slug, &found.Name, &found.Home, &found.Position,
-		&found.Retired, &markID, &width, &height,
+		&found.Retired,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return App{}, ErrAppNotFound
@@ -261,6 +254,5 @@ func (s *Service) appBySlug(ctx context.Context, slug string) (App, error) {
 	if err != nil {
 		return App{}, fmt.Errorf("read a publication app: %w", err)
 	}
-	found.Mark = scanMark(markID, width, height)
 	return found, nil
 }

@@ -87,11 +87,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPost, "/v1/auth/verify-email"):                                   d.JSON,
 		routeKey(http.MethodPost, "/v1/auth/password-reset"):                                 d.JSON,
 		routeKey(http.MethodPost, "/v1/auth/password-reset/complete"):                        d.JSON,
-		routeKey(http.MethodGet, "/v1/publication/apps"):                                     d.JSON,
-		routeKey(http.MethodPost, "/v1/publication/apps"):                                    d.JSON,
-		routeKey(http.MethodPut, "/v1/publication/apps"):                                     d.JSON,
-		routeKey(http.MethodPatch, "/v1/publication/apps/:id"):                               d.JSON,
-		routeKey(http.MethodPut, "/v1/publication/apps/:id/mark"):                            d.Upload,
 		routeKey(http.MethodGet, "/v1/publication/categories"):                               d.JSON,
 		routeKey(http.MethodPut, "/v1/publication/categories"):                               d.JSON,
 		routeKey(http.MethodPatch, "/v1/publication/categories/:id"):                         d.JSON,
@@ -99,10 +94,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodPost, "/v1/publication/grants"):                                  d.JSON,
 		routeKey(http.MethodPatch, "/v1/publication/grants/:id"):                             d.JSON,
 		routeKey(http.MethodDelete, "/v1/publication/grants/:id"):                            d.JSON,
-		routeKey(http.MethodGet, "/v1/publication/grants/:id/tokens"):                        d.JSON,
-		routeKey(http.MethodPost, "/v1/publication/grants/:id/tokens"):                       d.JSON,
-		routeKey(http.MethodDelete, "/v1/publication/tokens/:id"):                            d.JSON,
-		routeKey(http.MethodGet, "/v1/publication/token"):                                    d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/workspace"):                                d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/destinations"):                             d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/destinations"):                            d.JSON,
@@ -117,7 +108,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodGet, "/v1/publication/deliveries/:id/attempts"):                  d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/deliveries/:id/replay"):                   d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/deliveries/:id/repair"):                   d.Verify,
-		routeKey(http.MethodPut, "/v1/publication/apps/:id/destinations"):                    d.JSON,
 		routeKey(http.MethodPut, "/v1/publication/grants/:id/destinations"):                  d.JSON,
 		routeKey(http.MethodGet, "/v1/publication/posts"):                                    d.JSON,
 		routeKey(http.MethodPost, "/v1/publication/posts"):                                   d.JSON,
@@ -209,7 +199,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		deadlineByRoute(limits),
 		noStoreCredentialResponses(),
 		h.guardBrowserMutations(),
-		h.publicationAPI(),
 	)
 	routes.GET("/healthz", health)
 	routes.GET("/readyz", ready(readiness))

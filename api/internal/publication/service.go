@@ -22,21 +22,14 @@ import (
 var (
 	ErrNotAuthority    = errors.New("account does not hold publication authority")
 	ErrAccountNotFound = errors.New("no such account")
-	ErrMarkNotFound    = errors.New("no such publication mark")
 	ErrIncompleteOrder = errors.New("order does not name every member exactly once")
 
 	ErrAppNotFound       = errors.New("no such publication app")
 	ErrCategoryNotFound  = errors.New("no such publication category")
 	ErrGrantNotFound     = errors.New("no such publication grant")
-	ErrSlugTaken         = errors.New("another publication app already uses that slug")
 	ErrAccountUnverified = errors.New("the account has not verified its email")
 	ErrAlreadyGranted    = errors.New("the account already publishes for that app")
 	ErrGrantRevoked      = errors.New("the grant has been revoked")
-	ErrTokenNotFound     = errors.New("no such publication token")
-	ErrNotTokenOwner     = errors.New("the account neither holds the grant nor publication authority")
-	ErrTokenCredential   = errors.New("the value does not identify a live publication token")
-	ErrTokenExpired      = errors.New("the publication token has expired")
-	ErrTokenRevoked      = errors.New("the publication token has been revoked")
 )
 
 var ErrCategoryRefused = errors.New("the grant does not cover that category")
@@ -75,7 +68,6 @@ type Service struct {
 	sender  Sender
 	site    string
 	blog    string
-	rates   Rates
 	ledger  outbox.Ledger
 	now     func() time.Time
 }
@@ -83,14 +75,13 @@ type Service struct {
 func NewService(
 	pool *pgxpool.Pool,
 	media *mediaproc.Library,
-	rates Rates,
 	sending Publishing,
 ) *Service {
 	return &Service{
 		pool: pool, media: media, signer: signing.NewKey(),
 		sealing: sending.Sealing, sender: sending.Sender,
 		site: sending.Site, blog: sending.Blog,
-		rates: rates, ledger: outbox.NewLedger(pool, deliveryTables), now: time.Now,
+		ledger: outbox.NewLedger(pool, deliveryTables), now: time.Now,
 	}
 }
 
