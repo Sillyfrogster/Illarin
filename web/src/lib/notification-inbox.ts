@@ -41,7 +41,7 @@ export function notificationWords(entry: Notification): NotificationWords {
       };
     case "asset_updated":
       return {
-        lead: "New update to",
+        lead: updateLead(entry),
         subject: assetName,
         detail: updateDetail(entry),
         href: entry.asset
@@ -67,6 +67,12 @@ export function notificationWords(entry: Notification): NotificationWords {
         href: PROFILE_SETTINGS,
       };
   }
+}
+
+/** Says how many updates a folded entry stands for. */
+function updateLead(entry: Notification): string {
+  const arrivals = entry.update?.count ?? 1;
+  return arrivals > 1 ? `${arrivals} new updates to` : "New update to";
 }
 
 function updateDetail(entry: Notification): string {

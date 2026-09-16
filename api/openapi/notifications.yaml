@@ -231,16 +231,48 @@ components:
         name:
           type: string
           description: The asset's name when the notification arrived
+    NotificationSendTarget:
+      type: object
+      description: >-
+        One of the reader's linked instances that holds an older copy of the
+        asset and can receive it. The send it offers is the one the asset page
+        offers.
+      required:
+        - instanceId
+        - instanceName
+        - applicationName
+        - waiting
+      properties:
+        instanceId:
+          type: string
+          format: uuid
+        instanceName:
+          type: string
+        applicationName:
+          type: string
+        waiting:
+          type: boolean
+          description: >-
+            Whether a delivery of this asset is already waiting for the
+            instance to collect it.
     NotificationUpdate:
       type: object
       description: The update an asset_updated notification is about, as it read when it was published.
       required:
         - number
         - summary
+        - count
       properties:
         number:
           type: integer
           description: The update's number in the asset's history
+        count:
+          type: integer
+          minimum: 1
+          description: >-
+            How many updates the entry stands for. It goes up each time another
+            update arrives before the entry is read, and the entry shows the
+            latest of them.
         versionLabel:
           type: string
           description: The creator's own version text, absent when they wrote none
@@ -279,6 +311,13 @@ components:
             asset_withheld and profile_restricted.
         update:
           $ref: '#/components/schemas/NotificationUpdate'
+        sendTargets:
+          type: array
+          description: >-
+            The reader's linked instances that hold an older copy of the asset
+            and can receive it. Only an asset_updated notification carries any.
+          items:
+            $ref: '#/components/schemas/NotificationSendTarget'
     NotificationCursor:
       type: object
       required:

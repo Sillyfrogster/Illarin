@@ -3428,6 +3428,9 @@ type Notification struct {
 	// Reason Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted.
 	Reason *string `json:"reason,omitempty"`
 
+	// SendTargets The reader's linked instances that hold an older copy of the asset and can receive it. Only an asset_updated notification carries any.
+	SendTargets *[]NotificationSendTarget `json:"sendTargets,omitempty"`
+
 	// Type asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 	Type NotificationType `json:"type"`
 
@@ -3455,11 +3458,24 @@ type NotificationList struct {
 	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
 }
 
+// NotificationSendTarget One of the reader's linked instances that holds an older copy of the asset and can receive it. The send it offers is the one the asset page offers.
+type NotificationSendTarget struct {
+	ApplicationName string             `json:"applicationName"`
+	InstanceId      openapi_types.UUID `json:"instanceId"`
+	InstanceName    string             `json:"instanceName"`
+
+	// Waiting Whether a delivery of this asset is already waiting for the instance to collect it.
+	Waiting bool `json:"waiting"`
+}
+
 // NotificationType asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
 type NotificationType string
 
 // NotificationUpdate The update an asset_updated notification is about, as it read when it was published.
 type NotificationUpdate struct {
+	// Count How many updates the entry stands for. It goes up each time another update arrives before the entry is read, and the entry shows the latest of them.
+	Count int `json:"count"`
+
 	// Number The update's number in the asset's history
 	Number int `json:"number"`
 

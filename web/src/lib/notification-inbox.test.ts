@@ -89,6 +89,7 @@ test("an updated asset names the update, its version and summary, and opens that
         reason: undefined,
         update: {
           number: 3,
+          count: 1,
           versionLabel: "v2.1",
           summary: "Rewrote her opening",
         },
@@ -108,10 +109,48 @@ test("an update without a version label leaves the label out", () => {
       entry({
         type: "asset_updated",
         reason: undefined,
-        update: { number: 2, summary: "Fixed a typo in her greeting" },
+        update: {
+          number: 2,
+          count: 1,
+          summary: "Fixed a typo in her greeting",
+        },
       }),
     ).detail,
   ).toBe("Update 2: Fixed a typo in her greeting");
+});
+
+test("a folded entry says how many updates arrived and still shows the latest", () => {
+  const words = notificationWords(
+    entry({
+      type: "asset_updated",
+      reason: undefined,
+      update: {
+        number: 7,
+        count: 5,
+        versionLabel: "v3",
+        summary: "Added a third greeting",
+      },
+    }),
+  );
+  expect(words.lead).toBe("5 new updates to");
+  expect(words.subject).toBe("Moonlit Archive");
+  expect(words.detail).toBe("Update 7, v3: Added a third greeting");
+  expect(words.href).toBe(
+    "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-7",
+  );
+});
+
+test("an entry holding two updates counts them and one holding a single update does not", () => {
+  const folded = (count: number) =>
+    notificationWords(
+      entry({
+        type: "asset_updated",
+        reason: undefined,
+        update: { number: 4, count, summary: "Rewrote her opening" },
+      }),
+    ).lead;
+  expect(folded(1)).toBe("New update to");
+  expect(folded(2)).toBe("2 new updates to");
 });
 
 test("an entry that names no asset still reads plainly and has nowhere to send the reader", () => {

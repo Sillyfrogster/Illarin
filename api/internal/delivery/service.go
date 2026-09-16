@@ -247,6 +247,74 @@ func (s *Service) AssetInstances(
 	return found, nil
 }
 
+// UpdatableInstances names the account's instances that hold an older copy of an asset and can receive it.
+func (s *Service) UpdatableInstances(
+	ctx context.Context,
+	userID uuid.UUID,
+	assetIDs []uuid.UUID,
+) (map[uuid.UUID][]InstanceState, error) {
+	behind, err := s.assetsInstalledBehind(ctx, userID, assetIDs)
+	if err != nil {
+		return nil, err
+	}
+	offered := make(map[uuid.UUID][]InstanceState, len(behind))
+	for _, assetID := range behind {
+		found, err := s.AssetInstances(ctx, userID, assetID)
+		if errors.Is(err, ErrAssetNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, state := range found.Items {
+			if state.UpdateAvailable && state.CanReceive {
+				offered[assetID] = append(offered[assetID], state)
+			}
+		}
+	}
+	return offered, nil
+}
+
+// assetsInstalledBehind keeps only the assets one of the account's instances holds an older copy of.
+func (s *Service) assetsInstalledBehind(
+	ctx context.Context,
+	userID uuid.UUID,
+	assetIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
+	if len(assetIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		select distinct entry.asset_id
+		  from instance_library_entries entry
+		  join linked_instances instance on instance.id = entry.instance_id
+		  join assets subject on subject.id = entry.asset_id
+		 where instance.user_id = $1
+		   and instance.revoked_at is null
+		   and entry.asset_id = any($2::uuid[])
+		   and entry.content_generation < subject.content_generation
+		   and subject.deleted_at is null
+		   and subject.withheld_at is null
+		   and subject.lifecycle = 'published'
+	`, userID, assetIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find the assets an instance holds an older copy of: %w", err)
+	}
+	defer rows.Close()
+	behind := make([]uuid.UUID, 0, len(assetIDs))
+	for rows.Next() {
+		var assetID uuid.UUID
+		if err := rows.Scan(&assetID); err != nil {
+			return nil, fmt.Errorf("read an asset an instance holds an older copy of: %w", err)
+		}
+		behind = append(behind, assetID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("find the assets an instance holds an older copy of: %w", err)
+	}
+	return behind, nil
+}
+
 func holdsScope(scopes []string, wanted linking.Scope) bool {
 	for _, scope := range scopes {
 		if linking.Scope(scope) == wanted {

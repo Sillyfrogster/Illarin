@@ -3862,6 +3862,8 @@ export interface components {
       /** @description Why staff withheld the asset or restricted the profile. Present on asset_withheld and profile_restricted. */
       reason?: string;
       update?: components["schemas"]["NotificationUpdate"];
+      /** @description The reader's linked instances that hold an older copy of the asset and can receive it. Only an asset_updated notification carries any. */
+      sendTargets?: components["schemas"]["NotificationSendTarget"][];
     };
     /**
      * @description asset_withheld and asset_restored say that Illarin staff withheld or restored one of the account's assets. asset_updated says that an asset the account watches, or has installed on a linked instance, published an update that changed its file. profile_restricted and profile_restored say that Illarin staff restricted or restored the account's public profile.
@@ -3883,6 +3885,8 @@ export interface components {
     NotificationUpdate: {
       /** @description The update's number in the asset's history */
       number: number;
+      /** @description How many updates the entry stands for. It goes up each time another update arrives before the entry is read, and the entry shows the latest of them. */
+      count: number;
       /** @description The creator's own version text, absent when they wrote none */
       versionLabel?: string;
       /** @description The creator's short line saying what changed */
@@ -4046,6 +4050,15 @@ export interface components {
     UpdateAssetUpdateDestinationRequest: {
       name?: string;
       address?: string;
+    };
+    /** @description One of the reader's linked instances that holds an older copy of the asset and can receive it. The send it offers is the one the asset page offers. */
+    NotificationSendTarget: {
+      /** Format: uuid */
+      instanceId: string;
+      instanceName: string;
+      applicationName: string;
+      /** @description Whether a delivery of this asset is already waiting for the instance to collect it. */
+      waiting: boolean;
     };
     ProfileLink: {
       label: string;

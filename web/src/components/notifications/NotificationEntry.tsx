@@ -12,6 +12,7 @@ import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { arrivedAgo, notificationWords } from "@/lib/notification-inbox";
+import { SendUpdates } from "./SendUpdates";
 
 const TAKEN_TONE = "bg-stop-wash text-stop";
 const GIVEN_BACK_TONE = "bg-accent-wash text-accent";
@@ -41,9 +42,11 @@ export function NotificationEntry({
   const unread = !entry.readAt;
   const mark = MARKS[entry.type];
   const Icon = mark.icon;
+  const asset = entry.asset;
+  const sends = entry.sendTargets ?? [];
   const row = cn(
-    "flex gap-3.5 rounded-control py-3 pr-11 pl-3 outline-offset-[-2px] transition-colors duration-150 motion-reduce:transition-none",
-    unread ? "bg-accent-wash/45 hover:bg-accent-wash/80" : "hover:bg-deep",
+    "flex gap-3.5 pt-3 pr-11 pl-3 outline-offset-[-2px]",
+    sends.length > 0 ? "pb-1.5" : "pb-3",
   );
   const body = (
     <>
@@ -93,7 +96,12 @@ export function NotificationEntry({
   );
 
   return (
-    <li className="group/entry relative">
+    <li
+      className={cn(
+        "group/entry relative rounded-control transition-colors duration-150 motion-reduce:transition-none",
+        unread ? "bg-accent-wash/45 hover:bg-accent-wash/80" : "hover:bg-deep",
+      )}
+    >
       {words.href ? (
         <Link href={words.href} onClick={() => onOpen(entry)} className={row}>
           {body}
@@ -101,6 +109,9 @@ export function NotificationEntry({
       ) : (
         <div className={row}>{body}</div>
       )}
+      {asset && sends.length > 0 ? (
+        <SendUpdates assetId={asset.id} targets={sends} />
+      ) : null}
       <button
         type="button"
         title="Remove"

@@ -375,7 +375,13 @@ type inboxEntry struct {
 		Number       int    `json:"number"`
 		VersionLabel string `json:"versionLabel"`
 		Summary      string `json:"summary"`
+		Count        int    `json:"count"`
 	} `json:"update"`
+	SendTargets []struct {
+		InstanceID      string `json:"instanceId"`
+		InstanceName    string `json:"instanceName"`
+		ApplicationName string `json:"applicationName"`
+	} `json:"sendTargets"`
 }
 
 type inboxPage struct {

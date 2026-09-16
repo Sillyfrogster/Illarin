@@ -336,6 +336,17 @@ type EmailVerificationToken struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
+type InboxEntry struct {
+	ID          pgtype.UUID
+	AccountID   pgtype.UUID
+	Type        string
+	AssetID     pgtype.UUID
+	Words       []byte
+	CreatedAt   pgtype.Timestamptz
+	ReadAt      pgtype.Timestamptz
+	UpdateCount int32
+}
+
 type IngestOperation struct {
 	ID                 pgtype.UUID
 	OwnerID            pgtype.UUID
@@ -504,13 +515,14 @@ type MigrationStagedMedium struct {
 }
 
 type Notification struct {
-	ID        pgtype.UUID
-	AccountID pgtype.UUID
-	Type      string
-	AssetID   pgtype.UUID
-	Words     []byte
-	CreatedAt pgtype.Timestamptz
-	ReadAt    pgtype.Timestamptz
+	ID          pgtype.UUID
+	AccountID   pgtype.UUID
+	Type        string
+	AssetID     pgtype.UUID
+	Words       []byte
+	CreatedAt   pgtype.Timestamptz
+	ReadAt      pgtype.Timestamptz
+	UpdateCount int32
 }
 
 type NotificationEvent struct {
