@@ -5,6 +5,7 @@ import {
   arrivedAgo,
   markedRead,
   notificationWords,
+  removed,
   unreadBadge,
   unreadLabel,
 } from "./notification-inbox";
@@ -186,4 +187,14 @@ test("marking everything read stamps each unread entry and keeps the cursor", ()
     ],
     nextCursor: cursor,
   });
+});
+
+test("removing an entry takes only that entry out of the page and keeps the cursor", () => {
+  const gone = entry();
+  const kept = entry({ id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d" });
+  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: ASSET.id };
+  const page: NotificationList = { items: [gone, kept], nextCursor: cursor };
+
+  expect(removed(page, gone.id)).toEqual({ items: [kept], nextCursor: cursor });
+  expect(page.items).toHaveLength(2);
 });

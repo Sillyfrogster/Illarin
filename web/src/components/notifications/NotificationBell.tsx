@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +22,10 @@ import {
   NotificationEntrySkeleton,
 } from "./NotificationEntry";
 import {
+  useClearAll,
   useMarkAllRead,
   useOpenEntry,
+  useRemoveEntry,
   useUnreadCount,
   useUnreadRefreshOnNavigation,
 } from "./use-inbox";
@@ -99,13 +101,15 @@ function NotificationPanel({
     [inbox.data],
   );
   const openEntry = useOpenEntry();
+  const removeEntry = useRemoveEntry();
   const markAll = useMarkAllRead();
+  const clearAll = useClearAll();
   const now = new Date();
 
   return (
     <>
-      <div className="flex min-h-14 shrink-0 items-center justify-between gap-3 py-1.5 pr-2 pl-5">
-        <h2 className="flex min-w-0 items-baseline gap-2 font-ui text-ui font-medium text-ink">
+      <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 py-1.5 pr-2 pl-5">
+        <h2 className="flex min-w-0 flex-wrap items-baseline gap-x-2 font-ui text-ui font-medium text-ink">
           Notifications
           {count > 0 ? (
             <span className="text-meta font-normal text-accent tabular-nums">
@@ -113,19 +117,36 @@ function NotificationPanel({
             </span>
           ) : null}
         </h2>
-        <Button
-          variant="ghost"
-          size="compact"
-          disabled={count === 0 || markAll.isPending}
-          onClick={() => markAll.mutate()}
-        >
-          <CheckCheck aria-hidden="true" />
-          Mark all read
-        </Button>
+        <div className="flex shrink-0 items-center">
+          <Button
+            variant="ghost"
+            size="compact"
+            disabled={count === 0 || markAll.isPending}
+            onClick={() => markAll.mutate()}
+          >
+            <CheckCheck aria-hidden="true" />
+            Mark all read
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Clear all"
+            disabled={entries.length === 0 || clearAll.isPending}
+            onClick={() => clearAll.mutate()}
+          >
+            <Trash2 aria-hidden="true" />
+            <span className="sr-only">Clear all notifications</span>
+          </Button>
+        </div>
       </div>
       {markAll.isError ? (
         <p role="alert" className="px-5 pb-2 text-meta text-stop">
           Your notifications could not be marked read. Try again.
+        </p>
+      ) : null}
+      {clearAll.isError ? (
+        <p role="alert" className="px-5 pb-2 text-meta text-stop">
+          Your notifications could not be cleared. Try again.
         </p>
       ) : null}
 
@@ -143,6 +164,7 @@ function NotificationPanel({
                       openEntry(opened);
                       onLeave();
                     }}
+                    onRemove={removeEntry}
                   />
                 ))}
               </ul>

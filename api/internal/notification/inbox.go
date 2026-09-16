@@ -110,3 +110,20 @@ func (s *Service) MarkAllRead(ctx context.Context, account uuid.UUID) error {
 	}
 	return nil
 }
+
+// Remove takes one entry out of the account's inbox and reports whether the account had it.
+func (s *Service) Remove(ctx context.Context, account, id uuid.UUID) (bool, error) {
+	tag, err := s.pool.Exec(ctx, `delete from notifications where id = $1 and account_id = $2`, id, account)
+	if err != nil {
+		return false, fmt.Errorf("remove a notification: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+// Clear empties the account's inbox.
+func (s *Service) Clear(ctx context.Context, account uuid.UUID) error {
+	if _, err := s.pool.Exec(ctx, `delete from notifications where account_id = $1`, account); err != nil {
+		return fmt.Errorf("clear the inbox: %w", err)
+	}
+	return nil
+}

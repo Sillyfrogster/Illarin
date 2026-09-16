@@ -126,3 +126,7 @@ export function allMarkedRead(
     ),
   };
 }
+
+export function removed(page: NotificationList, id: string): NotificationList {
+  return { ...page, items: page.items.filter((item) => item.id !== id) };
+}

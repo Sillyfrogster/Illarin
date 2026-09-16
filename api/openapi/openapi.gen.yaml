@@ -437,6 +437,17 @@ paths:
           description: The limit is out of range, or only half a cursor was sent
         '401':
           description: No account is signed in
+    delete:
+      operationId: clearNotifications
+      description: Remove every notification from the signed-in account's inbox.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      responses:
+        '204':
+          description: The inbox is empty
+        '401':
+          description: No account is signed in
   /v1/notifications/unread:
     get:
       operationId: countUnreadNotifications
@@ -464,6 +475,27 @@ paths:
           description: Every notification is read
         '401':
           description: No account is signed in
+  /v1/notifications/{id}:
+    delete:
+      operationId: removeNotification
+      description: Remove one notification from the signed-in account's inbox.
+      security:
+        - sessionCookie: []
+          browserMutation: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The notification is gone
+        '401':
+          description: No account is signed in
+        '404':
+          description: The signed-in account has no such notification
   /v1/notifications/{id}/read:
     post:
       operationId: markNotificationRead

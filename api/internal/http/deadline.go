@@ -149,6 +149,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodGet, "/v1/notifications/unread"):                                 d.JSON,
 		routeKey(http.MethodPost, "/v1/notifications/read"):                                  d.JSON,
 		routeKey(http.MethodPost, "/v1/notifications/:id/read"):                              d.JSON,
+		routeKey(http.MethodDelete, "/v1/notifications"):                                     d.JSON,
+		routeKey(http.MethodDelete, "/v1/notifications/:id"):                                 d.JSON,
 		routeKey(http.MethodPut, "/v1/assets/:id/watch"):                                     d.JSON,
 		routeKey(http.MethodDelete, "/v1/assets/:id/watch"):                                  d.JSON,
 		routeKey(http.MethodGet, "/v1/profiles/:handle"):                                     d.JSON,

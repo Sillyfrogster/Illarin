@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   ShieldOff,
   Sparkles,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import type { Notification } from "@/lib/api/notifications";
@@ -24,22 +25,24 @@ const MARKS = {
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
 
-/** One inbox entry, tinted while unread, that opens what it is about when it has somewhere to go. */
+/** One inbox entry, tinted while unread, that opens what it is about when it has somewhere to go and can be taken out of the inbox. */
 export function NotificationEntry({
   entry,
   now,
   onOpen,
+  onRemove,
 }: {
   entry: Notification;
   now: Date;
   onOpen: (entry: Notification) => void;
+  onRemove: (entry: Notification) => void;
 }) {
   const words = notificationWords(entry);
   const unread = !entry.readAt;
   const mark = MARKS[entry.type];
   const Icon = mark.icon;
   const row = cn(
-    "group relative flex gap-3.5 rounded-control px-3 py-3 outline-offset-[-2px] transition-colors duration-150 motion-reduce:transition-none",
+    "flex gap-3.5 rounded-control py-3 pr-11 pl-3 outline-offset-[-2px] transition-colors duration-150 motion-reduce:transition-none",
     unread ? "bg-accent-wash/45 hover:bg-accent-wash/80" : "hover:bg-deep",
   );
   const body = (
@@ -90,7 +93,7 @@ export function NotificationEntry({
   );
 
   return (
-    <li>
+    <li className="group/entry relative">
       {words.href ? (
         <Link href={words.href} onClick={() => onOpen(entry)} className={row}>
           {body}
@@ -98,6 +101,15 @@ export function NotificationEntry({
       ) : (
         <div className={row}>{body}</div>
       )}
+      <button
+        type="button"
+        title="Remove"
+        onClick={() => onRemove(entry)}
+        className="absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-control text-mute opacity-0 outline-offset-2 transition-[opacity,background-color,color] duration-200 group-hover/entry:opacity-100 hover:bg-plane hover:text-ink focus-visible:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none"
+      >
+        <X aria-hidden="true" className="size-4" />
+        <span className="sr-only">Remove this notification</span>
+      </button>
     </li>
   );
 }

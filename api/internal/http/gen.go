@@ -6408,6 +6408,9 @@ type ServerInterface interface {
 	// (POST /v1/link/token)
 	ExchangeLinkAuthorization(c *gin.Context)
 
+	// (DELETE /v1/notifications)
+	ClearNotifications(c *gin.Context)
+
 	// (GET /v1/notifications)
 	ListNotifications(c *gin.Context, params ListNotificationsParams)
 
@@ -6416,6 +6419,9 @@ type ServerInterface interface {
 
 	// (GET /v1/notifications/unread)
 	CountUnreadNotifications(c *gin.Context)
+
+	// (DELETE /v1/notifications/{id})
+	RemoveNotification(c *gin.Context, id openapi_types.UUID)
 
 	// (POST /v1/notifications/{id}/read)
 	MarkNotificationRead(c *gin.Context, id openapi_types.UUID)
@@ -9555,6 +9561,19 @@ func (siw *ServerInterfaceWrapper) ExchangeLinkAuthorization(c *gin.Context) {
 	siw.Handler.ExchangeLinkAuthorization(c)
 }
 
+// ClearNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ClearNotifications(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ClearNotifications(c)
+}
+
 // ListNotifications operation middleware
 func (siw *ServerInterfaceWrapper) ListNotifications(c *gin.Context) {
 
@@ -9622,6 +9641,31 @@ func (siw *ServerInterfaceWrapper) CountUnreadNotifications(c *gin.Context) {
 	}
 
 	siw.Handler.CountUnreadNotifications(c)
+}
+
+// RemoveNotification operation middleware
+func (siw *ServerInterfaceWrapper) RemoveNotification(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveNotification(c, id)
 }
 
 // MarkNotificationRead operation middleware
@@ -11460,9 +11504,11 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.DisableAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/verification", wrapper.VerifyAssetUpdateDestination)
 	router.POST(options.BaseURL+"/v1/account/update-destinations/:id/secret", wrapper.RotateAssetUpdateDestinationSecret)
+	router.DELETE(options.BaseURL+"/v1/notifications", wrapper.ClearNotifications)
 	router.GET(options.BaseURL+"/v1/notifications", wrapper.ListNotifications)
 	router.GET(options.BaseURL+"/v1/notifications/unread", wrapper.CountUnreadNotifications)
 	router.POST(options.BaseURL+"/v1/notifications/read", wrapper.MarkAllNotificationsRead)
+	router.DELETE(options.BaseURL+"/v1/notifications/:id", wrapper.RemoveNotification)
 	router.POST(options.BaseURL+"/v1/notifications/:id/read", wrapper.MarkNotificationRead)
 	router.DELETE(options.BaseURL+"/v1/assets/:id/watch", wrapper.StopWatchingAsset)
 	router.PUT(options.BaseURL+"/v1/assets/:id/watch", wrapper.WatchAsset)

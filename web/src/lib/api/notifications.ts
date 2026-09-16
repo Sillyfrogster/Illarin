@@ -54,6 +54,25 @@ export async function markNotificationRead(id: string): Promise<void> {
   if (answer.error) throw new Error(answer.error);
 }
 
+/** Takes one entry out of the inbox, keeping the request alive if the page moves on before it lands. */
+export async function removeNotification(id: string): Promise<void> {
+  const answer = await ask<null>(
+    `/notifications/${encodeURIComponent(id)}`,
+    { method: "DELETE", keepalive: true },
+    async () => null,
+  );
+  if (answer.error) throw new Error(answer.error);
+}
+
+export async function clearNotifications(): Promise<void> {
+  const answer = await ask<null>(
+    "/notifications",
+    { method: "DELETE" },
+    async () => null,
+  );
+  if (answer.error) throw new Error(answer.error);
+}
+
 export function watchAsset(assetId: string): Promise<AssetWatch> {
   return changeWatch(assetId, "PUT");
 }

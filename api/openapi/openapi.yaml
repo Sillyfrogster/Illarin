@@ -35,6 +35,8 @@ paths:
     $ref: ./notifications.yaml#/paths/~1v1~1notifications~1unread
   /v1/notifications/read:
     $ref: ./notifications.yaml#/paths/~1v1~1notifications~1read
+  /v1/notifications/{id}:
+    $ref: ./notifications.yaml#/paths/~1v1~1notifications~1{id}
   /v1/notifications/{id}/read:
     $ref: ./notifications.yaml#/paths/~1v1~1notifications~1{id}~1read
   /v1/assets/{id}/watch:

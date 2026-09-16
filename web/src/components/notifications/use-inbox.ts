@@ -9,15 +9,17 @@ import {
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import {
+  clearNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   type Notification,
   type NotificationList,
   notificationKeys,
   readUnreadCount,
+  removeNotification,
 } from "@/lib/api/notifications";
 import { useAuth } from "@/lib/auth";
-import { allMarkedRead, markedRead } from "@/lib/notification-inbox";
+import { allMarkedRead, markedRead, removed } from "@/lib/notification-inbox";
 
 /** The signed-in account's unread count, which refreshes whenever the tab regains focus. */
 export function useUnreadCount(): number {
@@ -89,6 +91,51 @@ export function useMarkAllRead() {
       const at = new Date().toISOString();
       queryClient.setQueryData<number>(notificationKeys.unread(handle), 0);
       rewriteLists(queryClient, handle, (page) => allMarkedRead(page, at));
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+/** Takes an entry off the screen at once, tells the server, and settles every count against its answer. */
+export function useRemoveEntry() {
+  const { account } = useAuth();
+  const queryClient = useQueryClient();
+  const handle = account?.handle;
+
+  return useCallback(
+    (entry: Notification) => {
+      if (!handle) return;
+      if (!entry.readAt) {
+        queryClient.setQueryData<number>(
+          notificationKeys.unread(handle),
+          (count) => (count === undefined ? count : Math.max(0, count - 1)),
+        );
+      }
+      rewriteLists(queryClient, handle, (page) => removed(page, entry.id));
+      const settle = () =>
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      void removeNotification(entry.id).then(settle, settle);
+    },
+    [handle, queryClient],
+  );
+}
+
+/** Empties the inbox on screen at once and settles against the server's answer. */
+export function useClearAll() {
+  const { account } = useAuth();
+  const queryClient = useQueryClient();
+  const handle = account?.handle;
+
+  return useMutation({
+    mutationFn: clearNotifications,
+    onMutate: () => {
+      if (!handle) return;
+      queryClient.setQueryData<number>(notificationKeys.unread(handle), 0);
+      queryClient.setQueryData<InfiniteData<NotificationList>>(
+        notificationKeys.inbox(handle),
+        (data) => data && { pageParams: [null], pages: [{ items: [] }] },
+      );
     },
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: notificationKeys.all }),

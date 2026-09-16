@@ -265,6 +265,49 @@ func TestOpeningAnEntryOrMarkingAllReadClearsTheUnreadCount(t *testing.T) {
 	}
 }
 
+func TestAnAccountRemovesOneEntryOrClearsItsWholeInbox(t *testing.T) {
+	t.Parallel()
+	s := newInboxStack(t)
+	assetID := s.upload(t, "Moonlit Archive")
+	s.withhold(t, assetID, "Copyright report under review")
+	s.restore(t, assetID)
+	s.withhold(t, assetID, "A second report")
+	s.fanOut(t, time.Now())
+	entries := s.inbox(t, s.creator, "").Items
+	if len(entries) != 3 {
+		t.Fatalf("inbox has %d entries, want 3", len(entries))
+	}
+	s.markRead(t, s.creator, entries[1].ID)
+
+	if got := s.remove(t, s.staff, entries[0].ID); got != http.StatusNotFound {
+		t.Fatalf("another account removing the entry = %d, want 404", got)
+	}
+	if got := s.remove(t, s.creator, entries[0].ID); got != http.StatusNoContent {
+		t.Fatalf("remove = %d, want 204", got)
+	}
+	if got := s.remove(t, s.creator, entries[0].ID); got != http.StatusNotFound {
+		t.Fatalf("removing the same entry again = %d, want 404", got)
+	}
+	kept := s.inbox(t, s.creator, "").Items
+	if len(kept) != 2 || kept[0].ID != entries[1].ID || kept[1].ID != entries[2].ID {
+		t.Fatalf("after removing one entry the inbox holds %+v", kept)
+	}
+	if got := s.unread(t, s.creator); got != 1 {
+		t.Fatalf("unread after removing an unread entry = %d, want 1", got)
+	}
+
+	cleared := send(t, s.router, authorized(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil), s.creator))
+	if cleared.Code != http.StatusNoContent {
+		t.Fatalf("clear = %d, want 204: %s", cleared.Code, cleared.Body.String())
+	}
+	if left := s.inbox(t, s.creator, ""); len(left.Items) != 0 || s.unread(t, s.creator) != 0 {
+		t.Fatalf("after clearing the inbox holds %+v with %d unread", left.Items, s.unread(t, s.creator))
+	}
+	if staffInbox := s.inbox(t, s.staff, ""); len(staffInbox.Items) != 0 {
+		t.Fatalf("clearing one inbox touched another: %+v", staffInbox.Items)
+	}
+}
+
 func TestTheSweeperRemovesEntriesNinetyDaysAfterTheyArrived(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
@@ -292,6 +335,10 @@ func TestTheInboxNeedsAnAccount(t *testing.T) {
 		browserMutation(httptest.NewRequest(http.MethodPost, "/v1/notifications/read", nil)),
 		browserMutation(httptest.NewRequest(
 			http.MethodPost, "/v1/notifications/44444444-4444-4444-8444-444444444444/read", nil,
+		)),
+		browserMutation(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil)),
+		browserMutation(httptest.NewRequest(
+			http.MethodDelete, "/v1/notifications/44444444-4444-4444-8444-444444444444", nil,
 		)),
 	} {
 		if response := send(t, s.router, request); response.Code != http.StatusUnauthorized {
@@ -425,6 +472,13 @@ func (s inboxStack) markRead(t *testing.T, session *http.Cookie, entryID string)
 	t.Helper()
 	return send(t, s.router, authorized(
 		httptest.NewRequest(http.MethodPost, "/v1/notifications/"+entryID+"/read", nil), session,
+	)).Code
+}
+
+func (s inboxStack) remove(t *testing.T, session *http.Cookie, entryID string) int {
+	t.Helper()
+	return send(t, s.router, authorized(
+		httptest.NewRequest(http.MethodDelete, "/v1/notifications/"+entryID, nil), session,
 	)).Code
 }
 

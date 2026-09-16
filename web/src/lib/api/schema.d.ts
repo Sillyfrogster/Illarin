@@ -132,7 +132,8 @@ export interface paths {
     get: operations["listNotifications"];
     put?: never;
     post?: never;
-    delete?: never;
+    /** @description Remove every notification from the signed-in account's inbox. */
+    delete: operations["clearNotifications"];
     options?: never;
     head?: never;
     patch?: never;
@@ -167,6 +168,23 @@ export interface paths {
     /** @description Mark every notification the signed-in account has as read. */
     post: operations["markAllNotificationsRead"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/notifications/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** @description Remove one notification from the signed-in account's inbox. */
+    delete: operations["removeNotification"];
     options?: never;
     head?: never;
     patch?: never;
@@ -5377,6 +5395,31 @@ export interface operations {
       };
     };
   };
+  clearNotifications: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The inbox is empty */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   countUnreadNotifications: {
     parameters: {
       query?: never;
@@ -5422,6 +5465,40 @@ export interface operations {
       };
       /** @description No account is signed in */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  removeNotification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The notification is gone */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No account is signed in */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The signed-in account has no such notification */
+      404: {
         headers: {
           [name: string]: unknown;
         };

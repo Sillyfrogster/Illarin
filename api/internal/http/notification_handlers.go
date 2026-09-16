@@ -87,6 +87,34 @@ func (h *Handlers) MarkAllNotificationsRead(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *Handlers) RemoveNotification(c *gin.Context, id types.UUID) {
+	current, ok := h.signedInAccount(c, "removing a notification")
+	if !ok {
+		return
+	}
+	found, err := h.notifications.Remove(c.Request.Context(), current.ID, uuid.UUID(id))
+	switch {
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove the notification."})
+	case !found:
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such notification"})
+	default:
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func (h *Handlers) ClearNotifications(c *gin.Context) {
+	current, ok := h.signedInAccount(c, "clearing your notifications")
+	if !ok {
+		return
+	}
+	if err := h.notifications.Clear(c.Request.Context(), current.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not clear your notifications."})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func toAPINotification(entry notification.Entry) Notification {
 	shown := Notification{
 		Id: entry.ID, Type: NotificationType(entry.Type), CreatedAt: entry.CreatedAt, ReadAt: entry.ReadAt,
