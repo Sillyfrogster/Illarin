@@ -51,6 +51,9 @@ request.end();
 }
 
 through_gateway "$site_host" GET / 200
+through_gateway "$site_host" GET /stats/script.js 200 "" "website-id"
+through_gateway "$blog_host" GET /stats/script.js 200 "" "website-id"
+through_gateway "analytics.$site_host" GET /api/heartbeat 200
 through_gateway "$site_host" GET /blog 308 "$blog_root"
 through_gateway "$blog_host" GET / 200 "" "<link rel=\"canonical\" href=\"${BLOG_URL%/}"
 through_gateway "$blog_host" GET /feed.xml 200 "" "<rss"
@@ -61,4 +64,9 @@ through_gateway "$blog_host" GET /sign-in 404
 through_gateway "$blog_host" GET /admin/blog 404
 through_gateway "$blog_host" GET /withdrawn 404
 
-echo "Illarin passed its gateway, API, site and blog smoke checks."
+if ! compose ps --status running --services | grep -qx analytics-retention; then
+  echo "The nightly analytics retention job is not running." >&2
+  exit 1
+fi
+
+echo "Illarin passed its gateway, API, site, blog and analytics smoke checks."

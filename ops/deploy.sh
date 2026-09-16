@@ -42,6 +42,10 @@ echo "Pulling Illarin $ILLARIN_VERSION."
 compose pull api web
 compose up -d --wait --wait-timeout 180 db datadog
 
+echo "Starting analytics."
+"$OPS_DIR/analytics.sh" prepare
+compose up -d --wait --wait-timeout 180 umami analytics-retention
+
 if [[ "${BACKUPS_ENABLED:-false}" == "true" && -n "$current" ]]; then
   echo "Taking the pre-migration backup."
   compose --profile tools run --rm backup run
@@ -70,7 +74,7 @@ if ! compose up -d --wait --wait-timeout 180 --remove-orphans api web gateway da
   exit 1
 fi
 
-if ! "$OPS_DIR/smoke.sh"; then
+if ! "$OPS_DIR/analytics.sh" setup || ! "$OPS_DIR/smoke.sh"; then
   rollback_after_failure || true
   exit 1
 fi

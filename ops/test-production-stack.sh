@@ -71,7 +71,7 @@ printf '%s' 'test-client-secret' >"$TEST_DIR/secrets/microsoft-365-client-secret
   printf 'ILLARIN_GATEWAY_BIND=127.0.0.1\n'
   printf 'ILLARIN_GATEWAY_PORT=%s\n' "$TEST_PORT"
   printf 'NPMPLUS_NETWORK=\n'
-  printf 'SITE_URL=http://127.0.0.1:%s\n' "$TEST_PORT"
+  printf 'SITE_URL=http://localhost:%s\n' "$TEST_PORT"
   printf 'BLOG_URL=http://blog.localhost:%s\n' "$TEST_PORT"
   printf 'POSTGRES_DB=illarin\n'
   printf 'POSTGRES_USER=illarin\n'
@@ -81,6 +81,9 @@ printf '%s' 'test-client-secret' >"$TEST_DIR/secrets/microsoft-365-client-secret
   printf 'PUBLICATION_SECRET_KEY=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n'
   printf 'SMTP_ADDR=smtp.illarin.test:25\n'
   printf 'SMTP_FROM=mail@illarin.test\n'
+  printf 'UMAMI_DATABASE_PASSWORD=umami-test-password\n'
+  printf 'UMAMI_ADMIN_PASSWORD=umami-test-admin-password\n'
+  printf 'UMAMI_APP_SECRET=umami-test-app-secret\n'
   printf 'DD_API_KEY=00000000000000000000000000000000\n'
   printf 'BACKUPS_ENABLED=false\n'
 } >"$TEST_ENV"
@@ -107,6 +110,11 @@ if ! compose_test config | grep -Fq 'SMTP_ADDR: smtp.illarin.test:25'; then
 fi
 compose_microsoft_test config --quiet
 compose_test up -d --wait --wait-timeout 180 db
+analytics_test() {
+  COMPOSE_PROJECT_NAME="$TEST_PROJECT" ILLARIN_ENV_FILE="$TEST_ENV" "$OPS_DIR/analytics.sh" "$1"
+}
+analytics_test prepare
+compose_test up -d --wait --wait-timeout 180 umami analytics-retention
 compose_test --profile tools run --rm migrate
 compose_test up -d --wait --wait-timeout 240 api web gateway
 compose_test ps
@@ -154,6 +162,46 @@ expect_through_gateway 404 "$blog_host" POST /api/v1/publication/posts
 expect_through_gateway 404 "$blog_host" GET /sign-in
 expect_through_gateway 404 "$blog_host" GET /admin/blog
 expect_through_gateway 404 "$blog_host" GET /withdrawn
+
+analytics_test setup
+analytics_test setup
+site_page="$(curl --fail --silent --show-error --header "Host: localhost:$TEST_PORT" "http://127.0.0.1:$TEST_PORT/legal/privacy")"
+website_id="$(grep -m 1 -o 'data-website-id="[0-9a-f-]*"' <<<"$site_page" | cut -d '"' -f 2)"
+if ! grep -Fq 'src="/stats/script.js"' <<<"$site_page" || [[ -z "$website_id" ]]; then
+  echo "The site's pages do not load the analytics tracker." >&2
+  exit 1
+fi
+expect_through_gateway 200 "localhost:$TEST_PORT" GET /stats/script.js "" "website-id"
+expect_through_gateway 200 "$blog_host" GET /stats/script.js "" "website-id"
+expect_through_gateway 200 "analytics.localhost:$TEST_PORT" GET /api/heartbeat
+expect_through_gateway 200 "$blog_host" GET / "" 'src="/stats/script.js"'
+
+umami_sql() {
+  compose_test exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+}
+send_headers="$TEST_DIR/send-headers"
+curl --fail --silent --show-error --output /dev/null --dump-header "$send_headers" \
+  --header "Host: $blog_host" --header 'Content-Type: application/json' \
+  --header 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0' \
+  --data "{\"type\":\"event\",\"payload\":{\"website\":\"$website_id\",\"hostname\":\"blog.localhost\",\"url\":\"/stack-test\",\"referrer\":\"https://example.org/\",\"language\":\"en-US\",\"screen\":\"1280x720\",\"title\":\"Stack test\"}}" \
+  "http://127.0.0.1:$TEST_PORT/stats/api/send"
+if grep -qi '^set-cookie:' "$send_headers"; then
+  echo "Counting a page view set a cookie." >&2
+  exit 1
+fi
+if [[ "$(umami_sql <<<"SELECT count(*) FROM umami.website_event WHERE url_path = '/stack-test' AND referrer_domain = 'example.org';")" != 1 ]]; then
+  echo "Umami did not record a page view sent through the gateway." >&2
+  exit 1
+fi
+umami_sql >/dev/null <<SQL
+UPDATE umami.website_event SET created_at = now() - interval '31 days' WHERE url_path = '/stack-test';
+UPDATE umami.session SET created_at = now() - interval '31 days';
+SQL
+compose_test exec -T analytics-retention /analytics-retention.sh once
+if [[ "$(umami_sql <<<"SELECT (SELECT count(*) FROM umami.website_event) + (SELECT count(*) FROM umami.session);")" != 0 ]]; then
+  echo "The analytics retention job left rows older than 30 days." >&2
+  exit 1
+fi
 
 expect_through_gateway 200 "127.0.0.1:$TEST_PORT" GET /developers/publication "" "Save the writing"
 for page in requests writing publishing document markdown webhooks; do

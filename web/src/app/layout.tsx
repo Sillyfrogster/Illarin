@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ArtFilters } from "@/components/art/ArtFilters";
+import { AnalyticsScript } from "@/components/layout/AnalyticsScript";
 import { StoredTheme } from "@/components/layout/StoredTheme";
 import { blogAddress } from "@/lib/blog-address";
 import { FONT_VARIABLES } from "@/lib/fonts";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={FONT_VARIABLES} suppressHydrationWarning>
       <head>
         <script>{THEME_BOOTSTRAP_SCRIPT}</script>
+        <AnalyticsScript />
       </head>
       <body>
         <StoredTheme />

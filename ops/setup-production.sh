@@ -232,6 +232,18 @@ PUBLICATION_SECRET_KEY="$(_existing PUBLICATION_SECRET_KEY || true)"
 if [[ -z "$PUBLICATION_SECRET_KEY" ]]; then
   PUBLICATION_SECRET_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 fi
+UMAMI_DATABASE_PASSWORD="$(_existing UMAMI_DATABASE_PASSWORD || true)"
+if [[ -z "$UMAMI_DATABASE_PASSWORD" ]]; then
+  UMAMI_DATABASE_PASSWORD="$(openssl rand -hex 24)"
+fi
+UMAMI_ADMIN_PASSWORD="$(_existing UMAMI_ADMIN_PASSWORD || true)"
+if [[ -z "$UMAMI_ADMIN_PASSWORD" ]]; then
+  UMAMI_ADMIN_PASSWORD="$(openssl rand -hex 24)"
+fi
+UMAMI_APP_SECRET="$(_existing UMAMI_APP_SECRET || true)"
+if [[ -z "$UMAMI_APP_SECRET" ]]; then
+  UMAMI_APP_SECRET="$(openssl rand -hex 32)"
+fi
 
 write_env ILLARIN_IMAGE_REGISTRY "$ILLARIN_IMAGE_REGISTRY"
 write_env ILLARIN_DATA_DIR "/srv/illarin"
@@ -247,6 +259,9 @@ write_env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
 write_env DATABASE_URL "postgres://illarin:$POSTGRES_PASSWORD@db:5432/illarin"
 write_env LINKING_HMAC_KEY "$LINKING_HMAC_KEY"
 write_env PUBLICATION_SECRET_KEY "$PUBLICATION_SECRET_KEY"
+write_env UMAMI_DATABASE_PASSWORD "$UMAMI_DATABASE_PASSWORD"
+write_env UMAMI_ADMIN_PASSWORD "$UMAMI_ADMIN_PASSWORD"
+write_env UMAMI_APP_SECRET "$UMAMI_APP_SECRET"
 write_env DISCORD_CLIENT_ID "$DISCORD_CLIENT_ID"
 write_env DISCORD_CLIENT_SECRET "$DISCORD_CLIENT_SECRET"
 write_env BACKUPS_ENABLED "false"
@@ -356,15 +371,15 @@ if [[ -n "$NPMPLUS_DASHBOARD_URL" ]]; then
   ask NPMPLUS_FORWARD_PORT "Detected forward port:"
   open_url "$NPMPLUS_DASHBOARD_URL"
   step "Create one Proxy Host for $ILLARIN_DOMAIN using HTTP to $NPMPLUS_FORWARD_HOST:$NPMPLUS_FORWARD_PORT."
-  step "Create a second Proxy Host for blog.$ILLARIN_DOMAIN forwarding to the same address and port."
+  step "Create a second Proxy Host for blog.$ILLARIN_DOMAIN and a third for analytics.$ILLARIN_DOMAIN, both forwarding to the same address and port."
   step "Request or select a certificate for each, then enable Force SSL and HTTP/2 on both."
 else
-  step "Configure the TLS proxy to forward $ILLARIN_DOMAIN and blog.$ILLARIN_DOMAIN to the gateway address in the production environment."
+  step "Configure the TLS proxy to forward $ILLARIN_DOMAIN, blog.$ILLARIN_DOMAIN and analytics.$ILLARIN_DOMAIN to the gateway address in the production environment."
 fi
 if [[ -n "$DNS_DASHBOARD_URL" ]]; then
   open_url "$DNS_DASHBOARD_URL"
 fi
-step "In the DNS provider, point $ILLARIN_DOMAIN and blog.$ILLARIN_DOMAIN at $PRODUCTION_HOST and choose the provider's appropriate proxy mode."
+step "In the DNS provider, point $ILLARIN_DOMAIN, blog.$ILLARIN_DOMAIN and analytics.$ILLARIN_DOMAIN at $PRODUCTION_HOST and choose the provider's appropriate proxy mode."
 note "The edge proxy owns certificates. The repo nginx tells the two hostnames apart: the site owns /api, /media, /download and private blob routing, and the blog hostname serves only blog pages and media."
 
 stage "First deployment and verification"
@@ -373,6 +388,7 @@ open_url "https://github.com/$GITHUB_REPOSITORY/actions/workflows/deploy-product
 step "Choose Run workflow on $GITHUB_DEFAULT_BRANCH. Approve the production environment if GitHub asks."
 step "After it finishes, open https://$ILLARIN_DOMAIN/api/healthz and expect ok."
 step "Open https://blog.$ILLARIN_DOMAIN/ and expect the blog, and https://$ILLARIN_DOMAIN/blog to send you there."
+step "Open https://analytics.$ILLARIN_DOMAIN/ and sign in as admin with UMAMI_ADMIN_PASSWORD from the production environment."
 step "Create a test account and confirm the Microsoft 365 mailbox sends its verification email."
 step "In Datadog, confirm the illarin-production host and the API, web, gateway, and Postgres containers appear."
 warn "Off-box backups remain disabled until a restic repository is configured and a restore succeeds."
