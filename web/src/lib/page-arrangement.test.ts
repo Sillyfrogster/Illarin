@@ -8,6 +8,7 @@ import {
   layoutChoiceIssue,
   NARROW_BLOCK_GRID_PX,
   packBlockRows,
+  placeBlocks,
   suggestedBlockWidth,
   suggestionCandidateWidths,
   WIDTH_COLUMNS,
@@ -118,6 +119,30 @@ describe("page arrangement", () => {
         ["empty", 6, 5],
       ],
       [["last", 4, 1]],
+    ]);
+  });
+
+  test("placement gives every block its grid row and its place in that row", () => {
+    const blocks = [
+      block("a", "half"),
+      block("b", "third"),
+      block("c", "two_thirds"),
+      block("d", "full"),
+    ];
+
+    expect(
+      placeBlocks(blocks, {}).map((item) => [
+        item.block.id,
+        item.row,
+        item.place,
+        item.startColumn,
+        item.columns,
+      ]),
+    ).toEqual([
+      ["a", 1, 0, 1, 6],
+      ["b", 1, 1, 7, 4],
+      ["c", 2, 0, 1, 8],
+      ["d", 3, 0, 1, 12],
     ]);
   });
 

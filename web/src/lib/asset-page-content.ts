@@ -44,6 +44,20 @@ export function rendersOnThePage(block: {
   return !block.hidden && !block.empty;
 }
 
+export type BlockAudience = "shown" | "hidden" | "empty" | "model";
+
+/** Says what a reader meets where a block sits, which is not always the block */
+export function blockAudience(block: {
+  hidden: boolean;
+  elements: readonly PageElement[];
+}): BlockAudience {
+  if (block.hidden) return "hidden";
+  const filled = block.elements.filter((element) => !element.isEmpty);
+  if (filled.length === 0) return "empty";
+  if (filled.every(belongsInModelDisclosure)) return "model";
+  return "shown";
+}
+
 const INVITATION_BLOCK_LIMIT = 3;
 
 type FillableBlock = {

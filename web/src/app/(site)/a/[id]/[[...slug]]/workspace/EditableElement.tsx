@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { Fragment } from "react";
+import { Children, Fragment } from "react";
 import type { AssetBlock, AssetElement, AssetImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
@@ -20,6 +20,12 @@ const ADD =
 
 const DROP =
   "inline-flex size-9 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop";
+
+const TEXT_SET_NOUNS: Record<string, string> = {
+  greetings: "greeting",
+  group_greetings: "group-only greeting",
+  prompt_nudges: "nudge",
+};
 
 export function elementCursor(
   elementId: string,
@@ -109,6 +115,7 @@ export function EditableElement({
   );
 
   const { content } = element;
+  const takesMarkdown = element.display !== "verbatim";
 
   if (element.type === "prose" && "text" in content) {
     return field(["text"], {
@@ -116,16 +123,17 @@ export function EditableElement({
       label: element.label || "Text",
       onChange: (text) => write({ text }),
       placeholder: "Write here",
+      rich: takesMarkdown,
       value: content.text,
     });
   }
 
   if (element.type === "text_set" && "texts" in content) {
     const texts = content.texts;
-    const noun = element.role === "prompt_nudges" ? "nudge" : "greeting";
+    const noun = TEXT_SET_NOUNS[element.role ?? ""] ?? "passage";
     return (
       <Run
-        addLabel={`Add a ${noun}`}
+        addLabel={addLabel(noun)}
         onAdd={() => write({ texts: [...texts, { name: "", text: "" }] })}
       >
         {texts.map((item, index) => (
@@ -153,6 +161,7 @@ export function EditableElement({
               onChange: (text) =>
                 write({ texts: replace(texts, index, { ...item, text }) }),
               placeholder: "Write here",
+              rich: takesMarkdown,
               value: item.text,
             })}
           </li>
@@ -193,6 +202,7 @@ export function EditableElement({
               onChange: (text) =>
                 write({ turns: replace(turns, index, { ...turn, text }) }),
               placeholder: "What they say",
+              rich: true,
               value: turn.text,
             })}
           </li>
@@ -233,6 +243,7 @@ export function EditableElement({
                       fields: replace(fields, index, { ...item, value }),
                     }),
                   placeholder: "Write here",
+                  rich: true,
                   value: item.value,
                 })}
                 <Drop
@@ -301,6 +312,7 @@ export function EditableElement({
               onChange: (note) =>
                 write({ links: replace(links, index, { ...link, note }) }),
               placeholder: "Add a note",
+              rich: true,
               value: link.note ?? "",
             })}
           </li>
@@ -318,6 +330,7 @@ type FieldOptions = {
   label: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  rich?: boolean;
   singleLine?: boolean;
   value: string;
 };
@@ -348,9 +361,11 @@ function Run({
 }) {
   return (
     <>
-      <List className="flex list-none flex-col rounded-plate bg-inset">
-        {children}
-      </List>
+      {Children.count(children) === 0 ? null : (
+        <List className="flex list-none flex-col rounded-plate bg-inset">
+          {children}
+        </List>
+      )}
       <Add label={addLabel} onAdd={onAdd} />
     </>
   );
@@ -396,6 +411,10 @@ function Drop({
       <Trash2 aria-hidden="true" size={15} />
     </button>
   );
+}
+
+function addLabel(noun: string): string {
+  return `Add ${/^[aeiou]/i.test(noun) ? "an" : "a"} ${noun}`;
 }
 
 function replace<Item>(items: Item[], index: number, item: Item): Item[] {

@@ -3,6 +3,13 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { applyMarkdown, type MarkdownAction } from "@/lib/markdown-edit";
+import { FormattingBar } from "./FormattingBar";
+
+const SHORTCUTS: Record<string, MarkdownAction> = {
+  b: "bold",
+  i: "italic",
+};
 
 function offsetAtPoint(x: number, y: number, host: HTMLElement) {
   const document_ = document as Document & {
@@ -37,6 +44,7 @@ export function EditableText({
   label,
   placeholder,
   className,
+  rich = false,
   singleLine = false,
   as: Tag = "p",
 }: {
@@ -50,6 +58,7 @@ export function EditableText({
   label: string;
   placeholder?: string;
   className?: string;
+  rich?: boolean;
   singleLine?: boolean;
   as?: "p" | "h1" | "h2" | "h3" | "span" | "div";
 }) {
@@ -75,8 +84,25 @@ export function EditableText({
     caret.current = undefined;
   }, [active]);
 
+  function format(action: MarkdownAction) {
+    const input = field.current;
+    if (!input) return;
+    const edit = applyMarkdown(action, input.value, {
+      end: input.selectionEnd,
+      start: input.selectionStart,
+    });
+    onChange(edit.text);
+    window.requestAnimationFrame(() => {
+      const still = field.current;
+      if (!still) return;
+      still.focus({ preventScroll: true });
+      still.setSelectionRange(edit.selection.start, edit.selection.end);
+      growToFit(still);
+    });
+  }
+
   if (active) {
-    return (
+    const writing = (
       <textarea
         aria-label={label}
         className={cn(
@@ -99,12 +125,25 @@ export function EditableText({
             byKeyboard.current = true;
             done();
           }
+          const shortcut = SHORTCUTS[event.key.toLowerCase()];
+          if (rich && shortcut && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            format(shortcut);
+          }
         }}
         placeholder={placeholder}
         ref={field}
         rows={1}
         value={value}
       />
+    );
+
+    if (!rich) return writing;
+    return (
+      <div className="min-w-0">
+        <FormattingBar apply={format} />
+        {writing}
+      </div>
     );
   }
 

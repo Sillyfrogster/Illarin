@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   assetHoldsNothing,
+  blockAudience,
   coreBlockTitles,
   rendersOnThePage,
   splitAssetPageContent,
@@ -180,5 +181,52 @@ describe("an asset that holds nothing", () => {
     expect(
       coreBlockTitles([core("One"), core("Two"), core("Three"), core("Four")]),
     ).toEqual(["One", "Two", "Three"]);
+  });
+});
+
+describe("what a reader meets where a block sits", () => {
+  test("a filled block shows itself", () => {
+    expect(
+      blockAudience(block("Usage", [element("how", "creator_notes")])),
+    ).toBe("shown");
+  });
+
+  test("a hidden block reports hidden before anything else", () => {
+    expect(
+      blockAudience(block("Usage", [element("how", "creator_notes")], true)),
+    ).toBe("hidden");
+  });
+
+  test("a block with nothing written in it reports empty", () => {
+    expect(
+      blockAudience(
+        block("Usage", [
+          element("how", "creator_notes", true),
+          element("more", undefined, true),
+        ]),
+      ),
+    ).toBe("empty");
+  });
+
+  test("a block holding only model instructions reports the model panel", () => {
+    expect(
+      blockAudience(
+        block("Model instructions", [
+          element("system", "system_prompt"),
+          element("post-history", "post_history_instructions", true),
+        ]),
+      ),
+    ).toBe("model");
+  });
+
+  test("a block mixing model instructions with its own content shows itself", () => {
+    expect(
+      blockAudience(
+        block("Notes", [
+          element("system", "system_prompt"),
+          element("notes", "creator_notes"),
+        ]),
+      ),
+    ).toBe("shown");
   });
 });

@@ -115,6 +115,11 @@ export type PackedBlock<T> = {
   startColumn: number;
 };
 
+export type PlacedBlock<T> = PackedBlock<T> & {
+  row: number;
+  place: number;
+};
+
 function renderedColumns(width: BlockWidth, availableWidth: number): number {
   if (availableWidth <= NARROW_BLOCK_GRID_PX) return WIDTH_COLUMNS.full;
 
@@ -213,6 +218,16 @@ export function packBlockRows<T extends { width: BlockWidth }>(
   }
   finishRow();
   return rows;
+}
+
+/** Packs blocks into rows and gives each one its grid row, so one grid can place them all. */
+export function placeBlocks<T extends { width: BlockWidth }>(
+  blocks: readonly T[],
+  options: { availableWidth?: number },
+): PlacedBlock<T>[] {
+  return packBlockRows(blocks, options).flatMap((row, index) =>
+    row.map((item, place) => ({ ...item, place, row: index + 1 })),
+  );
 }
 
 export const WRITTEN_IN_PLACE_TYPES = [
