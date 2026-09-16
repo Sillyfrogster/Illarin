@@ -25,7 +25,7 @@ const MARKS = {
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
 
-/** One inbox entry, tinted while unread, that opens what it is about when it has somewhere to go and can be taken out of the inbox. */
+/** One inbox entry, tinted while unread, that opens what it is about and can be removed. */
 export function NotificationEntry({
   entry,
   now,

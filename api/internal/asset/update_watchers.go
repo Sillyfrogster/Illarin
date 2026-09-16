@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/jackc/pgx/v5"
@@ -14,7 +15,7 @@ func TellWatchers(ctx context.Context, tx pgx.Tx, published Update, choice Updat
 	}
 	var name string
 	if err := tx.QueryRow(ctx, `select name from assets where id = $1`, published.AssetID).Scan(&name); err != nil {
-		return err
+		return fmt.Errorf("read the name of the updated asset: %w", err)
 	}
 	return notification.Record(ctx, tx, notification.Event{
 		Type: notification.AssetUpdated, Asset: &published.AssetID,
