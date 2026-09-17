@@ -85,7 +85,7 @@ func (s *Service) DeletePreservedNamespace(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return candidate.commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, assetID)
 }
 
 func (s *Service) preservedAssetOrigin(

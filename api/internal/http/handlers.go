@@ -8,10 +8,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
 type Handlers struct {
 	assets             *asset.Service
+	works              *work.Service
 	accounts           *account.Service
 	links              *linking.Service
 	deliveries         *delivery.Service
@@ -23,6 +25,7 @@ type Handlers struct {
 
 func NewHandlers(
 	assets *asset.Service,
+	works *work.Service,
 	accounts *account.Service,
 	links *linking.Service,
 	deliveries *delivery.Service,
@@ -33,6 +36,7 @@ func NewHandlers(
 ) *Handlers {
 	return &Handlers{
 		assets:             assets,
+		works:              works,
 		accounts:           accounts,
 		links:              links,
 		deliveries:         deliveries,

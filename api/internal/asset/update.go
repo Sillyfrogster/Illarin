@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -104,11 +105,11 @@ func (s *Service) PublishUpdate(
 		return Update{}, nil, ErrAssetIsDraft
 	}
 
-	blocks, err := readBlocks(ctx, tx, in.AssetID)
+	blocks, err := block.Read(ctx, tx, in.AssetID)
 	if err != nil {
 		return Update{}, nil, err
 	}
-	items, err := s.candidateReadiness(ctx, tx, in.AssetID, kind, name, isNSFW, blocks)
+	items, err := s.CandidateReadiness(ctx, tx, in.AssetID, kind, name, isNSFW, blocks)
 	if err != nil {
 		return Update{}, nil, err
 	}
@@ -137,7 +138,7 @@ func (s *Service) PublishUpdate(
 			return Update{}, nil, err
 		}
 	}
-	if err := candidate.commit(ctx, tx, in.AssetID); err != nil {
+	if err := candidate.Commit(ctx, tx, in.AssetID); err != nil {
 		return Update{}, nil, err
 	}
 	return recorded, items, nil
@@ -211,7 +212,7 @@ func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID)
 	if err := digestCatalog(ctx, tx, assetID, whole); err != nil {
 		return versionDigest{}, err
 	}
-	blocks, err := readBlocks(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return versionDigest{}, err
 	}
@@ -256,4 +257,17 @@ func digestCatalog(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, into hash.
 	fmt.Fprintf(into, "catalog\x00%s\x00%s\x00%s\x00%s\x00%s\n",
 		name, blurb, strings.Join(tags, "\x00"), adult, uuidFromPgtype(cover))
 	return nil
+}
+
+// UnpublishedChanges says whether a published work has drafted changes it has not published
+func (s *Service) UnpublishedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
+	published, err := s.publishedDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	reviewed, err := s.assetDigest(ctx, tx, assetID)
+	if err != nil {
+		return false, err
+	}
+	return reviewed.whole != published.whole, nil
 }

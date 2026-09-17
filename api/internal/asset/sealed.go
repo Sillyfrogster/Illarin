@@ -75,15 +75,8 @@ func (s *Service) OpenSealedContent(
 	}, nil
 }
 
-func (s *Service) SealedBlockCount(
-	ctx context.Context,
-	ownerID uuid.UUID,
-	assetID uuid.UUID,
-) (int, error) {
-	return sealedBlockCount(ctx, s.pool, ownerID, assetID)
-}
-
-func sealedBlockCount(
+// SealedBlockCount counts the preserved prompts an owner can still export from a work
+func SealedBlockCount(
 	ctx context.Context,
 	q interface {
 		QueryRow(context.Context, string, ...any) pgx.Row

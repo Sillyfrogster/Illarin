@@ -152,7 +152,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
 		return Media{}, err
 	}
-	if err := candidate.commit(ctx, tx, in.AssetID); err != nil {
+	if err := candidate.Commit(ctx, tx, in.AssetID); err != nil {
 		return Media{}, fmt.Errorf("commit media addition: %w", err)
 	}
 	return Media{
@@ -392,4 +392,16 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 		MediaType:        s.media.DerivativeType(),
 		Private:          private,
 	}, nil
+}
+
+// ImageAddress is where a picture variant is served, signed when only its owner may see it
+func (s *Service) ImageAddress(mediaID uuid.UUID, variant string, blurred, private bool) string {
+	if blurred {
+		variant += "_blurred"
+	}
+	path := fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, mediaproc.DerivativeVersion)
+	if !private {
+		return path
+	}
+	return s.signer.Sign(path, s.now())
 }

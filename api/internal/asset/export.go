@@ -69,7 +69,7 @@ func (s *Service) OpenExport(
 	target string,
 	gallery *GallerySelection,
 ) (Export, error) {
-	tx, err := s.beginReadSnapshot(ctx)
+	tx, err := s.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Export{}, fmt.Errorf("begin export snapshot: %w", err)
 	}
@@ -141,7 +141,7 @@ func (s *Service) OpenExportForLinkedInstance(
 	assetID uuid.UUID,
 	target string,
 ) (Export, error) {
-	tx, err := s.beginReadSnapshot(ctx)
+	tx, err := s.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Export{}, fmt.Errorf("begin linked export snapshot: %w", err)
 	}
@@ -345,7 +345,7 @@ func (s *Service) exportSubject(
 	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
 	subject.revisionID = uuidOrNil(revisionID)
-	subject.blocks, err = readBlocks(ctx, q, assetID)
+	subject.blocks, err = block.Read(ctx, q, assetID)
 	if err != nil {
 		return exportSubject{}, err
 	}
@@ -487,7 +487,7 @@ func (subject exportSubject) snapshotID() *uuid.UUID {
 }
 
 func (s *Service) exportMediaURL(mediaID uuid.UUID, private bool) string {
-	return s.siteURL + s.variantURL(mediaID, "detail", false, private)
+	return s.siteURL + s.ImageAddress(mediaID, "detail", false, private)
 }
 
 func (s *Service) readBlob(ctx context.Context, blobID uuid.UUID) (format.ExportMedia, error) {

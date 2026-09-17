@@ -166,7 +166,7 @@ func contentGeneration(t *testing.T, pool *pgxpool.Pool, assetID uuid.UUID) int 
 
 func draftBlocks(t *testing.T, pool *pgxpool.Pool, assetID uuid.UUID) []block.Block {
 	t.Helper()
-	blocks, err := readBlocks(context.Background(), pool, assetID)
+	blocks, err := block.Read(context.Background(), pool, assetID)
 	if err != nil {
 		t.Fatalf("read the blocks: %v", err)
 	}

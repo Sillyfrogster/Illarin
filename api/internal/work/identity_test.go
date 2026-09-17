@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"encoding/json"
@@ -57,7 +57,7 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
 				if response.Code != http.StatusNoContent {
 					t.Fatalf("save blurb %q: status = %d, want 204: %s", blurb, response.Code, response.Body.String())
 				}
-				if saved := fetchStartedAsset(t, r, session, started.ID); saved.Blurb != blurb {
+				if saved := apitest.FetchStartedAsset(t, r, session, started.ID); saved.Blurb != blurb {
 					t.Fatalf("saved blurb = %q, want %q", saved.Blurb, blurb)
 				}
 			}
@@ -100,7 +100,7 @@ func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 	if refusal.Field != "blurb" || !strings.Contains(refusal.Error, "400") {
 		t.Fatalf("refusal = %+v, want the blurb field and its limit", refusal)
 	}
-	if saved := fetchStartedAsset(t, r, session, started.ID); saved.Blurb != accepted {
+	if saved := apitest.FetchStartedAsset(t, r, session, started.ID); saved.Blurb != accepted {
 		t.Fatalf("saved blurb has %d characters, want the intact 400-character value", len([]rune(saved.Blurb)))
 	}
 }
@@ -119,7 +119,7 @@ func TestIdentityRequestMustSayWhetherToKeepOrClearTheBlurb(t *testing.T) {
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("omit the blurb: status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	if saved := fetchStartedAsset(t, r, session, started.ID); saved.Blurb != "Keep this pitch" {
+	if saved := apitest.FetchStartedAsset(t, r, session, started.ID); saved.Blurb != "Keep this pitch" {
 		t.Fatalf("omitted blurb changed the saved value to %q", saved.Blurb)
 	}
 }

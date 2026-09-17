@@ -370,7 +370,7 @@ func (s updateInboxStack) restoreAsset(t *testing.T) {
 
 func (s updateInboxStack) describe(t *testing.T, text string) {
 	t.Helper()
-	started := fetchStartedAsset(t, s.router, s.creator, s.assetID)
+	started := apitest.FetchStartedAsset(t, s.router, s.creator, s.assetID)
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
 	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(fmt.Sprintf(`{"text":%q}`, text))
@@ -381,23 +381,23 @@ func (s updateInboxStack) describe(t *testing.T, text string) {
 
 func (s updateInboxStack) resizeMessages(t *testing.T) {
 	t.Helper()
-	started := fetchStartedAsset(t, s.router, s.creator, s.assetID)
-	arranged := make([]arrangedBlock, 0, len(started.Blocks))
+	started := apitest.FetchStartedAsset(t, s.router, s.creator, s.assetID)
+	arranged := make([]apitest.ArrangedBlock, 0, len(started.Blocks))
 	for _, block := range started.Blocks {
 		width := block.Width
 		if block.Definition == "messages" {
 			width = map[string]string{"full": "half", "half": "full"}[width]
 		}
-		arranged = append(arranged, arrangedBlock{ID: block.ID, Hidden: block.Hidden, Width: width})
+		arranged = append(arranged, apitest.ArrangedBlock{ID: block.ID, Hidden: block.Hidden, Width: width})
 	}
-	if got := arrangeBlocks(t, s.router, s.creator, s.assetID, arranged); got.Code != http.StatusOK {
+	if got := apitest.ArrangeBlocks(t, s.router, s.creator, s.assetID, arranged); got.Code != http.StatusOK {
 		t.Fatalf("resize the messages block = %d, want 200: %s", got.Code, got.Body.String())
 	}
 }
 
 func (s updateInboxStack) publishUpdate(t *testing.T, body string) {
 	t.Helper()
-	if got := publishAssetUpdate(t, s.router, s.creator, s.assetID, body); got.Code != http.StatusOK {
+	if got := apitest.PublishAssetUpdate(t, s.router, s.creator, s.assetID, body); got.Code != http.StatusOK {
 		t.Fatalf("publish an update = %d, want 200: %s", got.Code, got.Body.String())
 	}
 }

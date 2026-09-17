@@ -25,7 +25,7 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	added := addedBlock(t, addBlock(t, r, session, started.ID, "lorebook", "entry_table"))
+	added := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, started.ID, "lorebook", "entry_table"))
 	if len(added.Elements) != 1 || added.Elements[0].Type != "entry_table" {
 		t.Fatalf("a lorebook arrived holding %+v", added.Elements)
 	}
@@ -42,7 +42,7 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 		t.Fatalf("save the book: status = %d: %s", response.Code, response.Body.String())
 	}
 
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	var saved apitest.StartedBlock
 	for _, holder := range page.Blocks {
 		if holder.Definition == "lorebook" {
@@ -90,7 +90,7 @@ func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	added := addedBlock(t, addBlock(t, r, session, started.ID, "model_instructions", "prose"))
+	added := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, started.ID, "model_instructions", "prose"))
 	if len(added.Elements) != 2 {
 		t.Fatalf("model instructions arrived with %d elements", len(added.Elements))
 	}
@@ -113,11 +113,11 @@ func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	added := addedBlock(t, addBlock(t, r, session, started.ID, "expressions", "image_set"))
+	added := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, started.ID, "expressions", "image_set"))
 	if added.Elements[0].Role != "expressions" {
 		t.Fatalf("the expression set carries role %q", added.Elements[0].Role)
 	}
-	mediaID := uploadedImageID(t, r, session, started.ID, "expression", apitest.PNG(t, 200, 200))
+	mediaID := apitest.UploadedImageID(t, r, session, started.ID, "expression", apitest.PNG(t, 200, 200))
 
 	body := apitest.EditableBlock(added)
 	body.Elements[0].Content = json.RawMessage(
@@ -127,7 +127,7 @@ func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
 		t.Fatalf("save the expression set: status = %d: %s", response.Code, response.Body.String())
 	}
 
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	for _, holder := range page.Blocks {
 		if holder.Definition != "expressions" {
 			continue

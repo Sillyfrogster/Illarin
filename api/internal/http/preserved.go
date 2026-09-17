@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,7 +42,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 	namespace := c.Param("namespace")
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -52,7 +53,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 	candidate := &asset.Candidate{Version: version}
 	err := h.assets.DeletePreservedNamespace(
 		c.Request.Context(), owner.ID, id, namespace, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {

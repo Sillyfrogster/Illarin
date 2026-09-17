@@ -42,7 +42,7 @@ func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.U
 	return kind, nil
 }
 
-func (c *Candidate) commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
 	var version int64
 	if err := tx.QueryRow(ctx, `update assets set working_copy_version = working_copy_version + 1 where id = $1 returning working_copy_version`, assetID).Scan(&version); err != nil {
 		return err

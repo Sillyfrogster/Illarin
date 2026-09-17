@@ -17,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,6 +29,7 @@ func init() {
 // Services are the running parts a test router serves
 type Services struct {
 	Assets             *asset.Service
+	Works              *work.Service
 	Accounts           *account.Service
 	Links              *linking.Service
 	Deliveries         *delivery.Service
@@ -133,6 +135,7 @@ func NewServicesWithDelivery(
 	assets.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 	return Services{
 		Assets:             assets,
+		Works:              work.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         delivery.NewService(pool, assets, links, settings),
@@ -154,6 +157,7 @@ func NewServicesOver(
 	links := NewLinkingService(pool)
 	return Services{
 		Assets:             assets,
+		Works:              work.NewService(pool, assets),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
 		Deliveries:         NewDeliveryService(pool, assets, links),

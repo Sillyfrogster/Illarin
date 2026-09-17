@@ -76,7 +76,7 @@ func (s *Service) ListVault(ctx context.Context, ownerID, assetID uuid.UUID) ([]
 			return nil, fmt.Errorf("read a vault picture: %w", err)
 		}
 		if picture.MediaID != nil {
-			picture.ThumbURL = s.variantURL(*picture.MediaID, "grid", false, true)
+			picture.ThumbURL = s.ImageAddress(*picture.MediaID, "grid", false, true)
 		}
 		pictures = append(pictures, picture)
 	}
@@ -114,7 +114,7 @@ func (s *Service) PlaceVaultPicture(
 	if err != nil {
 		return SavedBlocks{}, err
 	}
-	page, err := readBlocks(ctx, tx, assetID)
+	page, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -148,7 +148,7 @@ func (s *Service) PlaceVaultPicture(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
@@ -183,7 +183,7 @@ func (s *Service) DiscardVaultPicture(
 			return fmt.Errorf("let the picture go: %w", err)
 		}
 	}
-	return candidate.commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, assetID)
 }
 
 func lockVaultPicture(ctx context.Context, tx pgx.Tx, assetID, pictureID uuid.UUID) (VaultPicture, error) {

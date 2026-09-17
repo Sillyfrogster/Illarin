@@ -1,11 +1,13 @@
-package asset
+package work
 
 import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -34,18 +36,16 @@ type Cursor struct {
 	ID     uuid.UUID
 }
 
-type ContentVisibility string
-
-const (
-	ContentHidden  ContentVisibility = "hidden"
-	ContentBlurred ContentVisibility = "blurred"
-	ContentShown   ContentVisibility = "shown"
-)
-
-type BrowseCover struct {
+type Cover struct {
 	URL    string
 	Width  int
 	Height int
+}
+
+// Withhold is what the owner of a withheld work reads, which never names the staff member who acted
+type Withhold struct {
+	Reason string
+	At     time.Time
 }
 
 type BrowseItem struct {
@@ -55,7 +55,7 @@ type BrowseItem struct {
 	Kind       string
 	IsNSFW     *bool
 	OwnerState string
-	Cover      *BrowseCover
+	Cover      *Cover
 	Withhold   *Withhold
 }
 
@@ -65,21 +65,21 @@ type BrowsePage struct {
 	Suppressed int
 	Next       *Cursor
 	EmptyState string
-	Platforms  []BrowseOption
-	Facets     []BrowseFacet
+	Platforms  []Option
+	Facets     []Filter
 }
 
-type BrowseOption struct {
+type Option struct {
 	Value    string
 	Label    string
 	Count    int
 	Selected bool
 }
 
-type BrowseFacet struct {
+type Filter struct {
 	Key     string
 	Label   string
-	Options []BrowseOption
+	Options []Option
 }
 
 type FacetSelection struct {
@@ -87,54 +87,18 @@ type FacetSelection struct {
 	Value string
 }
 
-func listAssets(ctx context.Context, q db.DBTX, f ListFilter) ([]Asset, error) {
-	queries := db.New(q)
-
-	params := db.ListAssetsParams{
-		Column1: f.Kind, Column2: f.PlatformSet, Format: valueOrEmpty(f.Platform),
-		Column4: nullableTags(f.Tags), Limit: int32(f.Limit),
-	}
-	if f.Before != nil {
-		params.Before = timeToNullable(&f.Before.MadeAt)
-		params.BeforeID = uuidToPgtype(f.Before.ID)
-	}
-
-	rows, err := queries.ListAssets(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("list assets: %w", err)
-	}
-
-	out := make([]Asset, len(rows))
-	for i, row := range rows {
-		out[i] = Asset{
-			ID:                uuidFromPgtype(row.ID),
-			Kind:              row.Kind,
-			Format:            row.Format.String,
-			Name:              row.Name,
-			Blurb:             row.Blurb,
-			Tags:              row.Tags,
-			IsNSFW:            &row.IsNsfw,
-			Discovery:         Discovery(row.Discovery),
-			CurrentRevisionID: uuidFromPgtype(row.CurrentRevisionID),
-			CreatedAt:         timeFromPgtype(row.CreatedAt),
-		}
-	}
-	return out, nil
-}
-
-func valueOrEmpty(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
-func (s *Service) browseAssets(
+func (s *Service) Browse(
 	ctx context.Context,
 	f ListFilter,
-	visibility ContentVisibility,
+	visibility asset.ContentVisibility,
 ) (BrowsePage, error) {
-	tx, err := s.beginReadSnapshot(ctx)
+	if f.Limit <= 0 || f.Limit > 24 {
+		f.Limit = 24
+	}
+	if visibility != asset.ContentHidden && visibility != asset.ContentShown {
+		visibility = asset.ContentBlurred
+	}
+	tx, err := s.assets.BeginReadSnapshot(ctx)
 	if err != nil {
 		return BrowsePage{}, err
 	}
@@ -170,7 +134,7 @@ func (s *Service) browseAssets(
 
 	page := BrowsePage{Items: make([]BrowseItem, 0, min(len(rows), f.Limit))}
 	for _, row := range rows[:min(len(rows), f.Limit)] {
-		draft := Lifecycle(row.Lifecycle) == LifecycleDraft
+		draft := asset.Lifecycle(row.Lifecycle) == asset.LifecycleDraft
 		item := BrowseItem{
 			ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
 			Kind: row.Kind, IsNSFW: boolFromPgtype(row.IsNsfw),
@@ -191,10 +155,10 @@ func (s *Service) browseAssets(
 		}
 		if row.CoverID.Valid && row.CoverWidth.Valid && row.CoverHeight.Valid {
 			flagged := item.IsNSFW != nil && *item.IsNSFW
-			item.Cover = &BrowseCover{
-				URL: s.variantURL(
+			item.Cover = &Cover{
+				URL: s.assets.ImageAddress(
 					uuidFromPgtype(row.CoverID), "grid",
-					visibility != ContentShown && flagged, draft,
+					visibility != asset.ContentShown && flagged, draft,
 				),
 				Width: int(row.CoverWidth.Int32), Height: int(row.CoverHeight.Int32),
 			}
@@ -219,7 +183,7 @@ func (s *Service) browseAssets(
 		return BrowsePage{}, fmt.Errorf("count browse assets: %w", err)
 	}
 	page.Total = int(count)
-	if visibility == ContentHidden && !ownProfile {
+	if visibility == asset.ContentHidden && !ownProfile {
 		suppressed, err := queries.CountSuppressedBrowseAssets(
 			ctx, db.CountSuppressedBrowseAssetsParams{
 				Kind: f.Kind, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
@@ -316,9 +280,9 @@ func countedPlatforms(
 	queries *db.Queries,
 	base db.CountBrowseAssetsParams,
 	selected string,
-) ([]BrowseOption, error) {
+) ([]Option, error) {
 	apps := browsePlatforms()
-	result := make([]BrowseOption, 0, len(apps))
+	result := make([]Option, 0, len(apps))
 	for _, app := range apps {
 		params := base
 		params.Platform = app.ID
@@ -327,7 +291,7 @@ func countedPlatforms(
 		if err != nil {
 			return nil, fmt.Errorf("count platform %s: %w", app.ID, err)
 		}
-		result = append(result, BrowseOption{
+		result = append(result, Option{
 			Value: app.ID, Label: app.Label, Count: int(count),
 			Selected: app.ID == selected,
 		})
@@ -341,10 +305,10 @@ func countedFacets(
 	base db.CountBrowseAssetsParams,
 	chosen []chosenFacet,
 	definitions []block.Facet,
-) ([]BrowseFacet, error) {
-	result := make([]BrowseFacet, 0, len(definitions))
+) ([]Filter, error) {
+	result := make([]Filter, 0, len(definitions))
 	for _, definition := range definitions {
-		group := BrowseFacet{Key: string(definition.Key), Label: definition.Label}
+		group := Filter{Key: string(definition.Key), Label: definition.Label}
 		for _, bucket := range definition.Buckets {
 			choice := chosenFacet{
 				FacetSelection: FacetSelection{
@@ -364,7 +328,7 @@ func countedFacets(
 			if err != nil {
 				return nil, fmt.Errorf("count facet %s=%s: %w", definition.Key, bucket.Value, err)
 			}
-			group.Options = append(group.Options, BrowseOption{
+			group.Options = append(group.Options, Option{
 				Value: bucket.Value, Label: bucket.Label, Count: int(count),
 				Selected: picked,
 			})
@@ -374,25 +338,55 @@ func countedFacets(
 	return result, nil
 }
 
-func assetByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Asset, error) {
-	row, err := db.New(q).AssetByID(ctx, uuidToPgtype(id))
-	if err != nil {
-		return Asset{}, fmt.Errorf("read asset: %w", err)
-	}
-	return Asset{
-		ID: uuidFromPgtype(row.ID), Kind: row.Kind, Format: row.Format,
-		OriginFormat: textToPointer(row.OriginFormat), AssetVersion: row.AssetVersion,
-		CreditedAuthor: row.CreditedAuthor, Nickname: row.Nickname,
-		Name: row.Name, Blurb: row.Blurb, Tags: row.Tags,
-		IsNSFW: &row.IsNsfw, Discovery: Discovery(row.Discovery), Lifecycle: Lifecycle(row.Lifecycle),
-		CurrentRevisionID: uuidFromPgtype(row.CurrentRevisionID),
-		CreatedAt:         timeFromPgtype(row.CreatedAt),
-	}, nil
+type browseQuery struct {
+	Text   string
+	Author string
+	Tags   []string
 }
 
-func nullableTags(tags []string) []string {
-	if len(tags) == 0 {
-		return nil
+func parseBrowseQuery(raw string) browseQuery {
+	var parsed browseQuery
+	var text []string
+	for _, token := range browseTokens(raw) {
+		lower := normalizeBrowseText(token)
+		switch {
+		case strings.HasPrefix(lower, "tag:") && len(lower) > len("tag:"):
+			parsed.Tags = append(parsed.Tags, normalizeBrowseText(token[len("tag:"):]))
+		case strings.HasPrefix(lower, "author:") && len(lower) > len("author:"):
+			if parsed.Author == "" {
+				parsed.Author = normalizeBrowseText(token[len("author:"):])
+			}
+		default:
+			text = append(text, lower)
+		}
 	}
-	return tags
+	parsed.Text = strings.Join(text, " ")
+	return parsed
+}
+
+func browseTokens(raw string) []string {
+	var tokens []string
+	var token strings.Builder
+	quoted := false
+	for _, char := range raw {
+		switch {
+		case char == '"':
+			quoted = !quoted
+		case !quoted && (char == ' ' || char == '\t' || char == '\n' || char == '\r'):
+			if token.Len() > 0 {
+				tokens = append(tokens, token.String())
+				token.Reset()
+			}
+		default:
+			token.WriteRune(char)
+		}
+	}
+	if token.Len() > 0 {
+		tokens = append(tokens, token.String())
+	}
+	return tokens
+}
+
+func normalizeBrowseText(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }

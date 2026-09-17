@@ -163,7 +163,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 		`{"name":"Sunlit Archive","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("rename status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAssetUpdate(t, s.router, s.creator, assetID, `{"summary":"A new name"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishAssetUpdate(t, s.router, s.creator, assetID, `{"summary":"A new name"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the rename = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	s.fanOut(t, time.Now())
@@ -412,7 +412,7 @@ func (s inboxStack) upload(t *testing.T, name string) string {
 	t.Helper()
 	metadata := apitest.ExampleMetadata(name)
 	metadata["filename"] = "archive.lumitheme"
-	return assetIDFromIngest(t, apitest.UploadAndFinish(t, s.router, s.creator, s.assets, metadata, []byte(name)))
+	return apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, s.router, s.creator, s.assets, metadata, []byte(name)))
 }
 
 func (s inboxStack) withhold(t *testing.T, assetID, reason string) {

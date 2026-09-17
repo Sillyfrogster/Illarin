@@ -50,20 +50,6 @@ func newCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.S
 	return harness.NewVerifiedIngestRouter(t, registry)
 }
 
-func uploadedCharacterID(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assets *asset.Service,
-	card string,
-) string {
-	t.Helper()
-	metadata := apitest.ExampleMetadata("Ana")
-	metadata["filename"] = "ana.json"
-	metadata["_keepDraft"] = true
-	return assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(card)))
-}
-
 func preservedNamespaces(
 	t *testing.T,
 	r http.Handler,
@@ -104,7 +90,7 @@ func namespaceNames(rows []struct {
 func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
 	names := namespaceNames(preservedNamespaces(t, r, session, assetID))
 	for _, want := range []string{"card", "character_book", "chub", "tavern_helper"} {
@@ -122,7 +108,7 @@ func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
@@ -150,7 +136,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
 	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID, nil,
@@ -173,10 +159,10 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 	before := preservedNamespaces(t, r, session, assetID)
 
-	page := fetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
 	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
@@ -199,10 +185,10 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
 	before := namespaceBytes(t, r, session, assetID, "character_book")
-	page := fetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	lorebook := apitest.BlockNamed(t, page.Blocks, "lorebook")
 	body := apitest.EditableBlock(lorebook)
 
@@ -342,11 +328,11 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, r, session, assets, metadata, []byte(aCardCarryingThirdPartyNamespaces),
 	))
 
-	page := fetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
 	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)

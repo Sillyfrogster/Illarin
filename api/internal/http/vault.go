@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -45,7 +46,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -67,7 +68,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.PlaceVaultPicture(
 		c.Request.Context(), owner.ID, id, pictureID, mediaID, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -78,7 +79,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
 	default:
-		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the page after placing the picture.")
 			return
@@ -96,7 +97,7 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -106,7 +107,7 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	}
 	candidate := &asset.Candidate{Version: version}
 	err := h.assets.DiscardVaultPicture(c.Request.Context(), owner.ID, id, pictureID, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {

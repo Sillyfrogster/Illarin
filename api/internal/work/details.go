@@ -1,4 +1,4 @@
-package asset
+package work
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
@@ -27,7 +28,7 @@ type Identity struct {
 	IsNSFW  *bool
 }
 
-func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candidate) error {
+func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *asset.Candidate) error {
 	name := strings.TrimSpace(in.Name)
 	if utf8.RuneCountInString(name) > MaxNameRunes {
 		return fmt.Errorf("%w: %d characters is past %d", ErrNameTooLong,
@@ -52,22 +53,19 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *Candi
 		return err
 	}
 
-	if in.IsNSFW == nil && Lifecycle(lifecycle) != LifecycleDraft {
+	if in.IsNSFW == nil && asset.Lifecycle(lifecycle) != asset.LifecycleDraft {
 		return ErrRatingUnanswerable
 	}
-	fingerprint, err := s.contentFingerprint(ctx, tx, in.AssetID)
-	if err != nil {
+	if err := s.assets.ChangeContent(ctx, tx, in.AssetID, func() error {
+		if _, err := tx.Exec(ctx, `
+			update assets set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
+			 where id = $1
+		`, in.AssetID, name, in.Blurb, in.IsNSFW); err != nil {
+			return fmt.Errorf("save asset header: %w", err)
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-
-	if _, err := tx.Exec(ctx, `
-		update assets set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
-		 where id = $1
-	`, in.AssetID, name, in.Blurb, in.IsNSFW); err != nil {
-		return fmt.Errorf("save asset header: %w", err)
-	}
-	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
-		return err
-	}
-	return candidate.commit(ctx, tx, in.AssetID)
+	return candidate.Commit(ctx, tx, in.AssetID)
 }

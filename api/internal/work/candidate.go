@@ -1,4 +1,4 @@
-package http
+package work
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func candidateResult(c *gin.Context, candidate *asset.Candidate, err error) bool {
+func CandidateResult(c *gin.Context, candidate *asset.Candidate, err error) bool {
 	var conflict *asset.VersionConflict
 	switch {
 	case errors.As(err, &conflict):

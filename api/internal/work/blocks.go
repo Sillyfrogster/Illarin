@@ -1,10 +1,10 @@
-package http
+package work
 
 import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-func toAPIBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
+func ToBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
 	out := make([]AssetBlock, 0, len(blocks))
 	for _, b := range blocks {
 		definition, _ := b.Definition.Definition(kind)

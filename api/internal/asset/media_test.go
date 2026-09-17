@@ -25,7 +25,7 @@ import (
 )
 
 func privateMediaQuery(svc *Service, id uuid.UUID, key string) string {
-	signed, _ := url.Parse(svc.variantURL(id, "grid", false, true))
+	signed, _ := url.Parse(svc.ImageAddress(id, "grid", false, true))
 	return signed.Query().Get(key)
 }
 
@@ -33,13 +33,13 @@ func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
 	t.Parallel()
 	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
 	svc := &Service{}
-	if got := svc.variantURL(id, "grid", false, false); got != "/media/"+id.String()+"/grid/2" {
+	if got := svc.ImageAddress(id, "grid", false, false); got != "/media/"+id.String()+"/grid/2" {
 		t.Fatalf("clear URL = %q", got)
 	}
-	if got := svc.variantURL(id, "grid", true, false); got != "/media/"+id.String()+"/grid_blurred/2" {
+	if got := svc.ImageAddress(id, "grid", true, false); got != "/media/"+id.String()+"/grid_blurred/2" {
 		t.Fatalf("blurred URL = %q", got)
 	}
-	if got := svc.variantURL(id, "og", true, false); got != "/media/"+id.String()+"/og_blurred/2" {
+	if got := svc.ImageAddress(id, "og", true, false); got != "/media/"+id.String()+"/og_blurred/2" {
 		t.Fatalf("blurred embed URL = %q", got)
 	}
 }

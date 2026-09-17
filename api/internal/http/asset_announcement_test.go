@@ -94,7 +94,7 @@ func (s destinationStack) describe(t *testing.T, session *http.Cookie, started a
 
 func (s destinationStack) announced(t *testing.T, session *http.Cookie, assetID, body string) {
 	t.Helper()
-	response := publishAssetUpdate(t, s.router, session, assetID, body)
+	response := apitest.PublishAssetUpdate(t, s.router, session, assetID, body)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update = %d: %s", response.Code, response.Body.String())
 	}
@@ -368,7 +368,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	}
 
 	stack.describe(t, stack.editor, started, "Needs consent.")
-	refused := publishAssetUpdate(t, stack.router, stack.editor, started.ID,
+	refused := apitest.PublishAssetUpdate(t, stack.router, stack.editor, started.ID,
 		fmt.Sprintf(`{"summary":"Needs consent","destinationIds":[%q]}`, hook.Destination.ID))
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
 		t.Fatalf("selecting a destination for an unlisted asset = %d: %s", refused.Code, refused.Body.String())
@@ -408,7 +408,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 	stack.describe(t, stack.editor, started, "Changed.")
 
 	for _, id := range []string{theirs.Destination.ID, disabled.Destination.ID} {
-		refused := publishAssetUpdate(t, stack.router, stack.editor, started.ID,
+		refused := apitest.PublishAssetUpdate(t, stack.router, stack.editor, started.ID,
 			fmt.Sprintf(`{"summary":"Changed","destinationIds":[%q]}`, id))
 		if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "destinationIds") {
 			t.Fatalf("publishing to an ineligible destination = %d: %s", refused.Code, refused.Body.String())

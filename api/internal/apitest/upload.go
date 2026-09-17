@@ -120,3 +120,74 @@ func PNG(t *testing.T, width, height int) []byte {
 	}
 	return encoded.Bytes()
 }
+
+func MediaUploadRequest(t *testing.T, assetID, role string, file []byte) *http.Request {
+	t.Helper()
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	WriteMetadataPart(t, form, map[string]any{"role": role})
+	WriteFilePartNamed(t, form, "screenshot.png", file)
+	if err := form.Close(); err != nil {
+		t.Fatalf("close media form: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/media", &body)
+	request.Header.Set("Content-Type", form.FormDataContentType())
+	return request
+}
+
+func AssetIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string {
+	t.Helper()
+	var operation struct {
+		Asset *struct {
+			ID string `json:"id"`
+		} `json:"asset"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &operation); err != nil {
+		t.Fatalf("decode ingest response: %v", err)
+	}
+	if operation.Asset == nil {
+		t.Fatal("ingest response has no asset")
+	}
+	return operation.Asset.ID
+}
+
+func UploadDiscoveryTestAsset(
+	t *testing.T,
+	router http.Handler,
+	session *http.Cookie,
+	assets *asset.Service,
+	discovery asset.Discovery,
+) string {
+	t.Helper()
+	metadata := ExampleMetadata("A quiet draft")
+	metadata["filename"] = "quiet-draft.lumitheme"
+	if discovery == "" {
+		delete(metadata, "discovery")
+	} else {
+		metadata["discovery"] = discovery
+	}
+	return AssetIDFromIngest(
+		t, UploadAndFinish(t, router, session, assets, metadata, []byte("theme")),
+	)
+}
+
+func UploadedImageID(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID, role string,
+	file []byte,
+) string {
+	t.Helper()
+	added := Send(t, r, Authorized(MediaUploadRequest(t, assetID, role, file), session))
+	if added.Code != http.StatusCreated {
+		t.Fatalf("add a %s image: %d %s", role, added.Code, added.Body.String())
+	}
+	var picture struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(added.Body.Bytes(), &picture); err != nil {
+		t.Fatalf("decode the added picture: %v", err)
+	}
+	return picture.ID
+}

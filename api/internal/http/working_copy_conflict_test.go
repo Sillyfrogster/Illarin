@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
 func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
-	started := startPreset(t, r, session, "lumiverse")
+	started := apitest.StartPreset(t, r, session, "lumiverse")
 	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = apitest.Authorized(req, session)
@@ -63,14 +64,14 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			if responses[winner].Code != want || responses[loser].Code != http.StatusConflict {
 				t.Fatalf("concurrent results: %d %s; %d %s", responses[0].Code, responses[0].Body, responses[1].Code, responses[1].Body)
 			}
-			var conflict CandidateConflict
+			var conflict work.CandidateConflict
 			if err := json.Unmarshal(responses[loser].Body.Bytes(), &conflict); err != nil {
 				t.Fatal(err)
 			}
 			if conflict.Code != "working_copy_conflict" || conflict.CurrentVersion == nil || strconv.FormatInt(*conflict.CurrentVersion, 10) != responses[winner].Header().Get("X-Working-Copy-Version") {
 				t.Fatalf("conflict lacks the winning version: %+v", conflict)
 			}
-			page := fetchStartedAsset(t, r, session, started.ID)
+			page := apitest.FetchStartedAsset(t, r, session, started.ID)
 			wantName := "First editor"
 			wantBlurb := "First pitch"
 			if winner == 1 {

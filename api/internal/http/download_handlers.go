@@ -20,7 +20,7 @@ func (h *Handlers) DownloadSource(c *gin.Context) {
 	if !ok {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}
@@ -46,7 +46,7 @@ func (h *Handlers) DownloadExport(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}
@@ -159,7 +159,7 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}

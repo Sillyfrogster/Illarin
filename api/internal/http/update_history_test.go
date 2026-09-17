@@ -61,7 +61,7 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	update := publishAssetUpdate(t, r, session, started.ID,
+	update := apitest.PublishAssetUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())

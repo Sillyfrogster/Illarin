@@ -1,34 +1,18 @@
-package http
+package work_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
-
-type profileListingResponse struct {
-	Items []struct {
-		Name       string  `json:"name"`
-		IsNsfw     *bool   `json:"isNsfw"`
-		OwnerState *string `json:"ownerState"`
-		Withhold   *struct {
-			Reason string    `json:"reason"`
-			At     time.Time `json:"at"`
-		} `json:"withhold"`
-	} `json:"items"`
-	Total      int `json:"total"`
-	Suppressed int `json:"suppressed"`
-}
 
 func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	t.Parallel()
@@ -43,8 +27,8 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 		`insert into users (id, username) values ($1, $2)`, secondID, "second.creator"); err != nil {
 		t.Fatalf("insert second creator: %v", err)
 	}
-	createProfileAsset(t, assets, firstID, "First garden", false, asset.DiscoveryListed)
-	createProfileAsset(t, assets, secondID, "Second garden", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, firstID, "First garden", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, secondID, "Second garden", false, asset.DiscoveryListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?creator=verified.creator", nil,
@@ -53,7 +37,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 		t.Fatalf("profile listing status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
-	var body profileListingResponse
+	var body apitest.ProfileListingResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode profile listing: %v", err)
 	}
@@ -70,8 +54,8 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
 		t.Fatalf("read creator: %v", err)
 	}
-	createProfileAsset(t, assets, creatorID, "Open garden", false, asset.DiscoveryListed)
-	createProfileAsset(t, assets, creatorID, "Midnight garden", true, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, creatorID, "Open garden", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, creatorID, "Midnight garden", true, asset.DiscoveryListed)
 
 	shown := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
@@ -101,13 +85,13 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
 		t.Fatalf("read creator: %v", err)
 	}
-	createProfileAsset(t, assets, creatorID, "Public garden", false, asset.DiscoveryListed)
-	createProfileAsset(t, assets, creatorID, "Adult garden", true, asset.DiscoveryListed)
-	createProfileAsset(t, assets, creatorID, "Unlisted garden", false, asset.DiscoveryUnlisted)
-	withheldID := createProfileAsset(
+	apitest.CreateProfileAsset(t, assets, creatorID, "Public garden", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, creatorID, "Adult garden", true, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, assets, creatorID, "Unlisted garden", false, asset.DiscoveryUnlisted)
+	withheldID := apitest.CreateProfileAsset(
 		t, assets, creatorID, "Withheld garden", false, asset.DiscoveryListed,
 	)
-	deletedID := createProfileAsset(
+	deletedID := apitest.CreateProfileAsset(
 		t, assets, creatorID, "Deleted garden", false, asset.DiscoveryListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
@@ -171,7 +155,7 @@ func readProfileListing(
 	router http.Handler,
 	path string,
 	session *http.Cookie,
-) profileListingResponse {
+) apitest.ProfileListingResponse {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, path, nil)
 	if session != nil {
@@ -181,37 +165,17 @@ func readProfileListing(
 	if response.Code != http.StatusOK {
 		t.Fatalf("profile listing status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	var body profileListingResponse
+	var body apitest.ProfileListingResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode profile listing: %v", err)
 	}
 	return body
 }
 
-func names(list profileListingResponse) []string {
+func names(list apitest.ProfileListingResponse) []string {
 	result := make([]string, len(list.Items))
 	for i, item := range list.Items {
 		result[i] = item.Name
 	}
 	return result
-}
-
-func createProfileAsset(
-	t *testing.T,
-	assets *asset.Service,
-	ownerID uuid.UUID,
-	name string,
-	isNSFW bool,
-	discovery asset.Discovery,
-) uuid.UUID {
-	t.Helper()
-	created, err := assets.Create(context.Background(), asset.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: name + ".lumitheme",
-		File: bytes.NewReader([]byte(name)), Name: name, IsNSFW: isNSFW,
-		Discovery: discovery,
-	})
-	if err != nil {
-		t.Fatalf("create profile asset %q: %v", name, err)
-	}
-	return created.ID
 }

@@ -165,10 +165,10 @@ func (s *Service) addressPictures(
 	for _, group := range groups {
 		for index, change := range group.Changes {
 			if change.BeforeMedia != nil {
-				group.Changes[index].BeforeImage = s.variantURL(*change.BeforeMedia, "thumb", blurred, false)
+				group.Changes[index].BeforeImage = s.ImageAddress(*change.BeforeMedia, "thumb", blurred, false)
 			}
 			if change.AfterMedia != nil {
-				group.Changes[index].AfterImage = s.variantURL(*change.AfterMedia, "thumb", blurred, false)
+				group.Changes[index].AfterImage = s.ImageAddress(*change.AfterMedia, "thumb", blurred, false)
 			}
 		}
 	}

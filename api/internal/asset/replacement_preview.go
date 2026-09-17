@@ -75,7 +75,7 @@ func replacementBlobIDs(job ingestJob, prepared preparedIngest) []uuid.UUID {
 }
 
 func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, prepared preparedIngest) (ReplacementPreview, error) {
-	working, err := readBlocks(ctx, tx, assetID)
+	working, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return ReplacementPreview{}, err
 	}
@@ -639,7 +639,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	`, operationID, assetID, s.now()); err != nil {
 		return IngestOperation{}, fmt.Errorf("accept replacement preview: %w", err)
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return IngestOperation{}, err
 	}
 	accepted, err := s.GetIngest(ctx, ownerID, operationID)

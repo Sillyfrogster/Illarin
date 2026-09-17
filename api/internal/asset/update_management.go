@@ -83,7 +83,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if err := s.writeProjections(ctx, tx, assetID); err != nil {
 		return err
 	}
-	return candidate.commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, assetID)
 }
 
 func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid.UUID, number int, summary, notes string) error {

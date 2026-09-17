@@ -70,7 +70,7 @@ func (s *Service) SaveBlock(
 		return SavedBlock{}, err
 	}
 
-	blocks, err := readBlocks(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -153,7 +153,7 @@ func (s *Service) SaveBlock(
 			break
 		}
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: *saved}, nil
@@ -218,7 +218,7 @@ func (s *Service) AddBlock(
 	if err != nil {
 		return SavedBlock{}, err
 	}
-	page, err := readBlocks(ctx, tx, assetID)
+	page, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
@@ -242,7 +242,7 @@ func (s *Service) AddBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return SavedBlock{}, err
 	}
 	return SavedBlock{Kind: kind, Block: added}, nil
@@ -265,7 +265,7 @@ func (s *Service) ArrangeBlocks(
 	if err != nil {
 		return SavedBlocks{}, err
 	}
-	blocks, err := readBlocks(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -311,7 +311,7 @@ func (s *Service) ArrangeBlocks(
 	if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
@@ -338,7 +338,7 @@ func (s *Service) RemoveBlock(
 	if err != nil {
 		return err
 	}
-	blocks, err := readBlocks(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (s *Service) RemoveBlock(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return err
 	}
-	return candidate.commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, assetID)
 }
 
 func (s *Service) MoveBlockContent(
@@ -404,7 +404,7 @@ func (s *Service) MoveBlockContent(
 	if err != nil {
 		return SavedBlocks{}, err
 	}
-	before, err := readBlocks(ctx, tx, assetID)
+	before, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -491,7 +491,7 @@ func (s *Service) MoveBlockContent(
 	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
 		return SavedBlocks{}, err
 	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, assetID); err != nil {
 		return SavedBlocks{}, err
 	}
 	return SavedBlocks{Kind: kind, Blocks: after}, nil
@@ -569,31 +569,6 @@ func insertBlocks(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, blocks []bl
 		}
 	}
 	return nil
-}
-
-func readBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
-	rows, err := db.New(q).AssetBlocks(ctx, uuidToPgtype(assetID))
-	if err != nil {
-		return nil, fmt.Errorf("read asset blocks: %w", err)
-	}
-	blocks := make([]block.Block, 0, len(rows))
-	for _, row := range rows {
-		var elements []block.Element
-		if err := json.Unmarshal(row.Elements, &elements); err != nil {
-			return nil, fmt.Errorf("read %s elements: %w", row.Definition, err)
-		}
-		blocks = append(blocks, block.Block{
-			ID:         uuidFromPgtype(row.ID),
-			Definition: block.DefinitionID(row.Definition),
-			Title:      textToPointer(row.Title),
-			Position:   int(row.Position),
-			Hidden:     row.Hidden,
-			Layout:     block.Layout(row.Layout),
-			Width:      block.Width(row.Width),
-			Elements:   elements,
-		})
-	}
-	return blocks, nil
 }
 
 func readPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {

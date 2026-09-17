@@ -550,7 +550,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	}
 	if job.Target != nil {
 		candidate := &Candidate{Version: job.Target.Version}
-		if err := candidate.commit(ctx, tx, job.Target.AssetID); err != nil {
+		if err := candidate.Commit(ctx, tx, job.Target.AssetID); err != nil {
 			return err
 		}
 	} else if err := tx.Commit(ctx); err != nil {
@@ -601,7 +601,7 @@ func (s *Service) writeIngestResultWithDecisions(
 		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
 			return uuid.Nil, err
 		}
-		existing, err := readBlocks(ctx, tx, job.Target.AssetID)
+		existing, err := block.Read(ctx, tx, job.Target.AssetID)
 		if err != nil {
 			return uuid.Nil, err
 		}

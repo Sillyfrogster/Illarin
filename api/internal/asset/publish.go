@@ -12,8 +12,6 @@ import (
 
 var ErrPublishFloor = errors.New("the draft is not ready to publish")
 
-var ErrAlreadyPublished = errors.New("the asset is already published")
-
 const (
 	nameRequirement         = "name"
 	adultContentRequirement = "adult_content"
@@ -39,15 +37,15 @@ func Ready(items []ReadinessItem) bool {
 	return true
 }
 
-func publishedShortfall(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
-	items := readiness(kind, name, isNSFW, blocks)
+func PublishedShortfall(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
+	items := Readiness(kind, name, isNSFW, blocks)
 	if Ready(items) {
 		return nil
 	}
 	return items
 }
 
-func readiness(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
+func Readiness(kind, name string, isNSFW *bool, blocks []block.Block) []ReadinessItem {
 	items := []ReadinessItem{
 		{
 			ID:     nameRequirement,
@@ -71,7 +69,7 @@ func readiness(kind, name string, isNSFW *bool, blocks []block.Block) []Readines
 	return items
 }
 
-func (s *Service) candidateReadiness(
+func (s *Service) CandidateReadiness(
 	ctx context.Context,
 	tx pgx.Tx,
 	assetID uuid.UUID,
@@ -79,7 +77,7 @@ func (s *Service) candidateReadiness(
 	isNSFW *bool,
 	blocks []block.Block,
 ) ([]ReadinessItem, error) {
-	items := readiness(kind, name, isNSFW, blocks)
+	items := Readiness(kind, name, isNSFW, blocks)
 	targets, err := s.exportCapability(ctx, tx, assetID)
 	if err != nil {
 		return nil, err
@@ -148,58 +146,4 @@ func uploadReviewed(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, er
 		return false, fmt.Errorf("read the uploads waiting on this asset: %w", err)
 	}
 	return reviewed, nil
-}
-
-func (s *Service) Publish(
-	ctx context.Context,
-	ownerID uuid.UUID,
-	assetID uuid.UUID,
-	candidate *Candidate,
-) ([]ReadinessItem, error) {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
-		return nil, err
-	}
-
-	var kind, name, lifecycle string
-	var isNSFW *bool
-	err = tx.QueryRow(ctx, `select kind, name, is_nsfw, lifecycle from assets where id = $1`, assetID).Scan(&kind, &name, &isNSFW, &lifecycle)
-	if err != nil {
-		return nil, fmt.Errorf("read asset to publish: %w", err)
-	}
-
-	if Lifecycle(lifecycle) != LifecycleDraft {
-		return nil, ErrAlreadyPublished
-	}
-
-	blocks, err := readBlocks(ctx, tx, assetID)
-	if err != nil {
-		return nil, err
-	}
-	items, err := s.candidateReadiness(ctx, tx, assetID, kind, name, isNSFW, blocks)
-	if err != nil {
-		return nil, err
-	}
-	if !Ready(items) {
-		return items, ErrPublishFloor
-	}
-
-	if _, err := tx.Exec(ctx, `
-		update assets set lifecycle = 'published', updated_at = now()
-		 where id = $1
-	`, assetID); err != nil {
-		return nil, fmt.Errorf("publish asset: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, assetID); err != nil {
-		return nil, fmt.Errorf("record initial publication: %w", err)
-	}
-	if err := candidate.commit(ctx, tx, assetID); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

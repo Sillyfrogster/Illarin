@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"context"
@@ -61,8 +61,8 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	if finished.Code != http.StatusOK {
 		t.Fatalf("finish ingest status = %d, want 200: %s", finished.Code, finished.Body.String())
 	}
-	assetID := assetIDFromIngest(t, finished)
-	gallery := apitest.Send(t, router, apitest.Authorized(mediaUploadRequest(
+	assetID := apitest.AssetIDFromIngest(t, finished)
+	gallery := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "gallery", apitest.PNG(t, 400, 300),
 	), session))
 	if gallery.Code != http.StatusCreated {
@@ -277,17 +277,17 @@ func TestFacetsAreKindScopedAndFilterOnElementContent(t *testing.T) {
 
 func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newCharacterIngestRouterWithPool(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	givePictures(t, r, session, assetID, "gallery", "gallery")
-	publishCharacter(t, r, session, assetID)
+	r, session, assets, _ := harness.NewCharacterIngestRouterWithPool(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
+	apitest.PublishCharacter(t, r, session, assetID)
 
 	before := readBrowse(t, r, "/v1/assets?kind=character&facet=gallery%3Dtrue")
 	if !slices.Equal(before.Names, []string{"Ana"}) {
 		t.Fatalf("a gallery answered %v, want Ana", before.Names)
 	}
 
-	page := fetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	gallery := apitest.BlockNamed(t, page.Blocks, "gallery")
 	messagesBlock := apitest.BlockNamed(t, page.Blocks, "messages")
 
@@ -297,7 +297,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	if response := apitest.SaveBlock(t, r, session, assetID, gallery.ID, renamed); response.Code != http.StatusOK {
 		t.Fatalf("rename the gallery: %d %s", response.Code, response.Body.String())
 	}
-	reordered := arrangeBlocks(t, r, session, assetID, []arrangedBlock{
+	reordered := apitest.ArrangeBlocks(t, r, session, assetID, []apitest.ArrangedBlock{
 		{ID: gallery.ID, Width: gallery.Width},
 		{ID: messagesBlock.ID, Width: messagesBlock.Width},
 		{ID: apitest.BlockNamed(t, page.Blocks, "character_core").ID, Width: "full"},
@@ -334,7 +334,7 @@ func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 	router, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
-	custom := addedBlock(t, addBlock(t, router, session, started.ID, "custom_block", "text_set"))
+	custom := apitest.AddedBlock(t, apitest.AddBlock(t, router, session, started.ID, "custom_block", "text_set"))
 	if response := apitest.PublishAsset(t, router, session, started.ID); response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
@@ -357,10 +357,10 @@ func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 
 func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newCharacterIngestRouterWithPool(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	addedBlock(t, addBlock(t, r, session, assetID, "expressions", "image_set"))
-	publishCharacter(t, r, session, assetID)
+	r, session, assets, _ := harness.NewCharacterIngestRouterWithPool(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.AddedBlock(t, apitest.AddBlock(t, r, session, assetID, "expressions", "image_set"))
+	apitest.PublishCharacter(t, r, session, assetID)
 
 	carried := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
 	if len(carried.Names) != 0 {
@@ -425,38 +425,38 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time
 
 func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	giveExpressions(t, r, session, assetID)
-	publishCharacter(t, r, session, assetID)
+	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GiveExpressions(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, assetID)
 
 	shown := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
 	if !slices.Equal(shown.Names, []string{"Ana"}) {
 		t.Fatalf("a shown expression set answered %v, want Ana", shown.Names)
 	}
 
-	exportedAt := projectionComputedAt(t, pool, assetID)
+	exportedAt := apitest.ProjectionComputedAt(t, pool, assetID)
 	measuredAt := facetComputedAt(t, pool, assetID)
-	generation := contentGeneration(t, pool, assetID)
+	generation := apitest.ContentGeneration(t, pool, assetID)
 
-	page := fetchStartedAsset(t, r, session, assetID)
-	arrangement := make([]arrangedBlock, 0, len(page.Blocks))
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	arrangement := make([]apitest.ArrangedBlock, 0, len(page.Blocks))
 	for _, holder := range page.Blocks {
-		arrangement = append(arrangement, arrangedBlock{
+		arrangement = append(arrangement, apitest.ArrangedBlock{
 			ID: holder.ID, Hidden: holder.Definition == "expressions", Width: holder.Width,
 		})
 	}
-	if hidden := arrangeBlocks(t, r, session, assetID, arrangement); hidden.Code != http.StatusOK {
+	if hidden := apitest.ArrangeBlocks(t, r, session, assetID, arrangement); hidden.Code != http.StatusOK {
 		t.Fatalf("hide the expressions: %d %s", hidden.Code, hidden.Body.String())
 	}
 
-	if after := projectionComputedAt(t, pool, assetID); !after.Equal(exportedAt) {
+	if after := apitest.ProjectionComputedAt(t, pool, assetID); !after.Equal(exportedAt) {
 		t.Error("hiding a block moved the export half of the projection")
 	}
 	if after := facetComputedAt(t, pool, assetID); !after.After(measuredAt) {
 		t.Error("hiding a block left the facet half of the projection alone")
 	}
-	if after := contentGeneration(t, pool, assetID); after != generation {
+	if after := apitest.ContentGeneration(t, pool, assetID); after != generation {
 		t.Errorf("content generation = %d, want %d after a hide", after, generation)
 	}
 
@@ -475,7 +475,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
 	}
-	if !containsBytes(export.Body, []byte("happy")) {
+	if !apitest.ContainsBytes(export.Body, []byte("happy")) {
 		t.Fatal("a hidden block's content did not travel in the download")
 	}
 }
@@ -488,8 +488,8 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	metadata["filename"] = "veiled-garden.lumitheme"
 	metadata["isNsfw"] = true
 	created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte("garden"))
-	assetID := assetIDFromIngest(t, created)
-	added := apitest.Send(t, router, apitest.Authorized(mediaUploadRequest(
+	assetID := apitest.AssetIDFromIngest(t, created)
+	added := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "avatar", apitest.PNG(t, 80, 120),
 	), session))
 	if added.Code != http.StatusCreated {

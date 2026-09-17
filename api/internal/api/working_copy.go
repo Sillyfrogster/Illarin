@@ -1,18 +1,17 @@
-package http
+package api
 
 import (
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/gin-gonic/gin"
 )
 
 const workingCopyVersionHeader = "X-Working-Copy-Version"
 
-// workingCopyVersion reads the working copy version the creator last saw
-func workingCopyVersion(c *gin.Context) (int64, bool) {
+// WorkingCopyVersion reads the working copy version the creator last saw
+func WorkingCopyVersion(c *gin.Context) (int64, bool) {
 	values := c.Request.Header.Values(workingCopyVersionHeader)
 	if len(values) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "Header parameter " + workingCopyVersionHeader + " is required, but not found"})
@@ -24,7 +23,7 @@ func workingCopyVersion(c *gin.Context) (int64, bool) {
 	}
 	version, err := strconv.ParseInt(values[0], 10, 64)
 	if err != nil {
-		api.RefuseParameter(c, workingCopyVersionHeader, err)
+		RefuseParameter(c, workingCopyVersionHeader, err)
 		return 0, false
 	}
 	return version, true

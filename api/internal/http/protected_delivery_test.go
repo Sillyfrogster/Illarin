@@ -49,7 +49,7 @@ func publishSealedPreset(
 	privateText string,
 ) string {
 	t.Helper()
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(
 		`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` +
@@ -86,7 +86,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	assetID := assetIDFromIngest(
+	assetID := apitest.AssetIDFromIngest(
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
@@ -95,7 +95,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 
-	page := fetchStartedAsset(t, router, session, assetID)
+	page := apitest.FetchStartedAsset(t, router, session, assetID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 	sealed := sealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
 	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
@@ -121,7 +121,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	assetID := assetIDFromIngest(
+	assetID := apitest.AssetIDFromIngest(
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
@@ -129,7 +129,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 	sendToInstance(t, router, session, assetID, grant.Instance.ID)
 	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
-	page := fetchStartedAsset(t, router, session, assetID)
+	page := apitest.FetchStartedAsset(t, router, session, assetID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 	sealed := sealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
 	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
@@ -186,7 +186,7 @@ func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
-	assetID := assetIDFromIngest(
+	assetID := apitest.AssetIDFromIngest(
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset)),
 	)
 	reader := addVerifiedLinkingUser(t, router, pool, "reader@example.com", "reader.creator")

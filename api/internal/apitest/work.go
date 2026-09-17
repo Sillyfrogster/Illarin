@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StartedAsset struct {
@@ -285,4 +288,66 @@ func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 		page.WorkingCopyVersion = 1
 	}
 	req.Header.Set("X-Working-Copy-Version", strconv.FormatInt(page.WorkingCopyVersion, 10))
+}
+
+func ContentGeneration(t *testing.T, pool *pgxpool.Pool, assetID string) int {
+	t.Helper()
+	id, err := uuid.Parse(assetID)
+	if err != nil {
+		t.Fatalf("parse the asset id: %v", err)
+	}
+	var generation int
+	if err := pool.QueryRow(t.Context(),
+		`select content_generation from assets where id = $1`, id,
+	).Scan(&generation); err != nil {
+		t.Fatalf("read the content generation: %v", err)
+	}
+	return generation
+}
+
+func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) StartedAsset {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
+		strings.NewReader(`{"kind":"preset","app":"`+app+`"}`))
+	request.Header.Set("Content-Type", "application/json")
+	response := Send(t, r, Authorized(request, session))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("start a preset for %s: status = %d, want 201: %s",
+			app, response.Code, response.Body.String())
+	}
+	var started StartedAsset
+	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
+		t.Fatalf("decode the started asset: %v", err)
+	}
+	return started
+}
+
+type PublishRefusal struct {
+	Error     string          `json:"error"`
+	Readiness []ReadinessItem `json:"readiness"`
+}
+
+func ItemNamed(t *testing.T, items []ReadinessItem, id string) ReadinessItem {
+	t.Helper()
+	for _, item := range items {
+		if item.ID == id {
+			return item
+		}
+	}
+	t.Fatalf("no %s item in the readiness list %+v", id, items)
+	return ReadinessItem{}
+}
+
+func PublishAssetUpdate(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+	body string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost,
+		"/v1/assets/"+assetID+"/updates", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	return Send(t, r, Authorized(request, session))
 }

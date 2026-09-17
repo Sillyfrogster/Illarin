@@ -29,6 +29,8 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -74,14 +76,14 @@ func run() error {
 	svc := asset.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
-	recomputed, err := svc.RecomputeStaleExportProjections(runtimeContext)
+	recomputed, err := summary.RecomputeStaleFormats(runtimeContext, pool, registry)
 	if err != nil {
 		return fmt.Errorf("export projections: %w", err)
 	}
 	if recomputed > 0 {
 		log.Printf("recomputed the export projection for %d assets", recomputed)
 	}
-	remeasured, err := svc.RecomputeStaleFacetProjections(runtimeContext)
+	remeasured, err := summary.RecomputeStaleFilters(runtimeContext, pool, registry)
 	if err != nil {
 		return fmt.Errorf("facet projections: %w", err)
 	}
@@ -205,7 +207,7 @@ func run() error {
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
 	handlers := apihttp.NewHandlers(
-		svc, accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
+		svc, work.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
 	)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {

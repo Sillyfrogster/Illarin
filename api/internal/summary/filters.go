@@ -1,4 +1,4 @@
-package asset
+package summary
 
 import (
 	"context"
@@ -8,16 +8,14 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func (s *Service) writeFacetProjection(
-	ctx context.Context,
-	tx pgx.Tx,
-	assetID uuid.UUID,
-) error {
-	counts, err := facetCounts(ctx, tx, assetID)
+func WriteFilters(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
+	counts, err := filterCounts(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
@@ -32,28 +30,24 @@ func (s *Service) writeFacetProjection(
 		   set facets = excluded.facets,
 		       facet_stamp = excluded.facet_stamp,
 		       facet_computed_at = excluded.facet_computed_at
-	`, assetID, stored, block.FacetStamp()); err != nil {
+	`, workID, stored, block.FacetStamp()); err != nil {
 		return fmt.Errorf("store the facet projection: %w", err)
 	}
 	return nil
 }
 
-func facetCounts(
-	ctx context.Context,
-	q db.DBTX,
-	assetID uuid.UUID,
-) (map[block.FacetKey]int, error) {
+func filterCounts(ctx context.Context, q db.DBTX, workID uuid.UUID) (map[block.FacetKey]int, error) {
 	var kind string
 	err := q.QueryRow(ctx, `
 		select kind from assets where id = $1 and deleted_at is null
-	`, assetID).Scan(&kind)
+	`, workID).Scan(&kind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read the asset to measure: %w", err)
 	}
-	blocks, err := readBlocks(ctx, q, assetID)
+	blocks, err := block.Read(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +65,8 @@ func shownElements(blocks []block.Block) []block.Element {
 	return elements
 }
 
-func (s *Service) RecomputeStaleFacetProjections(ctx context.Context) (int, error) {
-	stale, err := s.staleProjections(ctx, `
+func RecomputeStaleFilters(ctx context.Context, pool *pgxpool.Pool, reg *format.Registry) (int, error) {
+	stale, err := staleWorks(ctx, pool, `
 		select asset.id
 		  from assets asset
 		  left join asset_projections projection on projection.asset_id = asset.id
@@ -83,14 +77,14 @@ func (s *Service) RecomputeStaleFacetProjections(ctx context.Context) (int, erro
 	if err != nil {
 		return 0, err
 	}
-	for _, assetID := range stale {
-		if err := s.inTransaction(ctx, func(tx pgx.Tx) error {
-			if err := s.writeFacetProjection(ctx, tx, assetID); err != nil {
+	for _, workID := range stale {
+		if err := inTransaction(ctx, pool, func(tx pgx.Tx) error {
+			if err := WriteFilters(ctx, tx, workID); err != nil {
 				return err
 			}
-			return s.writePublishedProjections(ctx, tx, assetID)
+			return writePublished(ctx, tx, reg, workID)
 		}); err != nil {
-			return 0, fmt.Errorf("recompute the facet projection for %s: %w", assetID, err)
+			return 0, fmt.Errorf("recompute the facet projection for %s: %w", workID, err)
 		}
 	}
 	return len(stale), nil

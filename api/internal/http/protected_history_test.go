@@ -58,7 +58,7 @@ func publishTwoPromptPreset(
 	publicText, sealedText string,
 ) apitest.StartedAsset {
 	t.Helper()
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, publicText, sealedText)
 	core.AllowedApps = &[]string{"lumiverse"}
@@ -94,7 +94,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	started := publishTwoPromptPreset(t, router, session, publicID, sealedID,
 		"Answer plainly.", firstSecret)
 
-	owner := fetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID,
 		"Answer plainly and briefly.", secondSecret)
@@ -102,7 +102,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the prompts: %d %s", got.Code, got.Body.String())
 	}
-	if got := publishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
 		`{"summary":"Tightened the house rule"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -165,7 +165,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 		t.Fatalf("another account read the sealed prompts: %d %s", crossOwner.Code, crossOwner.Body.String())
 	}
 
-	owner = fetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
@@ -195,20 +195,20 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	const houseRule = "Answer plainly."
 	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, houseRule, secret)
 
-	owner := fetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the house rule: %d %s", got.Code, got.Body.String())
 	}
-	if got := publishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
 		`{"summary":"Tightened the house rule"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
 	reimportedPublic, reimportedSealed := uuid.New(), uuid.New()
-	owner = fetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(
 		reimportedPublic, reimportedSealed, houseRule+" And briefly.", secret)
@@ -276,7 +276,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatal("settling the correspondence made the sealed prompt public")
 	}
 
-	owner = fetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
@@ -313,24 +313,24 @@ func TestMediaRecordedInAnOlderVersionStaysPublic(t *testing.T) {
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
 	if got := apitest.Send(t, router, apitest.Authorized(
-		mediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 40, 60)), session,
+		apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 40, 60)), session,
 	)); got.Code != http.StatusCreated {
 		t.Fatalf("upload the first cover: %d", got.Code)
 	}
 	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
-	recorded := fetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	recorded := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
 	if got := apitest.Send(t, router, apitest.Authorized(
-		mediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session,
+		apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session,
 	)); got.Code != http.StatusCreated {
 		t.Fatalf("upload the replacement cover: %d", got.Code)
 	}
-	if got := publishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
 		`{"summary":"Replaced the cover"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
-	current := fetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	current := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
 	if current.ID == recorded.ID {
 		t.Fatal("the update did not replace the cover")
 	}

@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
 		withFilename(apitest.ExampleMetadata("Recoverable garden"), "recoverable-garden"),
 		[]byte("the retained source"),
@@ -72,7 +72,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
-	if got := fetchAssetPage(t, router, "/v1/assets/"+assetID); got.ID != assetID {
+	if got := apitest.FetchAssetPage(t, router, "/v1/assets/"+assetID); got.ID != assetID {
 		t.Fatalf("restored asset id = %q, want %q", got.ID, assetID)
 	}
 	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
@@ -84,7 +84,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	t.Parallel()
 	_, router, session, assets, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
 	const privateText = "Recover this exact private prompt."
@@ -107,7 +107,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 		}
 	}
 	deleteAsset()
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("during recovery: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
@@ -117,7 +117,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
-	owner := fetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) ||
 		!owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("restored protected asset lost its prompt or policy: %+v", owner)
@@ -132,7 +132,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	if _, err := assets.Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep expired asset: %v", err)
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after recovery expired: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 }
@@ -141,7 +141,7 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	file := []byte("bytes that cannot return")
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
 		withFilename(apitest.ExampleMetadata("Gone for good"), "gone-for-good"), file,
 	))
@@ -185,7 +185,7 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
 		withFilename(apitest.ExampleMetadata("Private recovery"), "private-recovery"), []byte("source"),
 	))

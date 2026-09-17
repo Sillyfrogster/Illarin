@@ -1,4 +1,4 @@
-package http
+package work
 
 import (
 	"encoding/json"
@@ -339,3 +339,11 @@ type LinkListContent struct {
 		Url   string     `json:"url"`
 	} `json:"links"`
 }
+
+type ItemSize string
+
+const (
+	ItemSizeLarge  ItemSize = "large"
+	ItemSizeMedium ItemSize = "medium"
+	ItemSizeSmall  ItemSize = "small"
+)

@@ -1,8 +1,7 @@
 package http
 
 import (
-	"time"
-
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -28,36 +27,23 @@ type PromptCorrespondenceRequest struct {
 }
 
 type ProtectionMismatch struct {
-	Recorded  []NamedPrompt   `json:"recorded"`
-	Unmatched []NamedPrompt   `json:"unmatched"`
-	Version   RecordedVersion `json:"version"`
+	Recorded  []NamedPrompt        `json:"recorded"`
+	Unmatched []NamedPrompt        `json:"unmatched"`
+	Version   work.RecordedVersion `json:"version"`
 }
 
 type ProtectionMismatchList struct {
 	Items []ProtectionMismatch `json:"items"`
 }
 
-type RecordedVersion struct {
-	Id                    uuid.UUID  `json:"id"`
-	Initial               bool       `json:"initial"`
-	Notes                 string     `json:"notes"`
-	NotesEditedAt         *time.Time `json:"notesEditedAt,omitempty"`
-	Number                int        `json:"number"`
-	RecordedAt            time.Time  `json:"recordedAt"`
-	Summary               string     `json:"summary"`
-	VersionLabel          string     `json:"versionLabel"`
-	WithdrawalExplanation *string    `json:"withdrawalExplanation,omitempty"`
-	WithdrawnAt           *time.Time `json:"withdrawnAt,omitempty"`
-}
-
 type RecordedVersionDownloads struct {
-	AppTargets        []AppTarget                  `json:"appTargets"`
-	Blocks            []AssetBlock                 `json:"blocks"`
-	Downloads         []DownloadTarget             `json:"downloads"`
+	AppTargets        []work.AppTarget             `json:"appTargets"`
+	Blocks            []work.AssetBlock            `json:"blocks"`
+	Downloads         []work.DownloadTarget        `json:"downloads"`
 	Kind              RecordedVersionDownloadsKind `json:"kind"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
-	Media             []AssetImage                 `json:"media"`
-	Version           RecordedVersion              `json:"version"`
+	Media             []work.AssetImage            `json:"media"`
+	Version           work.RecordedVersion         `json:"version"`
 }
 
 type RecordedVersionDownloadsKind string
@@ -72,7 +58,7 @@ const (
 )
 
 type RecordedVersionList struct {
-	Items []RecordedVersion `json:"items"`
+	Items []work.RecordedVersion `json:"items"`
 }
 
 type VersionChange struct {
@@ -95,10 +81,10 @@ const (
 )
 
 type VersionComparison struct {
-	From            RecordedVersion      `json:"from"`
+	From            work.RecordedVersion `json:"from"`
 	Groups          []VersionChangeGroup `json:"groups"`
 	PromptsWithheld bool                 `json:"promptsWithheld"`
-	To              RecordedVersion      `json:"to"`
+	To              work.RecordedVersion `json:"to"`
 	Unavailable     *string              `json:"unavailable,omitempty"`
 }
 

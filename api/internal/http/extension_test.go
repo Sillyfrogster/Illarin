@@ -81,7 +81,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 		}
 	}
 
-	started := fetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedAsset(t, r, session, assetID)
 	source := apitest.BlockNamed(t, started.Blocks, "extension_source")
 	edited := apitest.EditableBlock(source)
 	edited.Elements[0].Content = json.RawMessage(`{"fields":[{"name":"Version","value":"9.9.9"}]}`)
@@ -129,7 +129,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); strings.Contains(tavern, assetID) {
 		t.Errorf("browsing SillyTavern extensions found a Spindle extension: %s", tavern)
 	}
-	if generation := contentGeneration(t, pool, assetID); generation != 1 {
+	if generation := apitest.ContentGeneration(t, pool, assetID); generation != 1 {
 		t.Errorf("a listing edit moved the content generation to %d", generation)
 	}
 }
@@ -242,7 +242,7 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	if published := apitest.PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
 	}
-	before := contentGeneration(t, pool, assetID)
+	before := apitest.ContentGeneration(t, pool, assetID)
 
 	manifest := strings.Replace(toolboxManifest, `"ui_panels", "generation"`, `"ui_panels", "generation", "tools"`, 1)
 	manifest = strings.Replace(manifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1)
@@ -255,11 +255,11 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 		t.Fatalf("process the replacement: %v", err)
 	}
 	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := publishAssetUpdate(t, r, session, assetID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 
-	if after := contentGeneration(t, pool, assetID); after <= before {
+	if after := apitest.ContentGeneration(t, pool, assetID); after <= before {
 		t.Errorf("content generation stayed at %d after a new archive", after)
 	}
 	page := readExtensionPage(t, r, nil, assetID)
@@ -286,7 +286,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 	})
 	assetID := uploadExtension(t, r, session, assets, first)
 
-	started := fetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedAsset(t, r, session, assetID)
 	adds := apitest.BlockNamed(t, started.Blocks, "extension_additions")
 	edited := apitest.EditableBlock(adds)
 	edited.Elements[0].Content = json.RawMessage(`{"fields":[{"name":"Tools","value":"a_tool_it_lacks"}]}`)
@@ -318,7 +318,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 		t.Fatalf("process the replacement: %v", err)
 	}
 	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := publishAssetUpdate(t, r, session, assetID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 	if listed := additionsOnPage(t, r, assetID); listed != "Macros {{tidy}}; UI surfaces Drawer tab: Quiet Toolbox" {
@@ -447,7 +447,7 @@ func uploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets 
 	if !strings.Contains(finished.Body.String(), `"success"`) {
 		t.Fatalf("extension ingest did not succeed: %s", finished.Body.String())
 	}
-	return assetIDFromIngest(t, finished)
+	return apitest.AssetIDFromIngest(t, finished)
 }
 
 func readExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, assetID string) extensionPage {

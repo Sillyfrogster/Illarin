@@ -65,7 +65,7 @@ func newSealedStack(t *testing.T) sealedStack {
 	)
 	session := apitest.VerifiedSignUp(t, router, outbox, "sealed@example.com", "sealed.creator")
 	stranger := apitest.VerifiedSignUp(t, router, outbox, "other@example.com", "other.creator")
-	started := startPreset(t, router, session, "sillytavern")
+	started := apitest.StartPreset(t, router, session, "sillytavern")
 	return sealedStack{
 		router: router, session: session, stranger: stranger,
 		assetID: started.ID, pool: pool,
@@ -160,7 +160,7 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
-	started := startPreset(t, r, session, "sillytavern")
+	started := apitest.StartPreset(t, r, session, "sillytavern")
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/sealed", nil,

@@ -58,9 +58,9 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
 	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset))
-	assetID := assetIDFromIngest(t, finished)
+	assetID := apitest.AssetIDFromIngest(t, finished)
 
-	owner := fetchStartedAsset(t, router, session, assetID)
+	owner := apitest.FetchStartedAsset(t, router, session, assetID)
 	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("owner policy = linked install only %t, apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -93,7 +93,7 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
 	created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset))
-	assetID := assetIDFromIngest(t, created)
+	assetID := apitest.AssetIDFromIngest(t, created)
 
 	placeholder := []byte(`{
 		"schemaVersion": 1,
@@ -120,7 +120,7 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	acceptReplacementPreview(t, router, session, assetID, accepted.Header().Get("Location"))
 	pollIngestAsset(t, router, session, accepted.Header().Get("Location"))
 
-	owner := fetchStartedAsset(t, router, session, assetID)
+	owner := apitest.FetchStartedAsset(t, router, session, assetID)
 	prompts := promptListFromPage(t, owner).Fragments
 	if len(prompts) != 1 || prompts[0].Name != "Private renamed" ||
 		prompts[0].Text != "Exact private prompt." || !prompts[0].Protected {
@@ -145,16 +145,16 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			metadata := apitest.ExampleMetadata("Replacement protection")
 			metadata["filename"] = "keyed.json"
 			created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(initial))
-			assetID := assetIDFromIngest(t, created)
+			assetID := apitest.AssetIDFromIngest(t, created)
 			if sealedAfterPublication {
-				page := fetchStartedAsset(t, router, session, assetID)
+				page := apitest.FetchStartedAsset(t, router, session, assetID)
 				core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 				body := sealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
 				if response := apitest.SaveBlock(t, router, session, assetID, core.ID, body); response.Code != http.StatusOK {
 					t.Fatalf("seal published text: %d %s", response.Code, response.Body.String())
 				}
 			}
-			before := fetchStartedAsset(t, router, session, assetID)
+			before := apitest.FetchStartedAsset(t, router, session, assetID)
 			replacement := strings.ReplaceAll(ordinary, "Keyed sealed preset", "Replacement preset")
 			staged := apitest.Send(t, router, apitest.Authorized(revisionRequest(t, assetID, "replacement.json", []byte(replacement)), session))
 			if staged.Code != http.StatusAccepted {
@@ -171,7 +171,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), `"code":"sealed_exposure"`) || !strings.Contains(refused.Body.String(), "Private") {
 				t.Fatalf("unconfirmed replacement: %d %s", refused.Code, refused.Body.String())
 			}
-			after := fetchStartedAsset(t, router, session, assetID)
+			after := apitest.FetchStartedAsset(t, router, session, assetID)
 			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
 				t.Fatal("refused replacement changed the working copy or its protection")
 			}
@@ -185,7 +185,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			if confirmed.Code != http.StatusOK {
 				t.Fatalf("confirmed replacement: %d %s", confirmed.Code, confirmed.Body.String())
 			}
-			if fetchStartedAsset(t, router, session, assetID).LinkedInstallOnly {
+			if apitest.FetchStartedAsset(t, router, session, assetID).LinkedInstallOnly {
 				t.Fatal("confirmed replacement kept the old protection")
 			}
 			if sealedAfterPublication {
@@ -292,7 +292,7 @@ func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 			}
 		]
 	}`))
-	assetID := assetIDFromIngest(t, finished)
+	assetID := apitest.AssetIDFromIngest(t, finished)
 
 	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
 	if readerResponse.Code != http.StatusOK {

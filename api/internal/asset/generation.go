@@ -60,7 +60,7 @@ func (s *Service) contentFingerprint(
 		fmt.Fprintf(digest, "header\x00%s\x00%s\n", field, values[field])
 	}
 
-	blocks, err := readBlocks(ctx, q, assetID)
+	blocks, err := block.Read(ctx, q, assetID)
 	if err != nil {
 		return "", err
 	}
@@ -286,4 +286,16 @@ func (s *Service) moveContentGeneration(
 		return fmt.Errorf("move the content generation: %w", err)
 	}
 	return nil
+}
+
+// ChangeContent runs a change to a work's drafted content and moves its content generation when the content changed
+func (s *Service) ChangeContent(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, change func() error) error {
+	fingerprint, err := s.contentFingerprint(ctx, tx, assetID)
+	if err != nil {
+		return err
+	}
+	if err := change(); err != nil {
+		return err
+	}
+	return s.moveContentGeneration(ctx, tx, assetID, fingerprint)
 }

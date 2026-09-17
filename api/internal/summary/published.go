@@ -1,17 +1,18 @@
-package asset
+package summary
 
 import (
 	"context"
 	"encoding/json"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Service) writePublishedProjections(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+func writePublished(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID uuid.UUID) error {
 	var published bool
-	if err := tx.QueryRow(ctx, `select published_snapshot_id is not null from public.assets where id = $1`, assetID).Scan(&published); err != nil {
+	if err := tx.QueryRow(ctx, `select published_snapshot_id is not null from public.assets where id = $1`, workID).Scan(&published); err != nil {
 		return err
 	}
 	if !published {
@@ -20,16 +21,16 @@ func (s *Service) writePublishedProjections(ctx context.Context, tx pgx.Tx, asse
 	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
 		return err
 	}
-	targets, err := s.exportCapability(ctx, tx, assetID)
+	targets, err := Formats(ctx, tx, reg, workID)
 	if err != nil {
 		return err
 	}
-	facets, err := facetCounts(ctx, tx, assetID)
+	facets, err := filterCounts(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
 	stored, err := json.Marshal(map[string]any{
-		"asset_id": assetID, "export": targets, "export_stamp": s.reg.CapabilityStamp(),
+		"asset_id": workID, "export": targets, "export_stamp": reg.CapabilityStamp(),
 		"facets": facets, "facet_stamp": block.FacetStamp(),
 	})
 	if err != nil {
@@ -42,6 +43,6 @@ func (s *Service) writePublishedProjections(ctx context.Context, tx pgx.Tx, asse
 		select published_snapshot_id, $2::jsonb || jsonb_build_object(
 		    'export_computed_at', now(), 'facet_computed_at', now())
 		from assets where id = $1
-		on conflict (snapshot_id) do update set projection = excluded.projection`, assetID, stored)
+		on conflict (snapshot_id) do update set projection = excluded.projection`, workID, stored)
 	return err
 }

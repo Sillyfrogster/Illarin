@@ -21,7 +21,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	grant := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
 
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "Install this complete prompt."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
@@ -88,7 +88,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T) {
 	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	groupID := uuid.NewString()
 	const privateText = "disclosure-canary-7bb627e4"
@@ -159,7 +159,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	if len(started.Downloads) == 0 {
 		t.Fatal("the ordinary preset has no generated export target to protect")
 	}
@@ -220,7 +220,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 	metadata := apitest.ExampleMetadata("Protected original")
 	metadata["filename"] = "protected-original.json"
 	finished := apitest.UploadAndFinish(t, router, ownerSession, assets, metadata, []byte(keyedSealedPreset))
-	assetID := assetIDFromIngest(t, finished)
+	assetID := apitest.AssetIDFromIngest(t, finished)
 	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
 	for name, request := range map[string]*http.Request{
@@ -261,7 +261,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testing.T) {
 	t.Parallel()
 	_, router, session, assets, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
@@ -294,10 +294,10 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	if updated.ID != started.ID {
 		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after replacement: %d payloads and %d policy rows, want none", payloads, policies)
 	}
-	owner := fetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("replacement kept protected delivery policy: linked install only %t, apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)

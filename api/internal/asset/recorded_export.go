@@ -141,8 +141,8 @@ func (s *Service) recordedPictures(
 		}
 		picture.Width, picture.Height = int(*width), int(*height)
 		picture.IsCover = subject.cover != nil && *subject.cover == picture.ID
-		picture.DetailURL = s.variantURL(picture.ID, "detail", blurred, false)
-		picture.ThumbURL = s.variantURL(picture.ID, "thumb", blurred, false)
+		picture.DetailURL = s.ImageAddress(picture.ID, "detail", blurred, false)
+		picture.ThumbURL = s.ImageAddress(picture.ID, "thumb", blurred, false)
 		pictures = append(pictures, picture)
 	}
 	return pictures, rows.Err()

@@ -270,7 +270,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 		}
 	}`)
 	finished := apitest.UploadAndFinish(t, r, session, assets, metadata, card)
-	assetID := assetIDFromIngest(t, finished)
+	assetID := apitest.AssetIDFromIngest(t, finished)
 
 	pageResponse := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session,
@@ -360,7 +360,7 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 			metadata := apitest.ExampleMetadata("Ana")
 			metadata["filename"] = test.filename
 			metadata["_keepDraft"] = true
-			assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, test.file))
+			assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, test.file))
 			response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 				http.MethodGet, "/v1/assets/"+assetID, nil,
 			), session))
@@ -416,7 +416,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.charx"
 	metadata["_keepDraft"] = true
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, file))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, file))
 
 	var mediaCount int
 	if err := pool.QueryRow(context.Background(),
@@ -600,7 +600,7 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnAsset(t *testing.T) {
 	if operation.Asset != nil {
 		t.Fatalf("failed ingest returned asset %#v", operation.Asset)
 	}
-	if listed := get(t, r, "/v1/assets"); len(listed) != 0 {
+	if listed := apitest.ListItems(t, r, "/v1/assets"); len(listed) != 0 {
 		t.Fatalf("browse found %d assets after a failed parse, want none", len(listed))
 	}
 }

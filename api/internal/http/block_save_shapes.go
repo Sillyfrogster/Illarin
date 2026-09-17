@@ -3,15 +3,8 @@ package http
 import (
 	"encoding/json"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
-)
-
-type ItemSize string
-
-const (
-	ItemSizeLarge  ItemSize = "large"
-	ItemSizeMedium ItemSize = "medium"
-	ItemSizeSmall  ItemSize = "small"
 )
 
 type SaveAssetBlockRequest struct {
@@ -53,10 +46,10 @@ type SaveAssetElement struct {
 	Content  json.RawMessage          `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
 	Display  *SaveAssetElementDisplay `json:"display,omitempty"`
 	Id       uuid.UUID                `json:"id"`
-	ItemSize *ItemSize                `json:"itemSize,omitempty"`
+	ItemSize *work.ItemSize           `json:"itemSize,omitempty"`
 	Role     *string                  `json:"role,omitempty"`
 	Slot     string                   `json:"slot"`
-	Type     ElementType              `json:"type"`
+	Type     work.ElementType         `json:"type"`
 }
 
 type SaveAssetElementDisplay string

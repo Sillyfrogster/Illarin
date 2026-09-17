@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"context"
@@ -24,9 +24,9 @@ func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-			assetID := uploadDiscoveryTestAsset(t, router, session, assets, test.discovery)
+			assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, test.discovery)
 
-			page := fetchAssetPage(t, router, "/v1/assets/"+assetID)
+			page := apitest.FetchAssetPage(t, router, "/v1/assets/"+assetID)
 			if page.Discovery != test.want {
 				t.Fatalf("discovery = %q, want %q", page.Discovery, test.want)
 			}
@@ -37,7 +37,7 @@ func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
 func TestCreatorChangesAssetDiscovery(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
@@ -50,7 +50,7 @@ func TestCreatorChangesAssetDiscovery(t *testing.T) {
 		t.Fatalf("change discovery status = %d, want 204: %s", changed.Code, changed.Body.String())
 	}
 
-	page := fetchAssetPage(t, router, "/v1/assets/"+assetID)
+	page := apitest.FetchAssetPage(t, router, "/v1/assets/"+assetID)
 	if page.Discovery != "unlisted" {
 		t.Fatalf("discovery = %q, want unlisted", page.Discovery)
 	}
@@ -59,7 +59,7 @@ func TestCreatorChangesAssetDiscovery(t *testing.T) {
 func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	changed := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodPut,
@@ -74,7 +74,7 @@ func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = 'verified.creator'`,
@@ -99,24 +99,4 @@ func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
 	if changed.Code != http.StatusConflict {
 		t.Fatalf("change discovery status = %d, want 409: %s", changed.Code, changed.Body.String())
 	}
-}
-
-func uploadDiscoveryTestAsset(
-	t *testing.T,
-	router http.Handler,
-	session *http.Cookie,
-	assets *asset.Service,
-	discovery asset.Discovery,
-) string {
-	t.Helper()
-	metadata := apitest.ExampleMetadata("A quiet draft")
-	metadata["filename"] = "quiet-draft.lumitheme"
-	if discovery == "" {
-		delete(metadata, "discovery")
-	} else {
-		metadata["discovery"] = discovery
-	}
-	return assetIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte("theme")),
-	)
 }

@@ -164,7 +164,7 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 	if err := service.Delete(ctx, ownerID, created.ID); err != nil {
 		t.Fatalf("delete asset: %v", err)
 	}
-	now = now.Add(recoveryWindow + time.Second)
+	now = now.Add(WorkBridge.RecoveryWindow + time.Second)
 	if _, err := service.Sweep(ctx); err != nil {
 		t.Fatalf("mark expired asset: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
 		t.Fatalf("read blob id: %v", err)
 	}
 
-	now = now.Add(recoveryWindow + time.Second)
+	now = now.Add(WorkBridge.RecoveryWindow + time.Second)
 	marked, err := service.Sweep(ctx)
 	if err != nil || marked.Marked != 1 || marked.Deleted != 0 {
 		t.Fatalf("mark expired asset = %+v, %v; want one mark", marked, err)

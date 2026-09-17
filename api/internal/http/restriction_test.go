@@ -143,7 +143,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
-	createProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed)
 
 	restricted := stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	if restricted.Code != http.StatusOK {
@@ -167,7 +167,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	if listing.Code != http.StatusOK {
 		t.Fatalf("listing status = %d, want 200: %s", listing.Code, listing.Body.String())
 	}
-	var listed profileListingResponse
+	var listed apitest.ProfileListingResponse
 	if err := json.Unmarshal(listing.Body.Bytes(), &listed); err != nil {
 		t.Fatalf("decode listing: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
-	published := createProfileAsset(
+	published := apitest.CreateProfileAsset(
 		t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed,
 	)
 	before := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
@@ -306,7 +306,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 		t.Fatalf("restriction changed the account role to %q", role)
 	}
 	stack.expectAssetUntouched(t, published)
-	if createProfileAsset(
+	if apitest.CreateProfileAsset(
 		t, stack.assets, stack.ownerID, "Still working", false, asset.DiscoveryListed,
 	) == uuid.Nil {
 		t.Fatal("a restricted owner could not publish")

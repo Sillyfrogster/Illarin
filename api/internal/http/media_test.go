@@ -1,11 +1,9 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,9 +24,9 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "theme.lumitheme"
 	created := apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme"))
-	assetID := assetIDFromIngest(t, created)
+	assetID := apitest.AssetIDFromIngest(t, created)
 
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "gallery", apitest.PNG(t, 1200, 600),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -149,8 +147,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	created := apitest.UploadAndFinish(
 		t, r, session, assets, metadata, []byte("theme"),
 	)
-	assetID := assetIDFromIngest(t, created)
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	assetID := apitest.AssetIDFromIngest(t, created)
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "gallery", apitest.PNG(t, 120, 60),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -231,7 +229,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	created := apitest.UploadAndFinish(
 		t, r, session, assets, apitest.ExampleMetadata("Theme at its cap"), source,
 	)
-	assetID := assetIDFromIngest(t, created)
+	assetID := apitest.AssetIDFromIngest(t, created)
 	mediaBytes := apitest.PNG(t, 120, 60)
 
 	settings := asset.DefaultIngestSettings()
@@ -243,7 +241,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
 	response := apitest.Send(t, limitedRouter, apitest.Authorized(
-		mediaUploadRequest(t, assetID, "gallery", mediaBytes), session,
+		apitest.MediaUploadRequest(t, assetID, "gallery", mediaBytes), session,
 	))
 
 	if response.Code != http.StatusRequestEntityTooLarge {
@@ -256,34 +254,4 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	if mediaCount != 0 {
 		t.Fatalf("over-cap upload recorded %d media rows", mediaCount)
 	}
-}
-
-func mediaUploadRequest(t *testing.T, assetID, role string, file []byte) *http.Request {
-	t.Helper()
-	var body bytes.Buffer
-	form := multipart.NewWriter(&body)
-	apitest.WriteMetadataPart(t, form, map[string]any{"role": role})
-	apitest.WriteFilePartNamed(t, form, "screenshot.png", file)
-	if err := form.Close(); err != nil {
-		t.Fatalf("close media form: %v", err)
-	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/media", &body)
-	request.Header.Set("Content-Type", form.FormDataContentType())
-	return request
-}
-
-func assetIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string {
-	t.Helper()
-	var operation struct {
-		Asset *struct {
-			ID string `json:"id"`
-		} `json:"asset"`
-	}
-	if err := json.Unmarshal(response.Body.Bytes(), &operation); err != nil {
-		t.Fatalf("decode ingest response: %v", err)
-	}
-	if operation.Asset == nil {
-		t.Fatal("ingest response has no asset")
-	}
-	return operation.Asset.ID
 }

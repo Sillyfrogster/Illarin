@@ -2,11 +2,17 @@ package apitest
 
 import (
 	"bytes"
+	"context"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 )
 
 type PublicProfile struct {
@@ -49,4 +55,38 @@ func AvatarUploadRequest(t *testing.T, file []byte) *http.Request {
 	request := httptest.NewRequest(http.MethodPut, "/v1/account/profile/avatar", &body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
 	return request
+}
+
+type ProfileListingResponse struct {
+	Items []struct {
+		Name       string  `json:"name"`
+		IsNsfw     *bool   `json:"isNsfw"`
+		OwnerState *string `json:"ownerState"`
+		Withhold   *struct {
+			Reason string    `json:"reason"`
+			At     time.Time `json:"at"`
+		} `json:"withhold"`
+	} `json:"items"`
+	Total      int `json:"total"`
+	Suppressed int `json:"suppressed"`
+}
+
+func CreateProfileAsset(
+	t *testing.T,
+	assets *asset.Service,
+	ownerID uuid.UUID,
+	name string,
+	isNSFW bool,
+	discovery asset.Discovery,
+) uuid.UUID {
+	t.Helper()
+	created, err := assets.Create(context.Background(), asset.CreateInput{
+		OwnerID: ownerID, Kind: "theme", Filename: name + ".lumitheme",
+		File: bytes.NewReader([]byte(name)), Name: name, IsNSFW: isNSFW,
+		Discovery: discovery,
+	})
+	if err != nil {
+		t.Fatalf("create profile asset %q: %v", name, err)
+	}
+	return created.ID
 }

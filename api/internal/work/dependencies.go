@@ -1,40 +1,41 @@
-package asset
+package work
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 )
 
-type DependencyAsset struct {
+type DependencyMatch struct {
 	ID      uuid.UUID
 	Name    string
 	Creator string
 }
 
-type ExtensionDependency struct {
+type Dependency struct {
 	Name   string
-	Assets []DependencyAsset
+	Assets []DependencyMatch
 }
 
-// dependencySubject is the page whose dependencies are matched, and the format they are matched within.
+// dependencySubject is the page whose dependencies are matched, and the format they are matched within
 type dependencySubject struct {
 	assetID    uuid.UUID
 	kind       string
 	format     string
-	visibility ContentVisibility
+	visibility asset.ContentVisibility
 }
 
-// extensionDependencies pairs each dependency the archive names with the listed assets whose identifier it refers to.
-func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySubject, blocks []block.Block) ([]ExtensionDependency, error) {
+// extensionDependencies pairs each dependency the archive names with the listed assets whose identifier it refers to
+func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySubject, blocks []block.Block) ([]Dependency, error) {
 	items := dependencyItems(blocks)
-	dependencies := make([]ExtensionDependency, len(items))
+	dependencies := make([]Dependency, len(items))
 	identifiers := make([]string, 0, len(items))
 	for i, item := range items {
-		dependencies[i] = ExtensionDependency{Name: item.Text, Assets: []DependencyAsset{}}
+		dependencies[i] = Dependency{Name: item.Text, Assets: []DependencyMatch{}}
 		if item.Name != "" {
 			identifiers = append(identifiers, item.Name)
 		}
@@ -58,10 +59,10 @@ func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySub
 		return nil, fmt.Errorf("match extension dependencies: %w", err)
 	}
 	defer rows.Close()
-	matches := make(map[string][]DependencyAsset)
+	matches := make(map[string][]DependencyMatch)
 	for rows.Next() {
 		var identifier string
-		var found DependencyAsset
+		var found DependencyMatch
 		if err := rows.Scan(&identifier, &found.ID, &found.Name, &found.Creator); err != nil {
 			return nil, fmt.Errorf("read a matched extension dependency: %w", err)
 		}

@@ -116,7 +116,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("place a remote picture without a copy = %d: %s", refused.Code, refused.Body.String())
 	}
-	uploaded := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(t, assetID, "gallery", []byte(pictureFile(t, 90))), session))
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(t, assetID, "gallery", []byte(pictureFile(t, 90))), session))
 	if uploaded.Code != http.StatusCreated {
 		t.Fatalf("upload a copy = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
@@ -218,7 +218,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 		"spindle.json": toolboxManifest, "dist/frontend.js": "one", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
-	started := fetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedAsset(t, r, session, assetID)
 	install := blockTitled(t, started.Blocks, "Install")
 	edited := apitest.EditableBlock(install)
 	edited.Title = &install.Title
@@ -226,7 +226,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 	if saved := apitest.SaveBlock(t, r, session, assetID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
 		t.Fatalf("edit the seeded install text = %d: %s", saved.Code, saved.Body.String())
 	}
-	if update := publishAssetUpdate(t, r, session, assetID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the edit = %d: %s", update.Code, update.Body.String())
 	}
 	before := readSeededPage(t, r, nil, assetID)
@@ -244,7 +244,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := publishAssetUpdate(t, r, session, assetID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 

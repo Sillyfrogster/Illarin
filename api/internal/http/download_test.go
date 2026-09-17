@@ -91,7 +91,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	before := time.Now()
 	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
@@ -139,7 +139,7 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 
 func TestExportFromAnAssetMadeInIllarinRecordsTheHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, _, pool := newCharacterIngestRouterWithPool(t)
+	router, session, _, pool := harness.NewCharacterIngestRouterWithPool(t)
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
 	if published := apitest.PublishAsset(t, router, session, started.ID); published.Code != http.StatusOK {
@@ -198,7 +198,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 			return blocker
 		},
 	)
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	response := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
@@ -235,7 +235,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	download := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/download/"+assetID+"/test_opaque", nil,
@@ -267,7 +267,7 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/download/"+assetID+"/chara_card_v2", nil,
@@ -280,7 +280,7 @@ func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, ownerSession, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, ownerSession, assets, asset.DiscoveryListed)
 	readerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
 
 	requests := []*http.Request{
@@ -320,10 +320,10 @@ func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	unlistedID := uploadDiscoveryTestAsset(
+	unlistedID := apitest.UploadDiscoveryTestAsset(
 		t, router, ownerSession, assets, asset.DiscoveryUnlisted,
 	)
-	withheldID := uploadDiscoveryTestAsset(
+	withheldID := apitest.UploadDiscoveryTestAsset(
 		t, router, ownerSession, assets, asset.DiscoveryListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
@@ -402,9 +402,9 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	}`)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
 
-	page := fetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"After"}`)
 	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)

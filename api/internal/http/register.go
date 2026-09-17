@@ -10,6 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,6 +36,7 @@ func Register(r *gin.Engine, h *Handlers, d api.Deadlines, readiness Readiness) 
 	account.Register(routes, account.NewHandlers(h.accounts, h.links, h.publications))
 	profile.Register(routes, profile.NewHandlers(h.accounts, h.maxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(h.notifications))
+	work.Register(routes, work.NewHandlers(h.works, h.accounts, h.deliveries, h.notifications))
 	registerRoutes(routes, h)
 	return nil
 }

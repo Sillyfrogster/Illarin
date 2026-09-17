@@ -10,23 +10,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedAsset {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"preset","app":"`+app+`"}`))
-	request.Header.Set("Content-Type", "application/json")
-	response := apitest.Send(t, r, apitest.Authorized(request, session))
-	if response.Code != http.StatusCreated {
-		t.Fatalf("start a preset for %s: status = %d, want 201: %s",
-			app, response.Code, response.Body.String())
-	}
-	var started apitest.StartedAsset
-	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
-		t.Fatalf("decode the started asset: %v", err)
-	}
-	return started
-}
-
 func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
@@ -64,7 +47,7 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 
 	named := map[string][]string{}
 	for _, app := range []string{"sillytavern", "lumiverse"} {
-		started := startPreset(t, r, session, app)
+		started := apitest.StartPreset(t, r, session, app)
 
 		core := apitest.BlockNamed(t, started.Blocks, "preset_core")
 		if !core.Required || core.Hideable || !core.IsEmpty {
@@ -134,7 +117,7 @@ func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	started := startPreset(t, r, session, "sillytavern")
+	started := apitest.StartPreset(t, r, session, "sillytavern")
 
 	page := readAsset(t, r, session, started.ID)
 	if strings.Contains(page, "sillytavern") {
@@ -146,7 +129,7 @@ func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	started := startPreset(t, r, session, "lumiverse")
+	started := apitest.StartPreset(t, r, session, "lumiverse")
 
 	var fragments *string
 	for _, item := range started.Readiness {

@@ -106,3 +106,22 @@ type ReplacementPreview struct {
 	MissingWording  []string
 	Seals           int
 }
+
+type ContentVisibility string
+
+const (
+	ContentHidden  ContentVisibility = "hidden"
+	ContentBlurred ContentVisibility = "blurred"
+	ContentShown   ContentVisibility = "shown"
+)
+
+type DetailImage struct {
+	ID        uuid.UUID
+	Role      MediaRole
+	IsCover   bool
+	DetailURL string
+	ThumbURL  string
+	Width     int
+	Height    int
+	Bytes     int64
+}

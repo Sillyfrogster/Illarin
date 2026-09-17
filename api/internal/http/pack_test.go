@@ -49,11 +49,11 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("publish an empty Pack = %d, want 409: %s", refused.Code, refused.Body.String())
 	}
-	var refusal publishRefusal
+	var refusal apitest.PublishRefusal
 	if err := json.Unmarshal(refused.Body.Bytes(), &refusal); err != nil {
 		t.Fatalf("decode Pack readiness: %v", err)
 	}
-	if itemNamed(t, refusal.Readiness, "items").Met {
+	if apitest.ItemNamed(t, refusal.Readiness, "items").Met {
 		t.Error("an empty Pack meets the item floor")
 	}
 
@@ -100,8 +100,8 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			"authorName":"A creator","version":3,"futureItem":{"kept":true}
 		}],"loomItems":[]
 	}`)
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
-	page := fetchStartedAsset(t, r, session, assetID)
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
 	if page.Kind != "pack" || page.Lifecycle != "draft" || len(page.Blocks) != 1 ||
 		len(page.Media) != 0 {
 		t.Fatalf("imported Pack page = %+v", page)
@@ -111,7 +111,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 		t.Errorf("Pack facts = %v, want one computed item", core.Elements[0].Facts)
 	}
 
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "pack_item", apitest.PNG(t, 96, 96),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -123,7 +123,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if err := json.Unmarshal(added.Body.Bytes(), &itemImage); err != nil {
 		t.Fatalf("decode Pack item image: %v", err)
 	}
-	if got := contentGeneration(t, pool, assetID); got != 1 {
+	if got := apitest.ContentGeneration(t, pool, assetID); got != 1 {
 		t.Fatalf("unreferenced Pack image moved content generation to %d", got)
 	}
 
@@ -141,11 +141,11 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if saved := apitest.SaveBlock(t, r, session, assetID, core.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save edited Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	if got := contentGeneration(t, pool, assetID); got != 2 {
+	if got := apitest.ContentGeneration(t, pool, assetID); got != 2 {
 		t.Fatalf("Pack item edit moved content generation to %d, want 2", got)
 	}
 
-	cover := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "avatar", apitest.PNG(t, 800, 1000),
 	), session))
 	if cover.Code != http.StatusCreated {
@@ -157,7 +157,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if err := json.Unmarshal(cover.Body.Bytes(), &coverImage); err != nil {
 		t.Fatalf("decode Pack cover: %v", err)
 	}
-	if got := contentGeneration(t, pool, assetID); got != 3 {
+	if got := apitest.ContentGeneration(t, pool, assetID); got != 3 {
 		t.Fatalf("Pack cover moved content generation to %d, want 3", got)
 	}
 

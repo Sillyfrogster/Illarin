@@ -57,7 +57,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 		t.Error("a private edit reads as though readers already have it")
 	}
 
-	update := publishAssetUpdate(t, r, session, started.ID,
+	update := apitest.PublishAssetUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())

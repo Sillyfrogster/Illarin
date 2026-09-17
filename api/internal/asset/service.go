@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
@@ -46,7 +47,7 @@ type Service struct {
 	updateListeners []UpdateListener
 }
 
-func (s *Service) beginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
+func (s *Service) BeginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly,
 	})
@@ -462,33 +463,6 @@ func firstDate(preferred, fallback *time.Time) *time.Time {
 	return fallback
 }
 
-func (s *Service) List(ctx context.Context, f ListFilter) ([]Asset, error) {
-	if f.Limit <= 0 || f.Limit > 100 {
-		f.Limit = 24
-	}
-
-	tx, err := s.beginReadSnapshot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-	return listAssets(ctx, tx, f)
-}
-
-func (s *Service) Browse(
-	ctx context.Context,
-	f ListFilter,
-	visibility ContentVisibility,
-) (BrowsePage, error) {
-	if f.Limit <= 0 || f.Limit > 24 {
-		f.Limit = 24
-	}
-	if visibility != ContentHidden && visibility != ContentShown {
-		visibility = ContentBlurred
-	}
-	return s.browseAssets(ctx, f, visibility)
-}
-
 func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadCloser, error) {
 	location, err := currentRevisionLocation(ctx, s.pool, assetID, nil)
 	if err != nil {
@@ -517,7 +491,7 @@ func (s *Service) DownloadSource(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 ) (SourceDownload, error) {
-	tx, err := s.beginReadSnapshot(ctx)
+	tx, err := s.BeginReadSnapshot(ctx)
 	if err != nil {
 		return SourceDownload{}, err
 	}
@@ -533,7 +507,7 @@ func (s *Service) DownloadSource(
 	if err != nil {
 		return SourceDownload{}, err
 	}
-	blocks, err := readBlocks(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, assetID)
 	if err != nil {
 		return SourceDownload{}, err
 	}
@@ -603,4 +577,27 @@ func joinReadable(labels []string) string {
 	default:
 		return strings.Join(labels[:len(labels)-1], ", ") + " and " + labels[len(labels)-1]
 	}
+}
+
+func (s *Service) Now() time.Time {
+	return s.now()
+}
+func assetByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Asset, error) {
+	row, err := db.New(q).AssetByID(ctx, uuidToPgtype(id))
+	if err != nil {
+		return Asset{}, fmt.Errorf("read asset: %w", err)
+	}
+	return Asset{
+		ID: uuidFromPgtype(row.ID), Kind: row.Kind, Format: row.Format,
+		OriginFormat: textToPointer(row.OriginFormat), AssetVersion: row.AssetVersion,
+		CreditedAuthor: row.CreditedAuthor, Nickname: row.Nickname,
+		Name: row.Name, Blurb: row.Blurb, Tags: row.Tags,
+		IsNSFW: &row.IsNsfw, Discovery: Discovery(row.Discovery), Lifecycle: Lifecycle(row.Lifecycle),
+		CurrentRevisionID: uuidFromPgtype(row.CurrentRevisionID),
+		CreatedAt:         timeFromPgtype(row.CreatedAt),
+	}, nil
+}
+
+func (s *Service) Registry() *format.Registry {
+	return s.reg
 }

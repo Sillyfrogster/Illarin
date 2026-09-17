@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"encoding/json"
@@ -11,22 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-type publishRefusal struct {
-	Error     string                  `json:"error"`
-	Readiness []apitest.ReadinessItem `json:"readiness"`
-}
-
-func itemNamed(t *testing.T, items []apitest.ReadinessItem, id string) apitest.ReadinessItem {
-	t.Helper()
-	for _, item := range items {
-		if item.ID == id {
-			return item
-		}
-	}
-	t.Fatalf("no %s item in the readiness list %+v", id, items)
-	return apitest.ReadinessItem{}
-}
-
 func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
@@ -38,7 +22,7 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 		t.Fatalf("publish an empty draft status = %d, want 409: %s",
 			response.Code, response.Body.String())
 	}
-	var refusal publishRefusal
+	var refusal apitest.PublishRefusal
 	if err := json.Unmarshal(response.Body.Bytes(), &refusal); err != nil {
 		t.Fatalf("decode the refusal: %v", err)
 	}
@@ -46,7 +30,7 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 		t.Error("the refusal says nothing")
 	}
 	for _, id := range []string{"name", "adult_content", "description", "greetings"} {
-		item := itemNamed(t, refusal.Readiness, id)
+		item := apitest.ItemNamed(t, refusal.Readiness, id)
 		if item.Met {
 			t.Errorf("%s reads as met on an empty draft", id)
 		}
@@ -54,14 +38,14 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 			t.Errorf("%s = %+v, want wording a creator can act on", id, item)
 		}
 	}
-	if itemNamed(t, refusal.Readiness, "description").BlockID == nil {
+	if apitest.ItemNamed(t, refusal.Readiness, "description").BlockID == nil {
 		t.Error("a missing description links to no block")
 	}
-	if itemNamed(t, refusal.Readiness, "name").BlockID != nil {
+	if apitest.ItemNamed(t, refusal.Readiness, "name").BlockID != nil {
 		t.Error("the name links to a block, and it is a header field")
 	}
 
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if page.Lifecycle != "draft" {
 		t.Errorf("a refused draft is now %q", page.Lifecycle)
 	}
@@ -134,14 +118,14 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 	if stillRefused.Code != http.StatusConflict {
 		t.Fatalf("a greeting with no text published the draft: %d", stillRefused.Code)
 	}
-	var refusal publishRefusal
+	var refusal apitest.PublishRefusal
 	if err := json.Unmarshal(stillRefused.Body.Bytes(), &refusal); err != nil {
 		t.Fatalf("decode the refusal: %v", err)
 	}
-	if !itemNamed(t, refusal.Readiness, "description").Met {
+	if !apitest.ItemNamed(t, refusal.Readiness, "description").Met {
 		t.Error("a written description does not meet the floor")
 	}
-	if itemNamed(t, refusal.Readiness, "greetings").Met {
+	if apitest.ItemNamed(t, refusal.Readiness, "greetings").Met {
 		t.Error("an empty greeting meets the floor")
 	}
 
@@ -166,11 +150,11 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 		`{"name":"Ilse","blurb":"","isNsfw":null}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save a name with no answer status = %d: %s", got.Code, got.Body.String())
 	}
-	named := fetchStartedAsset(t, r, session, started.ID)
-	if !itemNamed(t, named.Readiness, "name").Met {
+	named := apitest.FetchStartedAsset(t, r, session, started.ID)
+	if !apitest.ItemNamed(t, named.Readiness, "name").Met {
 		t.Error("a named draft still reads as unnamed")
 	}
-	if itemNamed(t, named.Readiness, "adult_content").Met {
+	if apitest.ItemNamed(t, named.Readiness, "adult_content").Met {
 		t.Error("an unanswered adult content question reads as answered")
 	}
 	if named.IsNSFW != nil {
@@ -215,7 +199,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, started.ID, "avatar", apitest.PNG(t, 600, 400),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -228,7 +212,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 		t.Errorf("a stranger listed a draft's images: %d", strangerList.Code)
 	}
 
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if len(page.Media) != 1 {
 		t.Fatalf("draft media = %+v, want the image just added", page.Media)
 	}
@@ -333,7 +317,7 @@ func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore a draft status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
-	if page := fetchStartedAsset(t, r, session, started.ID); page.Lifecycle != "draft" {
+	if page := apitest.FetchStartedAsset(t, r, session, started.ID); page.Lifecycle != "draft" {
 		t.Errorf("a restored draft is now %q", page.Lifecycle)
 	}
 }
@@ -369,7 +353,7 @@ func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if len(page.Readiness) != 0 {
 		t.Errorf("a published page that meets the floor carries %d items", len(page.Readiness))
 	}
@@ -381,11 +365,11 @@ func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
 		t.Fatalf("empty the greetings status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	short := fetchStartedAsset(t, r, session, started.ID)
+	short := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if short.Lifecycle != "published" {
 		t.Errorf("the page is now %q, and a shortfall never unpublishes", short.Lifecycle)
 	}
-	greetings := itemNamed(t, short.Readiness, "greetings")
+	greetings := apitest.ItemNamed(t, short.Readiness, "greetings")
 	if greetings.Met {
 		t.Error("the greetings requirement reads as met with no greeting")
 	}
@@ -402,7 +386,7 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	page := fetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedAsset(t, r, session, started.ID)
 	messagesBlock := apitest.BlockNamed(t, page.Blocks, "messages")
 	messages := apitest.EditableBlock(messagesBlock)
 	messages.Elements[0].Content = json.RawMessage(`{"texts":[]}`)
@@ -423,20 +407,6 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	}
 }
 
-func publishAssetUpdate(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assetID string,
-	body string,
-) *httptest.ResponseRecorder {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodPost,
-		"/v1/assets/"+assetID+"/updates", strings.NewReader(body))
-	request.Header.Set("Content-Type", "application/json")
-	return apitest.Send(t, r, apitest.Authorized(request, session))
-}
-
 func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
@@ -452,7 +422,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	response := publishAssetUpdate(t, r, session, started.ID,
+	response := apitest.PublishAssetUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf","versionLabel":"v2"}`)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", response.Code, response.Body.String())
@@ -473,7 +443,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 		t.Error("the update named no committed working-copy version")
 	}
 
-	again := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
+	again := apitest.PublishAssetUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
 	if again.Code != http.StatusConflict {
 		t.Fatalf("republishing status = %d, want 409: %s", again.Code, again.Body.String())
 	}

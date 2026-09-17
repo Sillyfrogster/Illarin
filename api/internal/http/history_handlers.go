@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -15,7 +16,7 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 	if !ok {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}
@@ -28,9 +29,9 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the update history.")
 		return
 	}
-	items := make([]RecordedVersion, 0, len(history))
+	items := make([]work.RecordedVersion, 0, len(history))
 	for _, recorded := range history {
-		items = append(items, toAPIRecordedVersion(recorded))
+		items = append(items, work.ToRecordedVersion(recorded))
 	}
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
@@ -44,7 +45,7 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workingCopyVersion, ok := workingCopyVersion(c)
+	workingCopyVersion, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -54,7 +55,7 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 	}
 	candidate := &asset.Candidate{Version: workingCopyVersion}
 	err := h.assets.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -160,11 +161,11 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}
-	visibility, ok := h.readerVisibility(c, nil)
+	visibility, ok := work.ReaderVisibility(c, h.accounts, nil)
 	if !ok {
 		return
 	}
@@ -200,7 +201,7 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	viewerID, ok := h.viewerID(c)
+	viewerID, ok := api.ViewerID(c)
 	if !ok {
 		return
 	}
@@ -209,7 +210,7 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		value := string(*params.Nsfw)
 		requested = &value
 	}
-	visibility, ok := h.readerVisibility(c, requested)
+	visibility, ok := work.ReaderVisibility(c, h.accounts, requested)
 	if !ok {
 		return
 	}
@@ -222,19 +223,19 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
-	blocks, err := toAPIBlocks(offered.Kind, offered.Blocks)
+	blocks, err := work.ToBlocks(offered.Kind, offered.Blocks)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
 	c.JSON(http.StatusOK, RecordedVersionDownloads{
-		Version:           toAPIRecordedVersion(offered.Version),
+		Version:           work.ToRecordedVersion(offered.Version),
 		Kind:              RecordedVersionDownloadsKind(offered.Kind),
 		LinkedInstallOnly: offered.LinkedInstallOnly,
-		Downloads:         toAPIDownloads(offered.Downloads),
-		AppTargets:        toAPIAppTargets(offered.AppTargets),
+		Downloads:         work.ToDownloads(offered.Downloads),
+		AppTargets:        work.ToAppTargets(offered.AppTargets),
 		Blocks:            blocks,
-		Media:             toAPIImages(offered.Media),
+		Media:             work.ToImages(offered.Media),
 	})
 }
 
@@ -259,7 +260,7 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 	items := make([]ProtectionMismatch, 0, len(mismatches))
 	for _, mismatch := range mismatches {
 		items = append(items, ProtectionMismatch{
-			Version:   toAPIRecordedVersion(mismatch.Version),
+			Version:   work.ToRecordedVersion(mismatch.Version),
 			Unmatched: toAPINamedPrompts(mismatch.Unmatched),
 			Recorded:  toAPINamedPrompts(mismatch.Recorded),
 		})
@@ -315,18 +316,6 @@ func versionNumber(chosen *int) int {
 	return *chosen
 }
 
-func toAPIRecordedVersion(recorded asset.Version) RecordedVersion {
-	return RecordedVersion{
-		Id: recorded.ID, Number: recorded.Number,
-		RecordedAt: recorded.RecordedAt, Initial: recorded.Initial,
-		VersionLabel: recorded.VersionLabel,
-		Summary:      recorded.Summary, Notes: recorded.Notes,
-		NotesEditedAt:         recorded.NotesEditedAt,
-		WithdrawnAt:           recorded.WithdrawnAt,
-		WithdrawalExplanation: textOrNil(recorded.WithdrawalExplanation),
-	}
-}
-
 func toAPINamedPrompts(prompts []asset.NamedPrompt) []NamedPrompt {
 	out := make([]NamedPrompt, 0, len(prompts))
 	for _, prompt := range prompts {
@@ -337,7 +326,7 @@ func toAPINamedPrompts(prompts []asset.NamedPrompt) []NamedPrompt {
 
 func toAPIComparison(compared asset.Comparison) VersionComparison {
 	served := VersionComparison{
-		From: toAPIRecordedVersion(compared.From), To: toAPIRecordedVersion(compared.To),
+		From: work.ToRecordedVersion(compared.From), To: work.ToRecordedVersion(compared.To),
 		Groups:          make([]VersionChangeGroup, 0, len(compared.Groups)),
 		PromptsWithheld: compared.PromptsWithheld,
 	}

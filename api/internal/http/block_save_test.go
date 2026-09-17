@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,13 +11,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
-	started := startPreset(t, r, session, "lumiverse")
+	started := apitest.StartPreset(t, r, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "The reader must never receive these words."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
@@ -28,7 +26,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	owner := fetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
 		t.Fatal("the owner did not receive the restored sealed prompt")
 	}
@@ -59,7 +57,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
-	started := startPreset(t, r, session, "lumiverse")
+	started := apitest.StartPreset(t, r, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const publicText = "Readers can use this instruction."
 	const firstSecret = "Only allowed applications receive this first instruction."
@@ -79,7 +77,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		t.Fatalf("save several sealed prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	owner := fetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
 	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("sealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -121,7 +119,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	owner = fetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("unsealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -135,26 +133,6 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 			t.Errorf("reader response after unsealing does not contain %q", want)
 		}
 	}
-}
-
-func fetchStartedAsset(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assetID string,
-) apitest.StartedAsset {
-	t.Helper()
-	response := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session,
-	))
-	if response.Code != http.StatusOK {
-		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())
-	}
-	var saved apitest.StartedAsset
-	if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
-		t.Fatalf("decode saved asset: %v", err)
-	}
-	return saved
 }
 
 func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
@@ -177,7 +155,7 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 		t.Fatalf("save greeting status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
-	saved := fetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "character_core"))
 	messages = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "messages"))
 	if string(core.Elements[0].Content) != `{"text":"She keeps the memories that books forget."}` {
@@ -213,7 +191,7 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("save chosen title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != chosen || saved.TitleIsDefault {
 		t.Fatalf("chosen title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
@@ -223,7 +201,7 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("release title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved = apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved = apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != "The character" || !saved.TitleIsDefault {
 		t.Fatalf("released title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
@@ -474,7 +452,7 @@ func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("narrow required block status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Width != "half" || saved.Layout != "stack-3" {
 		t.Errorf("saved arrangement = %s at %s, want stack-3 at half", saved.Layout, saved.Width)
 	}
@@ -590,7 +568,7 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 		t.Fatalf("prepare three messages: %v", err)
 	}
 
-	savedAsset := fetchStartedAsset(t, r, session, started.ID)
+	savedAsset := apitest.FetchStartedAsset(t, r, session, started.ID)
 	messagesBlock = apitest.BlockNamed(t, savedAsset.Blocks, "messages")
 	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "stack-2"
@@ -610,7 +588,7 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	t.Parallel()
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
-	started := startPreset(t, r, session, "lumiverse")
+	started := apitest.StartPreset(t, r, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"Visible","role":"system","text":"Readers keep this one.","enabled":true},
@@ -622,51 +600,37 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("seal two prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
 		t.Fatalf("after sealing: %d payloads and %d policy rows, want 2 and 1", payloads, policies)
 	}
 
-	owner := fetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
 	shorter := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shorter.Elements[0].Content = withoutFragment(t, owner, "First sealed")
 	shorter.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shorter); got.Code != http.StatusOK {
 		t.Fatalf("remove one sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("after one removal: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
-	owner = fetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
 	shortest := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shortest.Elements[0].Content = withoutFragment(t, owner, "Second sealed")
 	shortest.AllowedApps = &[]string{}
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shortest); got.Code != http.StatusOK {
 		t.Fatalf("remove the final sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after the final removal: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 
-	owner = fetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("after the final removal: linked install only %t, allowed apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)
 	}
-}
-
-func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int) {
-	t.Helper()
-	var payloads, policies int
-	err := pool.QueryRow(context.Background(), `
-		SELECT
-			(SELECT count(*) FROM protected_content WHERE asset_id = $1),
-			(SELECT count(*) FROM protected_delivery_apps WHERE asset_id = $1)
-	`, assetID).Scan(&payloads, &policies)
-	if err != nil {
-		t.Fatalf("count protected rows: %v", err)
-	}
-	return payloads, policies
 }
 
 func withoutFragment(t *testing.T, owner apitest.StartedAsset, name string) json.RawMessage {

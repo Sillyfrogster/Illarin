@@ -7,6 +7,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -32,7 +33,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	saved, err := h.assets.AddBlock(
 		c.Request.Context(), owner.ID, id,
 		block.DefinitionID(request.Definition), block.Type(request.ElementType), candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -43,7 +44,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not add the block.")
 	default:
-		blocks, conversionErr := toAPIBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := work.ToBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the new block.")
 			return
@@ -57,7 +58,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -78,7 +79,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	}
 	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, id, arrangement, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -89,7 +90,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not arrange the blocks.")
 	default:
-		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return
@@ -107,7 +108,7 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -117,7 +118,7 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 	}
 	candidate := &asset.Candidate{Version: version}
 	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, id, blockID, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -141,7 +142,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -157,7 +158,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.MoveBlockContent(
 		c.Request.Context(), owner.ID, id, blockID, request.DestinationBlockId, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
@@ -168,7 +169,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not move the block content.")
 	default:
-		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return

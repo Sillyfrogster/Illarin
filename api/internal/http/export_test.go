@@ -1,28 +1,16 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-const aPlainCard = `{
-	"spec":"chara_card_v3","spec_version":"3.0",
-	"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Hello"}
-}`
 
 func downloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []apitest.DownloadTarget {
 	t.Helper()
@@ -65,7 +53,7 @@ func losses(target apitest.DownloadTarget) []apitest.RoleVerdict {
 func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 
 	plain := downloadMenu(t, r, session, assetID)
 	if len(plain) != 3 {
@@ -75,7 +63,7 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 		t.Fatalf("CCv2 reported %+v for a card that has none of what it drops", lost)
 	}
 
-	giveExpressions(t, r, session, assetID)
+	apitest.GiveExpressions(t, r, session, assetID)
 
 	withImages := downloadMenu(t, r, session, assetID)
 	lost := losses(targetLine(t, withImages, "chara_card_v2"))
@@ -93,9 +81,9 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	giveExpressions(t, r, session, assetID)
-	givePictures(t, r, session, assetID, "gallery", "gallery")
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GiveExpressions(t, r, session, assetID)
+	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
 	menu := downloadMenu(t, r, session, assetID)
 	recommended := ""
@@ -135,8 +123,8 @@ func roleVerdictNamed(t *testing.T, target apitest.DownloadTarget, role string) 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	publishCharacter(t, r, session, assetID)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.PublishCharacter(t, r, session, assetID)
 
 	seen := make(map[string]string)
 	for _, target := range []string{"chara_card_v2", "chara_card_v3", "charx"} {
@@ -157,8 +145,8 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	publishCharacter(t, r, session, assetID)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.PublishCharacter(t, r, session, assetID)
 
 	owner, stranger := downloadMenu(t, r, session, assetID), downloadMenu(t, r, nil, assetID)
 	if !json.Valid(mustJSON(t, owner)) || string(mustJSON(t, owner)) != string(mustJSON(t, stranger)) {
@@ -179,9 +167,9 @@ func mustJSON(t *testing.T, value any) []byte {
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 
-	uploaded := fetchStartedAsset(t, r, session, assetID)
+	uploaded := apitest.FetchStartedAsset(t, r, session, assetID)
 	if uploaded.Original == nil {
 		t.Fatal("an uploaded card has no original upload group")
 	}
@@ -195,7 +183,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	}
 
 	built := apitest.StartCharacter(t, r, session)
-	fromNothing := fetchStartedAsset(t, r, session, built.ID)
+	fromNothing := apitest.FetchStartedAsset(t, r, session, built.ID)
 	if fromNothing.Original != nil {
 		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
 	}
@@ -206,42 +194,42 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 
 func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
+	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 
-	before := projectionComputedAt(t, pool, assetID)
-	giveExpressions(t, r, session, assetID)
-	afterEdit := projectionComputedAt(t, pool, assetID)
+	before := apitest.ProjectionComputedAt(t, pool, assetID)
+	apitest.GiveExpressions(t, r, session, assetID)
+	afterEdit := apitest.ProjectionComputedAt(t, pool, assetID)
 	if !afterEdit.After(before) {
 		t.Fatal("editing a block left the export projection where it was")
 	}
 
-	publishCharacter(t, r, session, assetID)
-	if afterPublish := projectionComputedAt(t, pool, assetID); !afterPublish.Equal(afterEdit) {
+	apitest.PublishCharacter(t, r, session, assetID)
+	if afterPublish := apitest.ProjectionComputedAt(t, pool, assetID); !afterPublish.Equal(afterEdit) {
 		t.Fatal("publishing recomputed the export projection")
 	}
 }
 
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	giveExpressions(t, r, session, assetID)
-	publishCharacter(t, r, session, assetID)
+	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GiveExpressions(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, assetID)
 
-	before := projectionComputedAt(t, pool, assetID)
-	page := fetchStartedAsset(t, r, session, assetID)
-	arrangement := make([]arrangedBlock, 0, len(page.Blocks))
+	before := apitest.ProjectionComputedAt(t, pool, assetID)
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	arrangement := make([]apitest.ArrangedBlock, 0, len(page.Blocks))
 	for _, holder := range page.Blocks {
-		arrangement = append(arrangement, arrangedBlock{
+		arrangement = append(arrangement, apitest.ArrangedBlock{
 			ID: holder.ID, Hidden: holder.Definition == "expressions", Width: holder.Width,
 		})
 	}
-	arranged := arrangeBlocks(t, r, session, assetID, arrangement)
+	arranged := apitest.ArrangeBlocks(t, r, session, assetID, arrangement)
 	if arranged.Code != http.StatusOK {
 		t.Fatalf("hide the expressions: %d %s", arranged.Code, arranged.Body.String())
 	}
-	if after := projectionComputedAt(t, pool, assetID); !after.Equal(before) {
+	if after := apitest.ProjectionComputedAt(t, pool, assetID); !after.Equal(before) {
 		t.Fatal("hiding a block moved the export half of the projection")
 	}
 
@@ -251,78 +239,16 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
 	}
-	if !containsBytes(export.Body, []byte("emotion")) {
+	if !apitest.ContainsBytes(export.Body, []byte("emotion")) {
 		t.Fatal("a hidden block's content did not travel in the download")
 	}
-}
-
-func giveExpressions(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
-	t.Helper()
-	givePictures(t, r, session, assetID, "expression", "expressions")
-}
-
-func givePictures(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assetID, mediaRole, definition string,
-) {
-	t.Helper()
-	mediaID := uploadedImageID(t, r, session, assetID, mediaRole, apitest.PNG(t, 64, 64))
-	block := addedBlock(t, addBlock(t, r, session, assetID, definition, "image_set"))
-	body := apitest.EditableBlock(block)
-	body.Elements[0].Content = json.RawMessage(
-		`{"images":[{"mediaId":"` + mediaID + `","name":"happy"}]}`,
-	)
-	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
-		t.Fatalf("save the %s block: %d %s", definition, saved.Code, saved.Body.String())
-	}
-}
-
-func publishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
-	t.Helper()
-	if got := apitest.SaveIdentity(t, r, session, assetID,
-		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
-	}
-	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
-		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
-	}
-}
-
-func newCharacterIngestRouterWithPool(
-	t *testing.T,
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	registry := format.NewRegistry()
-	for _, module := range character.Modules() {
-		if err := registry.Register(module); err != nil {
-			t.Fatalf("register %s: %v", module.ID(), err)
-		}
-	}
-	return harness.NewVerifiedIngestRouterWithPool(t, registry)
-}
-
-func projectionComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time {
-	t.Helper()
-	var computedAt time.Time
-	if err := pool.QueryRow(context.Background(), `
-		select export_computed_at from asset_projections where asset_id = $1
-	`, assetID).Scan(&computedAt); err != nil {
-		t.Fatalf("read the export projection: %v", err)
-	}
-	return computedAt
-}
-
-func containsBytes(haystack, needle []byte) bool {
-	return bytes.Contains(haystack, needle)
 }
 
 func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	givePictures(t, r, session, assetID, "gallery", "gallery")
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
 	offered := appTargetsFor(t, r, session, assetID)
 	if len(offered) == 0 {
@@ -338,8 +264,8 @@ func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	givePictures(t, r, session, assetID, "gallery", "gallery")
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
 	menu := downloadMenu(t, r, session, assetID)
 	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")

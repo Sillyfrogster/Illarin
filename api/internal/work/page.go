@@ -1,4 +1,4 @@
-package asset
+package work
 
 import (
 	"context"
@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/summary"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -18,17 +19,6 @@ import (
 type DetailTag struct {
 	Label string
 	Value string
-}
-
-type DetailImage struct {
-	ID        uuid.UUID
-	Role      MediaRole
-	IsCover   bool
-	DetailURL string
-	ThumbURL  string
-	Width     int
-	Height    int
-	Bytes     int64
 }
 
 type Detail struct {
@@ -41,20 +31,20 @@ type Detail struct {
 	Tags                []DetailTag
 	Creator             string
 	Identifier          *string
-	Dependencies        []ExtensionDependency
+	Dependencies        []Dependency
 	IsNSFW              *bool
-	Discovery           Discovery
-	Lifecycle           Lifecycle
+	Discovery           asset.Discovery
+	Lifecycle           asset.Lifecycle
 	IsOwner             bool
 	Downloads           []format.Target
 	AppTargets          []format.AppTarget
-	Original            *OriginalUpload
+	Original            *asset.OriginalUpload
 	CreatedAt           time.Time
 	Blocks              []block.Block
-	Media               []DetailImage
+	Media               []asset.DetailImage
 	Preview             *string
-	LatestUpdate        *Version
-	Readiness           []ReadinessItem
+	LatestUpdate        *asset.Version
+	Readiness           []asset.ReadinessItem
 	SealedBlocks        int
 	LinkedInstallOnly   bool
 	AllowedApps         []string
@@ -63,30 +53,25 @@ type Detail struct {
 	Withhold            *Withhold
 }
 
-// Withhold is what the owner of a withheld asset reads, which never names the staff member who acted.
-type Withhold struct {
-	Reason string
-	At     time.Time
-}
-
 func (s *Service) Detail(
 	ctx context.Context,
 	id uuid.UUID,
 	viewerID *uuid.UUID,
-	visibility ContentVisibility,
+	visibility asset.ContentVisibility,
 ) (Detail, error) {
 	return s.detail(ctx, id, viewerID, visibility, false)
 }
 
-func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility) (Detail, error) {
+// WorkingCopy reads the page its owner edits, drafted changes included
+func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility asset.ContentVisibility) (Detail, error) {
 	if viewerID == nil {
-		return Detail{}, ErrNotFound
+		return Detail{}, asset.ErrNotFound
 	}
 	return s.detail(ctx, id, viewerID, visibility, true)
 }
 
-func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility ContentVisibility, working bool) (Detail, error) {
-	tx, err := s.beginReadSnapshot(ctx)
+func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility asset.ContentVisibility, working bool) (Detail, error) {
+	tx, err := s.assets.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Detail{}, fmt.Errorf("begin asset page snapshot: %w", err)
 	}
@@ -102,13 +87,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		ID: uuidToPgtype(id), ViewerID: uuidToNullable(viewerID),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Detail{}, ErrNotFound
+		return Detail{}, asset.ErrNotFound
 	}
 	if err != nil {
 		return Detail{}, fmt.Errorf("read asset page: %w", err)
 	}
 	if working && !row.IsOwner {
-		return Detail{}, ErrNotFound
+		return Detail{}, asset.ErrNotFound
 	}
 	found := Detail{
 		ID:        uuidFromPgtype(row.ID),
@@ -118,28 +103,28 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		Tags:      detailTags(row.Tags),
 		Creator:   row.Creator,
 		IsNSFW:    boolFromPgtype(row.IsNsfw),
-		Discovery: Discovery(row.Discovery),
-		Lifecycle: Lifecycle(row.Lifecycle),
+		Discovery: asset.Discovery(row.Discovery),
+		Lifecycle: asset.Lifecycle(row.Lifecycle),
 		IsOwner:   row.IsOwner,
 		Original:  originalUpload(s.reg, row),
 		CreatedAt: timeFromPgtype(row.CreatedAt),
-		Media:     []DetailImage{},
+		Media:     []asset.DetailImage{},
 	}
 	if row.Identifier != "" {
 		found.Identifier = &row.Identifier
 	}
-	if working || (found.IsOwner && found.Lifecycle == LifecycleDraft) {
+	if working || (found.IsOwner && found.Lifecycle == asset.LifecycleDraft) {
 		var version int64
 		if err := tx.QueryRow(ctx, `select working_copy_version from public.assets where id = $1`, id).Scan(&version); err != nil {
 			return Detail{}, err
 		}
 		found.WorkingCopyVersion = &version
 	}
-	found.Downloads, err = s.exportProjection(ctx, tx, id)
+	found.Downloads, err = summary.Offered(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
 	}
-	found.Blocks, err = readBlocks(ctx, tx, id)
+	found.Blocks, err = block.Read(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -153,8 +138,8 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	if err != nil {
 		return Detail{}, err
 	}
-	if working && found.Lifecycle == LifecyclePublished {
-		unpublished, err := s.unpublishedChanges(ctx, tx, id)
+	if working && found.Lifecycle == asset.LifecyclePublished {
+		unpublished, err := s.assets.UnpublishedChanges(ctx, tx, id)
 		if err != nil {
 			return Detail{}, err
 		}
@@ -177,16 +162,16 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		return Detail{}, fmt.Errorf("read asset page media: %w", err)
 	}
 	flagged := found.IsNSFW != nil && *found.IsNSFW
-	blurred := flagged && visibility != ContentShown
-	draft := found.Lifecycle == LifecycleDraft
+	blurred := flagged && visibility != asset.ContentShown
+	draft := found.Lifecycle == asset.LifecycleDraft
 	for _, image := range images {
 		mediaID := uuidFromPgtype(image.ID)
-		found.Media = append(found.Media, DetailImage{
+		found.Media = append(found.Media, asset.DetailImage{
 			ID:        mediaID,
-			Role:      MediaRole(image.Role),
+			Role:      asset.MediaRole(image.Role),
 			IsCover:   image.IsCover,
-			DetailURL: s.variantURL(mediaID, "detail", blurred, draft || working),
-			ThumbURL:  s.variantURL(mediaID, "thumb", blurred, draft || working),
+			DetailURL: s.assets.ImageAddress(mediaID, "detail", blurred, draft || working),
+			ThumbURL:  s.assets.ImageAddress(mediaID, "thumb", blurred, draft || working),
 			Width:     int(image.Width.Int32),
 			Height:    int(image.Height.Int32),
 			Bytes:     image.ByteSize,
@@ -197,12 +182,12 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			return Detail{}, err
 		}
 		if draft {
-			found.Readiness = readiness(found.Kind, found.Name, found.IsNSFW, found.Blocks)
+			found.Readiness = asset.Readiness(found.Kind, found.Name, found.IsNSFW, found.Blocks)
 		} else {
-			found.Readiness = publishedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
+			found.Readiness = asset.PublishedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
 		}
 		if viewerID != nil {
-			sealed, err := sealedBlockCount(ctx, tx, *viewerID, id)
+			sealed, err := asset.SealedBlockCount(ctx, tx, *viewerID, id)
 			if err != nil {
 				return Detail{}, err
 			}
@@ -230,7 +215,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	}
 	for _, image := range found.Media {
 		if image.IsCover {
-			preview := s.variantURL(image.ID, "og", flagged, false)
+			preview := s.assets.ImageAddress(image.ID, "og", flagged, false)
 			found.Preview = &preview
 			break
 		}
@@ -238,8 +223,8 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	return found, nil
 }
 
-func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*Version, error) {
-	var recorded Version
+func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*asset.Version, error) {
+	var recorded asset.Version
 	err := tx.QueryRow(ctx, `
 		select s.id, s.number, s.recorded_at, s.initial_recorded,
 		       s.version_label, s.summary, s.notes
@@ -257,19 +242,7 @@ func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*Version, 
 	return &recorded, nil
 }
 
-func (s *Service) unpublishedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
-	published, err := s.publishedDigest(ctx, tx, assetID)
-	if err != nil {
-		return false, err
-	}
-	reviewed, err := s.assetDigest(ctx, tx, assetID)
-	if err != nil {
-		return false, err
-	}
-	return reviewed.whole != published.whole, nil
-}
-
-func originalUpload(reg *format.Registry, row db.AssetPageRow) *OriginalUpload {
+func originalUpload(reg *format.Registry, row db.AssetPageRow) *asset.OriginalUpload {
 	if !row.OriginalFormat.Valid {
 		return nil
 	}
@@ -277,7 +250,7 @@ func originalUpload(reg *format.Registry, row db.AssetPageRow) *OriginalUpload {
 	if declaration, known := reg.Declaration(row.OriginalFormat.String); known {
 		label = declaration.Label
 	}
-	return &OriginalUpload{
+	return &asset.OriginalUpload{
 		Label:     label,
 		MediaType: row.OriginalMediaType.String,
 		ArrivedAt: timeFromPgtype(row.OriginalArrivedAt),
@@ -294,15 +267,4 @@ func detailTags(tags []string) []DetailTag {
 		out = append(out, DetailTag{Label: tag, Value: value})
 	}
 	return out
-}
-
-func (s *Service) variantURL(mediaID uuid.UUID, variant string, blurred, private bool) string {
-	if blurred {
-		variant += "_blurred"
-	}
-	path := fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, mediaproc.DerivativeVersion)
-	if !private {
-		return path
-	}
-	return s.signer.Sign(path, s.now())
 }

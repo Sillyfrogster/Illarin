@@ -202,7 +202,7 @@ func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
 

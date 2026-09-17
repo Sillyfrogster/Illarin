@@ -19,7 +19,7 @@ import (
 func TestOnlyAnAdminCanWithholdAnAssetAndTheDecisionIsRecordedTogether(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, "")
 
 	request := func() *http.Request {
 		return apitest.AuthorizedJSONRequest(
@@ -90,7 +90,7 @@ func TestOnlyAnAdminCanWithholdAnAssetAndTheDecisionIsRecordedTogether(t *testin
 func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, "")
 	mediaID := addWithholdingTestMedia(t, router, session, assetID)
 
 	if _, err := pool.Exec(context.Background(), `
@@ -113,7 +113,7 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 	if pageResponse.Code != http.StatusOK {
 		t.Fatalf("owner page status = %d, want 200: %s", pageResponse.Code, pageResponse.Body.String())
 	}
-	var page assetPageResponse
+	var page apitest.AssetPageResponse
 	if err := json.Unmarshal(pageResponse.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode owner page: %v", err)
 	}
@@ -148,8 +148,8 @@ func TestOwnerCanViewAndDownloadAWithheldAssetWithItsDecision(t *testing.T) {
 func TestUnavailableAssetsAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	withheldID := uploadDiscoveryTestAsset(t, router, session, assets, "")
-	deletedID := uploadDiscoveryTestAsset(t, router, session, assets, "")
+	withheldID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, "")
+	deletedID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, "")
 	withheldMediaID := addWithholdingTestMedia(t, router, session, withheldID)
 	deletedMediaID := addWithholdingTestMedia(t, router, session, deletedID)
 
@@ -215,7 +215,7 @@ func TestUnavailableAssetsAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 func TestWithheldAssetRefusesCreatorMutations(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := uploadDiscoveryTestAsset(t, router, session, assets, "")
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, "")
 	if _, err := pool.Exec(context.Background(), `
 		update assets asset
 		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'Review'
@@ -230,7 +230,7 @@ func TestWithheldAssetRefusesCreatorMutations(t *testing.T) {
 			t, http.MethodPut, "/v1/assets/"+assetID+"/discovery",
 			`{"discovery":"unlisted"}`, session,
 		),
-		apitest.Authorized(mediaUploadRequest(
+		apitest.Authorized(apitest.MediaUploadRequest(
 			t, assetID, "gallery", apitest.PNG(t, 2, 2),
 		), session),
 	}
@@ -253,7 +253,7 @@ func TestWithheldAssetRefusesCreatorMutations(t *testing.T) {
 func TestWithheldAssetRefusesEveryProtectedPromptMutation(t *testing.T) {
 	t.Parallel()
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
-	started := startPreset(t, router, session, "lumiverse")
+	started := apitest.StartPreset(t, router, session, "lumiverse")
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
 	const privateText = "This prompt stays frozen."
@@ -265,8 +265,8 @@ func TestWithheldAssetRefusesEveryProtectedPromptMutation(t *testing.T) {
 	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
 	}
-	before := contentGeneration(t, pool, started.ID)
-	owner := fetchStartedAsset(t, router, session, started.ID)
+	before := apitest.ContentGeneration(t, pool, started.ID)
+	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	if _, err := pool.Exec(t.Context(), `
 		update assets asset
@@ -312,10 +312,10 @@ func TestWithheldAssetRefusesEveryProtectedPromptMutation(t *testing.T) {
 	if storedText != privateText {
 		t.Fatalf("protected prompt after refused saves = %q, want %q", storedText, privateText)
 	}
-	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("after refused saves: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
-	if got := contentGeneration(t, pool, started.ID); got != before {
+	if got := apitest.ContentGeneration(t, pool, started.ID); got != before {
 		t.Fatalf("content generation after refused saves = %d, want %d", got, before)
 	}
 }
@@ -327,7 +327,7 @@ func addWithholdingTestMedia(
 	assetID string,
 ) string {
 	t.Helper()
-	response := apitest.Send(t, router, apitest.Authorized(mediaUploadRequest(
+	response := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "gallery", apitest.PNG(t, 1, 1),
 	), session))
 	if response.Code != http.StatusCreated {

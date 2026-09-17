@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"context"
@@ -7,54 +7,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
-
-type assetPageResponse struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	Blurb     string `json:"blurb"`
-	Creator   string `json:"creator"`
-	IsNSFW    bool   `json:"isNsfw"`
-	Discovery string `json:"discovery"`
-	CreatedAt string `json:"createdAt"`
-	Tags      []struct {
-		Label string `json:"label"`
-		Value string `json:"value"`
-	} `json:"tags"`
-	Media []struct {
-		ID        string `json:"id"`
-		Role      string `json:"role"`
-		IsCover   bool   `json:"isCover"`
-		DetailURL string `json:"detailUrl"`
-		ThumbURL  string `json:"thumbUrl"`
-		Width     int    `json:"width"`
-		Height    int    `json:"height"`
-	} `json:"media"`
-	Preview    *string `json:"preview"`
-	Visibility string  `json:"visibility"`
-	Withhold   *struct {
-		Reason string    `json:"reason"`
-		At     time.Time `json:"at"`
-	} `json:"withhold"`
-}
-
-func fetchAssetPage(t *testing.T, r http.Handler, path string) assetPageResponse {
-	t.Helper()
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, path, nil))
-	if response.Code != http.StatusOK {
-		t.Fatalf("GET %s status = %d, want 200: %s", path, response.Code, response.Body.String())
-	}
-	var page assetPageResponse
-	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode asset page: %v", err)
-	}
-	return page
-}
 
 func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	t.Parallel()
@@ -64,16 +20,16 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	metadata["filename"] = "archivist.lumitheme"
 	metadata["blurb"] = "She closes the book on a ribbon."
 	metadata["tags"] = []string{"Slow Burn", " Modern "}
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
 
-	cover := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "avatar", apitest.PNG(t, 800, 1000),
 	), session))
 	if cover.Code != http.StatusCreated {
 		t.Fatalf("add cover status = %d, want 201: %s", cover.Code, cover.Body.String())
 	}
 	for _, role := range []string{"gallery", "expression"} {
-		added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+		added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 			t, assetID, role, apitest.PNG(t, 400, 300),
 		), session))
 		if added.Code != http.StatusCreated {
@@ -85,7 +41,7 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := fetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
 
 	if page.ID != assetID || page.Name != "The Quiet Archivist" || page.Kind != "character" {
 		t.Fatalf("asset page identity = %+v", page)
@@ -135,9 +91,9 @@ func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	metadata := apitest.ExampleMetadata("Coverless Gallery")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "coverless-gallery.lumitheme"
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
 
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "gallery", apitest.PNG(t, 400, 300),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -148,7 +104,7 @@ func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := fetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
 	if len(page.Media) != 1 || page.Media[0].Role != "gallery" || page.Media[0].IsCover {
 		t.Fatalf("coverless gallery media = %+v", page.Media)
 	}
@@ -159,7 +115,7 @@ func TestAssetPageShowsNoTotals(t *testing.T) {
 	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Countless")
 	metadata["filename"] = "countless.lumitheme"
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
 
 	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
 	var body map[string]any
@@ -189,9 +145,9 @@ func TestAssetPageAnswersNormallyForAnUnlistedAsset(t *testing.T) {
 	metadata := apitest.ExampleMetadata("Kept Back")
 	metadata["filename"] = "kept-back.lumitheme"
 	metadata["discovery"] = "unlisted"
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
 
-	page := fetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
 
 	if page.Discovery != "unlisted" {
 		t.Fatalf("discovery = %q, want unlisted", page.Discovery)
@@ -201,10 +157,10 @@ func TestAssetPageAnswersNormallyForAnUnlistedAsset(t *testing.T) {
 func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
 	t.Parallel()
 	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	withhold := assetIDFromIngest(t, apitest.UploadAndFinish(
+	withhold := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, r, session, assets, withFilename(apitest.ExampleMetadata("Withheld"), "withheld"), []byte("a"),
 	))
-	deleted := assetIDFromIngest(t, apitest.UploadAndFinish(
+	deleted := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
 		t, r, session, assets, withFilename(apitest.ExampleMetadata("Deleted"), "deleted"), []byte("b"),
 	))
 	staff := "11111111-1111-1111-1111-111111111111"
@@ -248,8 +204,8 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "after-dark.lumitheme"
 	metadata["isNsfw"] = true
-	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
-	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, assetID, "avatar", apitest.PNG(t, 600, 600),
 	), session))
 	if added.Code != http.StatusCreated {
@@ -261,7 +217,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	}
 
 	for _, preference := range []string{"blurred", "hidden"} {
-		page := fetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw="+preference)
+		page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw="+preference)
 		if len(page.Media) != 1 {
 			t.Fatalf("%s media = %+v", preference, page.Media)
 		}
@@ -279,7 +235,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 		}
 	}
 
-	shown := fetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw=shown")
+	shown := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw=shown")
 	if !strings.HasSuffix(shown.Media[0].DetailURL, "/detail/2") {
 		t.Errorf("a shown reader got %q", shown.Media[0].DetailURL)
 	}

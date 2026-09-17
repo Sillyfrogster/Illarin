@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +22,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := workingCopyVersion(c)
+	version, ok := api.WorkingCopyVersion(c)
 	if !ok {
 		return
 	}
@@ -42,7 +43,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.SaveBlock(
 		c.Request.Context(), owner.ID, id, blockID, update, candidate)
-	if candidateResult(c, candidate, err) {
+	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	var exposure asset.ExposureRefusal
@@ -63,7 +64,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the block.")
 	default:
-		blocks, conversionErr := toAPIBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := work.ToBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the saved block.")
 			return
