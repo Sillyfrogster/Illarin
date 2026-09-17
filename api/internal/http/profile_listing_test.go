@@ -61,7 +61,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	}
 }
 
-func TestCreatorProfileKeepsCreatorAndReaderAdultContentChoicesSeparate(t *testing.T) {
+func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 	t.Parallel()
 	router, _, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
@@ -72,22 +72,11 @@ func TestCreatorProfileKeepsCreatorAndReaderAdultContentChoicesSeparate(t *testi
 	createProfileAsset(t, assets, creatorID, "Open garden", false, asset.DiscoveryListed)
 	createProfileAsset(t, assets, creatorID, "Midnight garden", true, asset.DiscoveryListed)
 
-	browse := readProfileListing(t, router, "/v1/assets?nsfw=shown", nil)
-	if names(browse) == nil || !slices.Equal(names(browse), []string{"Midnight garden", "Open garden"}) {
-		t.Fatalf("browse returned %v, want both assets regardless of the profile setting", names(browse))
-	}
-
-	privateProfile := readProfileListing(
+	shown := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
 	)
-	if !slices.Equal(names(privateProfile), []string{"Open garden"}) || privateProfile.Suppressed != 0 {
-		t.Fatalf("profile with adult contributions disabled = %+v", privateProfile)
-	}
-
-	if _, err := pool.Exec(context.Background(), `
-		update users set show_nsfw_contributions_on_profile = true where id = $1
-	`, creatorID); err != nil {
-		t.Fatalf("show adult contributions on profile: %v", err)
+	if !slices.Equal(names(shown), []string{"Midnight garden", "Open garden"}) {
+		t.Fatalf("shown reader preference returned %v, want both profile assets", names(shown))
 	}
 	hidden := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=hidden", nil,
@@ -142,8 +131,8 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	stranger := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
 	)
-	if !slices.Equal(names(stranger), []string{"Public garden"}) {
-		t.Fatalf("stranger profile returned %v, want only the public safe asset", names(stranger))
+	if !slices.Equal(names(stranger), []string{"Adult garden", "Public garden"}) {
+		t.Fatalf("stranger profile returned %v, want only the listed assets", names(stranger))
 	}
 
 	owner := readProfileListing(t, router, "/v1/assets?creator=verified.creator", session)

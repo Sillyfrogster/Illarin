@@ -91,10 +91,7 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the signed-in account."})
 			return
 		}
-		f.Profile = &asset.ProfileListingScope{
-			CreatorID:        creator.ID,
-			CreatorShowsNSFW: creator.ShowNSFWContributionsOnProfile,
-		}
+		f.Profile = &asset.ProfileListingScope{CreatorID: creator.ID}
 		if current != nil {
 			f.Profile.ViewerID = &current.ID
 		}
