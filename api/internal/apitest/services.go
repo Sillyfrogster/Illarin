@@ -9,14 +9,14 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
-	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -60,8 +60,8 @@ func NewPublicationService(pool *pgxpool.Pool, store storage.Store) *publication
 	)
 }
 
-func NewUpdateDestinations(pool *pgxpool.Pool) *assetdestination.Service {
-	return assetdestination.NewService(pool, SealingKey(), Publishing(nil).Sender, "http://localhost:3000")
+func NewUpdateDestinations(pool *pgxpool.Pool) *integration.Service {
+	return integration.NewService(pool, SealingKey(), Publishing(nil).Sender, "http://localhost:3000")
 }
 
 func Publishing(to publication.Sender) publication.Publishing {
@@ -87,17 +87,17 @@ func SealingKey() secrets.Key {
 type ClosedSender struct{}
 
 func (ClosedSender) Check(address string) (string, error) {
-	return outbound.NewCaller(outbound.DefaultLimits()).Check(address)
+	return dispatch.NewCaller(dispatch.DefaultLimits()).Check(address)
 }
 
-func (ClosedSender) Get(context.Context, string) (outbound.Answer, error) {
-	return outbound.Answer{}, errors.New("this test stack sends nowhere")
+func (ClosedSender) Get(context.Context, string) (dispatch.Answer, error) {
+	return dispatch.Answer{}, errors.New("this test stack sends nowhere")
 }
 
 func (ClosedSender) Post(
 	context.Context, string, map[string]string, []byte,
-) (outbound.Answer, error) {
-	return outbound.Answer{}, errors.New("this test stack sends nowhere")
+) (dispatch.Answer, error) {
+	return dispatch.Answer{}, errors.New("this test stack sends nowhere")
 }
 
 func NewLinkingService(pool *pgxpool.Pool) *connect.Apps {

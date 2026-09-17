@@ -54,7 +54,7 @@ func (s *Service) WithdrawPost(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -101,7 +101,7 @@ func (s *Service) WithdrawPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("record the withdrawal event: %w", err)
 	}
-	if err := s.queueDeliveries(ctx, tx, id, eventID, EventWithdrawn, chosen); err != nil {
+	if err := s.QueueDeliveries(ctx, tx, id, eventID, EventWithdrawn, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -133,7 +133,7 @@ func (s *Service) RepublishPost(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -177,7 +177,7 @@ func (s *Service) RepublishPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("record the republication event: %w", err)
 	}
-	if err := s.queueDeliveries(ctx, tx, id, eventID, EventPublished, chosen); err != nil {
+	if err := s.QueueDeliveries(ctx, tx, id, eventID, EventPublished, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{

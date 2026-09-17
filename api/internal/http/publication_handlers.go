@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
@@ -285,7 +286,7 @@ func toAPIApp(found publication.App) PublicationApp {
 		Home:         found.Home,
 		Position:     found.Position,
 		Retired:      found.Retired,
-		Destinations: toAPIChoiceRows(found.Destinations),
+		Destinations: integration.ChoiceRows(found.Destinations),
 	}
 }
 
@@ -342,7 +343,7 @@ func toAPIGrant(found publication.Grant, holder account.PublicProfile) Publicati
 		App:                   toAPIApp(found.App),
 		Categories:            toAPICategories(found.Categories),
 		DefaultCategory:       toAPICategory(found.DefaultCategory),
-		Destinations:          toAPIChoiceRows(found.Destinations),
+		Destinations:          integration.ChoiceRows(found.Destinations),
 		DestinationsInherited: found.DestinationsInherited,
 		GrantedAt:             found.GrantedAt,
 		RevokedAt:             found.RevokedAt,

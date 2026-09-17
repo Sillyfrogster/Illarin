@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/google/uuid"
 )
@@ -19,13 +20,13 @@ type OrderPublicationCategoriesRequest struct {
 }
 
 type PublicationApp struct {
-	Destinations []PublicationDestinationChoice `json:"destinations"`
-	Home         string                         `json:"home"`
-	Id           uuid.UUID                      `json:"id"`
-	Name         string                         `json:"name"`
-	Position     int                            `json:"position"`
-	Retired      bool                           `json:"retired"`
-	Slug         string                         `json:"slug"`
+	Destinations []integration.PublicationDestinationChoice `json:"destinations"`
+	Home         string                                     `json:"home"`
+	Id           uuid.UUID                                  `json:"id"`
+	Name         string                                     `json:"name"`
+	Position     int                                        `json:"position"`
+	Retired      bool                                       `json:"retired"`
+	Slug         string                                     `json:"slug"`
 }
 
 type PublicationCategory struct {
@@ -41,16 +42,16 @@ type PublicationCategoryList struct {
 }
 
 type PublicationGrant struct {
-	Active                bool                           `json:"active"`
-	App                   PublicationApp                 `json:"app"`
-	Categories            []PublicationCategory          `json:"categories"`
-	DefaultCategory       PublicationCategory            `json:"defaultCategory"`
-	Destinations          []PublicationDestinationChoice `json:"destinations"`
-	DestinationsInherited bool                           `json:"destinationsInherited"`
-	GrantedAt             time.Time                      `json:"grantedAt"`
-	Holder                PublicationGrantHolder         `json:"holder"`
-	Id                    uuid.UUID                      `json:"id"`
-	RevokedAt             *time.Time                     `json:"revokedAt,omitempty"`
+	Active                bool                                       `json:"active"`
+	App                   PublicationApp                             `json:"app"`
+	Categories            []PublicationCategory                      `json:"categories"`
+	DefaultCategory       PublicationCategory                        `json:"defaultCategory"`
+	Destinations          []integration.PublicationDestinationChoice `json:"destinations"`
+	DestinationsInherited bool                                       `json:"destinationsInherited"`
+	GrantedAt             time.Time                                  `json:"grantedAt"`
+	Holder                PublicationGrantHolder                     `json:"holder"`
+	Id                    uuid.UUID                                  `json:"id"`
+	RevokedAt             *time.Time                                 `json:"revokedAt,omitempty"`
 }
 
 type PublicationGrantHolder struct {

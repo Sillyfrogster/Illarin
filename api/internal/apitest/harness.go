@@ -9,12 +9,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -42,7 +42,7 @@ type Services struct {
 	Links              *connect.Apps
 	Deliveries         *connect.Sends
 	Publications       *publication.Service
-	UpdateDestinations *assetdestination.Service
+	UpdateDestinations *integration.Service
 	Notifications      *notify.Service
 	MaxUploadBytes     int64
 }
@@ -137,7 +137,7 @@ func NewServicesWithDelivery(
 	assets := asset.NewService(pool, Registry(t), blob)
 	accounts := NewAccounts(pool, sender, nil, MediaLibrary(blob))
 	links := NewLinkingService(pool)
-	updateDestinations := assetdestination.NewService(
+	updateDestinations := integration.NewService(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
 	assets.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)

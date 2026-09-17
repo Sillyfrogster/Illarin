@@ -11,8 +11,8 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +34,7 @@ type Service struct {
 	store           storage.Store
 	media           *mediaproc.Library
 	ingest          IngestSettings
-	signer          signing.Key
+	signer          dispatch.Key
 	now             func() time.Time
 	siteURL         string
 	updateListeners []UpdateListener
@@ -132,7 +132,7 @@ func NewServiceWithMediaProcessor(
 	return &Service{
 		pool: pool, reg: reg, store: store,
 		media:  mediaproc.NewLibrary(store, processor, workers),
-		ingest: settings, signer: signing.NewKey(), now: time.Now,
+		ingest: settings, signer: dispatch.NewKey(), now: time.Now,
 	}
 }
 

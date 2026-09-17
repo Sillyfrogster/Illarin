@@ -3,6 +3,7 @@ package publication
 import (
 	"context"
 	"fmt"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -12,23 +13,7 @@ const CredentialSession = "session"
 
 const CredentialSystem = "system"
 
-type change struct {
-	Actor      uuid.UUID
-	Credential string
-	Action     string
-	AppID      *uuid.UUID
-	CategoryID *uuid.UUID
-	GrantID    *uuid.UUID
-	PostID     *uuid.UUID
-	RevisionID *uuid.UUID
-	ScheduleID *uuid.UUID
-	SubjectID  *uuid.UUID
-
-	DestinationID *uuid.UUID
-	DeliveryID    *uuid.UUID
-	Before        string
-	After         string
-}
+type change = blog.Change
 
 func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 	if made.Credential == "" {

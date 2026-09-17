@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
@@ -51,7 +52,7 @@ func (s *Service) PublishPost(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -105,7 +106,7 @@ func (s *Service) PublishPost(
 }
 
 type captured struct {
-	Chosen []sending
+	Chosen []blog.Sending
 	Note   string
 }
 
@@ -151,7 +152,7 @@ func (s *Service) makePublic(
 	if err != nil {
 		return fmt.Errorf("record the publication event: %w", err)
 	}
-	return s.queueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
+	return s.QueueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
 }
 
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {

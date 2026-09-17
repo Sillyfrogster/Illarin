@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ func (s *Service) SchedulePost(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -142,7 +143,7 @@ func (s *Service) ReplaceSchedule(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -442,7 +443,7 @@ func keepScheduleChoice(
 	ctx context.Context,
 	tx pgx.Tx,
 	scheduleID uuid.UUID,
-	chosen []sending,
+	chosen []blog.Sending,
 ) error {
 	for _, one := range chosen {
 		_, err := tx.Exec(ctx, `
@@ -456,7 +457,7 @@ func keepScheduleChoice(
 	return nil
 }
 
-func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]sending, error) {
+func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]blog.Sending, error) {
 	rows, err := tx.Query(ctx, `
 		select destination.id, destination.name, destination.kind, destination.state,
 		       destination.events, destination.role_name, chosen.mention_role
@@ -468,7 +469,7 @@ func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]se
 	if err != nil {
 		return nil, fmt.Errorf("read the scheduled delivery choice: %w", err)
 	}
-	return collectSending(rows)
+	return blog.CollectSending(rows)
 }
 
 func settleSchedule(ctx context.Context, tx pgx.Tx, id uuid.UUID, state, because string) error {

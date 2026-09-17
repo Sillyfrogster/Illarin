@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"strconv"
@@ -17,7 +18,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// UpdateAnnouncement is the creator's choice of where one update is announced and whether watchers hear of it.
+var ErrUpdateDestinationIneligible = errors.New("choose only your own verified, active update destinations")
+
 type UpdateAnnouncement struct {
 	DestinationIDs   *[]uuid.UUID
 	AnnounceUnlisted bool

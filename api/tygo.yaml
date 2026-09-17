@@ -140,6 +140,16 @@ packages:
     include_files:
       - "link_shapes.go"
       - "send_shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/integration"
+    output_path: "../web/src/lib/api/shapes/integration.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
+    include_files:
+      - "asset_destination_shapes.go"
+      - "destination_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -147,12 +157,14 @@ packages:
     frontmatter: |
       import type { AssetWatch } from "./shapes/notify";
       import type { ProfileAvatar } from "./shapes/profile";
+      import type { PublicationDestinationChoice } from "./shapes/integration";
 
       export * from "./shapes/account";
       export * from "./shapes/block";
       export * from "./shapes/connect";
       export * from "./shapes/download";
       export * from "./shapes/edit";
+      export * from "./shapes/integration";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
       export * from "./shapes/upload";
@@ -164,10 +176,9 @@ packages:
       json.RawMessage: "unknown"
       notify.AssetWatch: "AssetWatch"
       profile.ProfileAvatar: "ProfileAvatar"
+      integration.PublicationDestinationChoice: "PublicationDestinationChoice"
     include_files:
-      - "asset_destination_shapes.go"
       - "asset_shapes.go"
-      - "destination_shapes.go"
       - "notification_shapes.go"
       - "post_deletion_shapes.go"
       - "post_history_shapes.go"

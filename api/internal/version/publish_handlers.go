@@ -6,7 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -40,7 +40,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 		return
 	}
 	switch {
-	case errors.Is(err, assetdestination.ErrUnlistedConsentRequired):
+	case errors.Is(err, integration.ErrUnlistedConsentRequired):
 		refuseInvalid(c, "announceUnlisted",
 			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.")
 	case errors.Is(err, asset.ErrUpdateDestinationIneligible):

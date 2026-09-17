@@ -8,11 +8,10 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
-	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
-	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -34,15 +33,7 @@ var (
 
 var ErrCategoryRefused = errors.New("the grant does not cover that category")
 
-type FieldError struct {
-	Field   string
-	Message string
-	cause   error
-}
-
-func (e FieldError) Error() string { return e.Message }
-
-func (e FieldError) Unwrap() error { return e.cause }
+type FieldError = blog.FieldError
 
 type Publishing struct {
 	Sealing secrets.Key
@@ -54,22 +45,20 @@ type Publishing struct {
 func DefaultPublishing(sealing secrets.Key, site, blog string) Publishing {
 	return Publishing{
 		Sealing: sealing,
-		Sender:  outbound.NewCaller(outbound.DefaultLimits()),
+		Sender:  dispatch.NewCaller(dispatch.DefaultLimits()),
 		Site:    site,
 		Blog:    blog,
 	}
 }
 
 type Service struct {
-	pool    *pgxpool.Pool
-	media   *mediaproc.Library
-	signer  signing.Key
-	sealing secrets.Key
-	sender  Sender
-	site    string
-	blog    string
-	ledger  outbox.Ledger
-	now     func() time.Time
+	*blog.Service
+	pool   *pgxpool.Pool
+	media  *mediaproc.Library
+	signer dispatch.Key
+	site   string
+	blog   string
+	now    func() time.Time
 }
 
 func NewService(
@@ -77,12 +66,15 @@ func NewService(
 	media *mediaproc.Library,
 	sending Publishing,
 ) *Service {
-	return &Service{
-		pool: pool, media: media, signer: signing.NewKey(),
-		sealing: sending.Sealing, sender: sending.Sender,
+	s := &Service{
+		pool: pool, media: media, signer: dispatch.NewKey(),
 		site: sending.Site, blog: sending.Blog,
-		ledger: outbox.NewLedger(pool, deliveryTables), now: time.Now,
+		now: time.Now,
 	}
+	s.Service = blog.NewService(pool, sending.Sealing, sending.Sender, s.summaryWith, func(ctx context.Context, tx pgx.Tx, made blog.Change) error {
+		return recordPublicationAudit(ctx, tx, made)
+	})
+	return s
 }
 
 func (s *Service) HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error) {

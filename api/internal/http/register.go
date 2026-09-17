@@ -11,13 +11,16 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
+	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Readiness func(context.Context) error
@@ -49,6 +52,25 @@ func Register(r *gin.Engine, h *Handlers, d api.Deadlines, readiness Readiness) 
 	download.Register(routes, h.downloads)
 	private.Register(routes, private.NewHandlers(private.NewService(h.assets.Pool())))
 	connect.Register(routes, connect.NewHandlers(h.links, h.deliveries, h.downloads))
+	integration.Register(routes, integration.NewHandlers(h.publications, h.updateDestinations, integration.BlogAccess{
+		Authority: func(c *gin.Context, action string) (integration.AccountIdentity, bool) {
+			current, ok := h.publicationAuthority(c, action)
+			return integration.AccountIdentity{ID: current.ID, Handle: current.Handle}, ok
+		},
+		Editor: h.postEditor, PublicationError: h.publicationError, PostError: h.postError,
+		Grant: func(c *gin.Context, id uuid.UUID) (any, error) {
+			grant, err := h.publications.Grant(c.Request.Context(), id)
+			if err != nil {
+				h.publicationError(c, err)
+				return nil, err
+			}
+			listed, err := h.withHolders(c, []publication.Grant{grant})
+			if err != nil {
+				return nil, err
+			}
+			return listed[0], nil
+		},
+	}))
 	registerRoutes(routes, h)
 	return nil
 }

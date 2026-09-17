@@ -2,75 +2,23 @@ package publication
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
-type sent struct {
-	ID         uuid.UUID `json:"id"`
-	Type       string    `json:"type"`
-	OccurredAt time.Time `json:"occurredAt"`
-	Post       sentPost  `json:"post"`
-	Note       string    `json:"note,omitempty"`
-}
-
-type sentPost struct {
-	ID          uuid.UUID    `json:"id"`
-	RevisionID  uuid.UUID    `json:"revisionId"`
-	Title       string       `json:"title"`
-	Summary     string       `json:"summary"`
-	Category    sentCategory `json:"category"`
-	URL         string       `json:"url"`
-	SocialImage string       `json:"socialImageUrl,omitempty"`
-	PublishedAt time.Time    `json:"publishedAt"`
-	UpdatedAt   *time.Time   `json:"updatedAt"`
-	Release     *sentRelease `json:"release,omitempty"`
-	Byline      sentByline   `json:"byline"`
-}
-
-type sentCategory struct {
-	Slug  string `json:"slug"`
-	Label string `json:"label"`
-}
-
-type sentApp struct {
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
-type sentRelease struct {
-	App     sentApp `json:"app"`
-	Version string  `json:"version"`
-	URL     string  `json:"url,omitempty"`
-}
-
-type sentByline struct {
-	Handle string   `json:"handle"`
-	Name   string   `json:"name"`
-	URL    string   `json:"url"`
-	App    *sentApp `json:"app,omitempty"`
-}
-
-func (s *Service) eventBody(ctx context.Context, eventID uuid.UUID) ([]byte, error) {
-	held, err := s.summary(ctx, eventID)
-	if err != nil {
-		return nil, err
-	}
-	body, err := json.Marshal(held)
-	if err != nil {
-		return nil, fmt.Errorf("write the publication event: %w", err)
-	}
-	return body, nil
-}
+type sent = blog.Event
+type sentPost = blog.EventPost
+type sentCategory = blog.EventCategory
+type sentApp = blog.EventApp
+type sentRelease = blog.EventRelease
+type sentByline = blog.EventByline
 
 func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
 	return s.summaryWith(ctx, s.pool, eventID)

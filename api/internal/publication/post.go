@@ -489,7 +489,7 @@ func (s *Service) mayWriteAs(
 	return FieldError{
 		Field:   "categoryId",
 		Message: "Your approval does not cover " + category.Label + " posts.",
-		cause:   ErrCategoryRefused,
+		Cause:   ErrCategoryRefused,
 	}
 }
 

@@ -16,7 +16,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
@@ -24,6 +23,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
@@ -153,7 +153,7 @@ func run() error {
 	}
 	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := publication.NewService(pool, images, publishing)
-	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
+	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	svc.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
 	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
