@@ -46,7 +46,7 @@ func setCurrentRevision(ctx context.Context, tx pgx.Tx, assetID, revisionID uuid
 	return nil
 }
 
-type revisionLocation struct {
+type RevisionLocation struct {
 	AssetID    uuid.UUID
 	RevisionID uuid.UUID
 	BlobID     uuid.UUID
@@ -54,25 +54,25 @@ type revisionLocation struct {
 	OwnerID    *uuid.UUID
 }
 
-func currentRevisionLocation(
+func CurrentRevisionLocation(
 	ctx context.Context,
 	q db.DBTX,
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
-) (revisionLocation, error) {
+) (RevisionLocation, error) {
 	queries := db.New(q)
 	row, err := queries.CurrentRevisionLocation(ctx, db.CurrentRevisionLocationParams{
 		ID: uuidToPgtype(assetID), ViewerID: uuidToNullable(viewerID),
 	})
 	if err != nil {
-		return revisionLocation{}, err
+		return RevisionLocation{}, err
 	}
 	var ownerID *uuid.UUID
 	if row.OwnerID.Valid {
 		owner := uuidFromPgtype(row.OwnerID)
 		ownerID = &owner
 	}
-	return revisionLocation{
+	return RevisionLocation{
 		AssetID: uuidFromPgtype(row.AssetID), RevisionID: uuidFromPgtype(row.RevisionID),
 		BlobID: uuidFromPgtype(row.BlobID), MediaType: row.MediaType,
 		OwnerID: ownerID,

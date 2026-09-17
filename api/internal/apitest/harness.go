@@ -12,6 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
@@ -37,6 +38,7 @@ type Services struct {
 	Blocks             *edit.Service
 	Versions           *version.Service
 	Uploads            *upload.Service
+	Downloads          *download.Service
 	Accounts           *account.Service
 	Links              *linking.Service
 	Deliveries         *delivery.Service
@@ -146,6 +148,7 @@ func NewServicesWithDelivery(
 		Blocks:             edit.NewService(pool, assets),
 		Versions:           version.NewService(pool, assets),
 		Uploads:            upload.NewService(pool, assets),
+		Downloads:          download.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         delivery.NewService(pool, assets, links, settings),
@@ -171,6 +174,7 @@ func NewServicesOver(
 		Blocks:             edit.NewService(pool, assets),
 		Versions:           version.NewService(pool, assets),
 		Uploads:            upload.NewService(pool, assets),
+		Downloads:          download.NewService(pool, assets),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
 		Deliveries:         NewDeliveryService(pool, assets, links),

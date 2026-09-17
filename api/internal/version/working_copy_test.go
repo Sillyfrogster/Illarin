@@ -11,6 +11,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -101,7 +102,7 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save private protected text: %d %s", got.Code, got.Body.String())
 	}
-	exported, err := assets.OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), "preset_lumiverse")
+	exported, err := download.NewService(pool, assets).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), "preset_lumiverse")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +114,7 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 		t.Fatalf("replace protected working-copy prompt: %d %s", got.Code, got.Body.String())
 	}
 	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
-		if _, err := assets.OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, asset.ErrLinkedInstallOnly) {
+		if _, err := download.NewService(pool, assets).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
 			t.Fatalf("delivery without a policy for %s: %v", target, err)
 		}
 	}

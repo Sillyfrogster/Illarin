@@ -1,4 +1,4 @@
-package http
+package download_test
 
 import (
 	"context"
@@ -9,25 +9,9 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/google/uuid"
 )
-
-func downloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []apitest.DownloadTarget {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
-	if session != nil {
-		request = apitest.Authorized(request, session)
-	}
-	response := apitest.Send(t, r, request)
-	if response.Code != http.StatusOK {
-		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
-	}
-	var page apitest.StartedAsset
-	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the asset: %v", err)
-	}
-	return page.Downloads
-}
 
 func targetLine(t *testing.T, menu []apitest.DownloadTarget, formatID string) apitest.DownloadTarget {
 	t.Helper()
@@ -52,10 +36,10 @@ func losses(target apitest.DownloadTarget) []apitest.RoleVerdict {
 
 func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 
-	plain := downloadMenu(t, r, session, assetID)
+	plain := apitest.DownloadMenu(t, r, session, assetID)
 	if len(plain) != 3 {
 		t.Fatalf("menu = %+v, want all three character formats", plain)
 	}
@@ -65,7 +49,7 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 
 	apitest.GiveExpressions(t, r, session, assetID)
 
-	withImages := downloadMenu(t, r, session, assetID)
+	withImages := apitest.DownloadMenu(t, r, session, assetID)
 	lost := losses(targetLine(t, withImages, "chara_card_v2"))
 	if len(lost) != 1 || lost[0].Role != "expressions" || lost[0].Verdict != "dropped" {
 		t.Fatalf("CCv2 losses = %+v, want the expressions dropped", lost)
@@ -80,12 +64,12 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 
 func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	apitest.GiveExpressions(t, r, session, assetID)
 	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
-	menu := downloadMenu(t, r, session, assetID)
+	menu := apitest.DownloadMenu(t, r, session, assetID)
 	recommended := ""
 	for _, target := range menu {
 		if target.Recommended {
@@ -122,7 +106,7 @@ func roleVerdictNamed(t *testing.T, target apitest.DownloadTarget, role string) 
 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	apitest.PublishCharacter(t, r, session, assetID)
 
@@ -144,29 +128,20 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	apitest.PublishCharacter(t, r, session, assetID)
 
-	owner, stranger := downloadMenu(t, r, session, assetID), downloadMenu(t, r, nil, assetID)
+	owner, stranger := apitest.DownloadMenu(t, r, session, assetID), apitest.DownloadMenu(t, r, nil, assetID)
 	if !json.Valid(mustJSON(t, owner)) || string(mustJSON(t, owner)) != string(mustJSON(t, stranger)) {
 		t.Fatalf("the owner reads %s and a reader reads %s",
 			mustJSON(t, owner), mustJSON(t, stranger))
 	}
 }
 
-func mustJSON(t *testing.T, value any) []byte {
-	t.Helper()
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("encode for comparison: %v", err)
-	}
-	return encoded
-}
-
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 
 	uploaded := apitest.FetchStartedAsset(t, r, session, assetID)
@@ -233,7 +208,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 		t.Fatal("hiding a block moved the export half of the projection")
 	}
 
-	export, err := assets.OpenExport(
+	export, err := download.NewService(assets.Pool(), assets).OpenExport(
 		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
@@ -246,7 +221,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 
 func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
@@ -263,11 +238,11 @@ func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 
 func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
 
-	menu := downloadMenu(t, r, session, assetID)
+	menu := apitest.DownloadMenu(t, r, session, assetID)
 	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
 	if inline.Destination == "" {
 		t.Fatal("the inline gallery lost its destination note")
@@ -295,4 +270,13 @@ func appTargetsFor(
 		t.Fatalf("decode the asset: %v", err)
 	}
 	return page.AppTargets
+}
+
+func mustJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("encode for comparison: %v", err)
+	}
+	return encoded
 }

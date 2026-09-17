@@ -109,6 +109,27 @@ packages:
       - "shapes.go"
       - "start_shapes.go"
       - "vault_shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/download"
+    output_path: "../web/src/lib/api/shapes/download.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    frontmatter: |
+      import type { AssetBlock } from "./block";
+      import type {
+        AppTarget,
+        AssetImage,
+        DownloadTarget,
+        RecordedVersion,
+      } from "./work";
+    type_mappings:
+      uuid.UUID: "string"
+      block.AssetBlock: "AssetBlock"
+      work.AppTarget: "AppTarget"
+      work.AssetImage: "AssetImage"
+      work.DownloadTarget: "DownloadTarget"
+      work.RecordedVersion: "RecordedVersion"
+    include_files:
+      - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -116,16 +137,10 @@ packages:
     frontmatter: |
       import type { AssetWatch } from "./shapes/notify";
       import type { ProfileAvatar } from "./shapes/profile";
-      import type { AssetBlock } from "./shapes/block";
-      import type {
-        AppTarget,
-        AssetImage,
-        DownloadTarget,
-        RecordedVersion,
-      } from "./shapes/work";
 
       export * from "./shapes/account";
       export * from "./shapes/block";
+      export * from "./shapes/download";
       export * from "./shapes/edit";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
@@ -138,17 +153,11 @@ packages:
       json.RawMessage: "unknown"
       notify.AssetWatch: "AssetWatch"
       profile.ProfileAvatar: "ProfileAvatar"
-      block.AssetBlock: "AssetBlock"
-      work.AppTarget: "AppTarget"
-      work.AssetImage: "AssetImage"
-      work.DownloadTarget: "DownloadTarget"
-      work.RecordedVersion: "RecordedVersion"
     include_files:
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
       - "delivery_shapes.go"
       - "destination_shapes.go"
-      - "download_shapes.go"
       - "linking_shapes.go"
       - "notification_shapes.go"
       - "post_deletion_shapes.go"

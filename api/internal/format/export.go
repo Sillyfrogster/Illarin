@@ -3,6 +3,7 @@ package format
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
@@ -77,4 +78,31 @@ func (r *Registry) TravelsWithOrigin(origin string, target Declaration) bool {
 	declared, known := r.Declaration(origin)
 	return known && declared.Preservation.Body == target.Preservation.Body &&
 		slices.Equal(declared.Preservation.Container, target.Preservation.Container)
+}
+
+// Filename names a written file after its work, version and format
+func Filename(name, update, label, extension string) string {
+	parts := make([]string, 0, 3)
+	for _, part := range []string{name, update, label} {
+		if slug := filenameSlug(part); slug != "" {
+			parts = append(parts, slug)
+		}
+	}
+	if len(parts) == 0 {
+		return "download" + extension
+	}
+	return strings.Join(parts, "-") + extension
+}
+
+func filenameSlug(text string) string {
+	slug := make([]rune, 0, len(text))
+	for _, letter := range strings.ToLower(text) {
+		switch {
+		case letter >= 'a' && letter <= 'z', letter >= '0' && letter <= '9':
+			slug = append(slug, letter)
+		case len(slug) > 0 && slug[len(slug)-1] != '-':
+			slug = append(slug, '-')
+		}
+	}
+	return strings.Trim(string(slug), "-")
 }

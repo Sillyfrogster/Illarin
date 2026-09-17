@@ -404,3 +404,8 @@ func (s *Service) ImageAddress(mediaID uuid.UUID, variant string, blurred, priva
 	}
 	return s.signer.Sign(path, s.now())
 }
+
+// ExportMediaURL is the full address a written file or a connected app fetches a picture from
+func (s *Service) ExportMediaURL(mediaID uuid.UUID, private bool) string {
+	return s.siteURL + s.ImageAddress(mediaID, "detail", false, private)
+}

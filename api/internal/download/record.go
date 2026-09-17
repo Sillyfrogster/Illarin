@@ -1,13 +1,12 @@
-package asset
+package download
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/google/uuid"
 )
-
-const RawDownloadTarget = "raw"
 
 type AuthorizationClass string
 
@@ -18,20 +17,20 @@ const (
 	AuthorizationLinkedInstance AuthorizationClass = "linked_instance"
 )
 
-type DownloadEvent struct {
+type Event struct {
 	AssetID            uuid.UUID
 	RevisionID         *uuid.UUID
 	ExportTarget       string
 	AuthorizationClass AuthorizationClass
 }
 
-func downloadEvent(
+func newEvent(
 	assetID uuid.UUID,
 	revisionID *uuid.UUID,
 	target string,
 	ownerID *uuid.UUID,
 	viewerID *uuid.UUID,
-) DownloadEvent {
+) Event {
 	authorization := AuthorizationAnonymous
 	if viewerID != nil {
 		authorization = AuthorizationSignedIn
@@ -39,13 +38,13 @@ func downloadEvent(
 			authorization = AuthorizationOwner
 		}
 	}
-	return DownloadEvent{
+	return Event{
 		AssetID: assetID, RevisionID: revisionID, ExportTarget: target,
 		AuthorizationClass: authorization,
 	}
 }
 
-func (s *Service) RecordDownload(ctx context.Context, event DownloadEvent) error {
+func (s *Service) Record(ctx context.Context, event Event) error {
 	recorded, err := s.pool.Exec(ctx, `
 		insert into download_events
 			(asset_id, revision_id, export_target, authorization_class, discovery)
@@ -60,7 +59,7 @@ func (s *Service) RecordDownload(ctx context.Context, event DownloadEvent) error
 		return fmt.Errorf("record download: %w", err)
 	}
 	if recorded.RowsAffected() != 1 {
-		return ErrNotFound
+		return asset.ErrNotFound
 	}
 	return nil
 }

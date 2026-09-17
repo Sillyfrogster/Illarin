@@ -1,4 +1,4 @@
-package http
+package download_test
 
 import (
 	"bytes"
@@ -394,7 +394,7 @@ func TestDownloadUnknownAssetIs404(t *testing.T) {
 
 func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Before","first_mes":"Hello",
@@ -438,7 +438,7 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	if err := json.Unmarshal(source, &sourceCard); err != nil {
 		t.Fatalf("read the source fixture: %v", err)
 	}
-	if !bytes.Equal(compactJSON(t, card.Data.Extensions), compactJSON(t, sourceCard.Data.Extensions)) {
+	if !bytes.Equal(apitest.CompactJSON(t, card.Data.Extensions), apitest.CompactJSON(t, sourceCard.Data.Extensions)) {
 		t.Fatalf("third-party extensions changed\n got: %s\nwant: %s",
 			card.Data.Extensions, sourceCard.Data.Extensions)
 	}
@@ -452,15 +452,6 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	if readErr != nil || closeErr != nil || !bytes.Equal(storedBytes, source) {
 		t.Fatalf("the upload changed: read %v, close %v", readErr, closeErr)
 	}
-}
-
-func compactJSON(t *testing.T, raw json.RawMessage) []byte {
-	t.Helper()
-	var out bytes.Buffer
-	if err := json.Compact(&out, raw); err != nil {
-		t.Fatalf("compact %s: %v", raw, err)
-	}
-	return out.Bytes()
 }
 
 func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {

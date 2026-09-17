@@ -13,6 +13,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/google/uuid"
@@ -468,7 +469,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 		t.Fatalf("a hidden expression set answered %v, want the none bucket", none.Names)
 	}
 
-	export, err := assets.OpenExport(
+	export, err := download.NewService(assets.Pool(), assets).OpenExport(
 		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {

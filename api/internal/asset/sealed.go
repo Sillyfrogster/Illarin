@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -70,7 +71,7 @@ func (s *Service) OpenSealedContent(
 	return SealedContent{
 		Body:      body,
 		MediaType: "application/json",
-		Filename:  downloadFilename(name, "", "sealed", ".json"),
+		Filename:  format.Filename(name, "", "sealed", ".json"),
 		Blocks:    len(blocks),
 	}, nil
 }

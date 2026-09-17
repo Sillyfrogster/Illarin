@@ -20,3 +20,8 @@ type WithholdAssetRequest struct {
 }
 
 type WorkingCopyVersion = int64
+
+type GetMediaVariantParams struct {
+	Expires   *string `json:"expires,omitempty"`
+	Signature *string `json:"signature,omitempty"`
+}

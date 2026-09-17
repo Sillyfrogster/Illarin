@@ -1,4 +1,4 @@
-package http
+package download_test
 
 import (
 	"archive/zip"
@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 )
 
 type carriedImage struct {
@@ -23,7 +23,7 @@ type carriedImage struct {
 
 func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	first, second := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	giveGallery(t, r, session, assetID, map[string][]byte{
@@ -31,7 +31,7 @@ func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	})
 	apitest.PublishCharacter(t, r, session, assetID)
 
-	for _, target := range downloadMenu(t, r, nil, assetID) {
+	for _, target := range apitest.DownloadMenu(t, r, nil, assetID) {
 		if roleVerdictNamed(t, target, "gallery").Verdict == "dropped" {
 			continue
 		}
@@ -187,7 +187,7 @@ func archivedCardImages(t *testing.T, archive []byte) []carriedImage {
 
 func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
@@ -210,7 +210,7 @@ func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 
 func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
@@ -306,7 +306,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 	if _, err := pool.Exec(context.Background(), `
 		update blobs set byte_size = $2
 		 where id = (select blob_id from asset_media where id = $1)
-	`, gallery["Huge"], int64(asset.MaxExportBytes)+1); err != nil {
+	`, gallery["Huge"], int64(download.MaxExportBytes)+1); err != nil {
 		t.Fatalf("make one image oversized: %v", err)
 	}
 
@@ -330,7 +330,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 
 func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	mediaID := apitest.UploadedImageID(t, r, session, assetID, "expression", apitest.PNG(t, 64, 64))
 
@@ -348,7 +348,7 @@ func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 
 func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
 	savedGallery(t, r, session, assetID, []galleryItem{
 		{name: "Kept", file: apitest.PNG(t, 64, 64)},

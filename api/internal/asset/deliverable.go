@@ -15,6 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// RawDownloadTarget names the main file as a download or send target
+const RawDownloadTarget = "raw"
+
 var ErrNotDeliverable = errors.New("that asset cannot be sent to an instance")
 
 type DeliveryTarget struct {
@@ -90,7 +93,7 @@ func (s *Service) DeliverableAsset(
 		found.HasOriginal = false
 		filtered := make([]DeliveryTarget, 0, len(found.Targets))
 		for _, target := range found.Targets {
-			if targetAllowed(apps, found.Kind, target.Format) {
+			if protected.AllowsTarget(apps, found.Kind, target.Format) {
 				filtered = append(filtered, target)
 			}
 		}
@@ -171,7 +174,7 @@ func (s *Service) deliveryPictures(
 			continue
 		}
 		picture.IsCover = coverID != nil && *coverID == picture.MediaID
-		picture.URL = s.exportMediaURL(picture.MediaID, true)
+		picture.URL = s.ExportMediaURL(picture.MediaID, true)
 		pictures = append(pictures, picture)
 	}
 	return pictures, rows.Err()
@@ -202,18 +205,6 @@ func (s *Service) SignedURL(path string) string {
 
 func (s *Service) ValidSignature(path, expires, signature string) bool {
 	return s.signer.Valid(path, expires, signature, s.now())
-}
-
-func (s *Service) DownloadSourceForLinkedInstance(
-	ctx context.Context,
-	assetID uuid.UUID,
-) (SourceDownload, error) {
-	download, err := s.DownloadSource(ctx, assetID, nil)
-	if err != nil {
-		return SourceDownload{}, err
-	}
-	download.Event.AuthorizationClass = AuthorizationLinkedInstance
-	return download, nil
 }
 
 func ReadPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {

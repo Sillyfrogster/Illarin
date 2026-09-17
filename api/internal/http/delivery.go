@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -159,21 +159,7 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 		h.deliveryArtifactError(c, err)
 		return
 	}
-	if target == asset.RawDownloadTarget {
-		download, err := h.assets.DownloadSourceForLinkedInstance(c.Request.Context(), assetID)
-		if err != nil {
-			h.deliveryArtifactError(c, err)
-			return
-		}
-		h.handOffDownload(c, download)
-		return
-	}
-	download, err := h.assets.DownloadExportForLinkedInstance(c.Request.Context(), assetID, target)
-	if err != nil {
-		h.deliveryArtifactError(c, err)
-		return
-	}
-	h.handOffExport(c, download)
+	h.downloads.LinkedInstanceFile(c, assetID, target)
 }
 
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
@@ -181,7 +167,7 @@ func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
 		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
-	h.downloadError(c, err)
+	download.Refuse(c, err)
 }
 
 func (h *Handlers) deliveryError(c *gin.Context, err error) {

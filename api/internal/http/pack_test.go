@@ -137,7 +137,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	}
 	content.Records[0]["lumiaBehavior"] = "Answers with source notes."
 	content.Records[0]["avatarUrl"] = itemImage.ID
-	body.Elements[0].Content = mustJSON(t, content)
+	body.Elements[0].Content = json.RawMessage(apitest.JSONText(t, content))
 	if saved := apitest.SaveBlock(t, r, session, assetID, core.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save edited Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}

@@ -12,42 +12,10 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-const aCardCarryingThirdPartyNamespaces = `{
-	"spec":"chara_card_v3","spec_version":"3.0",
-	"data":{
-		"name":"Ana","description":"Keeps the archive.","personality":"Patient",
-		"scenario":"After closing","first_mes":"Welcome back.",
-		"tags":["archivist"],
-		"character_book":{"name":"Ana's world","scan_depth":4,
-			"entries":[
-				{"keys":["ledger"],"content":"A debt.","uid":91,"probability":75},
-				{"keys":["mira"],"content":"A name.","uid":92,"group":"people"}]},
-		"extensions":{
-			"chub":{"full_path":"ana/quiet","related_lorebooks":[]},
-			"tavern_helper":{"scripts":[{"name":"Opening"}]},
-			"depth_prompt":{"depth":4,"prompt":"","role":"system"},
-			"talkativeness":"0.5","fav":false,"world":""
-		}
-	}
-}`
-
-func newCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.Service) {
-	t.Helper()
-	registry := format.NewRegistry()
-	for _, module := range character.Modules() {
-		if err := registry.Register(module); err != nil {
-			t.Fatalf("register %s: %v", module.ID(), err)
-		}
-	}
-	return harness.NewVerifiedIngestRouter(t, registry)
-}
 
 func preservedNamespaces(
 	t *testing.T,
@@ -88,8 +56,8 @@ func namespaceNames(rows []struct {
 
 func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 
 	names := namespaceNames(preservedNamespaces(t, r, session, assetID))
 	for _, want := range []string{"card", "character_book", "chub", "tavern_helper"} {
@@ -106,8 +74,8 @@ func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
 
 func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
@@ -134,8 +102,8 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 
 func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 
 	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID, nil,
@@ -157,8 +125,8 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 
 func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 	before := preservedNamespaces(t, r, session, assetID)
 
 	page := apitest.FetchStartedAsset(t, r, session, assetID)
@@ -183,8 +151,8 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 
 func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 
 	before := namespaceBytes(t, r, session, assetID, "character_book")
 	page := apitest.FetchStartedAsset(t, r, session, assetID)
@@ -324,11 +292,11 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 
 func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
-		t, r, session, assets, metadata, []byte(aCardCarryingThirdPartyNamespaces),
+		t, r, session, assets, metadata, []byte(apitest.CardWithThirdPartyNamespaces),
 	))
 
 	page := apitest.FetchStartedAsset(t, r, session, assetID)
@@ -339,28 +307,28 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
 	}
 
-	export, err := assets.OpenExport(
+	export, err := download.NewService(assets.Pool(), assets).OpenExport(
 		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export the card: %v", err)
 	}
 
-	exported := cardBodyOf(t, export.Body)
-	source := cardBodyOf(t, []byte(aCardCarryingThirdPartyNamespaces))
+	exported := apitest.CardBodyOf(t, export.Body)
+	source := apitest.CardBodyOf(t, []byte(apitest.CardWithThirdPartyNamespaces))
 	for _, key := range []string{"tags"} {
-		if !bytes.Equal(compactJSON(t, exported[key]), compactJSON(t, source[key])) {
+		if !bytes.Equal(apitest.CompactJSON(t, exported[key]), apitest.CompactJSON(t, source[key])) {
 			t.Errorf("%s came back as %s, want %s", key, exported[key], source[key])
 		}
 	}
-	for namespace, value := range namespacesOf(t, source["extensions"]) {
-		got := namespacesOf(t, exported["extensions"])[namespace]
-		if !bytes.Equal(compactJSON(t, got), compactJSON(t, value)) {
+	for namespace, value := range apitest.NamespacesOf(t, source["extensions"]) {
+		got := apitest.NamespacesOf(t, exported["extensions"])[namespace]
+		if !bytes.Equal(apitest.CompactJSON(t, got), apitest.CompactJSON(t, value)) {
 			t.Errorf("%s came back as %s, want %s", namespace, got, value)
 		}
 	}
-	book := namespacesOf(t, exported["character_book"])
-	if !bytes.Equal(compactJSON(t, book["scan_depth"]), []byte("4")) {
+	book := apitest.NamespacesOf(t, exported["character_book"])
+	if !bytes.Equal(apitest.CompactJSON(t, book["scan_depth"]), []byte("4")) {
 		t.Errorf("the book's own keys did not come back: %s", exported["character_book"])
 	}
 	var entries []map[string]json.RawMessage
@@ -370,27 +338,4 @@ func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	if len(entries) == 0 || string(entries[0]["uid"]) == "" {
 		t.Errorf("an entry lost the identifier its format gave it: %+v", entries)
 	}
-}
-
-func namespacesOf(t *testing.T, raw json.RawMessage) map[string]json.RawMessage {
-	t.Helper()
-	found := make(map[string]json.RawMessage)
-	if len(raw) == 0 {
-		return found
-	}
-	if err := json.Unmarshal(raw, &found); err != nil {
-		t.Fatalf("read %s as an object: %v", raw, err)
-	}
-	return found
-}
-
-func cardBodyOf(t *testing.T, card []byte) map[string]json.RawMessage {
-	t.Helper()
-	var read struct {
-		Data map[string]json.RawMessage `json:"data"`
-	}
-	if err := json.Unmarshal(card, &read); err != nil {
-		t.Fatalf("read a card: %v", err)
-	}
-	return read.Data
 }

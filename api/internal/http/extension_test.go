@@ -79,7 +79,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 		t.Fatalf("publish the extension = %d: %s", published.Code, published.Body.String())
 	}
 
-	menu := downloadMenu(t, r, nil, assetID)
+	menu := apitest.DownloadMenu(t, r, nil, assetID)
 	if len(menu) != 1 || menu[0].Format != extension.SpindleID || len(menu[0].Roles) != 0 {
 		t.Fatalf("download menu = %+v, want the archive with no loss report", menu)
 	}
@@ -160,7 +160,7 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 		t.Errorf("the built-in vectors links to %+v, want the bare name", dependencies[1].Assets)
 	}
 
-	menu := downloadMenu(t, r, nil, assetID)
+	menu := apitest.DownloadMenu(t, r, nil, assetID)
 	if len(menu) != 1 || menu[0].Format != extension.SillyTavernID || len(menu[0].Roles) != 0 {
 		t.Fatalf("download menu = %+v, want the archive with no loss report", menu)
 	}

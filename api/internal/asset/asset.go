@@ -66,3 +66,9 @@ type SavedBlocks struct {
 	Kind   string
 	Blocks []block.Block
 }
+
+type OriginalUpload struct {
+	Label     string
+	MediaType string
+	ArrivedAt time.Time
+}

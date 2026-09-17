@@ -351,3 +351,20 @@ func PublishAssetUpdate(
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
+
+func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []DownloadTarget {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
+	if session != nil {
+		request = Authorized(request, session)
+	}
+	response := Send(t, r, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
+	}
+	var page StartedAsset
+	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode the asset: %v", err)
+	}
+	return page.Downloads
+}

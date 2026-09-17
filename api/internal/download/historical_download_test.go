@@ -1,4 +1,4 @@
-package http
+package download_test
 
 import (
 	"archive/zip"
@@ -218,8 +218,8 @@ func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 
 func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
 	apitest.PublishCharacter(t, r, session, assetID)
 	removed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil), session))
@@ -235,14 +235,14 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	if older.Code != http.StatusOK {
 		t.Fatalf("download version 1: %d %s", older.Code, older.Body.String())
 	}
-	if _, kept := namespacesOf(t, cardBodyOf(t, older.Body.Bytes())["extensions"])["chub"]; !kept {
+	if _, kept := apitest.NamespacesOf(t, apitest.CardBodyOf(t, older.Body.Bytes())["extensions"])["chub"]; !kept {
 		t.Error("version 1 lost the chub namespace it recorded")
 	}
 	newest := downloadVersion(t, r, nil, assetID, "chara_card_v3", "")
 	if newest.Code != http.StatusOK {
 		t.Fatalf("download the newest: %d %s", newest.Code, newest.Body.String())
 	}
-	if _, kept := namespacesOf(t, cardBodyOf(t, newest.Body.Bytes())["extensions"])["chub"]; kept {
+	if _, kept := apitest.NamespacesOf(t, apitest.CardBodyOf(t, newest.Body.Bytes())["extensions"])["chub"]; kept {
 		t.Error("the newest version still carries the chub namespace the creator removed")
 	}
 }

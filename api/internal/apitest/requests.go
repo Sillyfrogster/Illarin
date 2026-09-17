@@ -113,3 +113,12 @@ func AssertNoStore(t *testing.T, rec *httptest.ResponseRecorder) {
 		t.Errorf("Cache-Control = %q, want no-store", cache)
 	}
 }
+
+func CompactJSON(t *testing.T, raw json.RawMessage) []byte {
+	t.Helper()
+	var out bytes.Buffer
+	if err := json.Compact(&out, raw); err != nil {
+		t.Fatalf("compact %s: %v", raw, err)
+	}
+	return out.Bytes()
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -194,6 +195,16 @@ func AppTargets(kind, app string) []string {
 		return []string{"preset_lumiverse"}
 	}
 	return nil
+}
+
+// AllowsTarget says whether any of the apps may receive the work in the target format
+func AllowsTarget(apps []string, kind, target string) bool {
+	for _, app := range apps {
+		if slices.Contains(AppTargets(kind, app), target) {
+			return true
+		}
+	}
+	return false
 }
 
 func EligibleApps(kind string, offered []string) []string {

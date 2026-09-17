@@ -12,7 +12,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/google/uuid"
@@ -202,7 +201,7 @@ func (s *Service) EnsureAccountStorage(
 }
 
 func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadCloser, error) {
-	location, err := currentRevisionLocation(ctx, s.pool, assetID, nil)
+	location, err := CurrentRevisionLocation(ctx, s.pool, assetID, nil)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -215,95 +214,6 @@ func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadClo
 		return nil, fmt.Errorf("open stored file: %w", err)
 	}
 	return rc, nil
-}
-
-type SourceDownload struct {
-	InternalRedirect string
-	MediaType        string
-	Inline           bool
-	Event            DownloadEvent
-}
-
-func (s *Service) DownloadSource(
-	ctx context.Context,
-	assetID uuid.UUID,
-	viewerID *uuid.UUID,
-) (SourceDownload, error) {
-	tx, err := s.BeginReadSnapshot(ctx)
-	if err != nil {
-		return SourceDownload{}, err
-	}
-	defer tx.Rollback(ctx)
-	location, err := currentRevisionLocation(ctx, tx, assetID, viewerID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return SourceDownload{}, ErrNotFound
-		}
-		return SourceDownload{}, fmt.Errorf("find current revision: %w", err)
-	}
-	apps, err := protected.Apps(ctx, tx, assetID)
-	if err != nil {
-		return SourceDownload{}, err
-	}
-	blocks, err := block.Read(ctx, tx, assetID)
-	if err != nil {
-		return SourceDownload{}, err
-	}
-	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, blocks); err != nil {
-		return SourceDownload{}, err
-	}
-	if (len(apps) > 0 || protected.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
-		return SourceDownload{}, ErrLinkedInstallOnly
-	}
-	redirect, err := s.store.InternalRedirect(ctx, location.BlobID)
-	if err != nil {
-		return SourceDownload{}, fmt.Errorf("resolve stored file: %w", err)
-	}
-	revisionID := location.RevisionID
-	return SourceDownload{
-		InternalRedirect: redirect, MediaType: location.MediaType,
-		Inline: format.IsInlineMediaType(location.MediaType),
-		Event: downloadEvent(
-			location.AssetID, &revisionID, RawDownloadTarget,
-			location.OwnerID, viewerID,
-		),
-	}, nil
-}
-
-func (s *Service) DownloadExport(
-	ctx context.Context,
-	assetID uuid.UUID,
-	viewerID *uuid.UUID,
-	target string,
-	gallery *GallerySelection,
-) (Export, error) {
-	return s.OpenExport(ctx, assetID, viewerID, target, gallery)
-}
-
-func (s *Service) DownloadRecordedExport(
-	ctx context.Context,
-	assetID uuid.UUID,
-	viewerID *uuid.UUID,
-	number int,
-	target string,
-	gallery *GallerySelection,
-) (Export, error) {
-	return s.OpenRecordedExport(ctx, assetID, viewerID, number, target, gallery)
-}
-
-func (s *Service) DownloadExportForLinkedInstance(
-	ctx context.Context,
-	assetID uuid.UUID,
-	target string,
-) (Export, error) {
-	download, err := s.OpenExportForLinkedInstance(ctx, assetID, target)
-	if err != nil {
-		return Export{}, err
-	}
-	if download.Event != nil {
-		download.Event.AuthorizationClass = AuthorizationLinkedInstance
-	}
-	return download, nil
 }
 
 func (s *Service) Now() time.Time {
