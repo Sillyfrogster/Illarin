@@ -1,4 +1,4 @@
-package http
+package edit
 
 import (
 	"errors"
@@ -30,7 +30,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
-	saved, err := h.assets.AddBlock(
+	saved, err := h.blocks.AddBlock(
 		c.Request.Context(), owner.ID, id,
 		block.DefinitionID(request.Definition), block.Type(request.ElementType), candidate)
 	if work.CandidateResult(c, candidate, err) {
@@ -39,12 +39,12 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not add the block.")
 	default:
-		blocks, conversionErr := work.ToBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := block.ToBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the new block.")
 			return
@@ -71,26 +71,26 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send every block once with its id, hidden state and width.")
 		return
 	}
-	arrangement := make([]asset.BlockArrangement, len(request.Blocks))
+	arrangement := make([]BlockArrangement, len(request.Blocks))
 	for i, choice := range request.Blocks {
-		arrangement[i] = asset.BlockArrangement{
+		arrangement[i] = BlockArrangement{
 			ID: choice.Id, Hidden: choice.Hidden, Width: block.Width(choice.Width),
 		}
 	}
 	candidate := &asset.Candidate{Version: version}
-	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, id, arrangement, candidate)
+	saved, err := h.blocks.ArrangeBlocks(c.Request.Context(), owner.ID, id, arrangement, candidate)
 	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not arrange the blocks.")
 	default:
-		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return
@@ -117,14 +117,14 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
-	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, id, blockID, candidate)
+	err := h.blocks.RemoveBlock(c.Request.Context(), owner.ID, id, blockID, candidate)
 	if work.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such block.")
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not remove the block.")
@@ -156,7 +156,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
-	saved, err := h.assets.MoveBlockContent(
+	saved, err := h.blocks.MoveBlockContent(
 		c.Request.Context(), owner.ID, id, blockID, request.DestinationBlockId, candidate)
 	if work.CandidateResult(c, candidate, err) {
 		return
@@ -164,12 +164,12 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such block.")
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not move the block content.")
 	default:
-		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return

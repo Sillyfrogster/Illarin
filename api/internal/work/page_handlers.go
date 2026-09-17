@@ -97,7 +97,7 @@ func ToPage(found Detail, visibility asset.ContentVisibility) (AssetDetail, erro
 		tags = append(tags, AssetTag{Label: tag.Label, Value: tag.Value})
 	}
 	media := ToImages(found.Media)
-	blocks, err := ToBlocks(found.Kind, found.Blocks)
+	blocks, err := block.ToBlocks(found.Kind, found.Blocks)
 	if err != nil {
 		return AssetDetail{}, err
 	}
@@ -272,7 +272,7 @@ func toAPIAddableBlocks(kind string, isOwner bool) *[]AddableBlock {
 		choices := make([]AddableBlockChoice, 0, len(offer.Choices))
 		for _, choice := range offer.Choices {
 			choices = append(choices, AddableBlockChoice{
-				Label: choice.Label, Type: ElementType(choice.Type),
+				Label: choice.Label, Type: block.ElementType(choice.Type),
 			})
 		}
 		addable = append(addable, AddableBlock{

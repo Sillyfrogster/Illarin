@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -66,7 +67,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, assetID); err != nil {
 		return fmt.Errorf("replace the working-copy blocks: %w", err)
 	}
-	if err := insertBlocks(ctx, tx, assetID, recorded.blocks); err != nil {
+	if err := block.Insert(ctx, tx, assetID, recorded.blocks); err != nil {
 		return fmt.Errorf("restore the recorded blocks: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `delete from asset_preserved_data where asset_id = $1`, assetID); err != nil {

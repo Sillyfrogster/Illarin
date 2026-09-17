@@ -26,19 +26,61 @@ packages:
     preserve_comments: "none"
     include_files:
       - "watch_shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/block"
+    output_path: "../web/src/lib/api/shapes/block.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      uuid.UUID: "string"
+      json.RawMessage: "unknown"
+    include_files:
+      - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+    output_path: "../web/src/lib/api/shapes/edit.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    frontmatter: |
+      import type {
+        AssetElementItemSize,
+        ColorSetContent,
+        DialogueSampleContent,
+        ElementType,
+        EntryTableContent,
+        FieldListContent,
+        ImageSetContent,
+        LinkListContent,
+        PromptListContent,
+        ProseContent,
+        RecordListContent,
+        ScriptListContent,
+        SettingGroupContent,
+        StylesheetSetContent,
+        TextSetContent,
+        VariableSchemaContent,
+      } from "./block";
+    type_mappings:
+      uuid.UUID: "string"
+      json.RawMessage: "unknown"
+      block.AssetElementItemSize: "AssetElementItemSize"
+      block.ElementType: "ElementType"
+    include_files:
+      - "save_shapes.go"
+      - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/work"
     output_path: "../web/src/lib/api/shapes/work.ts"
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
+      import type { AssetBlock, ElementType } from "./block";
       import type { AssetWatch } from "./notify";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
+      block.AssetBlock: "AssetBlock"
+      block.ElementType: "ElementType"
       notify.AssetWatch: "AssetWatch"
     include_files:
-      - "blocks_shapes.go"
       - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
@@ -47,31 +89,17 @@ packages:
     frontmatter: |
       import type { AssetWatch } from "./shapes/notify";
       import type { ProfileAvatar } from "./shapes/profile";
+      import type { AssetBlock } from "./shapes/block";
       import type {
         AppTarget,
-        AssetBlock,
         AssetImage,
-        ColorSetContent,
-        DialogueSampleContent,
         DownloadTarget,
-        ElementType,
-        EntryTableContent,
-        FieldListContent,
-        ImageSetContent,
-        ItemSize,
-        LinkListContent,
-        PromptListContent,
-        ProseContent,
         RecordedVersion,
-        RecordListContent,
-        ScriptListContent,
-        SettingGroupContent,
-        StylesheetSetContent,
-        TextSetContent,
-        VariableSchemaContent,
       } from "./shapes/work";
 
       export * from "./shapes/account";
+      export * from "./shapes/block";
+      export * from "./shapes/edit";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
       export * from "./shapes/work";
@@ -81,18 +109,14 @@ packages:
       json.RawMessage: "unknown"
       notify.AssetWatch: "AssetWatch"
       profile.ProfileAvatar: "ProfileAvatar"
+      block.AssetBlock: "AssetBlock"
       work.AppTarget: "AppTarget"
-      work.AssetBlock: "AssetBlock"
       work.AssetImage: "AssetImage"
       work.DownloadTarget: "DownloadTarget"
-      work.ElementType: "ElementType"
-      work.ItemSize: "ItemSize"
       work.RecordedVersion: "RecordedVersion"
     include_files:
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
-      - "block_arrangement_shapes.go"
-      - "block_save_shapes.go"
       - "delivery_shapes.go"
       - "destination_shapes.go"
       - "download_shapes.go"

@@ -1,9 +1,9 @@
-package http
+package edit
 
 import (
 	"encoding/json"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
 )
 
@@ -43,13 +43,13 @@ const (
 )
 
 type SaveAssetElement struct {
-	Content  json.RawMessage          `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
-	Display  *SaveAssetElementDisplay `json:"display,omitempty"`
-	Id       uuid.UUID                `json:"id"`
-	ItemSize *work.ItemSize           `json:"itemSize,omitempty"`
-	Role     *string                  `json:"role,omitempty"`
-	Slot     string                   `json:"slot"`
-	Type     work.ElementType         `json:"type"`
+	Content  json.RawMessage             `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
+	Display  *SaveAssetElementDisplay    `json:"display,omitempty"`
+	Id       uuid.UUID                   `json:"id"`
+	ItemSize *block.AssetElementItemSize `json:"itemSize,omitempty"`
+	Role     *string                     `json:"role,omitempty"`
+	Slot     string                      `json:"slot"`
+	Type     block.ElementType           `json:"type"`
 }
 
 type SaveAssetElementDisplay string
@@ -57,4 +57,16 @@ type SaveAssetElementDisplay string
 const (
 	SaveAssetElementDisplayRich     SaveAssetElementDisplay = "rich"
 	SaveAssetElementDisplayVerbatim SaveAssetElementDisplay = "verbatim"
+)
+
+type SealedExposureRefusal struct {
+	Code    SealedExposureRefusalCode `json:"code" tstype:"'sealed_exposure',required"`
+	Error   string                    `json:"error"`
+	Prompts []string                  `json:"prompts"`
+}
+
+type SealedExposureRefusalCode string
+
+const (
+	SealedExposureRefusalCodeSealedExposure SealedExposureRefusalCode = "sealed_exposure"
 )

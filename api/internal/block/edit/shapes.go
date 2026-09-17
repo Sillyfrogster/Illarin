@@ -1,13 +1,13 @@
-package http
+package edit
 
 import (
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
 )
 
 type AddAssetBlockRequest struct {
-	Definition  string           `json:"definition"`
-	ElementType work.ElementType `json:"elementType"`
+	Definition  string            `json:"definition"`
+	ElementType block.ElementType `json:"elementType"`
 }
 
 type ArrangeAssetBlocksRequest struct {

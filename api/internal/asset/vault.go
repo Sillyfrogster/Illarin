@@ -136,7 +136,7 @@ func (s *Service) PlaceVaultPicture(
 	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, assetID); err != nil {
 		return SavedBlocks{}, fmt.Errorf("replace the blocks: %w", err)
 	}
-	if err := insertBlocks(ctx, tx, assetID, after); err != nil {
+	if err := block.Insert(ctx, tx, assetID, after); err != nil {
 		return SavedBlocks{}, err
 	}
 	if _, err := tx.Exec(ctx, `delete from asset_vault_pictures where id = $1`, pictureID); err != nil {
@@ -293,4 +293,9 @@ func layoutHolding(count int) block.Layout {
 	default:
 		return block.Trio
 	}
+}
+
+type SavedBlocks struct {
+	Kind   string
+	Blocks []block.Block
 }

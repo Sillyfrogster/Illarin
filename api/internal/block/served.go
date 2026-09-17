@@ -1,10 +1,6 @@
-package work
+package block
 
-import (
-	"github.com/Sillyfrogster/Illarin/api/internal/block"
-)
-
-func ToBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
+func ToBlocks(kind string, blocks []Block) ([]AssetBlock, error) {
 	out := make([]AssetBlock, 0, len(blocks))
 	for _, b := range blocks {
 		definition, _ := b.Definition.Definition(kind)
@@ -35,7 +31,7 @@ func ToBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
 	return out, nil
 }
 
-func apiLayouts(layouts []block.Layout) []AssetBlockAllowedLayouts {
+func apiLayouts(layouts []Layout) []AssetBlockAllowedLayouts {
 	out := make([]AssetBlockAllowedLayouts, len(layouts))
 	for i, layout := range layouts {
 		out[i] = AssetBlockAllowedLayouts(layout)
@@ -43,7 +39,7 @@ func apiLayouts(layouts []block.Layout) []AssetBlockAllowedLayouts {
 	return out
 }
 
-func toAPIElements(kind string, holder block.Block) ([]AssetElement, error) {
+func toAPIElements(kind string, holder Block) ([]AssetElement, error) {
 	out := make([]AssetElement, 0, len(holder.Elements))
 	for _, element := range holder.Elements {
 		content, err := element.ContentJSON()
@@ -74,7 +70,7 @@ func toAPIElements(kind string, holder block.Block) ([]AssetElement, error) {
 			served.Display = &display
 		}
 		if element.Options.ItemSize != "" {
-			size := ItemSize(element.Options.ItemSize)
+			size := AssetElementItemSize(element.Options.ItemSize)
 			served.ItemSize = &size
 		}
 		out = append(out, served)

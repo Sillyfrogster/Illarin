@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
@@ -225,9 +226,9 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 	}
 	var exposure asset.ExposureRefusal
 	if errors.As(err, &exposure) {
-		c.JSON(http.StatusConflict, SealedExposureRefusal{
+		c.JSON(http.StatusConflict, edit.SealedExposureRefusal{
 			Error:   "This replacement removes prompt protection. Confirm that text in this asset and its recorded versions may become public immediately.",
-			Code:    SealedExposureRefusalCodeSealedExposure,
+			Code:    edit.SealedExposureRefusalCodeSealedExposure,
 			Prompts: exposure.Prompts,
 		})
 		return

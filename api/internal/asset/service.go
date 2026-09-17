@@ -28,7 +28,7 @@ var (
 	ErrIngestNotFound   = errors.New("ingest operation not found")
 	ErrInvalidDiscovery = errors.New("invalid discovery state")
 	ErrAssetFrozen      = errors.New("asset is frozen")
-	ErrInvalidBlock     = errors.New("invalid block")
+	ErrInvalidBlock     = block.ErrInvalid
 	ErrStorageCap       = errors.New("account storage cap exceeded")
 	ErrAssetIsDraft     = errors.New("the asset is still a draft")
 	ErrKindNotBuildable = errors.New("that kind cannot be built yet")
@@ -341,7 +341,7 @@ func (s *Service) StartFromNothing(
 	if _, err := insertAsset(ctx, tx, a, ownerID, nil); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertBlocks(ctx, tx, a.ID, blocks); err != nil {
+	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {
 		return uuid.Nil, err
 	}
 	if err := s.writeProjections(ctx, tx, a.ID); err != nil {
@@ -419,7 +419,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 	if err := insertAssetMedia(ctx, tx, a.ID, extractedMedia); err != nil {
 		return Asset{}, err
 	}
-	if err := insertBlocks(ctx, tx, a.ID, blocks); err != nil {
+	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {
 		return Asset{}, err
 	}
 	if err := insertVaultPictures(ctx, tx, a.ID, read.Vault); err != nil {

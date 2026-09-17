@@ -3,6 +3,7 @@ package work
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/google/uuid"
 )
@@ -38,8 +39,8 @@ const (
 )
 
 type AddableBlockChoice struct {
-	Label string      `json:"label"`
-	Type  ElementType `json:"type"`
+	Label string            `json:"label"`
+	Type  block.ElementType `json:"type"`
 }
 
 type AppTarget struct {
@@ -52,7 +53,7 @@ type AssetDetail struct {
 	AddableBlocks         *[]AddableBlock           `json:"addableBlocks,omitempty"`
 	AllowedApps           []AssetDetailAllowedApps  `json:"allowedApps" tstype:"'lumiverse'[],required"`
 	AppTargets            []AppTarget               `json:"appTargets"`
-	Blocks                []AssetBlock              `json:"blocks"`
+	Blocks                []block.AssetBlock        `json:"blocks"`
 	Blurb                 string                    `json:"blurb"`
 	CreatedAt             time.Time                 `json:"createdAt"`
 	Creator               string                    `json:"creator"`
@@ -312,25 +313,6 @@ type DownloadTarget struct {
 	Recommended bool                  `json:"recommended"`
 	Roles       []DownloadRoleVerdict `json:"roles"`
 }
-
-type ElementType string
-
-const (
-	ElementTypeColorSet       ElementType = "color_set"
-	ElementTypeDialogueSample ElementType = "dialogue_sample"
-	ElementTypeEntryTable     ElementType = "entry_table"
-	ElementTypeFieldList      ElementType = "field_list"
-	ElementTypeImageSet       ElementType = "image_set"
-	ElementTypeLinkList       ElementType = "link_list"
-	ElementTypePromptList     ElementType = "prompt_list"
-	ElementTypeProse          ElementType = "prose"
-	ElementTypeRecordList     ElementType = "record_list"
-	ElementTypeScriptList     ElementType = "script_list"
-	ElementTypeSettingGroup   ElementType = "setting_group"
-	ElementTypeStylesheetSet  ElementType = "stylesheet_set"
-	ElementTypeTextSet        ElementType = "text_set"
-	ElementTypeVariableSchema ElementType = "variable_schema"
-)
 
 type ExtensionDependency struct {
 	Assets []DependencyAsset `json:"assets"`

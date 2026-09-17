@@ -633,7 +633,7 @@ func (s *Service) writeIngestResultWithDecisions(
 		if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, job.Target.AssetID); err != nil {
 			return uuid.Nil, fmt.Errorf("replace imported blocks: %w", err)
 		}
-		if err := insertBlocks(ctx, tx, job.Target.AssetID, blocks); err != nil {
+		if err := block.Insert(ctx, tx, job.Target.AssetID, blocks); err != nil {
 			return uuid.Nil, err
 		}
 		remainder, err := retainUnrepresentableRemainder(ctx, tx, job.Target.AssetID, existing, prepared.Remainder, decisions)
@@ -685,7 +685,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	if _, err := insertAsset(ctx, tx, a, job.OwnerID, prepared.CreatedAt); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertBlocks(ctx, tx, assetID, blocks); err != nil {
+	if err := block.Insert(ctx, tx, assetID, blocks); err != nil {
 		return uuid.Nil, err
 	}
 	if err := replacePreservedData(ctx, tx, assetID, prepared.Remainder); err != nil {
@@ -783,4 +783,12 @@ func writeRevision(
 		return setCoverMedia(ctx, tx, assetID, coverID)
 	}
 	return clearSupersededCover(ctx, tx, assetID)
+}
+
+type ExposureRefusal struct {
+	Prompts []string
+}
+
+func (refusal ExposureRefusal) Error() string {
+	return "making a sealed prompt public needs an explicit confirmation"
 }

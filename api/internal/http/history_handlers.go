@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -223,7 +224,7 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
-	blocks, err := work.ToBlocks(offered.Kind, offered.Blocks)
+	blocks, err := block.ToBlocks(offered.Kind, offered.Blocks)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return

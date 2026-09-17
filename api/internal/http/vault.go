@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -79,7 +80,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
 	default:
-		blocks, conversionErr := work.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the page after placing the picture.")
 			return

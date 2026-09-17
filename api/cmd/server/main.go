@@ -17,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
+	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
@@ -207,7 +208,7 @@ func run() error {
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
 	handlers := apihttp.NewHandlers(
-		svc, work.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
+		svc, work.NewService(pool, svc), edit.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
 	)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {

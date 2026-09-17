@@ -53,3 +53,29 @@ func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) er
 	c.SavedVersion = version
 	return nil
 }
+
+func lockEditableAsset(
+	ctx context.Context,
+	tx pgx.Tx,
+	ownerID uuid.UUID,
+	assetID uuid.UUID,
+) (string, error) {
+	var kind string
+	var withheld bool
+	err := tx.QueryRow(ctx, `
+		select kind, withheld_at is not null
+		  from assets
+		 where id = $1 and owner_id = $2 and deleted_at is null
+		 for update
+	`, assetID, ownerID).Scan(&kind, &withheld)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("read block owner: %w", err)
+	}
+	if withheld {
+		return "", ErrAssetFrozen
+	}
+	return kind, nil
+}

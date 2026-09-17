@@ -10,6 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
+	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
@@ -30,6 +31,7 @@ func init() {
 type Services struct {
 	Assets             *asset.Service
 	Works              *work.Service
+	Blocks             *edit.Service
 	Accounts           *account.Service
 	Links              *linking.Service
 	Deliveries         *delivery.Service
@@ -136,6 +138,7 @@ func NewServicesWithDelivery(
 	return Services{
 		Assets:             assets,
 		Works:              work.NewService(pool, assets),
+		Blocks:             edit.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         delivery.NewService(pool, assets, links, settings),
@@ -158,6 +161,7 @@ func NewServicesOver(
 	return Services{
 		Assets:             assets,
 		Works:              work.NewService(pool, assets),
+		Blocks:             edit.NewService(pool, assets),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
 		Deliveries:         NewDeliveryService(pool, assets, links),

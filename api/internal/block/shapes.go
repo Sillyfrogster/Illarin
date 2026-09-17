@@ -1,4 +1,4 @@
-package work
+package block
 
 import (
 	"encoding/json"
@@ -54,18 +54,18 @@ const (
 )
 
 type AssetElement struct {
-	Content  json.RawMessage      `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
-	Display  *AssetElementDisplay `json:"display,omitempty"`
-	Facts    []string             `json:"facts"`
-	Id       uuid.UUID            `json:"id"`
-	IsEmpty  bool                 `json:"isEmpty"`
-	ItemSize *ItemSize            `json:"itemSize,omitempty"`
-	Label    string               `json:"label"`
-	Locked   bool                 `json:"locked"`
-	Pinned   bool                 `json:"pinned"`
-	Role     *string              `json:"role,omitempty"`
-	Slot     string               `json:"slot"`
-	Type     ElementType          `json:"type"`
+	Content  json.RawMessage       `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
+	Display  *AssetElementDisplay  `json:"display,omitempty"`
+	Facts    []string              `json:"facts"`
+	Id       uuid.UUID             `json:"id"`
+	IsEmpty  bool                  `json:"isEmpty"`
+	ItemSize *AssetElementItemSize `json:"itemSize,omitempty"`
+	Label    string                `json:"label"`
+	Locked   bool                  `json:"locked"`
+	Pinned   bool                  `json:"pinned"`
+	Role     *string               `json:"role,omitempty"`
+	Slot     string                `json:"slot"`
+	Type     ElementType           `json:"type"`
 }
 
 type AssetElementDisplay string
@@ -340,10 +340,29 @@ type LinkListContent struct {
 	} `json:"links"`
 }
 
-type ItemSize string
+type AssetElementItemSize string
 
 const (
-	ItemSizeLarge  ItemSize = "large"
-	ItemSizeMedium ItemSize = "medium"
-	ItemSizeSmall  ItemSize = "small"
+	AssetElementItemSizeLarge  AssetElementItemSize = "large"
+	AssetElementItemSizeMedium AssetElementItemSize = "medium"
+	AssetElementItemSizeSmall  AssetElementItemSize = "small"
+)
+
+type ElementType string
+
+const (
+	ElementTypeColorSet       ElementType = "color_set"
+	ElementTypeDialogueSample ElementType = "dialogue_sample"
+	ElementTypeEntryTable     ElementType = "entry_table"
+	ElementTypeFieldList      ElementType = "field_list"
+	ElementTypeImageSet       ElementType = "image_set"
+	ElementTypeLinkList       ElementType = "link_list"
+	ElementTypePromptList     ElementType = "prompt_list"
+	ElementTypeProse          ElementType = "prose"
+	ElementTypeRecordList     ElementType = "record_list"
+	ElementTypeScriptList     ElementType = "script_list"
+	ElementTypeSettingGroup   ElementType = "setting_group"
+	ElementTypeStylesheetSet  ElementType = "stylesheet_set"
+	ElementTypeTextSet        ElementType = "text_set"
+	ElementTypeVariableSchema ElementType = "variable_schema"
 )

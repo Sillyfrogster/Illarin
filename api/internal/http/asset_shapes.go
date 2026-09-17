@@ -86,18 +86,6 @@ type ReplacementPreview struct {
 	Unrepresentable []string             `json:"unrepresentable"`
 }
 
-type SealedExposureRefusal struct {
-	Code    SealedExposureRefusalCode `json:"code" tstype:"'sealed_exposure',required"`
-	Error   string                    `json:"error"`
-	Prompts []string                  `json:"prompts"`
-}
-
-type SealedExposureRefusalCode string
-
-const (
-	SealedExposureRefusalCodeSealedExposure SealedExposureRefusalCode = "sealed_exposure"
-)
-
 type VersionChangeGroup struct {
 	Changes []VersionChange `json:"changes"`
 	Label   string          `json:"label"`

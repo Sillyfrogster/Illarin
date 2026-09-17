@@ -1,4 +1,4 @@
-package http
+package edit
 
 import (
 	"errors"
@@ -41,7 +41,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
-	saved, err := h.assets.SaveBlock(
+	saved, err := h.blocks.SaveBlock(
 		c.Request.Context(), owner.ID, id, blockID, update, candidate)
 	if work.CandidateResult(c, candidate, err) {
 		return
@@ -59,12 +59,12 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such block.")
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the block.")
 	default:
-		blocks, conversionErr := work.ToBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := block.ToBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the saved block.")
 			return
@@ -73,7 +73,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	}
 }
 
-func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
+func blockUpdate(request SaveAssetBlockRequest) (BlockUpdate, error) {
 	elements := make([]block.Element, len(request.Elements))
 	for i, incoming := range request.Elements {
 		elementType := block.Type(incoming.Type)
@@ -87,7 +87,7 @@ func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
 			if name == "" {
 				name = fmt.Sprintf("Element %d", i+1)
 			}
-			return asset.BlockUpdate{}, fmt.Errorf("%s content is malformed: %w", name, err)
+			return BlockUpdate{}, fmt.Errorf("%s content is malformed: %w", name, err)
 		}
 		display := block.Display("")
 		if incoming.Display != nil {
@@ -112,7 +112,7 @@ func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
 		}
 		allowedApps = &apps
 	}
-	return asset.BlockUpdate{
+	return BlockUpdate{
 		Title:           request.Title,
 		Layout:          block.Layout(request.Layout),
 		Width:           block.Width(request.Width),

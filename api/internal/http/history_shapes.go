@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
@@ -38,7 +39,7 @@ type ProtectionMismatchList struct {
 
 type RecordedVersionDownloads struct {
 	AppTargets        []work.AppTarget             `json:"appTargets"`
-	Blocks            []work.AssetBlock            `json:"blocks"`
+	Blocks            []block.AssetBlock           `json:"blocks"`
 	Downloads         []work.DownloadTarget        `json:"downloads"`
 	Kind              RecordedVersionDownloadsKind `json:"kind"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`

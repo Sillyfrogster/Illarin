@@ -13,7 +13,7 @@ var Harness = apitest.Harness{Register: Register}
 
 func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	handlers := apihttp.NewHandlers(
-		s.Assets, s.Works, s.Accounts, s.Links, s.Deliveries, s.Publications,
+		s.Assets, s.Works, s.Blocks, s.Accounts, s.Links, s.Deliveries, s.Publications,
 		s.UpdateDestinations, s.Notifications, s.MaxUploadBytes,
 	)
 	return apihttp.Register(r, handlers, d, apitest.Ready)
