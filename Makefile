@@ -263,10 +263,6 @@ quiet-page-art: ## Generate the empty and barren page artwork, one piece per kin
 archive-cutouts: ## Neutralize the archive mascot glass cutouts
 	cd web && bun scripts/neutralize-archive-cutouts.mjs
 
-.PHONY: direction-fixtures
-direction-fixtures: ## Draw the synthetic art the visual direction prototype reads
-	cd web && bun scripts/generate-direction-fixtures.mjs
-
 # Guards
 
 .PHONY: need-db

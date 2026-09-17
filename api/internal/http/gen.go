@@ -3200,12 +3200,6 @@ type InstanceTokenGrant struct {
 // ItemSize How large the images inside an element are drawn. It names what it controls, and no element type declares a measurement of its own.
 type ItemSize string
 
-// LegacyAsset defines model for LegacyAsset.
-type LegacyAsset struct {
-	Id   openapi_types.UUID `json:"id"`
-	Name string             `json:"name"`
-}
-
 // LibraryEntry defines model for LibraryEntry.
 type LibraryEntry struct {
 	AssetId openapi_types.UUID `json:"assetId"`
@@ -6185,12 +6179,6 @@ type ServerInterface interface {
 	// (DELETE /v1/instances/{id})
 	RevokeInstance(c *gin.Context, id openapi_types.UUID, params RevokeInstanceParams)
 
-	// (GET /v1/legacy-assets/{author}/{name})
-	ResolveLegacyAsset(c *gin.Context, author string, name string)
-
-	// (GET /v1/legacy-profiles/{discordId})
-	ResolveLegacyProfile(c *gin.Context, discordId string)
-
 	// (POST /v1/library/sync)
 	SyncLibrary(c *gin.Context)
 
@@ -8955,65 +8943,6 @@ func (siw *ServerInterfaceWrapper) RevokeInstance(c *gin.Context) {
 	siw.Handler.RevokeInstance(c, id, params)
 }
 
-// ResolveLegacyAsset operation middleware
-func (siw *ServerInterfaceWrapper) ResolveLegacyAsset(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "author" -------------
-	var author string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "author", c.Param("author"), &author, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter author: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Path parameter "name" -------------
-	var name string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Param("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter name: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ResolveLegacyAsset(c, author, name)
-}
-
-// ResolveLegacyProfile operation middleware
-func (siw *ServerInterfaceWrapper) ResolveLegacyProfile(c *gin.Context) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "discordId" -------------
-	var discordId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "discordId", c.Param("discordId"), &discordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter discordId: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ResolveLegacyProfile(c, discordId)
-}
-
 // SyncLibrary operation middleware
 func (siw *ServerInterfaceWrapper) SyncLibrary(c *gin.Context) {
 
@@ -10850,12 +10779,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestoreProfile)
 	router.GET(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.GetProfileRestriction)
 	router.PUT(options.BaseURL+"/v1/profiles/:handle/restriction", wrapper.RestrictProfile)
-	router.GET(options.BaseURL+"/v1/legacy-profiles/:discordId", wrapper.ResolveLegacyProfile)
 	router.GET(options.BaseURL+"/v1/assets", wrapper.ListAssets)
 	router.POST(options.BaseURL+"/v1/assets", wrapper.CreateAsset)
 	router.DELETE(options.BaseURL+"/v1/assets/:id", wrapper.DeleteAsset)
 	router.GET(options.BaseURL+"/v1/assets/:id", wrapper.GetAsset)
-	router.GET(options.BaseURL+"/v1/legacy-assets/:author/:name", wrapper.ResolveLegacyAsset)
 	router.GET(options.BaseURL+"/v1/assets/:id/revisions", wrapper.GetAssetReplacement)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions", wrapper.AddAssetRevision)
 	router.POST(options.BaseURL+"/v1/assets/:id/revisions/:operationId/accept", wrapper.AcceptAssetRevision)

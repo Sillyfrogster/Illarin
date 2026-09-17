@@ -1498,23 +1498,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/v1/legacy-profiles/{discordId}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description Resolves v1's /user/<discordId> address through the Discord identity link. The lookup happens before any redirect, so an address with no account behind it is a plain miss. */
-    get: operations["resolveLegacyProfile"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/v1/assets": {
     parameters: {
       query?: never;
@@ -1544,23 +1527,6 @@ export interface paths {
     put?: never;
     post?: never;
     delete: operations["deleteAsset"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/legacy-assets/{author}/{name}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description The asset that answered for a v1 public address. The lookup applies the same access rules the permalink does, so a withheld, deleted or never-existed address answers 404 with nothing that says which. */
-    get: operations["resolveLegacyAsset"];
-    put?: never;
-    post?: never;
-    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -4418,11 +4384,6 @@ export interface components {
       label: string;
       /** @description The offered format Illarin writes for this application, chosen by what reaches it rather than by how many applications read it. */
       format: string;
-    };
-    LegacyAsset: {
-      /** Format: uuid */
-      id: string;
-      name: string;
     };
     CandidateConflict: {
       error: string;
@@ -9210,35 +9171,6 @@ export interface operations {
       };
     };
   };
-  resolveLegacyProfile: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        discordId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The profile the Discord identity belongs to */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Profile"];
-        };
-      };
-      /** @description No account carries that Discord identity */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   listAssets: {
     parameters: {
       query?: {
@@ -9433,36 +9365,6 @@ export interface operations {
       };
       /** @description The asset is withheld and cannot be deleted */
       409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  resolveLegacyAsset: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        author: string;
-        name: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The asset the address belongs to */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LegacyAsset"];
-        };
-      };
-      /** @description No asset a visitor may see */
-      404: {
         headers: {
           [name: string]: unknown;
         };

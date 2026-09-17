@@ -111,7 +111,6 @@ export type BrowseAsset = components["schemas"]["BrowseAsset"];
 export type BrowsePage = components["schemas"]["AssetList"];
 export type BrowseCursor = components["schemas"]["BrowseCursor"];
 export type DeletedAsset = components["schemas"]["DeletedAsset"];
-export type LegacyAsset = components["schemas"]["LegacyAsset"];
 export type BrowseKind = BrowseAsset["kind"];
 export type NsfwVisibility =
   components["schemas"]["NsfwVisibilityRequest"]["visibility"];
@@ -196,27 +195,6 @@ export async function fetchAssets(
     headers: cookie ? { cookie } : undefined,
   });
   if (error) throw new Error("Could not load the catalog");
-  return data;
-}
-
-export async function fetchLegacyAsset(
-  author: string,
-  name: string,
-): Promise<LegacyAsset | null> {
-  const { data, error } = await api.GET("/v1/legacy-assets/{author}/{name}", {
-    params: { path: { author, name } },
-  });
-  if (error || !data) return null;
-  return data;
-}
-
-export async function fetchLegacyProfile(
-  discordId: string,
-): Promise<Profile | null> {
-  const { data, error } = await api.GET("/v1/legacy-profiles/{discordId}", {
-    params: { path: { discordId } },
-  });
-  if (error || !data) return null;
   return data;
 }
 

@@ -486,17 +486,6 @@ func (s *Service) CreatorListing(ctx context.Context, handle string) (CreatorLis
 	}, nil
 }
 
-func (s *Service) PublicProfileByDiscordSubject(ctx context.Context, subject string) (PublicProfile, error) {
-	row, err := db.New(s.pool).ProfileByDiscordSubject(ctx, subject)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return PublicProfile{}, ErrProfileNotFound
-	}
-	if err != nil {
-		return PublicProfile{}, fmt.Errorf("read profile by Discord identity: %w", err)
-	}
-	return s.PublicProfile(ctx, row.Username)
-}
-
 func (s *Service) ChangeUnverifiedEmail(ctx context.Context, token, rawEmail string) (Account, error) {
 	email, err := normalizeEmail(rawEmail)
 	if err != nil {

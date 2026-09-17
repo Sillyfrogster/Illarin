@@ -1955,28 +1955,6 @@ func (q *Queries) InstanceLibraryCounts(ctx context.Context, userID pgtype.UUID)
 	return items, nil
 }
 
-const legacyPathTarget = `-- name: LegacyPathTarget :one
-select asset.id, asset.name
-  from asset_legacy_paths legacy
-  join assets asset on asset.id = legacy.asset_id
- where legacy.path = $1
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
-`
-
-type LegacyPathTargetRow struct {
-	ID   pgtype.UUID
-	Name string
-}
-
-func (q *Queries) LegacyPathTarget(ctx context.Context, path string) (LegacyPathTargetRow, error) {
-	row := q.db.QueryRow(ctx, legacyPathTarget, path)
-	var i LegacyPathTargetRow
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
-}
-
 const listAssets = `-- name: ListAssets :many
 select a.id, a.kind, revision.format, a.origin_format,
        a.asset_version, a.credited_author, a.nickname, a.lifecycle,
@@ -2535,26 +2513,6 @@ func (q *Queries) NSFWVisibilityBySessionHash(ctx context.Context, tokenHash []b
 	var nsfw_visibility string
 	err := row.Scan(&nsfw_visibility)
 	return nsfw_visibility, err
-}
-
-const profileByDiscordSubject = `-- name: ProfileByDiscordSubject :one
-select u.id, u.username, u.show_nsfw_contributions_on_profile
-  from oauth_identities identity
-  join users u on u.id = identity.user_id
- where identity.provider = 'discord' and identity.subject = $1
-`
-
-type ProfileByDiscordSubjectRow struct {
-	ID                             pgtype.UUID
-	Username                       string
-	ShowNsfwContributionsOnProfile bool
-}
-
-func (q *Queries) ProfileByDiscordSubject(ctx context.Context, subject string) (ProfileByDiscordSubjectRow, error) {
-	row := q.db.QueryRow(ctx, profileByDiscordSubject, subject)
-	var i ProfileByDiscordSubjectRow
-	err := row.Scan(&i.ID, &i.Username, &i.ShowNsfwContributionsOnProfile)
-	return i, err
 }
 
 const profileByHandle = `-- name: ProfileByHandle :one

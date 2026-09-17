@@ -33,11 +33,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/app/globals.css",
-        "src/app/prototype/editor/theme.css",
-        "src/app/prototype/direction/theme.css"
-      ],
+      "includes": ["src/app/globals.css"],
       "css": {
         "parser": {
           "tailwindDirectives": true
@@ -58,10 +54,7 @@
       }
     },
     {
-      "includes": [
-        "src/app/globals.css",
-        "src/app/prototype/direction/theme.css"
-      ],
+      "includes": ["src/app/globals.css"],
       "linter": {
         "rules": {
           "complexity": {

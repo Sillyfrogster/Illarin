@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { fetchAssets, fetchDeletedAssets, fetchProfile } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
@@ -9,10 +9,8 @@ import { pageMetadata, readableForMetadata } from "@/lib/site-metadata";
 import { ProfileListing } from "./ProfileListing";
 
 const loadProfile = cache(async (segment: string) => {
-  const address = readProfileAddress(decodeURIComponent(segment));
-  return address
-    ? { address, profile: await fetchProfile(address.handle) }
-    : null;
+  const handle = readProfileAddress(decodeURIComponent(segment));
+  return handle ? fetchProfile(handle) : null;
 });
 
 export async function generateMetadata({
@@ -20,10 +18,11 @@ export async function generateMetadata({
 }: {
   params: Promise<{ profile: string }>;
 }): Promise<Metadata> {
-  const found = await readableForMetadata(loadProfile((await params).profile));
-  if (!found?.profile) return { title: "Not found" };
+  const profile = await readableForMetadata(
+    loadProfile((await params).profile),
+  );
+  if (!profile) return { title: "Not found" };
 
-  const { profile } = found;
   const metadata = pageMetadata(
     profile.displayName
       ? `${profile.displayName} (@${profile.handle})`
@@ -43,19 +42,17 @@ export default async function CreatorProfileListing({
 }) {
   const { profile: encodedProfile } = await params;
   const requested = decodeURIComponent(encodedProfile);
-  const [filters, found, cookie] = await Promise.all([
+  const [filters, profile, cookie] = await Promise.all([
     searchParams.then(readBrowseFilters),
     loadProfile(encodedProfile),
     cookies().then((value) => value.toString()),
   ]);
-  if (!found?.profile) notFound();
-
-  const { address, profile } = found;
+  if (!profile) notFound();
 
   const canonical = `@${profile.handle}`;
-  const here = buildBrowseHref(filters, `/${canonical}`);
-  if (address.form === "legacy") permanentRedirect(here);
-  if (requested !== canonical) redirect(here);
+  if (requested !== canonical) {
+    redirect(buildBrowseHref(filters, `/${canonical}`));
+  }
 
   const [initialPage, deletedAssets] = await Promise.all([
     fetchAssets(

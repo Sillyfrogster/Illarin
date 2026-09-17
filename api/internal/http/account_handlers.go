@@ -419,19 +419,6 @@ func (h *Handlers) GetProfile(c *gin.Context, handle string) {
 	h.showProfile(c, profile)
 }
 
-func (h *Handlers) ResolveLegacyProfile(c *gin.Context, discordId string) {
-	profile, err := h.accounts.PublicProfileByDiscordSubject(c.Request.Context(), discordId)
-	if errors.Is(err, account.ErrProfileNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
-		return
-	}
-	h.showProfile(c, profile)
-}
-
 func (h *Handlers) accountError(c *gin.Context, err error) {
 	var field account.FieldError
 	switch {

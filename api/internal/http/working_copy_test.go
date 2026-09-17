@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -117,4 +118,14 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	if _, err := assets.DeliverableAsset(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, asset.ErrNotDeliverable) {
 		t.Fatalf("advertised delivery without a policy: %v", err)
 	}
+}
+
+func publishedCharacter(t *testing.T, router *gin.Engine, session *http.Cookie) string {
+	t.Helper()
+	started := startCharacter(t, router, session)
+	writeCharacterFloor(t, router, session, started)
+	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	return started.ID
 }
