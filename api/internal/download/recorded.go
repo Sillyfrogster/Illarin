@@ -11,7 +11,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -179,17 +179,17 @@ func (s *Service) recordedExportSubject(
 	if recorded.WithdrawnAt != nil && (viewerID == nil || ownerID == nil || *viewerID != *ownerID) {
 		return exportSubject{}, false, asset.ErrNotFound
 	}
-	if err := protected.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
+	if err := private.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
-	if _, err := protected.ApplyRecordedPolicy(ctx, tx, assetID, &recorded.ID, recorded.Blocks); err != nil {
+	if _, err := private.ApplyRecordedPolicy(ctx, tx, assetID, &recorded.ID, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
-	apps, err := protected.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, assetID)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
-	sealed := len(apps) > 0 || protected.HasPromptFragments(recorded.Blocks)
+	sealed := len(apps) > 0 || private.HasPromptFragments(recorded.Blocks)
 	subject.assetID = assetID
 	subject.kind = recorded.Kind
 	subject.name = recorded.Metadata.Name

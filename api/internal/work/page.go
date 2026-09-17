@@ -10,7 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -146,7 +146,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		found.UnpublishedChanges = &unpublished
 	}
 	if !working && !found.IsOwner {
-		if err := protected.ApplyPublishedPolicy(ctx, tx, id, found.Blocks); err != nil {
+		if err := private.ApplyPublishedPolicy(ctx, tx, id, found.Blocks); err != nil {
 			return Detail{}, err
 		}
 	}
@@ -178,7 +178,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		})
 	}
 	if found.IsOwner {
-		if err := protected.RestorePromptFragments(ctx, tx, id, found.Blocks); err != nil {
+		if err := private.RestorePromptFragments(ctx, tx, id, found.Blocks); err != nil {
 			return Detail{}, err
 		}
 		if draft {
@@ -187,23 +187,23 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			found.Readiness = asset.PublishedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
 		}
 		if viewerID != nil {
-			sealed, err := asset.SealedBlockCount(ctx, tx, *viewerID, id)
+			sealed, err := private.SealedBlockCount(ctx, tx, *viewerID, id)
 			if err != nil {
 				return Detail{}, err
 			}
 			found.SealedBlocks = sealed
 		}
 	}
-	found.AllowedApps, err = protected.Apps(ctx, tx, id)
+	found.AllowedApps, err = private.Apps(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
 	}
-	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || protected.HasPromptFragments(found.Blocks)
+	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || private.HasPromptFragments(found.Blocks)
 	offered := make([]string, len(found.Downloads))
 	for i, target := range found.Downloads {
 		offered[i] = target.Format
 	}
-	found.EligibleApps = protected.EligibleApps(found.Kind, offered)
+	found.EligibleApps = private.EligibleApps(found.Kind, offered)
 	found.InstallCapabilities = format.InstallCapabilities(found.Kind, offered)
 	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {

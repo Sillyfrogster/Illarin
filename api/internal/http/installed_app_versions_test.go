@@ -20,7 +20,7 @@ func linkInstallations(t *testing.T, r *gin.Engine, session *http.Cookie, count 
 			t, r, session, "Lumiverse", fmt.Sprintf("desk %d", index+1),
 			[]string{apitest.ReceiveScope, apitest.LibrarySyncScope},
 		)
-		declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+		apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
 		grants = append(grants, grant)
 	}
 	return grants
@@ -81,7 +81,7 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 
 func TestOnlyAnExtensionPageListsInstalledAppVersions(t *testing.T) {
 	t.Parallel()
-	r, session, _ := newLinkingRouter(t)
+	r, session, _ := harness.NewLinkingRouter(t)
 	assetID := apitest.PublishedAsset(t, r, session)
 	for _, install := range linkInstallations(t, r, session, 5) {
 		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
@@ -97,7 +97,7 @@ func TestAnAppVersionCountsOnlyFromInstallationsThatCanInstallTheExtensionsApp(t
 	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	for _, install := range linkInstallations(t, r, session, 5) {
-		declare(t, r, install.AccessToken, []string{sillyTavernInstalls}, []string{extension.SillyTavernID})
+		apitest.Declare(t, r, install.AccessToken, []string{sillyTavernInstalls}, []string{extension.SillyTavernID})
 		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
 	}
 
@@ -155,7 +155,7 @@ func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing
 			t.Errorf("application version %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := assetInstances(t, r, session, assetID).Items[0]; state.InstalledGeneration != nil {
+	if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; state.InstalledGeneration != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

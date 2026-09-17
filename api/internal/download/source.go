@@ -8,7 +8,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -38,7 +38,7 @@ func (s *Service) Source(
 		}
 		return Source{}, fmt.Errorf("find current revision: %w", err)
 	}
-	apps, err := protected.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, assetID)
 	if err != nil {
 		return Source{}, err
 	}
@@ -46,10 +46,10 @@ func (s *Service) Source(
 	if err != nil {
 		return Source{}, err
 	}
-	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, blocks); err != nil {
+	if err := private.ApplyPublishedPolicy(ctx, tx, assetID, blocks); err != nil {
 		return Source{}, err
 	}
-	if (len(apps) > 0 || protected.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
+	if (len(apps) > 0 || private.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
 		return Source{}, ErrLinkedInstallOnly
 	}
 	redirect, err := s.store.InternalRedirect(ctx, location.BlobID)

@@ -65,16 +65,16 @@ func TestTheNextDeliveryWaitFromAnInstanceReportingAWithheldExtensionCarriesTheN
 
 	withholdAsAdmin(t, r, pool, session, "verified.creator", assetID)
 
-	rec := collect(t, r, install.AccessToken, nil)
+	rec := apitest.Collect(t, r, install.AccessToken, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("collect status = %d, want 200 carrying the notice: %s", rec.Code, rec.Body.String())
 	}
-	waited := apitest.DecodeResponse[deliveryWorkList](t, rec)
+	waited := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec)
 	if len(waited.Deliveries) != 0 || len(waited.Withheld) != 1 ||
 		waited.Withheld[0].AssetID != assetID || waited.Withheld[0].Name != "Quiet Toolbox" {
 		t.Fatalf("wait = %+v, want no work and one notice naming Quiet Toolbox", waited)
 	}
-	if again := collect(t, r, install.AccessToken, nil); again.Code != http.StatusNoContent {
+	if again := apitest.Collect(t, r, install.AccessToken, nil); again.Code != http.StatusNoContent {
 		t.Fatalf("the next wait = %d, want 204 once the notice was carried: %s", again.Code, again.Body.String())
 	}
 	if synced := apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0"); len(synced.Withheld) != 0 {
@@ -106,7 +106,7 @@ func TestAnExtensionWithheldAgainAfterBeingClearedIsNoticedAgain(t *testing.T) {
 
 func TestOnlyAWithheldExtensionIsNoticed(t *testing.T) {
 	t.Parallel()
-	r, session, pool := newLinkingRouter(t)
+	r, session, pool := harness.NewLinkingRouter(t)
 	assetID := apitest.PublishedAsset(t, r, session)
 	install := linkInstallations(t, r, session, 1)[0]
 	apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
@@ -116,7 +116,7 @@ func TestOnlyAWithheldExtensionIsNoticed(t *testing.T) {
 	if synced := apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0"); len(synced.Withheld) != 0 {
 		t.Fatalf("withholding a character told the instance %+v", synced.Withheld)
 	}
-	if rec := collect(t, r, install.AccessToken, nil); rec.Code != http.StatusNoContent {
+	if rec := apitest.Collect(t, r, install.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect = %d after a character was withheld, want 204: %s", rec.Code, rec.Body.String())
 	}
 }
@@ -126,19 +126,19 @@ func TestWithholdingAnExtensionStopsItsQueuedDeliveriesAsWithdrawn(t *testing.T)
 	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
-	declare(t, r, install.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
-	if queued := sendToInstance(t, r, session, assetID, install.Instance.ID); queued.Code != http.StatusAccepted {
+	apitest.Declare(t, r, install.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	if queued := apitest.SendToInstance(t, r, session, assetID, install.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
 
 	withholdAsAdmin(t, r, pool, session, "verified.creator", assetID)
 	clearWithhold(t, r, session, assetID)
 
-	stopped := assetInstances(t, r, session, assetID).Items[0].Delivery
+	stopped := apitest.AssetInstances(t, r, session, assetID).Items[0].Delivery
 	if stopped == nil || stopped.State != "failed" || stopped.Reason == nil || *stopped.Reason != "withdrawn" {
 		t.Fatalf("delivery = %+v, want it stopped as withdrawn when the extension was withheld", stopped)
 	}
-	if rec := collect(t, r, install.AccessToken, nil); rec.Code != http.StatusNoContent {
+	if rec := apitest.Collect(t, r, install.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect = %d, want nothing released: %s", rec.Code, rec.Body.String())
 	}
 }

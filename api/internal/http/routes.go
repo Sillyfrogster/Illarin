@@ -99,7 +99,6 @@ func registerRoutes(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restriction", d.JSON, h.RestrictProfile)
 	routes.Handle(http.MethodGet, "/v1/assets/:id/preserved", d.JSON, h.ListPreservedNamespaces)
 	routes.Handle(http.MethodDelete, "/v1/assets/:id/preserved/:namespace", d.JSON, h.DeletePreservedNamespace)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/sealed", d.JSON, h.ExportSealedContent)
 	routes.Handle(http.MethodDelete, "/v1/assets/:id/withhold", d.JSON, h.ClearAssetWithhold)
 	routes.Handle(http.MethodPut, "/v1/assets/:id/withhold", d.JSON, h.WithholdAsset)
 	routes.Handle(http.MethodGet, "/v1/assets/:id/media", d.JSON, h.ListMedia)

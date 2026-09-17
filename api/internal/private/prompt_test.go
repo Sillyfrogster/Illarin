@@ -1,4 +1,4 @@
-package http
+package private_test
 
 import (
 	"context"
@@ -18,9 +18,9 @@ import (
 
 func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
 
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
@@ -38,13 +38,13 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	unsupported := apitest.LinkDeviceInstance(t, router, session, "Other app", "tablet", []string{apitest.ReceiveScope})
-	declareTargets(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
-	for _, state := range assetInstances(t, router, session, started.ID).Items {
+	apitest.DeclareTargets(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
+	for _, state := range apitest.AssetInstances(t, router, session, started.ID).Items {
 		if state.InstanceID == unsupported.Instance.ID && state.CanReceive {
 			t.Fatal("an instance without an allowed target was offered sealed content")
 		}
 	}
-	if got := sendToInstance(t, router, session, started.ID, unsupported.Instance.ID); got.Code != http.StatusConflict {
+	if got := apitest.SendToInstance(t, router, session, started.ID, unsupported.Instance.ID); got.Code != http.StatusConflict {
 		t.Fatalf("queue incompatible instance = %d, want 409: %s", got.Code, got.Body.String())
 	}
 
@@ -66,15 +66,15 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 		t.Fatal("the linked export did not restore the protected prompt")
 	}
 
-	queued := sendToInstance(t, router, session, started.ID, grant.Instance.ID)
+	queued := apitest.SendToInstance(t, router, session, started.ID, grant.Instance.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 	if work.Format != "preset_lumiverse" {
 		t.Fatalf("delivery format = %q, want Lumiverse", work.Format)
 	}
-	artifact := fetchSigned(t, router, work.Artifacts[0].URL)
+	artifact := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
 	if artifact.Code != http.StatusOK {
 		t.Fatalf("artifact status = %d, want 200: %s", artifact.Code, artifact.Body.String())
 	}
@@ -88,7 +88,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 
 func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	groupID := uuid.NewString()
@@ -159,7 +159,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 
 func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	if len(started.Downloads) == 0 {
 		t.Fatal("the ordinary preset has no generated export target to protect")

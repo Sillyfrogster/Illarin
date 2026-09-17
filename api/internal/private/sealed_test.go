@@ -1,4 +1,4 @@
-package http
+package private_test
 
 import (
 	"encoding/json"

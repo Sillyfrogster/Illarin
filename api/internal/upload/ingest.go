@@ -16,7 +16,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -570,7 +570,7 @@ func importProtectedPrompts(
 	if len(imported.Prompts) == 0 {
 		return nil
 	}
-	if err := protected.ImportPromptFragments(
+	if err := private.ImportPromptFragments(
 		ctx, tx, assetID, blocks, carried, imported.Prompts, imported.Apps,
 	); err != nil {
 		return fmt.Errorf("import protected prompts: %w", err)
@@ -615,12 +615,12 @@ func (s *Service) writeIngestResultWithDecisions(
 			if err != nil {
 				return uuid.Nil, err
 			}
-			exposed, err := protected.UnsealedReplacement(ctx, tx, job.Target.AssetID, blocks, identities, prepared.Protected.Prompts)
+			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.AssetID, blocks, identities, prepared.Protected.Prompts)
 			if err != nil {
 				return uuid.Nil, err
 			}
 			if len(exposed) > 0 {
-				return uuid.Nil, asset.ExposureRefusal{Prompts: exposed}
+				return uuid.Nil, private.ExposureRefusal{Prompts: exposed}
 			}
 		}
 		change := func() error {
@@ -696,7 +696,7 @@ func (s *Service) replaceContent(
 		); err != nil {
 			return err
 		}
-	} else if err := protected.SyncPromptFragments(
+	} else if err := private.SyncPromptFragments(
 		ctx, tx, job.Target.AssetID, blocks, nil,
 	); err != nil {
 		return fmt.Errorf("reconcile protected prompts: %w", err)

@@ -1,16 +1,28 @@
-package asset
+package private
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const sealedSourceTable = "preset_sealed_blocks"
+
+var ErrNotFound = errors.New("no sealed content")
+
+type Service struct {
+	pool *pgxpool.Pool
+}
+
+func NewService(pool *pgxpool.Pool) *Service {
+	return &Service{pool: pool}
+}
 
 type SealedContent struct {
 	Body      []byte

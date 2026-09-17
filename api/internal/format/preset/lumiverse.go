@@ -9,7 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 )
 
@@ -284,7 +284,7 @@ func protectedImport(prompts []format.ProtectedPrompt) format.ProtectedImport {
 	}
 	return format.ProtectedImport{
 		Prompts: prompts,
-		Apps:    []string{protected.AppLumiverse},
+		Apps:    []string{private.AppLumiverse},
 	}
 }
 

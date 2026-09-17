@@ -90,15 +90,15 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
-	if queued := sendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	if queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send to the instance = %d: %s", queued.Code, queued.Body.String())
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, r, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
 	if work.Format != extension.SpindleID || work.Kind != "extension" {
 		t.Fatalf("delivery = %+v, want the Spindle archive", work)
 	}
-	fetched := fetchSigned(t, r, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, r, work.Artifacts[0].URL)
 	if fetched.Code != http.StatusOK {
 		t.Fatalf("fetch the delivery = %d: %s", fetched.Code, fetched.Body.String())
 	}

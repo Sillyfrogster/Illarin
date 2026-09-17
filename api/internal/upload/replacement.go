@@ -12,7 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -80,7 +80,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return Preview{}, err
 	}
-	if err := protected.RestorePromptFragments(ctx, tx, assetID, working); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, assetID, working); err != nil {
 		return Preview{}, err
 	}
 	public, err := asset.ReadPublishedBlocks(ctx, tx, assetID)
@@ -92,7 +92,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return Preview{}, err
 	}
-	unfillable, err := protected.UnfillablePrompts(ctx, tx, assetID, carried, prepared.Protected.Prompts)
+	unfillable, err := private.UnfillablePrompts(ctx, tx, assetID, carried, prepared.Protected.Prompts)
 	if err != nil {
 		return Preview{}, err
 	}
@@ -173,7 +173,7 @@ func promptNames(incoming []block.Block, fragments []uuid.UUID) []string {
 			}
 			for _, fragment := range list.Fragments {
 				if wanted[fragment.ID] {
-					names = append(names, protected.PromptName(fragment))
+					names = append(names, private.PromptName(fragment))
 				}
 			}
 		}

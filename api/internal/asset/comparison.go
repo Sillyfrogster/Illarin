@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -181,13 +181,13 @@ func (v RecordedVersion) holdPrompts(
 	assetID uuid.UUID,
 	asOwner bool,
 ) (bool, error) {
-	if err := protected.RestoreRecordedPrompts(v.ProtectedPayloads, v.Blocks); err != nil {
+	if err := private.RestoreRecordedPrompts(v.ProtectedPayloads, v.Blocks); err != nil {
 		return false, err
 	}
 	if asOwner {
 		return false, nil
 	}
-	return protected.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.Blocks)
+	return private.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.Blocks)
 }
 
 func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to int) (int, int, error) {

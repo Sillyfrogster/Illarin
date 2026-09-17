@@ -9,7 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -73,7 +73,7 @@ func (s *Service) DeliverableAsset(
 		return Deliverable{}, err
 	}
 	found.Targets = offered
-	apps, err := protected.Apps(ctx, q, assetID)
+	apps, err := private.Apps(ctx, q, assetID)
 	if err != nil {
 		return Deliverable{}, err
 	}
@@ -82,10 +82,10 @@ func (s *Service) DeliverableAsset(
 		if err != nil {
 			return Deliverable{}, err
 		}
-		if err := protected.ApplyPublishedPolicy(ctx, q, assetID, blocks); err != nil {
+		if err := private.ApplyPublishedPolicy(ctx, q, assetID, blocks); err != nil {
 			return Deliverable{}, err
 		}
-		if protected.HasPromptFragments(blocks) {
+		if private.HasPromptFragments(blocks) {
 			return Deliverable{}, ErrNotDeliverable
 		}
 	}
@@ -93,7 +93,7 @@ func (s *Service) DeliverableAsset(
 		found.HasOriginal = false
 		filtered := make([]DeliveryTarget, 0, len(found.Targets))
 		for _, target := range found.Targets {
-			if protected.AllowsTarget(apps, found.Kind, target.Format) {
+			if private.AllowsTarget(apps, found.Kind, target.Format) {
 				filtered = append(filtered, target)
 			}
 		}

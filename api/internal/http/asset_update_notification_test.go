@@ -287,7 +287,7 @@ func TestAnUpdateEntryOffersASendToEachInstanceHoldingAnOlderCopy(t *testing.T) 
 		if sent.InstanceID != desk.Instance.ID && sent.InstanceID != laptop.Instance.ID {
 			t.Fatalf("the entry offers an instance it should not: %+v", sent)
 		}
-		if queued := sendToInstance(t, s.router, reader, s.assetID, sent.InstanceID); queued.Code != http.StatusAccepted {
+		if queued := apitest.SendToInstance(t, s.router, reader, s.assetID, sent.InstanceID); queued.Code != http.StatusAccepted {
 			t.Fatalf("sending from the entry = %d, want 202: %s", queued.Code, queued.Body.String())
 		}
 	}
@@ -338,7 +338,7 @@ func (s updateInboxStack) setWatch(t *testing.T, session *http.Cookie, method st
 func (s updateInboxStack) install(t *testing.T, session *http.Cookie, instance string) apitest.TokenGrant {
 	t.Helper()
 	grant := apitest.LinkDeviceInstance(t, s.router, session, "Lumiverse", instance, []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	declareTargets(t, s.router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, s.router, grant.AccessToken, []string{"test_opaque"})
 	apitest.ReportInstalled(t, s.router, grant.AccessToken, "", s.assetID)
 	return grant
 }

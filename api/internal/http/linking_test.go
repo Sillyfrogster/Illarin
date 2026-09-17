@@ -8,70 +8,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
-	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var testLinkHMACKey = []byte("01234567890123456789012345678901")
-
-func newLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
-	t.Helper()
-	return newLinkingRouterWith(t, apitest.DeliverySettings())
-}
-
-func newLinkingRouterWith(
-	t *testing.T,
-	settings delivery.Settings,
-) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
-	t.Helper()
-	pool := testdb.Connect(t)
-	outbox := &apitest.VerificationOutbox{}
-	handlers := apitest.NewServicesWithDelivery(
-		t, pool, 1<<20, outbox, settings, nil,
-	)
-	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
-
-	session := apitest.SignUp(t, router, "creator@example.com", "linking.creator")
-	link, err := url.Parse(outbox.Messages[0].Link)
-	if err != nil {
-		t.Fatalf("parse verification link: %v", err)
-	}
-	rec := apitest.SendJSON(t, router, http.MethodPost, "/v1/auth/verify-email",
-		`{"token":"`+link.Query().Get("token")+`"}`)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("verify creator: %d %s", rec.Code, rec.Body.String())
-	}
-	return router, session, pool
-}
-
-func addVerifiedLinkingUser(
-	t *testing.T,
-	r *gin.Engine,
-	pool *pgxpool.Pool,
-	email string,
-	handle string,
-) *http.Cookie {
-	t.Helper()
-	session := apitest.SignUp(t, r, email, handle)
-	if _, err := pool.Exec(
-		context.Background(),
-		`update users set email_verified_at = now() where email = $1`,
-		email,
-	); err != nil {
-		t.Fatalf("verify second linking user: %v", err)
-	}
-	return session
-}
 
 func listInstances(t *testing.T, r *gin.Engine, session *http.Cookie) []apitest.LinkedInstance {
 	t.Helper()
@@ -103,7 +49,7 @@ func instanceByID(t *testing.T, instances []apitest.LinkedInstance, id string) a
 
 func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 	t.Parallel()
-	r, session, _ := newLinkingRouter(t)
+	r, session, _ := harness.NewLinkingRouter(t)
 	started, raw := apitest.StartLink(t, r,
 		apitest.LinkStartBody("Example client", "studio workstation", []string{"asset:receive"}))
 
@@ -173,8 +119,8 @@ func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 
 func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T) {
 	t.Parallel()
-	r, firstSession, pool := newLinkingRouter(t)
-	secondSession := addVerifiedLinkingUser(
+	r, firstSession, pool := harness.NewLinkingRouter(t)
+	secondSession := apitest.AddVerifiedLinkingUser(
 		t, r, pool, "second.creator@example.com", "second.creator",
 	)
 	started, _ := apitest.StartLink(t, r,
@@ -229,7 +175,7 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 	t.Parallel()
 	t.Run("denial", func(t *testing.T) {
-		r, session, _ := newLinkingRouter(t)
+		r, session, _ := harness.NewLinkingRouter(t)
 		started, _ := apitest.StartLink(t, r,
 			apitest.LinkStartBody("Example client", "remote host", []string{"asset:receive"}))
 		_, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
@@ -250,7 +196,7 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 	})
 
 	t.Run("slow down", func(t *testing.T) {
-		r, _, _ := newLinkingRouter(t)
+		r, _, _ := harness.NewLinkingRouter(t)
 		started, _ := apitest.StartLink(t, r,
 			apitest.LinkStartBody("Example client", "remote host", []string{"asset:receive"}))
 
@@ -271,7 +217,7 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 
 func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
 	t.Parallel()
-	r, session, _ := newLinkingRouter(t)
+	r, session, _ := harness.NewLinkingRouter(t)
 	initial := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "refresh test", []string{"asset:receive"},
 	)
@@ -310,7 +256,7 @@ func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
 
 func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 	t.Parallel()
-	r, session, pool := newLinkingRouter(t)
+	r, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "idle refresh test", []string{"asset:receive"},
 	)
@@ -337,7 +283,7 @@ func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 
 func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *testing.T) {
 	t.Parallel()
-	r, session, _ := newLinkingRouter(t)
+	r, session, _ := harness.NewLinkingRouter(t)
 	first := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "studio workstation", []string{"asset:receive"},
 	)
@@ -413,7 +359,7 @@ func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *te
 
 func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
 	t.Parallel()
-	r, session, pool := newLinkingRouter(t)
+	r, session, pool := harness.NewLinkingRouter(t)
 	started, _ := apitest.StartLink(t, r,
 		apitest.LinkStartBody("Example client", "storage test", []string{"asset:receive"}))
 	_, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
@@ -472,7 +418,7 @@ func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
 
 func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 	t.Parallel()
-	r, _, _ := newLinkingRouter(t)
+	r, _, _ := harness.NewLinkingRouter(t)
 	body := `{"applicationName":"` + strings.Repeat("x", maxLinkBodyBytes) + `"}`
 	rec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/requests", body)
 	apitest.AssertNoStore(t, rec)
@@ -489,7 +435,7 @@ func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 
 func TestFiveCodeReviewsCannotBeResetByAValidCode(t *testing.T) {
 	t.Parallel()
-	r, session, _ := newLinkingRouter(t)
+	r, session, _ := harness.NewLinkingRouter(t)
 	started, _ := apitest.StartLink(t, r,
 		apitest.LinkStartBody("Example client", "attempt test", []string{"asset:receive"}))
 

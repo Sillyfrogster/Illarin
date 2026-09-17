@@ -9,7 +9,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -40,7 +40,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if recorded.Kind != kind {
 		return asset.ErrNotFound
 	}
-	if err := protected.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
+	if err := private.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return err
 	}
 

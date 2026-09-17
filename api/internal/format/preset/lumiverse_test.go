@@ -13,7 +13,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 )
 
 func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
@@ -434,7 +434,7 @@ func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.
 	for i, target := range offered {
 		targets[i] = target.Format
 	}
-	if apps := protected.EligibleApps(Kind, targets); len(apps) != 0 {
+	if apps := private.EligibleApps(Kind, targets); len(apps) != 0 {
 		t.Fatalf("SillyTavern protected-delivery apps = %v, want none", apps)
 	}
 }

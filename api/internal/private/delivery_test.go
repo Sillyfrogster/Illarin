@@ -1,4 +1,4 @@
-package http
+package private_test
 
 import (
 	"context"
@@ -39,8 +39,8 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
-	if queued := sendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	if queued := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 
@@ -51,7 +51,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("collect status = %d, want 204: %s", rec.Code, rec.Body.String())
@@ -60,7 +60,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 	if state != "failed" || reason != "unsupported" {
 		t.Fatalf("delivery = %s/%s, want failed/unsupported", state, reason)
 	}
-	if got := downloadEventCount(t, pool, "linked_instance"); got != 0 {
+	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 0 {
 		t.Fatalf("a stopped delivery recorded %d downloads, want 0", got)
 	}
 }
@@ -74,9 +74,9 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
 	page := apitest.FetchStartedAsset(t, router, session, assetID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
@@ -85,7 +85,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	fetched := fetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
 
 	if fetched.Code != http.StatusNotFound {
 		t.Fatalf("fetch after sealing = %d, want 404: %s", fetched.Code, fetched.Body.String())
@@ -93,22 +93,22 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 	if fetched.Header().Get("X-Accel-Redirect") != "" {
 		t.Fatalf("a refused artifact still pointed at %q", fetched.Header().Get("X-Accel-Redirect"))
 	}
-	if got := downloadEventCount(t, pool, "linked_instance"); got != 0 {
+	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 0 {
 		t.Fatalf("a refused artifact recorded %d downloads, want 0", got)
 	}
 }
 
 func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	assetID := apitest.PublishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
 	borrowedName := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, borrowedName.AccessToken, []string{"invented_by_the_client"})
+	apitest.DeclareTargets(t, router, borrowedName.AccessToken, []string{"invented_by_the_client"})
 	otherName := apitest.LinkDeviceInstance(t, router, session, "Some Other App", "tablet", []string{apitest.ReceiveScope})
-	declareTargets(t, router, otherName.AccessToken, []string{"preset_lumiverse"})
+	apitest.DeclareTargets(t, router, otherName.AccessToken, []string{"preset_lumiverse"})
 
 	offered := map[string]bool{}
-	for _, state := range assetInstances(t, router, session, assetID).Items {
+	for _, state := range apitest.AssetInstances(t, router, session, assetID).Items {
 		offered[state.InstanceID] = state.CanReceive
 	}
 
@@ -118,13 +118,13 @@ func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 	if !offered[otherName.Instance.ID] {
 		t.Fatal("an instance accepting the allowed target was not offered a sealed preset")
 	}
-	if got := sendToInstance(t, router, session, assetID, borrowedName.Instance.ID); got.Code != http.StatusConflict {
+	if got := apitest.SendToInstance(t, router, session, assetID, borrowedName.Instance.ID); got.Code != http.StatusConflict {
 		t.Fatalf("queue by borrowed name = %d, want 409: %s", got.Code, got.Body.String())
 	}
-	if got := sendToInstance(t, router, session, assetID, otherName.Instance.ID); got.Code != http.StatusAccepted {
+	if got := apitest.SendToInstance(t, router, session, assetID, otherName.Instance.ID); got.Code != http.StatusAccepted {
 		t.Fatalf("queue by accepted target = %d, want 202: %s", got.Code, got.Body.String())
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, otherName.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, otherName.AccessToken, nil)).Deliveries[0]
 	if work.Format != "preset_lumiverse" {
 		t.Fatalf("released format = %q, want preset_lumiverse", work.Format)
 	}
@@ -138,18 +138,18 @@ func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.
 	assetID := apitest.AssetIDFromIngest(
 		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(apitest.KeyedSealedPreset)),
 	)
-	reader := addVerifiedLinkingUser(t, router, pool, "reader@example.com", "reader.creator")
+	reader := apitest.AddVerifiedLinkingUser(t, router, pool, "reader@example.com", "reader.creator")
 	grant := apitest.LinkDeviceInstance(t, router, reader, "Lumiverse", "reader desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
 
-	if queued := sendToInstance(t, router, reader, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, router, reader, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("a reader could not queue the preset: %d %s", queued.Code, queued.Body.String())
 	}
-	if before := downloadEventCount(t, pool, "linked_instance"); before != 0 {
+	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {
 		t.Fatalf("queueing recorded %d downloads, want 0", before)
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
-	artifact := fetchSigned(t, router, work.Artifacts[0].URL)
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	artifact := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
 
 	if artifact.Code != http.StatusOK {
 		t.Fatalf("artifact status = %d, want 200: %s", artifact.Code, artifact.Body.String())
@@ -157,10 +157,10 @@ func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.
 	if !strings.Contains(artifact.Body.String(), "Exact private prompt.") {
 		t.Fatal("a reader's allowed instance did not receive the complete preset")
 	}
-	if got := downloadEventCount(t, pool, "linked_instance"); got != 1 {
+	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 1 {
 		t.Fatalf("the handoff recorded %d downloads, want 1", got)
 	}
-	if got := collect(t, router, grant.AccessToken, []string{work.ID}); got.Code != http.StatusNoContent {
+	if got := apitest.Collect(t, router, grant.AccessToken, []string{work.ID}); got.Code != http.StatusNoContent {
 		t.Fatalf("acknowledge status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 }

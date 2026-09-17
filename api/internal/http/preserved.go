@@ -65,26 +65,3 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 		c.Status(http.StatusNoContent)
 	}
 }
-
-func (h *Handlers) ExportSealedContent(c *gin.Context) {
-	id, ok := api.PathID(c, "id")
-	if !ok {
-		return
-	}
-	owner, ok := api.Verified(c, "reading sealed content")
-	if !ok {
-		return
-	}
-	sealed, err := h.assets.OpenSealedContent(c.Request.Context(), owner.ID, id)
-	switch {
-	case errors.Is(err, asset.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "This asset holds no sealed content.")
-	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the sealed content.")
-	default:
-		c.Header("Content-Disposition", `attachment; filename="`+sealed.Filename+`"`)
-		c.Header("X-Content-Type-Options", "nosniff")
-		c.Header("Cache-Control", "private, no-store")
-		c.Data(http.StatusOK, sealed.MediaType, sealed.Body)
-	}
-}

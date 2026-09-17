@@ -10,7 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -50,7 +50,7 @@ func (s *Service) SaveBlock(
 	}); err != nil {
 		return SavedBlock{}, err
 	}
-	if err := protected.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
 		return SavedBlock{}, err
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
@@ -71,7 +71,7 @@ func (s *Service) writeBlock(
 	if err != nil {
 		return nil, 0, err
 	}
-	if err := protected.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
 		return nil, 0, err
 	}
 	before := append([]block.Block(nil), blocks...)
@@ -93,15 +93,15 @@ func (s *Service) writeBlock(
 		return nil, 0, invalid(err)
 	}
 	if !update.ExposeProtected {
-		exposed, err := protected.UnsealedFragments(ctx, tx, workID, blocks)
+		exposed, err := private.UnsealedFragments(ctx, tx, workID, blocks)
 		if err != nil {
 			return nil, 0, err
 		}
 		if len(exposed) > 0 {
-			return nil, 0, asset.ExposureRefusal{Prompts: exposed}
+			return nil, 0, private.ExposureRefusal{Prompts: exposed}
 		}
 	}
-	if err := protected.SyncPromptFragments(ctx, tx, workID, blocks, update.AllowedApps); err != nil {
+	if err := private.SyncPromptFragments(ctx, tx, workID, blocks, update.AllowedApps); err != nil {
 		return nil, 0, invalid(err)
 	}
 	saved := blocks[index]
@@ -134,7 +134,7 @@ func (s *Service) validateProtectedApps(
 	blocks []block.Block,
 	allowedApps *[]string,
 ) error {
-	if allowedApps == nil || !protected.HasPromptFragments(blocks) {
+	if allowedApps == nil || !private.HasPromptFragments(blocks) {
 		return nil
 	}
 	var origin string
@@ -149,7 +149,7 @@ func (s *Service) validateProtectedApps(
 		Kind: kind, Origin: origin, Elements: elements,
 	})
 	for _, app := range *allowedApps {
-		available := slices.ContainsFunc(protected.AppTargets(kind, app), func(wanted string) bool {
+		available := slices.ContainsFunc(private.AppTargets(kind, app), func(wanted string) bool {
 			return slices.ContainsFunc(offered, func(target format.Target) bool { return target.Format == wanted })
 		})
 		if !available {

@@ -15,7 +15,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -64,7 +64,7 @@ func (s *Service) contentFingerprint(
 	if err != nil {
 		return "", err
 	}
-	if err := protected.RestorePromptFragments(ctx, q, assetID, blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, q, assetID, blocks); err != nil {
 		return "", err
 	}
 	elements := make([]block.Element, 0)

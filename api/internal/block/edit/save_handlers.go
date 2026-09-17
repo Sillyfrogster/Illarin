@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
@@ -46,7 +47,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	if work.CandidateResult(c, candidate, err) {
 		return
 	}
-	var exposure asset.ExposureRefusal
+	var exposure private.ExposureRefusal
 	if errors.As(err, &exposure) {
 		c.JSON(http.StatusConflict, SealedExposureRefusal{
 			Error: "Saving this makes " + joinNames(exposure.Prompts) +

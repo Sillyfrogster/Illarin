@@ -35,25 +35,25 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 		"another app's":         {sillyTavernInstalls},
 		"an unknown capability": {"lumiverse:extension-install", "chat.lumiverse:extension-installer"},
 	} {
-		declare(t, r, grant.AccessToken, capabilities, []string{extension.SpindleID})
-		if state := assetInstances(t, r, session, assetID).Items[0]; state.CanReceive {
+		apitest.Declare(t, r, grant.AccessToken, capabilities, []string{extension.SpindleID})
+		if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; state.CanReceive {
 			t.Errorf("%s: the page offers the extension to the instance", name)
 		}
-		refused := sendToInstance(t, r, session, assetID, grant.Instance.ID)
+		refused := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID)
 		if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), "does not install extensions") {
 			t.Errorf("%s: send = %d %s, want 409 naming the missing capability", name, refused.Code, refused.Body.String())
 		}
 	}
 
-	declare(t, r, grant.AccessToken, []string{"chat.lumiverse:preset-install", lumiverseInstalls}, []string{extension.SpindleID})
-	if state := assetInstances(t, r, session, assetID).Items[0]; !state.CanReceive {
+	apitest.Declare(t, r, grant.AccessToken, []string{"chat.lumiverse:preset-install", lumiverseInstalls}, []string{extension.SpindleID})
+	if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; !state.CanReceive {
 		t.Fatal("the page does not offer the extension to an instance declaring the capability")
 	}
-	queued := sendToInstance(t, r, session, assetID, grant.Instance.ID)
+	queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
-	if first := apitest.DecodeResponse[queuedDelivery](t, queued); first.State != "queued" || first.UpdatesInstall {
+	if first := apitest.DecodeResponse[apitest.QueuedDelivery](t, queued); first.State != "queued" || first.UpdatesInstall {
 		t.Fatalf("delivery = %+v, want a queued first install", first)
 	}
 }
@@ -63,19 +63,19 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
-	sendToInstance(t, r, session, assetID, grant.Instance.ID)
+	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID)
 
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, r, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
 	if work.Format != extension.SpindleID || work.Kind != "extension" {
 		t.Fatalf("delivery = %+v, want the Spindle archive", work)
 	}
-	if picked := assetInstances(t, r, session, assetID).Items[0].Delivery; picked == nil || picked.State != "released" {
+	if picked := apitest.AssetInstances(t, r, session, assetID).Items[0].Delivery; picked == nil || picked.State != "released" {
 		t.Fatalf("delivery = %+v, want it picked up", picked)
 	}
 
-	collect(t, r, grant.AccessToken, []string{work.ID})
-	installed := assetInstances(t, r, session, assetID).Items[0]
+	apitest.Collect(t, r, grant.AccessToken, []string{work.ID})
+	installed := apitest.AssetInstances(t, r, session, assetID).Items[0]
 	if installed.Delivery == nil || installed.Delivery.State != "delivered" || installed.Delivery.SettledAt == nil {
 		t.Fatalf("delivery = %+v, want it delivered", installed.Delivery)
 	}
@@ -86,12 +86,12 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	syncLibrary(t, r, grant.AccessToken, false, []map[string]any{
 		{"assetId": assetID, "contentGeneration": 1},
 	}, nil)
-	reported := assetInstances(t, r, session, assetID).Items[0]
+	reported := apitest.AssetInstances(t, r, session, assetID).Items[0]
 	if reported.InstalledGeneration == nil || *reported.InstalledGeneration != 1 {
 		t.Fatalf("instance = %+v, want generation 1 installed", reported)
 	}
 
-	again := apitest.DecodeResponse[queuedDelivery](t, sendToInstance(t, r, session, assetID, grant.Instance.ID))
+	again := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID))
 	if !again.UpdatesInstall || again.State != "queued" {
 		t.Fatalf("second delivery = %+v, want one that updates the install", again)
 	}
@@ -102,13 +102,13 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
-	if queued := sendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	if queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
-	declare(t, r, grant.AccessToken, []string{}, []string{extension.SpindleID})
+	apitest.Declare(t, r, grant.AccessToken, []string{}, []string{extension.SpindleID})
 
-	if rec := collect(t, r, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
+	if rec := apitest.Collect(t, r, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
 	var state, reason string
@@ -120,7 +120,7 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 	if state != "failed" || reason != "unsupported" {
 		t.Fatalf("delivery = %s/%s, want failed/unsupported", state, reason)
 	}
-	stopped := assetInstances(t, r, session, assetID).Items[0]
+	stopped := apitest.AssetInstances(t, r, session, assetID).Items[0]
 	if stopped.CanReceive || stopped.Delivery == nil || stopped.Delivery.Reason == nil || *stopped.Delivery.Reason != "unsupported" {
 		t.Fatalf("instance = %+v, want the stop and its reason on the page", stopped)
 	}
@@ -141,7 +141,7 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 			t.Errorf("address %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := assetInstances(t, r, session, assetID).Items[0]; state.InstalledGeneration != nil {
+	if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; state.InstalledGeneration != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

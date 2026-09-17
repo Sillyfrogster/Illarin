@@ -10,7 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 )
 
@@ -88,7 +88,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 		Prompts: []format.ProtectedPrompt{{
 			FragmentID: arriving, SourceKey: "setup", ReuseExisting: true,
 		}},
-		Apps: []string{protected.AppLumiverse},
+		Apps: []string{private.AppLumiverse},
 	}
 	parsed = replacement
 
@@ -135,7 +135,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		Prompts: []format.ProtectedPrompt{{
 			FragmentID: arriving, SourceKey: "late", ReuseExisting: true,
 		}},
-		Apps: []string{protected.AppLumiverse},
+		Apps: []string{private.AppLumiverse},
 	}
 	parsed = replacement
 

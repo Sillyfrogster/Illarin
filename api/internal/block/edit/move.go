@@ -7,7 +7,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -55,7 +55,7 @@ func (s *Service) moveContent(
 	if err != nil {
 		return nil, err
 	}
-	if err := protected.RestorePromptFragments(ctx, tx, workID, before); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, workID, before); err != nil {
 		return nil, err
 	}
 	var source *block.Block
@@ -88,7 +88,7 @@ func (s *Service) moveContent(
 	if err := block.ValidateBuilderConstraints(kind, before, after); err != nil {
 		return nil, invalid(err)
 	}
-	if err := protected.SyncPromptFragments(ctx, tx, workID, after, nil); err != nil {
+	if err := private.SyncPromptFragments(ctx, tx, workID, after, nil); err != nil {
 		return nil, invalid(err)
 	}
 	elements, err := json.Marshal(destination.Elements)

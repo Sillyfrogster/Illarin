@@ -1,4 +1,4 @@
-package protected
+package private
 
 import (
 	"context"

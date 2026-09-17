@@ -6,7 +6,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
 	"github.com/google/uuid"
 )
@@ -164,14 +164,14 @@ func (s *Service) RemoveBlock(
 		if err != nil {
 			return err
 		}
-		if err := protected.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
+		if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
 			return err
 		}
 		remaining, err := withoutBlock(kind, blocks, blockID)
 		if err != nil {
 			return err
 		}
-		if err := protected.SyncPromptFragments(ctx, tx, workID, remaining, nil); err != nil {
+		if err := private.SyncPromptFragments(ctx, tx, workID, remaining, nil); err != nil {
 			return invalid(err)
 		}
 		if err := deleteBlockAndClosePositions(ctx, tx, workID, blockID, remaining); err != nil {

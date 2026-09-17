@@ -21,125 +21,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type deliveryArtifact struct {
-	Kind    string  `json:"kind"`
-	URL     string  `json:"url"`
-	MediaID *string `json:"mediaId"`
-	Role    *string `json:"role"`
-	IsCover *bool   `json:"isCover"`
-}
-
-type deliveryWork struct {
-	ID                string             `json:"id"`
-	AssetID           string             `json:"assetId"`
-	ContentGeneration int                `json:"contentGeneration"`
-	Kind              string             `json:"kind"`
-	Name              string             `json:"name"`
-	Format            string             `json:"format"`
-	Label             string             `json:"label"`
-	QueuedAt          time.Time          `json:"queuedAt"`
-	LeaseExpiresAt    time.Time          `json:"leaseExpiresAt"`
-	Artifacts         []deliveryArtifact `json:"artifacts"`
-}
-
-type deliveryWorkList struct {
-	Deliveries []deliveryWork           `json:"deliveries"`
-	Withheld   []apitest.WithheldNotice `json:"withheld"`
-}
-
-type queuedDelivery struct {
-	ID             string     `json:"id"`
-	InstanceID     string     `json:"instanceId"`
-	AssetID        string     `json:"assetId"`
-	State          string     `json:"state"`
-	Reason         *string    `json:"reason"`
-	QueuedAt       time.Time  `json:"queuedAt"`
-	SettledAt      *time.Time `json:"settledAt"`
-	ExpiresAt      time.Time  `json:"expiresAt"`
-	UpdatesInstall bool       `json:"updatesInstall"`
-}
-
-type assetInstance struct {
-	InstanceID          string          `json:"instanceId"`
-	ApplicationName     string          `json:"applicationName"`
-	InstanceName        string          `json:"instanceName"`
-	LastSeenAt          *time.Time      `json:"lastSeenAt"`
-	CanReceive          bool            `json:"canReceive"`
-	ReportsLibrary      bool            `json:"reportsLibrary"`
-	Delivery            *queuedDelivery `json:"delivery"`
-	InstalledGeneration *int            `json:"installedGeneration"`
-	UpdateAvailable     bool            `json:"updateAvailable"`
-}
-
-type assetInstanceList struct {
-	ContentGeneration int             `json:"contentGeneration"`
-	Items             []assetInstance `json:"items"`
-}
-
-func sendToInstance(
-	t *testing.T,
-	r *gin.Engine,
-	session *http.Cookie,
-	assetID string,
-	instanceID string,
-) *httptest.ResponseRecorder {
-	t.Helper()
-	return apitest.Send(t, r, apitest.BrowserRequest(
-		t, http.MethodPost, "/v1/assets/"+assetID+"/deliveries",
-		map[string]string{"instanceId": instanceID}, session,
-	))
-}
-
-func collect(t *testing.T, r *gin.Engine, token string, acknowledge []string) *httptest.ResponseRecorder {
-	t.Helper()
-	if acknowledge == nil {
-		acknowledge = []string{}
-	}
-	return apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/deliveries/collect", token,
-		map[string]any{"acknowledge": acknowledge}))
-}
-
-func assetInstances(
-	t *testing.T,
-	r *gin.Engine,
-	session *http.Cookie,
-	assetID string,
-) assetInstanceList {
-	t.Helper()
-	rec := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/instances", nil), session))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("asset instances status = %d, want 200: %s", rec.Code, rec.Body.String())
-	}
-	return apitest.DecodeResponse[assetInstanceList](t, rec)
-}
-
-func fetchSigned(t *testing.T, r *gin.Engine, address string) *httptest.ResponseRecorder {
-	t.Helper()
-	parsed, err := url.Parse(address)
-	if err != nil {
-		t.Fatalf("parse a delivery address: %v", err)
-	}
-	return apitest.Send(t, r, httptest.NewRequest(http.MethodGet, parsed.RequestURI(), nil))
-}
-
-func downloadEventCount(t *testing.T, pool *pgxpool.Pool, class string) int {
-	t.Helper()
-	var count int
-	if err := pool.QueryRow(context.Background(),
-		`select count(*) from download_events where authorization_class = $1`, class,
-	).Scan(&count); err != nil {
-		t.Fatalf("count download events: %v", err)
-	}
-	return count
-}
-
 func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("empty wait status = %d, want 204: %s", rec.Code, rec.Body.String())
@@ -149,25 +36,25 @@ func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
 
 func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
-	queued := sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	queued := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	waiting := apitest.DecodeResponse[queuedDelivery](t, queued)
+	waiting := apitest.DecodeResponse[apitest.QueuedDelivery](t, queued)
 	if waiting.State != "queued" || waiting.AssetID != assetID {
 		t.Fatalf("queued delivery = %+v, want a queued delivery for the asset", waiting)
 	}
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("collect status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	released := apitest.DecodeResponse[deliveryWorkList](t, rec)
+	released := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec)
 	if len(released.Deliveries) != 1 {
 		t.Fatalf("released %d deliveries, want 1", len(released.Deliveries))
 	}
@@ -182,7 +69,7 @@ func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 	if !strings.Contains(work.Artifacts[0].URL, "signature=") {
 		t.Fatalf("export address %q carries no signature", work.Artifacts[0].URL)
 	}
-	fetched := fetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
 	if fetched.Code != http.StatusOK {
 		t.Fatalf("fetch status = %d, want 200: %s", fetched.Code, fetched.Body.String())
 	}
@@ -204,41 +91,41 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
 
-	if queued := sendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	if before := downloadEventCount(t, pool, "linked_instance"); before != 0 {
+	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {
 		t.Fatalf("queueing wrote %d download events, want 0", before)
 	}
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("collect status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, rec).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec).Deliveries[0]
 	if work.Format != asset.RawDownloadTarget {
 		t.Fatalf("format = %q, want the creator's own file as raw", work.Format)
 	}
-	fetched := fetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
 
 	if fetched.Code != http.StatusOK || fetched.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("fetch = %d, headers %v", fetched.Code, fetched.Header())
 	}
-	if got := downloadEventCount(t, pool, "linked_instance"); got != 1 {
+	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 1 {
 		t.Fatalf("recorded %d linked-instance downloads, want 1", got)
 	}
 }
 
 func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
 	address, err := url.Parse(work.Artifacts[0].URL)
 	if err != nil {
@@ -261,27 +148,27 @@ func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 
 func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
-	again := collect(t, router, grant.AccessToken, []string{work.ID})
+	again := apitest.Collect(t, router, grant.AccessToken, []string{work.ID})
 
 	if again.Code != http.StatusNoContent {
 		t.Fatalf("wait after acknowledgement status = %d, want 204: %s", again.Code, again.Body.String())
 	}
-	delivered := assetInstances(t, router, session, assetID).Items[0].Delivery
+	delivered := apitest.AssetInstances(t, router, session, assetID).Items[0].Delivery
 	if delivered == nil || delivered.State != "delivered" || delivered.SettledAt == nil || delivered.UpdatesInstall {
 		t.Fatalf("delivery = %+v, want it on record as delivered", delivered)
 	}
-	if fetched := fetchSigned(t, router, work.Artifacts[0].URL); fetched.Code != http.StatusNotFound {
+	if fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL); fetched.Code != http.StatusNotFound {
 		t.Fatalf("the export address still answers %d after acknowledgement", fetched.Code)
 	}
 
-	resent := apitest.DecodeResponse[queuedDelivery](t, sendToInstance(t, router, session, assetID, grant.Instance.ID))
+	resent := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID))
 	if resent.ID == work.ID || resent.State != "queued" {
 		t.Fatalf("sending again = %+v, want a new queued delivery", resent)
 	}
@@ -289,25 +176,25 @@ func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *test
 	if dismissed.Code != http.StatusNoContent {
 		t.Fatalf("dismiss status = %d, want 204: %s", dismissed.Code, dismissed.Body.String())
 	}
-	if after := assetInstances(t, router, session, assetID).Items[0].Delivery; after == nil || after.ID != work.ID {
+	if after := apitest.AssetInstances(t, router, session, assetID).Items[0].Delivery; after == nil || after.ID != work.ID {
 		t.Fatalf("delivery = %+v, want the delivered record back once the new one is dismissed", after)
 	}
 }
 
 func TestSendingTheSameAssetTwiceQueuesItOnce(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
-	first := apitest.DecodeResponse[queuedDelivery](t, sendToInstance(t, router, session, assetID, grant.Instance.ID))
-	second := apitest.DecodeResponse[queuedDelivery](t, sendToInstance(t, router, session, assetID, grant.Instance.ID))
+	first := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID))
+	second := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID))
 
 	if first.ID != second.ID {
 		t.Fatalf("two sends made two deliveries, %s and %s", first.ID, second.ID)
 	}
-	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil))
+	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
 	if len(work.Deliveries) != 1 {
 		t.Fatalf("released %d deliveries, want 1", len(work.Deliveries))
 	}
@@ -315,11 +202,11 @@ func TestSendingTheSameAssetTwiceQueuesItOnce(t *testing.T) {
 
 func TestAnAssetWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 	if _, err := pool.Exec(context.Background(), `
 		update assets asset
 		   set withheld_at = now(), withheld_by = asset.owner_id,
@@ -329,7 +216,7 @@ func TestAnAssetWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 		t.Fatalf("withhold the asset: %v", err)
 	}
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("collect status = %d, want 204: %s", rec.Code, rec.Body.String())
@@ -348,12 +235,12 @@ func TestAnAssetWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 
 func TestAnInstanceThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
-	rec := sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	rec := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("send status = %d, want 409: %s", rec.Code, rec.Body.String())
@@ -362,10 +249,10 @@ func TestAnInstanceThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
 
 func TestCollectingNeedsTheReceiveScope(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Reader", "desk", []string{"library:sync"})
 
-	rec := collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, grant.AccessToken, nil)
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("collect without the scope status = %d, want 403: %s", rec.Code, rec.Body.String())
@@ -374,13 +261,13 @@ func TestCollectingNeedsTheReceiveScope(t *testing.T) {
 
 func TestSendingNeedsAnInstanceOfYourOwnThatCanReceive(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	stranger := addVerifiedLinkingUser(t, router, pool, "stranger@example.com", "stranger.creator")
+	stranger := apitest.AddVerifiedLinkingUser(t, router, pool, "stranger@example.com", "stranger.creator")
 
-	rec := sendToInstance(t, router, stranger, assetID, grant.Instance.ID)
+	rec := apitest.SendToInstance(t, router, stranger, assetID, grant.Instance.ID)
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("send to another creator's instance status = %d, want 404: %s",
@@ -390,14 +277,14 @@ func TestSendingNeedsAnInstanceOfYourOwnThatCanReceive(t *testing.T) {
 
 func TestARevokedInstanceLosesItsQueueAndMirrorAndAnotherKeepsBoth(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	cut := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "cut", []string{apitest.ReceiveScope, "library:sync"})
 	kept := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "kept", []string{apitest.ReceiveScope, "library:sync"})
-	declareTargets(t, router, cut.AccessToken, []string{"test_opaque"})
-	declareTargets(t, router, kept.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, cut.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, kept.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, cut.Instance.ID)
-	sendToInstance(t, router, session, assetID, kept.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, cut.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, kept.Instance.ID)
 	syncLibrary(t, router, cut.AccessToken, false, []map[string]any{{"assetId": assetID}}, nil)
 	syncLibrary(t, router, kept.AccessToken, false, []map[string]any{{"assetId": assetID}}, nil)
 
@@ -430,24 +317,6 @@ func rowCount(t *testing.T, pool *pgxpool.Pool, query string, args ...any) int {
 	return count
 }
 
-func declareTargets(t *testing.T, r *gin.Engine, token string, targets []string) {
-	t.Helper()
-	declare(t, r, token, []string{}, targets)
-}
-
-func declare(t *testing.T, r *gin.Engine, token string, capabilities, targets []string) {
-	t.Helper()
-	rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPut, "/v1/instances/me", token, map[string]any{
-		"applicationVersion": "1.0.0",
-		"protocolVersion":    1,
-		"capabilities":       capabilities,
-		"acceptedTargets":    targets,
-	}))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("declare status = %d, want 200: %s", rec.Code, rec.Body.String())
-	}
-}
-
 func syncLibrary(
 	t *testing.T,
 	r *gin.Engine,
@@ -470,10 +339,10 @@ func syncLibrary(
 
 func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk",
 		[]string{apitest.ReceiveScope, "library:sync"})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
 	result := syncLibrary(t, router, grant.AccessToken, true,
@@ -481,14 +350,14 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 	if result.Accepted != 1 {
 		t.Fatalf("library sync accepted %d, want 1", result.Accepted)
 	}
-	current := assetInstances(t, router, session, assetID)
+	current := apitest.AssetInstances(t, router, session, assetID)
 	if current.Items[0].InstalledGeneration == nil || current.Items[0].UpdateAvailable {
 		t.Fatalf("state = %+v, want installed and current", current.Items[0])
 	}
 
 	changeTheAsset(t, router, session, assetID)
 
-	stale := assetInstances(t, router, session, assetID)
+	stale := apitest.AssetInstances(t, router, session, assetID)
 	if stale.Items[0].UpdateAvailable ||
 		*stale.Items[0].InstalledGeneration != stale.ContentGeneration {
 		t.Fatalf("state = %+v at generation %d, want the published generation unchanged",
@@ -498,7 +367,7 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 
 func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	first := apitest.PublishedAsset(t, router, session)
 	second := apitest.PublishedAsset(t, router, session)
@@ -514,7 +383,7 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 	if result.Accepted != 1 || result.Removed != 1 {
 		t.Fatalf("snapshot = %+v, want one kept and one removed", result)
 	}
-	gone := assetInstances(t, router, session, first)
+	gone := apitest.AssetInstances(t, router, session, first)
 	if gone.Items[0].InstalledGeneration != nil {
 		t.Fatalf("the first asset is still installed after a snapshot without it")
 	}
@@ -522,7 +391,7 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 
 func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
@@ -540,14 +409,14 @@ func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 
 func TestTheAssetPageOffersTheMostRecentlySeenInstanceFirst(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	older := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "older", []string{apitest.ReceiveScope})
 	newer := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "newer", []string{apitest.ReceiveScope})
-	declareTargets(t, router, older.AccessToken, []string{"test_opaque"})
-	declareTargets(t, router, newer.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, older.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, newer.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
 
-	state := assetInstances(t, router, session, assetID)
+	state := apitest.AssetInstances(t, router, session, assetID)
 
 	if len(state.Items) != 2 {
 		t.Fatalf("listed %d instances, want 2", len(state.Items))
@@ -563,7 +432,7 @@ func TestTheAssetPageOffersTheMostRecentlySeenInstanceFirst(t *testing.T) {
 
 func TestAnAssetNobodyMaySendHasNoInstanceState(t *testing.T) {
 	t.Parallel()
-	router, session, _ := newLinkingRouter(t)
+	router, session, _ := harness.NewLinkingRouter(t)
 	apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 	draft := apitest.StartCharacter(t, router, session)
 
@@ -579,15 +448,15 @@ func TestALeaseThatRanOutBringsTheDeliveryBack(t *testing.T) {
 	t.Parallel()
 	settings := apitest.DeliverySettings()
 	settings.Lease = time.Millisecond
-	router, session, _ := newLinkingRouterWith(t, settings)
+	router, session, _ := harness.NewLinkingRouterWith(t, settings)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
-	first := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil))
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
+	first := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
 
 	time.Sleep(10 * time.Millisecond)
-	second := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil))
+	second := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
 
 	if len(second.Deliveries) != 1 || second.Deliveries[0].ID != first.Deliveries[0].ID {
 		t.Fatalf("second collect = %+v, want the same delivery back", second.Deliveries)
@@ -599,17 +468,17 @@ func TestADeliveryTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
 	settings := apitest.DeliverySettings()
 	settings.Lease = time.Millisecond
 	settings.MaxAttempts = 2
-	router, session, pool := newLinkingRouterWith(t, settings)
+	router, session, pool := harness.NewLinkingRouterWith(t, settings)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 
 	for attempt := 0; attempt < 3; attempt++ {
-		collect(t, router, grant.AccessToken, nil)
+		apitest.Collect(t, router, grant.AccessToken, nil)
 		time.Sleep(5 * time.Millisecond)
 	}
-	collect(t, router, grant.AccessToken, nil)
+	apitest.Collect(t, router, grant.AccessToken, nil)
 
 	var state, reason string
 	if err := pool.QueryRow(context.Background(),
@@ -627,16 +496,16 @@ func TestAnExpiredDeliveryIsSweptAway(t *testing.T) {
 	t.Parallel()
 	settings := apitest.DeliverySettings()
 	settings.Retention = 250 * time.Millisecond
-	router, session, pool := newLinkingRouterWith(t, settings)
+	router, session, pool := harness.NewLinkingRouterWith(t, settings)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	if queued := sendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("queue the delivery status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 
 	time.Sleep(settings.Retention)
-	if rec := collect(t, router, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
+	if rec := apitest.Collect(t, router, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect an expired delivery status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
 	swept := sweepDeliveries(t, pool)
@@ -680,12 +549,12 @@ func changeTheAsset(t *testing.T, r *gin.Engine, session *http.Cookie, assetID s
 
 func TestAnInstanceThatLostTheReceiveScopeReleasesNothing(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk",
 		[]string{apitest.ReceiveScope, "library:sync"})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 	if before := claimable(t, pool, grant.Instance.ID); before != 1 {
 		t.Fatalf("%d deliveries were claimable before the scope went, want 1", before)
 	}
@@ -704,11 +573,11 @@ func TestAnInstanceThatLostTheReceiveScopeReleasesNothing(t *testing.T) {
 
 func TestARevokedInstanceReleasesNothingEvenWithRowsLeftBehind(t *testing.T) {
 	t.Parallel()
-	router, session, pool := newLinkingRouter(t)
+	router, session, pool := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	declareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
 	assetID := apitest.PublishedAsset(t, router, session)
-	sendToInstance(t, router, session, assetID, grant.Instance.ID)
+	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
 
 	if _, err := pool.Exec(context.Background(),
 		`update linked_instances

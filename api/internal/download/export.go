@@ -12,7 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -79,14 +79,14 @@ func (s *Service) OpenExport(
 		return Export{}, err
 	}
 	subject.gallery = gallery
-	if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+	if err := private.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
 		return Export{}, err
 	}
-	apps, err := protected.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, assetID)
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 || protected.HasPromptFragments(subject.blocks) {
+	if len(apps) > 0 || private.HasPromptFragments(subject.blocks) {
 		return Export{}, ErrLinkedInstallOnly
 	}
 	offered := s.reg.OfferedTargets(subject.capability())
@@ -150,22 +150,22 @@ func (s *Service) OpenExportForLinkedInstance(
 	if err != nil {
 		return Export{}, err
 	}
-	apps, err := protected.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, assetID)
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 && !protected.AllowsTarget(apps, subject.kind, target) {
+	if len(apps) > 0 && !private.AllowsTarget(apps, subject.kind, target) {
 		return Export{}, ErrTargetNotOffered
 	}
 	if len(apps) == 0 {
-		if err := protected.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+		if err := private.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
 			return Export{}, err
 		}
-		if protected.HasPromptFragments(subject.blocks) {
+		if private.HasPromptFragments(subject.blocks) {
 			return Export{}, ErrLinkedInstallOnly
 		}
 	}
-	if err := protected.RestorePromptFragments(ctx, tx, assetID, subject.blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, assetID, subject.blocks); err != nil {
 		return Export{}, err
 	}
 	if !offersTarget(s.reg.OfferedTargets(subject.capability()), target) {

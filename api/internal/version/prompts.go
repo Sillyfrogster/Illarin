@@ -9,7 +9,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -45,7 +45,7 @@ func (s *Service) ProtectionMismatches(
 	if err := ownedAsset(ctx, tx, ownerID, assetID); err != nil {
 		return nil, err
 	}
-	sealed, err := protected.SealedPrompts(ctx, tx, assetID)
+	sealed, err := private.SealedPrompts(ctx, tx, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (s *Service) ResolvePromptCorrespondence(
 	if err := ownedAsset(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
-	sealed, err := protected.SealedPrompts(ctx, tx, assetID)
+	sealed, err := private.SealedPrompts(ctx, tx, assetID)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func recordedPrompts(blocks []block.Block) []Prompt {
 			}
 			for _, fragment := range list.Fragments {
 				prompts = append(prompts, Prompt{
-					ID: fragment.ID, Name: protected.PromptName(fragment),
+					ID: fragment.ID, Name: private.PromptName(fragment),
 				})
 			}
 		}
