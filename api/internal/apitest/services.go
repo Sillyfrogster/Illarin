@@ -10,6 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
@@ -17,7 +18,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -54,8 +54,8 @@ func MediaLibrary(store storage.Store) *mediaproc.Library {
 	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 }
 
-func NewPublicationService(pool *pgxpool.Pool, store storage.Store) *publication.Service {
-	return publication.NewService(
+func NewPublicationService(pool *pgxpool.Pool, store storage.Store) *blog.Service {
+	return blog.NewService(
 		pool, MediaLibrary(store), Publishing(nil),
 	)
 }
@@ -64,11 +64,11 @@ func NewUpdateDestinations(pool *pgxpool.Pool) *integration.Service {
 	return integration.NewService(pool, SealingKey(), Publishing(nil).Sender, "http://localhost:3000")
 }
 
-func Publishing(to publication.Sender) publication.Publishing {
+func Publishing(to blog.Sender) blog.Publishing {
 	if to == nil {
 		to = ClosedSender{}
 	}
-	return publication.Publishing{
+	return blog.Publishing{
 		Sealing: SealingKey(),
 		Sender:  to,
 		Site:    "http://localhost:3000",

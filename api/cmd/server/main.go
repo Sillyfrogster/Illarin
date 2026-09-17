@@ -17,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
@@ -27,7 +28,6 @@ import (
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
@@ -151,8 +151,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("publication secret key: %w", err)
 	}
-	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
-	publications := publication.NewService(pool, images, publishing)
+	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
+	publications := blog.NewService(pool, images, publishing)
 	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	svc.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
 	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)

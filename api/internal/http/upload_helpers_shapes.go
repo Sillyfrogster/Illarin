@@ -14,7 +14,3 @@ const (
 	AddMediaRequestRolePackItem         AddMediaRequestRole = "pack_item"
 	AddMediaRequestRolePerspectiveLayer AddMediaRequestRole = "perspective_layer"
 )
-
-type AddPostMediaRequest struct {
-	Purpose PostMediaPurpose `json:"purpose"`
-}

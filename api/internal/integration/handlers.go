@@ -4,29 +4,18 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 )
 
-type AccountIdentity struct {
-	ID     uuid.UUID
-	Handle string
-}
-type BlogAccess struct {
-	Authority        func(*gin.Context, string) (AccountIdentity, bool)
-	Editor           func(*gin.Context, string) (publication.Editor, bool)
-	PublicationError func(*gin.Context, error)
-	PostError        func(*gin.Context, error)
-	Grant            func(*gin.Context, uuid.UUID) (any, error)
-}
+type BlogAccess = blog.IntegrationAccess
+
 type Handlers struct {
-	publications       *publication.Service
+	publications       *blog.Service
 	updateDestinations *Service
 	access             BlogAccess
 }
 
-func NewHandlers(publications *publication.Service, destinations *Service, access BlogAccess) *Handlers {
+func NewHandlers(publications *blog.Service, destinations *Service, access BlogAccess) *Handlers {
 	return &Handlers{publications: publications, updateDestinations: destinations, access: access}
 }
 func Register(routes api.Routes, h *Handlers) {

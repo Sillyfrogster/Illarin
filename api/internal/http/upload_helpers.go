@@ -21,18 +21,3 @@ func readMediaMetadata(parts *multipart.Reader) (AddMediaRequest, error) {
 	}
 	return metadata, nil
 }
-
-func readPostMediaMetadata(parts *multipart.Reader) (AddPostMediaRequest, error) {
-	part, err := api.NextPart(parts, api.MetadataPart)
-	if err != nil {
-		return AddPostMediaRequest{}, err
-	}
-	var metadata AddPostMediaRequest
-	if err := api.DecodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
-		return AddPostMediaRequest{}, api.FormRefusal{
-			Reason: "the " + api.MetadataPart + " part is not valid JSON",
-			Cause:  err,
-		}
-	}
-	return metadata, nil
-}

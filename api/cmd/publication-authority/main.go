@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,8 +34,8 @@ func run(ctx context.Context, handle string) error {
 	}
 	defer pool.Close()
 
-	accountID, err := publication.NewService(pool, nil, publication.Publishing{}).AssignAuthority(ctx, handle)
-	if errors.Is(err, publication.ErrAccountNotFound) {
+	accountID, err := blog.NewService(pool, nil, blog.Publishing{}).AssignAuthority(ctx, handle)
+	if errors.Is(err, blog.ErrAccountNotFound) {
 		return fmt.Errorf("no account uses the handle %q", handle)
 	}
 	if err != nil {

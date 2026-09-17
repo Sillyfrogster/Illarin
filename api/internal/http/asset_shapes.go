@@ -1,5 +1,7 @@
 package http
 
+import "github.com/google/uuid"
+
 type MediaRole string
 
 const (
@@ -24,4 +26,13 @@ type WorkingCopyVersion = int64
 type GetMediaVariantParams struct {
 	Expires   *string `json:"expires,omitempty"`
 	Signature *string `json:"signature,omitempty"`
+}
+
+type Media struct {
+	AssetId           uuid.UUID `json:"assetId"`
+	DerivativeVersion int       `json:"derivativeVersion"`
+	Height            int       `json:"height"`
+	Id                uuid.UUID `json:"id"`
+	Role              MediaRole `json:"role"`
+	Width             int       `json:"width"`
 }

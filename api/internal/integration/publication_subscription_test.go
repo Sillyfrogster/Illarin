@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/google/uuid"
 )
 
@@ -59,7 +59,7 @@ func (s destinationStack) quietlyPublished(t *testing.T, ready blogPost) blogPos
 func withdrawalsAmong(held []arrived) []arrived {
 	kept := make([]arrived, 0, len(held))
 	for _, one := range held {
-		if strings.Contains(string(one.Body), publication.EventWithdrawn) {
+		if strings.Contains(string(one.Body), blog.EventWithdrawn) {
 			kept = append(kept, one)
 		}
 	}
@@ -73,7 +73,7 @@ func TestADestinationTakesPublishedEventsAndNothingElseByDefault(t *testing.T) {
 	made := stack.active(t, "Release feed")
 
 	shown := stack.destinations(t, stack.authority).Destinations[0]
-	if len(shown.Events) != 1 || shown.Events[0] != publication.EventPublished {
+	if len(shown.Events) != 1 || shown.Events[0] != blog.EventPublished {
 		t.Errorf("events = %v, want the published event alone", shown.Events)
 	}
 	live := stack.publishedTo(t, stack.readyPost(t), made.Destination.ID, "")
@@ -89,7 +89,7 @@ func TestChangingALivePostReachesOnlyWhoeverAsksForUpdates(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	announcements := stack.active(t, "Announcements")
-	changes := stack.activeFor(t, "Change log", []string{publication.EventUpdated})
+	changes := stack.activeFor(t, "Change log", []string{blog.EventUpdated})
 	ready := stack.readyPost(t)
 
 	live := stack.publishedTo(t, ready, announcements.Destination.ID, "")
@@ -102,7 +102,7 @@ func TestChangingALivePostReachesOnlyWhoeverAsksForUpdates(t *testing.T) {
 	}
 	if got := stack.sentTo(t, ready.ID, "Change log"); len(got) != 1 {
 		t.Fatalf("the change log was queued %v, want the update alone", got)
-	} else if got[0] != publication.EventUpdated {
+	} else if got[0] != blog.EventUpdated {
 		t.Errorf("the change log was queued %q, want the update", got[0])
 	}
 	if got := stack.sentTo(t, ready.ID, "Announcements"); len(got) != 1 {
@@ -114,7 +114,7 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	announcements := stack.active(t, "Announcements")
-	removals := stack.activeFor(t, "Takedowns", []string{publication.EventWithdrawn})
+	removals := stack.activeFor(t, "Takedowns", []string{blog.EventWithdrawn})
 	ready := stack.readyPost(t)
 	live := stack.publishedTo(t, ready, announcements.Destination.ID, "")
 	stack.sendQueued(t)
@@ -129,7 +129,7 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 		t.Fatalf("withdraw status = %d: %s", gone.Code, gone.Body.String())
 	}
 	if got := stack.sentTo(t, ready.ID, "Takedowns"); len(got) != 1 ||
-		got[0] != publication.EventWithdrawn {
+		got[0] != blog.EventWithdrawn {
 		t.Fatalf("takedowns was queued %v, want the withdrawal alone", got)
 	}
 	if got := stack.sentTo(t, ready.ID, "Announcements"); len(got) != 1 {
@@ -156,7 +156,7 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 func TestAWithdrawalCanSendNothing(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	removals := stack.activeFor(t, "Takedowns", []string{publication.EventWithdrawn})
+	removals := stack.activeFor(t, "Takedowns", []string{blog.EventWithdrawn})
 	ready := stack.readyPost(t)
 	live := stack.publishedTo(t, ready, removals.Destination.ID, "")
 
@@ -234,7 +234,7 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.activeFor(t, "Everything", []string{
-		publication.EventPublished, publication.EventUpdated, publication.EventWithdrawn,
+		blog.EventPublished, blog.EventUpdated, blog.EventWithdrawn,
 	})
 	draft := stack.illarinDraft(t, stack.editor, "Illarin keeps its own writing now")
 	ready := stack.saved(t, stack.editor, draft.ID, finished(draft, nil))
@@ -283,7 +283,7 @@ func TestWhatArrivesIsWhatTheContractDocuments(t *testing.T) {
 	if err := reader.Decode(&held); err != nil {
 		t.Fatalf("the event does not fit the documented contract: %v", err)
 	}
-	if held.Type != integration.PublicationEvent(publication.EventPublished) {
+	if held.Type != integration.PublicationEvent(blog.EventPublished) {
 		t.Errorf("type = %q, want the published event", held.Type)
 	}
 	if held.Id == uuid.Nil || held.Post.Id == uuid.Nil || held.Post.RevisionId == uuid.Nil {
@@ -327,7 +327,7 @@ func TestASubscriptionCanBeNarrowedAfterwards(t *testing.T) {
 		t.Fatalf("update status = %d: %s", response.Code, response.Body.String())
 	}
 	shown := stack.destinations(t, stack.authority).Destinations[0]
-	want := []string{publication.EventPublished, publication.EventWithdrawn}
+	want := []string{blog.EventPublished, blog.EventWithdrawn}
 	if len(shown.Events) != len(want) {
 		t.Fatalf("events = %v, want %v", shown.Events, want)
 	}

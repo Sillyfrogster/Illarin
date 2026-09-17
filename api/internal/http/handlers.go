@@ -4,11 +4,11 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
@@ -24,7 +24,7 @@ type Handlers struct {
 	accounts           *account.Service
 	links              *connect.Apps
 	deliveries         *connect.Sends
-	publications       *publication.Service
+	publications       *blog.Service
 	updateDestinations *integration.Service
 	notifications      *notify.Service
 	maxUploadBytes     int64
@@ -40,7 +40,7 @@ func NewHandlers(
 	accounts *account.Service,
 	links *connect.Apps,
 	deliveries *connect.Sends,
-	publications *publication.Service,
+	publications *blog.Service,
 	updateDestinations *integration.Service,
 	notifications *notify.Service,
 	maxUploadBytes int64,

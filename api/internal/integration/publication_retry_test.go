@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 )
 
 func (s destinationStack) activeFor(t *testing.T, name string, events []string) addedDestination {
@@ -147,7 +147,7 @@ func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
 	stack.answersWith(http.StatusServiceUnavailable)
 
 	at := time.Now().UTC()
-	for place, gap := range publication.DeliveryDelays[1:] {
+	for place, gap := range blog.DeliveryDelays[1:] {
 		if attempted := stack.sendQueuedAt(t, at); attempted != 1 {
 			t.Fatalf("attempt %d made %d requests, want 1", place+1, attempted)
 		}
@@ -173,8 +173,8 @@ func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
 	if spent.State != "failed" || spent.SettledReason != "exhausted" {
 		t.Errorf("the run ended %q/%q, want failed/exhausted", spent.State, spent.SettledReason)
 	}
-	if spent.Attempts != publication.DeliveryAttempts {
-		t.Errorf("the run made %d attempts, want %d", spent.Attempts, publication.DeliveryAttempts)
+	if spent.Attempts != blog.DeliveryAttempts {
+		t.Errorf("the run made %d attempts, want %d", spent.Attempts, blog.DeliveryAttempts)
 	}
 	if again := stack.sendQueuedAt(t, at.Add(365*24*time.Hour)); again != 0 {
 		t.Errorf("a spent run made %d further requests", again)
@@ -356,7 +356,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 	}
 
 	forgotten, err := stack.handlers.Publications.ForgetOldSecrets(
-		t.Context(), time.Now().Add(publication.SecretOverlap+time.Hour),
+		t.Context(), time.Now().Add(blog.SecretOverlap+time.Hour),
 	)
 	if err != nil {
 		t.Fatalf("forget the rotated secrets: %v", err)
@@ -464,9 +464,9 @@ func TestAnExhaustedDeliveryReplaysWithoutErasingWhatItTried(t *testing.T) {
 			arrived.State, arrived.SettledReason)
 	}
 	made1 := stack.attempts(t, stack.authority, spent.ID)
-	if len(made1.Attempts) != publication.DeliveryAttempts+1 {
+	if len(made1.Attempts) != blog.DeliveryAttempts+1 {
 		t.Fatalf("the delivery shows %d attempts, want %d",
-			len(made1.Attempts), publication.DeliveryAttempts+1)
+			len(made1.Attempts), blog.DeliveryAttempts+1)
 	}
 	last := made1.Attempts[len(made1.Attempts)-1]
 	if last.Run != spent.Run+1 || last.Outcome != "delivered" {
@@ -580,7 +580,7 @@ func TestAnInterruptedAttemptIsTakenOverWithoutSpendingItsPlace(t *testing.T) {
 	if waiting.Last.Number != 2 {
 		t.Errorf("the recorded attempt is number %d, want 2", waiting.Last.Number)
 	}
-	gap := publication.DeliveryDelays[1]
+	gap := blog.DeliveryDelays[1]
 	if waited := waiting.DueAt.Sub(at); waited < gap*9/10 || waited > gap*11/10 {
 		t.Errorf("the next attempt waits %s, want the first gap of %s", waited, gap)
 	}
@@ -602,7 +602,7 @@ func interrupt(t *testing.T, stack destinationStack, deliveryID string) {
 func spendTheRun(t *testing.T, stack destinationStack, postID string) {
 	t.Helper()
 	at := time.Now().UTC()
-	for range publication.DeliveryAttempts {
+	for range blog.DeliveryAttempts {
 		if made := stack.sendQueuedAt(t, at); made != 1 {
 			t.Fatalf("an attempt made %d requests, want 1", made)
 		}

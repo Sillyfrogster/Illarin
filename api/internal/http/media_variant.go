@@ -8,7 +8,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -94,7 +94,7 @@ func (h *Handlers) sharedImageVariant(
 		redirect, mediaType, private, err := owner()
 		switch {
 		case errors.Is(err, account.ErrProfileMediaNotFound),
-			errors.Is(err, publication.ErrPostMediaNotFound):
+			errors.Is(err, blog.ErrPostMediaNotFound):
 			continue
 		case errors.Is(err, storage.ErrInsufficientSpace):
 			api.Refuse(c, http.StatusServiceUnavailable, "The image is temporarily unavailable.")

@@ -13,7 +13,7 @@ import { PostBody } from "./PostBody";
 
 const IMPORTS = join(
   import.meta.dir,
-  "../../../../api/internal/postdoc/testdata/markdown/carried",
+  "../../../../api/internal/blog/body/testdata/markdown/carried",
 );
 
 const PLACED = "6f2c1b40-9d38-4a7e-b512-0c8e37a41d59";

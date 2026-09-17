@@ -144,23 +144,66 @@ packages:
     output_path: "../web/src/lib/api/shapes/integration.ts"
     enum_style: "union"
     preserve_comments: "none"
+    frontmatter: |
+      import type { PublicationDestinationChoice as AnnouncementPublicationDestinationChoice } from "./announcements";
+      import type { PublicationDestinationKind as AnnouncementPublicationDestinationKind } from "./announcements";
+      import type { PublicationDestinationState as AnnouncementPublicationDestinationState } from "./announcements";
+      import type { PublicationEvent as AnnouncementPublicationEvent } from "./announcements";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
+      announcements.PublicationDestinationChoice: "AnnouncementPublicationDestinationChoice"
+      announcements.PublicationDestinationKind: "AnnouncementPublicationDestinationKind"
+      announcements.PublicationDestinationState: "AnnouncementPublicationDestinationState"
+      announcements.PublicationEvent: "AnnouncementPublicationEvent"
     include_files:
       - "asset_destination_shapes.go"
       - "destination_shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
+    output_path: "../web/src/lib/api/shapes/announcements.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      uuid.UUID: "string"
+    include_files:
+      - "choice_shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/blog"
+    output_path: "../web/src/lib/api/shapes/blog.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    frontmatter: |
+      export type { PostResponse as Post };
+      export type { PostImportResponse as PostImport };
+      export type { PostMediaResponse as PostMedia };
+      export type { PostSummaryResponse as PostSummary };
+      export type { PublicPostResponse as PublicPost };
+      import type { ProfileAvatar } from "./profile";
+      import type { PublicationDestinationChoice } from "./integration";
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
+      json.RawMessage: "unknown"
+      profile.ProfileAvatar: "ProfileAvatar"
+      announcements.PublicationDestinationChoice: "PublicationDestinationChoice"
+    include_files:
+      - "post_deletion_handlers.go"
+      - "post_history_handlers.go"
+      - "post_import_handlers.go"
+      - "post_schedule_handlers.go"
+      - "post_handlers.go"
+      - "post_withdrawal_handlers.go"
+      - "publication_handlers.go"
+      - "handlers.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
       import type { AssetWatch } from "./shapes/notify";
-      import type { ProfileAvatar } from "./shapes/profile";
-      import type { PublicationDestinationChoice } from "./shapes/integration";
 
       export * from "./shapes/account";
       export * from "./shapes/block";
+      export * from "./shapes/blog";
       export * from "./shapes/connect";
       export * from "./shapes/download";
       export * from "./shapes/edit";
@@ -175,19 +218,9 @@ packages:
       uuid.UUID: "string"
       json.RawMessage: "unknown"
       notify.AssetWatch: "AssetWatch"
-      profile.ProfileAvatar: "ProfileAvatar"
-      integration.PublicationDestinationChoice: "PublicationDestinationChoice"
     include_files:
       - "asset_shapes.go"
       - "notification_shapes.go"
-      - "post_deletion_shapes.go"
-      - "post_history_shapes.go"
-      - "post_import_shapes.go"
-      - "post_refusal_shapes.go"
-      - "post_schedule_shapes.go"
-      - "post_shapes.go"
-      - "post_withdrawal_shapes.go"
       - "preserved_shapes.go"
-      - "publication_shapes.go"
       - "restriction_shapes.go"
       - "upload_helpers_shapes.go"

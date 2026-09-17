@@ -1,6 +1,7 @@
 package integration
 
 import (
+	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"time"
 
 	"github.com/google/uuid"
@@ -132,47 +133,22 @@ type PublicationDestination struct {
 	VerifiedAt          *time.Time                  `json:"verifiedAt,omitempty"`
 }
 
-type PublicationDestinationChoice struct {
-	ByDefault bool                        `json:"byDefault"`
-	Events    []PublicationEvent          `json:"events"`
-	Id        uuid.UUID                   `json:"id"`
-	Kind      PublicationDestinationKind  `json:"kind"`
-	Name      string                      `json:"name"`
-	Role      string                      `json:"role"`
-	State     PublicationDestinationState `json:"state"`
-}
+type PublicationDestinationChoice = announcements.PublicationDestinationChoice
 
 type PublicationDestinationChoiceList struct {
 	Destinations []PublicationDestinationChoice `json:"destinations"`
 	Inherited    bool                           `json:"inherited"`
 }
 
-type PublicationDestinationKind string
-
-const (
-	PublicationDestinationKindDiscord PublicationDestinationKind = "discord"
-	PublicationDestinationKindWebhook PublicationDestinationKind = "webhook"
-)
+type PublicationDestinationKind = announcements.PublicationDestinationKind
 
 type PublicationDestinationList struct {
 	Destinations []PublicationDestination `json:"destinations"`
 }
 
-type PublicationDestinationState string
+type PublicationDestinationState = announcements.PublicationDestinationState
 
-const (
-	PublicationDestinationStateActive     PublicationDestinationState = "active"
-	PublicationDestinationStateDisabled   PublicationDestinationState = "disabled"
-	PublicationDestinationStateUnverified PublicationDestinationState = "unverified"
-)
-
-type PublicationEvent string
-
-const (
-	PublicationEventPublicationPostPublishedV1 PublicationEvent = "publication.post.published.v1"
-	PublicationEventPublicationPostUpdatedV1   PublicationEvent = "publication.post.updated.v1"
-	PublicationEventPublicationPostWithdrawnV1 PublicationEvent = "publication.post.withdrawn.v1"
-)
+type PublicationEvent = announcements.PublicationEvent
 
 type PublicationEventApp struct {
 	Name string `json:"name"`

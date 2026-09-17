@@ -19,7 +19,7 @@ import { isSafeAddress } from "@/lib/post-link";
 
 const CORPUS = join(
   import.meta.dir,
-  "../../../api/internal/postdoc/testdata/corpus",
+  "../../../api/internal/blog/body/testdata/corpus",
 );
 
 type CorpusCase = {

@@ -10,13 +10,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
@@ -41,7 +41,7 @@ type Services struct {
 	Accounts           *account.Service
 	Links              *connect.Apps
 	Deliveries         *connect.Sends
-	Publications       *publication.Service
+	Publications       *blog.Service
 	UpdateDestinations *integration.Service
 	Notifications      *notify.Service
 	MaxUploadBytes     int64
@@ -127,7 +127,7 @@ func NewServicesWithDelivery(
 	maxUploadBytes int64,
 	sender account.EmailSender,
 	settings connect.Settings,
-	to publication.Sender,
+	to blog.Sender,
 ) Services {
 	t.Helper()
 	blob, err := storage.NewStore(pool, t.TempDir())
@@ -151,7 +151,7 @@ func NewServicesWithDelivery(
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         connect.NewSends(pool, assets, links, settings),
-		Publications:       publication.NewService(pool, MediaLibrary(blob), Publishing(to)),
+		Publications:       blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
 		UpdateDestinations: updateDestinations,
 		Notifications:      NewNotifications(pool),
 		MaxUploadBytes:     maxUploadBytes,

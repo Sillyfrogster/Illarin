@@ -2,10 +2,11 @@ package integration
 
 import (
 	"errors"
+	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -39,7 +40,7 @@ func (h *Handlers) AddPublicationDestination(c *gin.Context) {
 	}
 	added, err := h.publications.AddDestination(
 		c.Request.Context(), authority.ID,
-		publication.DestinationEdit{
+		blog.DestinationEdit{
 			Name: request.Name, Address: request.Address, Events: readEvents(request.Events),
 		},
 	)
@@ -93,14 +94,14 @@ func (h *Handlers) UpdatePublicationChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIDestination(updated))
 }
 
-func readChannel(c *gin.Context) (publication.ChannelEdit, bool) {
+func readChannel(c *gin.Context) (blog.ChannelEdit, bool) {
 	var request PublicationChannelRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the channel's name and address.", "address")
-		return publication.ChannelEdit{}, false
+		return blog.ChannelEdit{}, false
 	}
-	edit := publication.ChannelEdit{Name: request.Name}
+	edit := blog.ChannelEdit{Name: request.Name}
 	if request.Address != nil {
 		edit.Address = *request.Address
 	}
@@ -130,7 +131,7 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context) {
 	}
 	updated, err := h.publications.UpdateDestination(
 		c.Request.Context(), authority.ID, id,
-		publication.DestinationUpdate{
+		blog.DestinationUpdate{
 			Name: request.Name, Address: request.Address, Events: readEvents(request.Events),
 		},
 	)
@@ -287,7 +288,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var body publication.DiscordRepair
+	var body blog.DiscordRepair
 	if err := c.ShouldBindJSON(&body); err != nil {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the repair as JSON.", "repair")
 		return
@@ -372,14 +373,14 @@ func readEvents(named *[]PublicationEvent) *[]string {
 	return &events
 }
 
-func readDestinationPolicy(c *gin.Context) (publication.DestinationPolicy, bool) {
+func readDestinationPolicy(c *gin.Context) (blog.DestinationPolicy, bool) {
 	var request DestinationPolicyRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the destinations as JSON.", "destinationIds")
-		return publication.DestinationPolicy{}, false
+		return blog.DestinationPolicy{}, false
 	}
-	policy := publication.DestinationPolicy{Defaults: readIDs(request.DefaultDestinationIds)}
+	policy := blog.DestinationPolicy{Defaults: readIDs(request.DefaultDestinationIds)}
 	if request.DestinationIds != nil {
 		allowed := readIDs(request.DestinationIds)
 		policy.Allowed = &allowed
@@ -400,26 +401,26 @@ func readIDs(listed *[]uuid.UUID) []uuid.UUID {
 
 func (h *Handlers) destinationError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, publication.ErrDestinationNotFound):
+	case errors.Is(err, blog.ErrDestinationNotFound):
 		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such destination.")
-	case errors.Is(err, publication.ErrDestinationRefused):
+	case errors.Is(err, blog.ErrDestinationRefused):
 		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not send to that destination.")
-	case errors.Is(err, publication.ErrRoleRefused):
+	case errors.Is(err, blog.ErrRoleRefused):
 		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not mention that destination's role.")
-	case errors.Is(err, publication.ErrNotDiscord):
+	case errors.Is(err, blog.ErrNotDiscord):
 		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That destination is a generic webhook.")
-	case errors.Is(err, publication.ErrNotWebhook):
+	case errors.Is(err, blog.ErrNotWebhook):
 		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That destination is a Discord channel.")
-	case errors.Is(err, publication.ErrDeliveryNotFound):
+	case errors.Is(err, blog.ErrDeliveryNotFound):
 		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such delivery.")
-	case errors.Is(err, publication.ErrDeliveryUnsettled):
+	case errors.Is(err, blog.ErrDeliveryUnsettled):
 		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This delivery is still trying on its own.")
-	case errors.Is(err, publication.ErrDeliveryUnsendable):
+	case errors.Is(err, blog.ErrDeliveryUnsendable):
 		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"There is nowhere left to send this delivery.")
 	default:
@@ -427,7 +428,7 @@ func (h *Handlers) destinationError(c *gin.Context, err error) {
 	}
 }
 
-func toAPIDestinations(configured []publication.Destination) []PublicationDestination {
+func toAPIDestinations(configured []blog.Destination) []PublicationDestination {
 	listed := make([]PublicationDestination, 0, len(configured))
 	for _, one := range configured {
 		listed = append(listed, toAPIDestination(one))
@@ -435,7 +436,7 @@ func toAPIDestinations(configured []publication.Destination) []PublicationDestin
 	return listed
 }
 
-func toAPIDestination(found publication.Destination) PublicationDestination {
+func toAPIDestination(found blog.Destination) PublicationDestination {
 	events := make([]PublicationEvent, 0, len(found.Events))
 	for _, one := range found.Events {
 		events = append(events, PublicationEvent(one))
@@ -466,34 +467,14 @@ func toAPIDestination(found publication.Destination) PublicationDestination {
 	return shown
 }
 
-func toAPIChoices(held []publication.Choice, inherited bool) PublicationDestinationChoiceList {
+func toAPIChoices(held []blog.Choice, inherited bool) PublicationDestinationChoiceList {
 	return PublicationDestinationChoiceList{
-		Destinations: ChoiceRows(held),
+		Destinations: announcements.ChoiceRows(held),
 		Inherited:    inherited,
 	}
 }
 
-func ChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
-	listed := make([]PublicationDestinationChoice, 0, len(held))
-	for _, one := range held {
-		events := make([]PublicationEvent, 0, len(one.Events))
-		for _, name := range one.Events {
-			events = append(events, PublicationEvent(name))
-		}
-		listed = append(listed, PublicationDestinationChoice{
-			Id:        one.ID,
-			Name:      one.Name,
-			Kind:      PublicationDestinationKind(one.Kind),
-			State:     PublicationDestinationState(one.State),
-			Events:    events,
-			Role:      one.Role,
-			ByDefault: one.ByDefault,
-		})
-	}
-	return listed
-}
-
-func toAPIDeliveries(sent []publication.Delivery) []PostDelivery {
+func toAPIDeliveries(sent []blog.Delivery) []PostDelivery {
 	listed := make([]PostDelivery, 0, len(sent))
 	for _, one := range sent {
 		listed = append(listed, toAPIDelivery(one))
@@ -501,7 +482,7 @@ func toAPIDeliveries(sent []publication.Delivery) []PostDelivery {
 	return listed
 }
 
-func toAPIDelivery(one publication.Delivery) PostDelivery {
+func toAPIDelivery(one blog.Delivery) PostDelivery {
 	shown := PostDelivery{
 		Id:          one.ID,
 		EventId:     one.EventID,
@@ -531,7 +512,7 @@ func toAPIDelivery(one publication.Delivery) PostDelivery {
 	return shown
 }
 
-func toAPIAttempts(made []publication.DeliveryAttempt) []PostDeliveryAttempt {
+func toAPIAttempts(made []blog.DeliveryAttempt) []PostDeliveryAttempt {
 	listed := make([]PostDeliveryAttempt, 0, len(made))
 	for _, one := range made {
 		listed = append(listed, toAPIAttempt(one))
@@ -539,7 +520,7 @@ func toAPIAttempts(made []publication.DeliveryAttempt) []PostDeliveryAttempt {
 	return listed
 }
 
-func toAPIAttempt(one publication.DeliveryAttempt) PostDeliveryAttempt {
+func toAPIAttempt(one blog.DeliveryAttempt) PostDeliveryAttempt {
 	return PostDeliveryAttempt{
 		Run:         one.Run,
 		Number:      one.Number,
@@ -550,3 +531,20 @@ func toAPIAttempt(one publication.DeliveryAttempt) PostDeliveryAttempt {
 		AttemptedAt: one.Attempted,
 	}
 }
+
+const (
+	PublicationDestinationKindDiscord = announcements.PublicationDestinationKindDiscord
+	PublicationDestinationKindWebhook = announcements.PublicationDestinationKindWebhook
+)
+
+const (
+	PublicationDestinationStateActive     = announcements.PublicationDestinationStateActive
+	PublicationDestinationStateDisabled   = announcements.PublicationDestinationStateDisabled
+	PublicationDestinationStateUnverified = announcements.PublicationDestinationStateUnverified
+)
+
+const (
+	PublicationEventPublicationPostPublishedV1 = announcements.PublicationEventPublicationPostPublishedV1
+	PublicationEventPublicationPostUpdatedV1   = announcements.PublicationEventPublicationPostUpdatedV1
+	PublicationEventPublicationPostWithdrawnV1 = announcements.PublicationEventPublicationPostWithdrawnV1
+)
