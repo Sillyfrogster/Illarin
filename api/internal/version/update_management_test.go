@@ -1,4 +1,4 @@
-package http
+package version_test
 
 import (
 	"encoding/json"
@@ -57,7 +57,7 @@ func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T
 	if working.Name != "Ilse of the west shelf" || blockText(t, working.Blocks, "character_core") != "She keeps the books that forget themselves." {
 		t.Fatalf("restored working copy = %q / %q", working.Name, blockText(t, working.Blocks, "character_core"))
 	}
-	public := fetchAsset(t, r, nil, started.ID)
+	public := apitest.FetchAsset(t, r, nil, started.ID)
 	if got := blockText(t, public.Blocks, "character_core"); got != "The second public description." {
 		t.Fatalf("restore changed public description to %q", got)
 	}
@@ -123,14 +123,14 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 
 func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	publicID, sealedID := uuid.New(), uuid.New()
-	started := publishTwoPromptPreset(t, r, session, publicID, sealedID,
+	started := apitest.PublishTwoPromptPreset(t, r, session, publicID, sealedID,
 		"First public prompt.", "First protected prompt.")
 	working := apitest.FetchStartedAsset(t, r, session, started.ID)
 	coreBlock := apitest.BlockNamed(t, working.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
-	core.Elements[0].Content = sealedPresetPrompts(uuid.New(), uuid.New(),
+	core.Elements[0].Content = apitest.SealedPresetPrompts(uuid.New(), uuid.New(),
 		"Second public prompt.", "Second protected prompt.")
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
@@ -158,7 +158,7 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	if got := apitest.PublishAssetUpdate(t, r, session, started.ID, `{"summary":"Restored earlier prompts"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish restored prompts = %d: %s", got.Code, got.Body.String())
 	}
-	public := fetchAsset(t, r, nil, started.ID)
+	public := apitest.FetchAsset(t, r, nil, started.ID)
 	publicJSON, _ := json.Marshal(public)
 	if strings.Contains(string(publicJSON), "First public prompt.") || strings.Contains(string(publicJSON), "First protected prompt.") || strings.Contains(string(publicJSON), "Second protected prompt.") {
 		t.Fatal("restoration exposed a protected prompt")

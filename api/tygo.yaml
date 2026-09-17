@@ -82,6 +82,19 @@ packages:
       notify.AssetWatch: "AssetWatch"
     include_files:
       - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/version"
+    output_path: "../web/src/lib/api/shapes/version.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    frontmatter: |
+      import type { RecordedVersion } from "./work";
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
+      work.RecordedVersion: "RecordedVersion"
+    include_files:
+      - "publish_shapes.go"
+      - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -96,12 +109,14 @@ packages:
         DownloadTarget,
         RecordedVersion,
       } from "./shapes/work";
+      import type { VersionChangeGroup } from "./shapes/version";
 
       export * from "./shapes/account";
       export * from "./shapes/block";
       export * from "./shapes/edit";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
+      export * from "./shapes/version";
       export * from "./shapes/work";
     type_mappings:
       time.Time: "string"
@@ -114,6 +129,7 @@ packages:
       work.AssetImage: "AssetImage"
       work.DownloadTarget: "DownloadTarget"
       work.RecordedVersion: "RecordedVersion"
+      version.VersionChangeGroup: "VersionChangeGroup"
     include_files:
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
@@ -121,8 +137,6 @@ packages:
       - "destination_shapes.go"
       - "download_shapes.go"
       - "from_nothing_shapes.go"
-      - "history_shapes.go"
-      - "lifecycle_shapes.go"
       - "linking_shapes.go"
       - "notification_shapes.go"
       - "post_deletion_shapes.go"

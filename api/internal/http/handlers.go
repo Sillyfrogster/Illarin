@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
@@ -16,6 +17,7 @@ type Handlers struct {
 	assets             *asset.Service
 	works              *work.Service
 	blocks             *edit.Service
+	versions           *version.Service
 	accounts           *account.Service
 	links              *linking.Service
 	deliveries         *delivery.Service
@@ -29,6 +31,7 @@ func NewHandlers(
 	assets *asset.Service,
 	works *work.Service,
 	blocks *edit.Service,
+	versions *version.Service,
 	accounts *account.Service,
 	links *linking.Service,
 	deliveries *delivery.Service,
@@ -41,6 +44,7 @@ func NewHandlers(
 		assets:             assets,
 		works:              works,
 		blocks:             blocks,
+		versions:           versions,
 		accounts:           accounts,
 		links:              links,
 		deliveries:         deliveries,

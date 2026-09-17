@@ -1,4 +1,4 @@
-package http
+package version_test
 
 import (
 	"encoding/json"
@@ -94,7 +94,7 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
-	id := publishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
+	id := apitest.PublishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
 	owner := apitest.FetchStartedAsset(t, router, session, id)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(string(core.Elements[0].Content), "Recorded secret", "Unpublished secret"))

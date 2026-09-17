@@ -18,6 +18,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +33,7 @@ type Services struct {
 	Assets             *asset.Service
 	Works              *work.Service
 	Blocks             *edit.Service
+	Versions           *version.Service
 	Accounts           *account.Service
 	Links              *linking.Service
 	Deliveries         *delivery.Service
@@ -134,11 +136,12 @@ func NewServicesWithDelivery(
 	updateDestinations := assetdestination.NewService(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
-	assets.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
+	assets.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
 	return Services{
 		Assets:             assets,
 		Works:              work.NewService(pool, assets),
 		Blocks:             edit.NewService(pool, assets),
+		Versions:           version.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         delivery.NewService(pool, assets, links, settings),
@@ -162,6 +165,7 @@ func NewServicesOver(
 		Assets:             assets,
 		Works:              work.NewService(pool, assets),
 		Blocks:             edit.NewService(pool, assets),
+		Versions:           version.NewService(pool, assets),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
 		Deliveries:         NewDeliveryService(pool, assets, links),
@@ -200,7 +204,7 @@ func (h Harness) NewDiscordStack(
 	assets := asset.NewService(pool, Registry(t), blob)
 	outbox := &VerificationOutbox{}
 	services := NewServicesOver(pool, blob, assets, outbox, provider)
-	assets.OnUpdatePublished(services.UpdateDestinations.Announce, asset.TellWatchers)
+	assets.OnUpdatePublished(services.UpdateDestinations.Announce, version.TellWatchers)
 	return h.RegisterRouter(t, services, api.DefaultDeadlines()), outbox, pool
 }
 

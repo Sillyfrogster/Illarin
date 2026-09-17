@@ -215,7 +215,7 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(
-		t, lumiverseIngestRegistry(t),
+		t, apitest.LumiverseRegistry(t),
 	)
 	metadata := apitest.ExampleMetadata("Protected original")
 	metadata["filename"] = "protected-original.json"

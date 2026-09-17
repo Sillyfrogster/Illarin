@@ -1,4 +1,4 @@
-package asset
+package version
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ var (
 	ErrVersionAlreadyWithdrawn       = errors.New("the version is already withdrawn")
 )
 
-func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, candidate *Candidate) error {
+func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, candidate *asset.Candidate) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -32,18 +33,18 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if err != nil {
 		return err
 	}
-	recorded, err := readVersion(ctx, tx, assetID, number)
+	recorded, err := asset.ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return err
 	}
-	if recorded.kind != kind {
-		return ErrNotFound
+	if recorded.Kind != kind {
+		return asset.ErrNotFound
 	}
-	if err := protected.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.protectedPayloads, recorded.blocks); err != nil {
+	if err := protected.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return err
 	}
 
-	metadata := recorded.metadata
+	metadata := recorded.Metadata
 	_, err = tx.Exec(ctx, `
 		update assets set name = $2, blurb = $3, tags = $4, is_nsfw = $5,
 		       credited_author = $6, nickname = $7, asset_version = $8,
@@ -52,7 +53,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 		 where id = $1
 	`, assetID, metadata.Name, metadata.Blurb, metadata.Tags, metadata.IsNSFW,
 		metadata.CreditedAuthor, metadata.Nickname, metadata.AssetVersion,
-		recorded.origin, recorded.sourceRevisionID, metadata.Cover)
+		recorded.Origin, recorded.SourceRevisionID, metadata.Cover)
 	if err != nil {
 		return fmt.Errorf("restore the recorded header: %w", err)
 	}
@@ -67,13 +68,13 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, assetID); err != nil {
 		return fmt.Errorf("replace the working-copy blocks: %w", err)
 	}
-	if err := block.Insert(ctx, tx, assetID, recorded.blocks); err != nil {
+	if err := block.Insert(ctx, tx, assetID, recorded.Blocks); err != nil {
 		return fmt.Errorf("restore the recorded blocks: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `delete from asset_preserved_data where asset_id = $1`, assetID); err != nil {
 		return fmt.Errorf("replace the preserved data: %w", err)
 	}
-	for _, kept := range recorded.preserved {
+	for _, kept := range recorded.Preserved {
 		if _, err := tx.Exec(ctx, `
 			insert into asset_preserved_data (id, asset_id, owner_kind, owner_id, namespace, payload)
 			values ($1, $2, $3, $4, $5, $6::jsonb)
@@ -81,7 +82,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 			return fmt.Errorf("restore preserved data: %w", err)
 		}
 	}
-	if err := s.writeProjections(ctx, tx, assetID); err != nil {
+	if err := s.writeSummary(ctx, tx, assetID); err != nil {
 		return err
 	}
 	return candidate.Commit(ctx, tx, assetID)
@@ -101,7 +102,7 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := lockEditableAsset(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := asset.LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
@@ -112,7 +113,7 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 		return fmt.Errorf("correct the update notes: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return ErrNotFound
+		return asset.ErrNotFound
 	}
 	return tx.Commit(ctx)
 }
@@ -130,7 +131,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := lockEditableAsset(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := asset.LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	var current, chosen uuid.UUID
@@ -141,7 +142,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		 where asset.id = $1 and snapshot.number = $2 for update of asset, snapshot
 	`, assetID, number).Scan(&current, &chosen, &withdrawn)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+		return asset.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("read the version to withdraw: %w", err)

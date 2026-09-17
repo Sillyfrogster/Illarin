@@ -253,10 +253,10 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	publicID, sealedID := uuid.New(), uuid.New()
 	const firstSecret = "The first private instruction."
 	const secondSecret = "The second private instruction."
-	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", firstSecret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", firstSecret)
 	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
+	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the sealed prompt: %d %s", got.Code, got.Body.String())
@@ -280,7 +280,7 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 
 	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
+	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
 	core.AllowedApps = &[]string{}
@@ -311,7 +311,7 @@ func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *test
 	router, session := harness.NewVerifiedRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Words that were sealed when version 1 was recorded."
-	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
 	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[` +
@@ -523,12 +523,12 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 }
 
 type recordedDownloadsBody struct {
-	Version           recordedVersionBody      `json:"version"`
-	Kind              string                   `json:"kind"`
-	LinkedInstallOnly bool                     `json:"linkedInstallOnly"`
-	Downloads         []apitest.DownloadTarget `json:"downloads"`
-	AppTargets        []apitest.AppTarget      `json:"appTargets"`
-	Blocks            []apitest.StartedBlock   `json:"blocks"`
+	Version           apitest.RecordedVersionBody `json:"version"`
+	Kind              string                      `json:"kind"`
+	LinkedInstallOnly bool                        `json:"linkedInstallOnly"`
+	Downloads         []apitest.DownloadTarget    `json:"downloads"`
+	AppTargets        []apitest.AppTarget         `json:"appTargets"`
+	Blocks            []apitest.StartedBlock      `json:"blocks"`
 	Media             []struct {
 		ID       string `json:"id"`
 		IsCover  bool   `json:"isCover"`
@@ -607,7 +607,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 	setupRouter, router, session, _ := harness.NewVerifiedRoutersWithService(t, 1<<20, api.DefaultDeadlines())
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Not for a file."
-	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
 
 	for _, reader := range []*http.Cookie{nil, session} {
 		answer := readVersionDownloads(t, router, reader, started.ID, 1)

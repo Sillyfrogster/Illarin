@@ -20,8 +20,8 @@ func recordedElement(role block.Role, kind block.Type, content block.Content) bl
 	return block.Element{ID: uuid.New(), Type: kind, Role: role, Content: content}
 }
 
-func recordedVersionOf(kind string, blocks ...block.Block) recordedVersion {
-	return recordedVersion{kind: kind, metadata: versionMetadata{Name: "Recorded"}, blocks: blocks}
+func recordedVersionOf(kind string, blocks ...block.Block) RecordedVersion {
+	return RecordedVersion{Kind: kind, Metadata: VersionMetadata{Name: "Recorded"}, Blocks: blocks}
 }
 
 func changesUnder(t *testing.T, groups []ChangeGroup, subject string) []Change {
@@ -136,7 +136,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 	t.Parallel()
 	page := uuid.New()
 	first, second := uuid.New(), uuid.New()
-	greetings := func(texts ...block.TextItem) recordedVersion {
+	greetings := func(texts ...block.TextItem) RecordedVersion {
 		return recordedVersionOf("character",
 			recordedBlock(page, block.CharacterCore, recordedElement(block.RoleGreetings, block.TypeTextSet,
 				block.TextSet{Texts: texts})))
@@ -150,7 +150,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 	reimported := greetings(
 		block.TextItem{ID: uuid.New(), Text: "Hello there"},
 		block.TextItem{ID: uuid.New(), Text: "Well met"})
-	for _, later := range []recordedVersion{reordered, reimported} {
+	for _, later := range []RecordedVersion{reordered, reimported} {
 		if groups := compareVersions(earlier, later); len(groups) != 0 {
 			t.Fatalf("groups = %+v, want none", groups)
 		}
@@ -218,11 +218,11 @@ func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
 	t.Parallel()
 	owner := uuid.New()
 	earlier := recordedVersionOf("character")
-	earlier.preserved = []versionPreserved{
+	earlier.Preserved = []VersionPreserved{
 		{Owner: "asset", OwnerID: owner, Namespace: "test", Payload: `{"secret":"before"}`},
 	}
 	later := recordedVersionOf("character")
-	later.preserved = []versionPreserved{
+	later.Preserved = []VersionPreserved{
 		{Owner: "asset", OwnerID: owner, Namespace: "test", Payload: `{"secret":"after"}`},
 	}
 	changes := changesUnder(t, compareVersions(earlier, later), preservedSubject)

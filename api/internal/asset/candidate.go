@@ -25,7 +25,7 @@ func (e *VersionConflict) Error() string {
 }
 
 func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) (string, error) {
-	kind, err := lockEditableAsset(ctx, tx, ownerID, assetID)
+	kind, err := LockEditable(ctx, tx, ownerID, assetID)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +54,7 @@ func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) er
 	return nil
 }
 
-func lockEditableAsset(
+func LockEditable(
 	ctx context.Context,
 	tx pgx.Tx,
 	ownerID uuid.UUID,

@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 )
 
 const keyedSealedPreset = `{
@@ -30,15 +28,6 @@ type promptListResponse struct {
 	} `json:"fragments"`
 }
 
-func lumiverseIngestRegistry(t *testing.T) *format.Registry {
-	t.Helper()
-	registry := format.NewRegistry()
-	if err := registry.Register(preset.LumiverseModule{}); err != nil {
-		t.Fatalf("register Lumiverse preset format: %v", err)
-	}
-	return registry
-}
-
 func promptListFromPage(t *testing.T, page apitest.StartedAsset) promptListResponse {
 	t.Helper()
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
@@ -54,7 +43,7 @@ func promptListFromPage(t *testing.T, page apitest.StartedAsset) promptListRespo
 
 func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
 	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset))
@@ -89,7 +78,7 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 
 func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
 	created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset))
@@ -136,7 +125,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			name = "sealed after publication"
 		}
 		t.Run(name, func(t *testing.T) {
-			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 			ordinary := strings.ReplaceAll(keyedSealedPreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
 			initial := keyedSealedPreset
 			if sealedAfterPublication {
@@ -239,7 +228,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 			metadata := apitest.ExampleMetadata("Refused preset")
 			metadata["filename"] = "refused.json"
 			accepted := apitest.Send(t, router, apitest.Authorized(
@@ -274,7 +263,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 
 func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
 	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(`{

@@ -227,10 +227,10 @@ func fillSealedPrompts(blocks []block.Block, carried map[uuid.UUID]string, impor
 }
 
 // asVersionPreserved reads remainder records the way a recorded version holds them.
-func asVersionPreserved(records []format.Remainder) []versionPreserved {
-	held := make([]versionPreserved, len(records))
+func asVersionPreserved(records []format.Remainder) []VersionPreserved {
+	held := make([]VersionPreserved, len(records))
 	for index, record := range records {
-		held[index] = versionPreserved{
+		held[index] = VersionPreserved{
 			Owner: string(record.Owner), OwnerID: record.OwnerID,
 			Namespace: record.Namespace, Payload: string(record.Payload),
 		}

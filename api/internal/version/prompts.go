@@ -1,4 +1,4 @@
-package asset
+package version
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
@@ -15,15 +16,15 @@ import (
 
 var ErrUnknownPrompt = errors.New("that prompt is not one of the choices")
 
-type NamedPrompt struct {
+type Prompt struct {
 	ID   uuid.UUID
 	Name string
 }
 
-type ProtectionMismatch struct {
-	Version   Version
-	Unmatched []NamedPrompt
-	Recorded  []NamedPrompt
+type Mismatch struct {
+	Version   asset.Version
+	Unmatched []Prompt
+	Recorded  []Prompt
 }
 
 type PromptCorrespondence struct {
@@ -35,7 +36,7 @@ func (s *Service) ProtectionMismatches(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	assetID uuid.UUID,
-) ([]ProtectionMismatch, error) {
+) ([]Mismatch, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, err
@@ -52,9 +53,9 @@ func (s *Service) ProtectionMismatches(
 	if err != nil {
 		return nil, err
 	}
-	mismatches := make([]ProtectionMismatch, 0)
+	mismatches := make([]Mismatch, 0)
 	for _, number := range numbers {
-		version, err := readVersion(ctx, tx, assetID, number)
+		version, err := asset.ReadVersion(ctx, tx, assetID, number)
 		if err != nil {
 			return nil, err
 		}
@@ -62,24 +63,24 @@ func (s *Service) ProtectionMismatches(
 		if err != nil {
 			return nil, err
 		}
-		carried := recordedPrompts(version.blocks)
+		carried := recordedPrompts(version.Blocks)
 		held := make(map[uuid.UUID]bool, len(carried))
 		for _, prompt := range carried {
 			held[prompt.ID] = true
 		}
-		unmatched := make([]NamedPrompt, 0)
+		unmatched := make([]Prompt, 0)
 		for id, name := range sealed {
 			if !held[id] && !settled[id] {
-				unmatched = append(unmatched, NamedPrompt{ID: id, Name: name})
+				unmatched = append(unmatched, Prompt{ID: id, Name: name})
 			}
 		}
 		if len(unmatched) == 0 {
 			continue
 		}
-		slices.SortFunc(unmatched, func(a, b NamedPrompt) int {
+		slices.SortFunc(unmatched, func(a, b Prompt) int {
 			return strings.Compare(a.Name+a.ID.String(), b.Name+b.ID.String())
 		})
-		mismatches = append(mismatches, ProtectionMismatch{
+		mismatches = append(mismatches, Mismatch{
 			Version: version.Version, Unmatched: unmatched, Recorded: carried,
 		})
 	}
@@ -105,12 +106,12 @@ func (s *Service) ResolvePromptCorrespondence(
 	if err != nil {
 		return err
 	}
-	version, err := readVersion(ctx, tx, assetID, number)
+	version, err := asset.ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return err
 	}
 	held := make(map[uuid.UUID]bool)
-	for _, prompt := range recordedPrompts(version.blocks) {
+	for _, prompt := range recordedPrompts(version.Blocks) {
 		held[prompt.ID] = true
 	}
 	for _, answer := range answers {
@@ -140,7 +141,7 @@ func ownedAsset(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) erro
 		select true from assets where id = $1 and owner_id = $2 and deleted_at is null
 	`, assetID, ownerID).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+		return asset.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("read the asset to settle: %w", err)
@@ -185,8 +186,8 @@ func settledPrompts(ctx context.Context, tx pgx.Tx, snapshotID uuid.UUID) (map[u
 	return settled, rows.Err()
 }
 
-func recordedPrompts(blocks []block.Block) []NamedPrompt {
-	prompts := make([]NamedPrompt, 0)
+func recordedPrompts(blocks []block.Block) []Prompt {
+	prompts := make([]Prompt, 0)
 	for _, holder := range blocks {
 		for _, element := range holder.Elements {
 			list, ok := element.Content.(block.PromptList)
@@ -194,7 +195,7 @@ func recordedPrompts(blocks []block.Block) []NamedPrompt {
 				continue
 			}
 			for _, fragment := range list.Fragments {
-				prompts = append(prompts, NamedPrompt{
+				prompts = append(prompts, Prompt{
 					ID: fragment.ID, Name: protected.PromptName(fragment),
 				})
 			}

@@ -1,4 +1,4 @@
-package http
+package version_test
 
 import (
 	"encoding/json"

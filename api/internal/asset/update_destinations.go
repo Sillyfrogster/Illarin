@@ -56,7 +56,7 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, assetID uu
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := lockEditableAsset(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `

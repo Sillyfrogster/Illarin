@@ -1,10 +1,11 @@
-package asset
+package version
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -13,7 +14,7 @@ func (s *Service) VersionHistory(
 	ctx context.Context,
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
-) ([]Version, error) {
+) ([]asset.Version, error) {
 	owner, err := s.readerRole(ctx, assetID, viewerID)
 	if err != nil {
 		return nil, err
@@ -27,9 +28,9 @@ func (s *Service) VersionHistory(
 		return nil, fmt.Errorf("read the update history: %w", err)
 	}
 	defer rows.Close()
-	history := make([]Version, 0)
+	history := make([]asset.Version, 0)
 	for rows.Next() {
-		var recorded Version
+		var recorded asset.Version
 		if err := rows.Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 			&recorded.Initial, &recorded.VersionLabel, &recorded.Summary,
 			&recorded.Notes, &recorded.NotesEditedAt, &recorded.WithdrawnAt,
@@ -37,7 +38,7 @@ func (s *Service) VersionHistory(
 			return nil, fmt.Errorf("read a recorded version: %w", err)
 		}
 		if recorded.WithdrawnAt != nil && !owner {
-			redactWithdrawnVersion(&recorded)
+			asset.RedactWithdrawn(&recorded)
 		}
 		history = append(history, recorded)
 	}
@@ -49,15 +50,15 @@ func (s *Service) CompareVersions(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	from, to int,
-	visibility ContentVisibility,
-) (Comparison, error) {
+	visibility asset.ContentVisibility,
+) (asset.Comparison, error) {
 	owner, err := s.readerRole(ctx, assetID, viewerID)
 	if err != nil {
-		return Comparison{}, err
+		return asset.Comparison{}, err
 	}
-	return s.Compare(ctx, ComparisonRequest{
+	return s.assets.Compare(ctx, asset.ComparisonRequest{
 		AssetID: assetID, From: from, To: to, AsOwner: owner, Visibility: visibility,
-		Access: func(version Version) string {
+		Access: func(version asset.Version) string {
 			if version.WithdrawnAt != nil && !owner {
 				return "This version was withdrawn."
 			}
@@ -80,7 +81,7 @@ func (s *Service) readerRole(
 		   and (withheld_at is null or owner_id = $2)
 	`, assetID, viewerID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, ErrNotFound
+		return false, asset.ErrNotFound
 	}
 	if err != nil {
 		return false, fmt.Errorf("read the asset to compare: %w", err)

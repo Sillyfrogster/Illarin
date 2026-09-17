@@ -171,46 +171,46 @@ func (s *Service) recordedExportSubject(
 	if err != nil {
 		return exportSubject{}, false, fmt.Errorf("read the asset to export: %w", err)
 	}
-	recorded, err := readVersion(ctx, tx, assetID, number)
+	recorded, err := ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
 	if recorded.WithdrawnAt != nil && (viewerID == nil || ownerID == nil || *viewerID != *ownerID) {
 		return exportSubject{}, false, ErrNotFound
 	}
-	if err := protected.RestoreRecordedPrompts(recorded.protectedPayloads, recorded.blocks); err != nil {
+	if err := protected.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
-	if _, err := protected.ApplyRecordedPolicy(ctx, tx, assetID, &recorded.ID, recorded.blocks); err != nil {
+	if _, err := protected.ApplyRecordedPolicy(ctx, tx, assetID, &recorded.ID, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
 	apps, err := protected.Apps(ctx, tx, assetID)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
-	sealed := len(apps) > 0 || protected.HasPromptFragments(recorded.blocks)
+	sealed := len(apps) > 0 || protected.HasPromptFragments(recorded.Blocks)
 	subject.assetID = assetID
-	subject.kind = recorded.kind
-	subject.name = recorded.metadata.Name
-	subject.origin = recorded.origin
+	subject.kind = recorded.Kind
+	subject.name = recorded.Metadata.Name
+	subject.origin = recorded.Origin
 	subject.header = format.Header{
-		Name:           recorded.metadata.Name,
-		Blurb:          recorded.metadata.Blurb,
-		AssetVersion:   recorded.metadata.AssetVersion,
-		CreditedAuthor: recorded.metadata.CreditedAuthor,
-		Nickname:       recorded.metadata.Nickname,
+		Name:           recorded.Metadata.Name,
+		Blurb:          recorded.Metadata.Blurb,
+		AssetVersion:   recorded.Metadata.AssetVersion,
+		CreditedAuthor: recorded.Metadata.CreditedAuthor,
+		Nickname:       recorded.Metadata.Nickname,
 	}
-	subject.blocks = recorded.blocks
-	subject.cover = recorded.metadata.Cover
+	subject.blocks = recorded.Blocks
+	subject.cover = recorded.Metadata.Cover
 	subject.ownerID = ownerID
-	subject.revisionID = recorded.sourceRevisionID
+	subject.revisionID = recorded.SourceRevisionID
 	subject.recorded = &recorded
 	return subject, sealed, nil
 }
 
-func (v recordedVersion) remainder() []format.Remainder {
-	preserved := make([]format.Remainder, 0, len(v.preserved))
-	for _, row := range v.preserved {
+func (v RecordedVersion) remainder() []format.Remainder {
+	preserved := make([]format.Remainder, 0, len(v.Preserved))
+	for _, row := range v.Preserved {
 		preserved = append(preserved, format.Remainder{
 			Owner: format.Owner(row.Owner), OwnerID: row.OwnerID,
 			Namespace: row.Namespace, Payload: []byte(row.Payload),

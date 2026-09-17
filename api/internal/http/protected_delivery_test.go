@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -39,34 +38,6 @@ func sealEveryFragment(t *testing.T, body apitest.SaveBlockBody, apps []string) 
 	body.Elements[0].Content = sealed
 	body.AllowedApps = &apps
 	return body
-}
-
-func publishSealedPreset(
-	t *testing.T,
-	router *gin.Engine,
-	session *http.Cookie,
-	name string,
-	privateText string,
-) string {
-	t.Helper()
-	started := apitest.StartPreset(t, router, session, "lumiverse")
-	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
-	core.Elements[0].Content = json.RawMessage(
-		`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` +
-			privateText + `","protected":true,"enabled":true}]}`)
-	core.AllowedApps = &[]string{"lumiverse"}
-	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
-	}
-	if got := apitest.SaveIdentity(
-		t, router, session, started.ID, `{"name":"`+name+`","blurb":"","isNsfw":false}`,
-	); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
-	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
-		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
-	}
-	return started.ID
 }
 
 func settledDelivery(t *testing.T, pool *pgxpool.Pool, assetID string) (string, string) {
@@ -152,7 +123,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
-	assetID := publishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
+	assetID := apitest.PublishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
 	borrowedName := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	declareTargets(t, router, borrowedName.AccessToken, []string{"invented_by_the_client"})
 	otherName := apitest.LinkDeviceInstance(t, router, session, "Some Other App", "tablet", []string{apitest.ReceiveScope})

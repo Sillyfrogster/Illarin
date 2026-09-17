@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
@@ -391,18 +392,8 @@ func toAPIIngest(operation asset.IngestOperation) gin.H {
 		}
 	}
 	if operation.Preview != nil {
-		groups := make([]VersionChangeGroup, 0, len(operation.Preview.Groups))
-		for _, group := range operation.Preview.Groups {
-			changes := make([]VersionChange, 0, len(group.Changes))
-			for _, change := range group.Changes {
-				changes = append(changes, toAPIChange(change))
-			}
-			groups = append(groups, VersionChangeGroup{
-				Subject: group.Subject, Label: group.Label, Changes: changes,
-			})
-		}
 		response["preview"] = gin.H{
-			"format": operation.Preview.Format, "groups": groups,
+			"format": operation.Preview.Format, "groups": version.ToChangeGroups(operation.Preview.Groups),
 			"conflicts":       nonNilStrings(operation.Preview.Conflicts),
 			"unrepresentable": nonNilStrings(operation.Preview.Unrepresentable),
 			"missingWording":  nonNilStrings(operation.Preview.MissingWording),

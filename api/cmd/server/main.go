@@ -31,6 +31,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
@@ -151,7 +152,7 @@ func run() error {
 	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := publication.NewService(pool, images, publishing)
 	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
-	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
+	svc.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
 	notifications := notify.NewService(pool)
@@ -208,7 +209,7 @@ func run() error {
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
 	handlers := apihttp.NewHandlers(
-		svc, work.NewService(pool, svc), edit.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
+		svc, work.NewService(pool, svc), edit.NewService(pool, svc), version.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
 	)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {

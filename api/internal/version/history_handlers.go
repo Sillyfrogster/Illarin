@@ -1,4 +1,4 @@
-package http
+package version
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,7 +20,7 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 	if !ok {
 		return
 	}
-	history, err := h.assets.VersionHistory(c.Request.Context(), id, viewerID)
+	history, err := h.versions.VersionHistory(c.Request.Context(), id, viewerID)
 	if errors.Is(err, asset.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
@@ -55,7 +54,7 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: workingCopyVersion}
-	err := h.assets.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
+	err := h.versions.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
 	if work.CandidateResult(c, candidate, err) {
 		return
 	}
@@ -92,12 +91,12 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send the corrected summary and notes.")
 		return
 	}
-	err := h.assets.CorrectVersionNotes(c.Request.Context(), owner.ID, id, number,
+	err := h.versions.CorrectVersionNotes(c.Request.Context(), owner.ID, id, number,
 		request.Summary, valueOrEmpty(request.Notes))
 	switch {
-	case errors.Is(err, asset.ErrSummaryRequired):
+	case errors.Is(err, ErrSummaryRequired):
 		api.Refuse(c, http.StatusBadRequest, "Keep a summary for this update.")
-	case errors.Is(err, asset.ErrSummaryTooLong):
+	case errors.Is(err, ErrSummaryTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The summary or notes are too long.")
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
@@ -128,15 +127,15 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send a public withdrawal explanation.")
 		return
 	}
-	err := h.assets.WithdrawVersion(c.Request.Context(), owner.ID, id, number, request.Explanation)
+	err := h.versions.WithdrawVersion(c.Request.Context(), owner.ID, id, number, request.Explanation)
 	switch {
-	case errors.Is(err, asset.ErrWithdrawalExplanationRequired):
+	case errors.Is(err, ErrWithdrawalExplanationRequired):
 		api.Refuse(c, http.StatusBadRequest, "Explain why this version was withdrawn.")
-	case errors.Is(err, asset.ErrWithdrawalExplanationTooLong):
+	case errors.Is(err, ErrWithdrawalExplanationTooLong):
 		api.Refuse(c, http.StatusBadRequest, "Keep the explanation under 1,000 characters.")
-	case errors.Is(err, asset.ErrCurrentVersionWithdrawal):
+	case errors.Is(err, ErrCurrentVersionWithdrawal):
 		api.Refuse(c, http.StatusConflict, "Publish a replacement before withdrawing the current version.")
-	case errors.Is(err, asset.ErrVersionAlreadyWithdrawn):
+	case errors.Is(err, ErrVersionAlreadyWithdrawn):
 		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
 	case errors.Is(err, asset.ErrAssetFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
@@ -170,7 +169,7 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	compared, err := h.assets.CompareVersions(
+	compared, err := h.versions.CompareVersions(
 		c.Request.Context(), id, viewerID,
 		versionNumber(params.From), versionNumber(params.To), visibility,
 	)
@@ -186,60 +185,6 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
-	id, ok := api.PathID(c, "id")
-	if !ok {
-		return
-	}
-	number, ok := api.PathNumber(c, "number")
-	if !ok {
-		return
-	}
-	q := api.ReadQuery(c)
-	params := GetRecordedVersionDownloadsParams{
-		Nsfw: api.QueryText[GetRecordedVersionDownloadsParamsNsfw](q, "nsfw"),
-	}
-	if q.Refused(c) {
-		return
-	}
-	viewerID, ok := api.ViewerID(c)
-	if !ok {
-		return
-	}
-	var requested *string
-	if params.Nsfw != nil {
-		value := string(*params.Nsfw)
-		requested = &value
-	}
-	visibility, ok := work.ReaderVisibility(c, h.accounts, requested)
-	if !ok {
-		return
-	}
-	offered, err := h.assets.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
-	if errors.Is(err, asset.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "No such version.")
-		return
-	}
-	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
-		return
-	}
-	blocks, err := block.ToBlocks(offered.Kind, offered.Blocks)
-	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
-		return
-	}
-	c.JSON(http.StatusOK, RecordedVersionDownloads{
-		Version:           work.ToRecordedVersion(offered.Version),
-		Kind:              RecordedVersionDownloadsKind(offered.Kind),
-		LinkedInstallOnly: offered.LinkedInstallOnly,
-		Downloads:         work.ToDownloads(offered.Downloads),
-		AppTargets:        work.ToAppTargets(offered.AppTargets),
-		Blocks:            blocks,
-		Media:             work.ToImages(offered.Media),
-	})
-}
-
 func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
@@ -249,7 +194,7 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 	if !ok {
 		return
 	}
-	mismatches, err := h.assets.ProtectionMismatches(c.Request.Context(), owner.ID, id)
+	mismatches, err := h.versions.ProtectionMismatches(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
@@ -287,19 +232,19 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send a match for each sealed prompt, naming the recorded prompt it stands for.")
 		return
 	}
-	answers := make([]asset.PromptCorrespondence, 0, len(request.Matches))
+	answers := make([]PromptCorrespondence, 0, len(request.Matches))
 	for _, match := range request.Matches {
-		answer := asset.PromptCorrespondence{Current: match.Current}
+		answer := PromptCorrespondence{Current: match.Current}
 		if match.Recorded != nil {
 			recorded := uuid.UUID(*match.Recorded)
 			answer.Recorded = &recorded
 		}
 		answers = append(answers, answer)
 	}
-	err := h.assets.ResolvePromptCorrespondence(
+	err := h.versions.ResolvePromptCorrespondence(
 		c.Request.Context(), owner.ID, id, number, answers)
 	switch {
-	case errors.Is(err, asset.ErrUnknownPrompt):
+	case errors.Is(err, ErrUnknownPrompt):
 		api.Refuse(c, http.StatusBadRequest, "That prompt is not one of the choices.")
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
@@ -317,7 +262,7 @@ func versionNumber(chosen *int) int {
 	return *chosen
 }
 
-func toAPINamedPrompts(prompts []asset.NamedPrompt) []NamedPrompt {
+func toAPINamedPrompts(prompts []Prompt) []NamedPrompt {
 	out := make([]NamedPrompt, 0, len(prompts))
 	for _, prompt := range prompts {
 		out = append(out, NamedPrompt{Id: prompt.ID, Name: prompt.Name})
@@ -328,19 +273,24 @@ func toAPINamedPrompts(prompts []asset.NamedPrompt) []NamedPrompt {
 func toAPIComparison(compared asset.Comparison) VersionComparison {
 	served := VersionComparison{
 		From: work.ToRecordedVersion(compared.From), To: work.ToRecordedVersion(compared.To),
-		Groups:          make([]VersionChangeGroup, 0, len(compared.Groups)),
+		Groups:          ToChangeGroups(compared.Groups),
 		PromptsWithheld: compared.PromptsWithheld,
 	}
 	if compared.Unavailable != "" {
 		unavailable := compared.Unavailable
 		served.Unavailable = &unavailable
 	}
-	for _, group := range compared.Groups {
+	return served
+}
+
+func ToChangeGroups(groups []asset.ChangeGroup) []VersionChangeGroup {
+	served := make([]VersionChangeGroup, 0, len(groups))
+	for _, group := range groups {
 		changes := make([]VersionChange, 0, len(group.Changes))
 		for _, change := range group.Changes {
 			changes = append(changes, toAPIChange(change))
 		}
-		served.Groups = append(served.Groups, VersionChangeGroup{
+		served = append(served, VersionChangeGroup{
 			Subject: group.Subject, Label: group.Label, Changes: changes,
 		})
 	}

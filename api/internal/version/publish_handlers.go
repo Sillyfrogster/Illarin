@@ -1,4 +1,4 @@
-package http
+package version
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
@@ -30,7 +31,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: workingCopyVersion}
-	recorded, items, err := h.assets.PublishUpdate(c.Request.Context(), asset.UpdateRequest{
+	recorded, items, err := h.versions.PublishUpdate(c.Request.Context(), UpdateRequest{
 		OwnerID: owner.ID, AssetID: id, Summary: request.Summary,
 		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
 		Announcement: announcementChoice(request),
@@ -40,15 +41,13 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, assetdestination.ErrUnlistedConsentRequired):
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.",
-			"announceUnlisted")
+		refuseInvalid(c, "announceUnlisted",
+			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.")
 	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Choose only your own verified, active destinations.", "destinationIds")
-	case errors.Is(err, asset.ErrSummaryRequired):
+		refuseInvalid(c, "destinationIds", "Choose only your own verified, active destinations.")
+	case errors.Is(err, ErrSummaryRequired):
 		api.Refuse(c, http.StatusBadRequest, "Say what changed in this update.")
-	case errors.Is(err, asset.ErrSummaryTooLong):
+	case errors.Is(err, ErrSummaryTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The summary, notes or version label is too long.")
 	case errors.Is(err, asset.ErrPublishFloor):
 		notReady := work.PublishRefusalCodeNotReady
@@ -57,7 +56,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 			Code:      &notReady,
 			Readiness: work.ToReadiness(items),
 		})
-	case errors.Is(err, asset.ErrNothingToPublish):
+	case errors.Is(err, ErrNothingToPublish):
 		unchanged := work.PublishRefusalCodeNoChanges
 		c.JSON(http.StatusConflict, work.PublishRefusal{
 			Error: "Nothing has changed since the last update.", Code: &unchanged,
@@ -82,11 +81,23 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 func announcementChoice(request AssetUpdateRequest) asset.UpdateAnnouncement {
 	choice := asset.UpdateAnnouncement{Notify: request.Notify == nil || *request.Notify}
 	if request.DestinationIds != nil {
-		chosen := readIDs(request.DestinationIds)
+		chosen := append([]uuid.UUID(nil), *request.DestinationIds...)
 		choice.DestinationIDs = &chosen
 	}
 	if request.AnnounceUnlisted != nil {
 		choice.AnnounceUnlisted = *request.AnnounceUnlisted
 	}
 	return choice
+}
+
+// refuseInvalid answers with the error body the blog's publish refusals use, naming the field at fault
+func refuseInvalid(c *gin.Context, field, message string) {
+	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": message, "code": "invalid", "field": field})
+}
+
+func valueOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }

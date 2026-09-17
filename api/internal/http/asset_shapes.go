@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/google/uuid"
 )
 
@@ -78,18 +79,12 @@ const (
 )
 
 type ReplacementPreview struct {
-	Conflicts       []string             `json:"conflicts"`
-	Format          string               `json:"format"`
-	Groups          []VersionChangeGroup `json:"groups"`
-	MissingWording  []string             `json:"missingWording"`
-	Seals           int                  `json:"seals"`
-	Unrepresentable []string             `json:"unrepresentable"`
-}
-
-type VersionChangeGroup struct {
-	Changes []VersionChange `json:"changes"`
-	Label   string          `json:"label"`
-	Subject string          `json:"subject"`
+	Conflicts       []string                     `json:"conflicts"`
+	Format          string                       `json:"format"`
+	Groups          []version.VersionChangeGroup `json:"groups"`
+	MissingWording  []string                     `json:"missingWording"`
+	Seals           int                          `json:"seals"`
+	Unrepresentable []string                     `json:"unrepresentable"`
 }
 
 type WithholdAssetRequest struct {

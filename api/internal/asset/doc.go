@@ -1,2 +1,2 @@
-// Package asset holds what is still to move out of it, with drafted changes, updates and comparison to version, uploads, images and found images to upload, exports to download, preserved and private prompts to private, withholding to staff, and sweep and purge to storage
+// Package asset holds what is still to move out of it: uploads and found images to upload, exports and recorded downloads to download, private prompts to private, withholding to staff, sweep and purge to storage, and the comparison and recorded version reader that version, upload and download share
 package asset

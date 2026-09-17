@@ -59,7 +59,7 @@ type exportSubject struct {
 	lifecycle  Lifecycle
 	revisionID *uuid.UUID
 	gallery    *GallerySelection
-	recorded   *recordedVersion
+	recorded   *RecordedVersion
 }
 
 func (s *Service) OpenExport(

@@ -104,26 +104,26 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 	if err != nil {
 		return Comparison{}, err
 	}
-	earlier, err := readVersion(ctx, tx, in.AssetID, from)
+	earlier, err := ReadVersion(ctx, tx, in.AssetID, from)
 	if err != nil {
 		return Comparison{}, err
 	}
-	later, err := readVersion(ctx, tx, in.AssetID, to)
+	later, err := ReadVersion(ctx, tx, in.AssetID, to)
 	if err != nil {
 		return Comparison{}, err
 	}
 	compared := Comparison{From: earlier.Version, To: later.Version}
-	for _, version := range []recordedVersion{earlier, later} {
+	for _, version := range []RecordedVersion{earlier, later} {
 		if refusal := in.Access(version.Version); refusal != "" {
 			compared.Unavailable = refusal
 			if !in.AsOwner {
-				redactWithdrawnVersion(&compared.From)
-				redactWithdrawnVersion(&compared.To)
+				RedactWithdrawn(&compared.From)
+				RedactWithdrawn(&compared.To)
 			}
 			return compared, nil
 		}
 	}
-	for _, version := range []recordedVersion{earlier, later} {
+	for _, version := range []RecordedVersion{earlier, later} {
 		withheld, err := version.holdPrompts(ctx, tx, in.AssetID, in.AsOwner)
 		if err != nil {
 			return Comparison{}, err
@@ -137,7 +137,7 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 	return compared, nil
 }
 
-func redactWithdrawnVersion(version *Version) {
+func RedactWithdrawn(version *Version) {
 	if version.WithdrawnAt == nil {
 		return
 	}
@@ -175,19 +175,19 @@ func (s *Service) addressPictures(
 	return nil
 }
 
-func (v recordedVersion) holdPrompts(
+func (v RecordedVersion) holdPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
 	assetID uuid.UUID,
 	asOwner bool,
 ) (bool, error) {
-	if err := protected.RestoreRecordedPrompts(v.protectedPayloads, v.blocks); err != nil {
+	if err := protected.RestoreRecordedPrompts(v.ProtectedPayloads, v.Blocks); err != nil {
 		return false, err
 	}
 	if asOwner {
 		return false, nil
 	}
-	return protected.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.blocks)
+	return protected.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.Blocks)
 }
 
 func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to int) (int, int, error) {
@@ -220,18 +220,18 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to
 	return from, to, nil
 }
 
-type recordedVersion struct {
+type RecordedVersion struct {
 	Version
-	kind              string
-	origin            string
-	sourceRevisionID  *uuid.UUID
-	metadata          versionMetadata
-	blocks            []block.Block
-	preserved         []versionPreserved
-	protectedPayloads []byte
+	Kind              string
+	Origin            string
+	SourceRevisionID  *uuid.UUID
+	Metadata          VersionMetadata
+	Blocks            []block.Block
+	Preserved         []VersionPreserved
+	ProtectedPayloads []byte
 }
 
-type versionMetadata struct {
+type VersionMetadata struct {
 	Name           string     `json:"name"`
 	Blurb          string     `json:"blurb"`
 	Tags           []string   `json:"tags"`
@@ -242,7 +242,7 @@ type versionMetadata struct {
 	Cover          *uuid.UUID `json:"cover_media_id"`
 }
 
-type versionPreserved struct {
+type VersionPreserved struct {
 	ID        uuid.UUID `json:"id"`
 	Owner     string    `json:"owner_kind"`
 	OwnerID   uuid.UUID `json:"owner_id"`
@@ -251,15 +251,15 @@ type versionPreserved struct {
 }
 
 type versionPayload struct {
-	versionMetadata
+	VersionMetadata
 	Kind      string             `json:"kind"`
 	Origin    string             `json:"origin_format"`
 	Blocks    []block.Block      `json:"blocks"`
-	Preserved []versionPreserved `json:"preserved_data"`
+	Preserved []VersionPreserved `json:"preserved_data"`
 }
 
-func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (recordedVersion, error) {
-	var recorded recordedVersion
+func ReadVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (RecordedVersion, error) {
+	var recorded RecordedVersion
 	var stored []byte
 	var sourceRevision pgtype.UUID
 	err := tx.QueryRow(ctx, `
@@ -270,34 +270,34 @@ func readVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
 		&recorded.NotesEditedAt, &recorded.WithdrawnAt, &recorded.WithdrawalExplanation,
-		&sourceRevision, &stored, &recorded.protectedPayloads)
+		&sourceRevision, &stored, &recorded.ProtectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return recordedVersion{}, ErrNotFound
+		return RecordedVersion{}, ErrNotFound
 	}
 	if err != nil {
-		return recordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
+		return RecordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
 	var payload versionPayload
 	if err := json.Unmarshal(stored, &payload); err != nil {
-		return recordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
+		return RecordedVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
-	recorded.kind = payload.Kind
-	recorded.origin = payload.Origin
-	recorded.sourceRevisionID = uuidOrNil(sourceRevision)
-	recorded.metadata = payload.versionMetadata
-	recorded.blocks = payload.Blocks
-	recorded.preserved = payload.Preserved
+	recorded.Kind = payload.Kind
+	recorded.Origin = payload.Origin
+	recorded.SourceRevisionID = uuidOrNil(sourceRevision)
+	recorded.Metadata = payload.VersionMetadata
+	recorded.Blocks = payload.Blocks
+	recorded.Preserved = payload.Preserved
 	return recorded, nil
 }
 
-func compareVersions(earlier, later recordedVersion) []ChangeGroup {
+func compareVersions(earlier, later RecordedVersion) []ChangeGroup {
 	groups := make([]ChangeGroup, 0, 8)
-	groups = addGroup(groups, metadataSubject, "Details", compareMetadata(earlier.metadata, later.metadata))
-	groups = append(groups, compareContent(earlier.blocks, later.blocks)...)
+	groups = addGroup(groups, metadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
+	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)
 	groups = addGroup(groups, presentationSubject, "Page",
-		comparePresentation(later.kind, earlier.blocks, later.blocks))
+		comparePresentation(later.Kind, earlier.Blocks, later.Blocks))
 	groups = addGroup(groups, preservedSubject, "Preserved data",
-		comparePreserved(earlier.preserved, later.preserved))
+		comparePreserved(earlier.Preserved, later.Preserved))
 	return groups
 }
 
@@ -308,7 +308,7 @@ func addGroup(groups []ChangeGroup, subject, label string, changes []Change) []C
 	return append(groups, ChangeGroup{Subject: subject, Label: label, Changes: changes})
 }
 
-func compareMetadata(earlier, later versionMetadata) []Change {
+func compareMetadata(earlier, later VersionMetadata) []Change {
 	changes := make([]Change, 0, 8)
 	for _, field := range []struct{ name, before, after string }{
 		{"Name", earlier.Name, later.Name},
@@ -839,7 +839,7 @@ func optionWords(options block.Options) string {
 	return strings.Join(words, " ")
 }
 
-func comparePreserved(earlier, later []versionPreserved) []Change {
+func comparePreserved(earlier, later []VersionPreserved) []Change {
 	before := preservedDigests(earlier)
 	after := preservedDigests(later)
 	namespaces := make([]string, 0, len(before)+len(after))
@@ -868,7 +868,7 @@ func comparePreserved(earlier, later []versionPreserved) []Change {
 	return changes
 }
 
-func preservedDigests(preserved []versionPreserved) map[string]string {
+func preservedDigests(preserved []VersionPreserved) map[string]string {
 	keyed := make(map[string][]string)
 	for _, item := range preserved {
 		keyed[item.Namespace] = append(keyed[item.Namespace],

@@ -1,4 +1,4 @@
-package http
+package version_test
 
 import (
 	"encoding/json"
@@ -14,15 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type recordedVersionBody struct {
-	ID     string `json:"id"`
-	Number int    `json:"number"`
-}
-
 type versionComparisonBody struct {
-	From            recordedVersionBody `json:"from"`
-	To              recordedVersionBody `json:"to"`
-	PromptsWithheld bool                `json:"promptsWithheld"`
+	From            apitest.RecordedVersionBody `json:"from"`
+	To              apitest.RecordedVersionBody `json:"to"`
+	PromptsWithheld bool                        `json:"promptsWithheld"`
 	Groups          []struct {
 		Subject string `json:"subject"`
 	} `json:"groups"`
@@ -30,7 +25,7 @@ type versionComparisonBody struct {
 
 type protectionMismatchBody struct {
 	Items []struct {
-		Version   recordedVersionBody `json:"version"`
+		Version   apitest.RecordedVersionBody `json:"version"`
 		Unmatched []struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
@@ -40,39 +35,6 @@ type protectionMismatchBody struct {
 			Name string `json:"name"`
 		} `json:"recorded"`
 	} `json:"items"`
-}
-
-func sealedPresetPrompts(publicID, sealedID uuid.UUID, publicText, sealedText string) json.RawMessage {
-	return json.RawMessage(`{"groups":[],"fragments":[` +
-		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"` +
-		publicText + `","enabled":true},` +
-		`{"id":"` + sealedID.String() + `","name":"Private instructions","role":"system","text":"` +
-		sealedText + `","protected":true,"enabled":true}]}`)
-}
-
-func publishTwoPromptPreset(
-	t *testing.T,
-	router *gin.Engine,
-	session *http.Cookie,
-	publicID, sealedID uuid.UUID,
-	publicText, sealedText string,
-) apitest.StartedAsset {
-	t.Helper()
-	started := apitest.StartPreset(t, router, session, "lumiverse")
-	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, publicText, sealedText)
-	core.AllowedApps = &[]string{"lumiverse"}
-	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save the sealed prompts: %d %s", got.Code, got.Body.String())
-	}
-	if got := apitest.SaveIdentity(t, router, session, started.ID,
-		`{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save the identity: %d %s", got.Code, got.Body.String())
-	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
-		t.Fatalf("publish the preset: %d %s", got.Code, got.Body.String())
-	}
-	return started
 }
 
 func compareVersions(t *testing.T, router *gin.Engine, assetID, query string, session *http.Cookie) *httptest.ResponseRecorder {
@@ -91,12 +53,12 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	publicID, sealedID := uuid.New(), uuid.New()
 	const firstSecret = "Never hand these words to a reader."
 	const secondSecret = "Nor these ones either."
-	started := publishTwoPromptPreset(t, router, session, publicID, sealedID,
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID,
 		"Answer plainly.", firstSecret)
 
 	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID,
+	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID,
 		"Answer plainly and briefly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
@@ -112,7 +74,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 		t.Fatalf("read the history: %d %s", history.Code, history.Body.String())
 	}
 	var recorded struct {
-		Items []recordedVersionBody `json:"items"`
+		Items []apitest.RecordedVersionBody `json:"items"`
 	}
 	if err := json.Unmarshal(history.Body.Bytes(), &recorded); err != nil {
 		t.Fatalf("decode the history: %v", err)
@@ -193,11 +155,11 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "The reader must never receive these words."
 	const houseRule = "Answer plainly."
-	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, houseRule, secret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, houseRule, secret)
 
 	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, houseRule+" And briefly.", secret)
+	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the house rule: %d %s", got.Code, got.Body.String())
@@ -210,7 +172,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	reimportedPublic, reimportedSealed := uuid.New(), uuid.New()
 	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = sealedPresetPrompts(
+	core.Elements[0].Content = apitest.SealedPresetPrompts(
 		reimportedPublic, reimportedSealed, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {

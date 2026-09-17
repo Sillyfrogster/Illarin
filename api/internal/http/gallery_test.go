@@ -356,7 +356,7 @@ func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
 	})
 	apitest.PublishCharacter(t, r, session, assetID)
 
-	owner, reader := fetchAsset(t, r, session, assetID), fetchAsset(t, r, nil, assetID)
+	owner, reader := apitest.FetchAsset(t, r, session, assetID), apitest.FetchAsset(t, r, nil, assetID)
 	if string(mustJSON(t, owner.Downloads)) != string(mustJSON(t, reader.Downloads)) {
 		t.Errorf("the owner reads %s and a reader reads %s",
 			mustJSON(t, owner.Downloads), mustJSON(t, reader.Downloads))
@@ -398,26 +398,4 @@ func savedGallery(
 		t.Fatalf("save the gallery: %d %s", saved.Code, saved.Body.String())
 	}
 	return byName
-}
-
-func fetchAsset(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assetID string,
-) apitest.StartedAsset {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
-	if session != nil {
-		request = apitest.Authorized(request, session)
-	}
-	response := apitest.Send(t, r, request)
-	if response.Code != http.StatusOK {
-		t.Fatalf("read the asset: %d %s", response.Code, response.Body.String())
-	}
-	var page apitest.StartedAsset
-	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the asset: %v", err)
-	}
-	return page
 }

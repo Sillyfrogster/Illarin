@@ -16,7 +16,7 @@ var harness = apitest.Harness{Register: register}
 
 func register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	handlers := NewHandlers(
-		s.Assets, s.Works, s.Blocks, s.Accounts, s.Links, s.Deliveries, s.Publications,
+		s.Assets, s.Works, s.Blocks, s.Versions, s.Accounts, s.Links, s.Deliveries, s.Publications,
 		s.UpdateDestinations, s.Notifications, s.MaxUploadBytes,
 	)
 	return Register(r, handlers, d, apitest.Ready)

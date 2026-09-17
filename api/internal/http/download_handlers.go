@@ -9,8 +9,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -261,4 +263,58 @@ func toAPIMedia(found asset.Media) Media {
 		Height:            found.Height,
 		DerivativeVersion: int(found.DerivativeVersion),
 	}
+}
+
+func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := api.PathNumber(c, "number")
+	if !ok {
+		return
+	}
+	q := api.ReadQuery(c)
+	params := GetRecordedVersionDownloadsParams{
+		Nsfw: api.QueryText[GetRecordedVersionDownloadsParamsNsfw](q, "nsfw"),
+	}
+	if q.Refused(c) {
+		return
+	}
+	viewerID, ok := api.ViewerID(c)
+	if !ok {
+		return
+	}
+	var requested *string
+	if params.Nsfw != nil {
+		value := string(*params.Nsfw)
+		requested = &value
+	}
+	visibility, ok := work.ReaderVisibility(c, h.accounts, requested)
+	if !ok {
+		return
+	}
+	offered, err := h.assets.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
+	if errors.Is(err, asset.ErrNotFound) {
+		api.Refuse(c, http.StatusNotFound, "No such version.")
+		return
+	}
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
+		return
+	}
+	blocks, err := block.ToBlocks(offered.Kind, offered.Blocks)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
+		return
+	}
+	c.JSON(http.StatusOK, RecordedVersionDownloads{
+		Version:           work.ToRecordedVersion(offered.Version),
+		Kind:              RecordedVersionDownloadsKind(offered.Kind),
+		LinkedInstallOnly: offered.LinkedInstallOnly,
+		Downloads:         work.ToDownloads(offered.Downloads),
+		AppTargets:        work.ToAppTargets(offered.AppTargets),
+		Blocks:            blocks,
+		Media:             work.ToImages(offered.Media),
+	})
 }
