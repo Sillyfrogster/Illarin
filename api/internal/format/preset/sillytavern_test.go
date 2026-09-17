@@ -7,7 +7,63 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
 )
+
+func TestSillyTavernExportsUseNativeMarkersAndPromptFlags(t *testing.T) {
+	t.Parallel()
+	list := block.PromptList{Fragments: []block.PromptFragment{
+		{ID: block.NewItemID(), Marker: "worldInfoBefore", Enabled: true},
+		{ID: block.NewItemID(), Marker: "chatHistory", Enabled: true},
+		{ID: block.NewItemID(), Marker: "chatHistory", Enabled: false},
+		{ID: block.NewItemID(), Marker: "enhanceDefinitions", Text: "Add detail."},
+		{ID: block.NewItemID(), Marker: "nsfw", Text: "Keep the tone."},
+		{ID: block.NewItemID(), Name: "Instructions", Role: block.PromptSystem, Text: "Be brief.", Enabled: true},
+	}}
+	parsed := format.Parsed{Elements: []block.Element{{
+		Type: block.TypePromptList, Role: block.RolePromptFragments, Content: list,
+	}}}
+	for _, fragment := range list.Fragments {
+		if fragment.Marker == "" {
+			continue
+		}
+		parsed.Remainder = append(parsed.Remainder, format.Remainder{
+			Owner: format.OwnerItem, OwnerID: fragment.ID, Namespace: sillyTavernPromptNamespace,
+			Payload: keys.Must(map[string]any{"system_prompt": false}),
+		})
+	}
+	var body struct {
+		Prompts []struct {
+			Identifier   string `json:"identifier"`
+			Marker       bool   `json:"marker"`
+			SystemPrompt *bool  `json:"system_prompt"`
+		}
+		Orders []struct {
+			Order []struct {
+				Identifier string `json:"identifier"`
+				Enabled    bool   `json:"enabled"`
+			} `json:"order"`
+		} `json:"prompt_order"`
+	}
+	if err := json.Unmarshal(write(t, SillyTavernModule{}, parsed).Body, &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Prompts) != 5 || len(body.Orders[0].Order) != 5 {
+		t.Fatalf("export has %d prompts and %d order entries, want 5", len(body.Prompts), len(body.Orders[0].Order))
+	}
+	want := []string{"worldInfoBefore", "chatHistory", "enhanceDefinitions", "nsfw", list.Fragments[5].ID.String()}
+	for i, prompt := range body.Prompts {
+		if prompt.Identifier != want[i] || body.Orders[0].Order[i].Identifier != want[i] {
+			t.Errorf("native prompt identifier = %q", prompt.Identifier)
+		}
+		if prompt.Marker != (i < 2) || prompt.SystemPrompt == nil || *prompt.SystemPrompt != (i < 4) {
+			t.Errorf("wrong prompt flags for %q", prompt.Identifier)
+		}
+	}
+	if !body.Orders[0].Order[1].Enabled {
+		t.Error("the duplicate history marker disabled the active history")
+	}
+}
 
 func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 	t.Parallel()
