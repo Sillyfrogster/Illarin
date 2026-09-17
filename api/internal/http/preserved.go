@@ -6,16 +6,18 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID) {
+func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "reading preserved data")
 	if !ok {
 		return
 	}
-	found, err := h.assets.PreservedNamespaces(c.Request.Context(), owner.ID, uuid.UUID(id))
+	found, err := h.assets.PreservedNamespaces(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
@@ -32,19 +34,23 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context, id openapi_types.UUID
 	}
 }
 
-func (h *Handlers) DeletePreservedNamespace(
-	c *gin.Context,
-	id openapi_types.UUID,
-	namespace string,
-	params DeletePreservedNamespaceParams,
-) {
+func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	namespace := c.Param("namespace")
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "deleting preserved data")
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	err := h.assets.DeletePreservedNamespace(
-		c.Request.Context(), owner.ID, uuid.UUID(id), namespace, candidate)
+		c.Request.Context(), owner.ID, id, namespace, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -58,12 +64,16 @@ func (h *Handlers) DeletePreservedNamespace(
 	}
 }
 
-func (h *Handlers) ExportSealedContent(c *gin.Context, id openapi_types.UUID) {
+func (h *Handlers) ExportSealedContent(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "reading sealed content")
 	if !ok {
 		return
 	}
-	sealed, err := h.assets.OpenSealedContent(c.Request.Context(), owner.ID, uuid.UUID(id))
+	sealed, err := h.assets.OpenSealedContent(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "This asset holds no sealed content."})

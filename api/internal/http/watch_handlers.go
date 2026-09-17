@@ -6,25 +6,31 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) WatchAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) WatchAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	current, ok := h.signedInAccount(c, "watching an asset")
 	if !ok {
 		return
 	}
-	watch, err := h.notifications.StartWatching(c.Request.Context(), current.ID, uuid.UUID(id))
+	watch, err := h.notifications.StartWatching(c.Request.Context(), current.ID, id)
 	answerWatch(c, watch, err)
 }
 
-func (h *Handlers) StopWatchingAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) StopWatchingAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	current, ok := h.signedInAccount(c, "watching an asset")
 	if !ok {
 		return
 	}
-	watch, err := h.notifications.StopWatching(c.Request.Context(), current.ID, uuid.UUID(id))
+	watch, err := h.notifications.StopWatching(c.Request.Context(), current.ID, id)
 	answerWatch(c, watch, err)
 }
 

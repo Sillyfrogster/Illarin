@@ -5,11 +5,13 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) DeletePost(c *gin.Context, id types.UUID) {
+func (h *Handlers) DeletePost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "deleting a post")
 	if !ok {
 		return
@@ -19,7 +21,7 @@ func (h *Handlers) DeletePost(c *gin.Context, id types.UUID) {
 		return
 	}
 	deleted, err := h.publications.DeletePost(
-		c.Request.Context(), editor, uuid.UUID(id), version,
+		c.Request.Context(), editor, id, version,
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -28,7 +30,11 @@ func (h *Handlers) DeletePost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(deleted))
 }
 
-func (h *Handlers) RecoverPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) RecoverPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "recovering a post")
 	if !ok {
 		return
@@ -38,7 +44,7 @@ func (h *Handlers) RecoverPost(c *gin.Context, id types.UUID) {
 		return
 	}
 	recovered, err := h.publications.RecoverPost(
-		c.Request.Context(), editor, uuid.UUID(id), version,
+		c.Request.Context(), editor, id, version,
 	)
 	if err != nil {
 		h.postError(c, err)

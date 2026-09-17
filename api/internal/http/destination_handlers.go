@@ -7,7 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const defaultDeliveryListing = 50
@@ -70,7 +69,11 @@ func (h *Handlers) AddPublicationChannel(c *gin.Context) {
 	c.JSON(http.StatusCreated, toAPIDestination(added))
 }
 
-func (h *Handlers) UpdatePublicationChannel(c *gin.Context, id types.UUID) {
+func (h *Handlers) UpdatePublicationChannel(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "changing a Discord destination")
 	if !ok {
 		return
@@ -80,7 +83,7 @@ func (h *Handlers) UpdatePublicationChannel(c *gin.Context, id types.UUID) {
 		return
 	}
 	updated, err := h.publications.UpdateChannel(
-		c.Request.Context(), authority.ID, uuid.UUID(id), edit,
+		c.Request.Context(), authority.ID, id, edit,
 	)
 	if err != nil {
 		h.destinationError(c, err)
@@ -109,7 +112,11 @@ func readChannel(c *gin.Context) (publication.ChannelEdit, bool) {
 	return edit, true
 }
 
-func (h *Handlers) UpdatePublicationDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) UpdatePublicationDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "changing a publication destination")
 	if !ok {
 		return
@@ -121,7 +128,7 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context, id types.UUID) {
 		return
 	}
 	updated, err := h.publications.UpdateDestination(
-		c.Request.Context(), authority.ID, uuid.UUID(id),
+		c.Request.Context(), authority.ID, id,
 		publication.DestinationUpdate{
 			Name: request.Name, Address: request.Address, Events: readEvents(request.Events),
 		},
@@ -133,12 +140,16 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIDestination(updated))
 }
 
-func (h *Handlers) RemovePublicationDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) RemovePublicationDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "removing a publication destination")
 	if !ok {
 		return
 	}
-	err := h.publications.RemoveDestination(c.Request.Context(), authority.ID, uuid.UUID(id))
+	err := h.publications.RemoveDestination(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -146,13 +157,17 @@ func (h *Handlers) RemovePublicationDestination(c *gin.Context, id types.UUID) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) VerifyPublicationDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) VerifyPublicationDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "verifying a publication destination")
 	if !ok {
 		return
 	}
 	verified, err := h.publications.VerifyDestination(
-		c.Request.Context(), authority.ID, uuid.UUID(id),
+		c.Request.Context(), authority.ID, id,
 	)
 	if err != nil {
 		h.destinationError(c, err)
@@ -161,13 +176,17 @@ func (h *Handlers) VerifyPublicationDestination(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIDestination(verified))
 }
 
-func (h *Handlers) DisablePublicationDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) DisablePublicationDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "disabling a publication destination")
 	if !ok {
 		return
 	}
 	disabled, err := h.publications.DisableDestination(
-		c.Request.Context(), authority.ID, uuid.UUID(id),
+		c.Request.Context(), authority.ID, id,
 	)
 	if err != nil {
 		h.destinationError(c, err)
@@ -176,12 +195,16 @@ func (h *Handlers) DisablePublicationDestination(c *gin.Context, id types.UUID) 
 	c.JSON(http.StatusOK, toAPIDestination(disabled))
 }
 
-func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context, id types.UUID) {
+func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "rotating a destination's signing secret")
 	if !ok {
 		return
 	}
-	rotated, err := h.publications.RotateSecret(c.Request.Context(), authority.ID, uuid.UUID(id))
+	rotated, err := h.publications.RotateSecret(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -193,10 +216,15 @@ func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context, id types.U
 	})
 }
 
-func (h *Handlers) ListPublicationDeliveries(
-	c *gin.Context,
-	params ListPublicationDeliveriesParams,
-) {
+func (h *Handlers) ListPublicationDeliveries(c *gin.Context) {
+	q := readQuery(c)
+	params := ListPublicationDeliveriesParams{
+		State: queryText[PostDeliveryState](q, "state"),
+		Limit: queryNumber(q, "limit"),
+	}
+	if q.refused(c) {
+		return
+	}
 	if _, ok := h.publicationAuthority(c, "reading publication deliveries"); !ok {
 		return
 	}
@@ -216,11 +244,15 @@ func (h *Handlers) ListPublicationDeliveries(
 	c.JSON(http.StatusOK, PostDeliveryList{Deliveries: toAPIDeliveries(sent)})
 }
 
-func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	if _, ok := h.publicationAuthority(c, "reading what a delivery tried"); !ok {
 		return
 	}
-	made, err := h.publications.DeliveryHistory(c.Request.Context(), uuid.UUID(id))
+	made, err := h.publications.DeliveryHistory(c.Request.Context(), id)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -228,12 +260,16 @@ func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context, id types.UUID
 	c.JSON(http.StatusOK, PostDeliveryAttemptList{Attempts: toAPIAttempts(made)})
 }
 
-func (h *Handlers) ReplayPublicationDelivery(c *gin.Context, id types.UUID) {
+func (h *Handlers) ReplayPublicationDelivery(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "replaying a publication delivery")
 	if !ok {
 		return
 	}
-	queued, err := h.publications.ReplayDelivery(c.Request.Context(), authority.ID, uuid.UUID(id))
+	queued, err := h.publications.ReplayDelivery(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -241,7 +277,11 @@ func (h *Handlers) ReplayPublicationDelivery(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIDelivery(queued))
 }
 
-func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context, id types.UUID) {
+func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "repairing a Discord announcement")
 	if !ok {
 		return
@@ -251,7 +291,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context, id types.UUID) {
 		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send the repair as JSON.", "repair")
 		return
 	}
-	result, err := h.publications.RepairDiscord(c.Request.Context(), authority.ID, uuid.UUID(id), body)
+	result, err := h.publications.RepairDiscord(c.Request.Context(), authority.ID, id, body)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -259,7 +299,11 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID) {
+func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "setting a contributor's destinations")
 	if !ok {
 		return
@@ -269,13 +313,13 @@ func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID
 		return
 	}
 	err := h.publications.SetGrantDestinations(
-		c.Request.Context(), authority.ID, uuid.UUID(id), policy,
+		c.Request.Context(), authority.ID, id, policy,
 	)
 	if err != nil {
 		h.destinationError(c, err)
 		return
 	}
-	grant, err := h.publications.Grant(c.Request.Context(), uuid.UUID(id))
+	grant, err := h.publications.Grant(c.Request.Context(), id)
 	if err != nil {
 		h.destinationError(c, err)
 		return
@@ -287,12 +331,16 @@ func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context, id types.UUID
 	c.JSON(http.StatusOK, listed[0])
 }
 
-func (h *Handlers) ListPostDestinations(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListPostDestinations(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading a post's destinations")
 	if !ok {
 		return
 	}
-	found, err := h.publications.PostDestinations(c.Request.Context(), editor, uuid.UUID(id))
+	found, err := h.publications.PostDestinations(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -300,12 +348,16 @@ func (h *Handlers) ListPostDestinations(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIChoices(found, false))
 }
 
-func (h *Handlers) ListPostDeliveries(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListPostDeliveries(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading what a post sent")
 	if !ok {
 		return
 	}
-	sent, err := h.publications.PostDeliveries(c.Request.Context(), editor, uuid.UUID(id))
+	sent, err := h.publications.PostDeliveries(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -314,8 +366,8 @@ func (h *Handlers) ListPostDeliveries(c *gin.Context, id types.UUID) {
 }
 
 func announcementOf(
-	destinations *[]types.UUID,
-	roles *[]types.UUID,
+	destinations *[]uuid.UUID,
+	roles *[]uuid.UUID,
 	note *string,
 ) publication.Announcement {
 	made := publication.Announcement{Ping: readIDs(roles)}
@@ -355,13 +407,13 @@ func readDestinationPolicy(c *gin.Context) (publication.DestinationPolicy, bool)
 	return policy, true
 }
 
-func readIDs(listed *[]types.UUID) []uuid.UUID {
+func readIDs(listed *[]uuid.UUID) []uuid.UUID {
 	if listed == nil {
 		return nil
 	}
 	held := make([]uuid.UUID, 0, len(*listed))
 	for _, one := range *listed {
-		held = append(held, uuid.UUID(one))
+		held = append(held, one)
 	}
 	return held
 }
@@ -409,7 +461,7 @@ func toAPIDestination(found publication.Destination) PublicationDestination {
 		events = append(events, PublicationEvent(one))
 	}
 	shown := PublicationDestination{
-		Id:                  types.UUID(found.ID),
+		Id:                  found.ID,
 		Kind:                PublicationDestinationKind(found.Kind),
 		Name:                found.Name,
 		Host:                found.Host,
@@ -449,7 +501,7 @@ func toAPIChoiceRows(held []publication.Choice) []PublicationDestinationChoice {
 			events = append(events, PublicationEvent(name))
 		}
 		listed = append(listed, PublicationDestinationChoice{
-			Id:        types.UUID(one.ID),
+			Id:        one.ID,
 			Name:      one.Name,
 			Kind:      PublicationDestinationKind(one.Kind),
 			State:     PublicationDestinationState(one.State),
@@ -471,12 +523,12 @@ func toAPIDeliveries(sent []publication.Delivery) []PostDelivery {
 
 func toAPIDelivery(one publication.Delivery) PostDelivery {
 	shown := PostDelivery{
-		Id:          types.UUID(one.ID),
-		EventId:     types.UUID(one.EventID),
+		Id:          one.ID,
+		EventId:     one.EventID,
 		EventType:   one.EventType,
-		PostId:      types.UUID(one.PostID),
+		PostId:      one.PostID,
 		PostTitle:   one.PostTitle,
-		RevisionId:  types.UUID(one.RevisionID),
+		RevisionId:  one.RevisionID,
 		Destination: one.Destination,
 		Kind:        PostDeliveryKind(one.Kind),
 		MessageId:   one.MessageID,

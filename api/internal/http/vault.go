@@ -9,15 +9,18 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListVaultPictures(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListVaultPictures(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.signedInAccount(c, "reading the vault")
 	if !ok {
 		return
 	}
-	pictures, err := h.assets.ListVault(c.Request.Context(), owner.ID, uuid.UUID(id))
+	pictures, err := h.assets.ListVault(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
@@ -32,7 +35,19 @@ func (h *Handlers) ListVaultPictures(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) PlaceVaultPicture(c *gin.Context, id, pictureID types.UUID, params PlaceVaultPictureParams) {
+func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	pictureID, ok := pathID(c, "pictureId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "placing a picture")
 	if !ok {
 		return
@@ -48,9 +63,9 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context, id, pictureID types.UUID, p
 		media := uuid.UUID(*request.MediaId)
 		mediaID = &media
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.PlaceVaultPicture(
-		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(pictureID), mediaID, candidate)
+		c.Request.Context(), owner.ID, id, pictureID, mediaID, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -71,13 +86,25 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context, id, pictureID types.UUID, p
 	}
 }
 
-func (h *Handlers) DiscardVaultPicture(c *gin.Context, id, pictureID types.UUID, params DiscardVaultPictureParams) {
+func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	pictureID, ok := pathID(c, "pictureId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "discarding a picture")
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	err := h.assets.DiscardVaultPicture(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(pictureID), candidate)
+	candidate := &asset.Candidate{Version: version}
+	err := h.assets.DiscardVaultPicture(c.Request.Context(), owner.ID, id, pictureID, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -93,19 +120,19 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context, id, pictureID types.UUID,
 
 func toAPIVaultPicture(picture asset.VaultPicture) VaultPicture {
 	listed := VaultPicture{
-		Id: types.UUID(picture.ID), Address: picture.Address, Name: picture.Name, Section: picture.Section,
+		Id: picture.ID, Address: picture.Address, Name: picture.Name, Section: picture.Section,
 	}
 	if picture.BlockID != nil {
-		blockID := types.UUID(*picture.BlockID)
+		blockID := *picture.BlockID
 		listed.BlockId = &blockID
 	}
 	if picture.MediaID != nil {
 		listed.Media = &struct {
-			Height   int        `json:"height"`
-			Id       types.UUID `json:"id"`
-			ThumbUrl string     `json:"thumbUrl"`
-			Width    int        `json:"width"`
-		}{Height: picture.Height, Id: types.UUID(*picture.MediaID), ThumbUrl: picture.ThumbURL, Width: picture.Width}
+			Height   int       `json:"height"`
+			Id       uuid.UUID `json:"id"`
+			ThumbUrl string    `json:"thumbUrl"`
+			Width    int       `json:"width"`
+		}{Height: picture.Height, Id: *picture.MediaID, ThumbUrl: picture.ThumbURL, Width: picture.Width}
 	}
 	return listed
 }

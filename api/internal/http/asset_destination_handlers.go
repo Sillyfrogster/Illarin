@@ -7,7 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/gin-gonic/gin"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 func (h *Handlers) ListAssetUpdateDestinations(c *gin.Context) {
@@ -27,7 +26,11 @@ func (h *Handlers) ListAssetUpdateDestinations(c *gin.Context) {
 	c.JSON(http.StatusOK, AssetUpdateDestinationList{Destinations: listed})
 }
 
-func (h *Handlers) GetAssetUpdateDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) GetAssetUpdateDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.signedInAccount(c, "reading your update destination")
 	if !ok {
 		return
@@ -83,7 +86,11 @@ func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
 	}
 }
 
-func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "verifying update destinations")
 	if !ok {
 		return
@@ -96,7 +103,11 @@ func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
 }
 
-func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "changing update destinations")
 	if !ok {
 		return
@@ -113,7 +124,11 @@ func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
 }
 
-func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "disabling update destinations")
 	if !ok {
 		return
@@ -126,7 +141,11 @@ func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context, id types.UUID) 
 	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
 }
 
-func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context, id types.UUID) {
+func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "removing update destinations")
 	if !ok {
 		return
@@ -138,7 +157,11 @@ func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context, id types.UUID) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context, id types.UUID) {
+func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "rotating an update destination's secret")
 	if !ok {
 		return
@@ -151,7 +174,11 @@ func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context, id types.U
 	c.JSON(http.StatusOK, AddedAssetUpdateDestination{Destination: toAssetUpdateDestination(added.Destination), Secret: &added.Secret})
 }
 
-func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.signedInAccount(c, "reading an asset's update destinations")
 	if !ok {
 		return
@@ -168,7 +195,11 @@ func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context, id types.UU
 	c.JSON(http.StatusOK, AssetUpdateDestinationChoices{Destinations: choices})
 }
 
-func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context, id types.UUID) {
+func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "choosing an asset's update destinations")
 	if !ok {
 		return
@@ -201,7 +232,11 @@ func toAssetUpdateDestination(d assetdestination.Destination) AssetUpdateDestina
 	return answer
 }
 
-func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.signedInAccount(c, "reading what an asset announced")
 	if !ok {
 		return

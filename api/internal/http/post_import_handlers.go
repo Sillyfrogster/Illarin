@@ -8,13 +8,15 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const maxImportBytes = 1 << 20
 
-func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID) {
+func (h *Handlers) ImportPostMarkdown(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "importing Markdown into a post")
 	if !ok {
 		return
@@ -23,7 +25,7 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context, id types.UUID) {
 	if !ok {
 		return
 	}
-	saved, notes, err := h.publications.ImportPost(c.Request.Context(), editor, uuid.UUID(id),
+	saved, notes, err := h.publications.ImportPost(c.Request.Context(), editor, id,
 		publication.PostImport{Version: request.Version, Markdown: request.Markdown})
 	if err != nil {
 		h.importError(c, err)

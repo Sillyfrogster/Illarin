@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const (
@@ -74,7 +73,15 @@ func (h *Handlers) SignIn(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIAccount(current))
 }
 
-func (h *Handlers) BeginDiscord(c *gin.Context, params BeginDiscordParams) {
+func (h *Handlers) BeginDiscord(c *gin.Context) {
+	q := readQuery(c)
+	params := BeginDiscordParams{
+		Intent:   queryText[BeginDiscordParamsIntent](q, "intent"),
+		ReturnTo: queryText[string](q, "returnTo"),
+	}
+	if q.refused(c) {
+		return
+	}
 	intent := account.DiscordSignIn
 	if params.Intent != nil && *params.Intent == Attach {
 		intent = account.DiscordAttach
@@ -106,7 +113,16 @@ func (h *Handlers) BeginDiscord(c *gin.Context, params BeginDiscordParams) {
 	c.Redirect(http.StatusSeeOther, authorization.URL)
 }
 
-func (h *Handlers) CompleteDiscord(c *gin.Context, params CompleteDiscordParams) {
+func (h *Handlers) CompleteDiscord(c *gin.Context) {
+	q := readQuery(c)
+	params := CompleteDiscordParams{
+		State: queryRequired(q, "state"),
+		Code:  queryText[string](q, "code"),
+		Error: queryText[string](q, "error"),
+	}
+	if q.refused(c) {
+		return
+	}
 	browserState, err := c.Cookie(oauthStateCookieName)
 	if err != nil || subtle.ConstantTimeCompare([]byte(browserState), []byte(params.State)) != 1 {
 		c.Redirect(http.StatusSeeOther, "/sign-in?discord=failed")
@@ -406,7 +422,8 @@ func (h *Handlers) DetachDiscord(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIAccount(updated))
 }
 
-func (h *Handlers) GetProfile(c *gin.Context, handle string) {
+func (h *Handlers) GetProfile(c *gin.Context) {
+	handle := c.Param("handle")
 	profile, err := h.accounts.PublicProfile(c.Request.Context(), handle)
 	if errors.Is(err, account.ErrProfileNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
@@ -521,17 +538,14 @@ func credentialCookie(c *gin.Context, name string) *http.Cookie {
 
 func toAPIAccount(value account.Account) Account {
 	result := Account{
-		Id:            types.UUID(value.ID),
+		Id:            value.ID,
 		Handle:        value.Handle,
 		EmailVerified: value.EmailVerified,
 		DiscordLinked: value.DiscordLinked,
 		HasPassword:   value.HasPassword,
 		Role:          AccountRole(value.Role),
 	}
-	if value.Email != nil {
-		email := types.Email(*value.Email)
-		result.Email = &email
-	}
+	result.Email = value.Email
 	return result
 }
 

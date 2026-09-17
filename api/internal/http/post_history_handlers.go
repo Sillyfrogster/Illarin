@@ -5,16 +5,18 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListPostRevisions(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListPostRevisions(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading the editions of a post")
 	if !ok {
 		return
 	}
-	kept, err := h.publications.Revisions(c.Request.Context(), editor, uuid.UUID(id))
+	kept, err := h.publications.Revisions(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -22,7 +24,11 @@ func (h *Handlers) ListPostRevisions(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, PostRevisionList{Revisions: toAPIRevisions(kept)})
 }
 
-func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) CheckpointPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "keeping an edition of a post")
 	if !ok {
 		return
@@ -31,7 +37,7 @@ func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID) {
 	if !ok {
 		return
 	}
-	kept, err := h.publications.Checkpoint(c.Request.Context(), editor, uuid.UUID(id), version)
+	kept, err := h.publications.Checkpoint(c.Request.Context(), editor, id, version)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -39,11 +45,15 @@ func (h *Handlers) CheckpointPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, toAPIRevision(kept))
 }
 
-func (h *Handlers) RestorePostRevision(
-	c *gin.Context,
-	id types.UUID,
-	revisionID types.UUID,
-) {
+func (h *Handlers) RestorePostRevision(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	revisionID, ok := pathID(c, "revisionId")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "restoring an edition of a post")
 	if !ok {
 		return
@@ -53,7 +63,7 @@ func (h *Handlers) RestorePostRevision(
 		return
 	}
 	restored, err := h.publications.RestoreRevision(
-		c.Request.Context(), editor, uuid.UUID(id), uuid.UUID(revisionID), version,
+		c.Request.Context(), editor, id, revisionID, version,
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -62,12 +72,16 @@ func (h *Handlers) RestorePostRevision(
 	c.JSON(http.StatusOK, h.toAPIPost(restored))
 }
 
-func (h *Handlers) ReadPostHistory(c *gin.Context, id types.UUID) {
+func (h *Handlers) ReadPostHistory(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading the history of a post")
 	if !ok {
 		return
 	}
-	done, err := h.publications.PostHistory(c.Request.Context(), editor, uuid.UUID(id))
+	done, err := h.publications.PostHistory(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -95,7 +109,7 @@ func toAPIRevisions(kept []publication.Revision) []PostRevision {
 
 func toAPIRevision(one publication.Revision) PostRevision {
 	return PostRevision{
-		Id:          types.UUID(one.ID),
+		Id:          one.ID,
 		Number:      one.Number,
 		Title:       one.Title,
 		Summary:     one.Summary,
@@ -112,7 +126,7 @@ func toAPIActions(done []publication.Action) []PostAction {
 	listed := make([]PostAction, 0, len(done))
 	for _, one := range done {
 		shown := PostAction{
-			Id:         types.UUID(one.ID),
+			Id:         one.ID,
 			Actor:      one.Actor,
 			Credential: one.Credential,
 			Action:     one.Action,

@@ -7,15 +7,18 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListAssetUpdates(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListAssetUpdates(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
 	}
-	history, err := h.assets.VersionHistory(c.Request.Context(), uuid.UUID(id), viewerID)
+	history, err := h.assets.VersionHistory(c.Request.Context(), id, viewerID)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
 		return
@@ -31,13 +34,25 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
 
-func (h *Handlers) RestoreAssetVersion(c *gin.Context, id types.UUID, number int, params RestoreAssetVersionParams) {
+func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := pathNumber(c, "number")
+	if !ok {
+		return
+	}
+	workingCopyVersion, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "restoring an asset version")
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	err := h.assets.RestoreVersion(c.Request.Context(), owner.ID, uuid.UUID(id), number, candidate)
+	candidate := &asset.Candidate{Version: workingCopyVersion}
+	err := h.assets.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -56,7 +71,15 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context, id types.UUID, number int
 	}
 }
 
-func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context, id types.UUID, number int) {
+func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := pathNumber(c, "number")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "correcting asset update notes")
 	if !ok {
 		return
@@ -66,7 +89,7 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context, id types.UUID, numbe
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the corrected summary and notes."})
 		return
 	}
-	err := h.assets.CorrectVersionNotes(c.Request.Context(), owner.ID, uuid.UUID(id), number,
+	err := h.assets.CorrectVersionNotes(c.Request.Context(), owner.ID, id, number,
 		request.Summary, valueOrEmpty(request.Notes))
 	switch {
 	case errors.Is(err, asset.ErrSummaryRequired):
@@ -84,7 +107,15 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context, id types.UUID, numbe
 	}
 }
 
-func (h *Handlers) WithdrawAssetVersion(c *gin.Context, id types.UUID, number int) {
+func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := pathNumber(c, "number")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "withdrawing an asset version")
 	if !ok {
 		return
@@ -94,7 +125,7 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context, id types.UUID, number in
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send a public withdrawal explanation."})
 		return
 	}
-	err := h.assets.WithdrawVersion(c.Request.Context(), owner.ID, uuid.UUID(id), number, request.Explanation)
+	err := h.assets.WithdrawVersion(c.Request.Context(), owner.ID, id, number, request.Explanation)
 	switch {
 	case errors.Is(err, asset.ErrWithdrawalExplanationRequired):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Explain why this version was withdrawn."})
@@ -115,7 +146,19 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context, id types.UUID, number in
 	}
 }
 
-func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params CompareAssetVersionsParams) {
+func (h *Handlers) CompareAssetVersions(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	q := readQuery(c)
+	params := CompareAssetVersionsParams{
+		From: queryNumber(q, "from"),
+		To:   queryNumber(q, "to"),
+	}
+	if q.refused(c) {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -125,7 +168,7 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params Co
 		return
 	}
 	compared, err := h.assets.CompareVersions(
-		c.Request.Context(), uuid.UUID(id), viewerID,
+		c.Request.Context(), id, viewerID,
 		versionNumber(params.From), versionNumber(params.To), visibility,
 	)
 	switch {
@@ -140,12 +183,22 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context, id types.UUID, params Co
 	}
 }
 
-func (h *Handlers) GetRecordedVersionDownloads(
-	c *gin.Context,
-	id types.UUID,
-	number int,
-	params GetRecordedVersionDownloadsParams,
-) {
+func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := pathNumber(c, "number")
+	if !ok {
+		return
+	}
+	q := readQuery(c)
+	params := GetRecordedVersionDownloadsParams{
+		Nsfw: queryText[GetRecordedVersionDownloadsParamsNsfw](q, "nsfw"),
+	}
+	if q.refused(c) {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -159,7 +212,7 @@ func (h *Handlers) GetRecordedVersionDownloads(
 	if !ok {
 		return
 	}
-	offered, err := h.assets.RecordedDownloads(c.Request.Context(), uuid.UUID(id), viewerID, number, visibility)
+	offered, err := h.assets.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
 		return
@@ -184,12 +237,16 @@ func (h *Handlers) GetRecordedVersionDownloads(
 	})
 }
 
-func (h *Handlers) ListProtectionMismatches(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.signedInAccount(c, "reading an asset's sealed prompts")
 	if !ok {
 		return
 	}
-	mismatches, err := h.assets.ProtectionMismatches(c.Request.Context(), owner.ID, uuid.UUID(id))
+	mismatches, err := h.assets.ProtectionMismatches(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
 		return
@@ -209,7 +266,15 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, ProtectionMismatchList{Items: items})
 }
 
-func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context, id types.UUID, number int) {
+func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	number, ok := pathNumber(c, "number")
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "settling an asset's sealed prompts")
 	if !ok {
 		return
@@ -223,7 +288,7 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context, id types.UUID, nu
 	}
 	answers := make([]asset.PromptCorrespondence, 0, len(request.Matches))
 	for _, match := range request.Matches {
-		answer := asset.PromptCorrespondence{Current: uuid.UUID(match.Current)}
+		answer := asset.PromptCorrespondence{Current: match.Current}
 		if match.Recorded != nil {
 			recorded := uuid.UUID(*match.Recorded)
 			answer.Recorded = &recorded
@@ -231,7 +296,7 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context, id types.UUID, nu
 		answers = append(answers, answer)
 	}
 	err := h.assets.ResolvePromptCorrespondence(
-		c.Request.Context(), owner.ID, uuid.UUID(id), number, answers)
+		c.Request.Context(), owner.ID, id, number, answers)
 	switch {
 	case errors.Is(err, asset.ErrUnknownPrompt):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "That prompt is not one of the choices."})
@@ -253,7 +318,7 @@ func versionNumber(chosen *int) int {
 
 func toAPIRecordedVersion(recorded asset.Version) RecordedVersion {
 	return RecordedVersion{
-		Id: types.UUID(recorded.ID), Number: recorded.Number,
+		Id: recorded.ID, Number: recorded.Number,
 		RecordedAt: recorded.RecordedAt, Initial: recorded.Initial,
 		VersionLabel: recorded.VersionLabel,
 		Summary:      recorded.Summary, Notes: recorded.Notes,
@@ -266,7 +331,7 @@ func toAPIRecordedVersion(recorded asset.Version) RecordedVersion {
 func toAPINamedPrompts(prompts []asset.NamedPrompt) []NamedPrompt {
 	out := make([]NamedPrompt, 0, len(prompts))
 	for _, prompt := range prompts {
-		out = append(out, NamedPrompt{Id: types.UUID(prompt.ID), Name: prompt.Name})
+		out = append(out, NamedPrompt{Id: prompt.ID, Name: prompt.Name})
 	}
 	return out
 }

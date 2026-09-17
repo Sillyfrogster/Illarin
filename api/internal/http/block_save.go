@@ -9,11 +9,21 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID, params SaveAssetBlockParams) {
+func (h *Handlers) SaveAssetBlock(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	blockID, ok := pathID(c, "blockId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
 		return
@@ -30,9 +40,9 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context, id types.UUID, blockID types.U
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.SaveBlock(
-		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), update, candidate)
+		c.Request.Context(), owner.ID, id, blockID, update, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -88,7 +98,7 @@ func blockUpdate(request SaveAssetBlockRequest) (asset.BlockUpdate, error) {
 			itemSize = block.ItemSize(*incoming.ItemSize)
 		}
 		elements[i] = block.Element{
-			ID: uuid.UUID(incoming.Id), Type: elementType, Role: role,
+			ID: incoming.Id, Type: elementType, Role: role,
 			Slot:    block.Slot(incoming.Slot),
 			Options: block.Options{Display: display, ItemSize: itemSize},
 			Content: content,

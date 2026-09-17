@@ -5,7 +5,8 @@
 !api/cmd/**
 !api/internal/**
 !api/migrations/**
-!api/openapi/**
+!api/protocol.go
+!api/protocol.md
 
 !web/package.json
 !web/bun.lock

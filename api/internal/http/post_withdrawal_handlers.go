@@ -6,11 +6,13 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) WithdrawPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "withdrawing a post")
 	if !ok {
 		return
@@ -25,7 +27,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID) {
 		explanation = *request.Explanation
 	}
 	withdrawn, err := h.publications.WithdrawPost(
-		c.Request.Context(), editor, uuid.UUID(id), request.Version, request.Reason, explanation,
+		c.Request.Context(), editor, id, request.Version, request.Reason, explanation,
 		announcementOf(request.DestinationIds, nil, request.Note),
 	)
 	if err != nil {
@@ -35,7 +37,11 @@ func (h *Handlers) WithdrawPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(withdrawn))
 }
 
-func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) RepublishPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "republishing a post")
 	if !ok {
 		return
@@ -46,7 +52,7 @@ func (h *Handlers) RepublishPost(c *gin.Context, id types.UUID) {
 		return
 	}
 	back, err := h.publications.RepublishPost(
-		c.Request.Context(), editor, uuid.UUID(id), uuid.UUID(request.RevisionId), request.Version,
+		c.Request.Context(), editor, id, request.RevisionId, request.Version,
 		announcementOf(request.DestinationIds, nil, request.Note),
 	)
 	if err != nil {

@@ -10,8 +10,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 func (h *Handlers) StartLinkRequest(c *gin.Context) {
@@ -83,23 +81,14 @@ func (h *Handlers) PollLinkRequest(c *gin.Context) {
 		return
 	}
 	if !linked {
-		result, encodeErr := pendingLinkPollResult()
-		if encodeErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not encode the link status."})
-			return
-		}
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusOK, PendingLinkPollResult{Status: PendingLinkPollResultStatusPending})
 		return
 	}
-	result, encodeErr := toAPIPollGrant(grant)
-	if encodeErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not encode the link grant."})
-		return
-	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, toAPIPollGrant(grant))
 }
 
-func (h *Handlers) GetLinkRequest(c *gin.Context, userCode UserCode) {
+func (h *Handlers) GetLinkRequest(c *gin.Context) {
+	userCode := c.Param("userCode")
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "reviewing a link")
 	if !ok {
@@ -113,11 +102,11 @@ func (h *Handlers) GetLinkRequest(c *gin.Context, userCode UserCode) {
 	c.JSON(http.StatusOK, toAPIPendingDeviceLink(pending))
 }
 
-func (h *Handlers) ApproveLinkRequest(
-	c *gin.Context,
-	userCode UserCode,
-	_ ApproveLinkRequestParams,
-) {
+func (h *Handlers) ApproveLinkRequest(c *gin.Context) {
+	userCode := c.Param("userCode")
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "approving a link")
 	if !ok || !h.allowLinkBrowserMutation(c) {
@@ -137,11 +126,11 @@ func (h *Handlers) ApproveLinkRequest(
 	c.JSON(http.StatusOK, toAPIPendingLink(approved))
 }
 
-func (h *Handlers) DenyLinkRequest(
-	c *gin.Context,
-	userCode UserCode,
-	_ DenyLinkRequestParams,
-) {
+func (h *Handlers) DenyLinkRequest(c *gin.Context) {
+	userCode := c.Param("userCode")
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "denying a link")
 	if !ok || !h.allowLinkBrowserMutation(c) {
@@ -160,7 +149,8 @@ func (h *Handlers) DenyLinkRequest(
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) GetLinkAuthorization(c *gin.Context, requestCode RequestCode) {
+func (h *Handlers) GetLinkAuthorization(c *gin.Context) {
+	requestCode := c.Param("requestCode")
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "reviewing a link")
 	if !ok {
@@ -176,11 +166,11 @@ func (h *Handlers) GetLinkAuthorization(c *gin.Context, requestCode RequestCode)
 	c.JSON(http.StatusOK, toAPIPendingLink(pending))
 }
 
-func (h *Handlers) ApproveLinkAuthorization(
-	c *gin.Context,
-	requestCode RequestCode,
-	_ ApproveLinkAuthorizationParams,
-) {
+func (h *Handlers) ApproveLinkAuthorization(c *gin.Context) {
+	requestCode := c.Param("requestCode")
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "approving a link")
 	if !ok || !h.allowLinkBrowserMutation(c) {
@@ -196,11 +186,11 @@ func (h *Handlers) ApproveLinkAuthorization(
 	c.JSON(http.StatusOK, LinkRedirect{RedirectUrl: redirect.URL})
 }
 
-func (h *Handlers) DenyLinkAuthorization(
-	c *gin.Context,
-	requestCode RequestCode,
-	_ DenyLinkAuthorizationParams,
-) {
+func (h *Handlers) DenyLinkAuthorization(c *gin.Context) {
+	requestCode := c.Param("requestCode")
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.verifiedAccount(c, "denying a link")
 	if !ok || !h.allowLinkBrowserMutation(c) {
@@ -272,13 +262,20 @@ func (h *Handlers) ListInstances(c *gin.Context) {
 	c.JSON(http.StatusOK, LinkedInstanceList{Items: items})
 }
 
-func (h *Handlers) RevokeInstance(c *gin.Context, id types.UUID, _ RevokeInstanceParams) {
+func (h *Handlers) RevokeInstance(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.signedInAccount(c, "managing linked instances")
 	if !ok || !h.allowLinkBrowserMutation(c) {
 		return
 	}
-	if err := h.links.Revoke(c.Request.Context(), creator.ID, uuid.UUID(id)); err != nil {
+	if err := h.links.Revoke(c.Request.Context(), creator.ID, id); err != nil {
 		h.linkingError(c, err)
 		return
 	}
@@ -468,24 +465,13 @@ func toAPIPendingDeviceLink(pending linking.Pending) PendingDeviceLink {
 	}
 }
 
-func pendingLinkPollResult() (LinkPollResult, error) {
-	var result LinkPollResult
-	err := result.FromPendingLinkPollResult(PendingLinkPollResult{
-		Status: PendingLinkPollResultStatusPending,
-	})
-	return result, err
-}
-
-func toAPIPollGrant(grant linking.TokenGrant) (LinkPollResult, error) {
-	instance := toAPIInstance(grant.Instance)
-	var result LinkPollResult
-	err := result.FromLinkedLinkPollResult(LinkedLinkPollResult{
+func toAPIPollGrant(grant linking.TokenGrant) LinkedLinkPollResult {
+	return LinkedLinkPollResult{
 		Status: Linked, AccessToken: AccessToken(grant.AccessToken),
 		AccessTokenExpiresAt: grant.AccessTokenExpiresAt,
 		RefreshToken:         RefreshToken(grant.RefreshToken),
-		Instance:             instance,
-	})
-	return result, err
+		Instance:             toAPIInstance(grant.Instance),
+	}
 }
 
 func toAPITokenGrant(grant linking.TokenGrant) InstanceTokenGrant {
@@ -504,7 +490,7 @@ func toAPIInstance(instance linking.Instance) LinkedInstance {
 		version = &protocol
 	}
 	return LinkedInstance{
-		Id:                 types.UUID(instance.ID),
+		Id:                 instance.ID,
 		ApplicationName:    instance.ApplicationName,
 		InstanceName:       instance.InstanceName,
 		ApplicationVersion: apiApplicationVersion(instance.ApplicationVersion),

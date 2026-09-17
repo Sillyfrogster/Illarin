@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/openapi"
+	"github.com/Sillyfrogster/Illarin/api"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,7 +49,6 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 		routeKey(http.MethodGet, "/healthz"):                                                 d.JSON,
 		routeKey(http.MethodGet, "/readyz"):                                                  d.JSON,
 		routeKey(http.MethodGet, "/protocol"):                                                d.JSON,
-		routeKey(http.MethodGet, "/openapi.yaml"):                                            d.JSON,
 		routeKey(http.MethodPost, "/v1/link/requests"):                                       d.JSON,
 		routeKey(http.MethodPost, "/v1/link/poll"):                                           d.JSON,
 		routeKey(http.MethodPost, "/v1/link/authorizations"):                                 d.JSON,
@@ -200,9 +199,8 @@ func Register(r *gin.Engine, h *Handlers, d Deadlines, readiness Readiness) erro
 	)
 	routes.GET("/healthz", health)
 	routes.GET("/readyz", ready(readiness))
-	routes.GET("/protocol", document("text/plain; charset=utf-8", openapi.Guide))
-	routes.GET("/openapi.yaml", document("application/yaml", openapi.Contract))
-	RegisterHandlersWithOptions(routes, h, GinServerOptions{ErrorHandler: generatedParameterError})
+	routes.GET("/protocol", document("text/plain; charset=utf-8", api.Protocol))
+	registerRoutes(routes, h)
 
 	for _, route := range r.Routes() {
 		key := routeKey(route.Method, route.Path)

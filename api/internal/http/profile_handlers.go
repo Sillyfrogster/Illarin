@@ -7,7 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const restrictedOwnerMessage = "An admin has restricted your public profile. Contact Illarin to have it reviewed."
@@ -125,7 +124,7 @@ func toAPIProfile(found account.PublicProfile) Profile {
 		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
 	}
 	profile := Profile{
-		Id:           types.UUID(found.ID),
+		Id:           found.ID,
 		Handle:       found.Handle,
 		DisplayName:  found.DisplayName,
 		Biography:    found.Biography,

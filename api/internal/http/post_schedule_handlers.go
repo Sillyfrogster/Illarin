@@ -6,11 +6,13 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID) {
+func (h *Handlers) SchedulePost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "scheduling a post")
 	if !ok {
 		return
@@ -22,7 +24,7 @@ func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID) {
 		return
 	}
 	scheduled, err := h.publications.SchedulePost(
-		c.Request.Context(), editor, uuid.UUID(id), request.Version, request.At,
+		c.Request.Context(), editor, id, request.Version, request.At,
 		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
 	)
 	if err != nil {
@@ -32,7 +34,11 @@ func (h *Handlers) SchedulePost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, h.toAPIPost(scheduled))
 }
 
-func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID) {
+func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "replacing a scheduled post")
 	if !ok {
 		return
@@ -44,7 +50,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID) {
 		return
 	}
 	replaced, err := h.publications.ReplaceSchedule(
-		c.Request.Context(), editor, uuid.UUID(id), uuid.UUID(request.RevisionId), request.At,
+		c.Request.Context(), editor, id, request.RevisionId, request.At,
 		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
 	)
 	if err != nil {
@@ -54,12 +60,16 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(replaced))
 }
 
-func (h *Handlers) CancelPostSchedule(c *gin.Context, id types.UUID) {
+func (h *Handlers) CancelPostSchedule(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "cancelling a scheduled post")
 	if !ok {
 		return
 	}
-	cancelled, err := h.publications.CancelSchedule(c.Request.Context(), editor, uuid.UUID(id))
+	cancelled, err := h.publications.CancelSchedule(c.Request.Context(), editor, id)
 	if err != nil {
 		h.scheduleError(c, err)
 		return
@@ -87,8 +97,8 @@ func toAPISchedule(found *publication.Schedule) *PostSchedule {
 		return nil
 	}
 	shown := &PostSchedule{
-		Id:             types.UUID(found.ID),
-		RevisionId:     types.UUID(found.RevisionID),
+		Id:             found.ID,
+		RevisionId:     found.RevisionID,
 		RevisionNumber: found.RevisionNumber,
 		At:             found.At,
 		State:          PostScheduleState(found.State),

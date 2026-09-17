@@ -9,7 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 func (h *Handlers) ListPublicationCategories(c *gin.Context) {
@@ -24,7 +23,11 @@ func (h *Handlers) ListPublicationCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, PublicationCategoryList{Categories: toAPICategories(sorted)})
 }
 
-func (h *Handlers) UpdatePublicationCategory(c *gin.Context, id types.UUID) {
+func (h *Handlers) UpdatePublicationCategory(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "changing a publication category")
 	if !ok {
 		return
@@ -35,7 +38,7 @@ func (h *Handlers) UpdatePublicationCategory(c *gin.Context, id types.UUID) {
 		return
 	}
 	updated, err := h.publications.UpdateCategory(
-		c.Request.Context(), authority.ID, uuid.UUID(id), publication.CategoryUpdate{
+		c.Request.Context(), authority.ID, id, publication.CategoryUpdate{
 			Label:   request.Label,
 			Retired: request.Retired,
 		},
@@ -95,9 +98,9 @@ func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
 	}
 	made, err := h.publications.CreateGrant(c.Request.Context(), authority.ID, publication.GrantEdit{
 		Handle:            request.Handle,
-		AppID:             uuid.UUID(request.AppId),
+		AppID:             request.AppId,
 		CategoryIDs:       toUUIDs(request.CategoryIds),
-		DefaultCategoryID: uuid.UUID(request.DefaultCategoryId),
+		DefaultCategoryID: request.DefaultCategoryId,
 	})
 	if err != nil {
 		h.publicationError(c, err)
@@ -110,7 +113,11 @@ func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
 	c.JSON(http.StatusCreated, listed[0])
 }
 
-func (h *Handlers) UpdatePublicationGrant(c *gin.Context, id types.UUID) {
+func (h *Handlers) UpdatePublicationGrant(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "changing a contributor's approval")
 	if !ok {
 		return
@@ -125,7 +132,7 @@ func (h *Handlers) UpdatePublicationGrant(c *gin.Context, id types.UUID) {
 		change.CategoryIDs = toUUIDs(*request.CategoryIds)
 	}
 	updated, err := h.publications.UpdateGrant(
-		c.Request.Context(), authority.ID, uuid.UUID(id), change,
+		c.Request.Context(), authority.ID, id, change,
 	)
 	if err != nil {
 		h.publicationError(c, err)
@@ -138,12 +145,16 @@ func (h *Handlers) UpdatePublicationGrant(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, listed[0])
 }
 
-func (h *Handlers) RevokePublicationGrant(c *gin.Context, id types.UUID) {
+func (h *Handlers) RevokePublicationGrant(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	authority, ok := h.publicationAuthority(c, "revoking a contributor's approval")
 	if !ok {
 		return
 	}
-	if err := h.publications.RevokeGrant(c.Request.Context(), authority.ID, uuid.UUID(id)); err != nil {
+	if err := h.publications.RevokeGrant(c.Request.Context(), authority.ID, id); err != nil {
 		h.publicationError(c, err)
 		return
 	}
@@ -250,10 +261,10 @@ type accountIdentity struct {
 	Handle string
 }
 
-func toUUIDs(given []types.UUID) []uuid.UUID {
+func toUUIDs(given []uuid.UUID) []uuid.UUID {
 	ids := make([]uuid.UUID, 0, len(given))
 	for _, id := range given {
-		ids = append(ids, uuid.UUID(id))
+		ids = append(ids, id)
 	}
 	return ids
 }
@@ -268,7 +279,7 @@ func toAPIApps(configured []publication.App) []PublicationApp {
 
 func toAPIApp(found publication.App) PublicationApp {
 	return PublicationApp{
-		Id:           types.UUID(found.ID),
+		Id:           found.ID,
 		Slug:         found.Slug,
 		Name:         found.Name,
 		Home:         found.Home,
@@ -288,7 +299,7 @@ func toAPICategories(sorted []publication.Category) []PublicationCategory {
 
 func toAPICategory(found publication.Category) PublicationCategory {
 	return PublicationCategory{
-		Id:       types.UUID(found.ID),
+		Id:       found.ID,
 		Slug:     found.Slug,
 		Label:    found.Label,
 		Position: found.Position,
@@ -326,7 +337,7 @@ func toAPIGrant(found publication.Grant, holder account.PublicProfile) Publicati
 		}
 	}
 	return PublicationGrant{
-		Id:                    types.UUID(found.ID),
+		Id:                    found.ID,
 		Holder:                shown,
 		App:                   toAPIApp(found.App),
 		Categories:            toAPICategories(found.Categories),

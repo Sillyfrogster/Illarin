@@ -12,10 +12,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) WithholdAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	admin, ok := h.adminAccount(c, "manage withholds")
 	if !ok {
 		return
@@ -25,7 +28,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Give a reason for withholding the asset."})
 		return
 	}
-	err := h.assets.Withhold(c.Request.Context(), uuid.UUID(id), admin.ID, request.Reason)
+	err := h.assets.Withhold(c.Request.Context(), id, admin.ID, request.Reason)
 	switch {
 	case errors.Is(err, asset.ErrInvalidWithholdReason):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Give a reason for withholding the asset."})
@@ -38,11 +41,15 @@ func (h *Handlers) WithholdAsset(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) ClearAssetWithhold(c *gin.Context, id types.UUID) {
+func (h *Handlers) ClearAssetWithhold(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	if _, ok := h.adminAccount(c, "manage withholds"); !ok {
 		return
 	}
-	err := h.assets.ClearWithhold(c.Request.Context(), uuid.UUID(id))
+	err := h.assets.ClearWithhold(c.Request.Context(), id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
@@ -72,7 +79,22 @@ func (h *Handlers) viewerID(c *gin.Context) (*uuid.UUID, bool) {
 	return &current.ID, true
 }
 
-func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
+func (h *Handlers) ListAssets(c *gin.Context) {
+	q := readQuery(c)
+	params := ListAssetsParams{
+		Kind:     queryText[ListAssetsParamsKind](q, "kind"),
+		Platform: queryText[string](q, "platform"),
+		Creator:  queryText[string](q, "creator"),
+		Q:        queryText[string](q, "q"),
+		Facet:    queryList(q, "facet"),
+		Nsfw:     queryText[ListAssetsParamsNsfw](q, "nsfw"),
+		Limit:    queryNumber(q, "limit"),
+		Before:   queryTime(q, "before"),
+		BeforeId: queryID(q, "beforeId"),
+	}
+	if q.refused(c) {
+		return
+	}
 	f := asset.ListFilter{}
 
 	if params.Creator != nil {
@@ -151,7 +173,7 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 			ownerState = &value
 		}
 		items = append(items, BrowseAsset{
-			Id: types.UUID(item.ID), Name: item.Name, Creator: item.Creator,
+			Id: item.ID, Name: item.Name, Creator: item.Creator,
 			Kind: BrowseAssetKind(item.Kind), IsNsfw: item.IsNSFW, Cover: cover,
 			OwnerState: ownerState,
 			Withhold:   toAPIWithhold(item.Withhold),
@@ -159,7 +181,7 @@ func (h *Handlers) ListAssets(c *gin.Context, params ListAssetsParams) {
 	}
 	var next *BrowseCursor
 	if found.Next != nil {
-		next = &BrowseCursor{Before: found.Next.MadeAt, BeforeId: types.UUID(found.Next.ID)}
+		next = &BrowseCursor{Before: found.Next.MadeAt, BeforeId: found.Next.ID}
 	}
 	var empty *AssetListEmptyState
 	if found.EmptyState != "" {
@@ -245,7 +267,15 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAssetRevisionParams) {
+func (h *Handlers) AddAssetRevision(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -267,10 +297,10 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAss
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	operation, err := h.assets.AcceptRevision(c.Request.Context(), asset.RevisionInput{
 		OwnerID:  owner.ID,
-		AssetID:  uuid.UUID(id),
+		AssetID:  id,
 		Filename: file.FileName(),
 		File:     limitedFile,
 	}, candidate)
@@ -294,12 +324,16 @@ func (h *Handlers) AddAssetRevision(c *gin.Context, id types.UUID, params AddAss
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
+func (h *Handlers) GetAssetReplacement(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
 	}
-	operation, err := h.assets.ReviewedReplacement(c.Request.Context(), owner.ID, uuid.UUID(id))
+	operation, err := h.assets.ReviewedReplacement(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrIngestNotFound) {
 		c.JSON(http.StatusOK, nil)
 		return
@@ -311,7 +345,19 @@ func (h *Handlers) GetAssetReplacement(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID, params AcceptAssetRevisionParams) {
+func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	operationID, ok := pathID(c, "operationId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -325,8 +371,8 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationI
 	for role, decision := range body.Unrepresentable {
 		decisions[role] = string(decision)
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID), candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
+	candidate := &asset.Candidate{Version: version}
+	operation, err := h.assets.AcceptReplacement(c.Request.Context(), owner.ID, id, operationID, candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -358,12 +404,20 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context, id types.UUID, operationI
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) CancelAssetRevision(c *gin.Context, id types.UUID, operationID types.UUID) {
+func (h *Handlers) CancelAssetRevision(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	operationID, ok := pathID(c, "operationId")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
 	}
-	err := h.assets.CancelReplacement(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(operationID))
+	err := h.assets.CancelReplacement(c.Request.Context(), owner.ID, id, operationID)
 	if errors.Is(err, asset.ErrIngestNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
 		return
@@ -375,12 +429,16 @@ func (h *Handlers) CancelAssetRevision(c *gin.Context, id types.UUID, operationI
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) DeleteAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) DeleteAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
 	}
-	err := h.assets.Delete(c.Request.Context(), owner.ID, uuid.UUID(id))
+	err := h.assets.Delete(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
@@ -393,12 +451,16 @@ func (h *Handlers) DeleteAsset(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) RestoreAsset(c *gin.Context, id types.UUID) {
+func (h *Handlers) RestoreAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
 	}
-	err := h.assets.Restore(c.Request.Context(), owner.ID, uuid.UUID(id))
+	err := h.assets.Restore(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such recoverable asset"})
@@ -409,7 +471,8 @@ func (h *Handlers) RestoreAsset(c *gin.Context, id types.UUID) {
 	}
 }
 
-func (h *Handlers) ListDeletedAssets(c *gin.Context, handle string) {
+func (h *Handlers) ListDeletedAssets(c *gin.Context) {
+	handle := c.Param("handle")
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -426,14 +489,22 @@ func (h *Handlers) ListDeletedAssets(c *gin.Context, handle string) {
 	items := make([]DeletedAsset, len(found))
 	for i, item := range found {
 		items[i] = DeletedAsset{
-			Id: types.UUID(item.ID), Name: item.Name, Kind: DeletedAssetKind(item.Kind),
+			Id: item.ID, Name: item.Name, Kind: DeletedAssetKind(item.Kind),
 			DeletedAt: item.DeletedAt, RecoverableUntil: item.RecoverableUntil,
 		}
 	}
 	c.JSON(http.StatusOK, DeletedAssetList{Items: items})
 }
 
-func (h *Handlers) AddMedia(c *gin.Context, id types.UUID, params AddMediaParams) {
+func (h *Handlers) AddMedia(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -458,10 +529,10 @@ func (h *Handlers) AddMedia(c *gin.Context, id types.UUID, params AddMediaParams
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	added, err := h.assets.AddMedia(c.Request.Context(), asset.AddMediaInput{
 		OwnerID: owner.ID,
-		AssetID: uuid.UUID(id),
+		AssetID: id,
 		Role:    asset.MediaRole(metadata.Role),
 		File:    limitedFile,
 	}, candidate)
@@ -497,7 +568,19 @@ func (h *Handlers) readerVisibility(
 	return asset.ContentVisibility(preference), true
 }
 
-func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams) {
+func (h *Handlers) GetAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	q := readQuery(c)
+	params := GetAssetParams{
+		WorkingCopy: queryFlag(q, "workingCopy"),
+		Nsfw:        queryText[GetAssetParamsNsfw](q, "nsfw"),
+	}
+	if q.refused(c) {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -515,7 +598,7 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 	if params.WorkingCopy != nil && *params.WorkingCopy {
 		read = h.assets.WorkingCopy
 	}
-	found, err := read(c.Request.Context(), uuid.UUID(id), viewerID, visibility)
+	found, err := read(c.Request.Context(), id, viewerID, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return
@@ -546,7 +629,11 @@ func (h *Handlers) GetAsset(c *gin.Context, id types.UUID, params GetAssetParams
 	c.JSON(http.StatusOK, page)
 }
 
-func (h *Handlers) SetAssetDiscovery(c *gin.Context, id types.UUID) {
+func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
@@ -557,7 +644,7 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context, id types.UUID) {
 		return
 	}
 	err := h.assets.SetDiscovery(
-		c.Request.Context(), owner.ID, uuid.UUID(id), asset.Discovery(request.Discovery),
+		c.Request.Context(), owner.ID, id, asset.Discovery(request.Discovery),
 	)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
@@ -589,7 +676,7 @@ func toAPIDetail(found asset.Detail, visibility asset.ContentVisibility) (AssetD
 	return AssetDetail{
 		WorkingCopyVersion:    found.WorkingCopyVersion,
 		UnpublishedChanges:    found.UnpublishedChanges,
-		Id:                    types.UUID(found.ID),
+		Id:                    found.ID,
 		Kind:                  AssetDetailKind(found.Kind),
 		Name:                  found.Name,
 		Blurb:                 found.Blurb,
@@ -626,7 +713,7 @@ func toAPIExtensionDependencies(dependencies []asset.ExtensionDependency) []Exte
 	for _, dependency := range dependencies {
 		assets := make([]DependencyAsset, 0, len(dependency.Assets))
 		for _, found := range dependency.Assets {
-			assets = append(assets, DependencyAsset{Id: types.UUID(found.ID), Name: found.Name, Creator: found.Creator})
+			assets = append(assets, DependencyAsset{Id: found.ID, Name: found.Name, Creator: found.Creator})
 		}
 		out = append(out, ExtensionDependency{Name: dependency.Name, Assets: assets})
 	}
@@ -637,7 +724,7 @@ func toAPIImages(images []asset.DetailImage) []AssetImage {
 	media := make([]AssetImage, 0, len(images))
 	for _, image := range images {
 		media = append(media, AssetImage{
-			Id:        types.UUID(image.ID),
+			Id:        image.ID,
 			Role:      AssetImageRole(image.Role),
 			IsCover:   image.IsCover,
 			DetailUrl: image.DetailURL,
@@ -711,9 +798,9 @@ func toAPIDownloadSample(sample block.Sample) DownloadSample {
 		converted.Texts = &texts
 	}
 	if len(sample.Images) > 0 {
-		images := make([]types.UUID, 0, len(sample.Images))
+		images := make([]uuid.UUID, 0, len(sample.Images))
 		for _, image := range sample.Images {
-			images = append(images, types.UUID(image))
+			images = append(images, image)
 		}
 		converted.Images = &images
 	}
@@ -779,12 +866,16 @@ func toAPIWithhold(found *asset.Withhold) *AssetWithhold {
 	return &AssetWithhold{Reason: found.Reason, At: found.At}
 }
 
-func (h *Handlers) ListMedia(c *gin.Context, id types.UUID) {
+func (h *Handlers) ListMedia(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
 	}
-	found, err := h.assets.ListMedia(c.Request.Context(), uuid.UUID(id), viewerID)
+	found, err := h.assets.ListMedia(c.Request.Context(), id, viewerID)
 	if errors.Is(err, asset.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
 		return
@@ -800,12 +891,16 @@ func (h *Handlers) ListMedia(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, MediaList{Items: items})
 }
 
-func (h *Handlers) GetIngest(c *gin.Context, id types.UUID) {
+func (h *Handlers) GetIngest(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	owner, ok := h.uploadOwner(c)
 	if !ok {
 		return
 	}
-	operation, err := h.assets.GetIngest(c.Request.Context(), owner.ID, uuid.UUID(id))
+	operation, err := h.assets.GetIngest(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrIngestNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no such ingest operation"})
 		return
@@ -891,7 +986,7 @@ func parseFacets(raw []string) []asset.FacetSelection {
 
 func toAPI(a asset.Asset) Asset {
 	return Asset{
-		Id: types.UUID(a.ID), Kind: a.Kind, Format: a.Format,
+		Id: a.ID, Kind: a.Kind, Format: a.Format,
 		Name: a.Name, Blurb: a.Blurb, Tags: a.Tags, IsNsfw: a.IsNSFW,
 		Discovery: AssetDiscovery(a.Discovery), CreatedAt: a.CreatedAt,
 	}

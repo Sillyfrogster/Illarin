@@ -1,9 +1,8 @@
 # Illarin platform integration guide
 
 This guide is for developers adding Illarin support to an application or a new
-asset platform. The machine-readable contract is served at `/openapi.yaml`. If
-this guide and that contract differ, follow OpenAPI and report the mismatch.
-All API paths below are relative to the exact Illarin base URL and include the
+asset platform. If the API behaves differently from this guide, report the
+mismatch. All API paths below are relative to the exact Illarin base URL and include the
 public `/api` prefix.
 
 The current protocol links an application installation, rotates its credentials,
@@ -219,7 +218,7 @@ remote terminal or headless server. A desktop application must use PKCE instead.
 This registration-free flow adopts RFC 8628's manual-code, expiry, polling,
 `slow_down`, denial, and consent-phishing protections. It is not a drop-in OAuth
 Device Authorization Grant: it has no client ID or `grant_type`, and its HTTP
-statuses and response bodies are defined by Illarin's OpenAPI contract.
+statuses and response bodies are the ones this guide describes.
 
 ### 1. Start the device request
 
@@ -630,6 +629,3 @@ Reporting:
 - A withheld notice from a library report or a delivery wait is stored and shown
   to the owner, naming the extension.
 - A withheld extension stays as it is until the owner decides what to do with it.
-
-For exact schemas, error bodies, and status codes, use `/openapi.yaml` as the
-source of truth.

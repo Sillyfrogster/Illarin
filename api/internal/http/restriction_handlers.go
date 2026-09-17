@@ -8,7 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) GetProfileRestriction(c *gin.Context, handle string) {
+func (h *Handlers) GetProfileRestriction(c *gin.Context) {
+	handle := c.Param("handle")
 	if _, ok := h.adminAccount(c, "read a restriction reason"); !ok {
 		return
 	}
@@ -20,7 +21,8 @@ func (h *Handlers) GetProfileRestriction(c *gin.Context, handle string) {
 	c.JSON(http.StatusOK, toAPIRestriction(found))
 }
 
-func (h *Handlers) RestrictProfile(c *gin.Context, handle string) {
+func (h *Handlers) RestrictProfile(c *gin.Context) {
+	handle := c.Param("handle")
 	admin, ok := h.adminAccount(c, "restrict a profile")
 	if !ok {
 		return
@@ -38,7 +40,8 @@ func (h *Handlers) RestrictProfile(c *gin.Context, handle string) {
 	c.JSON(http.StatusOK, toAPIRestriction(restriction))
 }
 
-func (h *Handlers) RestoreProfile(c *gin.Context, handle string) {
+func (h *Handlers) RestoreProfile(c *gin.Context) {
+	handle := c.Param("handle")
 	admin, ok := h.adminAccount(c, "restore a profile")
 	if !ok {
 		return

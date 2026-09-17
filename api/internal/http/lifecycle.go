@@ -7,8 +7,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 type assetIdentityInput struct {
@@ -17,7 +15,15 @@ type assetIdentityInput struct {
 	IsNsfw *bool   `json:"isNsfw"`
 }
 
-func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAssetIdentityParams) {
+func (h *Handlers) SetAssetIdentity(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "saving an asset")
 	if !ok {
 		return
@@ -35,9 +41,9 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAss
 		})
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	err := h.assets.SetIdentity(c.Request.Context(), asset.Identity{
-		OwnerID: owner.ID, AssetID: uuid.UUID(id),
+		OwnerID: owner.ID, AssetID: id,
 		Name: request.Name, Blurb: *request.Blurb, IsNSFW: request.IsNsfw,
 	}, candidate)
 	if candidateResult(c, candidate, err) {
@@ -63,13 +69,21 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context, id types.UUID, params SetAss
 	}
 }
 
-func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID, params PublishAssetParams) {
+func (h *Handlers) PublishAsset(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "publishing an asset")
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	items, err := h.assets.Publish(c.Request.Context(), owner.ID, uuid.UUID(id), candidate)
+	candidate := &asset.Candidate{Version: version}
+	items, err := h.assets.Publish(c.Request.Context(), owner.ID, id, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -100,7 +114,7 @@ func (h *Handlers) PublishAsset(c *gin.Context, id types.UUID, params PublishAss
 	if !ok {
 		return
 	}
-	found, err := h.assets.Detail(c.Request.Context(), uuid.UUID(id), &owner.ID, visibility)
+	found, err := h.assets.Detail(c.Request.Context(), id, &owner.ID, visibility)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the published asset."})
 		return
@@ -123,7 +137,7 @@ func toAPIReadiness(items []asset.ReadinessItem) *[]ReadinessItem {
 			Id: item.ID, Label: item.Label, Detail: item.Detail, Met: item.Met,
 		}
 		if item.BlockID != nil {
-			blockID := types.UUID(*item.BlockID)
+			blockID := *item.BlockID
 			served.BlockId = &blockID
 		}
 		out = append(out, served)
@@ -131,7 +145,15 @@ func toAPIReadiness(items []asset.ReadinessItem) *[]ReadinessItem {
 	return &out
 }
 
-func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params PublishAssetUpdateParams) {
+func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	workingCopyVersion, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "publishing an asset update")
 	if !ok {
 		return
@@ -143,9 +165,9 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params Publ
 		})
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: workingCopyVersion}
 	recorded, items, err := h.assets.PublishUpdate(c.Request.Context(), asset.UpdateRequest{
-		OwnerID: owner.ID, AssetID: uuid.UUID(id), Summary: request.Summary,
+		OwnerID: owner.ID, AssetID: id, Summary: request.Summary,
 		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
 		Announcement: announcementChoice(request),
 	}, candidate)
@@ -184,7 +206,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context, id types.UUID, params Publ
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not publish the update."})
 	default:
 		c.JSON(http.StatusOK, AssetUpdate{
-			Id: types.UUID(recorded.ID), Number: recorded.Number,
+			Id: recorded.ID, Number: recorded.Number,
 			RecordedAt: recorded.RecordedAt, VersionLabel: recorded.VersionLabel,
 			Summary: recorded.Summary, Notes: recorded.Notes,
 			ContentGeneration: recorded.ContentGeneration,

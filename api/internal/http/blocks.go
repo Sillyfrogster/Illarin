@@ -2,7 +2,6 @@ package http
 
 import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 func toAPIBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
@@ -18,7 +17,7 @@ func toAPIBlocks(kind string, blocks []block.Block) ([]AssetBlock, error) {
 			return nil, err
 		}
 		out = append(out, AssetBlock{
-			Id:             types.UUID(b.ID),
+			Id:             b.ID,
 			Definition:     string(b.Definition),
 			Title:          title,
 			TitleIsDefault: isDefault,
@@ -56,7 +55,7 @@ func toAPIElements(kind string, holder block.Block) ([]AssetElement, error) {
 			facts = []string{}
 		}
 		served := AssetElement{
-			Id:      types.UUID(element.ID),
+			Id:      element.ID,
 			Type:    ElementType(element.Type),
 			Slot:    string(element.Slot),
 			Label:   element.Label(),

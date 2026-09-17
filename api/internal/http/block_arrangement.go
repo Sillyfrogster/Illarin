@@ -7,11 +7,17 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID, params AddAssetBlockParams) {
+func (h *Handlers) AddAssetBlock(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "adding a block")
 	if !ok {
 		return
@@ -21,9 +27,9 @@ func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID, params AddAssetB
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Name the block to add and the element it starts with."})
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.AddBlock(
-		c.Request.Context(), owner.ID, uuid.UUID(id),
+		c.Request.Context(), owner.ID, id,
 		block.DefinitionID(request.Definition), block.Type(request.ElementType), candidate)
 	if candidateResult(c, candidate, err) {
 		return
@@ -45,7 +51,15 @@ func (h *Handlers) AddAssetBlock(c *gin.Context, id types.UUID, params AddAssetB
 	}
 }
 
-func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID, params ArrangeAssetBlocksParams) {
+func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "arranging an asset")
 	if !ok {
 		return
@@ -58,11 +72,11 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID, params Arra
 	arrangement := make([]asset.BlockArrangement, len(request.Blocks))
 	for i, choice := range request.Blocks {
 		arrangement[i] = asset.BlockArrangement{
-			ID: uuid.UUID(choice.Id), Hidden: choice.Hidden, Width: block.Width(choice.Width),
+			ID: choice.Id, Hidden: choice.Hidden, Width: block.Width(choice.Width),
 		}
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, uuid.UUID(id), arrangement, candidate)
+	candidate := &asset.Candidate{Version: version}
+	saved, err := h.assets.ArrangeBlocks(c.Request.Context(), owner.ID, id, arrangement, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -83,13 +97,25 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context, id types.UUID, params Arra
 	}
 }
 
-func (h *Handlers) RemoveAssetBlock(c *gin.Context, id types.UUID, blockID types.UUID, params RemoveAssetBlockParams) {
+func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	blockID, ok := pathID(c, "blockId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "removing a block")
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
-	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), candidate)
+	candidate := &asset.Candidate{Version: version}
+	err := h.assets.RemoveBlock(c.Request.Context(), owner.ID, id, blockID, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}
@@ -105,7 +131,19 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context, id types.UUID, blockID types
 	}
 }
 
-func (h *Handlers) MoveAssetBlockContent(c *gin.Context, id types.UUID, blockID types.UUID, params MoveAssetBlockContentParams) {
+func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	blockID, ok := pathID(c, "blockId")
+	if !ok {
+		return
+	}
+	version, ok := workingCopyVersion(c)
+	if !ok {
+		return
+	}
 	owner, ok := h.verifiedAccount(c, "moving block content")
 	if !ok {
 		return
@@ -115,9 +153,9 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context, id types.UUID, blockID 
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Choose the block that should keep this content."})
 		return
 	}
-	candidate := &asset.Candidate{Version: params.XWorkingCopyVersion}
+	candidate := &asset.Candidate{Version: version}
 	saved, err := h.assets.MoveBlockContent(
-		c.Request.Context(), owner.ID, uuid.UUID(id), uuid.UUID(blockID), uuid.UUID(request.DestinationBlockId), candidate)
+		c.Request.Context(), owner.ID, id, blockID, request.DestinationBlockId, candidate)
 	if candidateResult(c, candidate, err) {
 		return
 	}

@@ -97,16 +97,6 @@ func noStoreCredentialResponses() gin.HandlerFunc {
 	}
 }
 
-func generatedParameterError(c *gin.Context, err error, status int) {
-	if strings.Contains(err.Error(), "X-Illarin-Request") {
-		c.JSON(nethttp.StatusForbidden, gin.H{
-			"error": "Open this action from Illarin and try again.",
-		})
-		return
-	}
-	c.JSON(status, gin.H{"msg": err.Error()})
-}
-
 func linkRequestSource(c *gin.Context) string {
 	host := remoteHost(c.Request.RemoteAddr)
 	ip := net.ParseIP(host)

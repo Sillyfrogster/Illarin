@@ -10,10 +10,18 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/notification"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListNotifications(c *gin.Context, params ListNotificationsParams) {
+func (h *Handlers) ListNotifications(c *gin.Context) {
+	q := readQuery(c)
+	params := ListNotificationsParams{
+		Limit:    queryNumber(q, "limit"),
+		Before:   queryTime(q, "before"),
+		BeforeId: queryID(q, "beforeId"),
+	}
+	if q.refused(c) {
+		return
+	}
 	current, ok := h.signedInAccount(c, "reading your notifications")
 	if !ok {
 		return
@@ -67,12 +75,16 @@ func (h *Handlers) CountUnreadNotifications(c *gin.Context) {
 	c.JSON(http.StatusOK, UnreadNotifications{Count: count})
 }
 
-func (h *Handlers) MarkNotificationRead(c *gin.Context, id types.UUID) {
+func (h *Handlers) MarkNotificationRead(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	current, ok := h.signedInAccount(c, "marking a notification read")
 	if !ok {
 		return
 	}
-	found, err := h.notifications.MarkRead(c.Request.Context(), current.ID, uuid.UUID(id))
+	found, err := h.notifications.MarkRead(c.Request.Context(), current.ID, id)
 	switch {
 	case err != nil:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not mark the notification read."})
@@ -95,12 +107,16 @@ func (h *Handlers) MarkAllNotificationsRead(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) RemoveNotification(c *gin.Context, id types.UUID) {
+func (h *Handlers) RemoveNotification(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	current, ok := h.signedInAccount(c, "removing a notification")
 	if !ok {
 		return
 	}
-	found, err := h.notifications.Remove(c.Request.Context(), current.ID, uuid.UUID(id))
+	found, err := h.notifications.Remove(c.Request.Context(), current.ID, id)
 	switch {
 	case err != nil:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove the notification."})

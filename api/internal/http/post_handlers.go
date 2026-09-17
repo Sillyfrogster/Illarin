@@ -12,10 +12,16 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) ListPosts(c *gin.Context, params ListPostsParams) {
+func (h *Handlers) ListPosts(c *gin.Context) {
+	q := readQuery(c)
+	params := ListPostsParams{
+		Deleted: queryFlag(q, "deleted"),
+	}
+	if q.refused(c) {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading posts")
 	if !ok {
 		return
@@ -49,7 +55,7 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 	}
 	started, err := h.publications.CreatePost(c.Request.Context(), editor, publication.PostEdit{
 		GrantID:    optionalID(request.GrantId),
-		CategoryID: uuid.UUID(request.CategoryId),
+		CategoryID: request.CategoryId,
 		Title:      request.Title,
 	})
 	if err != nil {
@@ -59,12 +65,16 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 	c.JSON(http.StatusCreated, h.toAPIPost(started))
 }
 
-func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) GetPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "reading a post")
 	if !ok {
 		return
 	}
-	found, err := h.publications.Post(c.Request.Context(), editor, uuid.UUID(id))
+	found, err := h.publications.Post(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -72,7 +82,11 @@ func (h *Handlers) GetPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(found))
 }
 
-func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
+func (h *Handlers) SavePost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "saving a post")
 	if !ok {
 		return
@@ -87,10 +101,10 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
 		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the post body as JSON.")
 		return
 	}
-	saved, err := h.publications.SavePost(c.Request.Context(), editor, uuid.UUID(id),
+	saved, err := h.publications.SavePost(c.Request.Context(), editor, id,
 		publication.PostSave{
 			Version:       request.Version,
-			CategoryID:    uuid.UUID(request.CategoryId),
+			CategoryID:    request.CategoryId,
 			Title:         request.Title,
 			Summary:       request.Summary,
 			Slug:          request.Slug,
@@ -106,7 +120,11 @@ func (h *Handlers) SavePost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(saved))
 }
 
-func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
+func (h *Handlers) AddPostMedia(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "adding a picture to a post")
 	if !ok {
 		return
@@ -132,7 +150,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 	added, err := h.publications.AddPostMedia(
-		c.Request.Context(), editor, uuid.UUID(id), string(metadata.Purpose), limitedFile,
+		c.Request.Context(), editor, id, string(metadata.Purpose), limitedFile,
 	)
 	var refused publication.FieldError
 	switch {
@@ -149,7 +167,11 @@ func (h *Handlers) AddPostMedia(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.publications.SignPrivate))
 }
 
-func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
+func (h *Handlers) PublishPost(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "publishing a post")
 	if !ok {
 		return
@@ -161,7 +183,7 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 		return
 	}
 	published, err := h.publications.PublishPost(
-		c.Request.Context(), editor, uuid.UUID(id), request.Version,
+		c.Request.Context(), editor, id, request.Version,
 		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
 	)
 	if err != nil {
@@ -171,7 +193,11 @@ func (h *Handlers) PublishPost(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(published))
 }
 
-func (h *Handlers) CorrectPostAddress(c *gin.Context, id types.UUID) {
+func (h *Handlers) CorrectPostAddress(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "correcting a post address")
 	if !ok {
 		return
@@ -182,7 +208,7 @@ func (h *Handlers) CorrectPostAddress(c *gin.Context, id types.UUID) {
 		return
 	}
 	moved, err := h.publications.CorrectAddress(
-		c.Request.Context(), editor, uuid.UUID(id), request.Slug,
+		c.Request.Context(), editor, id, request.Slug,
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -191,7 +217,11 @@ func (h *Handlers) CorrectPostAddress(c *gin.Context, id types.UUID) {
 	c.JSON(http.StatusOK, h.toAPIPost(moved))
 }
 
-func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
+func (h *Handlers) CorrectPostByline(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	editor, ok := h.postEditor(c, "correcting a post byline")
 	if !ok {
 		return
@@ -202,7 +232,7 @@ func (h *Handlers) CorrectPostByline(c *gin.Context, id types.UUID) {
 		return
 	}
 	corrected, err := h.publications.CorrectByline(
-		c.Request.Context(), editor, uuid.UUID(id), request.Handle,
+		c.Request.Context(), editor, id, request.Handle,
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -229,7 +259,16 @@ func (h *Handlers) ListPostCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, PublicationCategoryList{Categories: toAPICategories(found)})
 }
 
-func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsParams) {
+func (h *Handlers) ListPublishedPosts(c *gin.Context) {
+	q := readQuery(c)
+	params := ListPublishedPostsParams{
+		Page:     queryNumber(q, "page"),
+		Category: queryText[string](q, "category"),
+		App:      queryText[string](q, "app"),
+	}
+	if q.refused(c) {
+		return
+	}
 	asked := publication.ArchiveQuery{Page: 1}
 	if params.Page != nil {
 		asked.Page = *params.Page
@@ -259,7 +298,8 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context, params ListPublishedPostsP
 	c.JSON(http.StatusOK, toAPIArchive(found))
 }
 
-func (h *Handlers) GetPublishedPost(c *gin.Context, slug string) {
+func (h *Handlers) GetPublishedPost(c *gin.Context) {
+	slug := c.Param("slug")
 	found, err := h.publications.PublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, publication.ErrPostNotFound) {
 		if h.withdrawnPost(c, slug) {
@@ -379,7 +419,7 @@ func (h *Handlers) toAPIPosts(held []publication.Post) []Post {
 
 func (h *Handlers) toAPIPost(found publication.Post) Post {
 	shown := Post{
-		Id:              types.UUID(found.ID),
+		Id:              found.ID,
 		Status:          PostStatus(found.Status),
 		Title:           found.Title,
 		Summary:         found.Summary,
@@ -399,7 +439,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		UpdatedAt:       found.UpdatedAt,
 	}
 	if found.GrantID != nil {
-		grantID := types.UUID(*found.GrantID)
+		grantID := *found.GrantID
 		shown.GrantId = &grantID
 	}
 	if found.App != nil {
@@ -407,11 +447,11 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 		shown.App = &app
 	}
 	if found.SocialMediaID != nil {
-		social := types.UUID(*found.SocialMediaID)
+		social := *found.SocialMediaID
 		shown.SocialMediaId = &social
 	}
 	if found.PublicRevision != nil {
-		public := types.UUID(*found.PublicRevision)
+		public := *found.PublicRevision
 		shown.PublicRevisionId = &public
 	}
 	shown.Schedule = toAPISchedule(found.Schedule)
@@ -426,7 +466,7 @@ func (h *Handlers) toAPIPost(found publication.Post) Post {
 
 func toAPIPublicPost(found publication.PublicPost) PublicPost {
 	return PublicPost{
-		Id:           types.UUID(found.ID),
+		Id:           found.ID,
 		Slug:         found.Slug,
 		OriginalSlug: found.OriginalSlug,
 		Title:        found.Title,
@@ -472,7 +512,7 @@ func toAPISummaries(listed []publication.PostSummary) []PostSummary {
 
 func toAPISummary(found publication.PostSummary) PostSummary {
 	shown := PostSummary{
-		Id:           types.UUID(found.ID),
+		Id:           found.ID,
 		Slug:         found.Slug,
 		OriginalSlug: found.OriginalSlug,
 		Title:        found.Title,
@@ -511,8 +551,8 @@ func toAPIPostPicture(found *publication.PostMedia, sign func(string) string) *P
 		thumb = sign(thumb)
 	}
 	return &PostMedia{
-		Id:       types.UUID(found.ID),
-		PostId:   types.UUID(found.PostID),
+		Id:       found.ID,
+		PostId:   found.PostID,
 		Purpose:  PostMediaPurpose(found.Purpose),
 		Url:      address,
 		ThumbUrl: thumb,
@@ -525,7 +565,7 @@ func toAPIHeader(found *publication.Header) *PostHeader {
 	if found == nil {
 		return nil
 	}
-	shown := &PostHeader{MediaId: types.UUID(found.MediaID), Alt: found.Alt}
+	shown := &PostHeader{MediaId: found.MediaID, Alt: found.Alt}
 	if found.Caption != "" {
 		shown.Caption = pointer(found.Caption)
 	}
@@ -580,7 +620,7 @@ func toReleaseEdit(request *PostReleaseEdit) *publication.ReleaseEdit {
 		return nil
 	}
 	edit := &publication.ReleaseEdit{
-		AppID:   uuid.UUID(request.AppId),
+		AppID:   request.AppId,
 		Version: request.Version,
 	}
 	if request.Address != nil {
@@ -593,14 +633,14 @@ func toHeaderEdit(request *PostHeaderEdit) *publication.HeaderEdit {
 	if request == nil {
 		return nil
 	}
-	edit := &publication.HeaderEdit{MediaID: uuid.UUID(request.MediaId), Alt: request.Alt}
+	edit := &publication.HeaderEdit{MediaID: request.MediaId, Alt: request.Alt}
 	if request.Caption != nil {
 		edit.Caption = *request.Caption
 	}
 	return edit
 }
 
-func optionalID(value *types.UUID) *uuid.UUID {
+func optionalID(value *uuid.UUID) *uuid.UUID {
 	if value == nil {
 		return nil
 	}

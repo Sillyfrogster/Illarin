@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const maxLibraryBodyBytes = 256 << 10
@@ -67,13 +66,17 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	})
 }
 
-func (h *Handlers) GetAssetInstances(c *gin.Context, id types.UUID) {
+func (h *Handlers) GetAssetInstances(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.signedInAccount(c, "sending an asset to an application")
 	if !ok {
 		return
 	}
-	found, err := h.deliveries.AssetInstances(c.Request.Context(), creator.ID, uuid.UUID(id))
+	found, err := h.deliveries.AssetInstances(c.Request.Context(), creator.ID, id)
 	if err != nil {
 		h.deliveryError(c, err)
 		return
@@ -87,11 +90,14 @@ func (h *Handlers) GetAssetInstances(c *gin.Context, id types.UUID) {
 	})
 }
 
-func (h *Handlers) SendAssetToInstance(
-	c *gin.Context,
-	id types.UUID,
-	_ SendAssetToInstanceParams,
-) {
+func (h *Handlers) SendAssetToInstance(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.signedInAccount(c, "sending an asset to an application")
 	if !ok || !h.allowLinkBrowserMutation(c) {
@@ -102,7 +108,7 @@ func (h *Handlers) SendAssetToInstance(
 		return
 	}
 	queued, err := h.deliveries.Queue(
-		c.Request.Context(), creator.ID, uuid.UUID(request.InstanceId), uuid.UUID(id),
+		c.Request.Context(), creator.ID, request.InstanceId, id,
 	)
 	if err != nil {
 		h.deliveryError(c, err)
@@ -111,27 +117,42 @@ func (h *Handlers) SendAssetToInstance(
 	c.JSON(http.StatusAccepted, toAPIQueuedDelivery(queued))
 }
 
-func (h *Handlers) DiscardDelivery(c *gin.Context, id types.UUID, _ DiscardDeliveryParams) {
+func (h *Handlers) DiscardDelivery(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	if !fromIllarin(c) {
+		return
+	}
 	noStoreLink(c)
 	creator, ok := h.signedInAccount(c, "managing deliveries")
 	if !ok || !h.allowLinkBrowserMutation(c) {
 		return
 	}
-	if err := h.deliveries.Discard(c.Request.Context(), creator.ID, uuid.UUID(id)); err != nil {
+	if err := h.deliveries.Discard(c.Request.Context(), creator.ID, id); err != nil {
 		h.deliveryError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) DownloadDeliveryExport(
-	c *gin.Context,
-	id types.UUID,
-	params DownloadDeliveryExportParams,
-) {
+func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	q := readQuery(c)
+	params := DownloadDeliveryExportParams{
+		Expires:   queryRequired(q, "expires"),
+		Signature: queryRequired(q, "signature"),
+	}
+	if q.refused(c) {
+		return
+	}
 	c.Header("Cache-Control", "private, no-store")
 	assetID, target, err := h.deliveries.Artifact(
-		c.Request.Context(), uuid.UUID(id), params.Expires, params.Signature,
+		c.Request.Context(), id, params.Expires, params.Signature,
 	)
 	if err != nil {
 		h.deliveryArtifactError(c, err)
@@ -219,7 +240,7 @@ func toLibraryReport(request LibraryReport) delivery.LibraryReport {
 	entries := make([]delivery.LibraryEntry, 0, len(request.Entries))
 	for _, entry := range request.Entries {
 		entries = append(entries, delivery.LibraryEntry{
-			AssetID: uuid.UUID(entry.AssetId), ContentGeneration: entry.ContentGeneration,
+			AssetID: entry.AssetId, ContentGeneration: entry.ContentGeneration,
 		})
 	}
 	var removed []uuid.UUID
@@ -242,14 +263,14 @@ func toAPIDeliveryWork(released delivery.Work) DeliveryWork {
 			Kind: DeliveryArtifactKind(artifact.Kind), Url: artifact.URL,
 		}
 		if artifact.MediaID != nil {
-			mediaID := types.UUID(*artifact.MediaID)
+			mediaID := *artifact.MediaID
 			role, isCover := artifact.Role, artifact.IsCover
 			item.MediaId, item.Role, item.IsCover = &mediaID, &role, &isCover
 		}
 		artifacts = append(artifacts, item)
 	}
 	return DeliveryWork{
-		Id: types.UUID(released.ID), AssetId: types.UUID(released.AssetID),
+		Id: released.ID, AssetId: released.AssetID,
 		ContentGeneration: released.ContentGeneration, Kind: released.Kind,
 		Name: released.Name, Format: released.Format, Label: released.Label,
 		QueuedAt: released.QueuedAt, LeaseExpiresAt: released.LeaseExpiresAt,
@@ -259,8 +280,8 @@ func toAPIDeliveryWork(released delivery.Work) DeliveryWork {
 
 func toAPIQueuedDelivery(queued delivery.Delivery) QueuedDelivery {
 	item := QueuedDelivery{
-		Id: types.UUID(queued.ID), InstanceId: types.UUID(queued.InstanceID),
-		AssetId: types.UUID(queued.AssetID), State: QueuedDeliveryState(queued.State),
+		Id: queued.ID, InstanceId: queued.InstanceID,
+		AssetId: queued.AssetID, State: QueuedDeliveryState(queued.State),
 		QueuedAt: queued.QueuedAt, SettledAt: queued.SettledAt, ExpiresAt: queued.ExpiresAt,
 		UpdatesInstall: queued.UpdatesInstall,
 	}
@@ -273,7 +294,7 @@ func toAPIQueuedDelivery(queued delivery.Delivery) QueuedDelivery {
 
 func toAPIAssetInstance(state delivery.InstanceState) AssetInstance {
 	item := AssetInstance{
-		InstanceId: types.UUID(state.InstanceID), ApplicationName: state.ApplicationName,
+		InstanceId: state.InstanceID, ApplicationName: state.ApplicationName,
 		InstanceName: state.InstanceName, LastSeenAt: state.LastSeenAt,
 		CanReceive: state.CanReceive, ReportsLibrary: state.ReportsLibrary,
 		InstalledGeneration: state.InstalledGeneration,
@@ -290,16 +311,16 @@ func toAPIWithheldNotices(notices []delivery.WithheldNotice) []WithheldNotice {
 	items := make([]WithheldNotice, 0, len(notices))
 	for _, notice := range notices {
 		items = append(items, WithheldNotice{
-			AssetId: types.UUID(notice.AssetID), Name: notice.Name, WithheldAt: notice.WithheldAt,
+			AssetId: notice.AssetID, Name: notice.Name, WithheldAt: notice.WithheldAt,
 		})
 	}
 	return items
 }
 
-func uuidsFrom(values []types.UUID) []uuid.UUID {
+func uuidsFrom(values []uuid.UUID) []uuid.UUID {
 	converted := make([]uuid.UUID, len(values))
 	for index, value := range values {
-		converted[index] = uuid.UUID(value)
+		converted[index] = value
 	}
 	return converted
 }

@@ -12,10 +12,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handlers) DownloadSource(c *gin.Context, id types.UUID) {
+func (h *Handlers) DownloadSource(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -28,12 +31,20 @@ func (h *Handlers) DownloadSource(c *gin.Context, id types.UUID) {
 	h.handOffDownload(c, download)
 }
 
-func (h *Handlers) DownloadExport(
-	c *gin.Context,
-	id types.UUID,
-	target string,
-	params DownloadExportParams,
-) {
+func (h *Handlers) DownloadExport(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	target := c.Param("target")
+	q := readQuery(c)
+	params := DownloadExportParams{
+		Images:  queryText[string](q, "images"),
+		Version: queryNumber(q, "version"),
+	}
+	if q.refused(c) {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -129,13 +140,24 @@ func (h *Handlers) handOffDownload(c *gin.Context, download asset.SourceDownload
 	c.Status(http.StatusOK)
 }
 
-func (h *Handlers) GetMediaVariant(
-	c *gin.Context,
-	mediaID types.UUID,
-	variant GetMediaVariantParamsVariant,
-	derivativeVersion int,
-	params GetMediaVariantParams,
-) {
+func (h *Handlers) GetMediaVariant(c *gin.Context) {
+	mediaID, ok := pathID(c, "media_id")
+	if !ok {
+		return
+	}
+	variant := c.Param("variant")
+	derivativeVersion, ok := pathNumber(c, "derivative_version")
+	if !ok {
+		return
+	}
+	q := readQuery(c)
+	params := GetMediaVariantParams{
+		Expires:   queryText[string](q, "expires"),
+		Signature: queryText[string](q, "signature"),
+	}
+	if q.refused(c) {
+		return
+	}
 	viewerID, ok := h.viewerID(c)
 	if !ok {
 		return
@@ -145,15 +167,15 @@ func (h *Handlers) GetMediaVariant(
 		return
 	}
 	download, err := h.assets.MediaVariant(c.Request.Context(), asset.MediaRequest{
-		MediaID:   uuid.UUID(mediaID),
-		Variant:   string(variant),
+		MediaID:   mediaID,
+		Variant:   variant,
 		Version:   uint32(derivativeVersion),
 		ViewerID:  viewerID,
 		Expires:   valueOrEmpty(params.Expires),
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, asset.ErrMediaNotFound) {
-		h.sharedImageVariant(c, uuid.UUID(mediaID), string(variant), uint32(derivativeVersion), params)
+		h.sharedImageVariant(c, mediaID, variant, uint32(derivativeVersion), params)
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -231,8 +253,8 @@ func valueOrEmpty(value *string) string {
 
 func toAPIMedia(found asset.Media) Media {
 	return Media{
-		Id:                types.UUID(found.ID),
-		AssetId:           types.UUID(found.AssetID),
+		Id:                found.ID,
+		AssetId:           found.AssetID,
 		Role:              MediaRole(found.Role),
 		Width:             found.Width,
 		Height:            found.Height,

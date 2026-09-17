@@ -1,10 +1,9 @@
 package http
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
-
-	"github.com/Sillyfrogster/Illarin/api/openapi"
-	"github.com/goccy/go-yaml"
 )
 
 func TestCredentialCookiesCarryTheProductName(t *testing.T) {
@@ -25,27 +24,23 @@ func TestCredentialCookiesCarryTheProductName(t *testing.T) {
 	}
 }
 
-func TestContractNamesTheSessionCookieTheHandlersSet(t *testing.T) {
+func TestSignOutReadsTheMutationHeaderAndClearsTheSessionCookie(t *testing.T) {
 	t.Parallel()
-	var document struct {
-		Components struct {
-			SecuritySchemes struct {
-				SessionCookie struct {
-					Name string `yaml:"name"`
-				} `yaml:"sessionCookie"`
-				BrowserMutation struct {
-					Name string `yaml:"name"`
-				} `yaml:"browserMutation"`
-			} `yaml:"securitySchemes"`
-		} `yaml:"components"`
+	router, session := newVerifiedTestRouter(t)
+	if session.Name != "illarin_session" {
+		t.Fatalf("sign-up set cookie %q, want illarin_session", session.Name)
 	}
-	if err := yaml.Unmarshal(openapi.Contract, &document); err != nil {
-		t.Fatalf("parse contract: %v", err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-out", nil)
+	req.AddCookie(session)
+	req.Header.Set("Origin", testBrowserOrigin)
+	req.Header.Set("X-Illarin-Request", "1")
+	rec := send(t, router, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("sign-out = %d %s, want %d", rec.Code, rec.Body.String(), http.StatusNoContent)
 	}
-	if got := document.Components.SecuritySchemes.SessionCookie.Name; got != sessionCookieName {
-		t.Errorf("contract session cookie = %q, want %q", got, sessionCookieName)
-	}
-	if got := document.Components.SecuritySchemes.BrowserMutation.Name; got != browserMutationHeader {
-		t.Errorf("contract browser mutation header = %q, want %q", got, browserMutationHeader)
+	cleared := rec.Result().Cookies()
+	if len(cleared) != 1 || cleared[0].Name != "illarin_session" || cleared[0].MaxAge >= 0 {
+		t.Errorf("sign-out cookies = %+v, want illarin_session cleared", cleared)
 	}
 }
