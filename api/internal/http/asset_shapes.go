@@ -17,10 +17,6 @@ type MediaList struct {
 	Items []Media `json:"items"`
 }
 
-type WithholdAssetRequest struct {
-	Reason string `json:"reason"`
-}
-
 type WorkingCopyVersion = int64
 
 type GetMediaVariantParams struct {

@@ -11,52 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) WithholdAsset(c *gin.Context) {
-	id, ok := api.PathID(c, "id")
-	if !ok {
-		return
-	}
-	admin, ok := api.Admin(c, "manage withholds")
-	if !ok {
-		return
-	}
-	var request WithholdAssetRequest
-	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
-		return
-	}
-	err := h.assets.Withhold(c.Request.Context(), id, admin.ID, request.Reason)
-	switch {
-	case errors.Is(err, asset.ErrInvalidWithholdReason):
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
-	case errors.Is(err, asset.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
-	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the asset.")
-	default:
-		c.Status(http.StatusNoContent)
-	}
-}
-
-func (h *Handlers) ClearAssetWithhold(c *gin.Context) {
-	id, ok := api.PathID(c, "id")
-	if !ok {
-		return
-	}
-	if _, ok := api.Admin(c, "manage withholds"); !ok {
-		return
-	}
-	err := h.assets.ClearWithhold(c.Request.Context(), id)
-	switch {
-	case errors.Is(err, asset.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
-	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not clear the withhold.")
-	default:
-		c.Status(http.StatusNoContent)
-	}
-}
-
 func (h *Handlers) AddMedia(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {

@@ -38,6 +38,7 @@ var (
 	ErrUnauthorized         = errors.New("no account is signed in")
 	ErrEmailUnverified      = errors.New("email is not verified")
 	ErrProfileNotFound      = errors.New("profile does not exist")
+	ErrProfileRestricted    = errors.New("profile is restricted")
 	ErrEmailVerified        = errors.New("verified email cannot be replaced here")
 	ErrEmailBelongsDiscord  = errors.New("verified email belongs to a Discord account")
 	ErrDiscordUnavailable   = errors.New("Discord sign-in is not configured")

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const CreatorHandle = "moon.creator"
@@ -94,4 +95,26 @@ func (o *VerificationOutbox) SendVerification(_ context.Context, address, link s
 func (o *VerificationOutbox) SendPasswordReset(_ context.Context, address, link string) error {
 	o.PasswordResets = append(o.PasswordResets, VerificationMessage{Address: address, Link: link})
 	return nil
+}
+
+// SetRole gives an account one of the staff roles
+func SetRole(t *testing.T, pool *pgxpool.Pool, handle, role string) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), `
+		update users set role = $2 where username = $1
+	`, handle, role); err != nil {
+		t.Fatalf("set %s role: %v", handle, err)
+	}
+}
+
+// HoldsAuthority gives an account publication authority
+func HoldsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+		insert into publication_authorities (user_id)
+		select id from users where username = $1
+	`, handle)
+	if err != nil {
+		t.Fatalf("assign publication authority: %v", err)
+	}
 }

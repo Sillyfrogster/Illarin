@@ -415,3 +415,17 @@ func plainField(field, raw string, limit int, allowBreaks bool) (string, error) 
 	}
 	return value, nil
 }
+
+func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
+	var restricted bool
+	err := s.pool.QueryRow(ctx, `
+		select exists (select 1 from profile_restrictions where user_id = $1)
+	`, ownerID).Scan(&restricted)
+	if err != nil {
+		return fmt.Errorf("read profile restriction state: %w", err)
+	}
+	if restricted {
+		return ErrProfileRestricted
+	}
+	return nil
+}

@@ -1,8 +1,6 @@
-package http
+package staff
 
-import (
-	"time"
-)
+import "time"
 
 type ProfileRestriction struct {
 	Reason       string    `json:"reason"`
@@ -11,5 +9,9 @@ type ProfileRestriction struct {
 }
 
 type RestrictProfileRequest struct {
+	Reason string `json:"reason"`
+}
+
+type WithholdAssetRequest struct {
 	Reason string `json:"reason"`
 }

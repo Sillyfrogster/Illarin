@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
@@ -50,7 +51,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := <-done; !errors.Is(err, asset.ErrAssetFrozen) {
 		t.Fatalf("revoked acceptance = %v, want frozen", err)
 	}
-	if err := svc.assets.ClearWithhold(context.Background(), id); err != nil {
+	if err := staff.NewService(pool).ClearWithhold(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{

@@ -1,4 +1,4 @@
-package asset
+package staff
 
 import (
 	"context"
@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-var ErrInvalidWithholdReason = errors.New("invalid withhold reason")
-
 func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason string) error {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
@@ -28,10 +26,10 @@ func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason st
 	withheld, err := db.New(tx).WithholdAsset(ctx, db.WithholdAssetParams{
 		ID:             uuidToPgtype(id),
 		WithheldBy:     uuidToPgtype(actorID),
-		WithheldReason: textToNullable(&reason),
+		WithheldReason: textToPgtype(reason),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+		return ErrAssetNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("withhold asset: %w", err)
@@ -55,7 +53,7 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 	defer tx.Rollback(ctx)
 	cleared, err := db.New(tx).ClearAssetWithhold(ctx, uuidToPgtype(id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNotFound
+		return ErrAssetNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("clear asset withhold: %w", err)

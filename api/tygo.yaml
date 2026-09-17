@@ -194,6 +194,14 @@ packages:
       - "post_withdrawal_handlers.go"
       - "publication_handlers.go"
       - "handlers.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/staff"
+    output_path: "../web/src/lib/api/shapes/staff.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      time.Time: "string"
+    include_files:
+      - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -210,6 +218,7 @@ packages:
       export * from "./shapes/integration";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
+      export * from "./shapes/staff";
       export * from "./shapes/upload";
       export * from "./shapes/version";
       export * from "./shapes/work";
@@ -222,5 +231,4 @@ packages:
       - "asset_shapes.go"
       - "notification_shapes.go"
       - "preserved_shapes.go"
-      - "restriction_shapes.go"
       - "upload_helpers_shapes.go"

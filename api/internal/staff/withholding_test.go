@@ -1,4 +1,4 @@
-package http
+package staff_test
 
 import (
 	"context"

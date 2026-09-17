@@ -1,4 +1,4 @@
-package account
+package staff
 
 import (
 	"context"
@@ -14,11 +14,6 @@ import (
 )
 
 const restrictionReasonLimit = 500
-
-var (
-	ErrProfileRestricted = errors.New("profile is restricted")
-	ErrNotRestricted     = errors.New("profile is not restricted")
-)
 
 type Restriction struct {
 	Reason       string
@@ -55,10 +50,7 @@ func (s *Service) RestrictProfile(
 ) (Restriction, error) {
 	reason := strings.TrimSpace(rawReason)
 	if reason == "" || len([]rune(reason)) > restrictionReasonLimit {
-		return Restriction{}, FieldError{
-			Field:   "reason",
-			Message: fmt.Sprintf("Give a reason of up to %d characters.", restrictionReasonLimit),
-		}
+		return Restriction{}, ErrInvalidReason
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -121,20 +113,6 @@ func (s *Service) RestoreProfile(ctx context.Context, admin api.Account, handle 
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit profile restoration: %w", err)
-	}
-	return nil
-}
-
-func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
-	var restricted bool
-	err := s.pool.QueryRow(ctx, `
-		select exists (select 1 from profile_restrictions where user_id = $1)
-	`, ownerID).Scan(&restricted)
-	if err != nil {
-		return fmt.Errorf("read profile restriction state: %w", err)
-	}
-	if restricted {
-		return ErrProfileRestricted
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package http
+package staff_test
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,11 +29,19 @@ type profileRestriction struct {
 }
 
 type restrictionStack struct {
-	publicationStack
-	assets  *asset.Service
-	admin   *http.Cookie
-	owner   *http.Cookie
-	ownerID uuid.UUID
+	router    *gin.Engine
+	pool      *pgxpool.Pool
+	outbox    *apitest.VerificationOutbox
+	authority *http.Cookie
+	assets    *asset.Service
+	admin     *http.Cookie
+	owner     *http.Cookie
+	ownerID   uuid.UUID
+}
+
+func (s restrictionStack) member(t *testing.T, email, handle string) *http.Cookie {
+	t.Helper()
+	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
 }
 
 const ownerHandle = "shown.creator"
@@ -42,14 +51,12 @@ func newRestrictionStack(t *testing.T) restrictionStack {
 	outbox := &apitest.VerificationOutbox{}
 	router, pool, handlers := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
 	authority := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	holdsAuthority(t, pool, "publication.authority")
+	apitest.HoldsAuthority(t, pool, "publication.authority")
 	admin := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "site.admin")
-	setRole(t, pool, "site.admin", "admin")
+	apitest.SetRole(t, pool, "site.admin", "admin")
 	owner := apitest.VerifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
 	return restrictionStack{
-		publicationStack: publicationStack{
-			router: router, pool: pool, outbox: outbox, authority: authority,
-		},
+		router: router, pool: pool, outbox: outbox, authority: authority,
 		assets:  handlers.Assets,
 		admin:   admin,
 		owner:   owner,
@@ -204,7 +211,7 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 	outsider := stack.member(t, "outsider@example.com", "ordinary.member")
 
 	for _, role := range []string{"user", "moderator"} {
-		setRole(t, stack.pool, "ordinary.member", role)
+		apitest.SetRole(t, stack.pool, "ordinary.member", role)
 		refused := stack.restrict(t, outsider, ownerHandle, "Because I say so.")
 		if refused.Code != http.StatusForbidden {
 			t.Fatalf("%s restrict status = %d, want 403: %s", role, refused.Code, refused.Body.String())

@@ -253,7 +253,7 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 func (s publicationStack) admin(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	session := s.member(t, email, handle)
-	setRole(t, s.pool, handle, "admin")
+	apitest.SetRole(t, s.pool, handle, "admin")
 	return session
 }
 
@@ -395,7 +395,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 	))
 
 	moderator := stack.member(t, "mod@example.com", "the.moderator")
-	setRole(t, stack.pool, "the.moderator", "moderator")
+	apitest.SetRole(t, stack.pool, "the.moderator", "moderator")
 	ordinary := stack.member(t, "reader@example.com", "just.reading")
 
 	for name, session := range map[string]*http.Cookie{

@@ -107,7 +107,7 @@ func newPublicationStack(t *testing.T) publicationStack {
 		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
 	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	holdsAuthority(t, pool, "publication.authority")
+	apitest.HoldsAuthority(t, pool, "publication.authority")
 	return publicationStack{
 		router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
 	}
@@ -116,26 +116,6 @@ func newPublicationStack(t *testing.T) publicationStack {
 func (s publicationStack) member(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
-}
-
-func holdsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
-	t.Helper()
-	_, err := pool.Exec(context.Background(), `
-		insert into publication_authorities (user_id)
-		select id from users where username = $1
-	`, handle)
-	if err != nil {
-		t.Fatalf("assign publication authority: %v", err)
-	}
-}
-
-func setRole(t *testing.T, pool *pgxpool.Pool, handle, role string) {
-	t.Helper()
-	if _, err := pool.Exec(context.Background(), `
-		update users set role = $2 where username = $1
-	`, handle, role); err != nil {
-		t.Fatalf("set %s role: %v", handle, err)
-	}
 }
 
 func jsonRequest(t *testing.T, method, target, body string) *http.Request {
@@ -507,7 +487,7 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 func (s publicationStack) admin(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	session := s.member(t, email, handle)
-	setRole(t, s.pool, handle, "admin")
+	apitest.SetRole(t, s.pool, handle, "admin")
 	return session
 }
 

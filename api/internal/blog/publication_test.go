@@ -103,7 +103,7 @@ func newPublicationStack(t *testing.T) publicationStack {
 		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
 	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	holdsAuthority(t, pool, "publication.authority")
+	apitest.HoldsAuthority(t, pool, "publication.authority")
 	return publicationStack{
 		router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
 	}
@@ -112,26 +112,6 @@ func newPublicationStack(t *testing.T) publicationStack {
 func (s publicationStack) member(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
-}
-
-func holdsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
-	t.Helper()
-	_, err := pool.Exec(context.Background(), `
-		insert into publication_authorities (user_id)
-		select id from users where username = $1
-	`, handle)
-	if err != nil {
-		t.Fatalf("assign publication authority: %v", err)
-	}
-}
-
-func setRole(t *testing.T, pool *pgxpool.Pool, handle, role string) {
-	t.Helper()
-	if _, err := pool.Exec(context.Background(), `
-		update users set role = $2 where username = $1
-	`, handle, role); err != nil {
-		t.Fatalf("set %s role: %v", handle, err)
-	}
 }
 
 func jsonRequest(t *testing.T, method, target, body string) *http.Request {
@@ -296,7 +276,7 @@ func TestOnlyThePublicationAuthorityManagesCategoriesAndGrants(t *testing.T) {
 		"/v1/publication/grants",
 	}
 	for _, role := range []string{"user", "moderator", "admin"} {
-		setRole(t, stack.pool, "publication.outsider", role)
+		apitest.SetRole(t, stack.pool, "publication.outsider", role)
 		for _, path := range reads {
 			refused := apitest.Send(t, stack.router, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, path, nil), outsider,
@@ -652,7 +632,7 @@ func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
 	}
 
 	admin := stack.member(t, "restrictor@example.com", "restricting.admin")
-	setRole(t, stack.pool, "restricting.admin", "admin")
+	apitest.SetRole(t, stack.pool, "restricting.admin", "admin")
 	restricted := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/profiles/named.writer/restriction",
 		`{"reason":"Under review"}`,

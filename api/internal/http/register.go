@@ -16,6 +16,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
+	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
@@ -54,6 +55,7 @@ func Register(r *gin.Engine, h *Handlers, d api.Deadlines, readiness Readiness) 
 	blogHandlers := blog.NewHandlers(h.publications, h.accounts, h.maxUploadBytes)
 	blog.Register(routes, blogHandlers)
 	integration.Register(routes, integration.NewHandlers(h.publications, h.updateDestinations, blogHandlers.IntegrationAccess()))
+	staff.Register(routes, staff.NewHandlers(staff.NewService(h.assets.Pool())))
 	registerRoutes(routes, h)
 	return nil
 }

@@ -309,7 +309,7 @@ func newDestinationStackThrough(
 	)
 	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	holdsAuthority(t, pool, "publication.authority")
+	apitest.HoldsAuthority(t, pool, "publication.authority")
 	stack := destinationStack{
 		publicationStack: publicationStack{
 			router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
