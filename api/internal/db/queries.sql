@@ -72,8 +72,6 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
         and (sqlc.arg('own_profile')::boolean
              or (a.discovery = 'listed' and a.withheld_at is null)))
    )
-   and (sqlc.narg('creator_id')::uuid is null or sqlc.arg('own_profile')::boolean
-        or sqlc.arg('creator_allows_nsfw')::boolean or not a.is_nsfw)
    and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
    and (sqlc.arg('own_profile')::boolean
         or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
@@ -130,8 +128,6 @@ select count(*)
         and (sqlc.arg('own_profile')::boolean
              or (a.discovery = 'listed' and a.withheld_at is null)))
    )
-   and (sqlc.narg('creator_id')::uuid is null or sqlc.arg('own_profile')::boolean
-        or sqlc.arg('creator_allows_nsfw')::boolean or not a.is_nsfw)
    and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
    and (sqlc.arg('own_profile')::boolean
         or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
@@ -176,8 +172,6 @@ select count(*)
    and a.withheld_at is null
    and a.deleted_at is null
    and (sqlc.narg('creator_id')::uuid is null or a.owner_id = sqlc.narg('creator_id')::uuid)
-   and (sqlc.narg('creator_id')::uuid is null
-        or sqlc.arg('creator_allows_nsfw')::boolean or not a.is_nsfw)
    and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
    and (sqlc.arg('platform')::text = '' or exists (
         select 1

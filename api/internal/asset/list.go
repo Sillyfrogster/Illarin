@@ -25,9 +25,8 @@ type ListFilter struct {
 }
 
 type ProfileListingScope struct {
-	CreatorID        uuid.UUID
-	ViewerID         *uuid.UUID
-	CreatorShowsNSFW bool
+	CreatorID uuid.UUID
+	ViewerID  *uuid.UUID
 }
 
 type Cursor struct {
@@ -150,10 +149,10 @@ func (s *Service) browseAssets(
 	}
 	formats := formatsForPlatform(platform)
 	facetKeys, facetLows, facetHighs := facetRanges(chosen)
-	creatorID, creatorShowsNSFW, ownProfile := profileListingValues(f.Profile)
+	creatorID, ownProfile := profileListingValues(f.Profile)
 	params := db.BrowseAssetsParams{
 		Kind: f.Kind, NsfwVisibility: string(visibility),
-		CreatorID: uuidToNullable(creatorID), CreatorAllowsNsfw: creatorShowsNSFW,
+		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 		Platform: platform, Formats: formats,
@@ -209,7 +208,7 @@ func (s *Service) browseAssets(
 
 	countParams := db.CountBrowseAssetsParams{
 		Kind: f.Kind, NsfwVisibility: string(visibility),
-		CreatorID: uuidToNullable(creatorID), CreatorAllowsNsfw: creatorShowsNSFW,
+		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 		Platform: platform, Formats: formats,
@@ -224,9 +223,8 @@ func (s *Service) browseAssets(
 		suppressed, err := queries.CountSuppressedBrowseAssets(
 			ctx, db.CountSuppressedBrowseAssetsParams{
 				Kind: f.Kind, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
-				CreatorID:         uuidToNullable(creatorID),
-				CreatorAllowsNsfw: creatorShowsNSFW,
-				Platform:          platform, Formats: formats,
+				CreatorID: uuidToNullable(creatorID),
+				Platform:  platform, Formats: formats,
 				FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 			},
 		)
@@ -256,12 +254,12 @@ func (s *Service) browseAssets(
 	return page, nil
 }
 
-func profileListingValues(scope *ProfileListingScope) (*uuid.UUID, bool, bool) {
+func profileListingValues(scope *ProfileListingScope) (*uuid.UUID, bool) {
 	if scope == nil {
-		return nil, false, false
+		return nil, false
 	}
 	ownedByViewer := scope.ViewerID != nil && *scope.ViewerID == scope.CreatorID
-	return &scope.CreatorID, scope.CreatorShowsNSFW, ownedByViewer
+	return &scope.CreatorID, ownedByViewer
 }
 
 func browsePlatforms() []format.App { return format.Apps() }

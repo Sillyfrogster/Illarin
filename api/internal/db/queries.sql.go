@@ -539,22 +539,20 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
         and ($1::boolean
              or (a.discovery = 'listed' and a.withheld_at is null)))
    )
-   and ($2::uuid is null or $1::boolean
-        or $3::boolean or not a.is_nsfw)
-   and ($4::text = '' or a.kind = $4::text)
+   and ($3::text = '' or a.kind = $3::text)
    and ($1::boolean
-        or $5::text <> 'hidden' or not a.is_nsfw)
-   and ($6::text = '' or exists (
+        or $4::text <> 'hidden' or not a.is_nsfw)
+   and ($5::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($7::text[])
+         where offered.target ->> 'format' = any($6::text[])
    ))
-   and (cardinality($8::text[]) = 0 or not exists (
+   and (cardinality($7::text[]) = 0 or not exists (
         select 1
-          from unnest($8::text[]) with ordinality as chosen(key, at)
-          join unnest($9::int[]) with ordinality as lows(low, at)
+          from unnest($7::text[]) with ordinality as chosen(key, at)
+          join unnest($8::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($10::int[]) with ordinality as highs(high, at)
+          join unnest($9::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -562,42 +560,41 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
                  and (highs.high < 0
                       or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($11::text = ''
-        or position($11::text in lower(a.name)) > 0
-        or position($11::text in lower(a.blurb)) > 0
-        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
-   and (cardinality($13::text[]) = 0 or not exists (
-        select 1 from unnest($13::text[]) wanted(tag)
+   and ($10::text = ''
+        or position($10::text in lower(a.name)) > 0
+        or position($10::text in lower(a.blurb)) > 0
+        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
+   and (cardinality($12::text[]) = 0 or not exists (
+        select 1 from unnest($12::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
          )
    ))
-   and ($14::timestamptz is null
+   and ($13::timestamptz is null
         or (a.created_at, a.id)
-           < ($14::timestamptz, $15::uuid))
+           < ($13::timestamptz, $14::uuid))
  order by a.created_at desc, a.id desc
- limit $16
+ limit $15
 `
 
 type BrowseAssetsParams struct {
-	OwnProfile        bool
-	CreatorID         pgtype.UUID
-	CreatorAllowsNsfw bool
-	Kind              string
-	NsfwVisibility    string
-	Platform          string
-	Formats           []string
-	FacetKeys         []string
-	FacetLows         []int32
-	FacetHighs        []int32
-	SearchText        string
-	Author            string
-	Tags              []string
-	Before            pgtype.Timestamptz
-	BeforeID          pgtype.UUID
-	PageSize          int32
+	OwnProfile     bool
+	CreatorID      pgtype.UUID
+	Kind           string
+	NsfwVisibility string
+	Platform       string
+	Formats        []string
+	FacetKeys      []string
+	FacetLows      []int32
+	FacetHighs     []int32
+	SearchText     string
+	Author         string
+	Tags           []string
+	Before         pgtype.Timestamptz
+	BeforeID       pgtype.UUID
+	PageSize       int32
 }
 
 type BrowseAssetsRow struct {
@@ -620,7 +617,6 @@ func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]B
 	rows, err := q.db.Query(ctx, browseAssets,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.CreatorAllowsNsfw,
 		arg.Kind,
 		arg.NsfwVisibility,
 		arg.Platform,
@@ -796,22 +792,20 @@ select count(*)
         and ($1::boolean
              or (a.discovery = 'listed' and a.withheld_at is null)))
    )
-   and ($2::uuid is null or $1::boolean
-        or $3::boolean or not a.is_nsfw)
-   and ($4::text = '' or a.kind = $4::text)
+   and ($3::text = '' or a.kind = $3::text)
    and ($1::boolean
-        or $5::text <> 'hidden' or not a.is_nsfw)
-   and ($6::text = '' or exists (
+        or $4::text <> 'hidden' or not a.is_nsfw)
+   and ($5::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($7::text[])
+         where offered.target ->> 'format' = any($6::text[])
    ))
-   and (cardinality($8::text[]) = 0 or not exists (
+   and (cardinality($7::text[]) = 0 or not exists (
         select 1
-          from unnest($8::text[]) with ordinality as chosen(key, at)
-          join unnest($9::int[]) with ordinality as lows(low, at)
+          from unnest($7::text[]) with ordinality as chosen(key, at)
+          join unnest($8::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($10::int[]) with ordinality as highs(high, at)
+          join unnest($9::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -819,13 +813,13 @@ select count(*)
                  and (highs.high < 0
                       or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($11::text = ''
-        or position($11::text in lower(a.name)) > 0
-        or position($11::text in lower(a.blurb)) > 0
-        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
-   and (cardinality($13::text[]) = 0 or not exists (
-        select 1 from unnest($13::text[]) wanted(tag)
+   and ($10::text = ''
+        or position($10::text in lower(a.name)) > 0
+        or position($10::text in lower(a.blurb)) > 0
+        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
+   and (cardinality($12::text[]) = 0 or not exists (
+        select 1 from unnest($12::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -834,26 +828,24 @@ select count(*)
 `
 
 type CountBrowseAssetsParams struct {
-	OwnProfile        bool
-	CreatorID         pgtype.UUID
-	CreatorAllowsNsfw bool
-	Kind              string
-	NsfwVisibility    string
-	Platform          string
-	Formats           []string
-	FacetKeys         []string
-	FacetLows         []int32
-	FacetHighs        []int32
-	SearchText        string
-	Author            string
-	Tags              []string
+	OwnProfile     bool
+	CreatorID      pgtype.UUID
+	Kind           string
+	NsfwVisibility string
+	Platform       string
+	Formats        []string
+	FacetKeys      []string
+	FacetLows      []int32
+	FacetHighs     []int32
+	SearchText     string
+	Author         string
+	Tags           []string
 }
 
 func (q *Queries) CountBrowseAssets(ctx context.Context, arg CountBrowseAssetsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countBrowseAssets,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.CreatorAllowsNsfw,
 		arg.Kind,
 		arg.NsfwVisibility,
 		arg.Platform,
@@ -893,20 +885,18 @@ select count(*)
    and a.withheld_at is null
    and a.deleted_at is null
    and ($1::uuid is null or a.owner_id = $1::uuid)
-   and ($1::uuid is null
-        or $2::boolean or not a.is_nsfw)
-   and ($3::text = '' or a.kind = $3::text)
-   and ($4::text = '' or exists (
+   and ($2::text = '' or a.kind = $2::text)
+   and ($3::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($5::text[])
+         where offered.target ->> 'format' = any($4::text[])
    ))
-   and (cardinality($6::text[]) = 0 or not exists (
+   and (cardinality($5::text[]) = 0 or not exists (
         select 1
-          from unnest($6::text[]) with ordinality as chosen(key, at)
-          join unnest($7::int[]) with ordinality as lows(low, at)
+          from unnest($5::text[]) with ordinality as chosen(key, at)
+          join unnest($6::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($8::int[]) with ordinality as highs(high, at)
+          join unnest($7::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -914,13 +904,13 @@ select count(*)
                  and (highs.high < 0
                       or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($9::text = ''
-        or position($9::text in lower(a.name)) > 0
-        or position($9::text in lower(a.blurb)) > 0
-        or position($9::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($10::text = '' or lower(coalesce(owner.username, '')) = $10::text)
-   and (cardinality($11::text[]) = 0 or not exists (
-        select 1 from unnest($11::text[]) wanted(tag)
+   and ($8::text = ''
+        or position($8::text in lower(a.name)) > 0
+        or position($8::text in lower(a.blurb)) > 0
+        or position($8::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($9::text = '' or lower(coalesce(owner.username, '')) = $9::text)
+   and (cardinality($10::text[]) = 0 or not exists (
+        select 1 from unnest($10::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -930,23 +920,21 @@ select count(*)
 `
 
 type CountSuppressedBrowseAssetsParams struct {
-	CreatorID         pgtype.UUID
-	CreatorAllowsNsfw bool
-	Kind              string
-	Platform          string
-	Formats           []string
-	FacetKeys         []string
-	FacetLows         []int32
-	FacetHighs        []int32
-	SearchText        string
-	Author            string
-	Tags              []string
+	CreatorID  pgtype.UUID
+	Kind       string
+	Platform   string
+	Formats    []string
+	FacetKeys  []string
+	FacetLows  []int32
+	FacetHighs []int32
+	SearchText string
+	Author     string
+	Tags       []string
 }
 
 func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSuppressedBrowseAssetsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countSuppressedBrowseAssets,
 		arg.CreatorID,
-		arg.CreatorAllowsNsfw,
 		arg.Kind,
 		arg.Platform,
 		arg.Formats,
