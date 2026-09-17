@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -117,7 +118,7 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	return found, nil
 }
 
-func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit) (PublicProfile, error) {
+func (s *Service) SaveProfile(ctx context.Context, owner api.Account, in ProfileEdit) (PublicProfile, error) {
 	edit, err := validateProfileEdit(in)
 	if err != nil {
 		return PublicProfile{}, err
@@ -160,7 +161,7 @@ func (s *Service) SaveProfile(ctx context.Context, owner Account, in ProfileEdit
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) (PublicProfile, error) {
+func (s *Service) SetAvatar(ctx context.Context, owner api.Account, file io.Reader) (PublicProfile, error) {
 	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
 		return PublicProfile{}, err
 	}
@@ -193,7 +194,7 @@ func (s *Service) SetAvatar(ctx context.Context, owner Account, file io.Reader) 
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-func (s *Service) RemoveAvatar(ctx context.Context, owner Account) (PublicProfile, error) {
+func (s *Service) RemoveAvatar(ctx context.Context, owner api.Account) (PublicProfile, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return PublicProfile{}, fmt.Errorf("begin avatar removal: %w", err)

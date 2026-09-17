@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postSummary struct {
@@ -35,12 +37,12 @@ type postArchive struct {
 
 func (s publicationStack) browse(t *testing.T, query string) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts"+query, nil))
+	return apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts"+query, nil))
 }
 
 func (s publicationStack) readableCategories(t *testing.T) []publicationCategory {
 	t.Helper()
-	response := send(t, s.router,
+	response := apitest.Send(t, s.router,
 		httptest.NewRequest(http.MethodGet, "/v1/post-categories", nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the blog categories status = %d: %s", response.Code, response.Body.String())

@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func serve(t *testing.T, handler http.Handler, timeouts Timeouts) string {
@@ -50,7 +53,7 @@ func TestAConnectionThatNeverFinishesItsHeadersIsCutOff(t *testing.T) {
 
 func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouterWith(t, 1<<20, Deadlines{
+	r, session := harness.NewVerifiedRouterWith(t, 1<<20, api.Deadlines{
 		JSON:     300 * time.Millisecond,
 		Upload:   30 * time.Second,
 		Download: 30 * time.Second,
@@ -59,7 +62,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 	})
 	base := serve(t, r, Timeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})
 
-	built := uploadRequest(t, exampleMetadata("Trickle"), []byte("bytes that take their time"))
+	built := apitest.UploadRequest(t, apitest.ExampleMetadata("Trickle"), []byte("bytes that take their time"))
 	form, err := io.ReadAll(built.Body)
 	if err != nil {
 		t.Fatalf("read form: %v", err)
@@ -71,7 +74,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		t.Fatalf("build request: %v", err)
 	}
 	req.Header.Set("Content-Type", built.Header.Get("Content-Type"))
-	authorized(req, session)
+	apitest.Authorized(req, session)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("post: %v", err)

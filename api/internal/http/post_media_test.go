@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postPicture struct {
@@ -36,8 +38,8 @@ func (s publicationStack) upload(
 	t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
-	writeMetadataPart(t, form, map[string]any{"purpose": purpose})
-	writeFilePartNamed(t, form, "picture.png", file)
+	apitest.WriteMetadataPart(t, form, map[string]any{"purpose": purpose})
+	apitest.WriteFilePartNamed(t, form, "picture.png", file)
 	if err := form.Close(); err != nil {
 		t.Fatalf("close picture form: %v", err)
 	}
@@ -45,7 +47,7 @@ func (s publicationStack) upload(
 		http.MethodPost, "/v1/publication/posts/"+postID+"/media", &body,
 	)
 	request.Header.Set("Content-Type", form.FormDataContentType())
-	return send(t, s.router, authorized(request, session))
+	return apitest.Send(t, s.router, apitest.Authorized(request, session))
 }
 
 func (s publicationStack) uploaded(
@@ -77,7 +79,7 @@ func bodyWithPicture(mediaID, alt string) json.RawMessage {
 
 func (s publicationStack) fetch(t *testing.T, address string) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, httptest.NewRequest(http.MethodGet, address, nil))
+	return apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, address, nil))
 }
 
 func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
@@ -86,7 +88,7 @@ func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
 	session := stack.admin(t, "pictures@example.com", "illarin.pictures")
 	draft := stack.illarinDraft(t, session, "The workspace has pictures")
 
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 1200, 600))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 1200, 600))
 	if picture.PostID != draft.ID || picture.Purpose != "document" {
 		t.Fatalf("picture = %+v, want it owned by the post as a document picture", picture)
 	}
@@ -131,7 +133,7 @@ func TestAPostCannotPlaceAPictureAnotherPostOwns(t *testing.T) {
 	theirs := stack.illarinDraft(t, session, "The post that owns the picture")
 	mine := stack.illarinDraft(t, session, "The post that wants it")
 
-	picture := stack.uploaded(t, session, theirs.ID, "document", httpTestPNG(t, 400, 400))
+	picture := stack.uploaded(t, session, theirs.ID, "document", apitest.PNG(t, 400, 400))
 	refused := stack.save(t, session, mine.ID, finished(mine, map[string]any{
 		"document": bodyWithPicture(picture.ID, "A picture from somewhere else"),
 	}))
@@ -150,7 +152,7 @@ func TestAPictureIsPlacedOnlyWhereItWasUploadedFor(t *testing.T) {
 	session := stack.admin(t, "purpose@example.com", "illarin.purpose")
 	draft := stack.illarinDraft(t, session, "One picture, one job")
 
-	header := stack.uploaded(t, session, draft.ID, "header", httpTestPNG(t, 1600, 900))
+	header := stack.uploaded(t, session, draft.ID, "header", apitest.PNG(t, 1600, 900))
 	refused := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(header.ID, "The header, placed in the body"),
 	}))
@@ -169,7 +171,7 @@ func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
 	session := stack.admin(t, "alt@example.com", "illarin.alt")
 	draft := stack.illarinDraft(t, session, "Pictures say what they show")
 
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
 	refused := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(picture.ID, "   "),
 	}))
@@ -181,7 +183,7 @@ func TestEveryDisplayedPictureCarriesAlternativeText(t *testing.T) {
 		t.Errorf("refusal does not name the picture: %s", refused.Body.String())
 	}
 
-	header := stack.uploaded(t, session, draft.ID, "header", httpTestPNG(t, 1600, 900))
+	header := stack.uploaded(t, session, draft.ID, "header", apitest.PNG(t, 1600, 900))
 	undescribed := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 		"header": map[string]any{"mediaId": header.ID, "alt": " "},
 	}))
@@ -200,14 +202,14 @@ func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
 	session := stack.admin(t, "replace@example.com", "illarin.replace")
 	draft := stack.illarinDraft(t, session, "The picture that was replaced")
 
-	first := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 900, 300))
+	first := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 900, 300))
 	stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(first.ID, "The first picture"),
 	}))
 	stack.published(t, session, draft.ID)
 	published := stack.reader(t, draft.Slug).Media[0].URL
 
-	second := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 600, 600))
+	second := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 600, 600))
 	if second.ID == first.ID {
 		t.Fatal("replacing a picture reused the address readers already hold")
 	}
@@ -237,7 +239,7 @@ func TestAnUploadRefusesBytesThatAreNotAPicture(t *testing.T) {
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("uploading text status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
-	unknown := stack.upload(t, session, draft.ID, "banner", httpTestPNG(t, 100, 100))
+	unknown := stack.upload(t, session, draft.ID, "banner", apitest.PNG(t, 100, 100))
 	if unknown.Code != http.StatusBadRequest {
 		t.Fatalf("an unknown purpose status = %d, want 400: %s", unknown.Code, unknown.Body.String())
 	}
@@ -250,7 +252,7 @@ func TestOnlyTheEditorOfAPostUploadsPicturesToIt(t *testing.T) {
 	outsider := stack.member(t, "outsider@example.com", "outsider.account")
 	draft := stack.illarinDraft(t, session, "Not everyone writes here")
 
-	refused := stack.upload(t, outsider, draft.ID, "document", httpTestPNG(t, 200, 200))
+	refused := stack.upload(t, outsider, draft.ID, "document", apitest.PNG(t, 200, 200))
 	if refused.Code != http.StatusForbidden {
 		t.Fatalf("an outsider uploading status = %d, want 403: %s",
 			refused.Code, refused.Body.String())
@@ -259,7 +261,7 @@ func TestOnlyTheEditorOfAPostUploadsPicturesToIt(t *testing.T) {
 
 func (s publicationStack) reload(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id, nil,
 	), session))
 	if response.Code != http.StatusOK {

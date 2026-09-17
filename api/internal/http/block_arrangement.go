@@ -4,13 +4,14 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) AddAssetBlock(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -18,13 +19,13 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "adding a block")
+	owner, ok := api.Verified(c, "adding a block")
 	if !ok {
 		return
 	}
 	var request AddAssetBlockRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name the block to add and the element it starts with."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Name the block to add and the element it starts with.")
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
@@ -36,15 +37,15 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case errors.Is(err, asset.ErrInvalidBlock):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add the block."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not add the block.")
 	default:
 		blocks, conversionErr := toAPIBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the new block."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the new block.")
 			return
 		}
 		c.JSON(http.StatusCreated, blocks[0])
@@ -52,7 +53,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 }
 
 func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -60,13 +61,13 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "arranging an asset")
+	owner, ok := api.Verified(c, "arranging an asset")
 	if !ok {
 		return
 	}
 	var request ArrangeAssetBlocksRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send every block once with its id, hidden state and width."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send every block once with its id, hidden state and width.")
 		return
 	}
 	arrangement := make([]asset.BlockArrangement, len(request.Blocks))
@@ -82,15 +83,15 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case errors.Is(err, asset.ErrInvalidBlock):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not arrange the blocks."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not arrange the blocks.")
 	default:
 		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the arranged blocks."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return
 		}
 		c.JSON(http.StatusOK, blocks)
@@ -98,11 +99,11 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 }
 
 func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	blockID, ok := pathID(c, "blockId")
+	blockID, ok := api.PathID(c, "blockId")
 	if !ok {
 		return
 	}
@@ -110,7 +111,7 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "removing a block")
+	owner, ok := api.Verified(c, "removing a block")
 	if !ok {
 		return
 	}
@@ -121,22 +122,22 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
+		api.Refuse(c, http.StatusNotFound, "No such block.")
 	case errors.Is(err, asset.ErrInvalidBlock):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove the block."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not remove the block.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	blockID, ok := pathID(c, "blockId")
+	blockID, ok := api.PathID(c, "blockId")
 	if !ok {
 		return
 	}
@@ -144,13 +145,13 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "moving block content")
+	owner, ok := api.Verified(c, "moving block content")
 	if !ok {
 		return
 	}
 	var request MoveAssetBlockContentRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Choose the block that should keep this content."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Choose the block that should keep this content.")
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
@@ -161,15 +162,15 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
+		api.Refuse(c, http.StatusNotFound, "No such block.")
 	case errors.Is(err, asset.ErrInvalidBlock):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not move the block content."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not move the block content.")
 	default:
 		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the arranged blocks."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return
 		}
 		c.JSON(http.StatusOK, blocks)

@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 )
 
 func TestWatchersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T) {
@@ -95,7 +96,7 @@ func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 func TestAnUnlistedAssetStillTellsItsWatchers(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	unlisted := send(t, s.router, authorizedJSONRequest(
+	unlisted := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
 		t, http.MethodPut, "/v1/assets/"+s.assetID+"/discovery", `{"discovery":"unlisted"}`, s.creator,
 	))
 	if unlisted.Code != http.StatusNoContent {
@@ -163,7 +164,7 @@ func TestUpdatesFoldIntoOneUnreadEntryThatTheNextReadUnfolds(t *testing.T) {
 func TestAFoldedEntryMovesBackToTheTopOfTheInbox(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	other := s.with(publishedTestAsset(t, s.router, s.creator))
+	other := s.with(apitest.PublishedAsset(t, s.router, s.creator))
 	watcher := s.reader(t, "watcher@example.com", "moon.watcher")
 	s.watch(t, watcher)
 	other.watch(t, watcher)
@@ -208,11 +209,11 @@ func TestAFoldedEntrysNinetyDaysRunFromTheUpdateItLastAbsorbed(t *testing.T) {
 	if waited <= 0 {
 		t.Fatalf("the folded entry still reads as arriving at %s", arrived)
 	}
-	s.sweep(t, arrived.Add(notification.Retention).Add(waited/2))
+	s.sweep(t, arrived.Add(notify.Retention).Add(waited/2))
 	if kept := s.inbox(t, watcher, ""); len(kept.Items) != 1 {
 		t.Fatalf("the sweeper counted the folded entry from the update it replaced")
 	}
-	s.sweep(t, absorbed.Add(notification.Retention).Add(waited))
+	s.sweep(t, absorbed.Add(notify.Retention).Add(waited))
 	if swept := s.inbox(t, watcher, ""); len(swept.Items) != 0 {
 		t.Fatalf("the folded entry outlived its ninety days: %+v", swept.Items)
 	}
@@ -265,8 +266,8 @@ func TestAnUpdateEntryOffersASendToEachInstanceHoldingAnOlderCopy(t *testing.T) 
 	reader := s.reader(t, "reader@example.com", "moon.reader")
 	desk := s.install(t, reader, "Reading desk")
 	laptop := s.install(t, reader, "Travel laptop")
-	tablet := linkDeviceInstance(t, s.router, reader, "Lumiverse", "Old tablet", []string{librarySyncScope})
-	reportInstalled(t, s.router, tablet.AccessToken, "", s.assetID)
+	tablet := apitest.LinkDeviceInstance(t, s.router, reader, "Lumiverse", "Old tablet", []string{apitest.LibrarySyncScope})
+	apitest.ReportInstalled(t, s.router, tablet.AccessToken, "", s.assetID)
 
 	s.describe(t, "A change worth sending on")
 	s.publishUpdate(t, `{"summary":"A change worth sending on"}`)
@@ -308,12 +309,12 @@ type updateInboxStack struct {
 func newUpdateInboxStack(t *testing.T) updateInboxStack {
 	t.Helper()
 	s := newInboxStack(t)
-	return updateInboxStack{inboxStack: s, assetID: publishedTestAsset(t, s.router, s.creator)}
+	return updateInboxStack{inboxStack: s, assetID: apitest.PublishedAsset(t, s.router, s.creator)}
 }
 
 func (s updateInboxStack) reader(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
-	return verifiedSignUp(t, s.router, s.outbox, email, handle)
+	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
 }
 
 func (s updateInboxStack) watch(t *testing.T, session *http.Cookie) {
@@ -328,17 +329,17 @@ func (s updateInboxStack) stopWatching(t *testing.T, session *http.Cookie) {
 
 func (s updateInboxStack) setWatch(t *testing.T, session *http.Cookie, method string) {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(method, "/v1/assets/"+s.assetID+"/watch", nil), session))
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/assets/"+s.assetID+"/watch", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("%s watch status = %d, want 200: %s", method, response.Code, response.Body.String())
 	}
 }
 
-func (s updateInboxStack) install(t *testing.T, session *http.Cookie, instance string) tokenGrant {
+func (s updateInboxStack) install(t *testing.T, session *http.Cookie, instance string) apitest.TokenGrant {
 	t.Helper()
-	grant := linkDeviceInstance(t, s.router, session, "Lumiverse", instance, []string{receiveScope, librarySyncScope})
+	grant := apitest.LinkDeviceInstance(t, s.router, session, "Lumiverse", instance, []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 	declareTargets(t, s.router, grant.AccessToken, []string{"test_opaque"})
-	reportInstalled(t, s.router, grant.AccessToken, "", s.assetID)
+	apitest.ReportInstalled(t, s.router, grant.AccessToken, "", s.assetID)
 	return grant
 }
 
@@ -349,7 +350,7 @@ func (s updateInboxStack) with(assetID string) updateInboxStack {
 
 func (s updateInboxStack) deleteAsset(t *testing.T) {
 	t.Helper()
-	response := send(t, s.router, browserRequest(
+	response := apitest.Send(t, s.router, apitest.BrowserRequest(
 		t, http.MethodDelete, "/v1/assets/"+s.assetID, nil, s.creator,
 	))
 	if response.Code != http.StatusNoContent {
@@ -359,7 +360,7 @@ func (s updateInboxStack) deleteAsset(t *testing.T) {
 
 func (s updateInboxStack) restoreAsset(t *testing.T) {
 	t.Helper()
-	response := send(t, s.router, browserRequest(
+	response := apitest.Send(t, s.router, apitest.BrowserRequest(
 		t, http.MethodPost, "/v1/assets/"+s.assetID+"/restore", nil, s.creator,
 	))
 	if response.Code != http.StatusNoContent {
@@ -370,10 +371,10 @@ func (s updateInboxStack) restoreAsset(t *testing.T) {
 func (s updateInboxStack) describe(t *testing.T, text string) {
 	t.Helper()
 	started := fetchStartedAsset(t, s.router, s.creator, s.assetID)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(fmt.Sprintf(`{"text":%q}`, text))
-	if got := saveBlock(t, s.router, s.creator, s.assetID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, s.router, s.creator, s.assetID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description = %d, want 200: %s", got.Code, got.Body.String())
 	}
 }

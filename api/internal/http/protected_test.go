@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/google/uuid"
@@ -16,25 +18,25 @@ import (
 func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	t.Parallel()
 	router, session, pool := newLinkingRouter(t)
-	grant := linkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{receiveScope})
+	grant := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	declareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
 
 	started := startPreset(t, router, session, "lumiverse")
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "Install this complete prompt."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	unsupported := linkDeviceInstance(t, router, session, "Other app", "tablet", []string{receiveScope})
+	unsupported := apitest.LinkDeviceInstance(t, router, session, "Other app", "tablet", []string{apitest.ReceiveScope})
 	declareTargets(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
 	for _, state := range assetInstances(t, router, session, started.ID).Items {
 		if state.InstanceID == unsupported.Instance.ID && state.CanReceive {
@@ -45,7 +47,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 		t.Fatalf("queue incompatible instance = %d, want 409: %s", got.Code, got.Body.String())
 	}
 
-	ordinary := send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+started.ID+"/preset_lumiverse", nil))
+	ordinary := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+started.ID+"/preset_lumiverse", nil))
 	if ordinary.Code != http.StatusNotFound || strings.Contains(ordinary.Body.String(), privateText) {
 		t.Fatalf("ordinary export = %d %s", ordinary.Code, ordinary.Body.String())
 	}
@@ -53,7 +55,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create export store: %v", err)
 	}
-	linkedExport, err := asset.NewService(pool, testRegistry(t), store).DownloadExportForLinkedInstance(
+	linkedExport, err := asset.NewService(pool, apitest.Registry(t), store).DownloadExportForLinkedInstance(
 		context.Background(), uuid.MustParse(started.ID), "preset_lumiverse",
 	)
 	if err != nil {
@@ -67,7 +69,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	work := decodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 	if work.Format != "preset_lumiverse" {
 		t.Fatalf("delivery format = %q, want Lumiverse", work.Format)
 	}
@@ -87,7 +89,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	t.Parallel()
 	router, session, _ := newLinkingRouter(t)
 	started := startPreset(t, router, session, "lumiverse")
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	groupID := uuid.NewString()
 	const privateText = "disclosure-canary-7bb627e4"
 	core.Elements[0].Content = json.RawMessage(`{
@@ -99,17 +101,17 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader page status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -129,15 +131,15 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 		}
 	}
 
-	strangerSession := signUp(t, router, "reader@example.com", "signed.reader")
-	stranger := send(t, router, authorized(
+	strangerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
+	stranger := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), strangerSession,
 	))
 	if stranger.Code != http.StatusOK || strings.Contains(stranger.Body.String(), privateText) {
 		t.Fatalf("signed-in reader response = %d %s", stranger.Code, stranger.Body.String())
 	}
 
-	search := send(t, router, httptest.NewRequest(
+	search := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?q="+privateText, nil,
 	))
 	if search.Code != http.StatusOK {
@@ -162,25 +164,25 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 		t.Fatal("the ordinary preset has no generated export target to protect")
 	}
 
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "ordinary-export-canary-86fd7431"
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{
 		"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true
 	}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if got := saveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := saveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	for _, target := range started.Downloads {
-		response := send(t, router, httptest.NewRequest(
+		response := apitest.Send(t, router, httptest.NewRequest(
 			http.MethodGet, "/download/"+started.ID+"/"+target.Format, nil,
 		))
 		if response.Code != http.StatusNotFound {
@@ -212,22 +214,22 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 
 func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, assets, pool := newVerifiedIngestRouterWithPool(
+	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(
 		t, lumiverseIngestRegistry(t),
 	)
-	metadata := exampleMetadata("Protected original")
+	metadata := apitest.ExampleMetadata("Protected original")
 	metadata["filename"] = "protected-original.json"
-	finished := uploadAndFinish(t, router, ownerSession, assets, metadata, []byte(keyedSealedPreset))
+	finished := apitest.UploadAndFinish(t, router, ownerSession, assets, metadata, []byte(keyedSealedPreset))
 	assetID := assetIDFromIngest(t, finished)
-	readerSession := signUp(t, router, "original-reader@example.com", "original.reader")
+	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
 	for name, request := range map[string]*http.Request{
 		"signed out": httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil),
-		"non-owner": authorized(
+		"non-owner": apitest.Authorized(
 			httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), readerSession,
 		),
 	} {
-		response := send(t, router, request)
+		response := apitest.Send(t, router, request)
 		if response.Code != http.StatusNotFound || response.Header().Get("X-Accel-Redirect") != "" ||
 			strings.Contains(response.Body.String(), "Exact private prompt.") {
 			t.Errorf("%s source response = %d, headers %v, body %s",
@@ -235,7 +237,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 		}
 	}
 
-	owner := send(t, router, authorized(
+	owner := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), ownerSession,
 	))
 	if owner.Code != http.StatusOK || owner.Header().Get("X-Accel-Redirect") == "" || owner.Body.Len() != 0 {
@@ -258,16 +260,16 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 
 func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testing.T) {
 	t.Parallel()
-	_, router, session, assets, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
+	_, router, session, assets, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
-	coreBlock := blockNamed(t, started.Blocks, "preset_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"Old sealed prompt","role":"system","text":"Private text with an old owner.","protected":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
 	}
 
@@ -278,7 +280,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 			{"id":"new-public-prompt","name":"New public prompt","role":"system","content":"Public replacement text.","enabled":true}
 		]
 	}`)
-	accepted := send(t, router, authorized(
+	accepted := apitest.Send(t, router, apitest.Authorized(
 		revisionRequest(t, started.ID, "replacement.json", replacement), session,
 	))
 	if accepted.Code != http.StatusAccepted {

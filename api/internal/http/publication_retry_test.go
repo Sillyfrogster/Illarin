@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 )
@@ -24,7 +25,7 @@ func (s destinationStack) activeFor(t *testing.T, name string, events []string) 
 	if err != nil {
 		t.Fatalf("encode destination: %v", err)
 	}
-	response := send(t, s.router, authorized(jsonRequest(t,
+	response := apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations", string(body),
 	), s.authority))
 	if response.Code != http.StatusCreated {
@@ -52,7 +53,7 @@ func (s destinationStack) rotate(
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations/"+id+"/secret", "",
 	), session))
 }
@@ -84,7 +85,7 @@ func (s destinationStack) allDeliveries(
 	query string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(httptest.NewRequest(
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/deliveries"+query, nil,
 	), session))
 }
@@ -108,14 +109,14 @@ func (s destinationStack) replay(
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/deliveries/"+id+"/replay", "",
 	), session))
 }
 
 func (s destinationStack) attempts(t *testing.T, session *http.Cookie, id string) attemptList {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/deliveries/"+id+"/attempts", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -255,7 +256,7 @@ func TestAnEndpointAskingIllarinToWaitIsWaitedFor(t *testing.T) {
 	ready := stack.readyPost(t)
 	stack.publishedTo(t, ready, made.Destination.ID, "")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusTooManyRequests, "" })
-	held := stack.handlers.publications
+	held := stack.handlers.Publications
 
 	at := time.Now().UTC()
 	if _, err := held.SendDueDeliveries(t.Context(), at); err != nil {
@@ -354,7 +355,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 		}
 	}
 
-	forgotten, err := stack.handlers.publications.ForgetOldSecrets(
+	forgotten, err := stack.handlers.Publications.ForgetOldSecrets(
 		t.Context(), time.Now().Add(publication.SecretOverlap+time.Hour),
 	)
 	if err != nil {

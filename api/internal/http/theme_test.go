@@ -6,19 +6,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) startedAsset {
+func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedAsset {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"theme","app":"`+app+`"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {
 		t.Fatalf("start a theme for %s: status = %d, want 201: %s",
 			app, response.Code, response.Body.String())
 	}
-	var started startedAsset
+	var started apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started theme: %v", err)
 	}
@@ -27,12 +29,12 @@ func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) 
 
 func TestAThemeAsksWhichAppsNamesItUsesAndSeedsThoseNames(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"theme"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest ||
 		!strings.Contains(response.Body.String(), "sillytavern") ||
 		!strings.Contains(response.Body.String(), "lumiverse") {
@@ -42,8 +44,8 @@ func TestAThemeAsksWhichAppsNamesItUsesAndSeedsThoseNames(t *testing.T) {
 
 	for _, app := range []string{"sillytavern", "lumiverse"} {
 		started := startTheme(t, r, session, app)
-		core := blockNamed(t, started.Blocks, "theme_core")
-		stylesheet := blockNamed(t, started.Blocks, "stylesheet")
+		core := apitest.BlockNamed(t, started.Blocks, "theme_core")
+		stylesheet := apitest.BlockNamed(t, started.Blocks, "stylesheet")
 		if !core.Required || core.Hideable || core.Layout != "duo" || core.Width != "full" {
 			t.Errorf("%s theme core = %+v, want the fixed full-width palette", app, core)
 		}

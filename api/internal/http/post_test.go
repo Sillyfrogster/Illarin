@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postAuthor struct {
@@ -99,7 +101,7 @@ func (s publicationStack) start(
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts", body,
 	), session))
 }
@@ -124,7 +126,7 @@ func (s publicationStack) save(
 	if err != nil {
 		t.Fatalf("encode working copy: %v", err)
 	}
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id, string(body),
 	), session))
 }
@@ -165,7 +167,7 @@ func (s publicationStack) publish(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	version := 1
-	reading := send(t, s.router, authorized(
+	reading := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
 	))
 	if reading.Code == http.StatusOK {
@@ -181,7 +183,7 @@ func (s publicationStack) publishAt(
 	version int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/publish",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
@@ -189,7 +191,7 @@ func (s publicationStack) publishAt(
 
 func (s publicationStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
 	))
 	if response.Code != http.StatusOK {
@@ -223,7 +225,7 @@ func (s publicationStack) publishedAt(
 
 func (s publicationStack) read(t *testing.T, slug string) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts/"+slug, nil))
+	return apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts/"+slug, nil))
 }
 
 func (s publicationStack) reader(t *testing.T, slug string) publicPost {
@@ -358,7 +360,7 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 		`{"grantId":%q,"categoryId":%q,"title":"First post"}`, first.grant.ID, announcement.ID,
 	))
 
-	reading := send(t, stack.router, authorized(
+	reading := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), second,
 	))
 	if reading.Code != http.StatusForbidden {
@@ -371,7 +373,7 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 		t.Errorf("another contributor published the post: %d", code)
 	}
 
-	listed := send(t, stack.router, authorized(
+	listed := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts", nil), second,
 	))
 	var mine postList
@@ -399,7 +401,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 	for name, session := range map[string]*http.Cookie{
 		"moderator": moderator, "ordinary account": ordinary,
 	} {
-		response := send(t, stack.router, authorized(
+		response := apitest.Send(t, stack.router, apitest.Authorized(
 			httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
 		))
 		if response.Code != http.StatusForbidden {
@@ -443,7 +445,7 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
 		t.Error("the conflict says nothing about what to do")
 	}
 
-	current := send(t, stack.router, authorized(
+	current := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
 	))
 	if title := decodePost(t, current).Title; title != "The newer title" {
@@ -597,7 +599,7 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	saveProfile(t, stack.router, session, `{"displayName":"The Editor","links":[]}`)
+	apitest.SaveProfile(t, stack.router, session, `{"displayName":"The Editor","links":[]}`)
 
 	draft := stack.illarinDraft(t, session, "Signed and dated")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -608,7 +610,7 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 		t.Fatalf("byline name = %q", found.Byline.DisplayName)
 	}
 
-	saveProfile(t, stack.router, session, `{"displayName":"Someone Else","links":[]}`)
+	apitest.SaveProfile(t, stack.router, session, `{"displayName":"Someone Else","links":[]}`)
 	after := stack.reader(t, draft.Slug)
 	if after.Byline.DisplayName != "The Editor" {
 		t.Errorf("a profile change rewrote the byline to %q", after.Byline.DisplayName)
@@ -696,14 +698,14 @@ func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	stack.published(t, writer.session, draft.ID)
 
-	revoke := send(t, stack.router, authorized(jsonRequest(t,
+	revoke := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, "",
 	), stack.authority))
 	if revoke.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d: %s", revoke.Code, revoke.Body.String())
 	}
 
-	response := send(t, stack.router, authorized(
+	response := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), writer.session,
 	))
 	if response.Code != http.StatusForbidden {
@@ -769,7 +771,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 			revisions, events, bylines)
 	}
 
-	current := send(t, stack.router, authorized(
+	current := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
 	))
 	if status := decodePost(t, current).Status; status != "draft" {

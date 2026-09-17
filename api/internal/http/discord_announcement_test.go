@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 const (
@@ -149,7 +151,7 @@ func (s destinationStack) addChannel(
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/channels", body,
 	), session))
 }

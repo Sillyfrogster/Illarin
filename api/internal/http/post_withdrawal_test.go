@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type tombstone struct {
@@ -30,7 +32,7 @@ func (s publicationStack) withdraw(
 	id, body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/withdraw", body,
 	), session))
 }
@@ -58,7 +60,7 @@ func (s publicationStack) republish(
 	id, body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/republish", body,
 	), session))
 }
@@ -365,7 +367,7 @@ func TestAWithdrawnPostIsPutBackByRepublishingAndNotByPublishing(t *testing.T) {
 		t.Fatalf("publishing a withdrawn post returned %d: %s", again.Code, again.Body.String())
 	}
 	later := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
-	scheduled := send(t, stack.router, authorized(jsonRequest(t,
+	scheduled := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+gone.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, gone.Version, later),
 	), session))
@@ -394,7 +396,7 @@ func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with an update on the way")
 	later := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
-	waiting := send(t, stack.router, authorized(jsonRequest(t,
+	waiting := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+live.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, live.Version, later),
 	), session))

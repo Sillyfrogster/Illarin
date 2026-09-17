@@ -1,145 +1,20 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
-
-type startedBlock struct {
-	ID             string   `json:"id"`
-	Definition     string   `json:"definition"`
-	Title          string   `json:"title"`
-	TitleIsDefault bool     `json:"titleIsDefault"`
-	Position       int      `json:"position"`
-	Hidden         bool     `json:"hidden"`
-	Layout         string   `json:"layout"`
-	Width          string   `json:"width"`
-	AllowedLayouts []string `json:"allowedLayouts"`
-	Required       bool     `json:"required"`
-	Hideable       bool     `json:"hideable"`
-	IsEmpty        bool     `json:"isEmpty"`
-	Elements       []struct {
-		ID       string          `json:"id"`
-		Type     string          `json:"type"`
-		Role     string          `json:"role"`
-		Slot     string          `json:"slot"`
-		Label    string          `json:"label"`
-		Pinned   bool            `json:"pinned"`
-		Display  string          `json:"display"`
-		ItemSize string          `json:"itemSize"`
-		IsEmpty  bool            `json:"isEmpty"`
-		Facts    []string        `json:"facts"`
-		Content  json.RawMessage `json:"content"`
-	} `json:"elements"`
-}
-
-type appTarget struct {
-	ID     string `json:"id"`
-	Label  string `json:"label"`
-	Format string `json:"format"`
-}
-
-type startedAsset struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	Blurb     string `json:"blurb"`
-	Lifecycle string `json:"lifecycle"`
-	IsOwner   bool   `json:"isOwner"`
-	IsNSFW    *bool  `json:"isNsfw"`
-	Preview   *string
-	Media     []struct {
-		ID        string `json:"id"`
-		DetailURL string `json:"detailUrl"`
-		ThumbURL  string `json:"thumbUrl"`
-	} `json:"media"`
-	Readiness         []readinessItem  `json:"readiness"`
-	Blocks            []startedBlock   `json:"blocks"`
-	AddableBlocks     []addableBlock   `json:"addableBlocks"`
-	Downloads         []downloadTarget `json:"downloads"`
-	AppTargets        []appTarget      `json:"appTargets"`
-	LinkedInstallOnly bool             `json:"linkedInstallOnly"`
-	AllowedApps       []string         `json:"allowedApps"`
-	EligibleApps      []string         `json:"eligibleApps"`
-	Original          *originalUpload  `json:"original"`
-}
-
-type downloadTarget struct {
-	Format      string        `json:"format"`
-	Label       string        `json:"label"`
-	Recommended bool          `json:"recommended"`
-	Roles       []roleVerdict `json:"roles"`
-}
-
-type roleVerdict struct {
-	Role        string   `json:"role"`
-	Label       string   `json:"label"`
-	Verdict     string   `json:"verdict"`
-	Reason      string   `json:"reason"`
-	Destination string   `json:"destination"`
-	ShownBy     []string `json:"shownBy"`
-	Sample      struct {
-		Count  int      `json:"count"`
-		Texts  []string `json:"texts"`
-		Images []string `json:"images"`
-	} `json:"sample"`
-}
-
-type originalUpload struct {
-	Label     string `json:"label"`
-	MediaType string `json:"mediaType"`
-	ArrivedAt string `json:"arrivedAt"`
-}
-
-type addableBlock struct {
-	Definition string `json:"definition"`
-	Title      string `json:"title"`
-	Summary    string `json:"summary"`
-	Group      string `json:"group"`
-	GroupTitle string `json:"groupTitle"`
-	Repeatable bool   `json:"repeatable"`
-	Choices    []struct {
-		Type  string `json:"type"`
-		Label string `json:"label"`
-	} `json:"choices"`
-}
-
-func startCharacter(t *testing.T, r http.Handler, session *http.Cookie) startedAsset {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"character"}`))
-	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
-	if response.Code != http.StatusCreated {
-		t.Fatalf("start a character: status = %d, want 201: %s",
-			response.Code, response.Body.String())
-	}
-	var started startedAsset
-	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
-		t.Fatalf("decode the started asset: %v", err)
-	}
-	return started
-}
-
-func blockNamed(t *testing.T, blocks []startedBlock, definition string) startedBlock {
-	t.Helper()
-	for _, b := range blocks {
-		if b.Definition == definition {
-			return b
-		}
-	}
-	t.Fatalf("no %s block on the page", definition)
-	return startedBlock{}
-}
 
 func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	started := startCharacter(t, r, session)
+	started := apitest.StartCharacter(t, r, session)
 
 	if started.Kind != "character" || started.Name != "" {
 		t.Fatalf("started asset = %+v, want an unnamed character", started)
@@ -154,7 +29,7 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 		t.Errorf("second block = %+v, want messages", started.Blocks[1])
 	}
 
-	core := blockNamed(t, started.Blocks, "character_core")
+	core := apitest.BlockNamed(t, started.Blocks, "character_core")
 	if !core.Required || !core.Hideable || !core.IsEmpty {
 		t.Errorf("character core = %+v, want required, hideable and empty", core)
 	}
@@ -184,7 +59,7 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 		}
 	}
 
-	messages := blockNamed(t, started.Blocks, "messages")
+	messages := apitest.BlockNamed(t, started.Blocks, "messages")
 	if !messages.Required || messages.Hideable {
 		t.Errorf("messages = %+v, want required and never hidden", messages)
 	}
@@ -200,9 +75,9 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 
 func TestAnAssetBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	started := startCharacter(t, r, session)
+	started := apitest.StartCharacter(t, r, session)
 
 	if started.Lifecycle != "draft" {
 		t.Errorf("lifecycle = %q, want draft", started.Lifecycle)
@@ -217,22 +92,22 @@ func TestAnAssetBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
 
 func TestADraftResolvesForItsOwnerAndReturnsTheUniform404ForEveryoneElse(t *testing.T) {
 	t.Parallel()
-	setup, r, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
+	setup, r, session, _ := harness.NewVerifiedRoutersWithService(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
 
-	owner := send(t, r, authorized(
+	owner := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), session))
 	if owner.Code != http.StatusOK {
 		t.Fatalf("the owner got %d for their own draft", owner.Code)
 	}
 
-	stranger := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("a signed-out reader got %d for a draft, want 404", stranger.Code)
 	}
 
-	other := signUp(t, setup, "other@example.com", "other.creator")
-	signedIn := send(t, r, authorized(
+	other := apitest.SignUp(t, setup, "other@example.com", "other.creator")
+	signedIn := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), other))
 	if signedIn.Code != http.StatusNotFound {
 		t.Errorf("another account got %d for someone else's draft, want 404", signedIn.Code)
@@ -241,15 +116,15 @@ func TestADraftResolvesForItsOwnerAndReturnsTheUniform404ForEveryoneElse(t *test
 
 func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	for _, path := range []string{
 		"/v1/assets",
 		"/v1/assets?kind=character",
 		"/v1/assets?q=character",
 	} {
-		listing := send(t, r, authorized(httptest.NewRequest(http.MethodGet, path, nil), session))
+		listing := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, path, nil), session))
 		if listing.Code != http.StatusOK {
 			t.Fatalf("GET %s status = %d, want 200: %s", path, listing.Code, listing.Body.String())
 		}
@@ -261,12 +136,12 @@ func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
 
 func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	for _, body := range []string{`{"kind":"nonsense"}`, `{"kind":""}`, `{}`} {
 		request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
 		request.Header.Set("Content-Type", "application/json")
-		response := send(t, r, authorized(request, session))
+		response := apitest.Send(t, r, apitest.Authorized(request, session))
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("POST %s status = %d, want 400: %s", body, response.Code, response.Body.String())
 		}
@@ -275,12 +150,12 @@ func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 
 func TestStartingAnAssetNeedsAVerifiedAccount(t *testing.T) {
 	t.Parallel()
-	r := newTestRouter(t)
+	r := harness.NewRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"character"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, request)
+	response := apitest.Send(t, r, request)
 
 	if response.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want 401 with no account signed in", response.Code)

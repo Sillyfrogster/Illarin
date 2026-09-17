@@ -6,26 +6,27 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 func (h *Handlers) ListVaultPictures(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.signedInAccount(c, "reading the vault")
+	owner, ok := api.SignedIn(c, "reading the vault")
 	if !ok {
 		return
 	}
 	pictures, err := h.assets.ListVault(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the vault."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the vault.")
 	default:
 		listed := VaultPictureList{Pictures: make([]VaultPicture, 0, len(pictures))}
 		for _, picture := range pictures {
@@ -36,11 +37,11 @@ func (h *Handlers) ListVaultPictures(c *gin.Context) {
 }
 
 func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	pictureID, ok := pathID(c, "pictureId")
+	pictureID, ok := api.PathID(c, "pictureId")
 	if !ok {
 		return
 	}
@@ -48,14 +49,14 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "placing a picture")
+	owner, ok := api.Verified(c, "placing a picture")
 	if !ok {
 		return
 	}
 	var request PlaceVaultPictureRequest
 	body, err := io.ReadAll(c.Request.Body)
-	if err != nil || (len(body) > 0 && decodeOneJSON(bytes.NewReader(body), &request) != nil) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the id of the uploaded picture, or nothing."})
+	if err != nil || (len(body) > 0 && api.DecodeOneJSON(bytes.NewReader(body), &request) != nil) {
+		api.Refuse(c, http.StatusBadRequest, "Send the id of the uploaded picture, or nothing.")
 		return
 	}
 	var mediaID *uuid.UUID
@@ -71,15 +72,15 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound), errors.Is(err, asset.ErrVaultPictureNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such picture is waiting in the vault."})
+		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
 	case errors.Is(err, asset.ErrVaultPictureNeedsMedia), errors.Is(err, asset.ErrInvalidBlock), errors.Is(err, asset.ErrMediaNotFound):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not place the picture."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
 	default:
 		blocks, conversionErr := toAPIBlocks(saved.Kind, saved.Blocks)
 		if conversionErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the page after placing the picture."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the page after placing the picture.")
 			return
 		}
 		c.JSON(http.StatusOK, blocks)
@@ -87,11 +88,11 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 }
 
 func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	pictureID, ok := pathID(c, "pictureId")
+	pictureID, ok := api.PathID(c, "pictureId")
 	if !ok {
 		return
 	}
@@ -99,7 +100,7 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "discarding a picture")
+	owner, ok := api.Verified(c, "discarding a picture")
 	if !ok {
 		return
 	}
@@ -110,9 +111,9 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound), errors.Is(err, asset.ErrVaultPictureNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such picture is waiting in the vault."})
+		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not discard the picture."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not discard the picture.")
 	default:
 		c.Status(http.StatusNoContent)
 	}

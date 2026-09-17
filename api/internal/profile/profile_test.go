@@ -1,37 +1,20 @@
-package http
+package profile_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-)
 
-type publicProfile struct {
-	ID           string `json:"id"`
-	Handle       string `json:"handle"`
-	DisplayName  string `json:"displayName"`
-	Biography    string `json:"biography"`
-	ContactEmail string `json:"contactEmail"`
-	Avatar       *struct {
-		URL    string `json:"url"`
-		Width  int    `json:"width"`
-		Height int    `json:"height"`
-	} `json:"avatar"`
-	Links []struct {
-		Label   string `json:"label"`
-		Address string `json:"address"`
-	} `json:"links"`
-}
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+)
 
 func TestOwnerFillsAPublicProfileAndAVisitorReadsIt(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	saved := saveProfile(t, r, session, `{
+	saved := apitest.SaveProfile(t, r, session, `{
 		"displayName":"Wren Ashdown",
 		"biography":"Writes lorebooks about weather.",
 		"contactEmail":"hello@example.com",
@@ -63,15 +46,15 @@ func TestOwnerFillsAPublicProfileAndAVisitorReadsIt(t *testing.T) {
 
 func TestClearingAProfileFieldRemovesItFromPublicView(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	saveProfile(t, r, session, `{
+	r, session := harness.NewVerifiedRouter(t)
+	apitest.SaveProfile(t, r, session, `{
 		"displayName":"Wren Ashdown",
 		"biography":"Writes lorebooks about weather.",
 		"contactEmail":"hello@example.com",
 		"links":[{"label":"Notes","address":"https://example.com/notes"}]
 	}`)
 
-	cleared := saveProfile(t, r, session, `{
+	cleared := apitest.SaveProfile(t, r, session, `{
 		"displayName":"",
 		"biography":"",
 		"contactEmail":"",
@@ -95,9 +78,9 @@ func TestClearingAProfileFieldRemovesItFromPublicView(t *testing.T) {
 
 func TestPublicContactIsNeverTakenFromASignInAddress(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	saveProfile(t, r, session, `{
+	apitest.SaveProfile(t, r, session, `{
 		"displayName":"Wren","biography":"","contactEmail":"","links":[]
 	}`)
 
@@ -109,12 +92,12 @@ func TestPublicContactIsNeverTakenFromASignInAddress(t *testing.T) {
 
 func TestPublicProfileHidesEverySignInAndAuthorityField(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	saveProfile(t, r, session, `{
+	r, session := harness.NewVerifiedRouter(t)
+	apitest.SaveProfile(t, r, session, `{
 		"displayName":"Wren","biography":"","contactEmail":"hello@example.com","links":[]
 	}`)
 
-	response := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/profiles/verified.creator", nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/profiles/verified.creator", nil))
 	body := response.Body.String()
 	for _, private := range []string{
 		"verified@example.com", "emailVerified", "discordLinked", "hasPassword", "role",
@@ -127,10 +110,10 @@ func TestPublicProfileHidesEverySignInAndAuthorityField(t *testing.T) {
 
 func TestAnUnverifiedAccountCannotEditItsPublicProfile(t *testing.T) {
 	t.Parallel()
-	r := newTestRouter(t)
-	session := signUp(t, r, "unverified@example.com", "unverified.one")
+	r := harness.NewRouter(t)
+	session := apitest.SignUp(t, r, "unverified@example.com", "unverified.one")
 
-	response := saveProfile(t, r, session, `{
+	response := apitest.SaveProfile(t, r, session, `{
 		"displayName":"Wren","biography":"","contactEmail":"","links":[]
 	}`)
 	if response.Code != http.StatusForbidden {
@@ -140,7 +123,7 @@ func TestAnUnverifiedAccountCannotEditItsPublicProfile(t *testing.T) {
 
 func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 	tests := []struct {
 		name string
 		body string
@@ -178,7 +161,7 @@ func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			response := saveProfile(t, r, session, test.body)
+			response := apitest.SaveProfile(t, r, session, test.body)
 			if response.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400: %s", response.Code, response.Body.String())
 			}
@@ -188,13 +171,13 @@ func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
 
 func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) {
 	t.Parallel()
-	r, session, _, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
+	r, session, _, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 
-	uploaded := send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 400, 400)), session))
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 400, 400)), session))
 	if uploaded.Code != http.StatusOK {
 		t.Fatalf("avatar status = %d, want 200: %s", uploaded.Code, uploaded.Body.String())
 	}
-	var profile publicProfile
+	var profile apitest.PublicProfile
 	if err := json.Unmarshal(uploaded.Body.Bytes(), &profile); err != nil {
 		t.Fatalf("decode avatar response: %v", err)
 	}
@@ -202,7 +185,7 @@ func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) 
 		t.Fatalf("avatar = %+v", profile.Avatar)
 	}
 
-	image := send(t, r, httptest.NewRequest(http.MethodGet, profile.Avatar.URL, nil))
+	image := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, profile.Avatar.URL, nil))
 	if image.Code != http.StatusOK {
 		t.Fatalf("avatar image status = %d, want 200: %s", image.Code, image.Body.String())
 	}
@@ -224,22 +207,22 @@ func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) 
 
 func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 	t.Parallel()
-	r, session, _, pool := newVerifiedIngestRouterWithPool(t, testRegistry(t))
+	r, session, _, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 
-	first := send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 200, 200)), session))
+	first := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), session))
 	if first.Code != http.StatusOK {
 		t.Fatalf("first avatar status = %d: %s", first.Code, first.Body.String())
 	}
-	var before publicProfile
+	var before apitest.PublicProfile
 	if err := json.Unmarshal(first.Body.Bytes(), &before); err != nil {
 		t.Fatalf("decode first avatar: %v", err)
 	}
 
-	second := send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 300, 300)), session))
+	second := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 300, 300)), session))
 	if second.Code != http.StatusOK {
 		t.Fatalf("second avatar status = %d: %s", second.Code, second.Body.String())
 	}
-	var after publicProfile
+	var after apitest.PublicProfile
 	if err := json.Unmarshal(second.Body.Bytes(), &after); err != nil {
 		t.Fatalf("decode second avatar: %v", err)
 	}
@@ -254,7 +237,7 @@ func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 	if remaining != 1 {
 		t.Fatalf("profile media rows = %d, want 1", remaining)
 	}
-	gone := send(t, r, httptest.NewRequest(http.MethodGet, before.Avatar.URL, nil))
+	gone := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, before.Avatar.URL, nil))
 	if gone.Code != http.StatusNotFound {
 		t.Fatalf("retired avatar status = %d, want 404", gone.Code)
 	}
@@ -262,16 +245,16 @@ func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 
 func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := newVerifiedIngestRouterWithPool(t, testRegistry(t))
+	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 
-	send(t, r, authorized(avatarUploadRequest(t, httpTestPNG(t, 200, 200)), session))
-	removed := send(t, r, authorized(
+	apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), session))
+	removed := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/account/profile/avatar", nil), session,
 	))
 	if removed.Code != http.StatusOK {
 		t.Fatalf("remove status = %d, want 200: %s", removed.Code, removed.Body.String())
 	}
-	var profile publicProfile
+	var profile apitest.PublicProfile
 	if err := json.Unmarshal(removed.Body.Bytes(), &profile); err != nil {
 		t.Fatalf("decode removal response: %v", err)
 	}
@@ -279,7 +262,7 @@ func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
 		t.Fatalf("avatar survived removal: %+v", profile.Avatar)
 	}
 
-	again := send(t, r, authorized(
+	again := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/account/profile/avatar", nil), session,
 	))
 	if again.Code != http.StatusNotFound {
@@ -289,48 +272,23 @@ func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
 
 func TestAnAvatarUploadRefusesSomethingThatIsNotAnImage(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	response := send(t, r, authorized(avatarUploadRequest(t, []byte("not a picture")), session))
+	response := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, []byte("not a picture")), session))
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400: %s", response.Code, response.Body.String())
 	}
 }
 
-func saveProfile(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	body string,
-) *httptest.ResponseRecorder {
+func readProfile(t *testing.T, r http.Handler, handle string) apitest.PublicProfile {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodPut, "/v1/account/profile", strings.NewReader(body))
-	request.Header.Set("Content-Type", "application/json")
-	return send(t, r, authorized(request, session))
-}
-
-func readProfile(t *testing.T, r http.Handler, handle string) publicProfile {
-	t.Helper()
-	response := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/profiles/"+handle, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/profiles/"+handle, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read profile status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	var profile publicProfile
+	var profile apitest.PublicProfile
 	if err := json.Unmarshal(response.Body.Bytes(), &profile); err != nil {
 		t.Fatalf("decode profile: %v", err)
 	}
 	return profile
-}
-
-func avatarUploadRequest(t *testing.T, file []byte) *http.Request {
-	t.Helper()
-	var body bytes.Buffer
-	form := multipart.NewWriter(&body)
-	writeFilePartNamed(t, form, "avatar.png", file)
-	if err := form.Close(); err != nil {
-		t.Fatalf("close avatar form: %v", err)
-	}
-	request := httptest.NewRequest(http.MethodPut, "/v1/account/profile/avatar", &body)
-	request.Header.Set("Content-Type", form.FormDataContentType())
-	return request
 }

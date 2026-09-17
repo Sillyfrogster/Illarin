@@ -7,7 +7,9 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -15,11 +17,11 @@ import (
 )
 
 func (h *Handlers) ListPosts(c *gin.Context) {
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := ListPostsParams{
-		Deleted: queryFlag(q, "deleted"),
+		Deleted: api.QueryFlag(q, "deleted"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	editor, ok := h.postEditor(c, "reading posts")
@@ -66,7 +68,7 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 }
 
 func (h *Handlers) GetPost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -83,7 +85,7 @@ func (h *Handlers) GetPost(c *gin.Context) {
 }
 
 func (h *Handlers) SavePost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -121,7 +123,7 @@ func (h *Handlers) SavePost(c *gin.Context) {
 }
 
 func (h *Handlers) AddPostMedia(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -168,7 +170,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context) {
 }
 
 func (h *Handlers) PublishPost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -194,7 +196,7 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 }
 
 func (h *Handlers) CorrectPostAddress(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -204,7 +206,7 @@ func (h *Handlers) CorrectPostAddress(c *gin.Context) {
 	}
 	var request CorrectPostAddressRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the address as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the address as JSON.")
 		return
 	}
 	moved, err := h.publications.CorrectAddress(
@@ -218,7 +220,7 @@ func (h *Handlers) CorrectPostAddress(c *gin.Context) {
 }
 
 func (h *Handlers) CorrectPostByline(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -228,7 +230,7 @@ func (h *Handlers) CorrectPostByline(c *gin.Context) {
 	}
 	var request CorrectPostBylineRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the handle as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the handle as JSON.")
 		return
 	}
 	corrected, err := h.publications.CorrectByline(
@@ -244,7 +246,7 @@ func (h *Handlers) CorrectPostByline(c *gin.Context) {
 func (h *Handlers) ListPostApps(c *gin.Context) {
 	found, err := h.publications.ReadableApps(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the apps."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the apps.")
 		return
 	}
 	c.JSON(http.StatusOK, PublicationAppList{Apps: toAPIApps(found)})
@@ -253,20 +255,20 @@ func (h *Handlers) ListPostApps(c *gin.Context) {
 func (h *Handlers) ListPostCategories(c *gin.Context) {
 	found, err := h.publications.ReadableCategories(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the categories."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the categories.")
 		return
 	}
 	c.JSON(http.StatusOK, PublicationCategoryList{Categories: toAPICategories(found)})
 }
 
 func (h *Handlers) ListPublishedPosts(c *gin.Context) {
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := ListPublishedPostsParams{
-		Page:     queryNumber(q, "page"),
-		Category: queryText[string](q, "category"),
-		App:      queryText[string](q, "app"),
+		Page:     api.QueryNumber(q, "page"),
+		Category: api.QueryText[string](q, "category"),
+		App:      api.QueryText[string](q, "app"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	asked := publication.ArchiveQuery{Page: 1}
@@ -274,7 +276,7 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context) {
 		asked.Page = *params.Page
 	}
 	if asked.Page < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Archive pages count from one."})
+		api.Refuse(c, http.StatusBadRequest, "Archive pages count from one.")
 		return
 	}
 	if params.Category != nil {
@@ -286,13 +288,13 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context) {
 	found, err := h.publications.Archive(c.Request.Context(), asked)
 	switch {
 	case errors.Is(err, publication.ErrCategoryNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication category."})
+		api.Refuse(c, http.StatusNotFound, "No such publication category.")
 		return
 	case errors.Is(err, publication.ErrAppNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such publication app."})
+		api.Refuse(c, http.StatusNotFound, "No such publication app.")
 		return
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load blog posts. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not load blog posts. Try again.")
 		return
 	}
 	c.JSON(http.StatusOK, toAPIArchive(found))
@@ -305,11 +307,11 @@ func (h *Handlers) GetPublishedPost(c *gin.Context) {
 		if h.withdrawnPost(c, slug) {
 			return
 		}
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such post."})
+		api.Refuse(c, http.StatusNotFound, "No such post.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the post."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the post.")
 		return
 	}
 	c.JSON(http.StatusOK, toAPIPublicPost(found))
@@ -331,13 +333,13 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 }
 
 func (h *Handlers) postEditor(c *gin.Context, action string) (publication.Editor, bool) {
-	current, ok := h.verifiedAccount(c, action)
+	current, ok := api.Verified(c, action)
 	if !ok {
 		return publication.Editor{}, false
 	}
 	return publication.Editor{
 		ID:    current.ID,
-		Admin: current.Role == account.RoleAdmin,
+		Admin: current.Role == api.RoleAdmin,
 	}, true
 }
 
@@ -580,7 +582,7 @@ func toAPIByline(found publication.Byline) PostByline {
 		Historical:   found.AccountID == nil,
 	}
 	if found.Avatar != nil {
-		shown.Avatar = &ProfileAvatar{
+		shown.Avatar = &profile.ProfileAvatar{
 			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.DerivativeVersion),
 			Width:  found.Avatar.Width,
 			Height: found.Avatar.Height,

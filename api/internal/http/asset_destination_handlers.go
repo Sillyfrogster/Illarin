@@ -4,13 +4,14 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) ListAssetUpdateDestinations(c *gin.Context) {
-	owner, ok := h.signedInAccount(c, "reading your update destinations")
+	owner, ok := api.SignedIn(c, "reading your update destinations")
 	if !ok {
 		return
 	}
@@ -27,11 +28,11 @@ func (h *Handlers) ListAssetUpdateDestinations(c *gin.Context) {
 }
 
 func (h *Handlers) GetAssetUpdateDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.signedInAccount(c, "reading your update destination")
+	owner, ok := api.SignedIn(c, "reading your update destination")
 	if !ok {
 		return
 	}
@@ -44,12 +45,12 @@ func (h *Handlers) GetAssetUpdateDestination(c *gin.Context) {
 }
 
 func (h *Handlers) AddAssetUpdateDestination(c *gin.Context) {
-	owner, ok := h.verifiedAccount(c, "configuring update destinations")
+	owner, ok := api.Verified(c, "configuring update destinations")
 	if !ok {
 		return
 	}
 	var request AddAssetUpdateDestinationRequest
-	if !readBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
+	if !api.ReadBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
 		return
 	}
 	if request.Address == nil {
@@ -74,24 +75,24 @@ func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
 	case errors.Is(err, assetdestination.ErrNotFound), errors.Is(err, asset.ErrNotFound):
 		c.Status(http.StatusNotFound)
 	case errors.Is(err, assetdestination.ErrChanged):
-		c.JSON(http.StatusConflict, gin.H{"error": "The destination changed. Check its configuration and try again."})
+		api.Refuse(c, http.StatusConflict, "The destination changed. Check its configuration and try again.")
 	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
+		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
 	case errors.As(err, &field):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, field.Message, field.Field)
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update your destination. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not update your destination. Try again.")
 	}
 }
 
 func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "verifying update destinations")
+	owner, ok := api.Verified(c, "verifying update destinations")
 	if !ok {
 		return
 	}
@@ -104,16 +105,16 @@ func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context) {
 }
 
 func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "changing update destinations")
+	owner, ok := api.Verified(c, "changing update destinations")
 	if !ok {
 		return
 	}
 	var request UpdateAssetUpdateDestinationRequest
-	if !readBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
+	if !api.ReadBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
 		return
 	}
 	found, err := h.updateDestinations.Update(c.Request.Context(), owner.ID, id, request.Name, request.Address)
@@ -125,11 +126,11 @@ func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context) {
 }
 
 func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "disabling update destinations")
+	owner, ok := api.Verified(c, "disabling update destinations")
 	if !ok {
 		return
 	}
@@ -142,11 +143,11 @@ func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context) {
 }
 
 func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "removing update destinations")
+	owner, ok := api.Verified(c, "removing update destinations")
 	if !ok {
 		return
 	}
@@ -158,11 +159,11 @@ func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context) {
 }
 
 func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "rotating an update destination's secret")
+	owner, ok := api.Verified(c, "rotating an update destination's secret")
 	if !ok {
 		return
 	}
@@ -175,11 +176,11 @@ func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context) {
 }
 
 func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.signedInAccount(c, "reading an asset's update destinations")
+	owner, ok := api.SignedIn(c, "reading an asset's update destinations")
 	if !ok {
 		return
 	}
@@ -196,16 +197,16 @@ func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context) {
 }
 
 func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "choosing an asset's update destinations")
+	owner, ok := api.Verified(c, "choosing an asset's update destinations")
 	if !ok {
 		return
 	}
 	var request AssetUpdateDestinationDefaultsRequest
-	if !readBoundedJSON(c, &request, 4096, "The destination selection is too large.") {
+	if !api.ReadBoundedJSON(c, &request, 4096, "The destination selection is too large.") {
 		return
 	}
 	if request.DestinationIds == nil {
@@ -233,11 +234,11 @@ func toAssetUpdateDestination(d assetdestination.Destination) AssetUpdateDestina
 }
 
 func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.signedInAccount(c, "reading what an asset announced")
+	owner, ok := api.SignedIn(c, "reading what an asset announced")
 	if !ok {
 		return
 	}

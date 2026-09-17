@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
@@ -23,7 +24,7 @@ type browseModule struct{}
 
 func (browseModule) ID() string { return "browse_card" }
 func (browseModule) Declaration() format.Declaration {
-	return testReaderDeclaration("browse_card", "character")
+	return apitest.ReaderDeclaration("browse_card", "character")
 }
 func (browseModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -50,25 +51,25 @@ func (browseModule) Parse(_ context.Context, file probe.Inspection, _ format.Cla
 
 func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	metadata := exampleMetadata("Velvet Night")
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Velvet Night")
 	metadata["filename"] = "velvet-night.lumitheme"
 	metadata["blurb"] = "A quiet midnight theme."
 	metadata["tags"] = []string{"Midnight"}
 	metadata["isNsfw"] = true
-	finished := uploadAndFinish(t, router, session, assets, metadata, []byte("theme"))
+	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte("theme"))
 	if finished.Code != http.StatusOK {
 		t.Fatalf("finish ingest status = %d, want 200: %s", finished.Code, finished.Body.String())
 	}
 	assetID := assetIDFromIngest(t, finished)
-	gallery := send(t, router, authorized(mediaUploadRequest(
-		t, assetID, "gallery", httpTestPNG(t, 400, 300),
+	gallery := apitest.Send(t, router, apitest.Authorized(mediaUploadRequest(
+		t, assetID, "gallery", apitest.PNG(t, 400, 300),
 	), session))
 	if gallery.Code != http.StatusCreated {
 		t.Fatalf("add gallery status = %d, want 201: %s", gallery.Code, gallery.Body.String())
 	}
 
-	response := send(t, router, httptest.NewRequest(
+	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?nsfw=blurred", nil,
 	))
 	if response.Code != http.StatusOK {
@@ -108,7 +109,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 
 func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	entries := []struct {
 		name        string
 		blurb       string
@@ -129,11 +130,11 @@ func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
 		},
 	}
 	for _, entry := range entries {
-		metadata := exampleMetadata(entry.name)
+		metadata := apitest.ExampleMetadata(entry.name)
 		metadata["filename"] = entry.name + ".lumitheme"
 		metadata["blurb"] = entry.blurb
 		metadata["tags"] = entry.tags
-		uploadAndFinish(t, router, session, assets, metadata, []byte(entry.sourceBytes))
+		apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(entry.sourceBytes))
 	}
 
 	cases := []struct {
@@ -153,7 +154,7 @@ func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.query, func(t *testing.T) {
-			response := send(t, router, httptest.NewRequest(
+			response := apitest.Send(t, router, httptest.NewRequest(
 				http.MethodGet, "/v1/assets?q="+url.QueryEscape(tc.query), nil,
 			))
 			if response.Code != http.StatusOK {
@@ -199,7 +200,7 @@ type browseReading struct {
 
 func readBrowse(t *testing.T, router http.Handler, path string) browseReading {
 	t.Helper()
-	response := send(t, router, httptest.NewRequest(http.MethodGet, path, nil))
+	response := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, path, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("browse %s status = %d: %s", path, response.Code, response.Body.String())
 	}
@@ -237,13 +238,13 @@ func TestFacetsAreKindScopedAndFilterOnElementContent(t *testing.T) {
 	if err := registry.Register(browseModule{}); err != nil {
 		t.Fatalf("register browse module: %v", err)
 	}
-	router, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Aster")
+	router, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Aster")
 	metadata["filename"] = "aster.json"
-	uploadAndFinish(t, router, session, assets, metadata, []byte(`{"card":true,"lorebook":"Ash"}`))
-	metadata = exampleMetadata("Storm")
+	apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(`{"card":true,"lorebook":"Ash"}`))
+	metadata = apitest.ExampleMetadata("Storm")
 	metadata["filename"] = "storm.json"
-	uploadAndFinish(t, router, session, assets, metadata, []byte(`{"card":true}`))
+	apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(`{"card":true}`))
 
 	mixed := readBrowse(t, router, "/v1/assets")
 	if len(mixed.Facets) != 0 {
@@ -287,29 +288,29 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	}
 
 	page := fetchStartedAsset(t, r, session, assetID)
-	gallery := blockNamed(t, page.Blocks, "gallery")
-	messagesBlock := blockNamed(t, page.Blocks, "messages")
+	gallery := apitest.BlockNamed(t, page.Blocks, "gallery")
+	messagesBlock := apitest.BlockNamed(t, page.Blocks, "messages")
 
-	renamed := editableBlock(gallery)
+	renamed := apitest.EditableBlock(gallery)
 	title := "Concept art"
 	renamed.Title = &title
-	if response := saveBlock(t, r, session, assetID, gallery.ID, renamed); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, assetID, gallery.ID, renamed); response.Code != http.StatusOK {
 		t.Fatalf("rename the gallery: %d %s", response.Code, response.Body.String())
 	}
 	reordered := arrangeBlocks(t, r, session, assetID, []arrangedBlock{
 		{ID: gallery.ID, Width: gallery.Width},
 		{ID: messagesBlock.ID, Width: messagesBlock.Width},
-		{ID: blockNamed(t, page.Blocks, "character_core").ID, Width: "full"},
+		{ID: apitest.BlockNamed(t, page.Blocks, "character_core").ID, Width: "full"},
 	})
 	if reordered.Code != http.StatusOK {
 		t.Fatalf("reorder the page: %d %s", reordered.Code, reordered.Body.String())
 	}
 
-	messages := editableBlock(messagesBlock)
+	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "stack-3"
 	messages.Elements[0].Slot = "top"
 	messages.Elements[1].Slot = "middle"
-	if response := saveBlock(t, r, session, assetID, messagesBlock.ID, messages); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, assetID, messagesBlock.ID, messages); response.Code != http.StatusOK {
 		t.Fatalf("make room in Messages: %d %s", response.Code, response.Body.String())
 	}
 	move := httptest.NewRequest(
@@ -318,7 +319,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 		strings.NewReader(`{"destinationBlockId":"`+messagesBlock.ID+`"}`),
 	)
 	move.Header.Set("Content-Type", "application/json")
-	if moved := send(t, r, authorized(move, session)); moved.Code != http.StatusOK {
+	if moved := apitest.Send(t, r, apitest.Authorized(move, session)); moved.Code != http.StatusOK {
 		t.Fatalf("move the gallery into Messages: %d %s", moved.Code, moved.Body.String())
 	}
 
@@ -330,19 +331,19 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 
 func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 	t.Parallel()
-	router, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, router, session)
-	writeCharacterFloor(t, router, session, started)
+	router, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, router, session)
+	apitest.WriteCharacterFloor(t, router, session, started)
 	custom := addedBlock(t, addBlock(t, router, session, started.ID, "custom_block", "text_set"))
-	if response := publishAsset(t, router, session, started.ID); response.Code != http.StatusOK {
+	if response := apitest.PublishAsset(t, router, session, started.ID); response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
 
-	body := editableBlock(custom)
+	body := apitest.EditableBlock(custom)
 	body.Elements[0].Content = json.RawMessage(
 		`{"texts":[{"text":"One"},{"text":"Two"},{"text":"Three"}]}`,
 	)
-	if response := saveBlock(t, router, session, started.ID, custom.ID, body); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, custom.ID, body); response.Code != http.StatusOK {
 		t.Fatalf("save the custom block status = %d: %s", response.Code, response.Body.String())
 	}
 
@@ -379,10 +380,10 @@ func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	router, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Ana")
+	router, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	uploadAndFinish(t, router, session, assets, metadata, []byte(`{
+	apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Welcome back."}
 	}`))
@@ -481,25 +482,25 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 
 func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	metadata := exampleMetadata("Veiled Garden")
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Veiled Garden")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "veiled-garden.lumitheme"
 	metadata["isNsfw"] = true
-	created := uploadAndFinish(t, router, session, assets, metadata, []byte("garden"))
+	created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte("garden"))
 	assetID := assetIDFromIngest(t, created)
-	added := send(t, router, authorized(mediaUploadRequest(
-		t, assetID, "avatar", httpTestPNG(t, 80, 120),
+	added := apitest.Send(t, router, apitest.Authorized(mediaUploadRequest(
+		t, assetID, "avatar", apitest.PNG(t, 80, 120),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add cover status = %d, want 201: %s", added.Code, added.Body.String())
 	}
 
-	if got := publishAsset(t, router, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, router, session, assetID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	saved := send(t, router, authorizedJSONRequest(
+	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t, http.MethodPut, "/v1/account/nsfw-visibility", `{"visibility":"hidden"}`, session,
 	))
 	if saved.Code != http.StatusNoContent {
@@ -519,7 +520,7 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	}
 	read := func(request *http.Request) response {
 		t.Helper()
-		answer := send(t, router, request)
+		answer := apitest.Send(t, router, request)
 		if answer.Code != http.StatusOK {
 			t.Fatalf("browse status = %d, want 200: %s", answer.Code, answer.Body.String())
 		}
@@ -530,7 +531,7 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 		return body
 	}
 
-	signedIn := read(authorized(
+	signedIn := read(apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets", nil), session,
 	))
 	if signedIn.Total != 0 || signedIn.Suppressed != 1 || signedIn.Visibility != "hidden" ||

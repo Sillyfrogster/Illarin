@@ -24,7 +24,7 @@ import (
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
@@ -151,7 +151,7 @@ func run() error {
 	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
 	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	notifications := notification.NewService(pool)
+	notifications := notify.NewService(pool)
 	background.Add(8)
 	go func() {
 		defer background.Done()

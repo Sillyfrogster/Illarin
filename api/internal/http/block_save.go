@@ -6,17 +6,18 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) SaveAssetBlock(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	blockID, ok := pathID(c, "blockId")
+	blockID, ok := api.PathID(c, "blockId")
 	if !ok {
 		return
 	}
@@ -24,20 +25,18 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "saving an asset")
+	owner, ok := api.Verified(c, "saving an asset")
 	if !ok {
 		return
 	}
 	var request SaveAssetBlockRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send valid JSON with a title, layout, width and elements. Every element id must be a UUID; display must be rich or verbatim, and an image size small, medium or large.",
-		})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send valid JSON with a title, layout, width and elements. Every element id must be a UUID; display must be rich or verbatim, and an image size small, medium or large.")
 		return
 	}
 	update, err := blockUpdate(request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
@@ -58,15 +57,15 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such block."})
+		api.Refuse(c, http.StatusNotFound, "No such block.")
 	case errors.Is(err, asset.ErrInvalidBlock):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the block."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the block.")
 	default:
 		blocks, conversionErr := toAPIBlocks(saved.Kind, []block.Block{saved.Block})
 		if conversionErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the saved block."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the saved block.")
 			return
 		}
 		c.JSON(http.StatusOK, blocks[0])

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -36,7 +36,7 @@ func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason st
 	if err != nil {
 		return fmt.Errorf("withhold asset: %w", err)
 	}
-	if err := tellOwner(ctx, tx, id, withheld.OwnerID, notification.AssetWithheld, notification.Words{
+	if err := tellOwner(ctx, tx, id, withheld.OwnerID, notify.AssetWithheld, notify.Words{
 		AssetName: withheld.PublicName, Reason: reason,
 	}); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("clear asset withhold: %w", err)
 	}
-	if err := tellOwner(ctx, tx, id, cleared.OwnerID, notification.AssetRestored, notification.Words{
+	if err := tellOwner(ctx, tx, id, cleared.OwnerID, notify.AssetRestored, notify.Words{
 		AssetName: cleared.PublicName,
 	}); err != nil {
 		return err
@@ -74,13 +74,13 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 // tellOwner records a staff decision for the asset's owner and never names the staff member who made it.
 func tellOwner(
 	ctx context.Context, tx pgx.Tx, assetID uuid.UUID, owner pgtype.UUID,
-	kind notification.Type, words notification.Words,
+	kind notify.Type, words notify.Words,
 ) error {
 	if !owner.Valid {
 		return nil
 	}
 	account := uuid.UUID(owner.Bytes)
-	return notification.Record(ctx, tx, notification.Event{
+	return notify.Record(ctx, tx, notify.Event{
 		Type: kind, Account: &account, Asset: &assetID, Words: words,
 	})
 }

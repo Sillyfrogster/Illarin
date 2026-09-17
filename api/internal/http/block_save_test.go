@@ -8,55 +8,38 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type saveBlockElement struct {
-	ID       string          `json:"id"`
-	Type     string          `json:"type"`
-	Role     string          `json:"role,omitempty"`
-	Slot     string          `json:"slot"`
-	Display  string          `json:"display,omitempty"`
-	ItemSize string          `json:"itemSize,omitempty"`
-	Content  json.RawMessage `json:"content"`
-}
-
-type saveBlockBody struct {
-	Title           *string            `json:"title"`
-	Layout          string             `json:"layout"`
-	Width           string             `json:"width"`
-	Elements        []saveBlockElement `json:"elements"`
-	AllowedApps     *[]string          `json:"allowedApps,omitempty"`
-	ExposeProtected *bool              `json:"exposeProtected,omitempty"`
-}
-
 func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "The reader must never receive these words."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	owner := fetchStartedAsset(t, r, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
 		t.Fatal("the owner did not receive the restored sealed prompt")
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -64,10 +47,10 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 		t.Fatal("a reader response contained the sealed prompt")
 	}
 
-	missingPolicy := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	missingPolicy := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	missingPolicy.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"role":"system","text":"new private text","protected":true,"enabled":true}]}`)
 	missingPolicy.AllowedApps = &[]string{}
-	refused := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, missingPolicy)
+	refused := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, missingPolicy)
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("seal without allowed app status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
@@ -75,9 +58,9 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 
 func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const publicText = "Readers can use this instruction."
 	const firstSecret = "Only allowed applications receive this first instruction."
 	const secondSecret = "Only allowed applications receive this second instruction."
@@ -92,7 +75,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save several sealed prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -106,14 +89,14 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 			t.Errorf("owner response does not contain %q: %s", want, ownerContent)
 		}
 	}
-	if got := saveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -126,16 +109,16 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		}
 	}
 
-	core = editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	content := strings.ReplaceAll(string(core.Elements[0].Content), `"protected":true`, `"protected":false`)
 	core.Elements[0].Content = json.RawMessage(content)
 	core.AllowedApps = &[]string{}
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
 		t.Fatalf("unseal without confirming status = %d, want 409: %s", got.Code, got.Body.String())
 	}
 	confirmed := true
 	core.ExposeProtected = &confirmed
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	owner = fetchStartedAsset(t, r, session, started.ID)
@@ -143,7 +126,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		t.Fatalf("unsealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 
-	reader = send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader = apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader after unsealing status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -154,58 +137,20 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	}
 }
 
-func editableBlock(block startedBlock) saveBlockBody {
-	elements := make([]saveBlockElement, len(block.Elements))
-	for i, element := range block.Elements {
-		elements[i] = saveBlockElement{
-			ID: element.ID, Type: element.Type, Role: element.Role,
-			Slot: element.Slot, Display: element.Display, ItemSize: element.ItemSize,
-			Content: element.Content,
-		}
-	}
-	return saveBlockBody{
-		Layout:   block.Layout,
-		Width:    block.Width,
-		Elements: elements,
-	}
-}
-
-func saveBlock(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assetID string,
-	blockID string,
-	body saveBlockBody,
-) *httptest.ResponseRecorder {
-	t.Helper()
-	encoded, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("encode block save: %v", err)
-	}
-	request := httptest.NewRequest(
-		http.MethodPut,
-		"/v1/assets/"+assetID+"/blocks/"+blockID,
-		strings.NewReader(string(encoded)),
-	)
-	request.Header.Set("Content-Type", "application/json")
-	return send(t, r, authorized(request, session))
-}
-
 func fetchStartedAsset(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
 	assetID string,
-) startedAsset {
+) apitest.StartedAsset {
 	t.Helper()
-	response := send(t, r, authorized(
+	response := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	var saved startedAsset
+	var saved apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
 		t.Fatalf("decode saved asset: %v", err)
 	}
@@ -214,27 +159,27 @@ func fetchStartedAsset(
 
 func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
-	core := editableBlock(blockNamed(t, started.Blocks, "character_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"She keeps the memories that books forget."}`)
-	response := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core)
 	if response.Code != http.StatusOK {
 		t.Fatalf("save description status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
-	messagesBlock := blockNamed(t, started.Blocks, "messages")
-	messages := editableBlock(messagesBlock)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
 	messages.Elements[0].Content = json.RawMessage(`{"texts":[{"text":"The west shelf moved again. Come in."}]}`)
-	response = saveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+	response = apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
 	if response.Code != http.StatusOK {
 		t.Fatalf("save greeting status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
 	saved := fetchStartedAsset(t, r, session, started.ID)
-	core = editableBlock(blockNamed(t, saved.Blocks, "character_core"))
-	messages = editableBlock(blockNamed(t, saved.Blocks, "messages"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "character_core"))
+	messages = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "messages"))
 	if string(core.Elements[0].Content) != `{"text":"She keeps the memories that books forget."}` {
 		t.Errorf("saved description = %s", core.Elements[0].Content)
 	}
@@ -257,28 +202,28 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 
 func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 
 	chosen := "Who she is"
 	core.Title = &chosen
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 	if response.Code != http.StatusOK {
 		t.Fatalf("save chosen title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := blockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != chosen || saved.TitleIsDefault {
 		t.Fatalf("chosen title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
 
 	core.Title = nil
-	response = saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response = apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 	if response.Code != http.StatusOK {
 		t.Fatalf("release title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved = blockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved = apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != "The character" || !saved.TitleIsDefault {
 		t.Fatalf("released title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
@@ -286,13 +231,13 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 
 func TestSavingMalformedElementContentNamesWhatMustChange(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{}`)
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("malformed content status = %d, want 400: %s", response.Code, response.Body.String())
@@ -306,13 +251,13 @@ func TestSavingMalformedElementContentNamesWhatMustChange(t *testing.T) {
 
 func TestSavingAnElementOutsideTheChosenLayoutNamesTheAvailableSlots(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Slot = "aside"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("invalid slot status = %d, want 400: %s", response.Code, response.Body.String())
@@ -326,14 +271,14 @@ func TestSavingAnElementOutsideTheChosenLayoutNamesTheAvailableSlots(t *testing.
 
 func TestSavingARoleOnTheWrongElementTypeNamesTheRequiredType(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Type = "text_set"
 	core.Elements[0].Content = json.RawMessage(`{"texts":[]}`)
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("wrong type status = %d, want 400: %s", response.Code, response.Body.String())
@@ -347,13 +292,13 @@ func TestSavingARoleOnTheWrongElementTypeNamesTheRequiredType(t *testing.T) {
 
 func TestASecondElementForASingularRoleIsRefusedWhereItIsCreated(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[2].Role = "description"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("second description status = %d, want 400: %s", response.Code, response.Body.String())
@@ -367,13 +312,13 @@ func TestASecondElementForASingularRoleIsRefusedWhereItIsCreated(t *testing.T) {
 
 func TestAPinnedElementCannotBeRemovedFromItsBlock(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements = core.Elements[1:]
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("removed pinned element status = %d, want 400: %s", response.Code, response.Body.String())
@@ -387,13 +332,13 @@ func TestAPinnedElementCannotBeRemovedFromItsBlock(t *testing.T) {
 
 func TestSavingAnElementWithAnUnknownDisplayNamesTheClosedChoices(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Display = "glowing"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("unknown display status = %d, want 400: %s", response.Code, response.Body.String())
@@ -407,13 +352,13 @@ func TestSavingAnElementWithAnUnknownDisplayNamesTheClosedChoices(t *testing.T) 
 
 func TestSavingTextWithoutDisplayNamesTheClosedChoices(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Display = ""
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("missing display status = %d, want 400: %s", response.Code, response.Body.String())
@@ -427,13 +372,13 @@ func TestSavingTextWithoutDisplayNamesTheClosedChoices(t *testing.T) {
 
 func TestSavingDuplicateElementIdentityNamesWhatMustChange(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[1].ID = core.Elements[0].ID
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("duplicate element id status = %d, want 400: %s", response.Code, response.Body.String())
@@ -447,13 +392,13 @@ func TestSavingDuplicateElementIdentityNamesWhatMustChange(t *testing.T) {
 
 func TestSavingAReplacementElementIdentityIsRefused(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].ID = "00000000-0000-4000-8000-000000000001"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("replacement element id status = %d, want 400: %s", response.Code, response.Body.String())
@@ -467,13 +412,13 @@ func TestSavingAReplacementElementIdentityIsRefused(t *testing.T) {
 
 func TestMalformedElementIdentityNamesTheRequiredShape(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].ID = "not-a-uuid"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("malformed element id status = %d, want 400: %s", response.Code, response.Body.String())
@@ -487,13 +432,13 @@ func TestMalformedElementIdentityNamesTheRequiredShape(t *testing.T) {
 
 func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	messagesBlock := blockNamed(t, started.Blocks, "messages")
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
 	body := struct {
-		saveBlockBody
+		apitest.SaveBlockBody
 		Hidden bool `json:"hidden"`
-	}{saveBlockBody: editableBlock(messagesBlock), Hidden: true}
+	}{SaveBlockBody: apitest.EditableBlock(messagesBlock), Hidden: true}
 	encoded, err := json.Marshal(body)
 	if err != nil {
 		t.Fatalf("encode later action: %v", err)
@@ -504,7 +449,7 @@ func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
 		strings.NewReader(string(encoded)),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("later arrangement fields status = %d, want 400: %s", response.Code, response.Body.String())
@@ -518,18 +463,18 @@ func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
 
 func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Width = "half"
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("narrow required block status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := blockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Width != "half" || saved.Layout != "stack-3" {
 		t.Errorf("saved arrangement = %s at %s, want stack-3 at half", saved.Layout, saved.Width)
 	}
@@ -537,16 +482,16 @@ func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
 
 func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Layout = "trio"
 	for i, slot := range []string{"left", "middle", "right"} {
 		core.Elements[i].Slot = slot
 	}
 
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("trio at two thirds status = %d, want 400: %s", response.Code, response.Body.String())
@@ -560,22 +505,22 @@ func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
 
 func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Layout = "trio"
 	core.Width = "full"
 	for i, slot := range []string{"left", "middle", "right"} {
 		core.Elements[i].Slot = slot
 	}
-	response := saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 	if response.Code != http.StatusOK {
 		t.Fatalf("prepare trio status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
 	core.Width = "half"
-	response = saveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	response = apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("narrow trio status = %d, want 400: %s", response.Code, response.Body.String())
@@ -589,16 +534,16 @@ func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
 
 func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	messagesBlock := blockNamed(t, started.Blocks, "messages")
-	messages := editableBlock(messagesBlock)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "duo"
 	for i, slot := range []string{"left", "right"} {
 		messages.Elements[i].Slot = slot
 	}
 
-	response := saveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+	response := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("unoffered layout status = %d, want 400: %s", response.Code, response.Body.String())
@@ -612,11 +557,11 @@ func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) 
 
 func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(
-		t, 1<<20, DefaultDeadlines(),
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(
+		t, 1<<20, api.DefaultDeadlines(),
 	)
-	started := startCharacter(t, r, session)
-	messagesBlock := blockNamed(t, started.Blocks, "messages")
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
 
 	var stored []block.Element
 	var encoded []byte
@@ -646,11 +591,11 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 	}
 
 	savedAsset := fetchStartedAsset(t, r, session, started.ID)
-	messagesBlock = blockNamed(t, savedAsset.Blocks, "messages")
-	messages := editableBlock(messagesBlock)
+	messagesBlock = apitest.BlockNamed(t, savedAsset.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "stack-2"
 
-	response := saveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+	response := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("three messages in stack-2 status = %d, want 400: %s", response.Code, response.Body.String())
@@ -664,9 +609,9 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 
 func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := startPreset(t, r, session, "lumiverse")
-	core := editableBlock(blockNamed(t, started.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"Visible","role":"system","text":"Readers keep this one.","enabled":true},
 		{"name":"First sealed","role":"system","text":"Only allowed applications receive this first instruction.","protected":true,"enabled":true},
@@ -674,7 +619,7 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("seal two prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
@@ -682,10 +627,10 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	}
 
 	owner := fetchStartedAsset(t, r, session, started.ID)
-	shorter := editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	shorter := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shorter.Elements[0].Content = withoutFragment(t, owner, "First sealed")
 	shorter.AllowedApps = &apps
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, shorter); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shorter); got.Code != http.StatusOK {
 		t.Fatalf("remove one sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
@@ -693,10 +638,10 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	}
 
 	owner = fetchStartedAsset(t, r, session, started.ID)
-	shortest := editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	shortest := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shortest.Elements[0].Content = withoutFragment(t, owner, "Second sealed")
 	shortest.AllowedApps = &[]string{}
-	if got := saveBlock(t, r, session, started.ID, started.Blocks[0].ID, shortest); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shortest); got.Code != http.StatusOK {
 		t.Fatalf("remove the final sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if payloads, policies := protectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
@@ -724,7 +669,7 @@ func protectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int
 	return payloads, policies
 }
 
-func withoutFragment(t *testing.T, owner startedAsset, name string) json.RawMessage {
+func withoutFragment(t *testing.T, owner apitest.StartedAsset, name string) json.RawMessage {
 	t.Helper()
 	var content struct {
 		Groups    json.RawMessage   `json:"groups"`

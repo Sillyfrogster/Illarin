@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/google/uuid"
 )
 
@@ -84,7 +85,7 @@ type AssetDetail struct {
 	Tags                  []AssetTag                `json:"tags"`
 	UnpublishedChanges    *bool                     `json:"unpublishedChanges,omitempty"`
 	Visibility            AssetDetailVisibility     `json:"visibility"`
-	Watch                 *AssetWatch               `json:"watch,omitempty"`
+	Watch                 *notify.AssetWatch        `json:"watch,omitempty"`
 	Withhold              *AssetWithhold            `json:"withhold,omitempty"`
 	WorkingCopyVersion    *int64                    `json:"workingCopyVersion,omitempty"`
 }
@@ -401,17 +402,6 @@ type OriginalUpload struct {
 	ArrivedAt time.Time `json:"arrivedAt"`
 	Label     string    `json:"label"`
 	MediaType string    `json:"mediaType"`
-}
-
-type Profile struct {
-	Avatar       *ProfileAvatar `json:"avatar,omitempty"`
-	Biography    string         `json:"biography"`
-	ContactEmail string         `json:"contactEmail"`
-	DisplayName  string         `json:"displayName"`
-	Handle       string         `json:"handle"`
-	Id           uuid.UUID      `json:"id"`
-	Links        []ProfileLink  `json:"links"`
-	Restricted   bool           `json:"restricted"`
 }
 
 type ReplacementAcceptance struct {

@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/google/uuid"
 )
 
@@ -72,12 +73,12 @@ type PostAuthor struct {
 }
 
 type PostByline struct {
-	App          *PublicationApp `json:"app,omitempty"`
-	Avatar       *ProfileAvatar  `json:"avatar,omitempty"`
-	ContactEmail string          `json:"contactEmail"`
-	DisplayName  string          `json:"displayName"`
-	Handle       string          `json:"handle"`
-	Historical   bool            `json:"historical"`
+	App          *PublicationApp        `json:"app,omitempty"`
+	Avatar       *profile.ProfileAvatar `json:"avatar,omitempty"`
+	ContactEmail string                 `json:"contactEmail"`
+	DisplayName  string                 `json:"displayName"`
+	Handle       string                 `json:"handle"`
+	Historical   bool                   `json:"historical"`
 }
 
 type PostConflict struct {
@@ -159,12 +160,6 @@ type PostSummary struct {
 	Summary        string              `json:"summary"`
 	Title          string              `json:"title"`
 	UpdatedAt      *time.Time          `json:"updatedAt,omitempty"`
-}
-
-type ProfileAvatar struct {
-	Height int    `json:"height"`
-	Url    string `json:"url"`
-	Width  int    `json:"width"`
 }
 
 type PublicPost struct {

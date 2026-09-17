@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func (s publicationStack) correctAddress(
@@ -15,7 +17,7 @@ func (s publicationStack) correctAddress(
 	id, slug string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id+"/address",
 		fmt.Sprintf(`{"slug":%q}`, slug),
 	), session))
@@ -40,7 +42,7 @@ func (s publicationStack) correctByline(
 	id, handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id+"/byline",
 		fmt.Sprintf(`{"handle":%q}`, handle),
 	), session))
@@ -228,7 +230,7 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 	live := stack.published(t, writer.session, draft.ID)
 
 	colleague := stack.member(t, "colleague@example.com", "the.colleague")
-	saveProfile(t, stack.router, colleague, `{"displayName":"The Colleague","links":[]}`)
+	apitest.SaveProfile(t, stack.router, colleague, `{"displayName":"The Colleague","links":[]}`)
 	admin := stack.admin(t, "admin@example.com", "the.admin")
 
 	if code := stack.correctByline(t, writer.session, draft.ID, "the.colleague").Code; code != http.StatusForbidden {
@@ -320,7 +322,7 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
-	saveProfile(t, stack.router, writer.session, `{"displayName":"The Writer","links":[]}`)
+	apitest.SaveProfile(t, stack.router, writer.session, `{"displayName":"The Writer","links":[]}`)
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
 		`{"grantId":%q,"categoryId":%q,"title":"History stands"}`, writer.grant.ID, announcement.ID,
@@ -329,13 +331,13 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 	live := stack.published(t, writer.session, draft.ID)
 
 	admin := stack.admin(t, "admin@example.com", "the.admin")
-	restrict := send(t, stack.router, authorized(jsonRequest(t,
+	restrict := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/profiles/writer.dev/restriction", `{"reason":"checking something"}`,
 	), admin))
 	if restrict.Code != http.StatusOK && restrict.Code != http.StatusNoContent {
 		t.Fatalf("restrict status = %d: %s", restrict.Code, restrict.Body.String())
 	}
-	revoke := send(t, stack.router, authorized(jsonRequest(t,
+	revoke := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, "",
 	), stack.authority))
 	if revoke.Code != http.StatusNoContent {

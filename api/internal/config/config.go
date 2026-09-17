@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
@@ -38,7 +39,7 @@ type Config struct {
 	ProbeLimits                  probe.Limits
 	IngestWorkers                int
 	Server                       apihttp.Timeouts
-	Deadlines                    apihttp.Deadlines
+	Deadlines                    api.Deadlines
 }
 
 type SMTPSettings struct {
@@ -69,7 +70,7 @@ func Load() (Config, error) {
 		Database:   postgres.DefaultSettings(databaseURL),
 		UploadsDir: get("UPLOADS_DIR", ""),
 		Server:     apihttp.DefaultTimeouts(),
-		Deadlines:  apihttp.DefaultDeadlines(),
+		Deadlines:  api.DefaultDeadlines(),
 		SMTP: SMTPSettings{
 			Address:  get("SMTP_ADDR", ""),
 			From:     get("SMTP_FROM", ""),

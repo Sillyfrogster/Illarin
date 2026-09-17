@@ -3,25 +3,8 @@ package account
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/google/uuid"
-)
-
-type Account struct {
-	ID            uuid.UUID
-	Handle        string
-	Email         *string
-	EmailVerified bool
-	DiscordLinked bool
-	HasPassword   bool
-	Role          Role
-}
-
-type Role string
-
-const (
-	RoleUser      Role = "user"
-	RoleModerator Role = "moderator"
-	RoleAdmin     Role = "admin"
 )
 
 type NSFWVisibility string
@@ -62,7 +45,7 @@ type DiscordAuthorization struct {
 }
 
 type DiscordCompletion struct {
-	Account        Account
+	Account        api.Account
 	SessionToken   string
 	SessionExpires time.Time
 	Intent         DiscordIntent

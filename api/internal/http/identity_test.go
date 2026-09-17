@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func startIdentityAsset(
@@ -14,7 +16,7 @@ func startIdentityAsset(
 	r http.Handler,
 	session *http.Cookie,
 	kind string,
-) startedAsset {
+) apitest.StartedAsset {
 	t.Helper()
 	body := fmt.Sprintf(`{"kind":%q}`, kind)
 	if kind == "preset" || kind == "theme" {
@@ -22,11 +24,11 @@ func startIdentityAsset(
 	}
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {
 		t.Fatalf("start a %s: status = %d, want 201: %s", kind, response.Code, response.Body.String())
 	}
-	var started startedAsset
+	var started apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started %s: %v", kind, err)
 	}
@@ -37,7 +39,7 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
 		t.Run(kind, func(t *testing.T) {
-			r, session := newVerifiedTestRouter(t)
+			r, session := harness.NewVerifiedRouter(t)
 			started := startIdentityAsset(t, r, session, kind)
 
 			for _, blurb := range []string{
@@ -51,7 +53,7 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				response := saveIdentity(t, r, session, started.ID, string(body))
+				response := apitest.SaveIdentity(t, r, session, started.ID, string(body))
 				if response.Code != http.StatusNoContent {
 					t.Fatalf("save blurb %q: status = %d, want 204: %s", blurb, response.Code, response.Body.String())
 				}
@@ -65,8 +67,8 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryAssetKind(t *testing.T) {
 
 func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 	accepted := strings.Repeat("界", 400)
 	tooLong := accepted + "界"
 
@@ -80,11 +82,11 @@ func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 		}
 		return string(body)
 	}
-	if response := saveIdentity(t, r, session, started.ID, identityBody(accepted)); response.Code != http.StatusNoContent {
+	if response := apitest.SaveIdentity(t, r, session, started.ID, identityBody(accepted)); response.Code != http.StatusNoContent {
 		t.Fatalf("save 400-character blurb: status = %d, want 204: %s", response.Code, response.Body.String())
 	}
 
-	response := saveIdentity(t, r, session, started.ID, identityBody(tooLong))
+	response := apitest.SaveIdentity(t, r, session, started.ID, identityBody(tooLong))
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("save 401-character blurb: status = %d, want 400: %s", response.Code, response.Body.String())
 	}
@@ -105,14 +107,14 @@ func TestBlurbLimitCountsUnicodeCharactersAndNeverTruncates(t *testing.T) {
 
 func TestIdentityRequestMustSayWhetherToKeepOrClearTheBlurb(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	if response := saveIdentity(t, r, session, started.ID,
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	if response := apitest.SaveIdentity(t, r, session, started.ID,
 		`{"name":"Catalog name","blurb":"Keep this pitch","isNsfw":false}`); response.Code != http.StatusNoContent {
 		t.Fatalf("save the starting blurb: %d %s", response.Code, response.Body.String())
 	}
 
-	response := saveIdentity(t, r, session, started.ID,
+	response := apitest.SaveIdentity(t, r, session, started.ID,
 		`{"name":"Renamed without the new field","isNsfw":false}`)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("omit the blurb: status = %d, want 400: %s", response.Code, response.Body.String())

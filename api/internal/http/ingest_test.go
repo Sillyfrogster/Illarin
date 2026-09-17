@@ -18,13 +18,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
-	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,77 +34,20 @@ import (
 
 type parseFailureModule struct{}
 
-type opaqueTestModule struct{}
-
 type neverClaimsModule struct{}
-
-func testReaderDeclaration(id, kind string) format.Declaration {
-	return format.Declaration{
-		ID: id, Kind: kind, Direction: format.Direction{Read: true},
-		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
-			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
-		}},
-		Limits: format.ContentLimits{
-			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
-			ItemBytes: block.MaxItemBytes,
-		},
-		ConsumedKeys:  []string{"payload"},
-		Preservation:  format.PreservationDeclaration{Body: "test"},
-		TestedOrigins: []string{id},
-	}
-}
 
 func (neverClaimsModule) ID() string { return "never" }
 func (neverClaimsModule) Declaration() format.Declaration {
-	return testReaderDeclaration("never", "character")
+	return apitest.ReaderDeclaration("never", "character")
 }
 func (neverClaimsModule) Claim(probe.Inspection) (format.Claim, bool) { return format.Claim{}, false }
 func (neverClaimsModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("unreachable")
 }
 
-func (opaqueTestModule) ID() string { return "test_opaque" }
-
-func (opaqueTestModule) Declaration() format.Declaration {
-	declaration := testReaderDeclaration("test_opaque", "character")
-	declaration.Label = "Test format"
-	declaration.Direction.Write = true
-	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
-	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
-		block.RoleDescription: {
-			Read:  format.RoleSupport{Grade: format.SupportFull},
-			Write: format.RoleSupport{Grade: format.SupportFull},
-		},
-		block.RoleGreetings: {
-			Read:  format.RoleSupport{Grade: format.SupportFull},
-			Write: format.RoleSupport{Grade: format.SupportFull},
-		},
-	}
-	return declaration
-}
-func (opaqueTestModule) Write(_ context.Context, written format.ExportAsset) (format.Artifact, error) {
-	return format.Artifact{
-		Body:      []byte(written.Text(block.RoleDescription)),
-		MediaType: "text/plain", Extension: ".txt",
-	}, nil
-}
-func (opaqueTestModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.WholeFileCompatibilityClaim(file), true
-}
-func (opaqueTestModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
-	return format.Parsed{
-		Kind: "character", Format: "test_opaque",
-		Elements: []block.Element{
-			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
-			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
-		},
-	}, nil
-}
-
 func (parseFailureModule) ID() string { return "claimed" }
 func (parseFailureModule) Declaration() format.Declaration {
-	return testReaderDeclaration("claimed", "character")
+	return apitest.ReaderDeclaration("claimed", "character")
 }
 func (parseFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -118,7 +62,7 @@ type typedParseFailureModule struct {
 
 func (typedParseFailureModule) ID() string { return "typed_failure" }
 func (typedParseFailureModule) Declaration() format.Declaration {
-	return testReaderDeclaration("typed_failure", "character")
+	return apitest.ReaderDeclaration("typed_failure", "character")
 }
 func (typedParseFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -135,10 +79,10 @@ func (parseFailureModule) Parse(context.Context, probe.Inspection, format.Claim)
 
 func TestUploadReturnsAPendingOperation(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
-	rec := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("Evening Theme"), []byte("theme bytes")),
+	rec := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Evening Theme"), []byte("theme bytes")),
 		session,
 	))
 
@@ -178,7 +122,7 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 		t.Skip("test filesystem has less than 8 MB free")
 	}
 
-	r, session, _, pool := newVerifiedIngestRouterWithStoreFactory(
+	r, session, _, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
 		t, format.NewRegistry(), asset.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStoreWithCapacity(pool, root, storage.Capacity{
@@ -188,8 +132,8 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 		},
 	)
 
-	response := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("Waiting theme"), []byte("small upload")),
+	response := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Waiting theme"), []byte("small upload")),
 		session,
 	))
 
@@ -213,7 +157,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	shared := []byte("shared canonical bytes")
 	root := t.TempDir()
 	var blobs storage.Store
-	r, firstSession, assets, pool := newVerifiedIngestRouterWithStoreFactory(
+	r, firstSession, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
 		t, format.NewRegistry(), asset.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
@@ -221,8 +165,8 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 			return blobs, err
 		},
 	)
-	seed := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("First use"), shared), firstSession,
+	seed := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("First use"), shared), firstSession,
 	))
 	if seed.Code != http.StatusAccepted {
 		t.Fatalf("seed upload status = %d, want 202: %s", seed.Code, seed.Body.String())
@@ -237,196 +181,57 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
-	outbox := &verificationOutbox{}
-	accounts := newTestAccounts(pool, outbox, nil, testMediaLibrary(blobs))
-	links := newTestLinkingService(pool)
-	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), newTestNotifications(pool), 1<<20,
-	)
-	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
+	outbox := &apitest.VerificationOutbox{}
+	handlers := apitest.NewServicesOver(pool, blobs, limitedAssets, outbox, nil)
+	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
-	repeated := send(t, limitedRouter, authorized(
-		uploadRequest(t, exampleMetadata("Repeated use"), shared), firstSession,
+	repeated := apitest.Send(t, limitedRouter, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Repeated use"), shared), firstSession,
 	))
 	if repeated.Code != http.StatusAccepted {
 		t.Fatalf("repeated upload status = %d, want 202: %s", repeated.Code, repeated.Body.String())
 	}
-	repeatedRevision := send(t, limitedRouter, authorized(
+	repeatedRevision := apitest.Send(t, limitedRouter, apitest.Authorized(
 		revisionRequest(t, created.ID, "same.bin", shared), firstSession,
 	))
 	if repeatedRevision.Code != http.StatusAccepted {
 		t.Fatalf("repeated revision status = %d, want 202: %s", repeatedRevision.Code, repeatedRevision.Body.String())
 	}
-	distinctRevision := send(t, limitedRouter, authorized(
+	distinctRevision := apitest.Send(t, limitedRouter, apitest.Authorized(
 		revisionRequest(t, created.ID, "different.bin", []byte("different canonical bytes")), firstSession,
 	))
 	if distinctRevision.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("distinct revision status = %d, want 413: %s", distinctRevision.Code, distinctRevision.Body.String())
 	}
 
-	secondSession := signUp(t, limitedRouter, "second@example.com", "second.creator")
-	verificationURL, err := url.Parse(outbox.messages[0].link)
+	secondSession := apitest.SignUp(t, limitedRouter, "second@example.com", "second.creator")
+	verificationURL, err := url.Parse(outbox.Messages[0].Link)
 	if err != nil {
 		t.Fatalf("parse second verification link: %v", err)
 	}
-	verified := sendJSON(t, limitedRouter, http.MethodPost, "/v1/auth/verify-email",
+	verified := apitest.SendJSON(t, limitedRouter, http.MethodPost, "/v1/auth/verify-email",
 		`{"token":"`+verificationURL.Query().Get("token")+`"}`)
 	if verified.Code != http.StatusOK {
 		t.Fatalf("verify second account: %d %s", verified.Code, verified.Body.String())
 	}
-	charged := send(t, limitedRouter, authorized(
-		uploadRequest(t, exampleMetadata("Somebody else's use"), shared), secondSession,
+	charged := apitest.Send(t, limitedRouter, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Somebody else's use"), shared), secondSession,
 	))
 	if charged.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("cross-account upload status = %d, want 413: %s", charged.Code, charged.Body.String())
 	}
 }
 
-func authorizedJSONRequest(
-	t *testing.T,
-	method string,
-	path string,
-	body string,
-	session *http.Cookie,
-) *http.Request {
-	t.Helper()
-	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	return authorized(req, session)
-}
-
-func uploadAndFinish(
-	t *testing.T,
-	r http.Handler,
-	session *http.Cookie,
-	assets *asset.Service,
-	metadata map[string]any,
-	file []byte,
-) *httptest.ResponseRecorder {
-	t.Helper()
-	accepted := send(t, r, authorized(uploadRequest(t, metadata, file), session))
-	if accepted.Code != http.StatusAccepted {
-		t.Fatalf("upload status = %d, want 202. body: %s", accepted.Code, accepted.Body.String())
-	}
-	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
-	}
-	finished := send(t, r, authorized(
-		httptest.NewRequest(http.MethodGet, accepted.Header().Get("Location"), nil), session,
-	))
-	if keep, _ := metadata["_keepDraft"].(bool); !keep {
-		var operation struct {
-			Status string `json:"status"`
-			Asset  *struct {
-				ID string `json:"id"`
-			} `json:"asset"`
-		}
-		if json.Unmarshal(finished.Body.Bytes(), &operation) == nil &&
-			operation.Status == "success" && operation.Asset != nil {
-			_ = send(t, r, authorized(httptest.NewRequest(
-				http.MethodPost, "/v1/assets/"+operation.Asset.ID+"/publish", nil,
-			), session))
-		}
-	}
-	return finished
-}
-
-func newVerifiedIngestRouter(
-	t *testing.T,
-	registry *format.Registry,
-) (*gin.Engine, *http.Cookie, *asset.Service) {
-	t.Helper()
-	router, session, assets, _ := newVerifiedIngestRouterWithSettings(
-		t, registry, asset.DefaultIngestSettings(),
-	)
-	return router, session, assets
-}
-
-func newVerifiedIngestRouterWithPool(
-	t *testing.T,
-	registry *format.Registry,
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	return newVerifiedIngestRouterWithSettings(t, registry, asset.DefaultIngestSettings())
-}
-
-func newVerifiedIngestRouterWithSettings(
-	t *testing.T,
-	registry *format.Registry,
-	settings asset.IngestSettings,
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	return newVerifiedIngestRouterWithStore(t, registry, settings, nil)
-}
-
-func newVerifiedIngestRouterWithStore(
-	t *testing.T,
-	registry *format.Registry,
-	settings asset.IngestSettings,
-	decorate func(storage.Store) storage.Store,
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	return newVerifiedIngestRouterWithStoreFactory(t, registry, settings,
-		func(pool *pgxpool.Pool) (storage.Store, error) {
-			blobs, err := storage.NewStore(pool, t.TempDir())
-			if err == nil && decorate != nil {
-				blobs = decorate(blobs)
-			}
-			return blobs, err
-		},
-	)
-}
-
-func newVerifiedIngestRouterWithStoreFactory(
-	t *testing.T,
-	registry *format.Registry,
-	settings asset.IngestSettings,
-	storeFactory func(*pgxpool.Pool) (storage.Store, error),
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	pool := testdb.Connect(t)
-	blobs, err := storeFactory(pool)
-	if err != nil {
-		t.Fatalf("storage: %v", err)
-	}
-	if registry.Empty() {
-		if err := registry.Register(opaqueTestModule{}); err != nil {
-			t.Fatalf("register test format: %v", err)
-		}
-	}
-	assets := asset.NewServiceWithIngestSettings(pool, registry, blobs, settings)
-	outbox := &verificationOutbox{}
-	accounts := newTestAccounts(pool, outbox, nil, testMediaLibrary(blobs))
-	links := newTestLinkingService(pool)
-	handlers := NewHandlers(
-		assets, accounts, links, newTestDeliveryService(pool, assets, links),
-		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), newTestNotifications(pool), 1<<20,
-	)
-	setup := registerTestRouter(t, handlers, DefaultDeadlines())
-	session := signUp(t, setup, "verified@example.com", "verified.creator")
-	verificationURL, err := url.Parse(outbox.messages[0].link)
-	if err != nil {
-		t.Fatalf("parse verification link: %v", err)
-	}
-	verified := sendJSON(t, setup, http.MethodPost, "/v1/auth/verify-email",
-		`{"token":"`+verificationURL.Query().Get("token")+`"}`)
-	if verified.Code != http.StatusOK {
-		t.Fatalf("verify test account: %d %s", verified.Code, verified.Body.String())
-	}
-	return registerTestRouter(t, handlers, DefaultDeadlines()), session, assets, pool
-}
-
 func TestCreatorCanPollTheirPendingIngest(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	upload := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("Evening Theme"), []byte("theme bytes")),
+	r, session := harness.NewVerifiedRouter(t)
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Evening Theme"), []byte("theme bytes")),
 		session,
 	))
 
 	poll := httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil)
-	rec := send(t, r, authorized(poll, session))
+	rec := apitest.Send(t, r, apitest.Authorized(poll, session))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200. body: %s", rec.Code, rec.Body.String())
@@ -450,8 +255,8 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, registry)
-	metadata := exampleMetadata("Ana")
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	metadata["_keepDraft"] = true
 	card := []byte(`{
@@ -464,16 +269,16 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 			"system_prompt":"Stay in character.","future_structure":{"kept":"whole"}
 		}
 	}`)
-	finished := uploadAndFinish(t, r, session, assets, metadata, card)
+	finished := apitest.UploadAndFinish(t, r, session, assets, metadata, card)
 	assetID := assetIDFromIngest(t, finished)
 
-	pageResponse := send(t, r, authorized(
+	pageResponse := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session,
 	))
 	if pageResponse.Code != http.StatusOK {
 		t.Fatalf("page status = %d, want 200: %s", pageResponse.Code, pageResponse.Body.String())
 	}
-	var page startedAsset
+	var page apitest.StartedAsset
 	if err := json.Unmarshal(pageResponse.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode imported page: %v", err)
 	}
@@ -483,18 +288,18 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 	if len(page.Blocks) != 3 {
 		t.Fatalf("blocks = %d, want character core, messages and model instructions", len(page.Blocks))
 	}
-	core := blockNamed(t, page.Blocks, "character_core")
+	core := apitest.BlockNamed(t, page.Blocks, "character_core")
 	if core.Layout != "stack-3" || core.Width != "two_thirds" {
 		t.Errorf("character core = %s at %s", core.Layout, core.Width)
 	}
 	if string(core.Elements[0].Content) != `{"text":"Keeps the archive."}` {
 		t.Errorf("description = %s", core.Elements[0].Content)
 	}
-	messages := blockNamed(t, page.Blocks, "messages")
+	messages := apitest.BlockNamed(t, page.Blocks, "messages")
 	if messages.Layout != "stack-3" || len(messages.Elements) != 3 {
 		t.Errorf("messages = %+v, want three roles in stack-3", messages)
 	}
-	instructions := blockNamed(t, page.Blocks, "model_instructions")
+	instructions := apitest.BlockNamed(t, page.Blocks, "model_instructions")
 	if instructions.Width != "half" || len(instructions.Elements) != 1 ||
 		instructions.Elements[0].Role != "system_prompt" {
 		t.Errorf("model instructions = %+v", instructions)
@@ -551,27 +356,27 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 					t.Fatalf("register %s: %v", module.ID(), err)
 				}
 			}
-			r, session, assets, pool := newVerifiedIngestRouterWithPool(t, registry)
-			metadata := exampleMetadata("Ana")
+			r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+			metadata := apitest.ExampleMetadata("Ana")
 			metadata["filename"] = test.filename
 			metadata["_keepDraft"] = true
-			assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, test.file))
-			response := send(t, r, authorized(httptest.NewRequest(
+			assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, test.file))
+			response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 				http.MethodGet, "/v1/assets/"+assetID, nil,
 			), session))
-			var page startedAsset
+			var page apitest.StartedAsset
 			if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &page) != nil {
 				t.Fatalf("page = %d: %s", response.Code, response.Body.String())
 			}
 			if page.Lifecycle != "draft" || len(page.Blocks) != 2 {
 				t.Fatalf("page = lifecycle %q, blocks %+v", page.Lifecycle, page.Blocks)
 			}
-			core := blockNamed(t, page.Blocks, "character_core")
+			core := apitest.BlockNamed(t, page.Blocks, "character_core")
 			if core.Layout != "stack-3" || core.Width != "two_thirds" ||
 				string(core.Elements[0].Content) != fmt.Sprintf(`{"text":%q}`, test.description) {
 				t.Errorf("character core = %+v", core)
 			}
-			messages := blockNamed(t, page.Blocks, "messages")
+			messages := apitest.BlockNamed(t, page.Blocks, "messages")
 			if messages.Layout != "stack-2" || messages.Width != "full" || len(messages.Elements) != 2 {
 				t.Errorf("messages = %+v", messages)
 			}
@@ -593,7 +398,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, registry)
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
 	card := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -608,10 +413,10 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 		t.Fatal("stored image bytes are missing from the CharX fixture")
 	}
 	file[position] ^= 0xff
-	metadata := exampleMetadata("Ana")
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.charx"
 	metadata["_keepDraft"] = true
-	assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, file))
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, file))
 
 	var mediaCount int
 	if err := pool.QueryRow(context.Background(),
@@ -646,7 +451,7 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	image := httpTestPNG(t, 120, 60)
+	image := apitest.PNG(t, 120, 60)
 	card := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -655,10 +460,10 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	file := zipCharacterCardWithFiles(t, card, map[string][]byte{"assets/happy.png": image})
 	settings := asset.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(file) + len(image) - 1)
-	r, session, assets, pool := newVerifiedIngestRouterWithSettings(t, registry, settings)
-	metadata := exampleMetadata("Ana")
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.charx"
-	upload := send(t, r, authorized(uploadRequest(t, metadata, file), session))
+	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, file), session))
 	if upload.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202: %s", upload.Code, upload.Body.String())
 	}
@@ -666,7 +471,7 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -726,17 +531,17 @@ func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
 	if err := registry.Register(neverClaimsModule{}); err != nil {
 		t.Fatalf("register non-claiming module: %v", err)
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Unknown")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Unknown")
 	metadata["filename"] = "velvet-night.bundle"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte("unrecognised bytes")), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte("unrecognised bytes")), session,
 	))
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -765,17 +570,17 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnAsset(t *testing.T) {
 	if err := registry.Register(parseFailureModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Broken card")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Broken card")
 	metadata["filename"] = "broken.json"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -839,14 +644,14 @@ func TestTerminalIngestFailuresStayDistinct(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			r, session, assets := newVerifiedIngestRouter(t, test.registry(t))
-			metadata := exampleMetadata("Refused")
+			r, session, assets := harness.NewVerifiedIngestRouter(t, test.registry(t))
+			metadata := apitest.ExampleMetadata("Refused")
 			metadata["filename"] = "refused.json"
-			upload := send(t, r, authorized(uploadRequest(t, metadata, test.file), session))
+			upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, test.file), session))
 			if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 				t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 			}
-			poll := send(t, r, authorized(
+			poll := apitest.Send(t, r, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 			))
 			var operation struct {
@@ -921,14 +726,14 @@ func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-			metadata := exampleMetadata("Unsafe theme")
+			r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			metadata := apitest.ExampleMetadata("Unsafe theme")
 			metadata["filename"] = "unsafe.lumitheme"
-			upload := send(t, r, authorized(uploadRequest(t, metadata, test.file(t)), session))
+			upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, test.file(t)), session))
 			if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 				t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 			}
-			poll := send(t, r, authorized(
+			poll := apitest.Send(t, r, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 			))
 			var operation struct {
@@ -960,7 +765,7 @@ type invalidFinalizationModule struct{}
 
 func (invalidFinalizationModule) ID() string { return "invalid_finalization" }
 func (invalidFinalizationModule) Declaration() format.Declaration {
-	return testReaderDeclaration("invalid_finalization", "not-a-kind")
+	return apitest.ReaderDeclaration("invalid_finalization", "not-a-kind")
 }
 func (invalidFinalizationModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -974,7 +779,7 @@ func (invalidFinalizationModule) Parse(context.Context, probe.Inspection, format
 
 func (catalogModule) ID() string { return "catalog" }
 func (catalogModule) Declaration() format.Declaration {
-	return testReaderDeclaration("catalog", "character")
+	return apitest.ReaderDeclaration("catalog", "character")
 }
 func (catalogModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -999,7 +804,7 @@ func (catalogModule) Parse(context.Context, probe.Inspection, format.Claim) (for
 
 func (*internalFailureModule) ID() string { return "internal_failure" }
 func (*internalFailureModule) Declaration() format.Declaration {
-	return testReaderDeclaration("internal_failure", "character")
+	return apitest.ReaderDeclaration("internal_failure", "character")
 }
 func (*internalFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -1025,17 +830,17 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets, _ := newVerifiedIngestRouterWithSettings(t, registry, settings)
-	metadata := exampleMetadata("Recovered card")
+	r, session, assets, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	metadata := apitest.ExampleMetadata("Recovered card")
 	metadata["filename"] = "recovered.json"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("first process = %v, %v; want true, nil", processed, err)
 	}
-	firstPoll := send(t, r, authorized(
+	firstPoll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var first struct {
@@ -1051,7 +856,7 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("second process = %v, %v; want true, nil", processed, err)
 	}
-	secondPoll := send(t, r, authorized(
+	secondPoll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var second struct {
@@ -1074,18 +879,18 @@ func TestExhaustedInternalFailureIsReported(t *testing.T) {
 	if err := registry.Register(&internalFailureModule{failuresLeft: 3}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets, _ := newVerifiedIngestRouterWithSettings(t, registry, settings)
-	metadata := exampleMetadata("Still broken")
+	r, session, assets, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	metadata := apitest.ExampleMetadata("Still broken")
 	metadata["filename"] = "broken.json"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 	for attempt := 0; attempt < settings.MaxAttempts; attempt++ {
 		if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 			t.Fatalf("process %d = %v, %v; want true, nil", attempt+1, processed, err)
 		}
 	}
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -1110,17 +915,17 @@ func TestAClaimedKindWithoutABlockCatalogIsRefused(t *testing.T) {
 	if err := registry.Register(invalidFinalizationModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets, _ := newVerifiedIngestRouterWithSettings(t, registry, settings)
-	metadata := exampleMetadata("Invalid finalization")
+	r, session, assets, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	metadata := apitest.ExampleMetadata("Invalid finalization")
 	metadata["filename"] = "invalid.json"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process = %v, %v; want true, nil", processed, err)
 	}
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -1144,15 +949,15 @@ func TestCatalogMetadataSeedsFromParseWithoutChangingTheFile(t *testing.T) {
 	if err := registry.Register(catalogModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
 	file := []byte(`{"payload":"original"}`)
-	upload := send(t, r, authorized(uploadRequest(t, map[string]any{
+	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, map[string]any{
 		"filename": "visitor.json", "confirmed": true,
 	}, file), session))
 	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -1177,7 +982,7 @@ func TestCatalogMetadataSeedsFromParseWithoutChangingTheFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse asset id: %v", err)
 	}
-	published := send(t, r, authorized(httptest.NewRequest(
+	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+operation.Asset.ID+"/publish", nil,
 	), session))
 	if published.Code != http.StatusOK {
@@ -1204,7 +1009,7 @@ type blockingModule struct {
 
 func (*blockingModule) ID() string { return "blocking" }
 func (*blockingModule) Declaration() format.Declaration {
-	return testReaderDeclaration("blocking", "character")
+	return apitest.ReaderDeclaration("blocking", "character")
 }
 func (*blockingModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
@@ -1225,11 +1030,11 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Patient card")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Patient card")
 	metadata["filename"] = "patient.json"
-	upload := send(t, r, authorized(
-		uploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
+	upload := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 	done := make(chan error, 1)
 	go func() {
@@ -1238,7 +1043,7 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 	}()
 	<-module.started
 
-	poll := send(t, r, authorized(
+	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 	))
 	var operation struct {
@@ -1258,7 +1063,7 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 
 func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	workerContext, stopWorkers := context.WithCancel(context.Background())
 	workersDone := make(chan struct{})
 	go func() {
@@ -1270,16 +1075,16 @@ func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
 		<-workersDone
 	}()
 
-	metadata := exampleMetadata("Background theme")
+	metadata := apitest.ExampleMetadata("Background theme")
 	metadata["filename"] = "background.lumitheme"
 	requestContext, closeConnection := context.WithCancel(context.Background())
-	req := uploadRequest(t, metadata, []byte("theme bytes")).WithContext(requestContext)
-	upload := send(t, r, authorized(req, session))
+	req := apitest.UploadRequest(t, metadata, []byte("theme bytes")).WithContext(requestContext)
+	upload := apitest.Send(t, r, apitest.Authorized(req, session))
 	closeConnection()
 
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		poll := send(t, r, authorized(
+		poll := apitest.Send(t, r, apitest.Authorized(
 			httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
 		))
 		var operation struct {
@@ -1302,7 +1107,7 @@ func revisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 	t.Helper()
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
-	writeFilePartNamed(t, form, filename, file)
+	apitest.WriteFilePartNamed(t, form, filename, file)
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
@@ -1313,15 +1118,15 @@ func revisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 
 func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	metadata := exampleMetadata("Evening Theme")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
-	upload := send(t, r, authorized(uploadRequest(t, metadata, []byte("first bytes")), session))
+	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
 	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process ingest: %v", err)
 	}
 	created := pollIngestAsset(t, r, session, upload.Header().Get("Location"))
-	published := send(t, r, authorized(httptest.NewRequest(
+	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+created.ID+"/publish", nil,
 	), session))
 	if published.Code != http.StatusOK {
@@ -1329,7 +1134,7 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	}
 	firstFile := servedSourcePath(t, r, created.ID)
 
-	revision := send(t, r, authorized(
+	revision := apitest.Send(t, r, apitest.Authorized(
 		revisionRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session,
 	))
 	if revision.Code != http.StatusAccepted {
@@ -1354,7 +1159,7 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 
 func servedSourcePath(t *testing.T, r *gin.Engine, assetID string) string {
 	t.Helper()
-	rec := send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
+	rec := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("download status = %d, want 200", rec.Code)
 	}
@@ -1367,16 +1172,16 @@ func servedSourcePath(t *testing.T, r *gin.Engine, assetID string) string {
 
 func TestARevisionForSomebodyElsesAssetIsNotFound(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	metadata := exampleMetadata("Evening Theme")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
-	upload := send(t, r, authorized(uploadRequest(t, metadata, []byte("first bytes")), session))
+	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
 	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process ingest: %v", err)
 	}
 	created := pollIngestAsset(t, r, session, upload.Header().Get("Location"))
 
-	stranger := send(t, r, revisionRequest(t, created.ID, "evening.lumitheme", []byte("second")))
+	stranger := apitest.Send(t, r, revisionRequest(t, created.ID, "evening.lumitheme", []byte("second")))
 	if stranger.Code != http.StatusUnauthorized {
 		t.Fatalf("signed-out status = %d, want 401", stranger.Code)
 	}
@@ -1387,7 +1192,7 @@ func pollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 	Name string `json:"name"`
 } {
 	t.Helper()
-	rec := send(t, r, authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	rec := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("poll status = %d, want 200. body: %s", rec.Code, rec.Body.String())
 	}
@@ -1409,7 +1214,7 @@ func pollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 
 func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string, exposeProtected ...bool) {
 	t.Helper()
-	preview := send(t, r, authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	preview := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
 	if preview.Code != http.StatusOK {
 		t.Fatalf("read replacement preview = %d: %s", preview.Code, preview.Body.String())
 	}
@@ -1439,7 +1244,7 @@ func acceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 	operationID := strings.TrimPrefix(location, "/v1/ingests/")
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
-	accepted := send(t, r, authorized(request, session))
+	accepted := apitest.Send(t, r, apitest.Authorized(request, session))
 	if accepted.Code != http.StatusOK {
 		t.Fatalf("accept replacement preview = %d: %s", accepted.Code, accepted.Body.String())
 	}

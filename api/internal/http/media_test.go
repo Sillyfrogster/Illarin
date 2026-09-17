@@ -5,15 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"image"
-	"image/color"
-	"image/png"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -22,15 +21,15 @@ import (
 
 func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	metadata := exampleMetadata("Theme with screenshots")
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Theme with screenshots")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "theme.lumitheme"
-	created := uploadAndFinish(t, r, session, assets, metadata, []byte("theme"))
+	created := apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme"))
 	assetID := assetIDFromIngest(t, created)
 
-	added := send(t, r, authorized(mediaUploadRequest(
-		t, assetID, "gallery", httpTestPNG(t, 1200, 600),
+	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+		t, assetID, "gallery", apitest.PNG(t, 1200, 600),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add media status = %d, want 201: %s", added.Code, added.Body.String())
@@ -59,11 +58,11 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	if media.Role != "gallery" || media.Width != 1200 || media.Height != 600 {
 		t.Fatalf("media response = %+v", media)
 	}
-	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	listed := send(t, r, httptest.NewRequest(
+	listed := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"/media", nil,
 	))
 	if listed.Code != http.StatusOK {
@@ -82,7 +81,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	}
 
 	variantURL := "/media/" + media.ID + "/grid/" + "2"
-	variant := send(t, r, httptest.NewRequest(http.MethodGet, variantURL, nil))
+	variant := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, variantURL, nil))
 	if variant.Code != http.StatusOK {
 		t.Fatalf("media status = %d, want 200: %s", variant.Code, variant.Body.String())
 	}
@@ -104,7 +103,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	if variant.Body.Len() != 0 {
 		t.Errorf("Go wrote %d media bytes instead of handing off to nginx", variant.Body.Len())
 	}
-	preview := send(t, r, httptest.NewRequest(
+	preview := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet, "/media/"+media.ID+"/og/2", nil,
 	))
 	if preview.Code != http.StatusOK {
@@ -124,12 +123,12 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 
 func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
 	t.Parallel()
-	r := newTestRouter(t)
+	r := harness.NewRouter(t)
 	for _, path := range []string{
 		"/media/11111111-1111-1111-1111-111111111111/1200x630/1",
 		"/media/11111111-1111-1111-1111-111111111111/grid/999",
 	} {
-		response := send(t, r, httptest.NewRequest(http.MethodGet, path, nil))
+		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusNotFound {
 			t.Errorf("GET %s status = %d, want 404", path, response.Code)
 		}
@@ -139,20 +138,20 @@ func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
 func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	r, session, assets, pool := newVerifiedIngestRouterWithStoreFactory(
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
 		t, format.NewRegistry(), asset.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStore(pool, root)
 		},
 	)
-	metadata := exampleMetadata("Theme with one image")
+	metadata := apitest.ExampleMetadata("Theme with one image")
 	metadata["_keepDraft"] = true
-	created := uploadAndFinish(
+	created := apitest.UploadAndFinish(
 		t, r, session, assets, metadata, []byte("theme"),
 	)
 	assetID := assetIDFromIngest(t, created)
-	added := send(t, r, authorized(mediaUploadRequest(
-		t, assetID, "gallery", httpTestPNG(t, 120, 60),
+	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+		t, assetID, "gallery", apitest.PNG(t, 120, 60),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add media status = %d, want 201: %s", added.Code, added.Body.String())
@@ -164,7 +163,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 		t.Fatalf("decode media: %v", err)
 	}
 
-	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d", got.Code)
 	}
 
@@ -201,15 +200,10 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), limited, asset.DefaultIngestSettings(),
 	)
-	accounts := newTestAccounts(pool, &verificationOutbox{}, nil, testMediaLibrary(limited))
-	links := newTestLinkingService(pool)
-	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, limited), newTestUpdateDestinations(pool), newTestNotifications(pool), 1<<20,
-	)
-	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
+	handlers := apitest.NewServicesOver(pool, limited, limitedAssets, &apitest.VerificationOutbox{}, nil)
+	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
-	response := send(t, limitedRouter, httptest.NewRequest(
+	response := apitest.Send(t, limitedRouter, httptest.NewRequest(
 		http.MethodGet, "/media/"+media.ID+"/grid/2", nil,
 	))
 
@@ -225,7 +219,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	var blobs storage.Store
-	r, session, assets, pool := newVerifiedIngestRouterWithStoreFactory(
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
 		t, format.NewRegistry(), asset.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
@@ -234,26 +228,21 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 		},
 	)
 	source := []byte("theme")
-	created := uploadAndFinish(
-		t, r, session, assets, exampleMetadata("Theme at its cap"), source,
+	created := apitest.UploadAndFinish(
+		t, r, session, assets, apitest.ExampleMetadata("Theme at its cap"), source,
 	)
 	assetID := assetIDFromIngest(t, created)
-	mediaBytes := httpTestPNG(t, 120, 60)
+	mediaBytes := apitest.PNG(t, 120, 60)
 
 	settings := asset.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(source) + len(mediaBytes) - 1)
 	limitedAssets := asset.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
-	accounts := newTestAccounts(pool, &verificationOutbox{}, nil, testMediaLibrary(blobs))
-	links := newTestLinkingService(pool)
-	handlers := NewHandlers(
-		limitedAssets, accounts, links, newTestDeliveryService(pool, limitedAssets, links),
-		newTestPublicationService(pool, blobs), newTestUpdateDestinations(pool), newTestNotifications(pool), 1<<20,
-	)
-	limitedRouter := registerTestRouter(t, handlers, DefaultDeadlines())
+	handlers := apitest.NewServicesOver(pool, blobs, limitedAssets, &apitest.VerificationOutbox{}, nil)
+	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
-	response := send(t, limitedRouter, authorized(
+	response := apitest.Send(t, limitedRouter, apitest.Authorized(
 		mediaUploadRequest(t, assetID, "gallery", mediaBytes), session,
 	))
 
@@ -273,8 +262,8 @@ func mediaUploadRequest(t *testing.T, assetID, role string, file []byte) *http.R
 	t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
-	writeMetadataPart(t, form, map[string]any{"role": role})
-	writeFilePartNamed(t, form, "screenshot.png", file)
+	apitest.WriteMetadataPart(t, form, map[string]any{"role": role})
+	apitest.WriteFilePartNamed(t, form, "screenshot.png", file)
 	if err := form.Close(); err != nil {
 		t.Fatalf("close media form: %v", err)
 	}
@@ -297,19 +286,4 @@ func assetIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string
 		t.Fatal("ingest response has no asset")
 	}
 	return operation.Asset.ID
-}
-
-func httpTestPNG(t *testing.T, width, height int) []byte {
-	t.Helper()
-	picture := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := range height {
-		for x := range width {
-			picture.Set(x, y, color.RGBA{R: 20, G: 60, B: 100, A: 255})
-		}
-	}
-	var encoded bytes.Buffer
-	if err := png.Encode(&encoded, picture); err != nil {
-		t.Fatalf("encode PNG: %v", err)
-	}
-	return encoded.Bytes()
 }

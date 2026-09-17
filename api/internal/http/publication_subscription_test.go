@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/google/uuid"
 )
@@ -240,14 +241,14 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 	kept := stack.saved(t, stack.editor, ready.ID, finished(ready, map[string]any{
 		"version": ready.Version, "title": "A better title",
 	}))
-	removed := send(t, stack.router, authorized(jsonRequest(t,
+	removed := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+kept.ID+"/delete",
 		fmt.Sprintf(`{"version":%d}`, kept.Version),
 	), stack.editor))
 	if removed.Code != http.StatusOK {
 		t.Fatalf("delete status = %d: %s", removed.Code, removed.Body.String())
 	}
-	recovered := send(t, stack.router, authorized(jsonRequest(t,
+	recovered := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+kept.ID+"/recover",
 		fmt.Sprintf(`{"version":%d}`, kept.Version),
 	), stack.editor))
@@ -299,7 +300,7 @@ func TestASubscriptionIsRefusedForAnEventIllarinDoesNotSend(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 
-	response := send(t, stack.router, authorized(jsonRequest(t,
+	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations", fmt.Sprintf(
 			`{"name":"Release feed","address":%q,"events":["publication.post.read.v1"]}`,
 			stack.to.address(),
@@ -316,7 +317,7 @@ func TestASubscriptionCanBeNarrowedAfterwards(t *testing.T) {
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 
-	response := send(t, stack.router, authorized(jsonRequest(t,
+	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPatch, "/v1/publication/destinations/"+made.Destination.ID,
 		`{"events":["publication.post.withdrawn.v1","publication.post.published.v1"]}`,
 	), stack.authority))

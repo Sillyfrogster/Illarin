@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,12 +59,12 @@ type sealedStack struct {
 
 func newSealedStack(t *testing.T) sealedStack {
 	t.Helper()
-	outbox := &verificationOutbox{}
-	router, pool, _ := newTestRouterWithSenderPoolAndHandlers(
-		t, 1<<20, DefaultDeadlines(), outbox,
+	outbox := &apitest.VerificationOutbox{}
+	router, pool, _ := harness.NewRouterWithSenderPoolAndServices(
+		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
-	session := verifiedSignUp(t, router, outbox, "sealed@example.com", "sealed.creator")
-	stranger := verifiedSignUp(t, router, outbox, "other@example.com", "other.creator")
+	session := apitest.VerifiedSignUp(t, router, outbox, "sealed@example.com", "sealed.creator")
+	stranger := apitest.VerifiedSignUp(t, router, outbox, "other@example.com", "other.creator")
 	started := startPreset(t, router, session, "sillytavern")
 	return sealedStack{
 		router: router, session: session, stranger: stranger,
@@ -85,7 +87,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	stack.seal(t, "1.0.0", "authors_note", "The other one.")
 	stack.seal(t, "0.9.0", "jailbreak", "An older take.")
 
-	response := send(t, stack.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
 	), stack.session))
 	if response.Code != http.StatusOK {
@@ -137,14 +139,14 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
-	signedOut := send(t, stack.router, httptest.NewRequest(
+	signedOut := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
 	))
 	if signedOut.Code != http.StatusUnauthorized {
 		t.Errorf("a signed-out reader asked for sealed content and got %d", signedOut.Code)
 	}
 
-	stranger := send(t, stack.router, authorized(httptest.NewRequest(
+	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
 	), stack.stranger))
 	if stranger.Code != http.StatusNotFound {
@@ -157,10 +159,10 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 
 func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 	started := startPreset(t, r, session, "sillytavern")
 
-	response := send(t, r, authorized(httptest.NewRequest(
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/sealed", nil,
 	), session))
 	if response.Code != http.StatusNotFound {
@@ -173,7 +175,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	stack := newSealedStack(t)
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
-	owner := send(t, stack.router, authorized(httptest.NewRequest(
+	owner := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+stack.assetID, nil,
 	), stack.session))
 	var page struct {
@@ -189,7 +191,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 		t.Error("the page rendered sealed content")
 	}
 
-	stranger := send(t, stack.router, authorized(httptest.NewRequest(
+	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+stack.assetID, nil,
 	), stack.stranger))
 	if strings.Contains(stranger.Body.String(), "sealedBlocks") {

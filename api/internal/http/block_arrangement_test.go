@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -33,7 +35,7 @@ func arrangeBlocks(
 		http.MethodPut, "/v1/assets/"+assetID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	return send(t, r, authorized(request, session))
+	return apitest.Send(t, r, apitest.Authorized(request, session))
 }
 
 func insertEmptyGallery(t *testing.T, pool *pgxpool.Pool, assetID string) string {
@@ -53,10 +55,10 @@ func insertEmptyGallery(t *testing.T, pool *pgxpool.Pool, assetID string) string
 
 func TestCreatorReordersAndHidesBlocksAsOneArrangement(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	core := blockNamed(t, started.Blocks, "character_core")
-	messages := blockNamed(t, started.Blocks, "messages")
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	core := apitest.BlockNamed(t, started.Blocks, "character_core")
+	messages := apitest.BlockNamed(t, started.Blocks, "messages")
 
 	response := arrangeBlocks(t, r, session, started.ID, []arrangedBlock{
 		{ID: messages.ID, Width: "half"},
@@ -77,10 +79,10 @@ func TestCreatorReordersAndHidesBlocksAsOneArrangement(t *testing.T) {
 
 func TestArrangementRefusesToHideTheAlwaysShownBlock(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	core := blockNamed(t, started.Blocks, "character_core")
-	messages := blockNamed(t, started.Blocks, "messages")
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	core := apitest.BlockNamed(t, started.Blocks, "character_core")
+	messages := apitest.BlockNamed(t, started.Blocks, "messages")
 
 	response := arrangeBlocks(t, r, session, started.ID, []arrangedBlock{
 		{ID: core.ID, Width: core.Width},
@@ -94,9 +96,9 @@ func TestArrangementRefusesToHideTheAlwaysShownBlock(t *testing.T) {
 
 func TestArrangementRequiresEveryCurrentBlockExactlyOnce(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	core := blockNamed(t, started.Blocks, "character_core")
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	core := apitest.BlockNamed(t, started.Blocks, "character_core")
 
 	response := arrangeBlocks(t, r, session, started.ID, []arrangedBlock{
 		{ID: core.ID, Width: core.Width},
@@ -110,14 +112,14 @@ func TestArrangementRequiresEveryCurrentBlockExactlyOnce(t *testing.T) {
 
 func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
 	galleryID := insertEmptyGallery(t, pool, started.ID)
 
 	request := httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+started.ID+"/blocks/"+galleryID, nil,
 	)
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("remove Gallery status = %d, want 204: %s", response.Code, response.Body.String())
 	}
@@ -126,11 +128,11 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 		t.Errorf("blocks after remove = %+v, want two required blocks in gapless order", saved.Blocks)
 	}
 
-	core := blockNamed(t, saved.Blocks, "character_core")
+	core := apitest.BlockNamed(t, saved.Blocks, "character_core")
 	request = httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+started.ID+"/blocks/"+core.ID, nil,
 	)
-	response = send(t, r, authorized(request, session))
+	response = apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "required") {
 		t.Fatalf("remove required block = %d, want required refusal: %s", response.Code, response.Body.String())
 	}
@@ -138,20 +140,20 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 
 func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
 	insertEmptyGallery(t, pool, started.ID)
-	gallery := blockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "gallery")
+	gallery := apitest.BlockNamed(t, fetchStartedAsset(t, r, session, started.ID).Blocks, "gallery")
 
-	update := editableBlock(gallery)
+	update := apitest.EditableBlock(gallery)
 	update.Width = "full"
-	response := saveBlock(t, r, session, started.ID, gallery.ID, update)
+	response := apitest.SaveBlock(t, r, session, started.ID, gallery.ID, update)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("save empty Gallery status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 	saved := fetchStartedAsset(t, r, session, started.ID)
-	kept := blockNamed(t, saved.Blocks, "gallery")
+	kept := apitest.BlockNamed(t, saved.Blocks, "gallery")
 	if len(saved.Blocks) != 3 || kept.ID != gallery.ID || kept.Width != "full" {
 		t.Errorf("blocks after empty save = %+v, want the full-width Gallery kept", saved.Blocks)
 	}
@@ -159,15 +161,15 @@ func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
 
 func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
 	galleryID := insertEmptyGallery(t, pool, started.ID)
-	messagesBlock := blockNamed(t, started.Blocks, "messages")
-	messages := editableBlock(messagesBlock)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "stack-3"
 	messages.Elements[0].Slot = "top"
 	messages.Elements[1].Slot = "middle"
-	response := saveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+	response := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
 	if response.Code != http.StatusOK {
 		t.Fatalf("prepare destination status = %d, want 200: %s", response.Code, response.Body.String())
 	}
@@ -178,7 +180,7 @@ func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
 		strings.NewReader(`{"destinationBlockId":"`+messagesBlock.ID+`"}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	response = send(t, r, authorized(request, session))
+	response = apitest.Send(t, r, apitest.Authorized(request, session))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("move Gallery content status = %d, want 200: %s", response.Code, response.Body.String())
@@ -187,7 +189,7 @@ func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
 	if len(saved.Blocks) != 2 {
 		t.Fatalf("blocks after move = %d, want the source removed", len(saved.Blocks))
 	}
-	messagesBlock = blockNamed(t, saved.Blocks, "messages")
+	messagesBlock = apitest.BlockNamed(t, saved.Blocks, "messages")
 	if len(messagesBlock.Elements) != 3 || messagesBlock.Elements[2].Role != "gallery" || messagesBlock.Elements[2].Slot != "bottom" {
 		t.Errorf("Messages after move = %+v, want Gallery in the free bottom slot", messagesBlock.Elements)
 	}

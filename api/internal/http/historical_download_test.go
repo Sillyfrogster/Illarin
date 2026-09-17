@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
@@ -30,12 +32,12 @@ type writtenCard struct {
 	} `json:"data"`
 }
 
-func describeBlock(t *testing.T, r http.Handler, session *http.Cookie, started startedAsset, text string) {
+func describeBlock(t *testing.T, r http.Handler, session *http.Cookie, started apitest.StartedAsset, text string) {
 	t.Helper()
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"text":"` + text + `"}`)
-	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description: %d %s", got.Code, got.Body.String())
 	}
 }
@@ -49,9 +51,9 @@ func downloadVersion(
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+target+query, nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	return send(t, r, request)
+	return apitest.Send(t, r, request)
 }
 
 func archivedCard(t *testing.T, archive []byte) []byte {
@@ -103,16 +105,16 @@ func publishTwoCoveredVersions(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
-) (startedAsset, []byte, []byte) {
+) (apitest.StartedAsset, []byte, []byte) {
 	t.Helper()
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	firstCover := httpTestPNG(t, 32, 32)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	firstCover := apitest.PNG(t, 32, 32)
 	uploadedImageID(t, r, session, started.ID, "avatar", firstCover)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
-	secondCover := httpTestPNG(t, 40, 40)
+	secondCover := apitest.PNG(t, 40, 40)
 	uploadedImageID(t, r, session, started.ID, "avatar", secondCover)
 	describeBlock(t, r, session, started, "She has moved to the east shelf.")
 	if got := publishAssetUpdate(t, r, session, started.ID,
@@ -185,7 +187,7 @@ func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 	r, session, _, _ := newCharacterIngestRouterWithPool(t)
 	started, firstCover, secondCover := publishTwoCoveredVersions(t, r, session)
 	describeBlock(t, r, session, started, "She is thinking about the north shelf.")
-	uploadedImageID(t, r, session, started.ID, "avatar", httpTestPNG(t, 48, 48))
+	uploadedImageID(t, r, session, started.ID, "avatar", apitest.PNG(t, 48, 48))
 
 	for _, reader := range []struct {
 		name    string
@@ -219,7 +221,7 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 	publishCharacter(t, r, session, assetID)
-	removed := send(t, r, authorized(httptest.NewRequest(
+	removed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil), session))
 	if removed.Code != http.StatusNoContent {
 		t.Fatalf("delete chub: %d %s", removed.Code, removed.Body.String())
@@ -247,16 +249,16 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 
 func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	t.Parallel()
-	router, session := newVerifiedTestRouter(t)
+	router, session := harness.NewVerifiedRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const firstSecret = "The first private instruction."
 	const secondSecret = "The second private instruction."
 	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", firstSecret)
 	owner := fetchStartedAsset(t, router, session, started.ID)
-	core := editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
-	if got := saveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
 	if got := publishAssetUpdate(t, router, session, started.ID,
@@ -277,14 +279,14 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	}
 
 	owner = fetchStartedAsset(t, router, session, started.ID)
-	core = editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = sealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
 	core.AllowedApps = &[]string{}
 	confirmed := true
 	core.ExposeProtected = &confirmed
-	if got := saveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal the prompt: %d %s", got.Code, got.Body.String())
 	}
 
@@ -306,16 +308,16 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 
 func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *testing.T) {
 	t.Parallel()
-	router, session := newVerifiedTestRouter(t)
+	router, session := harness.NewVerifiedRouter(t)
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Words that were sealed when version 1 was recorded."
 	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
 	owner := fetchStartedAsset(t, router, session, started.ID)
-	core := editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[` +
 		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"Answer plainly.","enabled":true}]}`)
 	core.AllowedApps = &[]string{}
-	if got := saveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("remove the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
 	if got := publishAssetUpdate(t, router, session, started.ID,
@@ -350,12 +352,12 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := newVerifiedIngestRouterWithSettings(t, registry, asset.DefaultIngestSettings())
-	metadata := exampleMetadata("Zenless lore")
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, asset.DefaultIngestSettings())
+	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := send(t, r, authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
+	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement: %d %s", revision.Code, revision.Body.String())
 	}
@@ -423,12 +425,12 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 	}
 	settings := asset.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(firstCover) + len(secondCover) + len(third) - 1)
-	r, session, _, _ := newVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, _, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
 
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
 	uploadedImageID(t, r, session, started.ID, "avatar", firstCover)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 	uploadedImageID(t, r, session, started.ID, "avatar", secondCover)
@@ -437,7 +439,7 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
-	refused := send(t, r, authorized(mediaUploadRequest(t, started.ID, "avatar", third), session))
+	refused := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(t, started.ID, "avatar", third), session))
 	if refused.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("a third cover past the cap = %d, want 413: %s", refused.Code, refused.Body.String())
 	}
@@ -460,7 +462,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
-	deleted := send(t, r, authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	deleted := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete: %d %s", deleted.Code, deleted.Body.String())
 	}
@@ -469,7 +471,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 			t.Fatalf("a deleted asset still wrote version 1: %d", got.Code)
 		}
 	}
-	restored := send(t, r, authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session))
+	restored := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session))
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore: %d %s", restored.Code, restored.Body.String())
 	}
@@ -489,7 +491,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatal("version 1 still carries the purged cover")
 	}
 
-	deleted = send(t, r, authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	deleted = apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete again: %d %s", deleted.Code, deleted.Body.String())
 	}
@@ -521,12 +523,12 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 }
 
 type recordedDownloadsBody struct {
-	Version           recordedVersionBody `json:"version"`
-	Kind              string              `json:"kind"`
-	LinkedInstallOnly bool                `json:"linkedInstallOnly"`
-	Downloads         []downloadTarget    `json:"downloads"`
-	AppTargets        []appTarget         `json:"appTargets"`
-	Blocks            []startedBlock      `json:"blocks"`
+	Version           recordedVersionBody      `json:"version"`
+	Kind              string                   `json:"kind"`
+	LinkedInstallOnly bool                     `json:"linkedInstallOnly"`
+	Downloads         []apitest.DownloadTarget `json:"downloads"`
+	AppTargets        []apitest.AppTarget      `json:"appTargets"`
+	Blocks            []apitest.StartedBlock   `json:"blocks"`
 	Media             []struct {
 		ID       string `json:"id"`
 		IsCover  bool   `json:"isCover"`
@@ -546,12 +548,12 @@ func readVersionDownloads(
 	request := httptest.NewRequest(http.MethodGet,
 		"/v1/assets/"+assetID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	return send(t, r, request)
+	return apitest.Send(t, r, request)
 }
 
-func offeredFormats(targets []downloadTarget) []string {
+func offeredFormats(targets []apitest.DownloadTarget) []string {
 	formats := make([]string, 0, len(targets))
 	for _, target := range targets {
 		formats = append(formats, target.Format)
@@ -567,12 +569,12 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Zenless lore")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	assetID := assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := send(t, r, authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
+	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
 	if _, err := assets.ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
@@ -587,7 +589,7 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 		if answer.Code != http.StatusOK {
 			t.Fatalf("version %d downloads: %d %s", number, answer.Code, answer.Body.String())
 		}
-		offered := decodeResponse[recordedDownloadsBody](t, answer)
+		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
 		if offered.Version.Number != number || offered.Kind != "lorebook" || offered.LinkedInstallOnly {
 			t.Errorf("version %d = %+v", number, offered)
 		}
@@ -602,7 +604,7 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 
 func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 	t.Parallel()
-	setupRouter, router, session, _ := newVerifiedTestRoutersWithService(t, 1<<20, DefaultDeadlines())
+	setupRouter, router, session, _ := harness.NewVerifiedRoutersWithService(t, 1<<20, api.DefaultDeadlines())
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Not for a file."
 	started := publishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
@@ -612,7 +614,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 		if answer.Code != http.StatusOK {
 			t.Fatalf("sealed version downloads: %d %s", answer.Code, answer.Body.String())
 		}
-		offered := decodeResponse[recordedDownloadsBody](t, answer)
+		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
 		if !offered.LinkedInstallOnly || len(offered.Downloads) != 0 || len(offered.AppTargets) != 0 {
 			t.Fatalf("a sealed version offered a file: %+v", offered)
 		}
@@ -621,8 +623,8 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 		}
 	}
 
-	other := signUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
-	withheld := send(t, router, authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	other := apitest.SignUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
+	withheld := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
 	if withheld.Code != http.StatusNoContent {
 		t.Fatalf("delete: %d %s", withheld.Code, withheld.Body.String())
 	}
@@ -640,14 +642,14 @@ func TestAVersionListsThePicturesItRecorded(t *testing.T) {
 	if answer.Code != http.StatusOK {
 		t.Fatalf("version 1 downloads: %d %s", answer.Code, answer.Body.String())
 	}
-	offered := decodeResponse[recordedDownloadsBody](t, answer)
+	offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
 	if len(offered.Media) != 1 || !offered.Media[0].IsCover || offered.Media[0].Bytes == 0 {
 		t.Fatalf("version 1 pictures = %+v, want its one cover", offered.Media)
 	}
 	if len(offered.Blocks) == 0 || len(offered.Downloads) == 0 {
 		t.Fatalf("version 1 carries %d blocks and %d formats", len(offered.Blocks), len(offered.Downloads))
 	}
-	picture := send(t, r, httptest.NewRequest(http.MethodGet, offered.Media[0].ThumbURL, nil))
+	picture := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, offered.Media[0].ThumbURL, nil))
 	if picture.Code != http.StatusOK || picture.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("the recorded cover is not reachable: %d %s", picture.Code, picture.Body.String())
 	}

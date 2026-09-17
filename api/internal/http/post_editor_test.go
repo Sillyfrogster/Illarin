@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type publicationRefusal struct {
@@ -23,7 +25,7 @@ func (s publicationStack) sent(
 	request *http.Request,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(request, who.session))
+	return apitest.Send(t, s.router, apitest.Authorized(request, who.session))
 }
 
 func (s publicationStack) startedBy(t *testing.T, who contributor, body string) blogPost {
@@ -176,7 +178,7 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 	draft := stack.startedBy(t, writer, fmt.Sprintf(
 		`{"categoryId":%q,"title":"One vocabulary"}`, announcement.ID,
 	))
-	picture := stack.uploaded(t, writer.session, draft.ID, "document", httpTestPNG(t, 800, 400))
+	picture := stack.uploaded(t, writer.session, draft.ID, "document", apitest.PNG(t, 800, 400))
 	sent := bodyWithPicture(picture.ID, "The workspace")
 	body, err := json.Marshal(finished(draft, map[string]any{"document": sent}))
 	if err != nil {

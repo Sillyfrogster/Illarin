@@ -2,87 +2,27 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
-
-func uploadRequest(t *testing.T, metadata map[string]any, file []byte) *http.Request {
-	t.Helper()
-
-	body := &bytes.Buffer{}
-	form := multipart.NewWriter(body)
-	filename, _ := metadata["filename"].(string)
-	writeMetadataPart(t, form, metadata)
-	writeFilePartNamed(t, form, filename, file)
-	if err := form.Close(); err != nil {
-		t.Fatalf("close form: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/assets", body)
-	req.Header.Set("Content-Type", form.FormDataContentType())
-	return req
-}
-
-func writeMetadataPart(t *testing.T, form *multipart.Writer, metadata map[string]any) {
-	t.Helper()
-	fields := make(map[string]any, len(metadata))
-	for key, value := range metadata {
-		if key != "filename" && !strings.HasPrefix(key, "_") {
-			fields[key] = value
-		}
-	}
-	encoded, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode metadata: %v", err)
-	}
-	if err := form.WriteField(metadataPart, string(encoded)); err != nil {
-		t.Fatalf("write metadata part: %v", err)
-	}
-}
 
 func writeFilePart(t *testing.T, form *multipart.Writer, file []byte) {
 	t.Helper()
-	writeFilePartNamed(t, form, "upload.bin", file)
-}
-
-func writeFilePartNamed(t *testing.T, form *multipart.Writer, filename string, file []byte) {
-	t.Helper()
-	part, err := form.CreateFormFile(filePart, filename)
-	if err != nil {
-		t.Fatalf("create file part: %v", err)
-	}
-	if _, err := part.Write(file); err != nil {
-		t.Fatalf("write file part: %v", err)
-	}
-}
-
-func exampleMetadata(name string) map[string]any {
-	return map[string]any{
-		"filename":  name + ".bin",
-		"name":      name,
-		"confirmed": true,
-		"discovery": "listed",
-	}
-}
-
-func send(t *testing.T, r http.Handler, req *http.Request) *httptest.ResponseRecorder {
-	t.Helper()
-	withReviewedVersion(t, r, req)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-	return rec
+	apitest.WriteFilePartNamed(t, form, "upload.bin", file)
 }
 
 func TestUploadOverTheCeilingIsRefused(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouterWith(t, 64, DefaultDeadlines())
+	r, session := harness.NewVerifiedRouterWith(t, 64, api.DefaultDeadlines())
 
-	rec := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("Huge"), bytes.Repeat([]byte("a"), 1024)), session,
+	rec := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Huge"), bytes.Repeat([]byte("a"), 1024)), session,
 	))
 
 	if rec.Code != http.StatusRequestEntityTooLarge {
@@ -92,10 +32,10 @@ func TestUploadOverTheCeilingIsRefused(t *testing.T) {
 
 func TestUploadAtTheCeilingIsAccepted(t *testing.T) {
 	t.Parallel()
-	req := uploadRequest(t, exampleMetadata("Exactly"), bytes.Repeat([]byte("a"), 1024))
-	r, session := newVerifiedTestRouterWith(t, 1024, DefaultDeadlines())
+	req := apitest.UploadRequest(t, apitest.ExampleMetadata("Exactly"), bytes.Repeat([]byte("a"), 1024))
+	r, session := harness.NewVerifiedRouterWith(t, 1024, api.DefaultDeadlines())
 
-	rec := send(t, r, authorized(req, session))
+	rec := apitest.Send(t, r, apitest.Authorized(req, session))
 
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202: a file of exactly the ceiling fits. body: %s",
@@ -105,13 +45,13 @@ func TestUploadAtTheCeilingIsAccepted(t *testing.T) {
 
 func TestUploadIsCutOffWhenItsLengthIsUnknown(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouterWith(t, 512, DefaultDeadlines())
+	r, session := harness.NewVerifiedRouterWith(t, 512, api.DefaultDeadlines())
 
-	req := uploadRequest(t, exampleMetadata("Unstated"), bytes.Repeat([]byte("a"), 4096))
+	req := apitest.UploadRequest(t, apitest.ExampleMetadata("Unstated"), bytes.Repeat([]byte("a"), 4096))
 	req.ContentLength = -1
-	authorized(req, session)
+	apitest.Authorized(req, session)
 
-	rec := send(t, r, req)
+	rec := apitest.Send(t, r, req)
 
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want 413. body: %s", rec.Code, rec.Body.String())
@@ -161,7 +101,7 @@ func TestFormDataThatCannotBeReadIsRefused(t *testing.T) {
 			name: "the file part is missing",
 			request: func(t *testing.T) *http.Request {
 				return formRequest(t, func(form *multipart.Writer) {
-					writeMetadataPart(t, form, exampleMetadata("Fileless"))
+					apitest.WriteMetadataPart(t, form, apitest.ExampleMetadata("Fileless"))
 				})
 			},
 			says: filePart,
@@ -182,9 +122,9 @@ func TestFormDataThatCannotBeReadIsRefused(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r, session := newVerifiedTestRouter(t)
+			r, session := harness.NewVerifiedRouter(t)
 
-			rec := send(t, r, authorized(c.request(t), session))
+			rec := apitest.Send(t, r, apitest.Authorized(c.request(t), session))
 
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400. body: %s", rec.Code, rec.Body.String())

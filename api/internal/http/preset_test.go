@@ -6,19 +6,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) startedAsset {
+func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedAsset {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"preset","app":"`+app+`"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {
 		t.Fatalf("start a preset for %s: status = %d, want 201: %s",
 			app, response.Code, response.Body.String())
 	}
-	var started startedAsset
+	var started apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started asset: %v", err)
 	}
@@ -27,12 +29,12 @@ func startPreset(t *testing.T, r http.Handler, session *http.Cookie, app string)
 
 func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	for _, body := range []string{`{"kind":"preset"}`, `{"kind":"preset","app":""}`} {
 		request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
 		request.Header.Set("Content-Type", "application/json")
-		response := send(t, r, authorized(request, session))
+		response := apitest.Send(t, r, apitest.Authorized(request, session))
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("POST %s status = %d, want 400: %s",
 				body, response.Code, response.Body.String())
@@ -45,12 +47,12 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 
 func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"character","app":"sillytavern"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400: %s", response.Code, response.Body.String())
 	}
@@ -58,18 +60,18 @@ func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 
 func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	named := map[string][]string{}
 	for _, app := range []string{"sillytavern", "lumiverse"} {
 		started := startPreset(t, r, session, app)
 
-		core := blockNamed(t, started.Blocks, "preset_core")
+		core := apitest.BlockNamed(t, started.Blocks, "preset_core")
 		if !core.Required || core.Hideable || !core.IsEmpty {
 			t.Errorf("%s preset core = %+v, want required, not hideable and empty", app, core)
 		}
 
-		settings := blockNamed(t, started.Blocks, "settings")
+		settings := apitest.BlockNamed(t, started.Blocks, "settings")
 		if len(settings.Elements) != 3 {
 			t.Fatalf("%s settings holds %d elements, want three groups",
 				app, len(settings.Elements))
@@ -105,7 +107,7 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 			}
 		}
 
-		nudges := blockNamed(t, started.Blocks, "nudges")
+		nudges := apitest.BlockNamed(t, started.Blocks, "nudges")
 		if len(nudges.Elements) != 1 || nudges.Elements[0].Type != "text_set" {
 			t.Fatalf("%s nudges = %+v, want one text set", app, nudges.Elements)
 		}
@@ -130,7 +132,7 @@ func TestTheAppAnsweredSeedsItsOwnSlotNamesAndNoValues(t *testing.T) {
 
 func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	started := startPreset(t, r, session, "sillytavern")
 
@@ -142,7 +144,7 @@ func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 
 func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 
 	started := startPreset(t, r, session, "lumiverse")
 
@@ -159,7 +161,7 @@ func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 	if fragments == nil {
 		t.Fatalf("readiness = %+v, want a prompt fragment naming its block", started.Readiness)
 	}
-	core := blockNamed(t, started.Blocks, "preset_core")
+	core := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	if *fragments != core.ID {
 		t.Errorf("the fragment check points at %s, want the preset core", *fragments)
 	}
@@ -168,7 +170,7 @@ func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 func readAsset(t *testing.T, r http.Handler, session *http.Cookie, id string) string {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil)
-	response := send(t, r, authorized(request, session))
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
 	}

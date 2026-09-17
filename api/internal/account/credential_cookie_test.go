@@ -1,9 +1,13 @@
-package http
+package account_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func TestCredentialCookiesCarryTheProductName(t *testing.T) {
@@ -13,9 +17,9 @@ func TestCredentialCookiesCarryTheProductName(t *testing.T) {
 		got  string
 		want string
 	}{
-		{"session", sessionCookieName, "illarin_session"},
-		{"oauth state", oauthStateCookieName, "illarin_discord_state"},
-		{"oauth return", oauthReturnCookieName, "illarin_discord_return"},
+		{"session", api.SessionCookie, "illarin_session"},
+		{"oauth state", account.OAuthStateCookieName, "illarin_discord_state"},
+		{"oauth return", account.OAuthReturnCookieName, "illarin_discord_return"},
 	}
 	for _, cookie := range cookies {
 		if cookie.got != cookie.want {
@@ -26,16 +30,16 @@ func TestCredentialCookiesCarryTheProductName(t *testing.T) {
 
 func TestSignOutReadsTheMutationHeaderAndClearsTheSessionCookie(t *testing.T) {
 	t.Parallel()
-	router, session := newVerifiedTestRouter(t)
+	router, session := harness.NewVerifiedRouter(t)
 	if session.Name != "illarin_session" {
 		t.Fatalf("sign-up set cookie %q, want illarin_session", session.Name)
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-out", nil)
 	req.AddCookie(session)
-	req.Header.Set("Origin", testBrowserOrigin)
+	req.Header.Set("Origin", apitest.BrowserOrigin)
 	req.Header.Set("X-Illarin-Request", "1")
-	rec := send(t, router, req)
+	rec := apitest.Send(t, router, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("sign-out = %d %s, want %d", rec.Code, rec.Body.String(), http.StatusNoContent)
 	}

@@ -4,12 +4,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) SchedulePost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -35,7 +36,7 @@ func (h *Handlers) SchedulePost(c *gin.Context) {
 }
 
 func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -61,7 +62,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
 }
 
 func (h *Handlers) CancelPostSchedule(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}

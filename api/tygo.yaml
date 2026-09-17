@@ -1,17 +1,49 @@
 # tygo reads the request and response structs in the files listed below and
-# writes them as TypeScript to web/src/lib/api/shapes.ts, which git ignores.
+# writes them as TypeScript to web/src/lib/api/shapes.ts and one file per
+# feature package under web/src/lib/api/shapes/, all of which git ignores.
+# shapes.ts re-exports the feature files, so the site imports from one place.
 # Run it from the api directory with make site-types.
 packages:
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/account"
+    output_path: "../web/src/lib/api/shapes/account.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      uuid.UUID: "string"
+    include_files:
+      - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/profile"
+    output_path: "../web/src/lib/api/shapes/profile.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      uuid.UUID: "string"
+    include_files:
+      - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/notify"
+    output_path: "../web/src/lib/api/shapes/notify.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    include_files:
+      - "watch_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
     preserve_comments: "none"
+    frontmatter: |
+      import type { AssetWatch } from "./shapes/notify";
+      import type { ProfileAvatar } from "./shapes/profile";
+
+      export * from "./shapes/account";
+      export * from "./shapes/notify";
+      export * from "./shapes/profile";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
+      notify.AssetWatch: "AssetWatch"
+      profile.ProfileAvatar: "ProfileAvatar"
     include_files:
-      - "account_shapes.go"
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
       - "block_arrangement_shapes.go"
@@ -34,9 +66,7 @@ packages:
       - "post_shapes.go"
       - "post_withdrawal_shapes.go"
       - "preserved_shapes.go"
-      - "profile_shapes.go"
       - "publication_shapes.go"
       - "restriction_shapes.go"
       - "upload_helpers_shapes.go"
       - "vault_shapes.go"
-      - "watch_shapes.go"

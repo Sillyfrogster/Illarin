@@ -1,0 +1,43 @@
+package account
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	"github.com/google/uuid"
+)
+
+// Authority says whether an account may publish on the blog
+type Authority interface {
+	HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error)
+}
+
+type Handlers struct {
+	accounts     *Service
+	links        *linking.Service
+	publications Authority
+}
+
+func NewHandlers(accounts *Service, links *linking.Service, publications Authority) *Handlers {
+	return &Handlers{accounts: accounts, links: links, publications: publications}
+}
+
+func Register(routes api.Routes, h *Handlers) {
+	d := routes.Deadlines
+	routes.Handle(http.MethodPost, "/v1/auth/sign-up", d.JSON, h.SignUp)
+	routes.Handle(http.MethodPost, "/v1/auth/sign-in", d.JSON, h.SignIn)
+	routes.Handle(http.MethodGet, "/v1/auth/discord", d.JSON, h.BeginDiscord)
+	routes.Handle(http.MethodGet, "/v1/auth/discord/callback", d.JSON, h.CompleteDiscord)
+	routes.Handle(http.MethodPost, "/v1/auth/sign-out", d.JSON, h.SignOut)
+	routes.Handle(http.MethodGet, "/v1/auth/session", d.JSON, h.GetSession)
+	routes.Handle(http.MethodPost, "/v1/auth/verify-email", d.JSON, h.VerifyEmail)
+	routes.Handle(http.MethodPost, "/v1/auth/password-reset", d.JSON, h.RequestPasswordReset)
+	routes.Handle(http.MethodPost, "/v1/auth/password-reset/complete", d.JSON, h.CompletePasswordReset)
+	routes.Handle(http.MethodDelete, "/v1/account/discord", d.JSON, h.DetachDiscord)
+	routes.Handle(http.MethodPatch, "/v1/account/email", d.JSON, h.ChangeUnverifiedEmail)
+	routes.Handle(http.MethodPatch, "/v1/account/handle", d.JSON, h.RenameHandle)
+	routes.Handle(http.MethodPut, "/v1/account/password", d.JSON, h.SetPassword)
+	routes.Handle(http.MethodPut, "/v1/account/nsfw-visibility", d.JSON, h.SetNsfwVisibility)
+}

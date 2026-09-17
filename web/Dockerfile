@@ -24,6 +24,7 @@ WORKDIR /src/web
 COPY --from=dependencies /src/web/node_modules ./node_modules
 COPY web/ ./
 COPY --from=site-types /src/web/src/lib/api/shapes.ts ./src/lib/api/shapes.ts
+COPY --from=site-types /src/web/src/lib/api/shapes/ ./src/lib/api/shapes/
 
 ARG ILLARIN_VERSION=development
 ENV API_URL=http://api:8080 \

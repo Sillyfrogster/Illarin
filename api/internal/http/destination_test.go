@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
@@ -299,15 +301,15 @@ func newDestinationStackThrough(
 ) destinationStack {
 	t.Helper()
 	pool := testdb.Connect(t)
-	outbox := &verificationOutbox{}
+	outbox := &apitest.VerificationOutbox{}
 	to := newReceiver(t)
 	discord := newDiscordServer(t)
-	handlers := newTestHandlersWithDelivery(
-		t, pool, 1<<20, outbox, testDeliverySettings(),
+	handlers := apitest.NewServicesWithDelivery(
+		t, pool, 1<<20, outbox, apitest.DeliverySettings(),
 		throughLoopback{receiver: to.server.URL, discord: discord.server.URL, resolves: resolves},
 	)
-	router := registerTestRouter(t, handlers, DefaultDeadlines())
-	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
+	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
+	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
 	stack := destinationStack{
 		publicationStack: publicationStack{
@@ -326,7 +328,7 @@ func (s destinationStack) add(
 	name, address string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations",
 		fmt.Sprintf(`{"name":%q,"address":%q}`, name, address),
 	), session))
@@ -351,7 +353,7 @@ func (s destinationStack) verify(
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations/"+id+"/verification", "",
 	), session))
 }
@@ -371,7 +373,7 @@ func (s destinationStack) active(t *testing.T, name string) addedDestination {
 
 func (s destinationStack) destinations(t *testing.T, session *http.Cookie) destinationList {
 	t.Helper()
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), session,
 	))
 	if response.Code != http.StatusOK {
@@ -401,7 +403,7 @@ func (s destinationStack) postChoices(
 	id string,
 ) destinationChoiceList {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id+"/destinations", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -420,7 +422,7 @@ func (s destinationStack) deliveries(
 	id string,
 ) deliveryList {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id+"/deliveries", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -441,7 +443,7 @@ func (s destinationStack) publishTo(
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/publish", body,
 	), session))
 }
@@ -453,7 +455,7 @@ func (s destinationStack) sendQueued(t *testing.T) int {
 
 func (s destinationStack) sendQueuedAt(t *testing.T, at time.Time) int {
 	t.Helper()
-	made, err := s.handlers.publications.SendDueDeliveries(t.Context(), at)
+	made, err := s.handlers.Publications.SendDueDeliveries(t.Context(), at)
 	if err != nil {
 		t.Fatalf("send queued deliveries: %v", err)
 	}
@@ -476,7 +478,7 @@ func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
 	if response.Code != http.StatusForbidden {
 		t.Errorf("add status = %d, want 403", response.Code)
 	}
-	listing := send(t, stack.router, authorized(
+	listing := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), member,
 	))
 	if listing.Code != http.StatusForbidden {
@@ -495,7 +497,7 @@ func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 		"https://hooks.example.com/publication#part",
 		"https://127.0.0.1/publication",
 	} {
-		response := send(t, stack.router, authorized(jsonRequest(t,
+		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 			http.MethodPost, "/v1/publication/destinations",
 			fmt.Sprintf(`{"name":"Somewhere","address":%q}`, address),
 		), stack.authority))
@@ -727,7 +729,7 @@ func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
 	if published.Status != "published" {
 		t.Errorf("status = %q, want published", published.Status)
 	}
-	reading := send(t, stack.router, httptest.NewRequest(
+	reading := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/posts/"+published.Slug, nil,
 	))
 	if reading.Code != http.StatusOK {
@@ -794,7 +796,7 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 			t.Errorf("the contributor was shown %q", hidden)
 		}
 	}
-	listing := send(t, stack.router, authorized(
+	listing := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), writer,
 	))
 	if listing.Code != http.StatusForbidden {
@@ -828,7 +830,7 @@ func TestADisabledEndpointStopsReceiving(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
-	response := send(t, stack.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete,
 		"/v1/publication/destinations/"+made.Destination.ID+"/verification", nil,
 	), stack.authority))
@@ -857,7 +859,7 @@ func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
 	stack := newDestinationStack(t)
 	made := stack.active(t, "Release feed")
 
-	response := send(t, stack.router, authorized(jsonRequest(t,
+	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPatch, "/v1/publication/destinations/"+made.Destination.ID,
 		`{"address":"https://hooks.example.com/elsewhere"}`,
 	), stack.authority))
@@ -882,7 +884,7 @@ func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
 
 	published := stack.publishedTo(t, ready, made.Destination.ID, "Read it in ten minutes.")
 
-	reading := send(t, stack.router, httptest.NewRequest(
+	reading := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/posts/"+published.Slug, nil,
 	))
 	if strings.Contains(reading.Body.String(), "Read it in ten minutes.") {
@@ -946,7 +948,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	ready := stack.readyPost(t)
 	at := time.Now().Add(time.Hour)
 
-	response := send(t, stack.router, authorized(jsonRequest(t,
+	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+ready.ID+"/schedule", fmt.Sprintf(
 			`{"version":%d,"at":%q,"destinationIds":[%q],"note":"Out at noon."}`,
 			ready.Version, at.Format(time.RFC3339), made.Destination.ID,
@@ -956,7 +958,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	if response.Code != http.StatusCreated {
 		t.Fatalf("schedule status = %d: %s", response.Code, response.Body.String())
 	}
-	settled, err := stack.handlers.publications.PublishDueSchedules(t.Context(), at.Add(time.Minute))
+	settled, err := stack.handlers.Publications.PublishDueSchedules(t.Context(), at.Add(time.Minute))
 	if err != nil {
 		t.Fatalf("publish due schedules: %v", err)
 	}
@@ -1008,7 +1010,7 @@ func TestAContributorNeverSeesAnotherPostsDeliveries(t *testing.T) {
 	stack.publishedTo(t, ready, made.Destination.ID, "")
 	outsider := stack.member(t, "writer@example.com", "outside.writer")
 
-	response := send(t, stack.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+ready.ID+"/deliveries", nil,
 	), outsider))
 

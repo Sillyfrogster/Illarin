@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func aBookOf(entries int) json.RawMessage {
@@ -20,8 +22,8 @@ func aBookOf(entries int) json.RawMessage {
 
 func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "lorebook", "entry_table"))
 	if len(added.Elements) != 1 || added.Elements[0].Type != "entry_table" {
@@ -34,14 +36,14 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 		t.Errorf("a lorebook arrived %s wide in %s", added.Width, added.Layout)
 	}
 
-	body := editableBlock(added)
+	body := apitest.EditableBlock(added)
 	body.Elements[0].Content = aBookOf(1004)
-	if response := saveBlock(t, r, session, started.ID, added.ID, body); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, started.ID, added.ID, body); response.Code != http.StatusOK {
 		t.Fatalf("save the book: status = %d: %s", response.Code, response.Body.String())
 	}
 
 	page := fetchStartedAsset(t, r, session, started.ID)
-	var saved startedBlock
+	var saved apitest.StartedBlock
 	for _, holder := range page.Blocks {
 		if holder.Definition == "lorebook" {
 			saved = holder
@@ -85,8 +87,8 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 
 func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "model_instructions", "prose"))
 	if len(added.Elements) != 2 {
@@ -108,20 +110,20 @@ func TestModelInstructionsArriveHoldingBothPrompts(t *testing.T) {
 
 func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "expressions", "image_set"))
 	if added.Elements[0].Role != "expressions" {
 		t.Fatalf("the expression set carries role %q", added.Elements[0].Role)
 	}
-	mediaID := uploadedImageID(t, r, session, started.ID, "expression", httpTestPNG(t, 200, 200))
+	mediaID := uploadedImageID(t, r, session, started.ID, "expression", apitest.PNG(t, 200, 200))
 
-	body := editableBlock(added)
+	body := apitest.EditableBlock(added)
 	body.Elements[0].Content = json.RawMessage(
 		`{"images":[{"mediaId":"` + mediaID + `","name":"hey there. do you feel better now?"}]}`,
 	)
-	if response := saveBlock(t, r, session, started.ID, added.ID, body); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, started.ID, added.ID, body); response.Code != http.StatusOK {
 		t.Fatalf("save the expression set: status = %d: %s", response.Code, response.Body.String())
 	}
 

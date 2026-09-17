@@ -6,71 +6,66 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 func (h *Handlers) WithholdAsset(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	admin, ok := h.adminAccount(c, "manage withholds")
+	admin, ok := api.Admin(c, "manage withholds")
 	if !ok {
 		return
 	}
 	var request WithholdAssetRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Give a reason for withholding the asset."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
 		return
 	}
 	err := h.assets.Withhold(c.Request.Context(), id, admin.ID, request.Reason)
 	switch {
 	case errors.Is(err, asset.ErrInvalidWithholdReason):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Give a reason for withholding the asset."})
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not withhold the asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the asset.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) ClearAssetWithhold(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	if _, ok := h.adminAccount(c, "manage withholds"); !ok {
+	if _, ok := api.Admin(c, "manage withholds"); !ok {
 		return
 	}
 	err := h.assets.ClearWithhold(c.Request.Context(), id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not clear the withhold."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not clear the withhold.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) viewerID(c *gin.Context) (*uuid.UUID, bool) {
-	token, err := c.Cookie(sessionCookieName)
-	if errors.Is(err, http.ErrNoCookie) {
-		return nil, true
-	}
+	current, err := api.Current(c)
 	if err != nil {
-		return nil, true
-	}
-	current, err := h.accounts.Current(c.Request.Context(), token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the signed-in account."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return nil, false
 	}
 	if current == nil {
@@ -80,19 +75,19 @@ func (h *Handlers) viewerID(c *gin.Context) (*uuid.UUID, bool) {
 }
 
 func (h *Handlers) ListAssets(c *gin.Context) {
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := ListAssetsParams{
-		Kind:     queryText[ListAssetsParamsKind](q, "kind"),
-		Platform: queryText[string](q, "platform"),
-		Creator:  queryText[string](q, "creator"),
-		Q:        queryText[string](q, "q"),
-		Facet:    queryList(q, "facet"),
-		Nsfw:     queryText[ListAssetsParamsNsfw](q, "nsfw"),
-		Limit:    queryNumber(q, "limit"),
-		Before:   queryTime(q, "before"),
-		BeforeId: queryID(q, "beforeId"),
+		Kind:     api.QueryText[ListAssetsParamsKind](q, "kind"),
+		Platform: api.QueryText[string](q, "platform"),
+		Creator:  api.QueryText[string](q, "creator"),
+		Q:        api.QueryText[string](q, "q"),
+		Facet:    api.QueryList(q, "facet"),
+		Nsfw:     api.QueryText[ListAssetsParamsNsfw](q, "nsfw"),
+		Limit:    api.QueryNumber(q, "limit"),
+		Before:   api.QueryTime(q, "before"),
+		BeforeId: api.QueryID(q, "beforeId"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	f := asset.ListFilter{}
@@ -100,17 +95,16 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 	if params.Creator != nil {
 		creator, err := h.accounts.CreatorListing(c.Request.Context(), strings.ToLower(*params.Creator))
 		if errors.Is(err, account.ErrProfileNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
+			api.Refuse(c, http.StatusNotFound, "No such profile.")
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the profile."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the profile.")
 			return
 		}
-		token, _ := c.Cookie(sessionCookieName)
-		current, err := h.accounts.Current(c.Request.Context(), token)
+		current, err := api.Current(c)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the signed-in account."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 			return
 		}
 		f.Profile = &asset.ProfileListingScope{CreatorID: creator.ID}
@@ -137,9 +131,7 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 
 	before, ok := cursorFrom(params)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "before and beforeId belong together, send both or neither",
-		})
+		api.Refuse(c, http.StatusBadRequest, "before and beforeId belong together, send both or neither")
 		return
 	}
 	f.Before = before
@@ -155,7 +147,7 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 	}
 	found, err := h.assets.Browse(c.Request.Context(), f, visibility)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not list assets"})
+		api.Refuse(c, http.StatusInternalServerError, "could not list assets")
 		return
 	}
 
@@ -212,7 +204,7 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 }
 
 func (h *Handlers) CreateAsset(c *gin.Context) {
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
@@ -223,7 +215,7 @@ func (h *Handlers) CreateAsset(c *gin.Context) {
 	h.acceptUpload(c, owner)
 }
 
-func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
+func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 	parts, err := c.Request.MultipartReader()
 	if err != nil {
 		h.refuse(c, refusal{
@@ -254,7 +246,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
 		c.Request.Context(), ingestInput(metadata, file.FileName(), limitedFile, owner.ID),
 	)
 	if errors.Is(err, storage.ErrTombstoned) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "This file cannot be accepted."})
+		api.Refuse(c, http.StatusUnprocessableEntity, "This file cannot be accepted.")
 		return
 	}
 	if err != nil {
@@ -268,7 +260,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner account.Account) {
 }
 
 func (h *Handlers) AddAssetRevision(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -276,7 +268,7 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
@@ -309,10 +301,10 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	case errors.Is(err, storage.ErrTombstoned):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "This file cannot be accepted."})
+		api.Refuse(c, http.StatusUnprocessableEntity, "This file cannot be accepted.")
 		return
 	case err != nil:
 		h.refuse(c, err)
@@ -325,11 +317,11 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 }
 
 func (h *Handlers) GetAssetReplacement(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
@@ -339,18 +331,18 @@ func (h *Handlers) GetAssetReplacement(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load the replacement file. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not load the replacement file. Try again.")
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
 func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	operationID, ok := pathID(c, "operationId")
+	operationID, ok := api.PathID(c, "operationId")
 	if !ok {
 		return
 	}
@@ -358,7 +350,7 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
@@ -386,86 +378,86 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 		return
 	}
 	if errors.Is(err, asset.ErrIngestNotFound) || errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		api.Refuse(c, http.StatusNotFound, "no reviewed replacement")
 		return
 	}
 	if errors.Is(err, asset.ErrReplacementDecision) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		api.Refuse(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	if _, why, classified := format.Explain(err); classified {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": why})
+		api.Refuse(c, http.StatusUnprocessableEntity, why)
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not apply the replacement file. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not apply the replacement file. Try again.")
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
 func (h *Handlers) CancelAssetRevision(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	operationID, ok := pathID(c, "operationId")
+	operationID, ok := api.PathID(c, "operationId")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	err := h.assets.CancelReplacement(c.Request.Context(), owner.ID, id, operationID)
 	if errors.Is(err, asset.ErrIngestNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no reviewed replacement"})
+		api.Refuse(c, http.StatusNotFound, "no reviewed replacement")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not discard the replacement file. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not discard the replacement file. Try again.")
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
 func (h *Handlers) DeleteAsset(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	err := h.assets.Delete(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be deleted."})
+		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be deleted.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete the asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not delete the asset.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) RestoreAsset(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	err := h.assets.Restore(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such recoverable asset"})
+		api.Refuse(c, http.StatusNotFound, "no such recoverable asset")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not restore the asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not restore the asset.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -473,17 +465,17 @@ func (h *Handlers) RestoreAsset(c *gin.Context) {
 
 func (h *Handlers) ListDeletedAssets(c *gin.Context) {
 	handle := c.Param("handle")
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	if !strings.EqualFold(owner.Handle, handle) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such deleted listing"})
+		api.Refuse(c, http.StatusNotFound, "no such deleted listing")
 		return
 	}
 	found, err := h.assets.Deleted(c.Request.Context(), owner.ID, strings.ToLower(handle))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not list deleted assets."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not list deleted assets.")
 		return
 	}
 	items := make([]DeletedAsset, len(found))
@@ -497,7 +489,7 @@ func (h *Handlers) ListDeletedAssets(c *gin.Context) {
 }
 
 func (h *Handlers) AddMedia(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -505,7 +497,7 @@ func (h *Handlers) AddMedia(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
@@ -540,7 +532,7 @@ func (h *Handlers) AddMedia(c *gin.Context) {
 		return
 	}
 	if errors.Is(err, asset.ErrMediaNotFound) || errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	}
 	if err != nil {
@@ -557,28 +549,25 @@ func (h *Handlers) readerVisibility(
 	if requested != nil {
 		return asset.ContentVisibility(*requested), true
 	}
-	token, _ := c.Cookie(sessionCookieName)
-	preference, err := h.accounts.NSFWVisibility(c.Request.Context(), token)
+	preference, err := h.accounts.NSFWVisibility(c.Request.Context(), api.SessionToken(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "could not read the content preference",
-		})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the content preference")
 		return "", false
 	}
 	return asset.ContentVisibility(preference), true
 }
 
 func (h *Handlers) GetAsset(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := GetAssetParams{
-		WorkingCopy: queryFlag(q, "workingCopy"),
-		Nsfw:        queryText[GetAssetParamsNsfw](q, "nsfw"),
+		WorkingCopy: api.QueryFlag(q, "workingCopy"),
+		Nsfw:        api.QueryText[GetAssetParamsNsfw](q, "nsfw"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	viewerID, ok := h.viewerID(c)
@@ -600,47 +589,47 @@ func (h *Handlers) GetAsset(c *gin.Context) {
 	}
 	found, err := read(c.Request.Context(), id, viewerID, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 		return
 	}
 	page, err := toAPIDetail(found, visibility)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 		return
 	}
 	page.InstalledAppVersions, err = h.deliveries.InstalledAppVersions(c.Request.Context(), found.ID, found.InstallCapabilities)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 		return
 	}
 	if viewerID != nil && !found.IsOwner && found.Lifecycle != asset.LifecycleDraft {
 		watch, err := h.notifications.WatchOf(c.Request.Context(), *viewerID, found.ID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the asset"})
+			api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 			return
 		}
-		shown := toAPIWatch(watch)
+		shown := notify.ToAPIWatch(watch)
 		page.Watch = &shown
 	}
 	c.JSON(http.StatusOK, page)
 }
 
 func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	var request AssetDiscoveryRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil || !request.Discovery.Valid() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Choose listed or unlisted."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil || !request.Discovery.Valid() {
+		api.Refuse(c, http.StatusBadRequest, "Choose listed or unlisted.")
 		return
 	}
 	err := h.assets.SetDiscovery(
@@ -648,15 +637,13 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
 	)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "A withheld asset cannot be changed."})
+		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be changed.")
 	case errors.Is(err, asset.ErrAssetIsDraft):
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "Discovery applies once the asset is published.",
-		})
+		api.Refuse(c, http.StatusConflict, "Discovery applies once the asset is published.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the catalog listing. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the catalog listing. Try again.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -867,7 +854,7 @@ func toAPIWithhold(found *asset.Withhold) *AssetWithhold {
 }
 
 func (h *Handlers) ListMedia(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -877,11 +864,11 @@ func (h *Handlers) ListMedia(c *gin.Context) {
 	}
 	found, err := h.assets.ListMedia(c.Request.Context(), id, viewerID)
 	if errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such asset"})
+		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not list the images"})
+		api.Refuse(c, http.StatusInternalServerError, "could not list the images")
 		return
 	}
 	items := make([]Media, 0, len(found))
@@ -892,21 +879,21 @@ func (h *Handlers) ListMedia(c *gin.Context) {
 }
 
 func (h *Handlers) GetIngest(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.uploadOwner(c)
+	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	operation, err := h.assets.GetIngest(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrIngestNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such ingest operation"})
+		api.Refuse(c, http.StatusNotFound, "no such ingest operation")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load import status. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not load import status. Try again.")
 		return
 	}
 	c.JSON(http.StatusOK, toAPIIngest(operation))

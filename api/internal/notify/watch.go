@@ -1,4 +1,4 @@
-package notification
+package notify
 
 import (
 	"context"

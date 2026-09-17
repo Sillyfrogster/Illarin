@@ -6,11 +6,13 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func (s publicationStack) readableApps(t *testing.T) []publicationApp {
 	t.Helper()
-	response := send(t, s.router,
+	response := apitest.Send(t, s.router,
 		httptest.NewRequest(http.MethodGet, "/v1/post-apps", nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the blog apps status = %d: %s", response.Code, response.Body.String())

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,16 +30,16 @@ func contentGeneration(t *testing.T, pool *pgxpool.Pool, assetID string) int {
 
 func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
 	if got := contentGeneration(t, pool, started.ID); got != 1 {
 		t.Fatalf("a new draft is at content generation %d, want 1", got)
 	}
 
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = []byte(`{"text":"She keeps the memories that books forget."}`)
-	if response := saveBlock(t, r, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save the description: %d %s", response.Code, response.Body.String())
 	}
 	edited := contentGeneration(t, pool, started.ID)
@@ -45,7 +47,7 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 		t.Fatalf("content generation = %d, want 2 after an edit", edited)
 	}
 
-	messages := blockNamed(t, started.Blocks, "messages")
+	messages := apitest.BlockNamed(t, started.Blocks, "messages")
 	response := arrangeBlocks(t, r, session, started.ID, []arrangedBlock{
 		{ID: messages.ID, Width: "full"},
 		{ID: coreBlock.ID, Width: "half"},
@@ -60,7 +62,7 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 	request := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity",
 		strings.NewReader(`{"name":"","blurb":"","isNsfw":true}`))
 	request.Header.Set("Content-Type", "application/json")
-	if answered := send(t, r, authorized(request, session)); answered.Code != http.StatusNoContent {
+	if answered := apitest.Send(t, r, apitest.Authorized(request, session)); answered.Code != http.StatusNoContent {
 		t.Fatalf("answer the adult content question: %d %s", answered.Code, answered.Body.String())
 	}
 	if got := contentGeneration(t, pool, started.ID); got != edited {
@@ -70,27 +72,27 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 
 func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 	t.Parallel()
-	_, router, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
+	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
-	coreBlock := blockNamed(t, started.Blocks, "preset_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
+	core := apitest.EditableBlock(coreBlock)
 	const original = "Keep every room quiet."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"House rule","role":"system","text":"` + original + `","enabled":true}
 	]}`)
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save public prompt: %d %s", response.Code, response.Body.String())
 	}
 	publicGeneration := contentGeneration(t, pool, started.ID)
 
 	owner := fetchStartedAsset(t, router, session, started.ID)
-	core = editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.Replace(
 		string(core.Elements[0].Content), `"enabled":true`, `"protected":true,"enabled":true`, 1,
 	))
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("seal unchanged prompt: %d %s", response.Code, response.Body.String())
 	}
 	if got := contentGeneration(t, pool, started.ID); got != publicGeneration {
@@ -102,12 +104,12 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 			owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 
-	core = editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.Replace(
 		string(core.Elements[0].Content), original, "Keep every room completely quiet.", 1,
 	))
 	core.AllowedApps = &apps
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("edit sealed prompt: %d %s", response.Code, response.Body.String())
 	}
 	editedGeneration := contentGeneration(t, pool, started.ID)
@@ -116,14 +118,14 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 	}
 
 	owner = fetchStartedAsset(t, router, session, started.ID)
-	core = editableBlock(blockNamed(t, owner.Blocks, "preset_core"))
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.Replace(
 		string(core.Elements[0].Content), `,"protected":true`, "", 1,
 	))
 	core.AllowedApps = &[]string{}
 	confirmed := true
 	core.ExposeProtected = &confirmed
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("unseal unchanged prompt: %d %s", response.Code, response.Body.String())
 	}
 	if got := contentGeneration(t, pool, started.ID); got != editedGeneration {

@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/google/uuid"
 )
 
@@ -53,10 +54,10 @@ type PublicationGrant struct {
 }
 
 type PublicationGrantHolder struct {
-	Avatar      *ProfileAvatar `json:"avatar,omitempty"`
-	DisplayName string         `json:"displayName"`
-	Handle      string         `json:"handle"`
-	Restricted  bool           `json:"restricted"`
+	Avatar      *profile.ProfileAvatar `json:"avatar,omitempty"`
+	DisplayName string                 `json:"displayName"`
+	Handle      string                 `json:"handle"`
+	Restricted  bool                   `json:"restricted"`
 }
 
 type PublicationGrantList struct {

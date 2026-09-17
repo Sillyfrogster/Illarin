@@ -1,4 +1,4 @@
-package http
+package account_test
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	discordapi "github.com/Sillyfrogster/Illarin/api/internal/discord"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,10 +38,10 @@ func TestDiscordSignUpSeedsAnAvailableHandleAndStartsASession(t *testing.T) {
 		Email:         "reader@example.com",
 		EmailVerified: true,
 	}}
-	r := newTestRouterWithDiscord(t, provider)
-	signUp(t, r, "somebody-else@example.com", "storyteller")
+	r := harness.NewRouterWithDiscord(t, provider)
+	apitest.SignUp(t, r, "somebody-else@example.com", "storyteller")
 
-	begin := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
 	if begin.Code != http.StatusSeeOther {
 		t.Fatalf("begin status = %d, want 303. body: %s", begin.Code, begin.Body.String())
 	}
@@ -52,14 +54,14 @@ func TestDiscordSignUpSeedsAnAvailableHandleAndStartsASession(t *testing.T) {
 		t.Fatal("authorization redirect has no OAuth state")
 	}
 
-	callback := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	callback := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if callback.Code != http.StatusSeeOther {
 		t.Fatalf("callback status = %d, want 303. body: %s", callback.Code, callback.Body.String())
 	}
 	if location := callback.Header().Get("Location"); location != "/browse" {
 		t.Errorf("callback redirects to %q, want /browse", location)
 	}
-	stateAfterSignIn := sessionState(t, r, responseCookie(t, callback, sessionCookieName))
+	stateAfterSignIn := apitest.SessionState(t, r, responseCookie(t, callback, api.SessionCookie))
 	if stateAfterSignIn.Handle != "storyteller.2" || stateAfterSignIn.Email == nil ||
 		*stateAfterSignIn.Email != "reader@example.com" || !stateAfterSignIn.EmailVerified ||
 		!stateAfterSignIn.DiscordLinked || stateAfterSignIn.HasPassword {
@@ -74,10 +76,10 @@ func TestDiscordResyncsItsOwnVerifiedAddress(t *testing.T) {
 		Username: "QuietReader",
 		Email:    "unverified@example.com",
 	}}
-	r := newTestRouterWithDiscord(t, provider)
+	r := harness.NewRouterWithDiscord(t, provider)
 
 	first := completeDiscordSignIn(t, r)
-	firstState := sessionState(t, r, responseCookie(t, first, sessionCookieName))
+	firstState := apitest.SessionState(t, r, responseCookie(t, first, api.SessionCookie))
 	if firstState.Email != nil || firstState.EmailVerified {
 		t.Fatalf("unverified Discord address was accepted: %+v", firstState)
 	}
@@ -85,7 +87,7 @@ func TestDiscordResyncsItsOwnVerifiedAddress(t *testing.T) {
 	provider.profile.EmailVerified = true
 	provider.profile.Email = "first.verified@example.com"
 	filled := completeDiscordSignIn(t, r)
-	filledState := sessionState(t, r, responseCookie(t, filled, sessionCookieName))
+	filledState := apitest.SessionState(t, r, responseCookie(t, filled, api.SessionCookie))
 	if filledState.Email == nil || *filledState.Email != "first.verified@example.com" ||
 		!filledState.EmailVerified {
 		t.Fatalf("verified Discord address did not fill the empty account: %+v", filledState)
@@ -93,7 +95,7 @@ func TestDiscordResyncsItsOwnVerifiedAddress(t *testing.T) {
 
 	provider.profile.Email = "updated@example.com"
 	updated := completeDiscordSignIn(t, r)
-	updatedState := sessionState(t, r, responseCookie(t, updated, sessionCookieName))
+	updatedState := apitest.SessionState(t, r, responseCookie(t, updated, api.SessionCookie))
 	if updatedState.Email == nil || *updatedState.Email != "updated@example.com" ||
 		!updatedState.EmailVerified {
 		t.Errorf("Discord did not replace its own address: %+v", updatedState)
@@ -108,8 +110,8 @@ func TestDiscordResyncRefusesAnAddressVerifiedOnAnotherAccount(t *testing.T) {
 		Email:         "original@example.com",
 		EmailVerified: true,
 	}}
-	r := newTestRouterWithDiscord(t, provider)
-	original := responseCookie(t, completeDiscordSignIn(t, r), sessionCookieName)
+	r := harness.NewRouterWithDiscord(t, provider)
+	original := responseCookie(t, completeDiscordSignIn(t, r), api.SessionCookie)
 
 	provider.profile = account.DiscordProfile{
 		Subject:       "discord-other",
@@ -131,10 +133,10 @@ func TestDiscordResyncRefusesAnAddressVerifiedOnAnotherAccount(t *testing.T) {
 		t.Fatalf("resync response = %d %q, want email-conflict redirect",
 			refused.Code, refused.Header().Get("Location"))
 	}
-	if hasResponseCookie(refused, sessionCookieName) {
+	if hasResponseCookie(refused, api.SessionCookie) {
 		t.Errorf("refused resync set a session cookie: %+v", refused.Result().Cookies())
 	}
-	current := sessionState(t, r, original)
+	current := apitest.SessionState(t, r, original)
 	if current.Email == nil || *current.Email != "original@example.com" {
 		t.Errorf("refused resync changed the existing address: %+v", current)
 	}
@@ -148,10 +150,10 @@ func TestEmailSignUpRefusesAnAddressHeldByADiscordAccount(t *testing.T) {
 		Email:         "same-person@example.com",
 		EmailVerified: true,
 	}}
-	r := newTestRouterWithDiscord(t, provider)
+	r := harness.NewRouterWithDiscord(t, provider)
 	completeDiscordSignIn(t, r)
 
-	refused := signUpRequest(t, r, "same-person@example.com", "second.account")
+	refused := apitest.SignUpRequest(t, r, "same-person@example.com", "second.account")
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("email sign-up status = %d, want 409. body: %s",
 			refused.Code, refused.Body.String())
@@ -176,26 +178,26 @@ func TestEmailAccountCanAttachDiscordWithoutReplacingItsAddress(t *testing.T) {
 		Email:         "discord-address@example.com",
 		EmailVerified: true,
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
-	session := signUp(t, r, "creator-address@example.com", "connected.creator")
-	verifyMessage(t, r, outbox.messages[0])
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
+	session := apitest.SignUp(t, r, "creator-address@example.com", "connected.creator")
+	verifyMessage(t, r, outbox.Messages[0])
 
 	beginRequest := httptest.NewRequest(http.MethodGet, "/v1/auth/discord?intent=attach", nil)
 	beginRequest.AddCookie(session)
-	begin := send(t, r, beginRequest)
+	begin := apitest.Send(t, r, beginRequest)
 	if begin.Code != http.StatusSeeOther {
 		t.Fatalf("attach begin status = %d, want 303. body: %s", begin.Code, begin.Body.String())
 	}
-	callback := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	callback := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if callback.Code != http.StatusSeeOther ||
 		callback.Header().Get("Location") != "/settings?discord=attached" {
 		t.Fatalf("attach callback = %d %q, want attached redirect",
 			callback.Code, callback.Header().Get("Location"))
 	}
-	if hasResponseCookie(callback, sessionCookieName) {
+	if hasResponseCookie(callback, api.SessionCookie) {
 		t.Errorf("attach callback replaced the existing session: %+v", callback.Result().Cookies())
 	}
-	current := sessionState(t, r, session)
+	current := apitest.SessionState(t, r, session)
 	if current.Email == nil || *current.Email != "creator-address@example.com" ||
 		!current.EmailVerified || !current.DiscordLinked || !current.HasPassword {
 		t.Errorf("attached account = %+v", current)
@@ -203,7 +205,7 @@ func TestEmailAccountCanAttachDiscordWithoutReplacingItsAddress(t *testing.T) {
 
 	provider.profile.Email = "changed-discord-address@example.com"
 	signedIn := completeDiscordSignIn(t, r)
-	resynced := sessionState(t, r, responseCookie(t, signedIn, sessionCookieName))
+	resynced := apitest.SessionState(t, r, responseCookie(t, signedIn, api.SessionCookie))
 	if resynced.Email == nil || *resynced.Email != "creator-address@example.com" {
 		t.Errorf("Discord replaced a creator-owned email: %+v", resynced)
 	}
@@ -217,21 +219,21 @@ func TestAttachingAnAlreadyClaimedDiscordIdentityRevealsNoAccount(t *testing.T) 
 		Email:         "first-link@example.com",
 		EmailVerified: true,
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
 	completeDiscordSignIn(t, r)
 
-	session := signUp(t, r, "second-link@example.com", "second.link")
-	verifyMessage(t, r, outbox.messages[0])
+	session := apitest.SignUp(t, r, "second-link@example.com", "second.link")
+	verifyMessage(t, r, outbox.Messages[0])
 	beginRequest := httptest.NewRequest(http.MethodGet, "/v1/auth/discord?intent=attach", nil)
 	beginRequest.AddCookie(session)
-	begin := send(t, r, beginRequest)
-	refused := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	begin := apitest.Send(t, r, beginRequest)
+	refused := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if refused.Code != http.StatusSeeOther ||
 		refused.Header().Get("Location") != "/settings?discord=claimed" {
 		t.Fatalf("claimed attach = %d %q, want generic claimed redirect",
 			refused.Code, refused.Header().Get("Location"))
 	}
-	if current := sessionState(t, r, session); current.DiscordLinked {
+	if current := apitest.SessionState(t, r, session); current.DiscordLinked {
 		t.Errorf("claimed Discord identity reached the second account: %+v", current)
 	}
 }
@@ -244,25 +246,25 @@ func TestDiscordCanDetachOnlyAfterAVerifiedEmailHasAPassword(t *testing.T) {
 		Email:         "detachable@example.com",
 		EmailVerified: true,
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
-	session := responseCookie(t, completeDiscordSignIn(t, r), sessionCookieName)
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
+	session := responseCookie(t, completeDiscordSignIn(t, r), api.SessionCookie)
 
 	unsafeRequest := httptest.NewRequest(http.MethodDelete, "/v1/account/discord", nil)
-	authorized(unsafeRequest, session)
-	unsafe := send(t, r, unsafeRequest)
+	apitest.Authorized(unsafeRequest, session)
+	unsafe := apitest.Send(t, r, unsafeRequest)
 	if unsafe.Code != http.StatusConflict {
 		t.Fatalf("Discord-only detach status = %d, want 409. body: %s",
 			unsafe.Code, unsafe.Body.String())
 	}
-	if current := sessionState(t, r, session); !current.DiscordLinked {
+	if current := apitest.SessionState(t, r, session); !current.DiscordLinked {
 		t.Errorf("refused detach removed Discord: %+v", current)
 	}
 
 	passwordRequest := httptest.NewRequest(http.MethodPut, "/v1/account/password",
 		strings.NewReader(`{"password":"a new private password"}`))
 	passwordRequest.Header.Set("Content-Type", "application/json")
-	authorized(passwordRequest, session)
-	password := send(t, r, passwordRequest)
+	apitest.Authorized(passwordRequest, session)
+	password := apitest.Send(t, r, passwordRequest)
 	if password.Code != http.StatusOK {
 		t.Fatalf("set password status = %d, want 200. body: %s",
 			password.Code, password.Body.String())
@@ -270,25 +272,25 @@ func TestDiscordCanDetachOnlyAfterAVerifiedEmailHasAPassword(t *testing.T) {
 	replacementRequest := httptest.NewRequest(http.MethodPut, "/v1/account/password",
 		strings.NewReader(`{"password":"replacement attempt"}`))
 	replacementRequest.Header.Set("Content-Type", "application/json")
-	authorized(replacementRequest, session)
-	if replacement := send(t, r, replacementRequest); replacement.Code != http.StatusConflict {
+	apitest.Authorized(replacementRequest, session)
+	if replacement := apitest.Send(t, r, replacementRequest); replacement.Code != http.StatusConflict {
 		t.Fatalf("replace password status = %d, want 409. body: %s",
 			replacement.Code, replacement.Body.String())
 	}
 
 	detachRequest := httptest.NewRequest(http.MethodDelete, "/v1/account/discord", nil)
-	authorized(detachRequest, session)
-	detached := send(t, r, detachRequest)
+	apitest.Authorized(detachRequest, session)
+	detached := apitest.Send(t, r, detachRequest)
 	if detached.Code != http.StatusOK {
 		t.Fatalf("safe detach status = %d, want 200. body: %s",
 			detached.Code, detached.Body.String())
 	}
-	current := sessionState(t, r, session)
+	current := apitest.SessionState(t, r, session)
 	if current.DiscordLinked || !current.HasPassword || !current.EmailVerified {
 		t.Errorf("account after detach = %+v", current)
 	}
 
-	signedIn := sendJSON(t, r, http.MethodPost, "/v1/auth/sign-in", `{
+	signedIn := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/sign-in", `{
 		"email":"detachable@example.com",
 		"password":"a new private password"
 	}`)
@@ -297,18 +299,18 @@ func TestDiscordCanDetachOnlyAfterAVerifiedEmailHasAPassword(t *testing.T) {
 			signedIn.Code, signedIn.Body.String())
 	}
 
-	newOwner := signUp(t, r, "new-owner@example.com", "new.owner")
-	verifyMessage(t, r, outbox.messages[0])
+	newOwner := apitest.SignUp(t, r, "new-owner@example.com", "new.owner")
+	verifyMessage(t, r, outbox.Messages[0])
 	beginRequest := httptest.NewRequest(http.MethodGet, "/v1/auth/discord?intent=attach", nil)
 	beginRequest.AddCookie(newOwner)
-	begin := send(t, r, beginRequest)
-	reused := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	begin := apitest.Send(t, r, beginRequest)
+	reused := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if reused.Code != http.StatusSeeOther ||
 		reused.Header().Get("Location") != "/settings?discord=attached" {
 		t.Fatalf("released identity attach = %d %q, want attached redirect",
 			reused.Code, reused.Header().Get("Location"))
 	}
-	if current := sessionState(t, r, newOwner); !current.DiscordLinked {
+	if current := apitest.SessionState(t, r, newOwner); !current.DiscordLinked {
 		t.Errorf("released Discord identity was not reusable: %+v", current)
 	}
 }
@@ -321,26 +323,26 @@ func TestPasswordResetSetsTheFirstPasswordForADiscordAccount(t *testing.T) {
 		Email:         "recover@example.com",
 		EmailVerified: true,
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
 	completeDiscordSignIn(t, r)
 
-	requested := sendJSON(t, r, http.MethodPost, "/v1/auth/password-reset", `{
+	requested := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/password-reset", `{
 		"email":"recover@example.com"
 	}`)
 	if requested.Code != http.StatusNoContent {
 		t.Fatalf("reset request status = %d, want 204. body: %s",
 			requested.Code, requested.Body.String())
 	}
-	if len(outbox.passwordResets) != 1 ||
-		outbox.passwordResets[0].address != "recover@example.com" {
-		t.Fatalf("password reset outbox = %+v", outbox.passwordResets)
+	if len(outbox.PasswordResets) != 1 ||
+		outbox.PasswordResets[0].Address != "recover@example.com" {
+		t.Fatalf("password reset outbox = %+v", outbox.PasswordResets)
 	}
-	resetURL, err := url.Parse(outbox.passwordResets[0].link)
+	resetURL, err := url.Parse(outbox.PasswordResets[0].Link)
 	if err != nil {
 		t.Fatalf("parse password reset link: %v", err)
 	}
 	token := resetURL.Query().Get("token")
-	completed := sendJSON(t, r, http.MethodPost, "/v1/auth/password-reset/complete", `{
+	completed := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/password-reset/complete", `{
 		"token":"`+token+`",
 		"password":"first account password"
 	}`)
@@ -348,7 +350,7 @@ func TestPasswordResetSetsTheFirstPasswordForADiscordAccount(t *testing.T) {
 		t.Fatalf("reset completion status = %d, want 204. body: %s",
 			completed.Code, completed.Body.String())
 	}
-	reused := sendJSON(t, r, http.MethodPost, "/v1/auth/password-reset/complete", `{
+	reused := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/password-reset/complete", `{
 		"token":"`+token+`",
 		"password":"replacement"
 	}`)
@@ -356,7 +358,7 @@ func TestPasswordResetSetsTheFirstPasswordForADiscordAccount(t *testing.T) {
 		t.Errorf("reused reset status = %d, want 400", reused.Code)
 	}
 
-	signedIn := sendJSON(t, r, http.MethodPost, "/v1/auth/sign-in", `{
+	signedIn := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/sign-in", `{
 		"email":"recover@example.com",
 		"password":"first account password"
 	}`)
@@ -374,9 +376,9 @@ func TestOneAccountCanOwnSeveralDiscordIdentities(t *testing.T) {
 		Email:         "first-identity@example.com",
 		EmailVerified: true,
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
-	session := signUp(t, r, "many-links@example.com", "many.links")
-	verifyMessage(t, r, outbox.messages[0])
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
+	session := apitest.SignUp(t, r, "many-links@example.com", "many.links")
+	verifyMessage(t, r, outbox.Messages[0])
 
 	first := completeDiscordAttach(t, r, session)
 	if first.Code != http.StatusSeeOther ||
@@ -396,15 +398,15 @@ func TestOneAccountCanOwnSeveralDiscordIdentities(t *testing.T) {
 	for _, identity := range []string{"first-discord-identity", "second-discord-identity"} {
 		provider.profile.Subject = identity
 		signedIn := completeDiscordSignIn(t, r)
-		current := sessionState(t, r, responseCookie(t, signedIn, sessionCookieName))
+		current := apitest.SessionState(t, r, responseCookie(t, signedIn, api.SessionCookie))
 		if current.Handle != "many.links" {
 			t.Errorf("%s reached @%s, want @many.links", identity, current.Handle)
 		}
 	}
 
 	detachRequest := httptest.NewRequest(http.MethodDelete, "/v1/account/discord", nil)
-	authorized(detachRequest, session)
-	if detached := send(t, r, detachRequest); detached.Code != http.StatusOK {
+	apitest.Authorized(detachRequest, session)
+	if detached := apitest.Send(t, r, detachRequest); detached.Code != http.StatusOK {
 		t.Fatalf("detach all identities = %d, want 200. body: %s",
 			detached.Code, detached.Body.String())
 	}
@@ -413,7 +415,7 @@ func TestOneAccountCanOwnSeveralDiscordIdentities(t *testing.T) {
 	for _, identity := range []string{"first-discord-identity", "second-discord-identity"} {
 		provider.profile.Subject = identity
 		signedIn := completeDiscordSignIn(t, r)
-		current := sessionState(t, r, responseCookie(t, signedIn, sessionCookieName))
+		current := apitest.SessionState(t, r, responseCookie(t, signedIn, api.SessionCookie))
 		if current.Handle == "many.links" {
 			t.Errorf("detached %s still reached the original account", identity)
 		}
@@ -426,22 +428,22 @@ func TestEmailVerificationReportsExistingDiscordAndPasswordMethods(t *testing.T)
 		Subject:  "verify-methods-discord",
 		Username: "VerifyMethods",
 	}}
-	r, outbox := newTestRouterWithDiscordAndOutbox(t, provider)
-	session := responseCookie(t, completeDiscordSignIn(t, r), sessionCookieName)
+	r, outbox := harness.NewRouterWithDiscordAndOutbox(t, provider)
+	session := responseCookie(t, completeDiscordSignIn(t, r), api.SessionCookie)
 
 	change := httptest.NewRequest(http.MethodPatch, "/v1/account/email",
 		strings.NewReader(`{"email":"verify-methods@example.com"}`))
 	change.Header.Set("Content-Type", "application/json")
-	authorized(change, session)
-	if changed := send(t, r, change); changed.Code != http.StatusOK {
+	apitest.Authorized(change, session)
+	if changed := apitest.Send(t, r, change); changed.Code != http.StatusOK {
 		t.Fatalf("change email = %d, want 200. body: %s", changed.Code, changed.Body.String())
 	}
-	if len(outbox.messages) != 1 {
-		t.Fatalf("verification messages = %d, want 1", len(outbox.messages))
+	if len(outbox.Messages) != 1 {
+		t.Fatalf("verification messages = %d, want 1", len(outbox.Messages))
 	}
 
-	verified := verifyMessage(t, r, outbox.messages[0])
-	var current accountState
+	verified := verifyMessage(t, r, outbox.Messages[0])
+	var current apitest.AccountState
 	if err := json.Unmarshal(verified.Body.Bytes(), &current); err != nil {
 		t.Fatalf("decode verified account: %v", err)
 	}
@@ -496,9 +498,9 @@ func TestDiscordOAuthRequestsIdentifyAndEmailFromTheProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create Discord client: %v", err)
 	}
-	r := newTestRouterWithDiscord(t, provider)
+	r := harness.NewRouterWithDiscord(t, provider)
 
-	begin := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
 	authorize, err := url.Parse(begin.Header().Get("Location"))
 	if err != nil {
 		t.Fatalf("parse authorization URL: %v", err)
@@ -509,11 +511,11 @@ func TestDiscordOAuthRequestsIdentifyAndEmailFromTheProvider(t *testing.T) {
 		authorize.Query().Get("redirect_uri") != "http://localhost:3000/api/v1/auth/discord/callback" {
 		t.Errorf("authorization query = %v", authorize.Query())
 	}
-	callback := send(t, r, oauthCallbackRequest(t, begin, "provider-code"))
-	if callback.Code != http.StatusSeeOther || !hasResponseCookie(callback, sessionCookieName) {
+	callback := apitest.Send(t, r, oauthCallbackRequest(t, begin, "provider-code"))
+	if callback.Code != http.StatusSeeOther || !hasResponseCookie(callback, api.SessionCookie) {
 		t.Fatalf("provider callback = %d, cookies %v", callback.Code, callback.Result().Cookies())
 	}
-	current := sessionState(t, r, responseCookie(t, callback, sessionCookieName))
+	current := apitest.SessionState(t, r, responseCookie(t, callback, api.SessionCookie))
 	if current.Email == nil || *current.Email != "provider@example.com" ||
 		!current.EmailVerified || !current.DiscordLinked {
 		t.Errorf("provider account = %+v", current)
@@ -526,22 +528,22 @@ func TestDiscordCallbackBelongsToTheBrowserThatBeganSignIn(t *testing.T) {
 		Subject:  "state-bound-discord",
 		Username: "StateBound",
 	}}
-	r := newTestRouterWithDiscord(t, provider)
+	r := harness.NewRouterWithDiscord(t, provider)
 
-	begin := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
 	authorize, err := url.Parse(begin.Header().Get("Location"))
 	if err != nil {
 		t.Fatalf("parse authorization redirect: %v", err)
 	}
 	cookies := begin.Result().Cookies()
-	if len(cookies) != 2 || !hasResponseCookie(begin, oauthStateCookieName) ||
-		!hasResponseCookie(begin, oauthReturnCookieName) {
+	if len(cookies) != 2 || !hasResponseCookie(begin, account.OAuthStateCookieName) ||
+		!hasResponseCookie(begin, account.OAuthReturnCookieName) {
 		t.Fatalf("OAuth begin cookies = %+v, want state and return cookies", cookies)
 	}
 	callbackURL := "/v1/auth/discord/callback?code=accepted&state=" +
 		url.QueryEscape(authorize.Query().Get("state"))
 
-	foreignBrowser := send(t, r, httptest.NewRequest(http.MethodGet, callbackURL, nil))
+	foreignBrowser := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, callbackURL, nil))
 	if foreignBrowser.Code != http.StatusSeeOther ||
 		foreignBrowser.Header().Get("Location") != "/sign-in?discord=failed" {
 		t.Fatalf("foreign callback = %d %q, want failed redirect",
@@ -553,7 +555,7 @@ func TestDiscordCallbackBelongsToTheBrowserThatBeganSignIn(t *testing.T) {
 
 	ownedRequest := httptest.NewRequest(http.MethodGet, callbackURL, nil)
 	ownedRequest.AddCookie(cookies[0])
-	owned := send(t, r, ownedRequest)
+	owned := apitest.Send(t, r, ownedRequest)
 	if owned.Code != http.StatusSeeOther || owned.Header().Get("Location") != "/browse" {
 		t.Fatalf("owned callback = %d %q, want browse redirect",
 			owned.Code, owned.Header().Get("Location"))
@@ -569,25 +571,25 @@ func TestDiscordSignInReturnsToTheInternalPageThatStartedIt(t *testing.T) {
 		Subject:  "returning-discord",
 		Username: "ReturningReader",
 	}}
-	r := newTestRouterWithDiscord(t, provider)
+	r := harness.NewRouterWithDiscord(t, provider)
 
-	begin := send(t, r, httptest.NewRequest(
+	begin := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet,
 		"/v1/auth/discord?returnTo=%2Flink%3Fcode%3DABCD-1234",
 		nil,
 	))
-	callback := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	callback := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if callback.Code != http.StatusSeeOther ||
 		callback.Header().Get("Location") != "/link?code=ABCD-1234" {
 		t.Fatalf("callback = %d %q, want link return", callback.Code, callback.Header().Get("Location"))
 	}
 
-	unsafeBegin := send(t, r, httptest.NewRequest(
+	unsafeBegin := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet,
 		"/v1/auth/discord?returnTo=%2F%2Foutside.example",
 		nil,
 	))
-	unsafeCallback := send(t, r, oauthCallbackRequest(t, unsafeBegin, "accepted"))
+	unsafeCallback := apitest.Send(t, r, oauthCallbackRequest(t, unsafeBegin, "accepted"))
 	if unsafeCallback.Code != http.StatusSeeOther ||
 		unsafeCallback.Header().Get("Location") != "/browse" {
 		t.Fatalf("unsafe callback = %d %q, want browse", unsafeCallback.Code, unsafeCallback.Header().Get("Location"))
@@ -597,14 +599,14 @@ func TestDiscordSignInReturnsToTheInternalPageThatStartedIt(t *testing.T) {
 func verifyMessage(
 	t *testing.T,
 	r http.Handler,
-	message verificationMessage,
+	message apitest.VerificationMessage,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	verificationURL, err := url.Parse(message.link)
+	verificationURL, err := url.Parse(message.Link)
 	if err != nil {
 		t.Fatalf("parse verification link: %v", err)
 	}
-	verified := sendJSON(t, r, http.MethodPost, "/v1/auth/verify-email",
+	verified := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/verify-email",
 		`{"token":"`+verificationURL.Query().Get("token")+`"}`)
 	if verified.Code != http.StatusOK {
 		t.Fatalf("verify status = %d, want 200. body: %s", verified.Code, verified.Body.String())
@@ -614,11 +616,11 @@ func verifyMessage(
 
 func completeDiscordSignIn(t *testing.T, r http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
-	begin := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
 	if begin.Code != http.StatusSeeOther {
 		t.Fatalf("begin status = %d, want 303. body: %s", begin.Code, begin.Body.String())
 	}
-	return send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	return apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 }
 
 func completeDiscordAttach(
@@ -629,11 +631,11 @@ func completeDiscordAttach(
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/auth/discord?intent=attach", nil)
 	request.AddCookie(session)
-	begin := send(t, r, request)
+	begin := apitest.Send(t, r, request)
 	if begin.Code != http.StatusSeeOther {
 		t.Fatalf("attach begin status = %d, want 303. body: %s", begin.Code, begin.Body.String())
 	}
-	return send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	return apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 }
 
 func oauthCallbackRequest(
@@ -649,8 +651,8 @@ func oauthCallbackRequest(
 	request := httptest.NewRequest(http.MethodGet,
 		"/v1/auth/discord/callback?code="+url.QueryEscape(code)+"&state="+
 			url.QueryEscape(authorize.Query().Get("state")), nil)
-	request.AddCookie(responseCookie(t, begin, oauthStateCookieName))
-	request.AddCookie(responseCookie(t, begin, oauthReturnCookieName))
+	request.AddCookie(responseCookie(t, begin, account.OAuthStateCookieName))
+	request.AddCookie(responseCookie(t, begin, account.OAuthReturnCookieName))
 	return request
 }
 
@@ -685,7 +687,7 @@ func TestDiscordRefreshesTheAvatarBannerAndDisplayNameAtSignIn(t *testing.T) {
 		AvatarURL: "https://cdn.discordapp.com/avatars/9/first.png",
 		BannerURL: "https://cdn.discordapp.com/banners/9/first.png?size=1024",
 	}}
-	r, _, pool := newDiscordTestStack(t, provider)
+	r, _, pool := harness.NewDiscordStack(t, provider)
 
 	signInThroughDiscord(t, r)
 	assertDiscordProfile(t, pool, "Reed",
@@ -706,7 +708,7 @@ func TestDiscordNeverTouchesTheDisplayNameACreatorSet(t *testing.T) {
 	provider := &discordStub{profile: account.DiscordProfile{
 		Subject: "discord-reader-10", Username: "tallowmoth", DisplayName: "tallowmoth",
 	}}
-	r, _, pool := newDiscordTestStack(t, provider)
+	r, _, pool := harness.NewDiscordStack(t, provider)
 	signInThroughDiscord(t, r)
 	if _, err := pool.Exec(context.Background(),
 		`update users set custom_display_name = 'Marbleframe'`); err != nil {
@@ -728,11 +730,11 @@ func TestDiscordNeverTouchesTheDisplayNameACreatorSet(t *testing.T) {
 
 func signInThroughDiscord(t *testing.T, r *gin.Engine) {
 	t.Helper()
-	begin := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord", nil))
 	if begin.Code != http.StatusSeeOther {
 		t.Fatalf("begin status = %d, want 303. body: %s", begin.Code, begin.Body.String())
 	}
-	callback := send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	callback := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
 	if callback.Code != http.StatusSeeOther {
 		t.Fatalf("callback status = %d, want 303. body: %s", callback.Code, callback.Body.String())
 	}

@@ -3,12 +3,13 @@ package http
 import (
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) ListPostRevisions(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -25,7 +26,7 @@ func (h *Handlers) ListPostRevisions(c *gin.Context) {
 }
 
 func (h *Handlers) CheckpointPost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -46,11 +47,11 @@ func (h *Handlers) CheckpointPost(c *gin.Context) {
 }
 
 func (h *Handlers) RestorePostRevision(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	revisionID, ok := pathID(c, "revisionId")
+	revisionID, ok := api.PathID(c, "revisionId")
 	if !ok {
 		return
 	}
@@ -73,7 +74,7 @@ func (h *Handlers) RestorePostRevision(c *gin.Context) {
 }
 
 func (h *Handlers) ReadPostHistory(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}

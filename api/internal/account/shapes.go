@@ -1,4 +1,4 @@
-package http
+package account
 
 import (
 	"github.com/google/uuid"

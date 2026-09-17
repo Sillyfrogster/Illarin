@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
@@ -52,7 +53,7 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 		return
 	}
 	var request LibraryReport
-	if !readBoundedJSON(c, &request, maxLibraryBodyBytes, "The library report is too large.") {
+	if !api.ReadBoundedJSON(c, &request, maxLibraryBodyBytes, "The library report is too large.") {
 		return
 	}
 	result, err := h.deliveries.Sync(c.Request.Context(), instance, toLibraryReport(request))
@@ -67,12 +68,12 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 }
 
 func (h *Handlers) GetAssetInstances(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.signedInAccount(c, "sending an asset to an application")
+	creator, ok := api.SignedIn(c, "sending an asset to an application")
 	if !ok {
 		return
 	}
@@ -91,16 +92,16 @@ func (h *Handlers) GetAssetInstances(c *gin.Context) {
 }
 
 func (h *Handlers) SendAssetToInstance(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.signedInAccount(c, "sending an asset to an application")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.SignedIn(c, "sending an asset to an application")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	var request SendAssetRequest
@@ -118,16 +119,16 @@ func (h *Handlers) SendAssetToInstance(c *gin.Context) {
 }
 
 func (h *Handlers) DiscardDelivery(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.signedInAccount(c, "managing deliveries")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.SignedIn(c, "managing deliveries")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	if err := h.deliveries.Discard(c.Request.Context(), creator.ID, id); err != nil {
@@ -138,16 +139,16 @@ func (h *Handlers) DiscardDelivery(c *gin.Context) {
 }
 
 func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := DownloadDeliveryExportParams{
-		Expires:   queryRequired(q, "expires"),
-		Signature: queryRequired(q, "signature"),
+		Expires:   api.QueryRequired(q, "expires"),
+		Signature: api.QueryRequired(q, "signature"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
@@ -177,7 +178,7 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
 	if errors.Is(err, delivery.ErrArtifactNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
 	h.downloadError(c, err)
@@ -189,48 +190,34 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 	case errors.As(err, &limited):
 		seconds := int((limited.After + time.Second - 1) / time.Second)
 		c.Header("Retry-After", strconv.Itoa(seconds))
-		c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests. Try again later."})
+		api.Refuse(c, http.StatusTooManyRequests, "Too many requests. Try again later.")
 	case errors.Is(err, delivery.ErrTooManyCollectors):
 		c.Header("Retry-After", strconv.Itoa(collectorsBusySeconds))
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Too many applications are waiting for work. Try again shortly.",
-		})
+		api.Refuse(c, http.StatusServiceUnavailable, "Too many applications are waiting for work. Try again shortly.")
 	case errors.Is(err, delivery.ErrInstanceNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No live application of yours has that id."})
+		api.Refuse(c, http.StatusNotFound, "No live application of yours has that id.")
 	case errors.Is(err, delivery.ErrMissingScope):
-		c.JSON(http.StatusForbidden, gin.H{"error": "That application cannot receive assets."})
+		api.Refuse(c, http.StatusForbidden, "That application cannot receive assets.")
 	case errors.Is(err, delivery.ErrAssetNotFound), errors.Is(err, delivery.ErrAssetNotSendable):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No asset that can be sent has that id."})
+		api.Refuse(c, http.StatusNotFound, "No asset that can be sent has that id.")
 	case errors.Is(err, delivery.ErrNoTarget):
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "That application accepts no format this asset can be written in.",
-		})
+		api.Refuse(c, http.StatusConflict, "That application accepts no format this asset can be written in.")
 	case errors.Is(err, delivery.ErrCannotInstall):
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "That application does not install extensions from Illarin.",
-		})
+		api.Refuse(c, http.StatusConflict, "That application does not install extensions from Illarin.")
 	case errors.Is(err, delivery.ErrQueueFull):
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "That application already has as many deliveries waiting as it may hold.",
-		})
+		api.Refuse(c, http.StatusConflict, "That application already has as many deliveries waiting as it may hold.")
 	case errors.Is(err, delivery.ErrDeliveryNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No delivery of yours has that id."})
+		api.Refuse(c, http.StatusNotFound, "No delivery of yours has that id.")
 	case errors.Is(err, delivery.ErrLibraryTooLarge):
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "Report fewer installed assets in one request.",
-		})
+		api.Refuse(c, http.StatusRequestEntityTooLarge, "Report fewer installed assets in one request.")
 	case errors.Is(err, delivery.ErrLibraryReport):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "That report is not valid."})
+		api.Refuse(c, http.StatusBadRequest, "That report is not valid.")
 	case errors.Is(err, delivery.ErrLibraryVersion):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "The application version must be printable text of at most 64 characters.",
-		})
+		api.Refuse(c, http.StatusBadRequest, "The application version must be printable text of at most 64 characters.")
 	case errors.Is(err, delivery.ErrAcknowledgement):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Acknowledge at most 32 deliveries in one request.",
-		})
+		api.Refuse(c, http.StatusBadRequest, "Acknowledge at most 32 deliveries in one request.")
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not complete the request."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not complete the request.")
 	}
 }
 

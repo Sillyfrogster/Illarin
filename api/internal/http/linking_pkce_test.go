@@ -12,6 +12,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type startedAuthorization struct {
@@ -39,17 +42,17 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 	state := strings.Repeat("s", 43)
 	redirectURI := "http://127.0.0.1:49152/illarin/callback"
 
-	body := linkStartBody("Example client", "studio workstation", []string{"asset:receive"})
+	body := apitest.LinkStartBody("Example client", "studio workstation", []string{"asset:receive"})
 	body["state"] = state
 	body["redirectUri"] = redirectURI
 	body["codeChallenge"] = challenge
 	body["codeChallengeMethod"] = "S256"
-	startedRec := sendJSON(t, r, http.MethodPost, "/v1/link/authorizations", jsonText(t, body))
-	assertNoStore(t, startedRec)
+	startedRec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/authorizations", apitest.JSONText(t, body))
+	apitest.AssertNoStore(t, startedRec)
 	if startedRec.Code != http.StatusCreated {
 		t.Fatalf("start authorization status = %d, want 201. body: %s", startedRec.Code, startedRec.Body.String())
 	}
-	started := decodeResponse[startedAuthorization](t, startedRec)
+	started := apitest.DecodeResponse[startedAuthorization](t, startedRec)
 	if started.ExpiresAt.Before(time.Now()) {
 		t.Errorf("authorization already expired at %s", started.ExpiresAt)
 	}
@@ -58,19 +61,19 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 		t.Fatalf("parse authorization URL: %v", err)
 	}
 	requestCode := authorizationURL.Query().Get("request")
-	if requestCode == "" || authorizationURL.Scheme+"://"+authorizationURL.Host+authorizationURL.Path != testBrowserOrigin+"/link" {
+	if requestCode == "" || authorizationURL.Scheme+"://"+authorizationURL.Host+authorizationURL.Path != apitest.BrowserOrigin+"/link" {
 		t.Fatalf("authorization URL = %q", started.AuthorizationURL)
 	}
 
 	reviewReq := httptest.NewRequest(
 		http.MethodGet, "/v1/link/authorizations/"+requestCode, nil,
 	)
-	reviewRec := send(t, r, authorized(reviewReq, session))
-	assertNoStore(t, reviewRec)
+	reviewRec := apitest.Send(t, r, apitest.Authorized(reviewReq, session))
+	apitest.AssertNoStore(t, reviewRec)
 	if reviewRec.Code != http.StatusOK {
 		t.Fatalf("review authorization status = %d, want 200. body: %s", reviewRec.Code, reviewRec.Body.String())
 	}
-	pending := decodeResponse[pendingAuthorization](t, reviewRec)
+	pending := apitest.DecodeResponse[pendingAuthorization](t, reviewRec)
 	if pending.ApplicationName != "Example client" || pending.InstanceName != "studio workstation" {
 		t.Errorf("pending authorization identity = %q / %q", pending.ApplicationName, pending.InstanceName)
 	}
@@ -87,24 +90,24 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 		header string
 	}{
 		{name: "neither"},
-		{name: "origin only", origin: testBrowserOrigin},
+		{name: "origin only", origin: apitest.BrowserOrigin},
 		{name: "header only", header: "1"},
 		{name: "wrong origin", origin: "https://attacker.invalid", header: "1"},
 	}
 	for _, test := range csrfCases {
 		req := httptest.NewRequest(http.MethodPost, approveTarget, nil)
 		req.Header.Set("Origin", test.origin)
-		req.Header.Set(browserMutationHeader, test.header)
+		req.Header.Set(api.BrowserHeader, test.header)
 		req.AddCookie(session)
-		rec := send(t, r, req)
-		assertNoStore(t, rec)
+		rec := apitest.Send(t, r, req)
+		apitest.AssertNoStore(t, rec)
 		if rec.Code != http.StatusForbidden {
 			t.Errorf("approve with %s = %d, want 403", test.name, rec.Code)
 		}
 	}
 
-	approved := send(t, r, browserRequest(t, http.MethodPost, approveTarget, nil, session))
-	assertNoStore(t, approved)
+	approved := apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodPost, approveTarget, nil, session))
+	apitest.AssertNoStore(t, approved)
 	if approved.Code != http.StatusOK {
 		t.Fatalf("approve authorization status = %d, want 200. body: %s", approved.Code, approved.Body.String())
 	}
@@ -131,7 +134,7 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 
 	exchange := func(code, candidateVerifier, candidateRedirect string) *httptest.ResponseRecorder {
 		t.Helper()
-		return sendJSON(t, r, http.MethodPost, "/v1/link/token", jsonText(t, map[string]string{
+		return apitest.SendJSON(t, r, http.MethodPost, "/v1/link/token", apitest.JSONText(t, map[string]string{
 			"authorizationCode": code,
 			"codeVerifier":      candidateVerifier,
 			"redirectUri":       candidateRedirect,
@@ -139,22 +142,22 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 	}
 	wrongRedirect := exchange(authorizationCode, verifier,
 		"http://127.0.0.1:49153/illarin/callback")
-	assertNoStore(t, wrongRedirect)
+	apitest.AssertNoStore(t, wrongRedirect)
 	if wrongRedirect.Code != http.StatusBadRequest {
 		t.Errorf("exchange with another loopback callback = %d, want 400", wrongRedirect.Code)
 	}
 	wrongVerifier := exchange(authorizationCode, strings.Repeat("B", 43), redirectURI)
-	assertNoStore(t, wrongVerifier)
+	apitest.AssertNoStore(t, wrongVerifier)
 	if wrongVerifier.Code != http.StatusBadRequest {
 		t.Errorf("exchange with wrong verifier = %d, want 400", wrongVerifier.Code)
 	}
 
 	exchanged := exchange(authorizationCode, verifier, redirectURI)
-	assertNoStore(t, exchanged)
+	apitest.AssertNoStore(t, exchanged)
 	if exchanged.Code != http.StatusOK {
 		t.Fatalf("exact code exchange status = %d, want 200. body: %s", exchanged.Code, exchanged.Body.String())
 	}
-	grant := decodeResponse[tokenGrant](t, exchanged)
+	grant := apitest.DecodeResponse[apitest.TokenGrant](t, exchanged)
 	if grant.AccessToken == "" || grant.RefreshToken == "" || grant.Instance.ID == "" {
 		t.Fatalf("code exchange grant = %+v", grant)
 	}
@@ -163,7 +166,7 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 	}
 
 	secondExchange := exchange(authorizationCode, verifier, redirectURI)
-	assertNoStore(t, secondExchange)
+	apitest.AssertNoStore(t, secondExchange)
 	if secondExchange.Code != http.StatusBadRequest {
 		t.Errorf("second exchange status = %d, want 400", secondExchange.Code)
 	}
@@ -177,16 +180,16 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 	)
 	verifier := strings.Repeat("A", 43)
 	digest := sha256.Sum256([]byte(verifier))
-	body := linkStartBody("Example browser client", "review test", []string{"asset:receive"})
+	body := apitest.LinkStartBody("Example browser client", "review test", []string{"asset:receive"})
 	body["state"] = strings.Repeat("s", 43)
 	body["redirectUri"] = "http://127.0.0.1:49152/illarin/callback"
 	body["codeChallenge"] = base64.RawURLEncoding.EncodeToString(digest[:])
 	body["codeChallengeMethod"] = "S256"
-	startedRec := sendJSON(t, r, http.MethodPost, "/v1/link/authorizations", jsonText(t, body))
+	startedRec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/authorizations", apitest.JSONText(t, body))
 	if startedRec.Code != http.StatusCreated {
 		t.Fatalf("start authorization status = %d, want 201. body: %s", startedRec.Code, startedRec.Body.String())
 	}
-	started := decodeResponse[startedAuthorization](t, startedRec)
+	started := apitest.DecodeResponse[startedAuthorization](t, startedRec)
 	authorizationURL, err := url.Parse(started.AuthorizationURL)
 	if err != nil {
 		t.Fatalf("parse authorization URL: %v", err)
@@ -201,7 +204,7 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 		req := httptest.NewRequest(
 			http.MethodGet, "/v1/link/authorizations/"+requestCode, nil,
 		)
-		return send(t, r, authorized(req, session))
+		return apitest.Send(t, r, apitest.Authorized(req, session))
 	}
 	for index, session := range []*http.Cookie{firstSession, firstSession, secondSession} {
 		rec := review(session)
@@ -223,7 +226,7 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 	}
 
 	denyTarget := "/v1/link/authorizations/" + requestCode + "/deny"
-	denied := send(t, r, browserRequest(
+	denied := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost, denyTarget, nil, firstSession,
 	))
 	if denied.Code != http.StatusOK {
@@ -240,7 +243,7 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 		t.Fatalf("denial redirect = %q, want access_denied", redirect.URL)
 	}
 
-	approved := send(t, r, browserRequest(
+	approved := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost,
 		"/v1/link/authorizations/"+requestCode+"/approve", nil, secondSession,
 	))
@@ -262,13 +265,13 @@ func TestSameDeviceLinkingRejectsNonLoopbackRedirects(t *testing.T) {
 		"http://127.0.0.1/illarin/callback",
 		"http://127.0.0.1:49152/illarin/callback?next=/admin",
 	} {
-		body := linkStartBody("Example client", "studio workstation", []string{"asset:receive"})
+		body := apitest.LinkStartBody("Example client", "studio workstation", []string{"asset:receive"})
 		body["state"] = strings.Repeat("s", 43)
 		body["redirectUri"] = redirectURI
 		body["codeChallenge"] = challenge
 		body["codeChallengeMethod"] = "S256"
-		rec := sendJSON(t, r, http.MethodPost, "/v1/link/authorizations", jsonText(t, body))
-		assertNoStore(t, rec)
+		rec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/authorizations", apitest.JSONText(t, body))
+		apitest.AssertNoStore(t, rec)
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("redirect %q status = %d, want 400. body: %s", redirectURI, rec.Code, rec.Body.String())
 		}

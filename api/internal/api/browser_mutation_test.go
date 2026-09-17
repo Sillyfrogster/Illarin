@@ -1,14 +1,17 @@
-package http
+package api_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func TestCookieAuthenticatedMutationsRequireTheIllarinBrowserOrigin(t *testing.T) {
 	t.Parallel()
-	router, session := newVerifiedTestRouter(t)
+	router, session := harness.NewVerifiedRouter(t)
 
 	request := func(origin, marker string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -18,7 +21,7 @@ func TestCookieAuthenticatedMutationsRequireTheIllarinBrowserOrigin(t *testing.T
 			req.Header.Set("Origin", origin)
 		}
 		if marker != "" {
-			req.Header.Set(browserMutationHeader, marker)
+			req.Header.Set(api.BrowserHeader, marker)
 		}
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -31,14 +34,14 @@ func TestCookieAuthenticatedMutationsRequireTheIllarinBrowserOrigin(t *testing.T
 	if rec := request("https://elsewhere.example", "1"); rec.Code != http.StatusForbidden {
 		t.Fatalf("cross-origin browser mutation = %d, want %d", rec.Code, http.StatusForbidden)
 	}
-	if rec := request(testBrowserOrigin, "1"); rec.Code != http.StatusNoContent {
+	if rec := request(apitest.BrowserOrigin, "1"); rec.Code != http.StatusNoContent {
 		t.Fatalf("same-origin browser mutation = %d %s, want %d", rec.Code, rec.Body.String(), http.StatusNoContent)
 	}
 }
 
 func TestBrowserMutationGuardLeavesPublicAccountEntryPointsAvailable(t *testing.T) {
 	t.Parallel()
-	router := newTestRouter(t)
+	router := harness.NewRouter(t)
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-in", nil)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

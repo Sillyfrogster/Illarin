@@ -4,25 +4,26 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "reading preserved data")
+	owner, ok := api.Verified(c, "reading preserved data")
 	if !ok {
 		return
 	}
 	found, err := h.assets.PreservedNamespaces(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load extra file data. Try again."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not load extra file data. Try again.")
 	default:
 		served := make([]PreservedNamespace, 0, len(found))
 		for _, namespace := range found {
@@ -35,7 +36,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 }
 
 func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -44,7 +45,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "deleting preserved data")
+	owner, ok := api.Verified(c, "deleting preserved data")
 	if !ok {
 		return
 	}
@@ -56,29 +57,29 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "This asset preserves no such data."})
+		api.Refuse(c, http.StatusNotFound, "This asset preserves no such data.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete the preserved data."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not delete the preserved data.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) ExportSealedContent(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "reading sealed content")
+	owner, ok := api.Verified(c, "reading sealed content")
 	if !ok {
 		return
 	}
 	sealed, err := h.assets.OpenSealedContent(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "This asset holds no sealed content."})
+		api.Refuse(c, http.StatusNotFound, "This asset holds no sealed content.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the sealed content."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the sealed content.")
 	default:
 		c.Header("Content-Disposition", `attachment; filename="`+sealed.Filename+`"`)
 		c.Header("X-Content-Type-Options", "nosniff")

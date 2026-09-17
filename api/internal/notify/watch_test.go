@@ -1,4 +1,4 @@
-package http
+package notify_test
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,7 +49,7 @@ func TestAnOwnerNeitherWatchesNorLearnsWhoWatchesTheirAsset(t *testing.T) {
 			t.Errorf("%s a watch on your own asset = %d, want 403: %s", method, got.Code, got.Body.String())
 		}
 	}
-	page := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+s.assetID, nil), s.creator))
+	page := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+s.assetID, nil), s.creator))
 	if page.Code != http.StatusOK {
 		t.Fatalf("owner's asset page = %d, want 200: %s", page.Code, page.Body.String())
 	}
@@ -63,7 +65,7 @@ func TestASignedOutReaderHasNoWatch(t *testing.T) {
 		t.Fatalf("signed-out watch = %+v, want none returned", got)
 	}
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
-		response := send(t, s.router, browserMutation(httptest.NewRequest(method, "/v1/assets/"+s.assetID+"/watch", nil)))
+		response := apitest.Send(t, s.router, apitest.BrowserMutation(httptest.NewRequest(method, "/v1/assets/"+s.assetID+"/watch", nil)))
 		if response.Code != http.StatusUnauthorized {
 			t.Errorf("signed-out %s watch = %d, want 401", method, response.Code)
 		}
@@ -73,14 +75,14 @@ func TestASignedOutReaderHasNoWatch(t *testing.T) {
 func TestADraftCannotBeWatchedButAnUnlistedAssetCan(t *testing.T) {
 	t.Parallel()
 	s := newWatchStack(t)
-	draft := startCharacter(t, s.router, s.creator)
+	draft := apitest.StartCharacter(t, s.router, s.creator)
 	for _, assetID := range []string{draft.ID, "44444444-4444-4444-8444-444444444444"} {
 		if got := s.watchAt(t, s.reader, http.MethodPut, assetID); got.Code != http.StatusNotFound {
 			t.Errorf("watching %s = %d, want 404: %s", assetID, got.Code, got.Body.String())
 		}
 	}
 
-	unlisted := send(t, s.router, authorizedJSONRequest(
+	unlisted := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
 		t, http.MethodPut, "/v1/assets/"+s.assetID+"/discovery", `{"discovery":"unlisted"}`, s.creator,
 	))
 	if unlisted.Code != http.StatusNoContent {
@@ -94,14 +96,14 @@ func TestADraftCannotBeWatchedButAnUnlistedAssetCan(t *testing.T) {
 func TestAnInstallReportedByLibrarySyncCountsAsWatchingUntilTheReaderStops(t *testing.T) {
 	t.Parallel()
 	s := newWatchStack(t)
-	studio := linkDeviceInstance(t, s.router, s.creator, "Lumiverse", "Studio", []string{receiveScope, librarySyncScope})
-	reportInstalled(t, s.router, studio.AccessToken, "", s.assetID)
+	studio := apitest.LinkDeviceInstance(t, s.router, s.creator, "Lumiverse", "Studio", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	apitest.ReportInstalled(t, s.router, studio.AccessToken, "", s.assetID)
 	if got := s.watchState(t, s.reader); got == nil || got.State != "none" || len(got.InstalledOn) != 0 {
 		t.Fatalf("another account's install gave the reader %+v, want none", got)
 	}
 
-	desk := linkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{receiveScope, librarySyncScope})
-	reportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
+	desk := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
 	if got := s.watchState(t, s.reader); got == nil || got.State != "installed" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk"}) {
 		t.Fatalf("watch with the asset installed = %+v, want installed on Reading desk", got)
@@ -110,7 +112,7 @@ func TestAnInstallReportedByLibrarySyncCountsAsWatchingUntilTheReaderStops(t *te
 	if got := s.setWatch(t, s.reader, http.MethodDelete); got.State != "stopped" {
 		t.Fatalf("stopping an installed asset answered %+v, want stopped", got)
 	}
-	reportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
+	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
 	if got := s.watchState(t, s.reader); got == nil || got.State != "stopped" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk"}) {
 		t.Fatalf("watch after the next library sync = %+v, want it still stopped", got)
@@ -124,18 +126,18 @@ func TestAnInstallReportedByLibrarySyncCountsAsWatchingUntilTheReaderStops(t *te
 func TestARevokedInstanceNoLongerCountsAsAWatch(t *testing.T) {
 	t.Parallel()
 	s := newWatchStack(t)
-	desk := linkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{receiveScope, librarySyncScope})
-	laptop := linkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Travel laptop", []string{receiveScope, librarySyncScope})
-	reportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
-	reportInstalled(t, s.router, laptop.AccessToken, "", s.assetID)
+	desk := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	laptop := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Travel laptop", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.assetID)
+	apitest.ReportInstalled(t, s.router, laptop.AccessToken, "", s.assetID)
 	if got := s.watchState(t, s.reader); got == nil || got.State != "installed" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk", "Travel laptop"}) {
 		t.Fatalf("watch with two installs = %+v, want installed on both", got)
 	}
 
-	revoke := func(grant tokenGrant) {
+	revoke := func(grant apitest.TokenGrant) {
 		t.Helper()
-		revoked := send(t, s.router, browserRequest(t, http.MethodDelete, "/v1/instances/"+grant.Instance.ID, nil, s.reader))
+		revoked := apitest.Send(t, s.router, apitest.BrowserRequest(t, http.MethodDelete, "/v1/instances/"+grant.Instance.ID, nil, s.reader))
 		if revoked.Code != http.StatusNoContent {
 			t.Fatalf("revoke status = %d, want 204: %s", revoked.Code, revoked.Body.String())
 		}
@@ -167,13 +169,13 @@ type assetWatch struct {
 
 func newWatchStack(t *testing.T) watchStack {
 	t.Helper()
-	outbox := &verificationOutbox{}
-	router, _, _ := newTestRouterWithSenderPoolAndHandlers(t, 1<<20, DefaultDeadlines(), outbox)
-	creator := verifiedSignUp(t, router, outbox, "creator@example.com", creatorHandle)
-	reader := verifiedSignUp(t, router, outbox, "reader@example.com", readerHandle)
+	outbox := &apitest.VerificationOutbox{}
+	router, _, _ := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
+	creator := apitest.VerifiedSignUp(t, router, outbox, "creator@example.com", apitest.CreatorHandle)
+	reader := apitest.VerifiedSignUp(t, router, outbox, "reader@example.com", readerHandle)
 	return watchStack{
 		router: router, creator: creator, reader: reader,
-		assetID: publishedTestAsset(t, router, creator),
+		assetID: apitest.PublishedAsset(t, router, creator),
 	}
 }
 
@@ -181,9 +183,9 @@ func (s watchStack) watchState(t *testing.T, session *http.Cookie) *assetWatch {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+s.assetID, nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	response := send(t, s.router, request)
+	response := apitest.Send(t, s.router, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("asset page status = %d, want 200: %s", response.Code, response.Body.String())
 	}
@@ -198,7 +200,7 @@ func (s watchStack) watchState(t *testing.T, session *http.Cookie) *assetWatch {
 
 func (s watchStack) watchAt(t *testing.T, session *http.Cookie, method, assetID string) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(httptest.NewRequest(method, "/v1/assets/"+assetID+"/watch", nil), session))
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/assets/"+assetID+"/watch", nil), session))
 }
 
 func (s watchStack) setWatch(t *testing.T, session *http.Cookie, method string) assetWatch {

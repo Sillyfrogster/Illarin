@@ -8,13 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/gin-gonic/gin"
 )
 
 const alreadyPast = time.Nanosecond
 
-func deadlines(json time.Duration) Deadlines {
-	return Deadlines{
+func deadlines(json time.Duration) api.Deadlines {
+	return api.Deadlines{
 		JSON: json, Upload: time.Minute, Download: time.Minute,
 		Deliver: time.Minute, Verify: time.Minute,
 	}
@@ -22,13 +24,13 @@ func deadlines(json time.Duration) Deadlines {
 
 func TestAListingPastItsDeadlineFailsRatherThanAnswers(t *testing.T) {
 	t.Parallel()
-	answered := list(t, newTestRouterWith(t, 1<<20, deadlines(5*time.Second)))
+	answered := list(t, harness.NewRouterWith(t, 1<<20, deadlines(5*time.Second)))
 	if answered.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 with time to spare. body: %s",
 			answered.Code, answered.Body.String())
 	}
 
-	gaveUp := list(t, newTestRouterWith(t, 1<<20, deadlines(alreadyPast)))
+	gaveUp := list(t, harness.NewRouterWith(t, 1<<20, deadlines(alreadyPast)))
 	if gaveUp.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500 once the deadline has gone. body: %s",
 			gaveUp.Code, gaveUp.Body.String())
@@ -47,7 +49,7 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	err := Register(
 		gin.New(),
 		NewHandlers(nil, nil, nil, nil, nil, nil, nil, 1<<20),
-		Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
+		api.Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
 		func(context.Context) error { return nil },
 	)
 
@@ -58,10 +60,10 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 
 func TestAnUploadIsNotHeldToTheListingDeadline(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouterWith(t, 1<<20, deadlines(alreadyPast))
+	r, session := harness.NewVerifiedRouterWith(t, 1<<20, deadlines(alreadyPast))
 
-	rec := send(t, r, authorized(
-		uploadRequest(t, exampleMetadata("Patient"), []byte("bytes")), session,
+	rec := apitest.Send(t, r, apitest.Authorized(
+		apitest.UploadRequest(t, apitest.ExampleMetadata("Patient"), []byte("bytes")), session,
 	))
 
 	if rec.Code != http.StatusAccepted {
@@ -71,12 +73,12 @@ func TestAnUploadIsNotHeldToTheListingDeadline(t *testing.T) {
 
 func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
 	t.Parallel()
-	setup, r, session, assets := newVerifiedTestRoutersWithService(t, 1<<20, deadlines(alreadyPast))
+	setup, r, session, assets := harness.NewVerifiedRoutersWithService(t, 1<<20, deadlines(alreadyPast))
 
 	file := []byte("bytes worth waiting for")
-	metadata := exampleMetadata("Roomy")
+	metadata := apitest.ExampleMetadata("Roomy")
 	metadata["filename"] = "roomy.lumitheme"
-	rec := uploadAndFinish(t, setup, session, assets, metadata, file)
+	rec := apitest.UploadAndFinish(t, setup, session, assets, metadata, file)
 
 	var created struct {
 		Asset *struct {

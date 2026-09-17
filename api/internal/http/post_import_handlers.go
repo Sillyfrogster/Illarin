@@ -5,6 +5,7 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/postdoc"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
@@ -13,7 +14,7 @@ import (
 const maxImportBytes = 1 << 20
 
 func (h *Handlers) ImportPostMarkdown(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -43,7 +44,7 @@ func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
 		return request, false
 	}
 	body := http.MaxBytesReader(c.Writer, c.Request.Body, maxImportBytes)
-	if err := decodeOneJSON(body, &request); err != nil {
+	if err := api.DecodeOneJSON(body, &request); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
 			refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,

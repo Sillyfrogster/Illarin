@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ type profileListingResponse struct {
 
 func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	t.Parallel()
-	router, _, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var firstID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&firstID); err != nil {
@@ -45,7 +46,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	createProfileAsset(t, assets, firstID, "First garden", false, asset.DiscoveryListed)
 	createProfileAsset(t, assets, secondID, "Second garden", false, asset.DiscoveryListed)
 
-	response := send(t, router, httptest.NewRequest(
+	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?creator=verified.creator", nil,
 	))
 	if response.Code != http.StatusOK {
@@ -63,7 +64,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 
 func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 	t.Parallel()
-	router, _, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
@@ -94,7 +95,7 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 
 func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
@@ -121,7 +122,7 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		t.Fatalf("soft-delete asset: %v", err)
 	}
 
-	saved := send(t, router, authorizedJSONRequest(
+	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t, http.MethodPut, "/v1/account/nsfw-visibility", `{"visibility":"hidden"}`, session,
 	))
 	if saved.Code != http.StatusNoContent {
@@ -176,7 +177,7 @@ func readProfileListing(
 	if session != nil {
 		request.AddCookie(session)
 	}
-	response := send(t, router, request)
+	response := apitest.Send(t, router, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("profile listing status = %d, want 200: %s", response.Code, response.Body.String())
 	}

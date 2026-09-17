@@ -1,4 +1,4 @@
-package http
+package notify
 
 type AssetWatch struct {
 	InstalledOn []string        `json:"installedOn"`

@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func addBlock(
@@ -27,15 +29,15 @@ func addBlock(
 		http.MethodPost, "/v1/assets/"+assetID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	return send(t, r, authorized(request, session))
+	return apitest.Send(t, r, apitest.Authorized(request, session))
 }
 
-func addedBlock(t *testing.T, response *httptest.ResponseRecorder) startedBlock {
+func addedBlock(t *testing.T, response *httptest.ResponseRecorder) apitest.StartedBlock {
 	t.Helper()
 	if response.Code != http.StatusCreated {
 		t.Fatalf("add a block: status = %d, want 201: %s", response.Code, response.Body.String())
 	}
-	var added startedBlock
+	var added apitest.StartedBlock
 	if err := json.Unmarshal(response.Body.Bytes(), &added); err != nil {
 		t.Fatalf("decode the new block: %v", err)
 	}
@@ -44,11 +46,11 @@ func addedBlock(t *testing.T, response *httptest.ResponseRecorder) startedBlock 
 
 func TestTheOwnerIsOfferedTheSharedBlocksGroupedByDestination(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	page := fetchStartedAsset(t, r, session, started.ID)
-	byDefinition := make(map[string]addableBlock, len(page.AddableBlocks))
+	byDefinition := make(map[string]apitest.AddableBlock, len(page.AddableBlocks))
 	for _, block := range page.AddableBlocks {
 		byDefinition[block.Definition] = block
 	}
@@ -77,8 +79,8 @@ func TestTheOwnerIsOfferedTheSharedBlocksGroupedByDestination(t *testing.T) {
 
 func TestAddingABlockPutsItAtTheFootOfThePageHoldingItsElement(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "gallery", "image_set"))
 
@@ -106,8 +108,8 @@ func TestAddingABlockPutsItAtTheFootOfThePageHoldingItsElement(t *testing.T) {
 
 func TestABlockThatCannotRepeatIsRefusedTwice(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	addedBlock(t, addBlock(t, r, session, started.ID, "usage", "prose"))
 	response := addBlock(t, r, session, started.ID, "usage", "prose")
@@ -122,8 +124,8 @@ func TestABlockThatCannotRepeatIsRefusedTwice(t *testing.T) {
 
 func TestACustomBlockRepeatsAndTakesTheElementTheCreatorChose(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	first := addedBlock(t, addBlock(t, r, session, started.ID, "custom_block", "prose"))
 	second := addedBlock(t, addBlock(t, r, session, started.ID, "custom_block", "link_list"))
@@ -138,8 +140,8 @@ func TestACustomBlockRepeatsAndTakesTheElementTheCreatorChose(t *testing.T) {
 
 func TestARequiredBlockAndAnUnofferedElementAreBothRefused(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
 	if response := addBlock(t, r, session, started.ID, "character_core", "prose"); response.Code != http.StatusBadRequest {
 		t.Errorf("adding a required block: status = %d, want 400", response.Code)
@@ -154,20 +156,20 @@ func TestARequiredBlockAndAnUnofferedElementAreBothRefused(t *testing.T) {
 
 func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "runs_best_with", "link_list"))
 
-	update := editableBlock(added)
+	update := apitest.EditableBlock(added)
 	update.Elements[0].Content = json.RawMessage(
 		`{"links":[{"label":"The winter lorebook","url":"https://illarin.xyz/a/1","note":"Load it first"}]}`,
 	)
-	if response := saveBlock(t, r, session, started.ID, added.ID, update); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, r, session, started.ID, added.ID, update); response.Code != http.StatusOK {
 		t.Fatalf("save links: status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
 	page := fetchStartedAsset(t, r, session, started.ID)
-	saved := blockNamed(t, page.Blocks, "runs_best_with")
+	saved := apitest.BlockNamed(t, page.Blocks, "runs_best_with")
 	if saved.IsEmpty {
 		t.Errorf("a block holding a link reads as empty")
 	}
@@ -181,15 +183,15 @@ func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
 
 func TestABlockSavedWithAScriptAddressIsRefused(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 	added := addedBlock(t, addBlock(t, r, session, started.ID, "runs_best_with", "link_list"))
 
-	update := editableBlock(added)
+	update := apitest.EditableBlock(added)
 	update.Elements[0].Content = json.RawMessage(
 		`{"links":[{"label":"Tap me","url":"javascript:alert(1)"}]}`,
 	)
-	response := saveBlock(t, r, session, started.ID, added.ID, update)
+	response := apitest.SaveBlock(t, r, session, started.ID, added.ID, update)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("a script address: status = %d, want 400: %s", response.Code, response.Body.String())
@@ -212,21 +214,21 @@ func TestSavingAnEmptyAddedBlockKeepsEveryDefinition(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.definition, func(t *testing.T) {
-			r, session := newVerifiedTestRouter(t)
-			started := startCharacter(t, r, session)
+			r, session := harness.NewVerifiedRouter(t)
+			started := apitest.StartCharacter(t, r, session)
 			added := addedBlock(t, addBlock(
 				t, r, session, started.ID, test.definition, test.elementType,
 			))
-			update := editableBlock(added)
+			update := apitest.EditableBlock(added)
 			update.Width = "full"
 
-			response := saveBlock(t, r, session, started.ID, added.ID, update)
+			response := apitest.SaveBlock(t, r, session, started.ID, added.ID, update)
 			if response.Code != http.StatusOK {
 				t.Fatalf("save empty block: status = %d, want 200: %s", response.Code, response.Body.String())
 			}
 
 			page := fetchStartedAsset(t, r, session, started.ID)
-			saved := blockNamed(t, page.Blocks, test.definition)
+			saved := apitest.BlockNamed(t, page.Blocks, test.definition)
 			if len(page.Blocks) != 3 || saved.ID != added.ID || saved.Width != "full" || !saved.IsEmpty {
 				t.Errorf("saved page = %+v, want the empty block kept at full width", page.Blocks)
 			}
@@ -236,13 +238,13 @@ func TestSavingAnEmptyAddedBlockKeepsEveryDefinition(t *testing.T) {
 
 func TestOnlyTheOwnerIsOfferedBlocksToAdd(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
 
-	response := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 
 	if response.Code == http.StatusOK {
-		var page startedAsset
+		var page apitest.StartedAsset
 		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 			t.Fatalf("decode the reader's page: %v", err)
 		}

@@ -6,7 +6,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 )
 
@@ -17,7 +17,7 @@ type Handlers struct {
 	deliveries         *delivery.Service
 	publications       *publication.Service
 	updateDestinations *assetdestination.Service
-	notifications      *notification.Service
+	notifications      *notify.Service
 	maxUploadBytes     int64
 }
 
@@ -28,7 +28,7 @@ func NewHandlers(
 	deliveries *delivery.Service,
 	publications *publication.Service,
 	updateDestinations *assetdestination.Service,
-	notifications *notification.Service,
+	notifications *notify.Service,
 	maxUploadBytes int64,
 ) *Handlers {
 	return &Handlers{

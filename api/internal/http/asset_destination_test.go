@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 )
 
@@ -19,9 +20,9 @@ func (s destinationStack) updateDestinationRequest(t *testing.T, session *http.C
 	t.Helper()
 	request := jsonRequest(t, method, path, body)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	return send(t, s.router, request)
+	return apitest.Send(t, s.router, request)
 }
 
 func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cookie, kind, address string) addedDestination {
@@ -44,7 +45,7 @@ func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cooki
 func TestAssetUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	creator := verifiedSignUp(t, stack.router, stack.outbox, "creator@example.com", "asset.creator")
+	creator := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "creator@example.com", "asset.creator")
 	made := stack.addUpdateDestination(t, creator, "webhook", stack.to.address())
 	if !strings.HasPrefix(made.Secret, "whsec_") || made.Destination.State != "unverified" {
 		t.Fatal("a new webhook needs its own signing secret and verification")
@@ -122,7 +123,7 @@ func TestAssetUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T
 func TestAssetUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	creator := verifiedSignUp(t, stack.router, stack.outbox, "updates@example.com", "updates.creator")
+	creator := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "updates@example.com", "updates.creator")
 	made := stack.addUpdateDestination(t, creator, "webhook", stack.to.address())
 	path := updateDestinationsPath + "/" + made.Destination.ID
 	for _, change := range []struct{ method, suffix, body string }{
@@ -232,8 +233,8 @@ func TestAssetUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(
 func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	first := startCharacter(t, stack.router, stack.editor)
-	second := startCharacter(t, stack.router, stack.editor)
+	first := apitest.StartCharacter(t, stack.router, stack.editor)
+	second := apitest.StartCharacter(t, stack.router, stack.editor)
 	webhook := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	foreign := stack.addUpdateDestination(t, stack.authority, "discord", discordCapability())
@@ -366,7 +367,7 @@ func TestAssetUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
 	if again := stack.updateDestinationRequest(t, stack.editor, http.MethodPost, path+"/secret", ""); again.Code != http.StatusBadRequest {
 		t.Error("a second rotation cut short the promised overlap")
 	}
-	if n, err := stack.handlers.updateDestinations.ForgetOldSecrets(t.Context(), time.Now().Add(25*time.Hour)); err != nil || n != 1 {
+	if n, err := stack.handlers.UpdateDestinations.ForgetOldSecrets(t.Context(), time.Now().Add(25*time.Hour)); err != nil || n != 1 {
 		t.Fatalf("expired secret cleanup = %d, %v", n, err)
 	}
 	stack.to.answers(echoesTheChallenge)
@@ -406,7 +407,7 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 		if strings.Contains(string(address), target.address) {
 			t.Fatal("stored address contains the plaintext capability")
 		}
-		opened, err := testSealingKey().Open(address)
+		opened, err := apitest.SealingKey().Open(address)
 		if err != nil || string(opened) != target.address {
 			t.Fatal("stored address cannot be opened with the application key")
 		}
@@ -419,7 +420,7 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 		if strings.Contains(string(secret), made.Secret) {
 			t.Fatal("stored signing secret contains plaintext")
 		}
-		opened, err = testSealingKey().Open(secret)
+		opened, err = apitest.SealingKey().Open(secret)
 		if err != nil || string(opened) != made.Secret {
 			t.Fatal("stored signing secret cannot be opened with the application key")
 		}
@@ -429,8 +430,8 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 func TestAssetUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	started := startCharacter(t, stack.router, stack.editor)
-	writeCharacterFloor(t, stack.router, stack.editor, started)
+	started := apitest.StartCharacter(t, stack.router, stack.editor)
+	apitest.WriteCharacterFloor(t, stack.router, stack.editor, started)
 	made := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	path := "/v1/assets/" + started.ID + "/update-destinations"
 	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut, path,
@@ -438,7 +439,7 @@ func TestAssetUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.
 	if chosen.Code != http.StatusNoContent {
 		t.Fatal("could not save defaults before first publication")
 	}
-	if published := publishAsset(t, stack.router, stack.editor, started.ID); published.Code != http.StatusOK {
+	if published := apitest.PublishAsset(t, stack.router, stack.editor, started.ID); published.Code != http.StatusOK {
 		t.Fatal("could not publish the asset")
 	}
 	if len(stack.discord.announcements()) != 0 || len(stack.to.arrivals()) != 0 {

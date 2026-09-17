@@ -4,13 +4,14 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 func (h *Handlers) ListAssetUpdates(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -20,11 +21,11 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 	}
 	history, err := h.assets.VersionHistory(c.Request.Context(), id, viewerID)
 	if errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the update history."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the update history.")
 		return
 	}
 	items := make([]RecordedVersion, 0, len(history))
@@ -35,11 +36,11 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 }
 
 func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	number, ok := pathNumber(c, "number")
+	number, ok := api.PathNumber(c, "number")
 	if !ok {
 		return
 	}
@@ -47,7 +48,7 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "restoring an asset version")
+	owner, ok := api.Verified(c, "restoring an asset version")
 	if !ok {
 		return
 	}
@@ -63,100 +64,100 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 			"code":  "invalid_recorded_version",
 		})
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not restore the version."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not restore the version.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	number, ok := pathNumber(c, "number")
+	number, ok := api.PathNumber(c, "number")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "correcting asset update notes")
+	owner, ok := api.Verified(c, "correcting asset update notes")
 	if !ok {
 		return
 	}
 	var request AssetVersionNotesRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the corrected summary and notes."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send the corrected summary and notes.")
 		return
 	}
 	err := h.assets.CorrectVersionNotes(c.Request.Context(), owner.ID, id, number,
 		request.Summary, valueOrEmpty(request.Notes))
 	switch {
 	case errors.Is(err, asset.ErrSummaryRequired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Keep a summary for this update."})
+		api.Refuse(c, http.StatusBadRequest, "Keep a summary for this update.")
 	case errors.Is(err, asset.ErrSummaryTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "The summary or notes are too long."})
+		api.Refuse(c, http.StatusBadRequest, "The summary or notes are too long.")
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
+		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not correct the notes."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not correct the notes.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	number, ok := pathNumber(c, "number")
+	number, ok := api.PathNumber(c, "number")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "withdrawing an asset version")
+	owner, ok := api.Verified(c, "withdrawing an asset version")
 	if !ok {
 		return
 	}
 	var request AssetVersionWithdrawalRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send a public withdrawal explanation."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send a public withdrawal explanation.")
 		return
 	}
 	err := h.assets.WithdrawVersion(c.Request.Context(), owner.ID, id, number, request.Explanation)
 	switch {
 	case errors.Is(err, asset.ErrWithdrawalExplanationRequired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Explain why this version was withdrawn."})
+		api.Refuse(c, http.StatusBadRequest, "Explain why this version was withdrawn.")
 	case errors.Is(err, asset.ErrWithdrawalExplanationTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Keep the explanation under 1,000 characters."})
+		api.Refuse(c, http.StatusBadRequest, "Keep the explanation under 1,000 characters.")
 	case errors.Is(err, asset.ErrCurrentVersionWithdrawal):
-		c.JSON(http.StatusConflict, gin.H{"error": "Publish a replacement before withdrawing the current version."})
+		api.Refuse(c, http.StatusConflict, "Publish a replacement before withdrawing the current version.")
 	case errors.Is(err, asset.ErrVersionAlreadyWithdrawn):
-		c.JSON(http.StatusConflict, gin.H{"error": "This version is already withdrawn."})
+		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
 	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
+		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not withdraw the version."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not withdraw the version.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) CompareAssetVersions(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := CompareAssetVersionsParams{
-		From: queryNumber(q, "from"),
-		To:   queryNumber(q, "to"),
+		From: api.QueryNumber(q, "from"),
+		To:   api.QueryNumber(q, "to"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	viewerID, ok := h.viewerID(c)
@@ -173,30 +174,30 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case errors.Is(err, asset.ErrNoEarlierVersion):
-		c.JSON(http.StatusConflict, gin.H{"error": "Nothing was recorded before that version."})
+		api.Refuse(c, http.StatusConflict, "Nothing was recorded before that version.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not compare the versions."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not compare the versions.")
 	default:
 		c.JSON(http.StatusOK, toAPIComparison(compared))
 	}
 }
 
 func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	number, ok := pathNumber(c, "number")
+	number, ok := api.PathNumber(c, "number")
 	if !ok {
 		return
 	}
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := GetRecordedVersionDownloadsParams{
-		Nsfw: queryText[GetRecordedVersionDownloadsParamsNsfw](q, "nsfw"),
+		Nsfw: api.QueryText[GetRecordedVersionDownloadsParamsNsfw](q, "nsfw"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	viewerID, ok := h.viewerID(c)
@@ -214,16 +215,16 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 	}
 	offered, err := h.assets.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
 	if errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the version's downloads."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
 	blocks, err := toAPIBlocks(offered.Kind, offered.Blocks)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the version's downloads."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
 	c.JSON(http.StatusOK, RecordedVersionDownloads{
@@ -238,21 +239,21 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 }
 
 func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := h.signedInAccount(c, "reading an asset's sealed prompts")
+	owner, ok := api.SignedIn(c, "reading an asset's sealed prompts")
 	if !ok {
 		return
 	}
 	mismatches, err := h.assets.ProtectionMismatches(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, asset.ErrNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the sealed prompts."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the sealed prompts.")
 		return
 	}
 	items := make([]ProtectionMismatch, 0, len(mismatches))
@@ -267,23 +268,21 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 }
 
 func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	number, ok := pathNumber(c, "number")
+	number, ok := api.PathNumber(c, "number")
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "settling an asset's sealed prompts")
+	owner, ok := api.Verified(c, "settling an asset's sealed prompts")
 	if !ok {
 		return
 	}
 	var request PromptCorrespondenceRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send a match for each sealed prompt, naming the recorded prompt it stands for.",
-		})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send a match for each sealed prompt, naming the recorded prompt it stands for.")
 		return
 	}
 	answers := make([]asset.PromptCorrespondence, 0, len(request.Matches))
@@ -299,11 +298,11 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 		c.Request.Context(), owner.ID, id, number, answers)
 	switch {
 	case errors.Is(err, asset.ErrUnknownPrompt):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "That prompt is not one of the choices."})
+		api.Refuse(c, http.StatusBadRequest, "That prompt is not one of the choices.")
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such version."})
+		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not settle the sealed prompts."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not settle the sealed prompts.")
 	default:
 		c.Status(http.StatusNoContent)
 	}

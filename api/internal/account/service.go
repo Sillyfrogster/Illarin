@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
@@ -109,16 +110,16 @@ func (s *Service) WithPasswordCost(cost int) *Service {
 	return &copied
 }
 
-func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, time.Time, error) {
+func (s *Service) SignUp(ctx context.Context, in SignUpInput) (api.Account, string, time.Time, error) {
 	email, err := normalizeEmail(in.Email)
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 	if err := validateHandle(in.Handle); err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 	if in.Password == "" {
-		return Account{}, "", time.Time{}, FieldError{
+		return api.Account{}, "", time.Time{}, FieldError{
 			Field:   "password",
 			Message: "Enter a password.",
 		}
@@ -126,52 +127,52 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, 
 
 	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(in.Password), s.passwordCost)
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("hash password: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("hash password: %w", err)
 	}
 	verificationToken, verificationHash, err := newCredential()
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 	sessionToken, sessionHash, err := newCredential()
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 
 	now := time.Now()
 	sessionExpires := now.Add(sessionLifetime)
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("begin sign up: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("begin sign up: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 
 	if _, err := queries.LockHandle(ctx, in.Handle); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("lock handle: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("lock handle: %w", err)
 	}
 	unavailable, err := queries.HandleUnavailable(ctx, in.Handle)
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("check handle: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("check handle: %w", err)
 	}
 	if unavailable {
-		return Account{}, "", time.Time{}, ErrHandleUnavailable
+		return api.Account{}, "", time.Time{}, ErrHandleUnavailable
 	}
 	if _, err := queries.LockEmail(ctx, email); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("lock email: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("lock email: %w", err)
 	}
 	claimed, err := queries.VerifiedEmailExists(ctx, text(email))
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("check email: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("check email: %w", err)
 	}
 	if claimed {
 		discordLinked, err := queries.VerifiedEmailBelongsToDiscordAccount(ctx, text(email))
 		if err != nil {
-			return Account{}, "", time.Time{}, fmt.Errorf("check email sign-in methods: %w", err)
+			return api.Account{}, "", time.Time{}, fmt.Errorf("check email sign-in methods: %w", err)
 		}
 		if discordLinked {
-			return Account{}, "", time.Time{}, ErrEmailBelongsDiscord
+			return api.Account{}, "", time.Time{}, ErrEmailBelongsDiscord
 		}
-		return Account{}, "", time.Time{}, ErrEmailUnavailable
+		return api.Account{}, "", time.Time{}, ErrEmailUnavailable
 	}
 
 	userID := uuid.New()
@@ -182,7 +183,7 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, 
 		PasswordHash: text(string(passwordHash)),
 	})
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("create account: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("create account: %w", err)
 	}
 	if err := queries.InsertEmailVerificationToken(ctx, db.InsertEmailVerificationTokenParams{
 		TokenHash: verificationHash,
@@ -190,22 +191,22 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, 
 		Email:     email,
 		ExpiresAt: timestamptz(now.Add(verificationLifetime)),
 	}); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("store verification: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("store verification: %w", err)
 	}
 	if err := queries.InsertSession(ctx, db.InsertSessionParams{
 		TokenHash: sessionHash,
 		UserID:    uuidValue(userID),
 		ExpiresAt: timestamptz(sessionExpires),
 	}); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("store session: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("store session: %w", err)
 	}
 
 	link := s.siteURL + "/verify-email?token=" + url.QueryEscape(verificationToken)
 	if err := s.sender.SendVerification(ctx, email, link); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("send verification: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("send verification: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("commit sign up: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("commit sign up: %w", err)
 	}
 
 	return accountFrom(accountRecord{
@@ -215,7 +216,7 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (Account, string, 
 		sessionToken, sessionExpires, nil
 }
 
-func (s *Service) Current(ctx context.Context, token string) (*Account, error) {
+func (s *Service) Current(ctx context.Context, token string) (*api.Account, error) {
 	hash, ok := credentialHash(token)
 	if !ok {
 		return nil, nil
@@ -229,7 +230,7 @@ func (s *Service) Current(ctx context.Context, token string) (*Account, error) {
 	}
 	account := accountFrom(accountRecord{
 		ID: row.ID, Handle: row.Username, Email: row.Email, Verified: row.EmailVerifiedAt,
-		HasPassword: row.HasPassword, DiscordLinked: row.DiscordLinked, Role: Role(row.Role),
+		HasPassword: row.HasPassword, DiscordLinked: row.DiscordLinked, Role: api.Role(row.Role),
 	})
 	return &account, nil
 }
@@ -277,63 +278,63 @@ func (s *Service) SetNSFWVisibility(
 	return nil
 }
 
-func (s *Service) VerifyEmail(ctx context.Context, token string) (Account, error) {
+func (s *Service) VerifyEmail(ctx context.Context, token string) (api.Account, error) {
 	hash, ok := credentialHash(token)
 	if !ok {
-		return Account{}, ErrVerification
+		return api.Account{}, ErrVerification
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, fmt.Errorf("begin verification: %w", err)
+		return api.Account{}, fmt.Errorf("begin verification: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 
 	email, err := queries.VerificationEmailByHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrVerification
+		return api.Account{}, ErrVerification
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("read verification: %w", err)
+		return api.Account{}, fmt.Errorf("read verification: %w", err)
 	}
 	if _, err := queries.LockEmail(ctx, email); err != nil {
-		return Account{}, fmt.Errorf("lock email: %w", err)
+		return api.Account{}, fmt.Errorf("lock email: %w", err)
 	}
 	verification, err := queries.VerificationByHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrVerification
+		return api.Account{}, ErrVerification
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("recheck verification: %w", err)
+		return api.Account{}, fmt.Errorf("recheck verification: %w", err)
 	}
 	if verification.Email != email {
-		return Account{}, ErrVerification
+		return api.Account{}, ErrVerification
 	}
 	verified, err := queries.VerifyUserEmail(ctx, db.VerifyUserEmailParams{
 		ID:    verification.UserID,
 		Email: text(verification.Email),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrVerification
+		return api.Account{}, ErrVerification
 	}
 	var databaseError *pgconn.PgError
 	if errors.As(err, &databaseError) && databaseError.Code == "23505" {
-		return Account{}, ErrEmailUnavailable
+		return api.Account{}, ErrEmailUnavailable
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("verify email: %w", err)
+		return api.Account{}, fmt.Errorf("verify email: %w", err)
 	}
 	if err := queries.ClearPendingEmailCopies(ctx, db.ClearPendingEmailCopiesParams{
 		Email: text(verification.Email),
 		ID:    verification.UserID,
 	}); err != nil {
-		return Account{}, fmt.Errorf("clear pending emails: %w", err)
+		return api.Account{}, fmt.Errorf("clear pending emails: %w", err)
 	}
 	if err := queries.DeleteVerificationTokensForEmail(ctx, verification.Email); err != nil {
-		return Account{}, fmt.Errorf("clear verification links: %w", err)
+		return api.Account{}, fmt.Errorf("clear verification links: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, fmt.Errorf("commit verification: %w", err)
+		return api.Account{}, fmt.Errorf("commit verification: %w", err)
 	}
 
 	return accountFrom(accountRecord{
@@ -343,15 +344,15 @@ func (s *Service) VerifyEmail(ctx context.Context, token string) (Account, error
 	}), nil
 }
 
-func (s *Service) SignIn(ctx context.Context, email, password string) (Account, string, time.Time, error) {
+func (s *Service) SignIn(ctx context.Context, email, password string) (api.Account, string, time.Time, error) {
 	normalized, err := normalizeEmail(email)
 	if err != nil {
 		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, passwordMaterial(password))
-		return Account{}, "", time.Time{}, ErrCredentials
+		return api.Account{}, "", time.Time{}, ErrCredentials
 	}
 	rows, err := db.New(s.pool).UsersForSignIn(ctx, text(normalized))
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("find account: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("find account: %w", err)
 	}
 
 	matches := make([]db.UsersForSignInRow, 0, 1)
@@ -366,12 +367,12 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (Account, 
 		}
 	}
 	if len(matches) != 1 {
-		return Account{}, "", time.Time{}, ErrCredentials
+		return api.Account{}, "", time.Time{}, ErrCredentials
 	}
 
 	token, hash, err := newCredential()
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 	expires := time.Now().Add(sessionLifetime)
 	if err := db.New(s.pool).InsertSession(ctx, db.InsertSessionParams{
@@ -379,13 +380,13 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (Account, 
 		UserID:    matches[0].ID,
 		ExpiresAt: timestamptz(expires),
 	}); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("store session: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("store session: %w", err)
 	}
 
 	row := matches[0]
 	return accountFrom(accountRecord{
 		ID: row.ID, Handle: row.Username, Email: row.Email, Verified: row.EmailVerifiedAt,
-		HasPassword: true, DiscordLinked: row.DiscordLinked, Role: Role(row.Role),
+		HasPassword: true, DiscordLinked: row.DiscordLinked, Role: api.Role(row.Role),
 	}), token, expires, nil
 }
 
@@ -400,75 +401,75 @@ func (s *Service) SignOut(ctx context.Context, token string) error {
 	return nil
 }
 
-func (s *Service) RenameHandle(ctx context.Context, token, handle string) (Account, error) {
+func (s *Service) RenameHandle(ctx context.Context, token, handle string) (api.Account, error) {
 	if err := validateHandle(handle); err != nil {
-		return Account{}, err
+		return api.Account{}, err
 	}
 	hash, ok := credentialHash(token)
 	if !ok {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, fmt.Errorf("begin handle rename: %w", err)
+		return api.Account{}, fmt.Errorf("begin handle rename: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 
 	current, err := queries.UserBySessionHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("read account: %w", err)
+		return api.Account{}, fmt.Errorf("read account: %w", err)
 	}
 	if !current.EmailVerifiedAt.Valid {
-		return Account{}, ErrEmailUnverified
+		return api.Account{}, ErrEmailUnverified
 	}
 	oldHandle, err := queries.UserHandleForUpdate(ctx, current.ID)
 	if err != nil {
-		return Account{}, fmt.Errorf("lock account: %w", err)
+		return api.Account{}, fmt.Errorf("lock account: %w", err)
 	}
 	if oldHandle == handle {
 		unchanged := accountFrom(accountRecord{
 			ID: current.ID, Handle: oldHandle, Email: current.Email,
 			Verified: current.EmailVerifiedAt, HasPassword: current.HasPassword,
-			DiscordLinked: current.DiscordLinked, Role: Role(current.Role),
+			DiscordLinked: current.DiscordLinked, Role: api.Role(current.Role),
 		})
 		if err := tx.Commit(ctx); err != nil {
-			return Account{}, fmt.Errorf("commit unchanged handle: %w", err)
+			return api.Account{}, fmt.Errorf("commit unchanged handle: %w", err)
 		}
 		return unchanged, nil
 	}
 	for _, value := range orderedHandles(oldHandle, handle) {
 		if _, err := queries.LockHandle(ctx, value); err != nil {
-			return Account{}, fmt.Errorf("lock handle: %w", err)
+			return api.Account{}, fmt.Errorf("lock handle: %w", err)
 		}
 	}
 	unavailable, err := queries.HandleUnavailable(ctx, handle)
 	if err != nil {
-		return Account{}, fmt.Errorf("check handle: %w", err)
+		return api.Account{}, fmt.Errorf("check handle: %w", err)
 	}
 	if unavailable {
-		return Account{}, ErrHandleUnavailable
+		return api.Account{}, ErrHandleUnavailable
 	}
 	if err := queries.InsertRetiredHandle(ctx, oldHandle); err != nil {
-		return Account{}, fmt.Errorf("retire handle: %w", err)
+		return api.Account{}, fmt.Errorf("retire handle: %w", err)
 	}
 	updated, err := queries.UpdateUserHandle(ctx, db.UpdateUserHandleParams{
 		ID:       current.ID,
 		Username: handle,
 	})
 	if err != nil {
-		return Account{}, fmt.Errorf("rename handle: %w", err)
+		return api.Account{}, fmt.Errorf("rename handle: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, fmt.Errorf("commit handle rename: %w", err)
+		return api.Account{}, fmt.Errorf("commit handle rename: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: updated.ID, Handle: updated.Username, Email: updated.Email,
 		Verified: updated.EmailVerifiedAt, HasPassword: current.HasPassword,
-		DiscordLinked: current.DiscordLinked, Role: Role(current.Role),
+		DiscordLinked: current.DiscordLinked, Role: api.Role(current.Role),
 	}), nil
 }
 
@@ -486,59 +487,59 @@ func (s *Service) CreatorListing(ctx context.Context, handle string) (CreatorLis
 	}, nil
 }
 
-func (s *Service) ChangeUnverifiedEmail(ctx context.Context, token, rawEmail string) (Account, error) {
+func (s *Service) ChangeUnverifiedEmail(ctx context.Context, token, rawEmail string) (api.Account, error) {
 	email, err := normalizeEmail(rawEmail)
 	if err != nil {
-		return Account{}, err
+		return api.Account{}, err
 	}
 	hash, ok := credentialHash(token)
 	if !ok {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	verificationToken, verificationHash, err := newCredential()
 	if err != nil {
-		return Account{}, err
+		return api.Account{}, err
 	}
 	now := time.Now()
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, fmt.Errorf("begin email change: %w", err)
+		return api.Account{}, fmt.Errorf("begin email change: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 
 	current, err := queries.UserBySessionHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("read account: %w", err)
+		return api.Account{}, fmt.Errorf("read account: %w", err)
 	}
 	if current.EmailVerifiedAt.Valid {
-		return Account{}, ErrEmailVerified
+		return api.Account{}, ErrEmailVerified
 	}
 	if _, err := queries.LockEmail(ctx, email); err != nil {
-		return Account{}, fmt.Errorf("lock email: %w", err)
+		return api.Account{}, fmt.Errorf("lock email: %w", err)
 	}
 	claimed, err := queries.VerifiedEmailExists(ctx, text(email))
 	if err != nil {
-		return Account{}, fmt.Errorf("check email: %w", err)
+		return api.Account{}, fmt.Errorf("check email: %w", err)
 	}
 	if claimed {
-		return Account{}, ErrEmailUnavailable
+		return api.Account{}, ErrEmailUnavailable
 	}
 	updated, err := queries.UpdateUnverifiedEmail(ctx, db.UpdateUnverifiedEmailParams{
 		ID:    current.ID,
 		Email: text(email),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrEmailVerified
+		return api.Account{}, ErrEmailVerified
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("change email: %w", err)
+		return api.Account{}, fmt.Errorf("change email: %w", err)
 	}
 	if err := queries.DeleteVerificationTokensForUser(ctx, current.ID); err != nil {
-		return Account{}, fmt.Errorf("clear old verification: %w", err)
+		return api.Account{}, fmt.Errorf("clear old verification: %w", err)
 	}
 	if err := queries.InsertEmailVerificationToken(ctx, db.InsertEmailVerificationTokenParams{
 		TokenHash: verificationHash,
@@ -546,55 +547,55 @@ func (s *Service) ChangeUnverifiedEmail(ctx context.Context, token, rawEmail str
 		Email:     email,
 		ExpiresAt: timestamptz(now.Add(verificationLifetime)),
 	}); err != nil {
-		return Account{}, fmt.Errorf("store verification: %w", err)
+		return api.Account{}, fmt.Errorf("store verification: %w", err)
 	}
 	link := s.siteURL + "/verify-email?token=" + url.QueryEscape(verificationToken)
 	if err := s.sender.SendVerification(ctx, email, link); err != nil {
-		return Account{}, fmt.Errorf("send verification: %w", err)
+		return api.Account{}, fmt.Errorf("send verification: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, fmt.Errorf("commit email change: %w", err)
+		return api.Account{}, fmt.Errorf("commit email change: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: updated.ID, Handle: updated.Username, Email: updated.Email,
 		Verified: updated.EmailVerifiedAt, HasPassword: current.HasPassword,
-		DiscordLinked: current.DiscordLinked, Role: Role(current.Role),
+		DiscordLinked: current.DiscordLinked, Role: api.Role(current.Role),
 	}), nil
 }
 
-func (s *Service) SetPassword(ctx context.Context, sessionToken, password string) (Account, error) {
+func (s *Service) SetPassword(ctx context.Context, sessionToken, password string) (api.Account, error) {
 	if password == "" {
-		return Account{}, FieldError{Field: "password", Message: "Enter a password."}
+		return api.Account{}, FieldError{Field: "password", Message: "Enter a password."}
 	}
 	hash, ok := credentialHash(sessionToken)
 	if !ok {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	current, err := db.New(s.pool).UserBySessionHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("read account for password: %w", err)
+		return api.Account{}, fmt.Errorf("read account for password: %w", err)
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(password), s.passwordCost)
 	if err != nil {
-		return Account{}, fmt.Errorf("hash password: %w", err)
+		return api.Account{}, fmt.Errorf("hash password: %w", err)
 	}
 	updated, err := db.New(s.pool).SetFirstPassword(ctx, db.SetFirstPasswordParams{
 		ID:           current.ID,
 		PasswordHash: text(string(passwordHash)),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrPasswordAlreadySet
+		return api.Account{}, ErrPasswordAlreadySet
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("set password: %w", err)
+		return api.Account{}, fmt.Errorf("set password: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: updated.ID, Handle: updated.Username, Email: updated.Email,
 		Verified: updated.EmailVerifiedAt, HasPassword: true,
-		DiscordLinked: current.DiscordLinked, Role: Role(current.Role),
+		DiscordLinked: current.DiscordLinked, Role: api.Role(current.Role),
 	}), nil
 }
 
@@ -776,14 +777,14 @@ type accountRecord struct {
 	Verified      pgtype.Timestamptz
 	HasPassword   bool
 	DiscordLinked bool
-	Role          Role
+	Role          api.Role
 }
 
-func accountFrom(row accountRecord) Account {
+func accountFrom(row accountRecord) api.Account {
 	if row.Role == "" {
-		row.Role = RoleUser
+		row.Role = api.RoleUser
 	}
-	account := Account{
+	account := api.Account{
 		ID:            uuid.UUID(row.ID.Bytes),
 		Handle:        row.Handle,
 		EmailVerified: row.Verified.Valid,

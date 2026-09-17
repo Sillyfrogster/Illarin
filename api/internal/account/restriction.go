@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -49,7 +50,7 @@ func (s *Service) ProfileRestriction(ctx context.Context, handle string) (Restri
 
 func (s *Service) RestrictProfile(
 	ctx context.Context,
-	admin Account,
+	admin api.Account,
 	handle, rawReason string,
 ) (Restriction, error) {
 	reason := strings.TrimSpace(rawReason)
@@ -82,8 +83,8 @@ func (s *Service) RestrictProfile(
 	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restrict", reason); err != nil {
 		return Restriction{}, err
 	}
-	if err := notification.Record(ctx, tx, notification.Event{
-		Type: notification.ProfileRestricted, Account: &subject, Words: notification.Words{Reason: reason},
+	if err := notify.Record(ctx, tx, notify.Event{
+		Type: notify.ProfileRestricted, Account: &subject, Words: notify.Words{Reason: reason},
 	}); err != nil {
 		return Restriction{}, err
 	}
@@ -93,7 +94,7 @@ func (s *Service) RestrictProfile(
 	return s.ProfileRestriction(ctx, handle)
 }
 
-func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle string) error {
+func (s *Service) RestoreProfile(ctx context.Context, admin api.Account, handle string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin profile restoration: %w", err)
@@ -113,8 +114,8 @@ func (s *Service) RestoreProfile(ctx context.Context, admin Account, handle stri
 	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restore", ""); err != nil {
 		return err
 	}
-	if err := notification.Record(ctx, tx, notification.Event{
-		Type: notification.ProfileRestored, Account: &subject,
+	if err := notify.Record(ctx, tx, notify.Event{
+		Type: notify.ProfileRestored, Account: &subject,
 	}); err != nil {
 		return err
 	}

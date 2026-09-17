@@ -5,12 +5,13 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) GetProfileRestriction(c *gin.Context) {
 	handle := c.Param("handle")
-	if _, ok := h.adminAccount(c, "read a restriction reason"); !ok {
+	if _, ok := api.Admin(c, "read a restriction reason"); !ok {
 		return
 	}
 	found, err := h.accounts.ProfileRestriction(c.Request.Context(), handle)
@@ -23,13 +24,13 @@ func (h *Handlers) GetProfileRestriction(c *gin.Context) {
 
 func (h *Handlers) RestrictProfile(c *gin.Context) {
 	handle := c.Param("handle")
-	admin, ok := h.adminAccount(c, "restrict a profile")
+	admin, ok := api.Admin(c, "restrict a profile")
 	if !ok {
 		return
 	}
 	var request RestrictProfileRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the audit reason as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the audit reason as JSON.")
 		return
 	}
 	restriction, err := h.accounts.RestrictProfile(c.Request.Context(), admin, handle, request.Reason)
@@ -42,7 +43,7 @@ func (h *Handlers) RestrictProfile(c *gin.Context) {
 
 func (h *Handlers) RestoreProfile(c *gin.Context) {
 	handle := c.Param("handle")
-	admin, ok := h.adminAccount(c, "restore a profile")
+	admin, ok := api.Admin(c, "restore a profile")
 	if !ok {
 		return
 	}
@@ -57,13 +58,13 @@ func (h *Handlers) restrictionError(c *gin.Context, err error) {
 	var field account.FieldError
 	switch {
 	case errors.As(err, &field):
-		c.JSON(http.StatusBadRequest, gin.H{"error": field.Message, "field": field.Field})
+		api.RefuseField(c, http.StatusBadRequest, field.Field, field.Message)
 	case errors.Is(err, account.ErrProfileNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such profile."})
+		api.Refuse(c, http.StatusNotFound, "No such profile.")
 	case errors.Is(err, account.ErrNotRestricted):
-		c.JSON(http.StatusNotFound, gin.H{"error": "That profile is not restricted."})
+		api.Refuse(c, http.StatusNotFound, "That profile is not restricted.")
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not change the restriction."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not change the restriction.")
 	}
 }
 

@@ -6,50 +6,51 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 func (h *Handlers) ListNotifications(c *gin.Context) {
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := ListNotificationsParams{
-		Limit:    queryNumber(q, "limit"),
-		Before:   queryTime(q, "before"),
-		BeforeId: queryID(q, "beforeId"),
+		Limit:    api.QueryNumber(q, "limit"),
+		Before:   api.QueryTime(q, "before"),
+		BeforeId: api.QueryID(q, "beforeId"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
-	current, ok := h.signedInAccount(c, "reading your notifications")
+	current, ok := api.SignedIn(c, "reading your notifications")
 	if !ok {
 		return
 	}
 	if (params.Before == nil) != (params.BeforeId == nil) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send before and beforeId together, or neither."})
+		api.Refuse(c, http.StatusBadRequest, "Send before and beforeId together, or neither.")
 		return
 	}
-	limit := notification.DefaultPageSize
+	limit := notify.DefaultPageSize
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	var after *notification.Cursor
+	var after *notify.Cursor
 	if params.Before != nil {
-		after = &notification.Cursor{Before: *params.Before, BeforeID: uuid.UUID(*params.BeforeId)}
+		after = &notify.Cursor{Before: *params.Before, BeforeID: uuid.UUID(*params.BeforeId)}
 	}
 	page, err := h.notifications.Inbox(c.Request.Context(), current.ID, after, limit)
-	if errors.Is(err, notification.ErrPageSize) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ask for between 1 and 50 notifications."})
+	if errors.Is(err, notify.ErrPageSize) {
+		api.Refuse(c, http.StatusBadRequest, "Ask for between 1 and 50 notifications.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read your notifications."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read your notifications.")
 		return
 	}
 	sends, err := h.sendTargetsFor(c, current.ID, page.Entries)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read your notifications."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read your notifications.")
 		return
 	}
 	listed := NotificationList{Items: make([]Notification, 0, len(page.Entries))}
@@ -63,77 +64,77 @@ func (h *Handlers) ListNotifications(c *gin.Context) {
 }
 
 func (h *Handlers) CountUnreadNotifications(c *gin.Context) {
-	current, ok := h.signedInAccount(c, "reading your notifications")
+	current, ok := api.SignedIn(c, "reading your notifications")
 	if !ok {
 		return
 	}
 	count, err := h.notifications.Unread(c.Request.Context(), current.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not count your notifications."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not count your notifications.")
 		return
 	}
 	c.JSON(http.StatusOK, UnreadNotifications{Count: count})
 }
 
 func (h *Handlers) MarkNotificationRead(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	current, ok := h.signedInAccount(c, "marking a notification read")
+	current, ok := api.SignedIn(c, "marking a notification read")
 	if !ok {
 		return
 	}
 	found, err := h.notifications.MarkRead(c.Request.Context(), current.ID, id)
 	switch {
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not mark the notification read."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not mark the notification read.")
 	case !found:
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such notification"})
+		api.Refuse(c, http.StatusNotFound, "no such notification")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) MarkAllNotificationsRead(c *gin.Context) {
-	current, ok := h.signedInAccount(c, "marking your notifications read")
+	current, ok := api.SignedIn(c, "marking your notifications read")
 	if !ok {
 		return
 	}
 	if err := h.notifications.MarkAllRead(c.Request.Context(), current.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not mark your notifications read."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not mark your notifications read.")
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
 func (h *Handlers) RemoveNotification(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	current, ok := h.signedInAccount(c, "removing a notification")
+	current, ok := api.SignedIn(c, "removing a notification")
 	if !ok {
 		return
 	}
 	found, err := h.notifications.Remove(c.Request.Context(), current.ID, id)
 	switch {
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove the notification."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not remove the notification.")
 	case !found:
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such notification"})
+		api.Refuse(c, http.StatusNotFound, "no such notification")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) ClearNotifications(c *gin.Context) {
-	current, ok := h.signedInAccount(c, "clearing your notifications")
+	current, ok := api.SignedIn(c, "clearing your notifications")
 	if !ok {
 		return
 	}
 	if err := h.notifications.Clear(c.Request.Context(), current.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not clear your notifications."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not clear your notifications.")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -143,12 +144,12 @@ func (h *Handlers) ClearNotifications(c *gin.Context) {
 func (h *Handlers) sendTargetsFor(
 	c *gin.Context,
 	account uuid.UUID,
-	entries []notification.Entry,
+	entries []notify.Entry,
 ) (map[uuid.UUID][]NotificationSendTarget, error) {
 	updated := make([]uuid.UUID, 0, len(entries))
 	seen := make(map[uuid.UUID]bool, len(entries))
 	for _, entry := range entries {
-		if entry.Type != notification.AssetUpdated || entry.Asset == nil || seen[*entry.Asset] {
+		if entry.Type != notify.AssetUpdated || entry.Asset == nil || seen[*entry.Asset] {
 			continue
 		}
 		seen[*entry.Asset] = true
@@ -190,7 +191,7 @@ func byInstanceName(first, second NotificationSendTarget) int {
 }
 
 func toAPINotification(
-	entry notification.Entry,
+	entry notify.Entry,
 	sends map[uuid.UUID][]NotificationSendTarget,
 ) Notification {
 	shown := Notification{
@@ -203,7 +204,7 @@ func toAPINotification(
 		reason := entry.Words.Reason
 		shown.Reason = &reason
 	}
-	if entry.Type == notification.AssetUpdated {
+	if entry.Type == notify.AssetUpdated {
 		shown.Update = &NotificationUpdate{
 			Number: entry.Words.UpdateNumber, Summary: entry.Words.Summary, Count: entry.Count,
 		}

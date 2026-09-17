@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbox"
 	"github.com/Sillyfrogster/Illarin/api/internal/webhook"
 )
@@ -71,22 +72,22 @@ func (s destinationStack) creatorWebhook(t *testing.T, session *http.Cookie) add
 	return made
 }
 
-func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie) startedAsset {
+func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie) apitest.StartedAsset {
 	t.Helper()
-	started := startCharacter(t, s.router, session)
-	writeCharacterFloor(t, s.router, session, started)
-	if got := publishAsset(t, s.router, session, started.ID); got.Code != http.StatusOK {
+	started := apitest.StartCharacter(t, s.router, session)
+	apitest.WriteCharacterFloor(t, s.router, session, started)
+	if got := apitest.PublishAsset(t, s.router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	return started
 }
 
-func (s destinationStack) describe(t *testing.T, session *http.Cookie, started startedAsset, text string) {
+func (s destinationStack) describe(t *testing.T, session *http.Cookie, started apitest.StartedAsset, text string) {
 	t.Helper()
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(fmt.Sprintf(`{"text":%q}`, text))
-	if got := saveBlock(t, s.router, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, s.router, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description = %d: %s", got.Code, got.Body.String())
 	}
 }
@@ -101,7 +102,7 @@ func (s destinationStack) announced(t *testing.T, session *http.Cookie, assetID,
 
 func (s destinationStack) announcements(t *testing.T, session *http.Cookie, assetID string) []assetAnnouncement {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"/announcements", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -116,7 +117,7 @@ func (s destinationStack) announcements(t *testing.T, session *http.Cookie, asse
 
 func (s destinationStack) sendAnnouncementsAt(t *testing.T, at time.Time) int {
 	t.Helper()
-	made, err := s.handlers.updateDestinations.SendDueAnnouncements(t.Context(), at)
+	made, err := s.handlers.UpdateDestinations.SendDueAnnouncements(t.Context(), at)
 	if err != nil {
 		t.Fatalf("send due announcements: %v", err)
 	}
@@ -252,22 +253,22 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
-	started := startCharacter(t, stack.router, stack.editor)
-	writeCharacterFloor(t, stack.router, stack.editor, started)
+	started := apitest.StartCharacter(t, stack.router, stack.editor)
+	apitest.WriteCharacterFloor(t, stack.router, stack.editor, started)
 	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut,
 		"/v1/assets/"+started.ID+"/update-destinations",
 		fmt.Sprintf(`{"destinationIds":[%q]}`, hook.Destination.ID))
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
-	if got := publishAsset(t, stack.router, stack.editor, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, stack.router, stack.editor, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	stack.describe(t, stack.editor, started, "A private save changes nothing public.")
-	correction := authorizedJSONRequest(t, http.MethodPatch,
+	correction := apitest.AuthorizedJSONRequest(t, http.MethodPatch,
 		"/v1/assets/"+started.ID+"/updates/1/notes",
 		`{"summary":"Corrected summary","notes":"Corrected context."}`, stack.editor)
-	if got := send(t, stack.router, correction); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
 	}
 
@@ -294,10 +295,10 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 		t.Errorf("event = %+v", event.Update)
 	}
 
-	correction = authorizedJSONRequest(t, http.MethodPatch,
+	correction = apitest.AuthorizedJSONRequest(t, http.MethodPatch,
 		"/v1/assets/"+started.ID+"/updates/2/notes",
 		`{"summary":"Corrected again","notes":""}`, stack.editor)
-	if got := send(t, stack.router, correction); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
 	}
 	stack.sendAnnouncementsAt(t, time.Now().Add(time.Hour))
@@ -354,7 +355,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
-	unlisted := send(t, stack.router, authorizedJSONRequest(t, http.MethodPut,
+	unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 		"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, stack.editor))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
@@ -372,7 +373,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
 		t.Fatalf("selecting a destination for an unlisted asset = %d: %s", refused.Code, refused.Body.String())
 	}
-	history := send(t, stack.router, authorized(httptest.NewRequest(
+	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
 	if strings.Contains(history.Body.String(), "Needs consent") {
 		t.Fatal("a refused announcement left the update published")
@@ -396,7 +397,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	other := verifiedSignUp(t, stack.router, stack.outbox, "other@example.com", "other.creator")
+	other := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "other@example.com", "other.creator")
 	theirs := stack.creatorWebhook(t, other)
 	disabled := stack.creatorWebhook(t, stack.editor)
 	if got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
@@ -413,7 +414,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 			t.Fatalf("publishing to an ineligible destination = %d: %s", refused.Code, refused.Body.String())
 		}
 	}
-	history := send(t, stack.router, authorized(httptest.NewRequest(
+	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
 	if strings.Contains(history.Body.String(), `"number":2`) {
 		t.Fatal("a refused announcement left the update published")
@@ -470,7 +471,7 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 			t.Fatalf("an attempt carried webhook-id %q, want the delivery %q", one.Headers.Get(webhook.IDHeader), spent.ID)
 		}
 	}
-	history := send(t, stack.router, authorized(httptest.NewRequest(
+	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
 	if !strings.Contains(history.Body.String(), "Retried") {
 		t.Error("delivery failure undid the publication")
@@ -479,50 +480,50 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 
 func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
 	t.Parallel()
-	type revoke func(t *testing.T, stack destinationStack, started startedAsset, hook addedDestination)
+	type revoke func(t *testing.T, stack destinationStack, started apitest.StartedAsset, hook addedDestination)
 	for name, one := range map[string]struct {
 		reason string
 		act    revoke
 	}{
-		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started startedAsset, _ addedDestination) {
-			withheld := send(t, stack.router, authorizedJSONRequest(t, http.MethodPut,
+		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+			withheld := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/assets/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
 			if withheld.Code != http.StatusNoContent {
 				t.Fatalf("withhold = %d: %s", withheld.Code, withheld.Body.String())
 			}
 		}},
-		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started startedAsset, _ addedDestination) {
-			unlisted := send(t, stack.router, authorizedJSONRequest(t, http.MethodPut,
+		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+			unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, stack.editor))
 			if unlisted.Code != http.StatusNoContent {
 				t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
 			}
 		}},
-		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started startedAsset, _ addedDestination) {
-			deleted := send(t, stack.router, authorized(httptest.NewRequest(
+		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+			deleted := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 				http.MethodDelete, "/v1/assets/"+started.ID, nil), stack.editor))
 			if deleted.Code != http.StatusNoContent {
 				t.Fatalf("delete = %d: %s", deleted.Code, deleted.Body.String())
 			}
 		}},
-		"withdrawn": {"withdrawn", func(t *testing.T, stack destinationStack, started startedAsset, _ addedDestination) {
+		"withdrawn": {"withdrawn", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
 			stack.describe(t, stack.editor, started, "A replacement so the old one can go.")
 			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","destinationIds":[]}`)
-			withdraw := authorizedJSONRequest(t, http.MethodPost,
+			withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
 				"/v1/assets/"+started.ID+"/updates/2/withdraw",
 				`{"explanation":"This version gave incorrect guidance."}`, stack.editor)
-			if got := send(t, stack.router, withdraw); got.Code != http.StatusNoContent {
+			if got := apitest.Send(t, stack.router, withdraw); got.Code != http.StatusNoContent {
 				t.Fatalf("withdraw = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"disabled": {"disabled", func(t *testing.T, stack destinationStack, _ startedAsset, hook addedDestination) {
+		"disabled": {"disabled", func(t *testing.T, stack destinationStack, _ apitest.StartedAsset, hook addedDestination) {
 			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
 				updateDestinationsPath+"/"+hook.Destination.ID+"/verification", "")
 			if got.Code != http.StatusOK {
 				t.Fatalf("disable = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"removed": {"removed", func(t *testing.T, stack destinationStack, _ startedAsset, hook addedDestination) {
+		"removed": {"removed", func(t *testing.T, stack destinationStack, _ apitest.StartedAsset, hook addedDestination) {
 			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
 				updateDestinationsPath+"/"+hook.Destination.ID, "")
 			if got.Code != http.StatusNoContent {
@@ -601,14 +602,14 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 	for _, session := range []*http.Cookie{stack.authority, nil} {
 		request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID+"/announcements", nil)
 		if session != nil {
-			request = authorized(request, session)
+			request = apitest.Authorized(request, session)
 		}
-		response := send(t, stack.router, request)
+		response := apitest.Send(t, stack.router, request)
 		if response.Code != http.StatusNotFound && response.Code != http.StatusUnauthorized {
 			t.Errorf("another account read announcements with %d", response.Code)
 		}
 	}
-	response := send(t, stack.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/announcements", nil), stack.editor))
 	body := response.Body.String()
 	if strings.Contains(body, hook.Secret) || strings.Contains(body, stack.to.address()) {

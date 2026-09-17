@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -15,7 +16,7 @@ import (
 )
 
 func (h *Handlers) DownloadSource(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -32,17 +33,17 @@ func (h *Handlers) DownloadSource(c *gin.Context) {
 }
 
 func (h *Handlers) DownloadExport(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
 	target := c.Param("target")
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := DownloadExportParams{
-		Images:  queryText[string](q, "images"),
-		Version: queryNumber(q, "version"),
+		Images:  api.QueryText[string](q, "images"),
+		Version: api.QueryNumber(q, "version"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	viewerID, ok := h.viewerID(c)
@@ -51,7 +52,7 @@ func (h *Handlers) DownloadExport(c *gin.Context) {
 	}
 	gallery, ok := chosenGallery(params.Images)
 	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
 	var err error
@@ -92,13 +93,13 @@ func (h *Handlers) downloadError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, asset.ErrNotFound), errors.Is(err, asset.ErrTargetNotOffered),
 		errors.Is(err, asset.ErrLinkedInstallOnly):
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such download"})
+		api.Refuse(c, http.StatusNotFound, "no such download")
 	case errors.Is(err, asset.ErrExportTooLarge):
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": oversizedDownload})
+		api.Refuse(c, http.StatusRequestEntityTooLarge, oversizedDownload)
 	case errors.Is(err, asset.ErrExportImageUnreadable):
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": unreadableDownloadImage})
+		api.Refuse(c, http.StatusServiceUnavailable, unreadableDownloadImage)
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the file"})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the file")
 	}
 }
 
@@ -141,21 +142,21 @@ func (h *Handlers) handOffDownload(c *gin.Context, download asset.SourceDownload
 }
 
 func (h *Handlers) GetMediaVariant(c *gin.Context) {
-	mediaID, ok := pathID(c, "media_id")
+	mediaID, ok := api.PathID(c, "media_id")
 	if !ok {
 		return
 	}
 	variant := c.Param("variant")
-	derivativeVersion, ok := pathNumber(c, "derivative_version")
+	derivativeVersion, ok := api.PathNumber(c, "derivative_version")
 	if !ok {
 		return
 	}
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := GetMediaVariantParams{
-		Expires:   queryText[string](q, "expires"),
-		Signature: queryText[string](q, "signature"),
+		Expires:   api.QueryText[string](q, "expires"),
+		Signature: api.QueryText[string](q, "signature"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	viewerID, ok := h.viewerID(c)
@@ -163,7 +164,7 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 		return
 	}
 	if derivativeVersion < 1 || uint64(derivativeVersion) > math.MaxUint32 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+		api.Refuse(c, http.StatusNotFound, "no such media variant")
 		return
 	}
 	download, err := h.assets.MediaVariant(c.Request.Context(), asset.MediaRequest{
@@ -179,11 +180,11 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
+		api.Refuse(c, http.StatusServiceUnavailable, "The image is temporarily unavailable.")
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
+		api.Refuse(c, http.StatusInternalServerError, "could not read the image")
 		return
 	}
 	cache := "public, max-age=31536000, immutable"
@@ -223,10 +224,10 @@ func (h *Handlers) sharedImageVariant(
 			errors.Is(err, publication.ErrPostMediaNotFound):
 			continue
 		case errors.Is(err, storage.ErrInsufficientSpace):
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "The image is temporarily unavailable."})
+			api.Refuse(c, http.StatusServiceUnavailable, "The image is temporarily unavailable.")
 			return
 		case err != nil:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read the image"})
+			api.Refuse(c, http.StatusInternalServerError, "could not read the image")
 			return
 		}
 		cache := "public, max-age=31536000, immutable"
@@ -241,7 +242,7 @@ func (h *Handlers) sharedImageVariant(
 		c.Status(http.StatusOK)
 		return
 	}
-	c.JSON(http.StatusNotFound, gin.H{"error": "no such media variant"})
+	api.Refuse(c, http.StatusNotFound, "no such media variant")
 }
 
 func valueOrEmpty(value *string) string {

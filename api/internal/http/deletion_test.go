@@ -9,27 +9,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
 func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := assetIDFromIngest(t, uploadAndFinish(
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
-		withFilename(exampleMetadata("Recoverable garden"), "recoverable-garden"),
+		withFilename(apitest.ExampleMetadata("Recoverable garden"), "recoverable-garden"),
 		[]byte("the retained source"),
 	))
 
-	deleted := send(t, router, authorized(
+	deleted := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+assetID, nil), session,
 	))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete status = %d, want 204: %s", deleted.Code, deleted.Body.String())
 	}
 
-	page := send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
 	if page.Code != http.StatusNotFound {
 		t.Fatalf("deleted asset page status = %d, want 404: %s", page.Code, page.Body.String())
 	}
@@ -38,7 +40,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 		t.Fatalf("active owner listing after delete = %+v, want empty", browse.Items)
 	}
 
-	listed := send(t, router, authorized(
+	listed := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/profiles/verified.creator/deleted", nil), session,
 	))
 	if listed.Code != http.StatusOK {
@@ -64,7 +66,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 		t.Fatalf("recovery deadline = %v, deleted at %v", recovery.Items[0].RecoverableUntil, recovery.Items[0].DeletedAt)
 	}
 
-	restored := send(t, router, authorized(
+	restored := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/restore", nil), session,
 	))
 	if restored.Code != http.StatusNoContent {
@@ -73,7 +75,7 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 	if got := fetchAssetPage(t, router, "/v1/assets/"+assetID); got.ID != assetID {
 		t.Fatalf("restored asset id = %q, want %q", got.ID, assetID)
 	}
-	download := send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
+	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
 	if download.Code != http.StatusOK || download.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("restored download = %d, headers %v", download.Code, download.Header())
 	}
@@ -81,23 +83,23 @@ func TestCreatorCanDeleteAndRestoreAnAssetDuringItsRecoveryWindow(t *testing.T) 
 
 func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	t.Parallel()
-	_, router, session, assets, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
+	_, router, session, assets, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := startPreset(t, router, session, "lumiverse")
-	coreBlock := blockNamed(t, started.Blocks, "preset_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
+	core := apitest.EditableBlock(coreBlock)
 	const privateText = "Recover this exact private prompt."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"Recoverable","role":"system","text":"` + privateText + `","protected":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
-	if response := saveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
+	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
 	}
 
 	deleteAsset := func() {
 		t.Helper()
-		response := send(t, router, authorized(
+		response := apitest.Send(t, router, apitest.Authorized(
 			httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session,
 		))
 		if response.Code != http.StatusNoContent {
@@ -109,7 +111,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 		t.Fatalf("during recovery: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
-	restored := send(t, router, authorized(
+	restored := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session,
 	))
 	if restored.Code != http.StatusNoContent {
@@ -137,11 +139,11 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 
 func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	file := []byte("bytes that cannot return")
-	assetID := assetIDFromIngest(t, uploadAndFinish(
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
-		withFilename(exampleMetadata("Gone for good"), "gone-for-good"), file,
+		withFilename(apitest.ExampleMetadata("Gone for good"), "gone-for-good"), file,
 	))
 	var digest []byte
 	if err := pool.QueryRow(context.Background(), `
@@ -164,8 +166,8 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 		t.Fatalf("purge: %v", err)
 	}
 
-	reupload := send(t, router, authorized(
-		uploadRequest(t, withFilename(exampleMetadata("Attempted return"), "attempted-return"), file),
+	reupload := apitest.Send(t, router, apitest.Authorized(
+		apitest.UploadRequest(t, withFilename(apitest.ExampleMetadata("Attempted return"), "attempted-return"), file),
 		session,
 	))
 	if reupload.Code != http.StatusUnprocessableEntity {
@@ -182,19 +184,19 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 
 func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := assetIDFromIngest(t, uploadAndFinish(
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
 		t, router, session, assets,
-		withFilename(exampleMetadata("Private recovery"), "private-recovery"), []byte("source"),
+		withFilename(apitest.ExampleMetadata("Private recovery"), "private-recovery"), []byte("source"),
 	))
-	response := send(t, router, authorized(
+	response := apitest.Send(t, router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+assetID, nil), session,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("delete status = %d: %s", response.Code, response.Body.String())
 	}
 
-	stranger := send(t, router, httptest.NewRequest(
+	stranger := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/profiles/verified.creator/deleted", nil,
 	))
 	if stranger.Code != http.StatusUnauthorized {

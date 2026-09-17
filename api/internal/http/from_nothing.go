@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) startAssetFromNothing(c *gin.Context, owner account.Account) {
+func (h *Handlers) startAssetFromNothing(c *gin.Context, owner api.Account) {
 	var request StartAssetRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the kind to build as JSON."})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send the kind to build as JSON.")
 		return
 	}
 	app := ""
@@ -22,28 +22,26 @@ func (h *Handlers) startAssetFromNothing(c *gin.Context, owner account.Account) 
 	}
 	id, err := h.assets.StartFromNothing(c.Request.Context(), owner.ID, request.Kind, app)
 	if errors.Is(err, asset.ErrKindNotBuildable) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Illarin cannot build that kind yet. Choose another.",
-		})
+		api.Refuse(c, http.StatusBadRequest, "Illarin cannot build that kind yet. Choose another.")
 		return
 	}
 	if errors.Is(err, asset.ErrAppNotAnswered) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": appAnswerRefusal(request.Kind)})
+		api.Refuse(c, http.StatusBadRequest, appAnswerRefusal(request.Kind))
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start the asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not start the asset.")
 		return
 	}
 
 	found, err := h.assets.Detail(c.Request.Context(), id, &owner.ID, asset.ContentShown)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the new asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
 		return
 	}
 	page, err := toAPIDetail(found, asset.ContentShown)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the new asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
 		return
 	}
 	c.Header("Location", "/v1/assets/"+id.String())

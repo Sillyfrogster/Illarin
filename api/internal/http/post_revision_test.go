@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postRevision struct {
@@ -41,7 +43,7 @@ func (s publicationStack) checkpoint(
 	version int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/revisions",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
@@ -72,7 +74,7 @@ func (s publicationStack) restore(
 	version int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost,
 		"/v1/publication/posts/"+id+"/revisions/"+revisionID+"/restore",
 		fmt.Sprintf(`{"version":%d}`, version),
@@ -99,7 +101,7 @@ func (s publicationStack) revisions(
 	id string,
 ) []postRevision {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id+"/revisions", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -120,7 +122,7 @@ func (s publicationStack) history(
 	id string,
 ) ([]postAction, string) {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+id+"/history", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -366,13 +368,13 @@ func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
 	written := stack.saved(t, mine.session, draft.ID, finished(draft, nil))
 	kept := stack.checkpointed(t, mine.session, draft.ID, written.Version)
 
-	listing := send(t, stack.router, authorized(httptest.NewRequest(
+	listing := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/revisions", nil,
 	), theirs))
 	if listing.Code != http.StatusForbidden {
 		t.Errorf("another contributor listed the editions: %d", listing.Code)
 	}
-	reading := send(t, stack.router, authorized(httptest.NewRequest(
+	reading := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/history", nil,
 	), theirs))
 	if reading.Code != http.StatusForbidden {
@@ -417,7 +419,7 @@ func TestACheckpointedPictureStaysBehindItsSignature(t *testing.T) {
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "signed@example.com", "illarin.signed")
 	draft := stack.illarinDraft(t, session, "A draft with a picture in it")
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(picture.ID, "A picture nobody has seen"),
 	}))
@@ -434,7 +436,7 @@ func TestRestoringBringsBackThePicturesTheEditionUsed(t *testing.T) {
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "pictured@example.com", "illarin.pictured")
 	draft := stack.illarinDraft(t, session, "The post that had a picture")
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 900, 500))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 900, 500))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(picture.ID, "The workspace as it stood"),
 	}))

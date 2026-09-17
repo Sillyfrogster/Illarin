@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -70,7 +71,7 @@ func (h *Handlers) AddPublicationChannel(c *gin.Context) {
 }
 
 func (h *Handlers) UpdatePublicationChannel(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -113,7 +114,7 @@ func readChannel(c *gin.Context) (publication.ChannelEdit, bool) {
 }
 
 func (h *Handlers) UpdatePublicationDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -141,7 +142,7 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context) {
 }
 
 func (h *Handlers) RemovePublicationDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -158,7 +159,7 @@ func (h *Handlers) RemovePublicationDestination(c *gin.Context) {
 }
 
 func (h *Handlers) VerifyPublicationDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -177,7 +178,7 @@ func (h *Handlers) VerifyPublicationDestination(c *gin.Context) {
 }
 
 func (h *Handlers) DisablePublicationDestination(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -196,7 +197,7 @@ func (h *Handlers) DisablePublicationDestination(c *gin.Context) {
 }
 
 func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -217,12 +218,12 @@ func (h *Handlers) RotatePublicationDestinationSecret(c *gin.Context) {
 }
 
 func (h *Handlers) ListPublicationDeliveries(c *gin.Context) {
-	q := readQuery(c)
+	q := api.ReadQuery(c)
 	params := ListPublicationDeliveriesParams{
-		State: queryText[PostDeliveryState](q, "state"),
-		Limit: queryNumber(q, "limit"),
+		State: api.QueryText[PostDeliveryState](q, "state"),
+		Limit: api.QueryNumber(q, "limit"),
 	}
-	if q.refused(c) {
+	if q.Refused(c) {
 		return
 	}
 	if _, ok := h.publicationAuthority(c, "reading publication deliveries"); !ok {
@@ -245,7 +246,7 @@ func (h *Handlers) ListPublicationDeliveries(c *gin.Context) {
 }
 
 func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -261,7 +262,7 @@ func (h *Handlers) ListPublicationDeliveryAttempts(c *gin.Context) {
 }
 
 func (h *Handlers) ReplayPublicationDelivery(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -278,7 +279,7 @@ func (h *Handlers) ReplayPublicationDelivery(c *gin.Context) {
 }
 
 func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -300,7 +301,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 }
 
 func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -332,7 +333,7 @@ func (h *Handlers) SetPublicationGrantDestinations(c *gin.Context) {
 }
 
 func (h *Handlers) ListPostDestinations(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -349,7 +350,7 @@ func (h *Handlers) ListPostDestinations(c *gin.Context) {
 }
 
 func (h *Handlers) ListPostDeliveries(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}

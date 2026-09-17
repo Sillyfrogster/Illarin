@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
 		{name: "explicit unlisted", discovery: asset.DiscoveryUnlisted, want: "unlisted"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
+			router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 			assetID := uploadDiscoveryTestAsset(t, router, session, assets, test.discovery)
 
 			page := fetchAssetPage(t, router, "/v1/assets/"+assetID)
@@ -35,10 +36,10 @@ func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
 
 func TestCreatorChangesAssetDiscovery(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
-	changed := send(t, router, authorizedJSONRequest(
+	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
 		"/v1/assets/"+assetID+"/discovery",
@@ -57,10 +58,10 @@ func TestCreatorChangesAssetDiscovery(t *testing.T) {
 
 func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 	t.Parallel()
-	router, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 
-	changed := send(t, router, httptest.NewRequest(
+	changed := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodPut,
 		"/v1/assets/"+assetID+"/discovery",
 		nil,
@@ -72,7 +73,7 @@ func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 
 func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	assetID := uploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
@@ -88,7 +89,7 @@ func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
 		t.Fatalf("withhold asset: %v", err)
 	}
 
-	changed := send(t, router, authorizedJSONRequest(
+	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
 		"/v1/assets/"+assetID+"/discovery",
@@ -108,7 +109,7 @@ func uploadDiscoveryTestAsset(
 	discovery asset.Discovery,
 ) string {
 	t.Helper()
-	metadata := exampleMetadata("A quiet draft")
+	metadata := apitest.ExampleMetadata("A quiet draft")
 	metadata["filename"] = "quiet-draft.lumitheme"
 	if discovery == "" {
 		delete(metadata, "discovery")
@@ -116,6 +117,6 @@ func uploadDiscoveryTestAsset(
 		metadata["discovery"] = discovery
 	}
 	return assetIDFromIngest(
-		t, uploadAndFinish(t, router, session, assets, metadata, []byte("theme")),
+		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte("theme")),
 	)
 }

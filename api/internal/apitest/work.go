@@ -1,0 +1,288 @@
+package apitest
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+type StartedAsset struct {
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Blurb     string `json:"blurb"`
+	Lifecycle string `json:"lifecycle"`
+	IsOwner   bool   `json:"isOwner"`
+	IsNSFW    *bool  `json:"isNsfw"`
+	Preview   *string
+	Media     []struct {
+		ID        string `json:"id"`
+		DetailURL string `json:"detailUrl"`
+		ThumbURL  string `json:"thumbUrl"`
+	} `json:"media"`
+	Readiness         []ReadinessItem  `json:"readiness"`
+	Blocks            []StartedBlock   `json:"blocks"`
+	AddableBlocks     []AddableBlock   `json:"addableBlocks"`
+	Downloads         []DownloadTarget `json:"downloads"`
+	AppTargets        []AppTarget      `json:"appTargets"`
+	LinkedInstallOnly bool             `json:"linkedInstallOnly"`
+	AllowedApps       []string         `json:"allowedApps"`
+	EligibleApps      []string         `json:"eligibleApps"`
+	Original          *OriginalUpload  `json:"original"`
+}
+
+type StartedBlock struct {
+	ID             string   `json:"id"`
+	Definition     string   `json:"definition"`
+	Title          string   `json:"title"`
+	TitleIsDefault bool     `json:"titleIsDefault"`
+	Position       int      `json:"position"`
+	Hidden         bool     `json:"hidden"`
+	Layout         string   `json:"layout"`
+	Width          string   `json:"width"`
+	AllowedLayouts []string `json:"allowedLayouts"`
+	Required       bool     `json:"required"`
+	Hideable       bool     `json:"hideable"`
+	IsEmpty        bool     `json:"isEmpty"`
+	Elements       []struct {
+		ID       string          `json:"id"`
+		Type     string          `json:"type"`
+		Role     string          `json:"role"`
+		Slot     string          `json:"slot"`
+		Label    string          `json:"label"`
+		Pinned   bool            `json:"pinned"`
+		Display  string          `json:"display"`
+		ItemSize string          `json:"itemSize"`
+		IsEmpty  bool            `json:"isEmpty"`
+		Facts    []string        `json:"facts"`
+		Content  json.RawMessage `json:"content"`
+	} `json:"elements"`
+}
+
+type AddableBlock struct {
+	Definition string `json:"definition"`
+	Title      string `json:"title"`
+	Summary    string `json:"summary"`
+	Group      string `json:"group"`
+	GroupTitle string `json:"groupTitle"`
+	Repeatable bool   `json:"repeatable"`
+	Choices    []struct {
+		Type  string `json:"type"`
+		Label string `json:"label"`
+	} `json:"choices"`
+}
+
+type DownloadTarget struct {
+	Format      string        `json:"format"`
+	Label       string        `json:"label"`
+	Recommended bool          `json:"recommended"`
+	Roles       []RoleVerdict `json:"roles"`
+}
+
+type AppTarget struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	Format string `json:"format"`
+}
+
+type RoleVerdict struct {
+	Role        string   `json:"role"`
+	Label       string   `json:"label"`
+	Verdict     string   `json:"verdict"`
+	Reason      string   `json:"reason"`
+	Destination string   `json:"destination"`
+	ShownBy     []string `json:"shownBy"`
+	Sample      struct {
+		Count  int      `json:"count"`
+		Texts  []string `json:"texts"`
+		Images []string `json:"images"`
+	} `json:"sample"`
+}
+
+type OriginalUpload struct {
+	Label     string `json:"label"`
+	MediaType string `json:"mediaType"`
+	ArrivedAt string `json:"arrivedAt"`
+}
+
+func StartCharacter(t *testing.T, r http.Handler, session *http.Cookie) StartedAsset {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
+		strings.NewReader(`{"kind":"character"}`))
+	request.Header.Set("Content-Type", "application/json")
+	response := Send(t, r, Authorized(request, session))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("start a character: status = %d, want 201: %s",
+			response.Code, response.Body.String())
+	}
+	var started StartedAsset
+	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
+		t.Fatalf("decode the started asset: %v", err)
+	}
+	return started
+}
+
+func BlockNamed(t *testing.T, blocks []StartedBlock, definition string) StartedBlock {
+	t.Helper()
+	for _, b := range blocks {
+		if b.Definition == definition {
+			return b
+		}
+	}
+	t.Fatalf("no %s block on the page", definition)
+	return StartedBlock{}
+}
+
+type SaveBlockBody struct {
+	Title           *string            `json:"title"`
+	Layout          string             `json:"layout"`
+	Width           string             `json:"width"`
+	Elements        []SaveBlockElement `json:"elements"`
+	AllowedApps     *[]string          `json:"allowedApps,omitempty"`
+	ExposeProtected *bool              `json:"exposeProtected,omitempty"`
+}
+
+type SaveBlockElement struct {
+	ID       string          `json:"id"`
+	Type     string          `json:"type"`
+	Role     string          `json:"role,omitempty"`
+	Slot     string          `json:"slot"`
+	Display  string          `json:"display,omitempty"`
+	ItemSize string          `json:"itemSize,omitempty"`
+	Content  json.RawMessage `json:"content"`
+}
+
+func EditableBlock(block StartedBlock) SaveBlockBody {
+	elements := make([]SaveBlockElement, len(block.Elements))
+	for i, element := range block.Elements {
+		elements[i] = SaveBlockElement{
+			ID: element.ID, Type: element.Type, Role: element.Role,
+			Slot: element.Slot, Display: element.Display, ItemSize: element.ItemSize,
+			Content: element.Content,
+		}
+	}
+	return SaveBlockBody{
+		Layout:   block.Layout,
+		Width:    block.Width,
+		Elements: elements,
+	}
+}
+
+func SaveBlock(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+	blockID string,
+	body SaveBlockBody,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("encode block save: %v", err)
+	}
+	request := httptest.NewRequest(
+		http.MethodPut,
+		"/v1/assets/"+assetID+"/blocks/"+blockID,
+		strings.NewReader(string(encoded)),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	return Send(t, r, Authorized(request, session))
+}
+
+type ReadinessItem struct {
+	ID      string  `json:"id"`
+	Label   string  `json:"label"`
+	Detail  string  `json:"detail"`
+	Met     bool    `json:"met"`
+	BlockID *string `json:"blockId"`
+}
+
+func SaveIdentity(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+	body string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPut,
+		"/v1/assets/"+assetID+"/identity", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	return Send(t, r, Authorized(request, session))
+}
+
+func WriteCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started StartedAsset) {
+	t.Helper()
+	if got := SaveIdentity(t, r, session, started.ID,
+		`{"name":"Ilse of the west shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+	}
+	coreBlock := BlockNamed(t, started.Blocks, "character_core")
+	core := EditableBlock(coreBlock)
+	core.Elements[0].Content = json.RawMessage(`{"text":"She keeps the books that forget themselves."}`)
+	if got := SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+		t.Fatalf("save description status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	messagesBlock := BlockNamed(t, started.Blocks, "messages")
+	messages := EditableBlock(messagesBlock)
+	messages.Elements[0].Content = json.RawMessage(`{"texts":[{"text":"The west shelf moved again."}]}`)
+	if got := SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages); got.Code != http.StatusOK {
+		t.Fatalf("save greeting status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+}
+
+func PublishAsset(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	return Send(t, r, Authorized(
+		httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/publish", nil), session))
+}
+
+func PublishedAsset(t *testing.T, r *gin.Engine, session *http.Cookie) string {
+	t.Helper()
+	started := StartCharacter(t, r, session)
+	WriteCharacterFloor(t, r, session, started)
+	if published := PublishAsset(t, r, session, started.ID); published.Code != http.StatusOK {
+		t.Fatalf("publish status = %d, want 200: %s", published.Code, published.Body.String())
+	}
+	return started.ID
+}
+
+func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
+	t.Helper()
+	parts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
+	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "assets" || req.Header.Get("X-Working-Copy-Version") != "" {
+		return
+	}
+	switch parts[3] {
+	case "identity", "blocks", "publish", "updates", "preserved", "media", "revisions", "vault":
+	default:
+		return
+	}
+	read := httptest.NewRequest(http.MethodGet, "/v1/assets/"+parts[2]+"?workingCopy=true", nil)
+	read.Header.Set("Cookie", req.Header.Get("Cookie"))
+	response := httptest.NewRecorder()
+	r.ServeHTTP(response, read)
+	var page struct {
+		WorkingCopyVersion int64 `json:"workingCopyVersion"`
+	}
+	if response.Code == http.StatusOK {
+		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if page.WorkingCopyVersion == 0 {
+		page.WorkingCopyVersion = 1
+	}
+	req.Header.Set("X-Working-Copy-Version", strconv.FormatInt(page.WorkingCopyVersion, 10))
+}

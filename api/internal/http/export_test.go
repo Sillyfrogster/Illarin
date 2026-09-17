@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
@@ -23,24 +24,24 @@ const aPlainCard = `{
 	"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Hello"}
 }`
 
-func downloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []downloadTarget {
+func downloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []apitest.DownloadTarget {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	response := send(t, r, request)
+	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
 	}
-	var page startedAsset
+	var page apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}
 	return page.Downloads
 }
 
-func targetLine(t *testing.T, menu []downloadTarget, formatID string) downloadTarget {
+func targetLine(t *testing.T, menu []apitest.DownloadTarget, formatID string) apitest.DownloadTarget {
 	t.Helper()
 	for _, target := range menu {
 		if target.Format == formatID {
@@ -48,11 +49,11 @@ func targetLine(t *testing.T, menu []downloadTarget, formatID string) downloadTa
 		}
 	}
 	t.Fatalf("%s is not on the menu: %+v", formatID, menu)
-	return downloadTarget{}
+	return apitest.DownloadTarget{}
 }
 
-func losses(target downloadTarget) []roleVerdict {
-	lost := make([]roleVerdict, 0, len(target.Roles))
+func losses(target apitest.DownloadTarget) []apitest.RoleVerdict {
+	lost := make([]apitest.RoleVerdict, 0, len(target.Roles))
 	for _, role := range target.Roles {
 		if role.Verdict != "carried" {
 			lost = append(lost, role)
@@ -120,7 +121,7 @@ func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	}
 }
 
-func roleVerdictNamed(t *testing.T, target downloadTarget, role string) roleVerdict {
+func roleVerdictNamed(t *testing.T, target apitest.DownloadTarget, role string) apitest.RoleVerdict {
 	t.Helper()
 	for _, found := range target.Roles {
 		if found.Role == role {
@@ -128,7 +129,7 @@ func roleVerdictNamed(t *testing.T, target downloadTarget, role string) roleVerd
 		}
 	}
 	t.Fatalf("%s has no verdict for %s: %+v", target.Format, role, target.Roles)
-	return roleVerdict{}
+	return apitest.RoleVerdict{}
 }
 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
@@ -139,7 +140,7 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 
 	seen := make(map[string]string)
 	for _, target := range []string{"chara_card_v2", "chara_card_v3", "charx"} {
-		download := send(t, r, httptest.NewRequest(
+		download := apitest.Send(t, r, httptest.NewRequest(
 			http.MethodGet, "/download/"+assetID+"/"+target, nil,
 		))
 		if download.Code != http.StatusOK {
@@ -193,7 +194,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 		}
 	}
 
-	built := startCharacter(t, r, session)
+	built := apitest.StartCharacter(t, r, session)
 	fromNothing := fetchStartedAsset(t, r, session, built.ID)
 	if fromNothing.Original != nil {
 		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
@@ -267,24 +268,24 @@ func givePictures(
 	assetID, mediaRole, definition string,
 ) {
 	t.Helper()
-	mediaID := uploadedImageID(t, r, session, assetID, mediaRole, httpTestPNG(t, 64, 64))
+	mediaID := uploadedImageID(t, r, session, assetID, mediaRole, apitest.PNG(t, 64, 64))
 	block := addedBlock(t, addBlock(t, r, session, assetID, definition, "image_set"))
-	body := editableBlock(block)
+	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
 		`{"images":[{"mediaId":"` + mediaID + `","name":"happy"}]}`,
 	)
-	if saved := saveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the %s block: %d %s", definition, saved.Code, saved.Body.String())
 	}
 }
 
 func publishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
 	t.Helper()
-	if got := saveIdentity(t, r, session, assetID,
+	if got := apitest.SaveIdentity(t, r, session, assetID,
 		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
 	}
-	if got := publishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 }
@@ -299,7 +300,7 @@ func newCharacterIngestRouterWithPool(
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	return newVerifiedIngestRouterWithPool(t, registry)
+	return harness.NewVerifiedIngestRouterWithPool(t, registry)
 }
 
 func projectionComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time {
@@ -356,14 +357,14 @@ func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 
 func appTargetsFor(
 	t *testing.T, r http.Handler, session *http.Cookie, assetID string,
-) []appTarget {
+) []apitest.AppTarget {
 	t.Helper()
-	request := authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session)
-	response := send(t, r, request)
+	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session)
+	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
 	}
-	var page startedAsset
+	var page apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}

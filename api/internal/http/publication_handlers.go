@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -24,7 +26,7 @@ func (h *Handlers) ListPublicationCategories(c *gin.Context) {
 }
 
 func (h *Handlers) UpdatePublicationCategory(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -34,7 +36,7 @@ func (h *Handlers) UpdatePublicationCategory(c *gin.Context) {
 	}
 	var request UpdatePublicationCategoryRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the change as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the change as JSON.")
 		return
 	}
 	updated, err := h.publications.UpdateCategory(
@@ -57,7 +59,7 @@ func (h *Handlers) OrderPublicationCategories(c *gin.Context) {
 	}
 	var request OrderPublicationCategoriesRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the order as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the order as JSON.")
 		return
 	}
 	ordered, err := h.publications.OrderCategories(
@@ -93,7 +95,7 @@ func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
 	}
 	var request CreatePublicationGrantRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the approval as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the approval as JSON.")
 		return
 	}
 	made, err := h.publications.CreateGrant(c.Request.Context(), authority.ID, publication.GrantEdit{
@@ -114,7 +116,7 @@ func (h *Handlers) CreatePublicationGrant(c *gin.Context) {
 }
 
 func (h *Handlers) UpdatePublicationGrant(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -124,7 +126,7 @@ func (h *Handlers) UpdatePublicationGrant(c *gin.Context) {
 	}
 	var request UpdatePublicationGrantRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the change as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the change as JSON.")
 		return
 	}
 	change := publication.GrantUpdate{DefaultCategoryID: (*uuid.UUID)(request.DefaultCategoryId)}
@@ -146,7 +148,7 @@ func (h *Handlers) UpdatePublicationGrant(c *gin.Context) {
 }
 
 func (h *Handlers) RevokePublicationGrant(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -162,7 +164,7 @@ func (h *Handlers) RevokePublicationGrant(c *gin.Context) {
 }
 
 func (h *Handlers) GetPublicationWorkspace(c *gin.Context) {
-	current, ok := h.verifiedAccount(c, "opening the publication workspace")
+	current, ok := api.Verified(c, "opening the publication workspace")
 	if !ok {
 		return
 	}
@@ -175,7 +177,7 @@ func (h *Handlers) GetPublicationWorkspace(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	admin := current.Role == account.RoleAdmin
+	admin := current.Role == api.RoleAdmin
 	open, err := h.publications.WritableCategories(c.Request.Context(), held, admin)
 	if err != nil {
 		h.publicationError(c, err)
@@ -238,19 +240,17 @@ func categoryOr(err error, otherwise PublicationErrorCode) PublicationErrorCode 
 }
 
 func (h *Handlers) publicationAuthority(c *gin.Context, action string) (accountIdentity, bool) {
-	current, ok := h.verifiedAccount(c, action)
+	current, ok := api.Verified(c, action)
 	if !ok {
 		return accountIdentity{}, false
 	}
 	held, err := h.publications.HoldsAuthority(c.Request.Context(), current.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check publication authority."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not check publication authority.")
 		return accountIdentity{}, false
 	}
 	if !held {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Only the account designated to manage blog access can do that.",
-		})
+		api.Refuse(c, http.StatusForbidden, "Only the account designated to manage blog access can do that.")
 		return accountIdentity{}, false
 	}
 	return accountIdentity{ID: current.ID, Handle: current.Handle}, true
@@ -315,7 +315,7 @@ func (h *Handlers) withHolders(
 	for _, one := range made {
 		found, err := h.accounts.PublicProfile(c.Request.Context(), one.Holder.Handle)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read a contributor."})
+			api.Refuse(c, http.StatusInternalServerError, "Could not read a contributor.")
 			return nil, err
 		}
 		listed = append(listed, toAPIGrant(one, found))
@@ -330,7 +330,7 @@ func toAPIGrant(found publication.Grant, holder account.PublicProfile) Publicati
 		Restricted:  holder.Restricted,
 	}
 	if holder.Avatar != nil {
-		shown.Avatar = &ProfileAvatar{
+		shown.Avatar = &profile.ProfileAvatar{
 			Url:    account.AvatarURL(holder.Avatar.MediaID, holder.Avatar.DerivativeVersion),
 			Width:  holder.Avatar.Width,
 			Height: holder.Avatar.Height,

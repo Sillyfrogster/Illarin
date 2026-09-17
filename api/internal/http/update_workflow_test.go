@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
@@ -22,7 +23,7 @@ func readWorkingCopyStanding(
 	assetID string,
 ) workingCopyStanding {
 	t.Helper()
-	response := send(t, r, authorized(httptest.NewRequest(
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the working copy = %d: %s", response.Code, response.Body.String())
@@ -36,20 +37,20 @@ func readWorkingCopyStanding(
 
 func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
 		t.Error("a freshly published asset reads as having changes readers cannot see")
 	}
 
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"text":"She has moved to the east shelf."}`)
-	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if !readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
@@ -68,28 +69,28 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 
 func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) {
 	t.Parallel()
-	r, session, assets := newVerifiedIngestRouter(t, format.NewRegistry())
-	metadata := exampleMetadata("Evening Theme")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
-	upload := send(t, r, authorized(uploadRequest(t, metadata, []byte("first bytes")), session))
+	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
 	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process ingest: %v", err)
 	}
 	created := pollIngestAsset(t, r, session, upload.Header().Get("Location"))
-	published := send(t, r, authorized(httptest.NewRequest(
+	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+created.ID+"/publish", nil), session))
 	if published.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", published.Code, published.Body.String())
 	}
 
-	quiet := send(t, r, authorized(httptest.NewRequest(
+	quiet := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
 	if quiet.Code != http.StatusOK || strings.TrimSpace(quiet.Body.String()) != "null" {
 		t.Fatalf("an asset with no replacement = %d %s, want 200 null",
 			quiet.Code, quiet.Body.String())
 	}
 
-	revision := send(t, r, authorized(
+	revision := apitest.Send(t, r, apitest.Authorized(
 		revisionRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload a replacement = %d, want 202: %s", revision.Code, revision.Body.String())
@@ -98,7 +99,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) 
 		t.Fatalf("process the replacement: %v", err)
 	}
 
-	found := send(t, r, authorized(httptest.NewRequest(
+	found := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
 	if found.Code != http.StatusOK {
 		t.Fatalf("read the waiting replacement = %d, want 200: %s", found.Code, found.Body.String())
@@ -121,12 +122,12 @@ func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) 
 			operation.ID, revision.Header().Get("Location"))
 	}
 
-	cancelled := send(t, r, authorized(httptest.NewRequest(
+	cancelled := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+created.ID+"/revisions/"+operation.ID, nil), session))
 	if cancelled.Code != http.StatusNoContent {
 		t.Fatalf("cancel the replacement = %d, want 204: %s", cancelled.Code, cancelled.Body.String())
 	}
-	after := send(t, r, authorized(httptest.NewRequest(
+	after := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
 	if strings.TrimSpace(after.Body.String()) != "null" {
 		t.Fatalf("a cancelled replacement still answers %s, want null", after.Body.String())

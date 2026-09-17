@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 )
@@ -13,7 +14,6 @@ import (
 const (
 	lumiverseInstalls   = "chat.lumiverse:extension-install"
 	sillyTavernInstalls = "app.sillytavern:extension-install"
-	librarySyncScope    = "library:sync"
 )
 
 func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service) string {
@@ -28,7 +28,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
-	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})
+	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 
 	for name, capabilities := range map[string][]string{
 		"no capability":         {},
@@ -53,7 +53,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
-	if first := decodeResponse[queuedDelivery](t, queued); first.State != "queued" || first.UpdatesInstall {
+	if first := apitest.DecodeResponse[queuedDelivery](t, queued); first.State != "queued" || first.UpdatesInstall {
 		t.Fatalf("delivery = %+v, want a queued first install", first)
 	}
 }
@@ -62,11 +62,11 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
-	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})
+	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
 	sendToInstance(t, r, session, assetID, grant.Instance.ID)
 
-	work := decodeResponse[deliveryWorkList](t, collect(t, r, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[deliveryWorkList](t, collect(t, r, grant.AccessToken, nil)).Deliveries[0]
 	if work.Format != extension.SpindleID || work.Kind != "extension" {
 		t.Fatalf("delivery = %+v, want the Spindle archive", work)
 	}
@@ -91,7 +91,7 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 		t.Fatalf("instance = %+v, want generation 1 installed", reported)
 	}
 
-	again := decodeResponse[queuedDelivery](t, sendToInstance(t, r, session, assetID, grant.Instance.ID))
+	again := apitest.DecodeResponse[queuedDelivery](t, sendToInstance(t, r, session, assetID, grant.Instance.ID))
 	if !again.UpdatesInstall || again.State != "queued" {
 		t.Fatalf("second delivery = %+v, want one that updates the install", again)
 	}
@@ -101,7 +101,7 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 	t.Parallel()
 	r, session, assets, pool := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
-	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope})
+	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
 	if queued := sendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
@@ -130,10 +130,10 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 	t.Parallel()
 	r, session, assets, _ := newExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
-	grant := linkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{receiveScope, librarySyncScope})
+	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 
 	for _, bad := range []string{"javascript:alert(1)", "lumiverse://extensions/x", "/extensions/x", "http://localhost/" + strings.Repeat("a", 600)} {
-		rec := send(t, r, asInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken, map[string]any{
+		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken, map[string]any{
 			"snapshot": false,
 			"entries":  []map[string]any{{"assetId": assetID, "address": bad}},
 		}))

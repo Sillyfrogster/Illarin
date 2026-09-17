@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postSchedule struct {
@@ -30,7 +32,7 @@ func (s publicationStack) schedule(
 	at time.Time,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, version, at.Format(time.RFC3339Nano)),
 	), session))
@@ -58,7 +60,7 @@ func (s publicationStack) replaceSchedule(
 	at time.Time,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id+"/schedule",
 		fmt.Sprintf(`{"revisionId":%q,"at":%q}`, revisionID, at.Format(time.RFC3339Nano)),
 	), session))
@@ -70,14 +72,14 @@ func (s publicationStack) cancelSchedule(
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(httptest.NewRequest(
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/publication/posts/"+id+"/schedule", nil,
 	), session))
 }
 
 func (s publicationStack) runSchedules(t *testing.T, at time.Time) int {
 	t.Helper()
-	settled, err := s.handlers.publications.PublishDueSchedules(t.Context(), at)
+	settled, err := s.handlers.Publications.PublishDueSchedules(t.Context(), at)
 	if err != nil {
 		t.Fatalf("run the scheduler: %v", err)
 	}
@@ -294,7 +296,7 @@ func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 		t.Fatalf("an instant in the past returned %d: %s", past.Code, past.Body.String())
 	}
 
-	local := send(t, stack.router, authorized(jsonRequest(t,
+	local := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+written.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":"2030-01-01T09:00:00"}`, written.Version),
 	), session))
@@ -317,7 +319,7 @@ func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) 
 	due := time.Now().Add(time.Hour).Truncate(time.Second)
 	waiting := stack.scheduled(t, writer.session, written.ID, written.Version, due)
 
-	revoked := send(t, stack.router, authorized(httptest.NewRequest(
+	revoked := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, nil,
 	), stack.authority))
 	if revoked.Code != http.StatusNoContent {
@@ -343,7 +345,7 @@ func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *test
 
 	waiting, due := stack.scheduledDraft(t, session, "Illarin speaks for itself", "Still going.")
 
-	revoked := send(t, stack.router, authorized(httptest.NewRequest(
+	revoked := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, nil,
 	), stack.authority))
 	if revoked.Code != http.StatusNoContent {
@@ -421,7 +423,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "An article with a picture")
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(picture.ID, "The workspace"),
 	}))
@@ -443,7 +445,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 	if held != 1 {
 		t.Fatalf("the scheduled edition refers to %d pictures, want 1", held)
 	}
-	if _, err := stack.handlers.assets.Sweep(t.Context()); err != nil {
+	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	var blob *string
@@ -593,7 +595,7 @@ func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
 
 	go func() {
 		defer close(stopped)
-		stack.handlers.publications.RunScheduler(ctx, func(error) {})
+		stack.handlers.Publications.RunScheduler(ctx, func(error) {})
 	}()
 	stop()
 

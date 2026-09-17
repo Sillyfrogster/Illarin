@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type restrictedProfile struct {
-	publicProfile
+	apitest.PublicProfile
 	Restricted bool `json:"restricted"`
 }
 
@@ -37,18 +39,18 @@ const ownerHandle = "shown.creator"
 
 func newRestrictionStack(t *testing.T) restrictionStack {
 	t.Helper()
-	outbox := &verificationOutbox{}
-	router, pool, handlers := newTestRouterWithSenderPoolAndHandlers(t, 1<<20, DefaultDeadlines(), outbox)
-	authority := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
+	outbox := &apitest.VerificationOutbox{}
+	router, pool, handlers := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
+	authority := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
-	admin := verifiedSignUp(t, router, outbox, "admin@example.com", "site.admin")
+	admin := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "site.admin")
 	setRole(t, pool, "site.admin", "admin")
-	owner := verifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
+	owner := apitest.VerifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
 	return restrictionStack{
 		publicationStack: publicationStack{
 			router: router, pool: pool, outbox: outbox, authority: authority,
 		},
-		assets:  handlers.assets,
+		assets:  handlers.Assets,
 		admin:   admin,
 		owner:   owner,
 		ownerID: accountID(t, pool, ownerHandle),
@@ -68,7 +70,7 @@ func accountID(t *testing.T, pool *pgxpool.Pool, handle string) uuid.UUID {
 
 func (s restrictionStack) fillProfile(t *testing.T) {
 	t.Helper()
-	saved := saveProfile(t, s.router, s.owner, `{
+	saved := apitest.SaveProfile(t, s.router, s.owner, `{
 		"displayName":"Wren Ashdown",
 		"biography":"Writes lorebooks about weather.",
 		"contactEmail":"hello@example.com",
@@ -77,8 +79,8 @@ func (s restrictionStack) fillProfile(t *testing.T) {
 	if saved.Code != http.StatusOK {
 		t.Fatalf("fill profile status = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	uploaded := send(t, s.router, authorized(
-		avatarUploadRequest(t, httpTestPNG(t, 200, 200)), s.owner,
+	uploaded := apitest.Send(t, s.router, apitest.Authorized(
+		apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), s.owner,
 	))
 	if uploaded.Code != http.StatusOK {
 		t.Fatalf("avatar status = %d, want 200: %s", uploaded.Code, uploaded.Body.String())
@@ -99,7 +101,7 @@ func (s restrictionStack) restrict(
 		http.MethodPut, "/v1/profiles/"+handle+"/restriction", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	return send(t, s.router, authorized(request, session))
+	return apitest.Send(t, s.router, apitest.Authorized(request, session))
 }
 
 func (s restrictionStack) restore(
@@ -108,7 +110,7 @@ func (s restrictionStack) restore(
 	handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(httptest.NewRequest(
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/profiles/"+handle+"/restriction", nil,
 	), session))
 }
@@ -119,14 +121,14 @@ func (s restrictionStack) readRestriction(
 	handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(httptest.NewRequest(
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/profiles/"+handle+"/restriction", nil,
 	), session))
 }
 
 func (s restrictionStack) publicProfile(t *testing.T, handle string) restrictedProfile {
 	t.Helper()
-	response := send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/profiles/"+handle, nil))
+	response := apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/profiles/"+handle, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read profile status = %d, want 200: %s", response.Code, response.Body.String())
 	}
@@ -159,7 +161,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 		t.Fatalf("restricted profile still carries an avatar or links: %+v", shown)
 	}
 
-	listing := send(t, stack.router, httptest.NewRequest(
+	listing := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?creator="+ownerHandle, nil,
 	))
 	if listing.Code != http.StatusOK {
@@ -183,7 +185,7 @@ func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testin
 	stack.fillProfile(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 
-	response := send(t, stack.router, httptest.NewRequest(
+	response := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/profiles/"+ownerHandle, nil,
 	))
 	body := response.Body.String()
@@ -256,7 +258,7 @@ func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 	if hidden := stack.readRestriction(t, stack.owner, ownerHandle); hidden.Code != http.StatusForbidden {
 		t.Fatalf("owner reason status = %d, want 403: %s", hidden.Code, hidden.Body.String())
 	}
-	anonymous := send(t, stack.router, httptest.NewRequest(
+	anonymous := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/profiles/"+ownerHandle+"/restriction", nil,
 	))
 	if anonymous.Code != http.StatusUnauthorized {
@@ -271,10 +273,10 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	published := createProfileAsset(
 		t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed,
 	)
-	before := accountFactsOf(sessionState(t, stack.router, stack.owner))
+	before := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 
-	blocked := saveProfile(t, stack.router, stack.owner, `{
+	blocked := apitest.SaveProfile(t, stack.router, stack.owner, `{
 		"displayName":"Another name","biography":"","contactEmail":"","links":[]
 	}`)
 	if blocked.Code != http.StatusForbidden {
@@ -283,20 +285,20 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	if strings.Contains(blocked.Body.String(), "Impersonating") {
 		t.Fatalf("the refused save repeats the restriction reason: %s", blocked.Body.String())
 	}
-	replaced := send(t, stack.router, authorized(
-		avatarUploadRequest(t, httpTestPNG(t, 200, 200)), stack.owner,
+	replaced := apitest.Send(t, stack.router, apitest.Authorized(
+		apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), stack.owner,
 	))
 	if replaced.Code != http.StatusForbidden {
 		t.Fatalf("restricted avatar status = %d, want 403: %s", replaced.Code, replaced.Body.String())
 	}
-	removed := send(t, stack.router, authorized(httptest.NewRequest(
+	removed := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/account/profile/avatar", nil,
 	), stack.owner))
 	if removed.Code != http.StatusForbidden {
 		t.Fatalf("restricted avatar removal status = %d, want 403", removed.Code)
 	}
 
-	after := accountFactsOf(sessionState(t, stack.router, stack.owner))
+	after := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
 	if after != before {
 		t.Fatalf("restriction changed the account: %+v became %+v", before, after)
 	}
@@ -319,7 +321,7 @@ type accountFacts struct {
 	HasPassword   bool
 }
 
-func accountFactsOf(state accountState) accountFacts {
+func accountFactsOf(state apitest.AccountState) accountFacts {
 	facts := accountFacts{
 		Handle:        state.Handle,
 		EmailVerified: state.EmailVerified,
@@ -383,7 +385,7 @@ func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
 		t.Fatal("the avatar did not come back")
 	}
 
-	saved := saveProfile(t, stack.router, stack.owner, `{
+	saved := apitest.SaveProfile(t, stack.router, stack.owner, `{
 		"displayName":"Wren A.","biography":"","contactEmail":"","links":[]
 	}`)
 	if saved.Code != http.StatusOK {

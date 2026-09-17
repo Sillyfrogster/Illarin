@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ func (h *Handlers) StartLinkRequest(c *gin.Context) {
 	}
 	started, err := h.links.Start(
 		c.Request.Context(),
-		linkRequestSource(c),
+		api.RequestSource(c),
 		startInput(
 			request.ApplicationName, request.InstanceName, request.ApplicationVersion,
 			request.ProtocolVersion, request.Capabilities, request.AcceptedTargets,
@@ -46,7 +47,7 @@ func (h *Handlers) StartLinkAuthorization(c *gin.Context) {
 	}
 	started, err := h.links.StartAuthorization(
 		c.Request.Context(),
-		linkRequestSource(c),
+		api.RequestSource(c),
 		linking.AuthorizationInput{
 			StartInput: startInput(
 				request.ApplicationName, request.InstanceName, request.ApplicationVersion,
@@ -74,7 +75,7 @@ func (h *Handlers) PollLinkRequest(c *gin.Context) {
 		return
 	}
 	grant, linked, err := h.links.Poll(
-		c.Request.Context(), linkRequestSource(c), request.DeviceCode,
+		c.Request.Context(), api.RequestSource(c), request.DeviceCode,
 	)
 	if err != nil {
 		h.linkingError(c, err)
@@ -90,7 +91,7 @@ func (h *Handlers) PollLinkRequest(c *gin.Context) {
 func (h *Handlers) GetLinkRequest(c *gin.Context) {
 	userCode := c.Param("userCode")
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "reviewing a link")
+	creator, ok := api.Verified(c, "reviewing a link")
 	if !ok {
 		return
 	}
@@ -104,12 +105,12 @@ func (h *Handlers) GetLinkRequest(c *gin.Context) {
 
 func (h *Handlers) ApproveLinkRequest(c *gin.Context) {
 	userCode := c.Param("userCode")
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "approving a link")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.Verified(c, "approving a link")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	var decision DeviceLinkDecision
@@ -128,12 +129,12 @@ func (h *Handlers) ApproveLinkRequest(c *gin.Context) {
 
 func (h *Handlers) DenyLinkRequest(c *gin.Context) {
 	userCode := c.Param("userCode")
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "denying a link")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.Verified(c, "denying a link")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	var decision DeviceLinkDecision
@@ -152,7 +153,7 @@ func (h *Handlers) DenyLinkRequest(c *gin.Context) {
 func (h *Handlers) GetLinkAuthorization(c *gin.Context) {
 	requestCode := c.Param("requestCode")
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "reviewing a link")
+	creator, ok := api.Verified(c, "reviewing a link")
 	if !ok {
 		return
 	}
@@ -168,12 +169,12 @@ func (h *Handlers) GetLinkAuthorization(c *gin.Context) {
 
 func (h *Handlers) ApproveLinkAuthorization(c *gin.Context) {
 	requestCode := c.Param("requestCode")
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "approving a link")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.Verified(c, "approving a link")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	redirect, err := h.links.ApproveAuthorization(
@@ -188,12 +189,12 @@ func (h *Handlers) ApproveLinkAuthorization(c *gin.Context) {
 
 func (h *Handlers) DenyLinkAuthorization(c *gin.Context) {
 	requestCode := c.Param("requestCode")
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.verifiedAccount(c, "denying a link")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.Verified(c, "denying a link")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	redirect, err := h.links.DenyAuthorization(
@@ -213,7 +214,7 @@ func (h *Handlers) ExchangeLinkAuthorization(c *gin.Context) {
 		return
 	}
 	grant, err := h.links.Exchange(
-		c.Request.Context(), linkRequestSource(c), request.AuthorizationCode,
+		c.Request.Context(), api.RequestSource(c), request.AuthorizationCode,
 		request.CodeVerifier, request.RedirectUri,
 	)
 	if err != nil {
@@ -230,7 +231,7 @@ func (h *Handlers) RefreshInstanceToken(c *gin.Context) {
 		return
 	}
 	grant, err := h.links.Refresh(
-		c.Request.Context(), linkRequestSource(c), request.RefreshToken,
+		c.Request.Context(), api.RequestSource(c), request.RefreshToken,
 	)
 	if err != nil {
 		h.linkingError(c, err)
@@ -241,7 +242,7 @@ func (h *Handlers) RefreshInstanceToken(c *gin.Context) {
 
 func (h *Handlers) ListInstances(c *gin.Context) {
 	noStoreLink(c)
-	creator, ok := h.signedInAccount(c, "managing linked instances")
+	creator, ok := api.SignedIn(c, "managing linked instances")
 	if !ok {
 		return
 	}
@@ -263,16 +264,16 @@ func (h *Handlers) ListInstances(c *gin.Context) {
 }
 
 func (h *Handlers) RevokeInstance(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	if !fromIllarin(c) {
+	if !api.FromIllarin(c) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := h.signedInAccount(c, "managing linked instances")
-	if !ok || !h.allowLinkBrowserMutation(c) {
+	creator, ok := api.SignedIn(c, "managing linked instances")
+	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
 		return
 	}
 	if err := h.links.Revoke(c.Request.Context(), creator.ID, id); err != nil {
@@ -320,13 +321,13 @@ func (h *Handlers) instance(c *gin.Context, needs linking.Scope) (linking.Instan
 	found, err := h.links.Authenticate(c.Request.Context(), bearerToken(c), needs)
 	switch {
 	case errors.Is(err, linking.ErrInstanceCredential):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This access token is not live."})
+		api.Refuse(c, http.StatusUnauthorized, "This access token is not live.")
 		return linking.Instance{}, false
 	case errors.Is(err, linking.ErrInstanceMissingScope):
-		c.JSON(http.StatusForbidden, gin.H{"error": "This instance was not granted that scope."})
+		api.Refuse(c, http.StatusForbidden, "This instance was not granted that scope.")
 		return linking.Instance{}, false
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the linked instance."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the linked instance.")
 		return linking.Instance{}, false
 	}
 	return found, true
@@ -346,38 +347,38 @@ func (h *Handlers) linkingError(c *gin.Context, err error) {
 	switch {
 	case errors.As(err, &delay):
 		c.Header("Retry-After", strconv.Itoa(int(delay.After.Seconds())))
-		c.JSON(http.StatusTooManyRequests, gin.H{"error": "slow_down"})
+		api.Refuse(c, http.StatusTooManyRequests, "slow_down")
 	case errors.Is(err, linking.ErrTooManyCodes):
 		c.Header("Retry-After", strconv.Itoa(int(timeHourSeconds)))
-		c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many codes were entered. Try again later."})
+		api.Refuse(c, http.StatusTooManyRequests, "Too many codes were entered. Try again later.")
 	case errors.As(err, &limited):
 		seconds := int((limited.After + time.Second - 1) / time.Second)
 		c.Header("Retry-After", strconv.Itoa(seconds))
-		c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many link requests. Try again later."})
+		api.Refuse(c, http.StatusTooManyRequests, "Too many link requests. Try again later.")
 	case errors.Is(err, linking.ErrInvalidName):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name the application and this installation in 64 characters or fewer."})
+		api.Refuse(c, http.StatusBadRequest, "Name the application and this installation in 64 characters or fewer.")
 	case errors.Is(err, linking.ErrInvalidDeclaration):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "The instance declaration is not valid."})
+		api.Refuse(c, http.StatusBadRequest, "The instance declaration is not valid.")
 	case errors.Is(err, linking.ErrInvalidScopes):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ask for asset:receive, library:sync, or both, once each."})
+		api.Refuse(c, http.StatusBadRequest, "Ask for asset:receive, library:sync, or both, once each.")
 	case errors.Is(err, linking.ErrInvalidRedirect):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Use an exact 127.0.0.1 or [::1] callback with an explicit port."})
+		api.Refuse(c, http.StatusBadRequest, "Use an exact 127.0.0.1 or [::1] callback with an explicit port.")
 	case errors.Is(err, linking.ErrInvalidPKCE):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
+		api.Refuse(c, http.StatusBadRequest, "invalid_grant")
 	case errors.Is(err, linking.ErrAccessDenied):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "access_denied"})
+		api.Refuse(c, http.StatusBadRequest, "access_denied")
 	case errors.Is(err, linking.ErrLinkExpired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "expired_token"})
+		api.Refuse(c, http.StatusBadRequest, "expired_token")
 	case errors.Is(err, linking.ErrLinkRequestNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No pending link request matches that code."})
+		api.Refuse(c, http.StatusNotFound, "No pending link request matches that code.")
 	case errors.Is(err, linking.ErrRefreshReuse):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This instance was revoked because a replaced refresh token was reused."})
+		api.Refuse(c, http.StatusUnauthorized, "This instance was revoked because a replaced refresh token was reused.")
 	case errors.Is(err, linking.ErrInstanceCredential):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "This token is not live."})
+		api.Refuse(c, http.StatusUnauthorized, "This token is not live.")
 	case errors.Is(err, linking.ErrInstanceNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No live linked instance has that id."})
+		api.Refuse(c, http.StatusNotFound, "No live linked instance has that id.")
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not complete the link request."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not complete the link request.")
 	}
 }
 

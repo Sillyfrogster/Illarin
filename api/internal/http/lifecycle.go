@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ type assetIdentityInput struct {
 }
 
 func (h *Handlers) SetAssetIdentity(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -24,21 +25,17 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "saving an asset")
+	owner, ok := api.Verified(c, "saving an asset")
 	if !ok {
 		return
 	}
 	var request assetIdentityInput
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send a name, a blurb, and an adult content answer of true, false or null.",
-		})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send a name, a blurb, and an adult content answer of true, false or null.")
 		return
 	}
 	if request.Blurb == nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send a blurb. Use an empty string to clear it.", "field": "blurb",
-		})
+		api.RefuseField(c, http.StatusBadRequest, "blurb", "Send a blurb. Use an empty string to clear it.")
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
@@ -51,26 +48,22 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case errors.Is(err, asset.ErrNameTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "The name is too long."})
+		api.Refuse(c, http.StatusBadRequest, "The name is too long.")
 	case errors.Is(err, asset.ErrBlurbTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "The blurb must be 400 characters or fewer.", "field": "blurb",
-		})
+		api.RefuseField(c, http.StatusBadRequest, "blurb", "The blurb must be 400 characters or fewer.")
 	case errors.Is(err, asset.ErrRatingUnanswerable):
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "A published asset needs an adult content answer.",
-		})
+		api.Refuse(c, http.StatusBadRequest, "A published asset needs an adult content answer.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the details."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the details.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
 func (h *Handlers) PublishAsset(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -78,7 +71,7 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "publishing an asset")
+	owner, ok := api.Verified(c, "publishing an asset")
 	if !ok {
 		return
 	}
@@ -103,10 +96,10 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 		})
 		return
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such draft."})
+		api.Refuse(c, http.StatusNotFound, "No such draft.")
 		return
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not publish the asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not publish the asset.")
 		return
 	}
 
@@ -116,12 +109,12 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 	}
 	found, err := h.assets.Detail(c.Request.Context(), id, &owner.ID, visibility)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the published asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
 		return
 	}
 	page, err := toAPIDetail(found, visibility)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the published asset."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
 		return
 	}
 	c.JSON(http.StatusOK, page)
@@ -146,7 +139,7 @@ func toAPIReadiness(items []asset.ReadinessItem) *[]ReadinessItem {
 }
 
 func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -154,15 +147,13 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := h.verifiedAccount(c, "publishing an asset update")
+	owner, ok := api.Verified(c, "publishing an asset update")
 	if !ok {
 		return
 	}
 	var request AssetUpdateRequest
-	if err := decodeOneJSON(c.Request.Body, &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Send a summary of what changed, and any notes with it.",
-		})
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send a summary of what changed, and any notes with it.")
 		return
 	}
 	candidate := &asset.Candidate{Version: workingCopyVersion}
@@ -183,9 +174,9 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Choose only your own verified, active destinations.", "destinationIds")
 	case errors.Is(err, asset.ErrSummaryRequired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Say what changed in this update."})
+		api.Refuse(c, http.StatusBadRequest, "Say what changed in this update.")
 	case errors.Is(err, asset.ErrSummaryTooLong):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "The summary, notes or version label is too long."})
+		api.Refuse(c, http.StatusBadRequest, "The summary, notes or version label is too long.")
 	case errors.Is(err, asset.ErrPublishFloor):
 		notReady := PublishRefusalCodeNotReady
 		c.JSON(http.StatusConflict, PublishRefusal{
@@ -201,9 +192,9 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	case errors.Is(err, asset.ErrAssetIsDraft):
 		c.JSON(http.StatusConflict, PublishRefusal{Error: "Publish this draft before updating it."})
 	case errors.Is(err, asset.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "No such asset."})
+		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case err != nil:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not publish the update."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not publish the update.")
 	default:
 		c.JSON(http.StatusOK, AssetUpdate{
 			Id: recorded.ID, Number: recorded.Number,

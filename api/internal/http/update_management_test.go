@@ -7,48 +7,50 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
 func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
 	page := fetchStartedAsset(t, r, session, started.ID)
-	coreBlock := blockNamed(t, page.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, page.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"text":"The second public description."}`)
-	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save second description = %d: %s", got.Code, got.Body.String())
 	}
 	if got := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Second version"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second version = %d: %s", got.Code, got.Body.String())
 	}
 
-	stale := authorized(httptest.NewRequest(http.MethodPost,
+	stale := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/1/restore", nil), session)
-	withReviewedVersion(t, r, stale)
-	identity := authorizedJSONRequest(t, http.MethodPut, "/v1/assets/"+started.ID+"/identity",
+	apitest.WithReviewedVersion(t, r, stale)
+	identity := apitest.AuthorizedJSONRequest(t, http.MethodPut, "/v1/assets/"+started.ID+"/identity",
 		`{"name":"Unsaved newer work","blurb":"Kept in the working copy.","isNsfw":false}`, session)
-	if got := send(t, r, identity); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, identity); got.Code != http.StatusNoContent {
 		t.Fatalf("save newer work = %d: %s", got.Code, got.Body.String())
 	}
-	if got := send(t, r, stale); got.Code != http.StatusConflict {
+	if got := apitest.Send(t, r, stale); got.Code != http.StatusConflict {
 		t.Fatalf("stale restore = %d, want 409: %s", got.Code, got.Body.String())
 	}
 	if got := fetchStartedAsset(t, r, session, started.ID); got.Name != "Unsaved newer work" {
 		t.Fatalf("stale restore replaced %q", got.Name)
 	}
 
-	restore := authorized(httptest.NewRequest(http.MethodPost,
+	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/1/restore", nil), session)
-	if got := send(t, r, restore); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	working := fetchStartedAsset(t, r, session, started.ID)
@@ -70,11 +72,11 @@ func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T
 
 func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	first := send(t, r, authorized(mediaUploadRequest(
-		t, started.ID, "gallery", httpTestPNG(t, 16, 16),
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	first := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+		t, started.ID, "gallery", apitest.PNG(t, 16, 16),
 	), session))
 	if first.Code != http.StatusCreated {
 		t.Fatalf("add first picture = %d: %s", first.Code, first.Body.String())
@@ -85,12 +87,12 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 	if err := json.Unmarshal(first.Body.Bytes(), &firstImage); err != nil {
 		t.Fatal(err)
 	}
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
-	second := send(t, r, authorized(mediaUploadRequest(
-		t, started.ID, "gallery", httpTestPNG(t, 24, 24),
+	second := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(
+		t, started.ID, "gallery", apitest.PNG(t, 24, 24),
 	), session))
 	if second.Code != http.StatusCreated {
 		t.Fatalf("add second picture = %d: %s", second.Code, second.Body.String())
@@ -101,16 +103,16 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 	if err := json.Unmarshal(second.Body.Bytes(), &secondImage); err != nil {
 		t.Fatal(err)
 	}
-	if got := saveIdentity(t, r, session, started.ID,
+	if got := apitest.SaveIdentity(t, r, session, started.ID,
 		`{"name":"Ilse of the west shelf","blurb":"Now with another picture.","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save second version details = %d: %s", got.Code, got.Body.String())
 	}
 	if got := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Added another picture"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second version = %d: %s", got.Code, got.Body.String())
 	}
-	restore := authorized(httptest.NewRequest(http.MethodPost,
+	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/1/restore", nil), session)
-	if got := send(t, r, restore); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore = %d: %s", got.Code, got.Body.String())
 	}
 	working := fetchStartedAsset(t, r, session, started.ID)
@@ -121,25 +123,25 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 
 func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := newVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
+	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, lumiverseIngestRegistry(t))
 	publicID, sealedID := uuid.New(), uuid.New()
 	started := publishTwoPromptPreset(t, r, session, publicID, sealedID,
 		"First public prompt.", "First protected prompt.")
 	working := fetchStartedAsset(t, r, session, started.ID)
-	coreBlock := blockNamed(t, working.Blocks, "preset_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, working.Blocks, "preset_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = sealedPresetPrompts(uuid.New(), uuid.New(),
 		"Second public prompt.", "Second protected prompt.")
 	core.AllowedApps = &[]string{"lumiverse"}
-	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save second prompts = %d: %s", got.Code, got.Body.String())
 	}
 	if got := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Changed both prompts"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second prompts = %d: %s", got.Code, got.Body.String())
 	}
-	restore := authorized(httptest.NewRequest(http.MethodPost,
+	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/1/restore", nil), session)
-	if got := send(t, r, restore); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore protected version = %d: %s", got.Code, got.Body.String())
 	}
 	restored := fetchStartedAsset(t, r, session, started.ID)
@@ -165,10 +167,10 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 
 func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
@@ -205,9 +207,9 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	restore := authorized(httptest.NewRequest(http.MethodPost,
+	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/2/restore", nil), session)
-	if got := send(t, r, restore); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore older content = %d: %s", got.Code, got.Body.String())
 	}
 	publish := publishAssetUpdate(t, r, session, started.ID, `{"summary":"Restore an older version"}`)
@@ -218,18 +220,18 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 
 func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	before := contentGeneration(t, pool, started.ID)
 
-	req := authorizedJSONRequest(t, http.MethodPatch,
+	req := apitest.AuthorizedJSONRequest(t, http.MethodPatch,
 		"/v1/assets/"+started.ID+"/updates/1/notes",
 		`{"summary":"Corrected summary","notes":"Corrected context."}`, session)
-	if got := send(t, r, req); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, req); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if after := contentGeneration(t, pool, started.ID); after != before {
@@ -255,19 +257,19 @@ func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 
 func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := newVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
-	withdrawnMedia := uploadedImageID(t, r, session, started.ID, "gallery", httpTestPNG(t, 600, 800))
+	withdrawnMedia := uploadedImageID(t, r, session, started.ID, "gallery", apitest.PNG(t, 600, 800))
 	for number, description := range []string{"Second secret history", "Current public history"} {
 		page := fetchStartedAsset(t, r, session, started.ID)
-		coreBlock := blockNamed(t, page.Blocks, "character_core")
-		core := editableBlock(coreBlock)
+		coreBlock := apitest.BlockNamed(t, page.Blocks, "character_core")
+		core := apitest.EditableBlock(coreBlock)
 		core.Elements[0].Content = json.RawMessage(`{"text":"` + description + `"}`)
-		if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+		if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 			t.Fatalf("save version %d = %d: %s", number+2, got.Code, got.Body.String())
 		}
 		notes := "Current notes"
@@ -279,18 +281,18 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 			t.Fatalf("publish version %d = %d: %s", number+2, got.Code, got.Body.String())
 		}
 		if number == 0 {
-			restore := authorized(httptest.NewRequest(http.MethodPost,
+			restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 				"/v1/assets/"+started.ID+"/updates/1/restore", nil), session)
-			if got := send(t, r, restore); got.Code != http.StatusNoContent {
+			if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 				t.Fatalf("restore without withdrawn picture = %d: %s", got.Code, got.Body.String())
 			}
 		}
 	}
 
-	withdraw := authorizedJSONRequest(t, http.MethodPost,
+	withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/2/withdraw",
 		`{"explanation":"This version gave incorrect guidance."}`, session)
-	if got := send(t, r, withdraw); got.Code != http.StatusNoContent {
+	if got := apitest.Send(t, r, withdraw); got.Code != http.StatusNoContent {
 		t.Fatalf("withdraw = %d, want 204: %s", got.Code, got.Body.String())
 	}
 
@@ -321,32 +323,32 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 		t.Fatalf("owner lost withdrawn snapshot: %s", owner.Body.String())
 	}
 
-	download := send(t, r, httptest.NewRequest(http.MethodGet,
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/v1/assets/"+started.ID+"/updates/2/downloads", nil))
 	if download.Code != http.StatusNotFound {
 		t.Fatalf("withdrawn download = %d, want 404: %s", download.Code, download.Body.String())
 	}
-	directMedia := send(t, r, httptest.NewRequest(http.MethodGet,
+	directMedia := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/media/"+withdrawnMedia+"/thumb/2", nil))
 	if directMedia.Code != http.StatusNotFound {
 		t.Fatalf("withdrawn media = %d, want 404", directMedia.Code)
 	}
-	comparison := send(t, r, httptest.NewRequest(http.MethodGet,
+	comparison := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/v1/assets/"+started.ID+"/updates/comparison?from=1&to=2", nil))
 	if comparison.Code != http.StatusOK || !strings.Contains(comparison.Body.String(), "This version was withdrawn.") || strings.Contains(comparison.Body.String(), "Second secret history") {
 		t.Fatalf("withdrawn comparison was not blocked: %d %s", comparison.Code, comparison.Body.String())
 	}
 
-	current := authorizedJSONRequest(t, http.MethodPost,
+	current := apitest.AuthorizedJSONRequest(t, http.MethodPost,
 		"/v1/assets/"+started.ID+"/updates/3/withdraw", `{"explanation":"Not alone."}`, session)
-	if got := send(t, r, current); got.Code != http.StatusConflict {
+	if got := apitest.Send(t, r, current); got.Code != http.StatusConflict {
 		t.Fatalf("current withdrawal = %d, want 409: %s", got.Code, got.Body.String())
 	}
 }
 
-func blockText(t *testing.T, blocks []startedBlock, definition string) string {
+func blockText(t *testing.T, blocks []apitest.StartedBlock, definition string) string {
 	t.Helper()
-	holder := blockNamed(t, blocks, definition)
+	holder := apitest.BlockNamed(t, blocks, definition)
 	var prose struct {
 		Text string `json:"text"`
 	}

@@ -4,12 +4,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) WithdrawPost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -38,7 +39,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context) {
 }
 
 func (h *Handlers) RepublishPost(c *gin.Context) {
-	id, ok := pathID(c, "id")
+	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
@@ -68,7 +69,7 @@ func (h *Handlers) withdrawnPost(c *gin.Context, slug string) bool {
 		return false
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read the address."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the address.")
 		return true
 	}
 	c.JSON(http.StatusGone, WithdrawnPost{Slug: found.Slug, Explanation: found.Explanation})

@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type importedPost struct {
@@ -172,7 +174,7 @@ func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	mine := stack.draftBy(t, writer, "Lumiverse 3 is out")
 	theirs := stack.draftBy(t, writer, "Lumiverse 2 is out")
-	picture := stack.uploaded(t, writer.session, theirs.ID, "document", httpTestPNG(t, 900, 500))
+	picture := stack.uploaded(t, writer.session, theirs.ID, "document", apitest.PNG(t, 900, 500))
 
 	response := stack.imported(t, writer, mine.ID, fmt.Sprintf(
 		"![A workspace](media:%s)\n", picture.ID,
@@ -190,7 +192,7 @@ func TestAnImportPlacesAPictureThePostOwns(t *testing.T) {
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
-	picture := stack.uploaded(t, writer.session, draft.ID, "document", httpTestPNG(t, 900, 500))
+	picture := stack.uploaded(t, writer.session, draft.ID, "document", apitest.PNG(t, 900, 500))
 
 	carried := decodeImport(t, stack.imported(t, writer, draft.ID, fmt.Sprintf(
 		"![A workspace](media:%s \"One draft.\")\n", picture.ID,

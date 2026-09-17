@@ -6,11 +6,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func TestHandlersRefuseMalformedInputBeforeDoingAnything(t *testing.T) {
 	t.Parallel()
-	router := newTestRouter(t)
+	router := harness.NewRouter(t)
 	const someID = "7f1c1c52-5f9e-4bb1-9d0c-2f4c6a0f6f11"
 
 	cases := []struct {
@@ -68,12 +70,12 @@ func TestHandlersRefuseMalformedInputBeforeDoingAnything(t *testing.T) {
 
 func TestAppActionsWithoutTheIllarinHeaderAreRefused(t *testing.T) {
 	t.Parallel()
-	router := newTestRouter(t)
+	router := harness.NewRouter(t)
 	for _, target := range []string{
 		"/v1/link/requests/ABCD-EFGH/approve",
 		"/v1/link/authorizations/some-code/deny",
 	} {
-		rec := send(t, router, httptest.NewRequest(http.MethodPost, target, nil))
+		rec := apitest.Send(t, router, httptest.NewRequest(http.MethodPost, target, nil))
 		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "Open this action from Illarin") {
 			t.Errorf("%s = %d %s, want 403 asking to open it from Illarin", target, rec.Code, rec.Body.String())
 		}

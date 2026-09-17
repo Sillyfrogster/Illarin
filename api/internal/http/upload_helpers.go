@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -29,7 +29,7 @@ func readMetadata(parts *multipart.Reader) (CreateAssetRequest, error) {
 	}
 
 	var metadata CreateAssetRequest
-	if err := decodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
+	if err := api.DecodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
 		return CreateAssetRequest{}, refusal{
 			reason: "the " + metadataPart + " part is not valid JSON",
 			cause:  err,
@@ -44,7 +44,7 @@ func readMediaMetadata(parts *multipart.Reader) (AddMediaRequest, error) {
 		return AddMediaRequest{}, err
 	}
 	var metadata AddMediaRequest
-	if err := decodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
+	if err := api.DecodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
 		return AddMediaRequest{}, refusal{
 			reason: "the " + metadataPart + " part is not valid JSON",
 			cause:  err,
@@ -59,29 +59,13 @@ func readPostMediaMetadata(parts *multipart.Reader) (AddPostMediaRequest, error)
 		return AddPostMediaRequest{}, err
 	}
 	var metadata AddPostMediaRequest
-	if err := decodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
+	if err := api.DecodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
 		return AddPostMediaRequest{}, refusal{
 			reason: "the " + metadataPart + " part is not valid JSON",
 			cause:  err,
 		}
 	}
 	return metadata, nil
-}
-
-func decodeOneJSON(reader io.Reader, destination any) error {
-	decoder := json.NewDecoder(reader)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(destination); err != nil {
-		return err
-	}
-	var trailing json.RawMessage
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return errors.New("more than one JSON value")
-		}
-		return err
-	}
-	return nil
 }
 
 func nextPart(parts *multipart.Reader, name string) (*multipart.Part, error) {
@@ -140,38 +124,32 @@ func (r refusal) Unwrap() error { return r.cause }
 
 func (h *Handlers) refuse(c *gin.Context, err error) {
 	if errors.Is(err, asset.ErrStorageCap) {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "Your account does not have enough storage left for this file.",
-		})
+		api.Refuse(c, http.StatusRequestEntityTooLarge, "Your account does not have enough storage left for this file.")
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Uploads are temporarily unavailable because storage is low.",
-		})
+		api.Refuse(c, http.StatusServiceUnavailable, "Uploads are temporarily unavailable because storage is low.")
 		return
 	}
 	if errors.Is(err, format.ErrInvariant) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create the asset"})
+		api.Refuse(c, http.StatusInternalServerError, "could not create the asset")
 		return
 	}
 
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": fmt.Sprintf(
-				"That file is larger than the %s upload limit.", readableSize(h.maxUploadBytes),
-			),
-		})
+		api.Refuse(c, http.StatusRequestEntityTooLarge, fmt.Sprintf(
+			"That file is larger than the %s upload limit.", readableSize(h.maxUploadBytes),
+		))
 		return
 	}
 
 	var refused refusal
 	if errors.As(err, &refused) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": refused.Error()})
+		api.Refuse(c, http.StatusBadRequest, refused.Error())
 		return
 	}
-	c.JSON(http.StatusBadRequest, gin.H{"error": "could not create the asset"})
+	api.Refuse(c, http.StatusBadRequest, "could not create the asset")
 }
 
 func readableSize(bytes int64) string {

@@ -12,6 +12,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 const seededReadme = "# Quiet Toolbox\n\n![Banner](art/banner.png)\n\nSmall tools for a calmer chat.\n\n" +
@@ -95,7 +97,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	vault := readVault(t, r, session, assetID)
 	settings, wide := vault[0], vault[1]
 
-	placed := send(t, r, authorized(httptest.NewRequest(
+	placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+assetID+"/vault/"+settings.ID+"/place", nil), session))
 	if placed.Code != http.StatusOK {
 		t.Fatalf("place the settings picture = %d: %s", placed.Code, placed.Body.String())
@@ -109,12 +111,12 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		t.Fatalf("install after placing = %+v, want the picture beside the text", install)
 	}
 
-	refused := send(t, r, authorized(httptest.NewRequest(
+	refused := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+assetID+"/vault/"+wide.ID+"/place", nil), session))
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("place a remote picture without a copy = %d: %s", refused.Code, refused.Body.String())
 	}
-	uploaded := send(t, r, authorized(mediaUploadRequest(t, assetID, "gallery", []byte(pictureFile(t, 90))), session))
+	uploaded := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(t, assetID, "gallery", []byte(pictureFile(t, 90))), session))
 	if uploaded.Code != http.StatusCreated {
 		t.Fatalf("upload a copy = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
@@ -127,7 +129,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	withCopy := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/vault/"+wide.ID+"/place",
 		strings.NewReader(fmt.Sprintf(`{"mediaId":%q}`, copyMedia.ID)))
 	withCopy.Header.Set("Content-Type", "application/json")
-	if placed := send(t, r, authorized(withCopy, session)); placed.Code != http.StatusOK {
+	if placed := apitest.Send(t, r, apitest.Authorized(withCopy, session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the copy = %d: %s", placed.Code, placed.Body.String())
 	}
 	page := readSeededPage(t, r, session, assetID+"?workingCopy=true")
@@ -147,11 +149,11 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if len(shots) != 2 || shots[0].BlockID != "" {
 		t.Fatalf("vault = %+v, want two pictures with no block, since their section held nothing else", shots)
 	}
-	if placed := send(t, r, authorized(httptest.NewRequest(
+	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+second+"/vault/"+shots[0].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place a picture with no block = %d: %s", placed.Code, placed.Body.String())
 	}
-	if placed := send(t, r, authorized(httptest.NewRequest(
+	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+second+"/vault/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the second picture = %d: %s", placed.Code, placed.Body.String())
 	}
@@ -168,7 +170,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
 	waiting := readVault(t, r, session, third)[0]
-	discarded := send(t, r, authorized(httptest.NewRequest(
+	discarded := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+third+"/vault/"+waiting.ID, nil), session))
 	if discarded.Code != http.StatusNoContent {
 		t.Fatalf("discard = %d: %s", discarded.Code, discarded.Body.String())
@@ -196,7 +198,7 @@ type vaultPicture struct {
 
 func readVault(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []vaultPicture {
 	t.Helper()
-	response := send(t, r, authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/vault", nil), session))
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/vault", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the vault = %d: %s", response.Code, response.Body.String())
 	}
@@ -218,10 +220,10 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 	}))
 	started := fetchStartedAsset(t, r, session, assetID)
 	install := blockTitled(t, started.Blocks, "Install")
-	edited := editableBlock(install)
+	edited := apitest.EditableBlock(install)
 	edited.Title = &install.Title
 	edited.Elements[0].Content = json.RawMessage(`{"text":"Clone it, then restart."}`)
-	if saved := saveBlock(t, r, session, assetID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
+	if saved := apitest.SaveBlock(t, r, session, assetID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
 		t.Fatalf("edit the seeded install text = %d: %s", saved.Code, saved.Body.String())
 	}
 	if update := publishAssetUpdate(t, r, session, assetID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
@@ -234,7 +236,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 		"spindle.json": manifest, "dist/frontend.js": "two",
 		"README.md": "# Quiet Toolbox\n\n## Changelog\n\nNew in 1.1.", "art/settings.png": pictureFile(t, 90),
 	})
-	revision := send(t, r, authorized(revisionRequest(t, assetID, "toolbox.zip", second), session))
+	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
@@ -265,9 +267,9 @@ func readSeededPage(t *testing.T, r http.Handler, session *http.Cookie, address 
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+address, nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	response := send(t, r, request)
+	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the extension = %d: %s", response.Code, response.Body.String())
 	}
@@ -286,7 +288,7 @@ func arrangement(page seededPage) []string {
 	return found
 }
 
-func blockTitled(t *testing.T, blocks []startedBlock, title string) startedBlock {
+func blockTitled(t *testing.T, blocks []apitest.StartedBlock, title string) apitest.StartedBlock {
 	t.Helper()
 	found := []string{}
 	for _, holder := range blocks {
@@ -296,7 +298,7 @@ func blockTitled(t *testing.T, blocks []startedBlock, title string) startedBlock
 		found = append(found, holder.Definition+" "+holder.Title)
 	}
 	t.Fatalf("no block titled %s among %q", title, found)
-	return startedBlock{}
+	return apitest.StartedBlock{}
 }
 
 func blockTitledIn(t *testing.T, blocks []seededBlock, title string) seededBlock {

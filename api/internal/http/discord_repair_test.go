@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/google/uuid"
 )
 
@@ -24,12 +25,12 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 	}
 	for index, action := range []string{"edit", "delete", "correction"} {
 		body := fmt.Sprintf(`{"requestId":%q,"action":%q,"messageId":%q,"text":"A corrected note @everyone"}`, uuid.NewString(), action, discordMessageID)
-		refused := send(t, stack.router, authorized(jsonRequest(t, http.MethodPost, path, body), stack.editor))
+		refused := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, body), stack.editor))
 		if refused.Code != http.StatusForbidden {
 			t.Fatalf("contributor repair = %d", refused.Code)
 		}
 		for repeat := 0; repeat < 2; repeat++ {
-			response := send(t, stack.router, authorized(jsonRequest(t, http.MethodPost, path, body), stack.authority))
+			response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, body), stack.authority))
 			if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"state":"completed"`) {
 				t.Fatalf("%s = %d: %s", action, response.Code, response.Body.String())
 			}
@@ -59,7 +60,7 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 	stack.discord.answersSendWith(func(arrived) (int, string) { return 0, "" })
 	ambiguous := fmt.Sprintf(`{"requestId":%q,"action":"correction","text":"A later correction"}`, uuid.NewString())
 	for repeat := 0; repeat < 2; repeat++ {
-		response := send(t, stack.router, authorized(jsonRequest(t, http.MethodPost, path, ambiguous), stack.authority))
+		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, ambiguous), stack.authority))
 		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"state":"unconfirmed"`) {
 			t.Fatalf("lost repair response = %d: %s", response.Code, response.Body.String())
 		}

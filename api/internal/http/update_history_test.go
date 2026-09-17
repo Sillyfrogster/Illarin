@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type latestUpdateBody struct {
@@ -33,17 +36,17 @@ func readUpdateHistory(
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/updates", nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	return send(t, r, request)
+	return apitest.Send(t, r, request)
 }
 
 func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -52,10 +55,10 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 		t.Fatalf("first publication reads as %+v", first)
 	}
 
-	coreBlock := blockNamed(t, started.Blocks, "character_core")
-	core := editableBlock(coreBlock)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"text":"She has moved to the east shelf."}`)
-	if got := saveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	update := publishAssetUpdate(t, r, session, started.ID,
@@ -87,13 +90,13 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 
 func TestUpdateHistoryFollowsTheAssetsCurrentAccess(t *testing.T) {
 	t.Parallel()
-	_, r, session, _, pool := newVerifiedTestRoutersWithPool(t, 1<<20, DefaultDeadlines())
-	started := startCharacter(t, r, session)
-	writeCharacterFloor(t, r, session, started)
-	if got := publishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartCharacter(t, r, session)
+	apitest.WriteCharacterFloor(t, r, session, started)
+	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	unlisted := send(t, r, authorizedJSONRequest(t, http.MethodPut,
+	unlisted := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 		"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, session))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist status = %d, want 204: %s", unlisted.Code, unlisted.Body.String())
@@ -130,7 +133,7 @@ func readLatestUpdate(t *testing.T, r http.Handler, assetID string) struct {
 	Summary string `json:"summary"`
 } {
 	t.Helper()
-	response := send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset page = %d: %s", response.Code, response.Body.String())
 	}

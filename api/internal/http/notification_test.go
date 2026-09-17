@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +26,7 @@ func TestWithholdingAnAssetTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
 	}
 	s.fanOut(t, time.Now())
 
-	response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications", nil), s.creator))
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications", nil), s.creator))
 	if response.Code != http.StatusOK {
 		t.Fatalf("inbox status = %d, want 200: %s", response.Code, response.Body.String())
 	}
@@ -130,11 +132,11 @@ func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
 	for _, path := range []string{
 		"/v1/notifications",
 		"/v1/assets/" + assetID,
-		"/v1/assets?creator=" + creatorHandle,
-		"/v1/profiles/" + creatorHandle,
+		"/v1/assets?creator=" + apitest.CreatorHandle,
+		"/v1/profiles/" + apitest.CreatorHandle,
 		"/v1/auth/session",
 	} {
-		response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, path, nil), s.creator))
+		response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, path, nil), s.creator))
 		if response.Code != http.StatusOK {
 			t.Fatalf("GET %s status = %d, want 200: %s", path, response.Code, response.Body.String())
 		}
@@ -143,8 +145,8 @@ func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
 		}
 	}
 
-	record := send(t, s.router, authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/profiles/"+creatorHandle+"/restriction", nil,
+	record := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", nil,
 	), s.staff))
 	if record.Code != http.StatusOK || !strings.Contains(record.Body.String(), `"restrictedBy":"`+staffHandle+`"`) {
 		t.Fatalf("the restriction record staff read = %d %s, want it to keep the actor", record.Code, record.Body.String())
@@ -157,7 +159,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 	assetID := s.upload(t, "Moonlit Archive")
 	s.withhold(t, assetID, "Copyright report under review")
 	s.restore(t, assetID)
-	if got := saveIdentity(t, s.router, s.creator, assetID,
+	if got := apitest.SaveIdentity(t, s.router, s.creator, assetID,
 		`{"name":"Sunlit Archive","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("rename status = %d, want 204: %s", got.Code, got.Body.String())
 	}
@@ -217,7 +219,7 @@ func TestTheInboxPagesNewestFirstByCursor(t *testing.T) {
 	}
 
 	for _, query := range []string{"?limit=0", "?limit=51", "?before=2026-09-14T12:00:00Z"} {
-		response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications"+query, nil), s.creator))
+		response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications"+query, nil), s.creator))
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("GET /v1/notifications%s status = %d, want 400", query, response.Code)
 		}
@@ -256,7 +258,7 @@ func TestOpeningAnEntryOrMarkingAllReadClearsTheUnreadCount(t *testing.T) {
 	if got := s.unread(t, s.creator); got != 2 {
 		t.Fatalf("unread = %d, want 2", got)
 	}
-	everything := send(t, s.router, authorized(httptest.NewRequest(http.MethodPost, "/v1/notifications/read", nil), s.creator))
+	everything := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/notifications/read", nil), s.creator))
 	if everything.Code != http.StatusNoContent {
 		t.Fatalf("mark all read = %d, want 204: %s", everything.Code, everything.Body.String())
 	}
@@ -296,7 +298,7 @@ func TestAnAccountRemovesOneEntryOrClearsItsWholeInbox(t *testing.T) {
 		t.Fatalf("unread after removing an unread entry = %d, want 1", got)
 	}
 
-	cleared := send(t, s.router, authorized(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil), s.creator))
+	cleared := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil), s.creator))
 	if cleared.Code != http.StatusNoContent {
 		t.Fatalf("clear = %d, want 204: %s", cleared.Code, cleared.Body.String())
 	}
@@ -332,31 +334,30 @@ func TestTheInboxNeedsAnAccount(t *testing.T) {
 	for _, request := range []*http.Request{
 		httptest.NewRequest(http.MethodGet, "/v1/notifications", nil),
 		httptest.NewRequest(http.MethodGet, "/v1/notifications/unread", nil),
-		browserMutation(httptest.NewRequest(http.MethodPost, "/v1/notifications/read", nil)),
-		browserMutation(httptest.NewRequest(
+		apitest.BrowserMutation(httptest.NewRequest(http.MethodPost, "/v1/notifications/read", nil)),
+		apitest.BrowserMutation(httptest.NewRequest(
 			http.MethodPost, "/v1/notifications/44444444-4444-4444-8444-444444444444/read", nil,
 		)),
-		browserMutation(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil)),
-		browserMutation(httptest.NewRequest(
+		apitest.BrowserMutation(httptest.NewRequest(http.MethodDelete, "/v1/notifications", nil)),
+		apitest.BrowserMutation(httptest.NewRequest(
 			http.MethodDelete, "/v1/notifications/44444444-4444-4444-8444-444444444444", nil,
 		)),
 	} {
-		if response := send(t, s.router, request); response.Code != http.StatusUnauthorized {
+		if response := apitest.Send(t, s.router, request); response.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s status = %d, want 401", request.Method, request.URL.Path, response.Code)
 		}
 	}
 }
 
 const (
-	creatorHandle = "moon.creator"
-	staffHandle   = "night.staff"
+	staffHandle = "night.staff"
 )
 
 type inboxStack struct {
 	router        *gin.Engine
 	assets        *asset.Service
-	notifications *notification.Service
-	outbox        *verificationOutbox
+	notifications *notify.Service
+	outbox        *apitest.VerificationOutbox
 	creator       *http.Cookie
 	staff         *http.Cookie
 }
@@ -394,24 +395,24 @@ type inboxPage struct {
 
 func newInboxStack(t *testing.T) inboxStack {
 	t.Helper()
-	outbox := &verificationOutbox{}
-	router, pool, handlers := newTestRouterWithSenderPoolAndHandlers(t, 1<<20, DefaultDeadlines(), outbox)
-	creator := verifiedSignUp(t, router, outbox, "creator@example.com", creatorHandle)
-	staff := verifiedSignUp(t, router, outbox, "staff@example.com", staffHandle)
+	outbox := &apitest.VerificationOutbox{}
+	router, pool, handlers := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
+	creator := apitest.VerifiedSignUp(t, router, outbox, "creator@example.com", apitest.CreatorHandle)
+	staff := apitest.VerifiedSignUp(t, router, outbox, "staff@example.com", staffHandle)
 	if _, err := pool.Exec(t.Context(), `update users set role = 'admin' where username = $1`, staffHandle); err != nil {
 		t.Fatalf("make the staff account an admin: %v", err)
 	}
 	return inboxStack{
-		router: router, assets: handlers.assets, notifications: handlers.notifications,
+		router: router, assets: handlers.Assets, notifications: handlers.Notifications,
 		outbox: outbox, creator: creator, staff: staff,
 	}
 }
 
 func (s inboxStack) upload(t *testing.T, name string) string {
 	t.Helper()
-	metadata := exampleMetadata(name)
+	metadata := apitest.ExampleMetadata(name)
 	metadata["filename"] = "archive.lumitheme"
-	return assetIDFromIngest(t, uploadAndFinish(t, s.router, s.creator, s.assets, metadata, []byte(name)))
+	return assetIDFromIngest(t, apitest.UploadAndFinish(t, s.router, s.creator, s.assets, metadata, []byte(name)))
 }
 
 func (s inboxStack) withhold(t *testing.T, assetID, reason string) {
@@ -420,7 +421,7 @@ func (s inboxStack) withhold(t *testing.T, assetID, reason string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := send(t, s.router, authorizedJSONRequest(
+	response := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
 		t, http.MethodPut, "/v1/assets/"+assetID+"/withhold", string(body), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
@@ -430,7 +431,7 @@ func (s inboxStack) withhold(t *testing.T, assetID, reason string) {
 
 func (s inboxStack) restore(t *testing.T, assetID string) {
 	t.Helper()
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+assetID+"/withhold", nil), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
@@ -444,8 +445,8 @@ func (s inboxStack) restrictProfile(t *testing.T, reason string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := send(t, s.router, authorizedJSONRequest(
-		t, http.MethodPut, "/v1/profiles/"+creatorHandle+"/restriction", string(body), s.staff,
+	response := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
+		t, http.MethodPut, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", string(body), s.staff,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("restrict status = %d, want 200: %s", response.Code, response.Body.String())
@@ -454,14 +455,14 @@ func (s inboxStack) restrictProfile(t *testing.T, reason string) {
 
 func (s inboxStack) restoreProfile(t *testing.T) int {
 	t.Helper()
-	return send(t, s.router, authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/profiles/"+creatorHandle+"/restriction", nil), s.staff,
+	return apitest.Send(t, s.router, apitest.Authorized(
+		httptest.NewRequest(http.MethodDelete, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", nil), s.staff,
 	)).Code
 }
 
 func (s inboxStack) unread(t *testing.T, session *http.Cookie) int {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications/unread", nil), session))
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications/unread", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("unread status = %d, want 200: %s", response.Code, response.Body.String())
 	}
@@ -476,22 +477,16 @@ func (s inboxStack) unread(t *testing.T, session *http.Cookie) int {
 
 func (s inboxStack) markRead(t *testing.T, session *http.Cookie, entryID string) int {
 	t.Helper()
-	return send(t, s.router, authorized(
+	return apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodPost, "/v1/notifications/"+entryID+"/read", nil), session,
 	)).Code
 }
 
 func (s inboxStack) remove(t *testing.T, session *http.Cookie, entryID string) int {
 	t.Helper()
-	return send(t, s.router, authorized(
+	return apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/notifications/"+entryID, nil), session,
 	)).Code
-}
-
-func browserMutation(request *http.Request) *http.Request {
-	request.Header.Set("Origin", testBrowserOrigin)
-	request.Header.Set(browserMutationHeader, "1")
-	return request
 }
 
 func (s inboxStack) fanOut(t *testing.T, now time.Time) {
@@ -510,7 +505,7 @@ func (s inboxStack) sweep(t *testing.T, now time.Time) {
 
 func (s inboxStack) inbox(t *testing.T, session *http.Cookie, query string) inboxPage {
 	t.Helper()
-	response := send(t, s.router, authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications"+query, nil), session))
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications"+query, nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("inbox status = %d, want 200: %s", response.Code, response.Body.String())
 	}

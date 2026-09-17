@@ -7,44 +7,17 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-)
 
-func withReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
-	t.Helper()
-	parts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
-	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "assets" || req.Header.Get("X-Working-Copy-Version") != "" {
-		return
-	}
-	switch parts[3] {
-	case "identity", "blocks", "publish", "updates", "preserved", "media", "revisions", "vault":
-	default:
-		return
-	}
-	read := httptest.NewRequest(http.MethodGet, "/v1/assets/"+parts[2]+"?workingCopy=true", nil)
-	read.Header.Set("Cookie", req.Header.Get("Cookie"))
-	response := httptest.NewRecorder()
-	r.ServeHTTP(response, read)
-	var page struct {
-		WorkingCopyVersion int64 `json:"workingCopyVersion"`
-	}
-	if response.Code == http.StatusOK {
-		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if page.WorkingCopyVersion == 0 {
-		page.WorkingCopyVersion = 1
-	}
-	req.Header.Set("X-Working-Copy-Version", strconv.FormatInt(page.WorkingCopyVersion, 10))
-}
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+)
 
 func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 	t.Parallel()
-	r, session := newVerifiedTestRouter(t)
+	r, session := harness.NewVerifiedRouter(t)
 	started := startPreset(t, r, session, "lumiverse")
 	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
 	req.Header.Set("Content-Type", "application/json")
-	req = authorized(req, session)
+	req = apitest.Authorized(req, session)
 	response := httptest.NewRecorder()
 	r.ServeHTTP(response, req)
 	if response.Code != http.StatusBadRequest {
@@ -60,14 +33,14 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			name = "save against publication"
 		}
 		t.Run(name, func(t *testing.T) {
-			r, session := newVerifiedTestRouter(t)
-			started := startCharacter(t, r, session)
-			writeCharacterFloor(t, r, session, started)
-			first := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"First editor","blurb":"First pitch","isNsfw":false}`)), session)
-			withReviewedVersion(t, r, first)
-			second := authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Second editor","blurb":"Second pitch","isNsfw":false}`)), session)
+			r, session := harness.NewVerifiedRouter(t)
+			started := apitest.StartCharacter(t, r, session)
+			apitest.WriteCharacterFloor(t, r, session, started)
+			first := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"First editor","blurb":"First pitch","isNsfw":false}`)), session)
+			apitest.WithReviewedVersion(t, r, first)
+			second := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Second editor","blurb":"Second pitch","isNsfw":false}`)), session)
 			if publish {
-				second = authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/publish", nil), session)
+				second = apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/publish", nil), session)
 			}
 			second.Header.Set("X-Working-Copy-Version", first.Header.Get("X-Working-Copy-Version"))
 			responses := []*httptest.ResponseRecorder{httptest.NewRecorder(), httptest.NewRecorder()}

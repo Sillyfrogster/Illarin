@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 func TestNoRouteForOutsideBlogAccessRemains(t *testing.T) {
@@ -32,7 +34,7 @@ func TestNoRouteForOutsideBlogAccessRemains(t *testing.T) {
 		if route.body != "" {
 			request = jsonRequest(t, route.method, route.path, route.body)
 		}
-		response := send(t, stack.router, authorized(request, stack.authority))
+		response := apitest.Send(t, stack.router, apitest.Authorized(request, stack.authority))
 		if response.Code != http.StatusNotFound {
 			t.Errorf("%s %s = %d, want 404", route.method, route.path, response.Code)
 		}
@@ -45,7 +47,7 @@ func TestABearerValueReachesNoPost(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/v1/publication/posts", nil)
 	request.Header.Set("Authorization", "Bearer ip1.BCDFGHJK.abcdefghijklmnopqrstuvwxyz0123456789")
 
-	response := send(t, stack.router, request)
+	response := apitest.Send(t, stack.router, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("a bearer value answered %d: %s", response.Code, response.Body.String())
 	}

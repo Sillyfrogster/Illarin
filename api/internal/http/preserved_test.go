@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
@@ -46,7 +47,7 @@ func newCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.S
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	return newVerifiedIngestRouter(t, registry)
+	return harness.NewVerifiedIngestRouter(t, registry)
 }
 
 func uploadedCharacterID(
@@ -57,10 +58,10 @@ func uploadedCharacterID(
 	card string,
 ) string {
 	t.Helper()
-	metadata := exampleMetadata("Ana")
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	metadata["_keepDraft"] = true
-	return assetIDFromIngest(t, uploadAndFinish(t, r, session, assets, metadata, []byte(card)))
+	return assetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(card)))
 }
 
 func preservedNamespaces(
@@ -73,7 +74,7 @@ func preservedNamespaces(
 	Bytes int    `json:"bytes"`
 } {
 	t.Helper()
-	response := send(t, r, authorized(httptest.NewRequest(
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"/preserved", nil,
 	), session))
 	if response.Code != http.StatusOK {
@@ -123,7 +124,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
-	response := send(t, r, authorized(httptest.NewRequest(
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
 	), session))
 	if response.Code != http.StatusNoContent {
@@ -138,7 +139,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 		t.Errorf("deleting chub cost the namespace beside it: %v", names)
 	}
 
-	again := send(t, r, authorized(httptest.NewRequest(
+	again := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
 	), session))
 	if again.Code != http.StatusNotFound {
@@ -151,7 +152,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aCardCarryingThirdPartyNamespaces)
 
-	page := send(t, r, authorized(httptest.NewRequest(
+	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID, nil,
 	), session))
 	body := page.Body.String()
@@ -161,7 +162,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 		}
 	}
 
-	stranger := send(t, r, httptest.NewRequest(
+	stranger := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+assetID+"/preserved", nil,
 	))
 	if stranger.Code != http.StatusUnauthorized {
@@ -176,9 +177,9 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	before := preservedNamespaces(t, r, session, assetID)
 
 	page := fetchStartedAsset(t, r, session, assetID)
-	core := editableBlock(blockNamed(t, page.Blocks, "character_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
-	saved := saveBlock(t, r, session, assetID, blockNamed(t, page.Blocks, "character_core").ID, core)
+	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
 	if saved.Code != http.StatusOK {
 		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
 	}
@@ -202,8 +203,8 @@ func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 
 	before := namespaceBytes(t, r, session, assetID, "character_book")
 	page := fetchStartedAsset(t, r, session, assetID)
-	lorebook := blockNamed(t, page.Blocks, "lorebook")
-	body := editableBlock(lorebook)
+	lorebook := apitest.BlockNamed(t, page.Blocks, "lorebook")
+	body := apitest.EditableBlock(lorebook)
 
 	var book struct {
 		Entries []json.RawMessage `json:"entries"`
@@ -219,7 +220,7 @@ func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 		t.Fatalf("write the shortened book: %v", err)
 	}
 	body.Elements[0].Content = kept
-	if saved := saveBlock(t, r, session, assetID, lorebook.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, assetID, lorebook.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the shortened book: status = %d: %s", saved.Code, saved.Body.String())
 	}
 
@@ -263,7 +264,7 @@ const smallPayloadLimit = 512
 func (smallLimitModule) ID() string { return "small_limit" }
 
 func (smallLimitModule) Declaration() format.Declaration {
-	declaration := testReaderDeclaration("small_limit", "character")
+	declaration := apitest.ReaderDeclaration("small_limit", "character")
 	declaration.Limits.PayloadBytes = smallPayloadLimit
 	declaration.Preservation = format.PreservationDeclaration{
 		Body: "card", Container: []string{"extensions"},
@@ -289,8 +290,8 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 	if err := registry.Register(smallLimitModule{}); err != nil {
 		t.Fatalf("register the small-limit module: %v", err)
 	}
-	r, session, assets := newVerifiedIngestRouter(t, registry)
-	metadata := exampleMetadata("Heavy")
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Heavy")
 	metadata["filename"] = "heavy.json"
 	oversized, err := json.Marshal(map[string]any{
 		"payload": true,
@@ -303,7 +304,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 		t.Fatalf("write the oversized file: %v", err)
 	}
 
-	finished := uploadAndFinish(t, r, session, assets, metadata, oversized)
+	finished := apitest.UploadAndFinish(t, r, session, assets, metadata, oversized)
 	var operation struct {
 		Status  string `json:"status"`
 		Failure *struct {
@@ -328,7 +329,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 		t.Errorf("refusal = %q, want it to name the limit", operation.Failure.Message)
 	}
 
-	listed := send(t, r, authorized(httptest.NewRequest(
+	listed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets?mine=true", nil,
 	), session))
 	if strings.Contains(listed.Body.String(), "Heavy") {
@@ -339,16 +340,16 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
-	metadata := exampleMetadata("Ana")
+	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	assetID := assetIDFromIngest(t, uploadAndFinish(
+	assetID := assetIDFromIngest(t, apitest.UploadAndFinish(
 		t, r, session, assets, metadata, []byte(aCardCarryingThirdPartyNamespaces),
 	))
 
 	page := fetchStartedAsset(t, r, session, assetID)
-	core := editableBlock(blockNamed(t, page.Blocks, "character_core"))
+	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
-	saved := saveBlock(t, r, session, assetID, blockNamed(t, page.Blocks, "character_core").ID, core)
+	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
 	if saved.Code != http.StatusOK {
 		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
 	}

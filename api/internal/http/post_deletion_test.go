@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
 type postDeletion struct {
@@ -24,7 +26,7 @@ func (s publicationStack) remove(
 	version int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/delete",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
@@ -51,7 +53,7 @@ func (s publicationStack) recover(
 	version int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+id+"/recover",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
@@ -77,7 +79,7 @@ func (s publicationStack) listing(t *testing.T, session *http.Cookie, deleted bo
 	if deleted {
 		address += "?deleted=true"
 	}
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, address, nil), session,
 	))
 	if response.Code != http.StatusOK {
@@ -92,7 +94,7 @@ func (s publicationStack) listing(t *testing.T, session *http.Cookie, deleted bo
 
 func (s publicationStack) clearOut(t *testing.T, at time.Time) int {
 	t.Helper()
-	removed, err := s.handlers.publications.RemoveExpiredPosts(t.Context(), at)
+	removed, err := s.handlers.Publications.RemoveExpiredPosts(t.Context(), at)
 	if err != nil {
 		t.Fatalf("run the recovery worker: %v", err)
 	}
@@ -307,7 +309,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A draft nobody came back for")
-	picture := stack.uploaded(t, session, draft.ID, "document", httpTestPNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"document": bodyWithPicture(picture.ID, "The workspace"),
 	}))
@@ -317,7 +319,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if removed := stack.clearOut(t, gone.Deletion.Until.Add(-time.Minute)); removed != 0 {
 		t.Fatalf("the worker removed %d posts before the deadline", removed)
 	}
-	if _, err := stack.handlers.assets.Sweep(t.Context()); err != nil {
+	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {
@@ -333,13 +335,13 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if len(stack.listing(t, session, true)) != 0 {
 		t.Error("a removed post is still in the deleted listing")
 	}
-	response := send(t, stack.router, authorized(httptest.NewRequest(
+	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/posts/"+draft.ID, nil,
 	), session))
 	if response.Code != http.StatusNotFound {
 		t.Errorf("a removed post still reads as %d", response.Code)
 	}
-	if _, err := stack.handlers.assets.Sweep(t.Context()); err != nil {
+	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if !markedBlob(t, stack, bytes) {
@@ -351,7 +353,7 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	same := httpTestPNG(t, 800, 400)
+	same := apitest.PNG(t, 800, 400)
 
 	leaving := stack.illarinDraft(t, session, "The draft that goes")
 	going := stack.uploaded(t, session, leaving.ID, "document", same)
@@ -374,7 +376,7 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 	if stack.clearOut(t, gone.Deletion.Until) != 1 {
 		t.Fatal("the worker left the post behind")
 	}
-	if _, err := stack.handlers.assets.Sweep(t.Context()); err != nil {
+	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {

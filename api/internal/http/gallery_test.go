@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 )
 
@@ -24,7 +25,7 @@ func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	first, second := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
+	first, second := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	giveGallery(t, r, session, assetID, map[string][]byte{
 		"At the door": first, "On the stair": second,
 	})
@@ -77,9 +78,9 @@ func giveGallery(
 			uploadedImageID(t, r, session, assetID, "gallery", file)+`","name":"`+name+`"}`)
 	}
 	block := addedBlock(t, addBlock(t, r, session, assetID, "gallery", "image_set"))
-	body := editableBlock(block)
+	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(`{"images":[` + strings.Join(items, ",") + `]}`)
-	if saved := saveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the gallery: %d %s", saved.Code, saved.Body.String())
 	}
 }
@@ -92,7 +93,7 @@ func uploadedImageID(
 	file []byte,
 ) string {
 	t.Helper()
-	added := send(t, r, authorized(mediaUploadRequest(t, assetID, role, file), session))
+	added := apitest.Send(t, r, apitest.Authorized(mediaUploadRequest(t, assetID, role, file), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add a %s image: %d %s", role, added.Code, added.Body.String())
 	}
@@ -121,7 +122,7 @@ func imagesInChosenDownload(
 	if images != nil {
 		address += "?images=" + *images
 	}
-	download := send(t, r, httptest.NewRequest(http.MethodGet, address, nil))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, address, nil))
 	if download.Code != http.StatusOK {
 		t.Fatalf("download %s: %d %s", target, download.Code, download.Body.String())
 	}
@@ -209,7 +210,7 @@ func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	kept, left := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
+	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
 		{name: "Kept", file: kept},
 		{name: "Left out", file: left, omitted: true},
@@ -232,7 +233,7 @@ func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T)
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	kept, left := httpTestPNG(t, 64, 64), httpTestPNG(t, 48, 48)
+	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
 		{name: "Kept", file: kept},
 		{name: "Left out", file: left, omitted: true},
@@ -266,7 +267,7 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
-		{name: "Kept", file: httpTestPNG(t, 64, 64)},
+		{name: "Kept", file: apitest.PNG(t, 64, 64)},
 	})
 	publishCharacter(t, r, session, assetID)
 
@@ -319,8 +320,8 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 	r, session, assets, pool := newCharacterIngestRouterWithPool(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	gallery := savedGallery(t, r, session, assetID, []galleryItem{
-		{name: "Huge", file: httpTestPNG(t, 64, 64)},
-		{name: "Small", file: httpTestPNG(t, 48, 48)},
+		{name: "Huge", file: apitest.PNG(t, 64, 64)},
+		{name: "Small", file: apitest.PNG(t, 48, 48)},
 	})
 	publishCharacter(t, r, session, assetID)
 	if _, err := pool.Exec(context.Background(), `
@@ -330,7 +331,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 		t.Fatalf("make one image oversized: %v", err)
 	}
 
-	refused := send(t, r, httptest.NewRequest(
+	refused := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet, "/download/"+assetID+"/charx", nil,
 	))
 	if refused.Code != http.StatusRequestEntityTooLarge {
@@ -352,14 +353,14 @@ func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 	t.Parallel()
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
-	mediaID := uploadedImageID(t, r, session, assetID, "expression", httpTestPNG(t, 64, 64))
+	mediaID := uploadedImageID(t, r, session, assetID, "expression", apitest.PNG(t, 64, 64))
 
 	block := addedBlock(t, addBlock(t, r, session, assetID, "expressions", "image_set"))
-	body := editableBlock(block)
+	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
 		`{"images":[{"mediaId":"` + mediaID + `","name":"happy","omitFromDownloads":true}]}`,
 	)
-	saved := saveBlock(t, r, session, assetID, block.ID, body)
+	saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body)
 	if saved.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want the choice refused where it has no meaning: %s",
 			saved.Code, saved.Body.String())
@@ -371,8 +372,8 @@ func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
 	r, session, assets := newCharacterIngestRouter(t)
 	assetID := uploadedCharacterID(t, r, session, assets, aPlainCard)
 	savedGallery(t, r, session, assetID, []galleryItem{
-		{name: "Kept", file: httpTestPNG(t, 64, 64)},
-		{name: "Left out", file: httpTestPNG(t, 48, 48), omitted: true},
+		{name: "Kept", file: apitest.PNG(t, 64, 64)},
+		{name: "Left out", file: apitest.PNG(t, 48, 48), omitted: true},
 	})
 	publishCharacter(t, r, session, assetID)
 
@@ -412,9 +413,9 @@ func savedGallery(
 		items = append(items, `{"mediaId":"`+mediaID+`","name":"`+one.name+`"`+choice+`}`)
 	}
 	block := addedBlock(t, addBlock(t, r, session, assetID, "gallery", "image_set"))
-	body := editableBlock(block)
+	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(`{"images":[` + strings.Join(items, ",") + `]}`)
-	if saved := saveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the gallery: %d %s", saved.Code, saved.Body.String())
 	}
 	return byName
@@ -425,17 +426,17 @@ func fetchAsset(
 	r http.Handler,
 	session *http.Cookie,
 	assetID string,
-) startedAsset {
+) apitest.StartedAsset {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
 	if session != nil {
-		request = authorized(request, session)
+		request = apitest.Authorized(request, session)
 	}
-	response := send(t, r, request)
+	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: %d %s", response.Code, response.Body.String())
 	}
-	var page startedAsset
+	var page apitest.StartedAsset
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}

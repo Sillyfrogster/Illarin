@@ -1,24 +1,39 @@
-package http
+package profile
 
 import (
 	"errors"
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
 const restrictedOwnerMessage = "An admin has restricted your public profile. Contact Illarin to have it reviewed."
 
+func (h *Handlers) GetProfile(c *gin.Context) {
+	handle := c.Param("handle")
+	found, err := h.accounts.PublicProfile(c.Request.Context(), handle)
+	if errors.Is(err, account.ErrProfileNotFound) {
+		api.Refuse(c, http.StatusNotFound, "No such profile.")
+		return
+	}
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the profile.")
+		return
+	}
+	showProfile(c, found)
+}
+
 func (h *Handlers) SavePublicProfile(c *gin.Context) {
-	owner, ok := h.verifiedAccount(c, "editing your public profile")
+	owner, ok := api.Verified(c, "editing your public profile")
 	if !ok {
 		return
 	}
 	var request SaveProfileRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the profile fields as JSON."})
+		api.Refuse(c, http.StatusBadRequest, "Send the profile fields as JSON.")
 		return
 	}
 	links := make([]account.ProfileLink, 0, len(request.Links))
@@ -32,89 +47,83 @@ func (h *Handlers) SavePublicProfile(c *gin.Context) {
 		Links:        links,
 	})
 	if err != nil {
-		h.profileError(c, err)
+		refuseProfile(c, err)
 		return
 	}
-	h.showProfile(c, saved)
+	showProfile(c, saved)
 }
 
 func (h *Handlers) SetProfileAvatar(c *gin.Context) {
-	owner, ok := h.verifiedAccount(c, "changing your avatar")
+	owner, ok := api.Verified(c, "changing your avatar")
 	if !ok {
 		return
 	}
 	parts, err := c.Request.MultipartReader()
 	if err != nil {
-		h.refuseProfile(c, refusal{reason: "send the image as form data", cause: err})
+		refuseImage(c, err)
 		return
 	}
-	file, err := nextPart(parts, filePart)
-	if err != nil {
-		h.refuseProfile(c, err)
+	file, err := parts.NextPart()
+	if err != nil || file.FormName() != "file" {
+		refuseImage(c, err)
 		return
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 	saved, err := h.accounts.SetAvatar(c.Request.Context(), owner, limitedFile)
 	if errors.Is(err, account.ErrProfileRestricted) {
-		h.profileError(c, err)
+		refuseProfile(c, err)
 		return
 	}
 	if err != nil {
-		h.refuseProfile(c, err)
+		refuseImage(c, err)
 		return
 	}
-	h.showProfile(c, saved)
+	showProfile(c, saved)
 }
 
 func (h *Handlers) RemoveProfileAvatar(c *gin.Context) {
-	owner, ok := h.verifiedAccount(c, "changing your avatar")
+	owner, ok := api.Verified(c, "changing your avatar")
 	if !ok {
 		return
 	}
 	saved, err := h.accounts.RemoveAvatar(c.Request.Context(), owner)
 	if errors.Is(err, account.ErrAvatarMissing) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "There is no avatar to remove."})
+		api.Refuse(c, http.StatusNotFound, "There is no avatar to remove.")
 		return
 	}
 	if err != nil {
-		h.profileError(c, err)
+		refuseProfile(c, err)
 		return
 	}
-	h.showProfile(c, saved)
+	showProfile(c, saved)
 }
 
-func (h *Handlers) profileError(c *gin.Context, err error) {
+func refuseProfile(c *gin.Context, err error) {
 	var field account.FieldError
 	switch {
 	case errors.As(err, &field):
-		c.JSON(http.StatusBadRequest, gin.H{"error": field.Message, "field": field.Field})
+		api.RefuseField(c, http.StatusBadRequest, field.Field, field.Message)
 	case errors.Is(err, account.ErrProfileRestricted):
-		c.JSON(http.StatusForbidden, gin.H{"error": restrictedOwnerMessage})
+		api.Refuse(c, http.StatusForbidden, restrictedOwnerMessage)
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save the profile."})
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the profile.")
 	}
 }
 
-func (h *Handlers) refuseProfile(c *gin.Context, err error) {
+func refuseImage(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
 	case errors.As(err, &tooLarge):
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "That image is larger than the upload limit.",
-		})
+		api.Refuse(c, http.StatusRequestEntityTooLarge, "That image is larger than the upload limit.")
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Uploads are temporarily unavailable because storage is low.",
-		})
+		api.Refuse(c, http.StatusServiceUnavailable, "Uploads are temporarily unavailable because storage is low.")
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "That image could not be read. Use a PNG, JPEG, WebP or GIF.",
-		})
+		api.Refuse(c, http.StatusBadRequest, "That image could not be read. Use a PNG, JPEG, WebP or GIF.")
 	}
 }
 
-func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
+func showProfile(c *gin.Context, found account.PublicProfile) {
 	c.JSON(http.StatusOK, toAPIProfile(found))
 }
 
@@ -123,7 +132,7 @@ func toAPIProfile(found account.PublicProfile) Profile {
 	for _, link := range found.Links {
 		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
 	}
-	profile := Profile{
+	shown := Profile{
 		Id:           found.ID,
 		Handle:       found.Handle,
 		DisplayName:  found.DisplayName,
@@ -133,11 +142,11 @@ func toAPIProfile(found account.PublicProfile) Profile {
 		Restricted:   found.Restricted,
 	}
 	if found.Avatar != nil {
-		profile.Avatar = &ProfileAvatar{
+		shown.Avatar = &ProfileAvatar{
 			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.DerivativeVersion),
 			Width:  found.Avatar.Width,
 			Height: found.Avatar.Height,
 		}
 	}
-	return profile
+	return shown
 }

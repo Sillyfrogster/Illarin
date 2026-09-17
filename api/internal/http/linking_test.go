@@ -13,71 +13,20 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const testBrowserOrigin = "http://localhost:3000"
-
 var testLinkHMACKey = []byte("01234567890123456789012345678901")
-
-type startedLink struct {
-	DeviceCode      string    `json:"deviceCode"`
-	UserCode        string    `json:"userCode"`
-	VerificationURL string    `json:"verificationUrl"`
-	ExpiresAt       time.Time `json:"expiresAt"`
-	Interval        int       `json:"interval"`
-}
-
-type linkedInstance struct {
-	ID                 string     `json:"id"`
-	ApplicationName    string     `json:"applicationName"`
-	InstanceName       string     `json:"instanceName"`
-	ApplicationVersion *string    `json:"applicationVersion"`
-	ProtocolVersion    *int       `json:"protocolVersion"`
-	Capabilities       []string   `json:"capabilities"`
-	AcceptedTargets    []string   `json:"acceptedTargets"`
-	Prefix             string     `json:"prefix"`
-	Scopes             []string   `json:"scopes"`
-	LinkedAt           time.Time  `json:"linkedAt"`
-	LastSeenAt         *time.Time `json:"lastSeenAt"`
-	RevokedAt          *time.Time `json:"revokedAt"`
-}
-
-type tokenGrant struct {
-	AccessToken          string         `json:"accessToken"`
-	AccessTokenExpiresAt time.Time      `json:"accessTokenExpiresAt"`
-	RefreshToken         string         `json:"refreshToken"`
-	Instance             linkedInstance `json:"instance"`
-}
-
-type polledLink struct {
-	Status               string          `json:"status"`
-	AccessToken          *string         `json:"accessToken"`
-	AccessTokenExpiresAt *time.Time      `json:"accessTokenExpiresAt"`
-	RefreshToken         *string         `json:"refreshToken"`
-	Instance             *linkedInstance `json:"instance"`
-}
-
-type pendingDeviceLink struct {
-	ApplicationName    string    `json:"applicationName"`
-	InstanceName       string    `json:"instanceName"`
-	ApplicationVersion *string   `json:"applicationVersion"`
-	ProtocolVersion    int       `json:"protocolVersion"`
-	Capabilities       []string  `json:"capabilities"`
-	AcceptedTargets    []string  `json:"acceptedTargets"`
-	Scopes             []string  `json:"scopes"`
-	ExpiresAt          time.Time `json:"expiresAt"`
-	ApprovalToken      string    `json:"approvalToken"`
-}
 
 func newLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
-	return newLinkingRouterWith(t, testDeliverySettings())
+	return newLinkingRouterWith(t, apitest.DeliverySettings())
 }
 
 func newLinkingRouterWith(
@@ -86,87 +35,23 @@ func newLinkingRouterWith(
 ) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
 	pool := testdb.Connect(t)
-	outbox := &verificationOutbox{}
-	handlers := newTestHandlersWithDelivery(
+	outbox := &apitest.VerificationOutbox{}
+	handlers := apitest.NewServicesWithDelivery(
 		t, pool, 1<<20, outbox, settings, nil,
 	)
-	router := registerTestRouter(t, handlers, DefaultDeadlines())
+	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
-	session := signUp(t, router, "creator@example.com", "linking.creator")
-	link, err := url.Parse(outbox.messages[0].link)
+	session := apitest.SignUp(t, router, "creator@example.com", "linking.creator")
+	link, err := url.Parse(outbox.Messages[0].Link)
 	if err != nil {
 		t.Fatalf("parse verification link: %v", err)
 	}
-	rec := sendJSON(t, router, http.MethodPost, "/v1/auth/verify-email",
+	rec := apitest.SendJSON(t, router, http.MethodPost, "/v1/auth/verify-email",
 		`{"token":"`+link.Query().Get("token")+`"}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("verify creator: %d %s", rec.Code, rec.Body.String())
 	}
 	return router, session, pool
-}
-
-func linkStartBody(application, instance string, scopes []string) map[string]any {
-	return map[string]any{
-		"applicationName":    application,
-		"instanceName":       instance,
-		"applicationVersion": "1.0.0",
-		"protocolVersion":    1,
-		"capabilities":       []string{"example.client:asset-install"},
-		"acceptedTargets":    []string{"portable-card-v1"},
-		"scopes":             scopes,
-	}
-}
-
-func jsonText(t *testing.T, value any) string {
-	t.Helper()
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("encode JSON: %v", err)
-	}
-	return string(encoded)
-}
-
-func decodeResponse[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
-	t.Helper()
-	var value T
-	if err := json.Unmarshal(rec.Body.Bytes(), &value); err != nil {
-		t.Fatalf("decode response: %v. body: %s", err, rec.Body.String())
-	}
-	return value
-}
-
-func assertNoStore(t *testing.T, rec *httptest.ResponseRecorder) {
-	t.Helper()
-	if cache := rec.Header().Get("Cache-Control"); !strings.Contains(cache, "no-store") {
-		t.Errorf("Cache-Control = %q, want no-store", cache)
-	}
-}
-
-func startLink(t *testing.T, r *gin.Engine, body map[string]any) (startedLink, map[string]json.RawMessage) {
-	t.Helper()
-	rec := sendJSON(t, r, http.MethodPost, "/v1/link/requests", jsonText(t, body))
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("start link status = %d, want 201. body: %s", rec.Code, rec.Body.String())
-	}
-	assertNoStore(t, rec)
-	started := decodeResponse[startedLink](t, rec)
-	return started, decodeResponse[map[string]json.RawMessage](t, rec)
-}
-
-func reviewDeviceLink(
-	t *testing.T,
-	r *gin.Engine,
-	session *http.Cookie,
-	userCode string,
-) (*httptest.ResponseRecorder, pendingDeviceLink) {
-	t.Helper()
-	req := httptest.NewRequest(http.MethodGet, "/v1/link/requests/"+userCode, nil)
-	rec := send(t, r, authorized(req, session))
-	assertNoStore(t, rec)
-	if rec.Code != http.StatusOK {
-		return rec, pendingDeviceLink{}
-	}
-	return rec, decodeResponse[pendingDeviceLink](t, rec)
 }
 
 func addVerifiedLinkingUser(
@@ -177,7 +62,7 @@ func addVerifiedLinkingUser(
 	handle string,
 ) *http.Cookie {
 	t.Helper()
-	session := signUp(t, r, email, handle)
+	session := apitest.SignUp(t, r, email, handle)
 	if _, err := pool.Exec(
 		context.Background(),
 		`update users set email_verified_at = now() where email = $1`,
@@ -188,98 +73,16 @@ func addVerifiedLinkingUser(
 	return session
 }
 
-func browserRequest(
-	t *testing.T,
-	method string,
-	target string,
-	body any,
-	session *http.Cookie,
-) *http.Request {
-	t.Helper()
-	var req *http.Request
-	if body == nil {
-		req = httptest.NewRequest(method, target, nil)
-	} else {
-		req = httptest.NewRequest(method, target, strings.NewReader(jsonText(t, body)))
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Origin", testBrowserOrigin)
-	req.Header.Set(browserMutationHeader, "1")
-	return authorized(req, session)
-}
-
-func poll(t *testing.T, r *gin.Engine, deviceCode string) *httptest.ResponseRecorder {
-	t.Helper()
-	rec := sendJSON(t, r, http.MethodPost, "/v1/link/poll",
-		jsonText(t, map[string]string{"deviceCode": deviceCode}))
-	assertNoStore(t, rec)
-	return rec
-}
-
-func linkDeviceInstance(
-	t *testing.T,
-	r *gin.Engine,
-	session *http.Cookie,
-	application string,
-	instance string,
-	scopes []string,
-) tokenGrant {
-	t.Helper()
-	started, _ := startLink(t, r, linkStartBody(application, instance, scopes))
-	review, pending := reviewDeviceLink(t, r, session, started.UserCode)
-	if review.Code != http.StatusOK || pending.ApprovalToken == "" {
-		t.Fatalf("review status = %d, approval token = %q", review.Code, pending.ApprovalToken)
-	}
-	approve := send(t, r, browserRequest(
-		t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
-		map[string]string{"approvalToken": pending.ApprovalToken}, session,
-	))
-	assertNoStore(t, approve)
-	if approve.Code != http.StatusOK {
-		t.Fatalf("approve status = %d, want 200. body: %s", approve.Code, approve.Body.String())
-	}
-	rec := poll(t, r, started.DeviceCode)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("poll status = %d, want 200. body: %s", rec.Code, rec.Body.String())
-	}
-	result := decodeResponse[polledLink](t, rec)
-	if result.Status != "linked" || result.AccessToken == nil || result.RefreshToken == nil || result.Instance == nil {
-		t.Fatalf("linked poll = %+v, want an instance and a token pair", result)
-	}
-	if result.AccessTokenExpiresAt == nil {
-		t.Fatal("linked poll has no access-token expiry")
-	}
-	return tokenGrant{
-		AccessToken:          *result.AccessToken,
-		AccessTokenExpiresAt: *result.AccessTokenExpiresAt,
-		RefreshToken:         *result.RefreshToken,
-		Instance:             *result.Instance,
-	}
-}
-
-func asInstance(t *testing.T, method, target, token string, body any) *http.Request {
-	t.Helper()
-	var req *http.Request
-	if body == nil {
-		req = httptest.NewRequest(method, target, nil)
-	} else {
-		req = httptest.NewRequest(method, target, strings.NewReader(jsonText(t, body)))
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	return req
-}
-
-func listInstances(t *testing.T, r *gin.Engine, session *http.Cookie) []linkedInstance {
+func listInstances(t *testing.T, r *gin.Engine, session *http.Cookie) []apitest.LinkedInstance {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/instances", nil)
-	rec := send(t, r, authorized(req, session))
-	assertNoStore(t, rec)
+	rec := apitest.Send(t, r, apitest.Authorized(req, session))
+	apitest.AssertNoStore(t, rec)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("list instances status = %d, want 200. body: %s", rec.Code, rec.Body.String())
 	}
 	var list struct {
-		Items []linkedInstance `json:"items"`
+		Items []apitest.LinkedInstance `json:"items"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil {
 		t.Fatalf("decode instances: %v", err)
@@ -287,7 +90,7 @@ func listInstances(t *testing.T, r *gin.Engine, session *http.Cookie) []linkedIn
 	return list.Items
 }
 
-func instanceByID(t *testing.T, instances []linkedInstance, id string) linkedInstance {
+func instanceByID(t *testing.T, instances []apitest.LinkedInstance, id string) apitest.LinkedInstance {
 	t.Helper()
 	for _, instance := range instances {
 		if instance.ID == id {
@@ -295,19 +98,19 @@ func instanceByID(t *testing.T, instances []linkedInstance, id string) linkedIns
 		}
 	}
 	t.Fatalf("instance %s is absent from %+v", id, instances)
-	return linkedInstance{}
+	return apitest.LinkedInstance{}
 }
 
 func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
-	started, raw := startLink(t, r,
-		linkStartBody("Example client", "studio workstation", []string{"asset:receive"}))
+	started, raw := apitest.StartLink(t, r,
+		apitest.LinkStartBody("Example client", "studio workstation", []string{"asset:receive"}))
 
 	if _, present := raw["verificationUrlComplete"]; present {
 		t.Error("device response includes verificationUrlComplete; the human code must be entered manually")
 	}
-	if started.VerificationURL != testBrowserOrigin+"/link" {
+	if started.VerificationURL != apitest.BrowserOrigin+"/link" {
 		t.Errorf("verification URL = %q", started.VerificationURL)
 	}
 	if len(started.UserCode) != 9 || started.UserCode[4] != '-' {
@@ -317,7 +120,7 @@ func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 		t.Errorf("private device code = %q, human code = %q", started.DeviceCode, started.UserCode)
 	}
 
-	review, pending := reviewDeviceLink(t, r, session, started.UserCode)
+	review, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
 	if review.Code != http.StatusOK {
 		t.Fatalf("review status = %d, want 200. body: %s", review.Code, review.Body.String())
 	}
@@ -333,30 +136,30 @@ func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 
 	withoutCSRF := httptest.NewRequest(
 		http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
-		strings.NewReader(jsonText(t, map[string]string{"approvalToken": pending.ApprovalToken})),
+		strings.NewReader(apitest.JSONText(t, map[string]string{"approvalToken": pending.ApprovalToken})),
 	)
 	withoutCSRF.Header.Set("Content-Type", "application/json")
 	withoutCSRF.AddCookie(session)
-	rejected := send(t, r, withoutCSRF)
-	assertNoStore(t, rejected)
+	rejected := apitest.Send(t, r, withoutCSRF)
+	apitest.AssertNoStore(t, rejected)
 	if rejected.Code != http.StatusForbidden {
 		t.Fatalf("approval without browser proof = %d, want 403", rejected.Code)
 	}
 
-	approved := send(t, r, browserRequest(
+	approved := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
 		map[string]string{"approvalToken": pending.ApprovalToken}, session,
 	))
-	assertNoStore(t, approved)
+	apitest.AssertNoStore(t, approved)
 	if approved.Code != http.StatusOK {
 		t.Fatalf("approval status = %d, want 200. body: %s", approved.Code, approved.Body.String())
 	}
 
-	linked := poll(t, r, started.DeviceCode)
+	linked := apitest.Poll(t, r, started.DeviceCode)
 	if linked.Code != http.StatusOK {
 		t.Fatalf("poll status = %d, want 200. body: %s", linked.Code, linked.Body.String())
 	}
-	grant := decodeResponse[polledLink](t, linked)
+	grant := apitest.DecodeResponse[apitest.PolledLink](t, linked)
 	if grant.Status != "linked" || grant.AccessToken == nil || grant.RefreshToken == nil || grant.Instance == nil {
 		t.Fatalf("poll after approval = %+v, want a token pair", grant)
 	}
@@ -374,11 +177,11 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 	secondSession := addVerifiedLinkingUser(
 		t, r, pool, "second.creator@example.com", "second.creator",
 	)
-	started, _ := startLink(t, r,
-		linkStartBody("Example client", "review test", []string{"asset:receive"}))
+	started, _ := apitest.StartLink(t, r,
+		apitest.LinkStartBody("Example client", "review test", []string{"asset:receive"}))
 
-	firstReview, first := reviewDeviceLink(t, r, firstSession, started.UserCode)
-	reloadedReview, reloaded := reviewDeviceLink(t, r, firstSession, started.UserCode)
+	firstReview, first := apitest.ReviewDeviceLink(t, r, firstSession, started.UserCode)
+	reloadedReview, reloaded := apitest.ReviewDeviceLink(t, r, firstSession, started.UserCode)
 	if firstReview.Code != http.StatusOK || reloadedReview.Code != http.StatusOK {
 		t.Fatalf("repeated review statuses = %d and %d, want 200", firstReview.Code, reloadedReview.Code)
 	}
@@ -386,7 +189,7 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 		t.Fatalf("approval proof changed across tabs: %q then %q", first.ApprovalToken, reloaded.ApprovalToken)
 	}
 
-	otherReview, other := reviewDeviceLink(t, r, secondSession, started.UserCode)
+	otherReview, other := apitest.ReviewDeviceLink(t, r, secondSession, started.UserCode)
 	if otherReview.Code != http.StatusOK {
 		t.Fatalf("second user review status = %d, want 200. body: %s", otherReview.Code, otherReview.Body.String())
 	}
@@ -406,7 +209,7 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 		t.Fatal("review GET claimed the device request or stored an approval proof")
 	}
 
-	crossUser := send(t, r, browserRequest(
+	crossUser := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
 		map[string]string{"approvalToken": first.ApprovalToken}, secondSession,
 	))
@@ -414,7 +217,7 @@ func TestDeviceReviewsAreReadOnlyAndApprovalProofsStayWithTheirUser(t *testing.T
 		t.Fatalf("cross-user approval status = %d, want 404. body: %s", crossUser.Code, crossUser.Body.String())
 	}
 
-	approved := send(t, r, browserRequest(
+	approved := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
 		map[string]string{"approvalToken": first.ApprovalToken}, firstSession,
 	))
@@ -427,20 +230,20 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 	t.Parallel()
 	t.Run("denial", func(t *testing.T) {
 		r, session, _ := newLinkingRouter(t)
-		started, _ := startLink(t, r,
-			linkStartBody("Example client", "remote host", []string{"asset:receive"}))
-		_, pending := reviewDeviceLink(t, r, session, started.UserCode)
+		started, _ := apitest.StartLink(t, r,
+			apitest.LinkStartBody("Example client", "remote host", []string{"asset:receive"}))
+		_, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
 
-		denied := send(t, r, browserRequest(
+		denied := apitest.Send(t, r, apitest.BrowserRequest(
 			t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/deny",
 			map[string]string{"approvalToken": pending.ApprovalToken}, session,
 		))
-		assertNoStore(t, denied)
+		apitest.AssertNoStore(t, denied)
 		if denied.Code != http.StatusNoContent {
 			t.Fatalf("deny status = %d, want 204. body: %s", denied.Code, denied.Body.String())
 		}
 
-		result := poll(t, r, started.DeviceCode)
+		result := apitest.Poll(t, r, started.DeviceCode)
 		if result.Code != http.StatusBadRequest || !strings.Contains(result.Body.String(), `"access_denied"`) {
 			t.Fatalf("poll after denial = %d %s, want access_denied", result.Code, result.Body.String())
 		}
@@ -448,14 +251,14 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 
 	t.Run("slow down", func(t *testing.T) {
 		r, _, _ := newLinkingRouter(t)
-		started, _ := startLink(t, r,
-			linkStartBody("Example client", "remote host", []string{"asset:receive"}))
+		started, _ := apitest.StartLink(t, r,
+			apitest.LinkStartBody("Example client", "remote host", []string{"asset:receive"}))
 
-		waiting := poll(t, r, started.DeviceCode)
-		if waiting.Code != http.StatusOK || decodeResponse[polledLink](t, waiting).Status != "pending" {
+		waiting := apitest.Poll(t, r, started.DeviceCode)
+		if waiting.Code != http.StatusOK || apitest.DecodeResponse[apitest.PolledLink](t, waiting).Status != "pending" {
 			t.Fatalf("first poll = %d %s, want pending", waiting.Code, waiting.Body.String())
 		}
-		tooFast := poll(t, r, started.DeviceCode)
+		tooFast := apitest.Poll(t, r, started.DeviceCode)
 		if tooFast.Code != http.StatusTooManyRequests || !strings.Contains(tooFast.Body.String(), `"slow_down"`) {
 			t.Fatalf("fast poll = %d %s, want slow_down", tooFast.Code, tooFast.Body.String())
 		}
@@ -469,32 +272,32 @@ func TestDeviceDenialAndFastPollingReturnProtocolErrors(t *testing.T) {
 func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
 	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
-	initial := linkDeviceInstance(
+	initial := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "refresh test", []string{"asset:receive"},
 	)
 
-	rotatedRec := sendJSON(t, r, http.MethodPost, "/v1/link/refresh",
-		jsonText(t, map[string]string{"refreshToken": initial.RefreshToken}))
-	assertNoStore(t, rotatedRec)
+	rotatedRec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/refresh",
+		apitest.JSONText(t, map[string]string{"refreshToken": initial.RefreshToken}))
+	apitest.AssertNoStore(t, rotatedRec)
 	if rotatedRec.Code != http.StatusOK {
 		t.Fatalf("refresh status = %d, want 200. body: %s", rotatedRec.Code, rotatedRec.Body.String())
 	}
-	rotated := decodeResponse[tokenGrant](t, rotatedRec)
+	rotated := apitest.DecodeResponse[apitest.TokenGrant](t, rotatedRec)
 	if rotated.RefreshToken == initial.RefreshToken || rotated.AccessToken == initial.AccessToken {
 		t.Error("refresh returned one of the old tokens")
 	}
-	if rec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", rotated.AccessToken, nil)); rec.Code != http.StatusOK {
+	if rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", rotated.AccessToken, nil)); rec.Code != http.StatusOK {
 		t.Fatalf("rotated access token status = %d, want 200. body: %s", rec.Code, rec.Body.String())
 	}
 
-	reused := sendJSON(t, r, http.MethodPost, "/v1/link/refresh",
-		jsonText(t, map[string]string{"refreshToken": initial.RefreshToken}))
-	assertNoStore(t, reused)
+	reused := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/refresh",
+		apitest.JSONText(t, map[string]string{"refreshToken": initial.RefreshToken}))
+	apitest.AssertNoStore(t, reused)
 	if reused.Code != http.StatusUnauthorized {
 		t.Fatalf("reused refresh token status = %d, want 401. body: %s", reused.Code, reused.Body.String())
 	}
 	for _, access := range []string{initial.AccessToken, rotated.AccessToken} {
-		rec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", access, nil))
+		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", access, nil))
 		if rec.Code != http.StatusUnauthorized {
 			t.Errorf("access token still works after refresh reuse: status %d", rec.Code)
 		}
@@ -508,7 +311,7 @@ func TestRefreshingRotatesTokensAndReuseRevokesTheInstance(t *testing.T) {
 func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 	t.Parallel()
 	r, session, pool := newLinkingRouter(t)
-	grant := linkDeviceInstance(
+	grant := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "idle refresh test", []string{"asset:receive"},
 	)
 	if _, err := pool.Exec(context.Background(),
@@ -518,13 +321,13 @@ func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 		t.Fatalf("age linked instance: %v", err)
 	}
 
-	refresh := sendJSON(t, r, http.MethodPost, "/v1/link/refresh",
-		jsonText(t, map[string]string{"refreshToken": grant.RefreshToken}))
-	assertNoStore(t, refresh)
+	refresh := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/refresh",
+		apitest.JSONText(t, map[string]string{"refreshToken": grant.RefreshToken}))
+	apitest.AssertNoStore(t, refresh)
 	if refresh.Code != http.StatusUnauthorized {
 		t.Fatalf("idle refresh status = %d, want 401. body: %s", refresh.Code, refresh.Body.String())
 	}
-	if rec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", grant.AccessToken, nil)); rec.Code != http.StatusUnauthorized {
+	if rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", grant.AccessToken, nil)); rec.Code != http.StatusUnauthorized {
 		t.Errorf("access token survived idle-family revocation: status %d", rec.Code)
 	}
 	if revoked := instanceByID(t, listInstances(t, r, session), grant.Instance.ID); revoked.RevokedAt == nil {
@@ -535,10 +338,10 @@ func TestAnIdleRefreshFamilyExpiresAndRevokesItsInstance(t *testing.T) {
 func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *testing.T) {
 	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
-	first := linkDeviceInstance(
+	first := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "studio workstation", []string{"asset:receive"},
 	)
-	second := linkDeviceInstance(
+	second := apitest.LinkDeviceInstance(
 		t, r, session, "Example client", "remote host", []string{"asset:receive", "library:sync"},
 	)
 	if first.Instance.ID == second.Instance.ID || first.RefreshToken == second.RefreshToken {
@@ -550,17 +353,17 @@ func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *te
 		"example.client:asset-install",
 	}
 	updatedTargets := []string{"portable-lore-v1", "portable-card-v1"}
-	update := send(t, r, asInstance(t, http.MethodPut, "/v1/instances/me", first.AccessToken, map[string]any{
+	update := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPut, "/v1/instances/me", first.AccessToken, map[string]any{
 		"applicationVersion": "1.1.0",
 		"protocolVersion":    1,
 		"capabilities":       updatedCapabilities,
 		"acceptedTargets":    updatedTargets,
 	}))
-	assertNoStore(t, update)
+	apitest.AssertNoStore(t, update)
 	if update.Code != http.StatusOK {
 		t.Fatalf("update declaration status = %d, want 200. body: %s", update.Code, update.Body.String())
 	}
-	updated := decodeResponse[linkedInstance](t, update)
+	updated := apitest.DecodeResponse[apitest.LinkedInstance](t, update)
 	if !slices.Equal(updated.Capabilities, updatedCapabilities) || !slices.Equal(updated.AcceptedTargets, updatedTargets) {
 		t.Errorf("updated declaration lost order: capabilities %v, targets %v", updated.Capabilities, updated.AcceptedTargets)
 	}
@@ -568,29 +371,29 @@ func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *te
 		t.Errorf("declaration update changed granted scopes to %v", updated.Scopes)
 	}
 
-	otherRec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", second.AccessToken, nil))
-	assertNoStore(t, otherRec)
+	otherRec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", second.AccessToken, nil))
+	apitest.AssertNoStore(t, otherRec)
 	if otherRec.Code != http.StatusOK {
 		t.Fatalf("second instance status = %d, want 200. body: %s", otherRec.Code, otherRec.Body.String())
 	}
-	other := decodeResponse[linkedInstance](t, otherRec)
+	other := apitest.DecodeResponse[apitest.LinkedInstance](t, otherRec)
 	if !slices.Equal(other.Capabilities, []string{"example.client:asset-install"}) ||
 		!slices.Equal(other.AcceptedTargets, []string{"portable-card-v1"}) ||
 		!slices.Equal(other.Scopes, []string{"asset:receive", "library:sync"}) {
 		t.Errorf("first instance update changed the second: %+v", other)
 	}
 
-	revoke := send(t, r, browserRequest(
+	revoke := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodDelete, "/v1/instances/"+first.Instance.ID, nil, session,
 	))
-	assertNoStore(t, revoke)
+	apitest.AssertNoStore(t, revoke)
 	if revoke.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d, want 204. body: %s", revoke.Code, revoke.Body.String())
 	}
-	if rec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", first.AccessToken, nil)); rec.Code != http.StatusUnauthorized {
+	if rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", first.AccessToken, nil)); rec.Code != http.StatusUnauthorized {
 		t.Errorf("revoked first instance status = %d, want 401", rec.Code)
 	}
-	if rec := send(t, r, asInstance(t, http.MethodGet, "/v1/instances/me", second.AccessToken, nil)); rec.Code != http.StatusOK {
+	if rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodGet, "/v1/instances/me", second.AccessToken, nil)); rec.Code != http.StatusOK {
 		t.Errorf("second instance was affected by first revocation: status %d", rec.Code)
 	}
 
@@ -611,18 +414,18 @@ func TestSameApplicationInstancesStayIndependentThroughUpdateAndRevocation(t *te
 func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
 	t.Parallel()
 	r, session, pool := newLinkingRouter(t)
-	started, _ := startLink(t, r,
-		linkStartBody("Example client", "storage test", []string{"asset:receive"}))
-	_, pending := reviewDeviceLink(t, r, session, started.UserCode)
-	approved := send(t, r, browserRequest(
+	started, _ := apitest.StartLink(t, r,
+		apitest.LinkStartBody("Example client", "storage test", []string{"asset:receive"}))
+	_, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
+	approved := apitest.Send(t, r, apitest.BrowserRequest(
 		t, http.MethodPost, "/v1/link/requests/"+started.UserCode+"/approve",
 		map[string]string{"approvalToken": pending.ApprovalToken}, session,
 	))
 	if approved.Code != http.StatusOK {
 		t.Fatalf("approve status = %d, want 200. body: %s", approved.Code, approved.Body.String())
 	}
-	polled := poll(t, r, started.DeviceCode)
-	result := decodeResponse[polledLink](t, polled)
+	polled := apitest.Poll(t, r, started.DeviceCode)
+	result := apitest.DecodeResponse[apitest.PolledLink](t, polled)
 	if result.AccessToken == nil || result.RefreshToken == nil || result.Instance == nil {
 		t.Fatalf("poll did not return a token pair: %+v", result)
 	}
@@ -671,14 +474,14 @@ func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 	t.Parallel()
 	r, _, _ := newLinkingRouter(t)
 	body := `{"applicationName":"` + strings.Repeat("x", maxLinkBodyBytes) + `"}`
-	rec := sendJSON(t, r, http.MethodPost, "/v1/link/requests", body)
-	assertNoStore(t, rec)
+	rec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/requests", body)
+	apitest.AssertNoStore(t, rec)
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized link body status = %d, want 413. body: %s", rec.Code, rec.Body.String())
 	}
 
-	invalid := sendJSON(t, r, http.MethodPost, "/v1/link/token", `{}`)
-	assertNoStore(t, invalid)
+	invalid := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/token", `{}`)
+	apitest.AssertNoStore(t, invalid)
 	if invalid.Code != http.StatusBadRequest {
 		t.Errorf("invalid exchange status = %d, want 400", invalid.Code)
 	}
@@ -687,26 +490,26 @@ func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 func TestFiveCodeReviewsCannotBeResetByAValidCode(t *testing.T) {
 	t.Parallel()
 	r, session, _ := newLinkingRouter(t)
-	started, _ := startLink(t, r,
-		linkStartBody("Example client", "attempt test", []string{"asset:receive"}))
+	started, _ := apitest.StartLink(t, r,
+		apitest.LinkStartBody("Example client", "attempt test", []string{"asset:receive"}))
 
 	for attempt := 1; attempt <= 4; attempt++ {
 		req := httptest.NewRequest(http.MethodGet, "/v1/link/requests/BBBB-CCCC", nil)
-		rec := send(t, r, authorized(req, session))
-		assertNoStore(t, rec)
+		rec := apitest.Send(t, r, apitest.Authorized(req, session))
+		apitest.AssertNoStore(t, rec)
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("wrong-code review %d status = %d, want 404", attempt, rec.Code)
 		}
 	}
-	valid, pending := reviewDeviceLink(t, r, session, started.UserCode)
+	valid, pending := apitest.ReviewDeviceLink(t, r, session, started.UserCode)
 	if valid.Code != http.StatusOK || pending.ApprovalToken == "" {
 		t.Fatalf("fifth, valid review = %d, approval token %q", valid.Code, pending.ApprovalToken)
 	}
 
 	for _, code := range []string{"BBBB-CCCC", started.UserCode} {
 		req := httptest.NewRequest(http.MethodGet, "/v1/link/requests/"+code, nil)
-		rec := send(t, r, authorized(req, session))
-		assertNoStore(t, rec)
+		rec := apitest.Send(t, r, apitest.Authorized(req, session))
+		apitest.AssertNoStore(t, rec)
 		if rec.Code != http.StatusTooManyRequests {
 			t.Errorf("review after five total attempts for %q = %d, want 429", code, rec.Code)
 		}

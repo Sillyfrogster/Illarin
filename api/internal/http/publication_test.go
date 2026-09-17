@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -16,8 +18,8 @@ import (
 type publicationStack struct {
 	router    *gin.Engine
 	pool      *pgxpool.Pool
-	handlers  *Handlers
-	outbox    *verificationOutbox
+	handlers  apitest.Services
+	outbox    *apitest.VerificationOutbox
 	authority *http.Cookie
 }
 
@@ -96,11 +98,11 @@ func (s publicationStack) contributor(t *testing.T, email, handle string) contri
 
 func newPublicationStack(t *testing.T) publicationStack {
 	t.Helper()
-	outbox := &verificationOutbox{}
-	router, pool, handlers := newTestRouterWithSenderPoolAndHandlers(
-		t, 1<<20, DefaultDeadlines(), outbox,
+	outbox := &apitest.VerificationOutbox{}
+	router, pool, handlers := harness.NewRouterWithSenderPoolAndServices(
+		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
-	session := verifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
+	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	holdsAuthority(t, pool, "publication.authority")
 	return publicationStack{
 		router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
@@ -109,7 +111,7 @@ func newPublicationStack(t *testing.T) publicationStack {
 
 func (s publicationStack) member(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
-	return verifiedSignUp(t, s.router, s.outbox, email, handle)
+	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
 }
 
 func holdsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
@@ -163,7 +165,7 @@ func (s publicationStack) apps(t *testing.T) []publicationApp {
 
 func (s publicationStack) categories(t *testing.T) []publicationCategory {
 	t.Helper()
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/categories", nil), s.authority,
 	))
 	if response.Code != http.StatusOK {
@@ -226,7 +228,7 @@ func (s publicationStack) approve(
 	if err != nil {
 		t.Fatalf("encode approval: %v", err)
 	}
-	return send(t, s.router, authorized(jsonRequest(t,
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/grants", string(body),
 	), session))
 }
@@ -251,7 +253,7 @@ func (s publicationStack) approved(
 
 func (s publicationStack) workspace(t *testing.T, session *http.Cookie) publicationWorkspace {
 	t.Helper()
-	response := send(t, s.router, authorized(
+	response := apitest.Send(t, s.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/workspace", nil), session,
 	))
 	if response.Code != http.StatusOK {
@@ -296,14 +298,14 @@ func TestOnlyThePublicationAuthorityManagesCategoriesAndGrants(t *testing.T) {
 	for _, role := range []string{"user", "moderator", "admin"} {
 		setRole(t, stack.pool, "publication.outsider", role)
 		for _, path := range reads {
-			refused := send(t, stack.router, authorized(
+			refused := apitest.Send(t, stack.router, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, path, nil), outsider,
 			))
 			if refused.Code != http.StatusForbidden {
 				t.Fatalf("%s read of %s = %d, want 403", role, path, refused.Code)
 			}
 		}
-		relabelled := send(t, stack.router, authorized(jsonRequest(t,
+		relabelled := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 			http.MethodPatch, "/v1/publication/categories/"+announcement.ID, `{"label":"News"}`,
 		), outsider))
 		if relabelled.Code != http.StatusForbidden {
@@ -326,14 +328,14 @@ func TestTheAuthorityRelabelsAndOrdersCategories(t *testing.T) {
 	article := stack.categoryBySlug(t, "article")
 	release := stack.categoryBySlug(t, "release")
 
-	relabelled := send(t, stack.router, authorized(jsonRequest(t,
+	relabelled := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPatch, "/v1/publication/categories/"+announcement.ID, `{"label":"Update"}`,
 	), stack.authority))
 	if relabelled.Code != http.StatusOK {
 		t.Fatalf("relabel status = %d: %s", relabelled.Code, relabelled.Body.String())
 	}
 
-	ordered := send(t, stack.router, authorized(jsonRequest(t,
+	ordered := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/categories",
 		`{"categoryIds":["`+article.ID+`","`+release.ID+`","`+announcement.ID+`"]}`,
 	), stack.authority))
@@ -357,7 +359,7 @@ func TestAGrantNeedsAVerifiedAccountAnAppAndABackedDefaultCategory(t *testing.T)
 	t.Parallel()
 	stack := newPublicationStack(t)
 	stack.member(t, "writer@example.com", "lumiverse.writer")
-	signUp(t, stack.router, "unverified@example.com", "unverified.writer")
+	apitest.SignUp(t, stack.router, "unverified@example.com", "unverified.writer")
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")
 	release := stack.categoryBySlug(t, "release")
@@ -423,7 +425,7 @@ func TestAContributorSeesOnlyTheirOwnEffectiveScope(t *testing.T) {
 		t.Fatalf("workspace categories = %+v, default = %+v", held.Categories, held.DefaultCategory)
 	}
 
-	refused := send(t, stack.router, authorized(
+	refused := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), writer,
 	))
 	if refused.Code != http.StatusForbidden {
@@ -447,7 +449,7 @@ func TestSeparatePeopleForOneAppGetSeparateGrants(t *testing.T) {
 	)
 	stack.approved(t, "second.developer", lumiverse.ID, []string{announcement.ID}, announcement.ID)
 
-	revoked := send(t, stack.router, authorized(
+	revoked := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/publication/grants/"+held.ID, nil), stack.authority,
 	))
 	if revoked.Code != http.StatusNoContent {
@@ -472,20 +474,20 @@ func TestRevocationKeepsTheAccountAndTheGrantRecord(t *testing.T) {
 		t, "ended.writer", illarin.ID, []string{announcement.ID}, announcement.ID,
 	)
 
-	revoked := send(t, stack.router, authorized(
+	revoked := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/publication/grants/"+held.ID, nil), stack.authority,
 	))
 	if revoked.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d: %s", revoked.Code, revoked.Body.String())
 	}
-	twice := send(t, stack.router, authorized(
+	twice := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/publication/grants/"+held.ID, nil), stack.authority,
 	))
 	if twice.Code != http.StatusNotFound {
 		t.Fatalf("second revoke status = %d, want 404", twice.Code)
 	}
 
-	listed := send(t, stack.router, authorized(
+	listed := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), stack.authority,
 	))
 	if listed.Code != http.StatusOK {
@@ -535,7 +537,7 @@ func TestAGrantIsDirectPublicationAndNothingElse(t *testing.T) {
 		} else {
 			request = jsonRequest(t, refused.method, refused.path, refused.body)
 		}
-		response := send(t, stack.router, authorized(request, writer))
+		response := apitest.Send(t, stack.router, apitest.Authorized(request, writer))
 		if response.Code != http.StatusForbidden {
 			t.Fatalf("%s %s = %d, want 403: %s",
 				refused.method, refused.path, response.Code, response.Body.String())
@@ -566,7 +568,7 @@ func TestGrantChangesLeaveSafeIdentifiersBehind(t *testing.T) {
 	held := stack.approved(
 		t, "audited.writer", lumiverse.ID, []string{announcement.ID}, announcement.ID,
 	)
-	revoked := send(t, stack.router, authorized(
+	revoked := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodDelete, "/v1/publication/grants/"+held.ID, nil), stack.authority,
 	))
 	if revoked.Code != http.StatusNoContent {
@@ -636,7 +638,7 @@ func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
 	illarin := stack.appBySlug(t, "illarin")
 	announcement := stack.categoryBySlug(t, "announcement")
 
-	saved := send(t, stack.router, authorized(jsonRequest(t,
+	saved := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/account/profile",
 		`{"displayName":"Kestrel","biography":"","contactEmail":"","links":[]}`,
 	), writer))
@@ -651,7 +653,7 @@ func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
 
 	admin := stack.member(t, "restrictor@example.com", "restricting.admin")
 	setRole(t, stack.pool, "restricting.admin", "admin")
-	restricted := send(t, stack.router, authorized(jsonRequest(t,
+	restricted := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/profiles/named.writer/restriction",
 		`{"reason":"Under review"}`,
 	), admin))
@@ -659,7 +661,7 @@ func TestAGrantNamesItsContributorTheWayTheirProfileDoes(t *testing.T) {
 		t.Fatalf("restrict status = %d: %s", restricted.Code, restricted.Body.String())
 	}
 
-	listed := send(t, stack.router, authorized(
+	listed := apitest.Send(t, stack.router, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/publication/grants", nil), stack.authority,
 	))
 	if listed.Code != http.StatusOK {
