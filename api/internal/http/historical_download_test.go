@@ -357,14 +357,14 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
 	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement: %d %s", revision.Code, revision.Body.String())
 	}
-	if _, err := assets.ProcessNextIngest(t.Context()); err != nil {
+	if _, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
 	if got := apitest.PublishAssetUpdate(t, r, session, assetID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
@@ -574,11 +574,11 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
 	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
-	if _, err := assets.ProcessNextIngest(t.Context()); err != nil {
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
+	if _, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
 	if got := apitest.PublishAssetUpdate(t, r, session, assetID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())

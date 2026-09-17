@@ -99,3 +99,11 @@ func SealedBlockCount(
 	}
 	return count, nil
 }
+
+type ExposureRefusal struct {
+	Prompts []string
+}
+
+func (refusal ExposureRefusal) Error() string {
+	return "making a sealed prompt public needs an explicit confirmation"
+}

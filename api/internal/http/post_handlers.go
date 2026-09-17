@@ -133,9 +133,9 @@ func (h *Handlers) AddPostMedia(c *gin.Context) {
 	}
 	parts, err := c.Request.MultipartReader()
 	if err != nil {
-		h.refusePostMedia(c, refusal{
-			reason: "send the picture as form data, with a metadata part and a file part",
-			cause:  err,
+		h.refusePostMedia(c, api.FormRefusal{
+			Reason: "send the picture as form data, with a metadata part and a file part",
+			Cause:  err,
 		})
 		return
 	}
@@ -144,7 +144,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context) {
 		h.refusePostMedia(c, err)
 		return
 	}
-	file, err := nextPart(parts, filePart)
+	file, err := api.NextPart(parts, api.FilePart)
 	if err != nil {
 		h.refusePostMedia(c, err)
 		return
@@ -322,13 +322,13 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	switch {
 	case errors.As(err, &tooLarge):
 		refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,
-			"That picture is larger than the upload limit.", filePart)
+			"That picture is larger than the upload limit.", api.FilePart)
 	case errors.Is(err, storage.ErrInsufficientSpace):
 		refusePublication(c, http.StatusServiceUnavailable, PublicationErrorCodeServerError,
 			"Uploads are temporarily unavailable because storage is low.")
 	default:
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"That picture could not be read. Use a PNG, JPEG, WebP or GIF.", filePart)
+			"That picture could not be read. Use a PNG, JPEG, WebP or GIF.", api.FilePart)
 	}
 }
 

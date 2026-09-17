@@ -13,11 +13,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
+	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
@@ -34,6 +36,7 @@ type Services struct {
 	Works              *work.Service
 	Blocks             *edit.Service
 	Versions           *version.Service
+	Uploads            *upload.Service
 	Accounts           *account.Service
 	Links              *linking.Service
 	Deliveries         *delivery.Service
@@ -142,6 +145,7 @@ func NewServicesWithDelivery(
 		Works:              work.NewService(pool, assets),
 		Blocks:             edit.NewService(pool, assets),
 		Versions:           version.NewService(pool, assets),
+		Uploads:            upload.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
 		Deliveries:         delivery.NewService(pool, assets, links, settings),
@@ -166,6 +170,7 @@ func NewServicesOver(
 		Works:              work.NewService(pool, assets),
 		Blocks:             edit.NewService(pool, assets),
 		Versions:           version.NewService(pool, assets),
+		Uploads:            upload.NewService(pool, assets),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
 		Deliveries:         NewDeliveryService(pool, assets, links),
@@ -342,4 +347,16 @@ func (h Harness) NewVerifiedIngestRouterWithStoreFactory(
 		t.Fatalf("verify test account: %d %s", verified.Code, verified.Body.String())
 	}
 	return h.RegisterRouter(t, services, api.DefaultDeadlines()), session, assets, pool
+}
+
+// NewExtensionRouter serves a signed-in creator with every extension format registered
+func (h Harness) NewExtensionRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
+	t.Helper()
+	registry := format.NewRegistry()
+	for _, module := range extension.Modules() {
+		if err := registry.Register(module); err != nil {
+			t.Fatalf("register %s: %v", module.ID(), err)
+		}
+	}
+	return h.NewVerifiedIngestRouterWithPool(t, registry)
 }

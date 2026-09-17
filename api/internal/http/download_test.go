@@ -542,7 +542,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
-	if err := registry.Register(neverClaimsModule{}); err != nil {
+	if err := registry.Register(apitest.NeverClaimsModule{}); err != nil {
 		t.Fatalf("register non-claiming module: %v", err)
 	}
 	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
@@ -568,7 +568,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202", accepted.Code)
 	}
-	if processed, err := assets.ProcessNextIngest(request.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(assets).ProcessNextIngest(request.Context()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 

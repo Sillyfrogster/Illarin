@@ -86,9 +86,9 @@ type ComparisonRequest struct {
 
 const (
 	metadataSubject     = "metadata"
-	presentationSubject = "presentation"
-	preservedSubject    = "preserved_data"
-	picturesSubject     = "pictures"
+	PresentationSubject = "presentation"
+	PreservedSubject    = "preserved_data"
+	PicturesSubject     = "pictures"
 )
 
 func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison, error) {
@@ -131,7 +131,7 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		compared.PromptsWithheld = compared.PromptsWithheld || withheld
 	}
 	compared.Groups = compareVersions(earlier, later)
-	if err := s.addressPictures(ctx, tx, in, compared.Groups); err != nil {
+	if err := s.AddressPictures(ctx, tx, in, compared.Groups); err != nil {
 		return Comparison{}, err
 	}
 	return compared, nil
@@ -150,7 +150,7 @@ func RedactWithdrawn(version *Version) {
 	version.WithdrawnAt = nil
 }
 
-func (s *Service) addressPictures(
+func (s *Service) AddressPictures(
 	ctx context.Context,
 	tx pgx.Tx,
 	in ComparisonRequest,
@@ -292,16 +292,16 @@ func ReadVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 
 func compareVersions(earlier, later RecordedVersion) []ChangeGroup {
 	groups := make([]ChangeGroup, 0, 8)
-	groups = addGroup(groups, metadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
+	groups = AddGroup(groups, metadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
 	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)
-	groups = addGroup(groups, presentationSubject, "Page",
-		comparePresentation(later.Kind, earlier.Blocks, later.Blocks))
-	groups = addGroup(groups, preservedSubject, "Preserved data",
-		comparePreserved(earlier.Preserved, later.Preserved))
+	groups = AddGroup(groups, PresentationSubject, "Page",
+		ComparePresentation(later.Kind, earlier.Blocks, later.Blocks))
+	groups = AddGroup(groups, PreservedSubject, "Preserved data",
+		ComparePreserved(earlier.Preserved, later.Preserved))
 	return groups
 }
 
-func addGroup(groups []ChangeGroup, subject, label string, changes []Change) []ChangeGroup {
+func AddGroup(groups []ChangeGroup, subject, label string, changes []Change) []ChangeGroup {
 	if len(changes) == 0 {
 		return groups
 	}
@@ -392,11 +392,11 @@ func (i versionItem) mediaRef() *uuid.UUID {
 }
 
 func compareContent(earlier, later []block.Block) []ChangeGroup {
-	return compareContentKeyed(earlier, later, nil)
+	return CompareContentKeyed(earlier, later, nil)
 }
 
-// compareContentKeyed compares content, matching items whose ids changed by a stable name.
-func compareContentKeyed(earlier, later []block.Block, names map[uuid.UUID]string) []ChangeGroup {
+// CompareContentKeyed compares content, matching items whose ids changed by a stable name.
+func CompareContentKeyed(earlier, later []block.Block, names map[uuid.UUID]string) []ChangeGroup {
 	before := contentSubjects(earlier, names)
 	after := contentSubjects(later, names)
 	groups := make([]ChangeGroup, 0, len(before)+len(after))
@@ -405,7 +405,7 @@ func compareContentKeyed(earlier, later []block.Block, names map[uuid.UUID]strin
 		if label == "" {
 			label = before[subject].label
 		}
-		groups = addGroup(groups, subject, label, compareItems(before[subject].items, after[subject].items))
+		groups = AddGroup(groups, subject, label, compareItems(before[subject].items, after[subject].items))
 	}
 	return groups
 }
@@ -727,7 +727,7 @@ func editedItem(was, now versionItem) Change {
 	return edited
 }
 
-func comparePresentation(kind string, earlier, later []block.Block) []Change {
+func ComparePresentation(kind string, earlier, later []block.Block) []Change {
 	before := blocksByID(earlier)
 	after := blocksByID(later)
 	changes := make([]Change, 0, len(later))
@@ -839,7 +839,7 @@ func optionWords(options block.Options) string {
 	return strings.Join(words, " ")
 }
 
-func comparePreserved(earlier, later []VersionPreserved) []Change {
+func ComparePreserved(earlier, later []VersionPreserved) []Change {
 	before := preservedDigests(earlier)
 	after := preservedDigests(later)
 	namespaces := make([]string, 0, len(before)+len(after))

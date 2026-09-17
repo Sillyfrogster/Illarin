@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 )
 
 type PublicProfile struct {
@@ -80,7 +81,7 @@ func CreateProfileAsset(
 	discovery asset.Discovery,
 ) uuid.UUID {
 	t.Helper()
-	created, err := assets.Create(context.Background(), asset.CreateInput{
+	created, err := Uploads(assets).Create(context.Background(), upload.CreateInput{
 		OwnerID: ownerID, Kind: "theme", Filename: name + ".lumitheme",
 		File: bytes.NewReader([]byte(name)), Name: name, IsNSFW: isNSFW,
 		Discovery: discovery,

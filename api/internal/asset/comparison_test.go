@@ -225,7 +225,7 @@ func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
 	later.Preserved = []VersionPreserved{
 		{Owner: "asset", OwnerID: owner, Namespace: "test", Payload: `{"secret":"after"}`},
 	}
-	changes := changesUnder(t, compareVersions(earlier, later), preservedSubject)
+	changes := changesUnder(t, compareVersions(earlier, later), PreservedSubject)
 	if len(changes) != 1 || changes[0].Kind != ChangeEdited || changes[0].Name != "test" {
 		t.Fatalf("changes = %+v", changes)
 	}
@@ -247,10 +247,10 @@ func TestPresentationOnlyUpdateExplainsThePage(t *testing.T) {
 	later := recordedVersionOf("character", moved, restyled)
 
 	groups := compareVersions(earlier, later)
-	if got := subjectsOf(groups); len(got) != 1 || got[0] != presentationSubject {
+	if got := subjectsOf(groups); len(got) != 1 || got[0] != PresentationSubject {
 		t.Fatalf("subjects = %v, want only the page", got)
 	}
-	changes := changesUnder(t, groups, presentationSubject)
+	changes := changesUnder(t, groups, PresentationSubject)
 	if len(changes) != 2 || changes[1].Name != "Page order" {
 		t.Fatalf("changes = %+v", changes)
 	}
@@ -339,5 +339,59 @@ func publishUpdate(t *testing.T, svc *Service, owner, id uuid.UUID, summary stri
 		OwnerID: owner, AssetID: id, Summary: summary,
 	}, currentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the update: %v", err)
+	}
+}
+
+func TestReplacementPreviewUsesStableItemIDs(t *testing.T) {
+	t.Parallel()
+	shared, removed, added := block.NewItemID(), block.NewItemID(), block.NewItemID()
+	working := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: shared, Text: "Same"}, {ID: removed, Text: "Old"}}},
+	}}}}
+	incoming := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: shared, Text: "Updated"}, {ID: added, Text: "New"}}},
+	}}}}
+	groups := compareContent(working, incoming)
+	var additions, removals, updates int
+	for _, group := range groups {
+		if group.Subject != string(block.RoleGreetings) {
+			continue
+		}
+		for _, change := range group.Changes {
+			switch change.Kind {
+			case ChangeAdded:
+				additions++
+			case ChangeRemoved:
+				removals++
+			case ChangeEdited:
+				updates++
+			}
+		}
+	}
+	if additions != 1 || removals != 1 || updates != 1 {
+		t.Fatalf("stable-item changes = %+v", groups)
+	}
+}
+
+func TestReplacementPreviewShowsTheWordingOnBothSides(t *testing.T) {
+	t.Parallel()
+	item := block.NewItemID()
+	working := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: item, Name: "Opening", Text: "Old wording"}}},
+	}}}}
+	incoming := []block.Block{{Elements: []block.Element{{
+		Role: block.RoleGreetings, Type: block.TypeTextSet,
+		Content: block.TextSet{Texts: []block.TextItem{{ID: item, Name: "Opening", Text: "New wording"}}},
+	}}}}
+	groups := compareContent(working, incoming)
+	if len(groups) != 1 || len(groups[0].Changes) != 1 {
+		t.Fatalf("groups = %+v", groups)
+	}
+	change := groups[0].Changes[0]
+	if change.Kind != ChangeEdited || change.Before != "Old wording" || change.After != "New wording" {
+		t.Fatalf("change = %+v, want the wording on both sides", change)
 	}
 }

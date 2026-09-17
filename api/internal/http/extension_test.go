@@ -1,8 +1,6 @@
 package http
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -13,25 +11,8 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-const toolboxManifest = `{
-	"version": "1.0.0",
-	"name": "Quiet Toolbox",
-	"identifier": "quiet_toolbox",
-	"author": "A developer",
-	"github": "https://github.com/example/quiet_toolbox",
-	"homepage": "https://github.com/example/quiet_toolbox",
-	"description": "Small tools for a calmer chat.",
-	"permissions": ["ui_panels", "generation"],
-	"entry_frontend": "dist/frontend.js",
-	"minimum_lumiverse_version": "0.1.0"
-}`
 
 type extensionPage struct {
 	Kind                  string   `json:"kind"`
@@ -60,11 +41,11 @@ type extensionPage struct {
 
 func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
-	upload := extensionZip(t, map[string]string{
-		"spindle.json": toolboxManifest, "dist/frontend.js": "export default {}",
+	r, session, assets, pool := harness.NewExtensionRouter(t)
+	upload := apitest.ExtensionZip(t, map[string]string{
+		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",
 	})
-	assetID := uploadExtension(t, r, session, assets, upload)
+	assetID := apitest.UploadExtension(t, r, session, assets, upload)
 
 	page := readExtensionPage(t, r, session, assetID)
 	if page.Kind != "extension" || page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
@@ -136,21 +117,21 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 
 func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
-	library := extensionZip(t, map[string]string{
+	r, session, assets, _ := harness.NewExtensionRouter(t)
+	library := apitest.ExtensionZip(t, map[string]string{
 		"manifest.json": `{"display_name":"LALib","js":"index.js","author":"A developer",` +
 			`"homePage":"https://github.com/example/SillyTavern-LALib"}`,
 		"index.js": "",
 	})
-	libraryID := publishExtension(t, r, session, assets, "LALib", library)
+	libraryID := apitest.PublishExtension(t, r, session, assets, "LALib", library)
 
-	upload := extensionZip(t, map[string]string{
+	upload := apitest.ExtensionZip(t, map[string]string{
 		"manifest.json": `{"display_name":"Custom Sliders","js":"dist/index.js","author":"A developer",` +
 			`"version":"1.0.0","homePage":"https://github.com/example/Extension-CustomSliders",` +
 			`"dependencies":["third-party/SillyTavern-LALib","vectors"]}`,
 		"dist/index.js": "export {}",
 	})
-	assetID := publishExtension(t, r, session, assets, "Custom Sliders", upload)
+	assetID := apitest.PublishExtension(t, r, session, assets, "Custom Sliders", upload)
 
 	page := readExtensionPage(t, r, nil, assetID)
 	if page.Identifier == nil || *page.Identifier != "Extension-CustomSliders" {
@@ -199,13 +180,13 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 
 func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
-	upload := extensionZip(t, map[string]string{
+	r, session, assets, _ := harness.NewExtensionRouter(t)
+	upload := apitest.ExtensionZip(t, map[string]string{
 		"quiet_toolbox-main/":                 "",
-		"quiet_toolbox-main/spindle.json":     toolboxManifest,
+		"quiet_toolbox-main/spindle.json":     apitest.ToolboxManifest,
 		"quiet_toolbox-main/dist/frontend.js": "export default {}",
 	})
-	assetID := publishExtension(t, r, session, assets, "Quiet Toolbox", upload)
+	assetID := apitest.PublishExtension(t, r, session, assets, "Quiet Toolbox", upload)
 
 	if page := readExtensionPage(t, r, nil, assetID); page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
 		t.Fatalf("identifier = %v, want the manifest inside the folder read", page.Identifier)
@@ -217,24 +198,11 @@ func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 }
 
-func publishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, name string, file []byte) string {
-	t.Helper()
-	assetID := uploadExtension(t, r, session, assets, file)
-	identity := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)
-	if saved := apitest.SaveIdentity(t, r, session, assetID, identity); saved.Code != http.StatusNoContent {
-		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
-	}
-	if published := apitest.PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
-		t.Fatalf("publish %s = %d: %s", name, published.Code, published.Body.String())
-	}
-	return assetID
-}
-
 func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
-	first := extensionZip(t, map[string]string{"spindle.json": toolboxManifest, "dist/frontend.js": "one"})
-	assetID := uploadExtension(t, r, session, assets, first)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
+	first := apitest.ExtensionZip(t, map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one"})
+	assetID := apitest.UploadExtension(t, r, session, assets, first)
 	if saved := apitest.SaveIdentity(t, r, session, assetID,
 		`{"name":"Quiet Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
@@ -244,17 +212,17 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	}
 	before := apitest.ContentGeneration(t, pool, assetID)
 
-	manifest := strings.Replace(toolboxManifest, `"ui_panels", "generation"`, `"ui_panels", "generation", "tools"`, 1)
+	manifest := strings.Replace(apitest.ToolboxManifest, `"ui_panels", "generation"`, `"ui_panels", "generation", "tools"`, 1)
 	manifest = strings.Replace(manifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1)
-	second := extensionZip(t, map[string]string{"spindle.json": manifest, "dist/frontend.js": "two"})
-	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "toolbox.zip", second), session))
+	second := apitest.ExtensionZip(t, map[string]string{"spindle.json": manifest, "dist/frontend.js": "two"})
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
 	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
@@ -278,13 +246,13 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 
 func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
-	first := extensionZip(t, map[string]string{
-		"spindle.json":     toolboxManifest,
+	r, session, assets, _ := harness.NewExtensionRouter(t)
+	first := apitest.ExtensionZip(t, map[string]string{
+		"spindle.json":     apitest.ToolboxManifest,
 		"dist/backend.js":  `spindle.registerTool({ name: "tidy_reply" })`,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Quiet Toolbox" }) }`,
 	})
-	assetID := uploadExtension(t, r, session, assets, first)
+	assetID := apitest.UploadExtension(t, r, session, assets, first)
 
 	started := apitest.FetchStartedAsset(t, r, session, assetID)
 	adds := apitest.BlockNamed(t, started.Blocks, "extension_additions")
@@ -305,19 +273,19 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 		t.Fatalf("what it adds = %q, want the tool and the drawer tab, locked", listed)
 	}
 
-	second := extensionZip(t, map[string]string{
-		"spindle.json":     strings.Replace(toolboxManifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1),
+	second := apitest.ExtensionZip(t, map[string]string{
+		"spindle.json":     strings.Replace(apitest.ToolboxManifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1),
 		"dist/backend.js":  `spindle.registerMacro({ name: "tidy" })`,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Quiet Toolbox" }) }`,
 	})
-	revision := apitest.Send(t, r, apitest.Authorized(revisionRequest(t, assetID, "toolbox.zip", second), session))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := assets.ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	acceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
 	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
@@ -361,25 +329,25 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 		reason string
 	}{
 		"unsafe path": {
-			files:  map[string]string{"spindle.json": toolboxManifest, "dist/frontend.js": "", "../escape.js": ""},
+			files:  map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "", "../escape.js": ""},
 			reason: "safety_violation",
 		},
 		"invalid identifier": {
 			files: map[string]string{
-				"spindle.json":     strings.Replace(toolboxManifest, "quiet_toolbox", "Quiet-Toolbox", 1),
+				"spindle.json":     strings.Replace(apitest.ToolboxManifest, "quiet_toolbox", "Quiet-Toolbox", 1),
 				"dist/frontend.js": "",
 			},
 			reason: "malformed_input",
 		},
 		"manifest beside other files in a folder": {
 			files: map[string]string{
-				"README.md": "", "packages/quiet/spindle.json": toolboxManifest, "packages/quiet/dist/frontend.js": "",
+				"README.md": "", "packages/quiet/spindle.json": apitest.ToolboxManifest, "packages/quiet/dist/frontend.js": "",
 			},
 			reason: "malformed_input",
 		},
 		"both manifests": {
 			files: map[string]string{
-				"spindle.json": toolboxManifest, "dist/frontend.js": "",
+				"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "",
 				"manifest.json": `{"display_name":"Quiet","js":"index.js","author":"A developer"}`, "index.js": "",
 			},
 			reason: "malformed_input",
@@ -387,10 +355,10 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			r, session, assets, _ := newExtensionRouter(t)
+			r, session, assets, _ := harness.NewExtensionRouter(t)
 			metadata := apitest.ExampleMetadata("Quiet Toolbox")
 			metadata["filename"] = "toolbox.zip"
-			finished := apitest.UploadAndFinish(t, r, session, assets, metadata, extensionZip(t, tc.files))
+			finished := apitest.UploadAndFinish(t, r, session, assets, metadata, apitest.ExtensionZip(t, tc.files))
 			var operation struct {
 				Status  string `json:"status"`
 				Failure *struct {
@@ -409,45 +377,22 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 
 func TestAnExtensionBuiltIntoManyFilesIsAccepted(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
-	files := map[string]string{"spindle.json": toolboxManifest, "dist/frontend.js": ""}
+	r, session, assets, _ := harness.NewExtensionRouter(t)
+	files := map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": ""}
 	for index := range 600 {
 		files[fmt.Sprintf("dist/chunks/%d.js", index)] = ""
 	}
-	uploadExtension(t, r, session, assets, extensionZip(t, files))
+	apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, files))
 }
 
 func TestAnExtensionCannotBeStartedWithoutAnArchive(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := newExtensionRouter(t)
+	r, session, _, _ := harness.NewExtensionRouter(t)
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(`{"kind":"extension"}`))
 	request.Header.Set("Content-Type", "application/json")
 	if response := apitest.Send(t, r, apitest.Authorized(request, session)); response.Code != http.StatusBadRequest {
 		t.Fatalf("start an extension from nothing = %d: %s", response.Code, response.Body.String())
 	}
-}
-
-func newExtensionRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
-	t.Helper()
-	registry := format.NewRegistry()
-	for _, module := range extension.Modules() {
-		if err := registry.Register(module); err != nil {
-			t.Fatalf("register %s: %v", module.ID(), err)
-		}
-	}
-	return harness.NewVerifiedIngestRouterWithPool(t, registry)
-}
-
-func uploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, file []byte) string {
-	t.Helper()
-	metadata := apitest.ExampleMetadata("Quiet Toolbox")
-	metadata["filename"] = "toolbox.zip"
-	metadata["_keepDraft"] = true
-	finished := apitest.UploadAndFinish(t, r, session, assets, metadata, file)
-	if !strings.Contains(finished.Body.String(), `"success"`) {
-		t.Fatalf("extension ingest did not succeed: %s", finished.Body.String())
-	}
-	return apitest.AssetIDFromIngest(t, finished)
 }
 
 func readExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, assetID string) extensionPage {
@@ -481,23 +426,4 @@ func assertSameBytes(t *testing.T, what string, got, want []byte) {
 	if sha256.Sum256(got) != sha256.Sum256(want) {
 		t.Fatalf("%s has %d bytes that differ from the %d uploaded", what, len(got), len(want))
 	}
-}
-
-func extensionZip(t *testing.T, files map[string]string) []byte {
-	t.Helper()
-	var file bytes.Buffer
-	archive := zip.NewWriter(&file)
-	for name, content := range files {
-		entry, err := archive.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
-		if err != nil {
-			t.Fatalf("create %q: %v", name, err)
-		}
-		if _, err := entry.Write([]byte(content)); err != nil {
-			t.Fatalf("write %q: %v", name, err)
-		}
-	}
-	if err := archive.Close(); err != nil {
-		t.Fatalf("close archive: %v", err)
-	}
-	return file.Bytes()
 }

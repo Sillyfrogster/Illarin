@@ -213,7 +213,7 @@ func (s *Service) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.T
 		return false, fmt.Errorf("begin blob sweep: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := lockBlobDigest(ctx, tx, id); err != nil {
+	if err := LockBlobDigest(ctx, tx, id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
@@ -276,7 +276,7 @@ func (s *Service) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.
 		return false, fmt.Errorf("begin blob sweep preparation: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := lockBlobDigest(ctx, tx, id); err != nil {
+	if err := LockBlobDigest(ctx, tx, id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
@@ -315,7 +315,7 @@ func (s *Service) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.
 	return true, nil
 }
 
-func lockBlobDigest(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+func LockBlobDigest(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	var digest []byte
 	if err := tx.QueryRow(ctx, `select sha256 from blobs where id = $1`, id).Scan(&digest); err != nil {
 		return err

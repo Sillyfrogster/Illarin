@@ -219,7 +219,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 	)
 	metadata := apitest.ExampleMetadata("Protected original")
 	metadata["filename"] = "protected-original.json"
-	finished := apitest.UploadAndFinish(t, router, ownerSession, assets, metadata, []byte(keyedSealedPreset))
+	finished := apitest.UploadAndFinish(t, router, ownerSession, assets, metadata, []byte(apitest.KeyedSealedPreset))
 	assetID := apitest.AssetIDFromIngest(t, finished)
 	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
@@ -281,16 +281,16 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 		]
 	}`)
 	accepted := apitest.Send(t, router, apitest.Authorized(
-		revisionRequest(t, started.ID, "replacement.json", replacement), session,
+		apitest.RevisionRequest(t, started.ID, "replacement.json", replacement), session,
 	))
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("replacement upload status = %d, want 202: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := assets.ProcessNextIngest(t.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process replacement = %t, %v; want true, nil", processed, err)
 	}
-	acceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
-	updated := pollIngestAsset(t, router, session, accepted.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
+	updated := apitest.PollIngestAsset(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
 		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)
 	}

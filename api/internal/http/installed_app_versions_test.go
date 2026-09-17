@@ -33,7 +33,7 @@ func installedAppVersions(t *testing.T, r http.Handler, assetID string) []string
 
 func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
 
@@ -52,7 +52,7 @@ func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *te
 
 func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
 	for _, install := range installs {
@@ -94,7 +94,7 @@ func TestOnlyAnExtensionPageListsInstalledAppVersions(t *testing.T) {
 
 func TestAnAppVersionCountsOnlyFromInstallationsThatCanInstallTheExtensionsApp(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	for _, install := range linkInstallations(t, r, session, 5) {
 		declare(t, r, install.AccessToken, []string{sillyTavernInstalls}, []string{extension.SillyTavernID})
@@ -121,7 +121,7 @@ func declareApplicationVersion(t *testing.T, r http.Handler, token, version stri
 
 func TestAnInstallationThatLeavesOutItsAppVersionCountsUnderTheVersionItDeclared(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 5)
 
@@ -141,7 +141,7 @@ func TestAnInstallationThatLeavesOutItsAppVersionCountsUnderTheVersionItDeclared
 
 func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
 

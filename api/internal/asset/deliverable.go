@@ -75,7 +75,7 @@ func (s *Service) DeliverableAsset(
 		return Deliverable{}, err
 	}
 	if len(apps) == 0 {
-		blocks, err := readPublishedBlocks(ctx, q, assetID)
+		blocks, err := ReadPublishedBlocks(ctx, q, assetID)
 		if err != nil {
 			return Deliverable{}, err
 		}
@@ -144,7 +144,7 @@ func (s *Service) deliveryPictures(
 	assetID uuid.UUID,
 	coverID *uuid.UUID,
 ) ([]DeliveryPicture, error) {
-	blocks, err := readPublishedBlocks(ctx, q, assetID)
+	blocks, err := ReadPublishedBlocks(ctx, q, assetID)
 	if err != nil {
 		return nil, fmt.Errorf("read the blocks to deliver: %w", err)
 	}
@@ -216,7 +216,7 @@ func (s *Service) DownloadSourceForLinkedInstance(
 	return download, nil
 }
 
-func readPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
+func ReadPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
 	var stored []byte
 	err := q.QueryRow(ctx, `select coalesce(jsonb_agg(to_jsonb(b) order by position), '[]'::jsonb)
 		from asset_public.asset_blocks b where asset_id = $1`, assetID).Scan(&stored)

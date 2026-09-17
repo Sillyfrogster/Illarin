@@ -18,19 +18,3 @@ const (
 type AddPostMediaRequest struct {
 	Purpose PostMediaPurpose `json:"purpose"`
 }
-
-type CreateAssetRequest struct {
-	Blurb     *string                      `json:"blurb,omitempty"`
-	Confirmed bool                         `json:"confirmed"`
-	Discovery *CreateAssetRequestDiscovery `json:"discovery,omitempty"`
-	IsNsfw    *bool                        `json:"isNsfw,omitempty"`
-	Name      *string                      `json:"name,omitempty"`
-	Tags      *[]string                    `json:"tags,omitempty"`
-}
-
-type CreateAssetRequestDiscovery string
-
-const (
-	CreateAssetRequestDiscoveryListed   CreateAssetRequestDiscovery = "listed"
-	CreateAssetRequestDiscoveryUnlisted CreateAssetRequestDiscovery = "unlisted"
-)

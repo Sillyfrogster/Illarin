@@ -62,7 +62,7 @@ type MediaRequest struct {
 	Signature string
 }
 
-type preparedMedia struct {
+type PreparedMedia struct {
 	ID          uuid.UUID
 	BlobID      uuid.UUID
 	Role        MediaRole
@@ -117,7 +117,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	}
 	defer tx.Rollback(ctx)
 
-	if err := s.ensureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
+	if err := s.EnsureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return Media{}, err
 	}
 	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
@@ -209,12 +209,12 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 	return media, nil
 }
 
-func (s *Service) prepareExtractedMedia(
+func (s *Service) PrepareExtractedMedia(
 	ctx context.Context,
 	file format.Inspection,
 	extracted []format.Media,
-) ([]preparedMedia, error) {
-	prepared := make([]preparedMedia, 0, len(extracted))
+) ([]PreparedMedia, error) {
+	prepared := make([]PreparedMedia, 0, len(extracted))
 	for _, item := range extracted {
 		role := item.Role
 		if !role.Valid() {
@@ -249,7 +249,7 @@ func (s *Service) prepareExtractedMedia(
 			}
 			return nil, err
 		}
-		prepared = append(prepared, preparedMedia{
+		prepared = append(prepared, PreparedMedia{
 			ID: uuid.New(), BlobID: stored.ID, Role: role,
 			ElementRole: item.ElementRole, Name: item.Name,
 			Width: image.Width, Height: image.Height,
@@ -262,7 +262,7 @@ func localImageReadFailure(err error) bool {
 	return err != nil && !errors.Is(err, format.ErrRangeRead) && !errors.Is(err, context.Canceled)
 }
 
-func elementsForExtractedMedia(media []preparedMedia) []block.Element {
+func ElementsForExtractedMedia(media []PreparedMedia) []block.Element {
 	grouped := make(map[block.Role][]block.ImageItem)
 	order := make([]block.Role, 0, 2)
 	for _, item := range media {
@@ -290,7 +290,7 @@ func insertAssetMedia(
 	ctx context.Context,
 	tx pgx.Tx,
 	assetID uuid.UUID,
-	media []preparedMedia,
+	media []PreparedMedia,
 ) error {
 	for _, item := range media {
 		_, err := tx.Exec(ctx, `
@@ -329,7 +329,7 @@ func supersedeExtractedMedia(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) 
 	return nil
 }
 
-func mediaIngestFailure(err error) format.FailureReason {
+func MediaIngestFailure(err error) format.FailureReason {
 	switch {
 	case errors.Is(err, mediaproc.ErrImageTooLarge):
 		return format.FailureSafetyViolation

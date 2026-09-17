@@ -35,7 +35,7 @@ func clearWithhold(t *testing.T, r http.Handler, session *http.Cookie, assetID s
 
 func TestTheNextLibrarySyncFromAnInstanceReportingAWithheldExtensionCarriesANoticeNamingIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	installs := linkInstallations(t, r, session, 2)
 	holding, other := installs[0], installs[1]
@@ -58,7 +58,7 @@ func TestTheNextLibrarySyncFromAnInstanceReportingAWithheldExtensionCarriesANoti
 
 func TestTheNextDeliveryWaitFromAnInstanceReportingAWithheldExtensionCarriesTheNoticeOnce(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
 	apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
@@ -84,7 +84,7 @@ func TestTheNextDeliveryWaitFromAnInstanceReportingAWithheldExtensionCarriesTheN
 
 func TestAnExtensionWithheldAgainAfterBeingClearedIsNoticedAgain(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
 	apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
@@ -123,7 +123,7 @@ func TestOnlyAWithheldExtensionIsNoticed(t *testing.T) {
 
 func TestWithholdingAnExtensionStopsItsQueuedDeliveriesAsWithdrawn(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
 	declare(t, r, install.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})

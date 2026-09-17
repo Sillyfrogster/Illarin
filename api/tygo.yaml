@@ -95,6 +95,20 @@ packages:
     include_files:
       - "publish_shapes.go"
       - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/upload"
+    output_path: "../web/src/lib/api/shapes/upload.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    frontmatter: |
+      import type { VersionChangeGroup } from "./version";
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
+      version.VersionChangeGroup: "VersionChangeGroup"
+    include_files:
+      - "shapes.go"
+      - "start_shapes.go"
+      - "vault_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -109,13 +123,13 @@ packages:
         DownloadTarget,
         RecordedVersion,
       } from "./shapes/work";
-      import type { VersionChangeGroup } from "./shapes/version";
 
       export * from "./shapes/account";
       export * from "./shapes/block";
       export * from "./shapes/edit";
       export * from "./shapes/notify";
       export * from "./shapes/profile";
+      export * from "./shapes/upload";
       export * from "./shapes/version";
       export * from "./shapes/work";
     type_mappings:
@@ -129,14 +143,12 @@ packages:
       work.AssetImage: "AssetImage"
       work.DownloadTarget: "DownloadTarget"
       work.RecordedVersion: "RecordedVersion"
-      version.VersionChangeGroup: "VersionChangeGroup"
     include_files:
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
       - "delivery_shapes.go"
       - "destination_shapes.go"
       - "download_shapes.go"
-      - "from_nothing_shapes.go"
       - "linking_shapes.go"
       - "notification_shapes.go"
       - "post_deletion_shapes.go"
@@ -150,4 +162,3 @@ packages:
       - "publication_shapes.go"
       - "restriction_shapes.go"
       - "upload_helpers_shapes.go"
-      - "vault_shapes.go"

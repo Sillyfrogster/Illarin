@@ -18,15 +18,15 @@ const (
 
 func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service) string {
 	t.Helper()
-	upload := extensionZip(t, map[string]string{
-		"spindle.json": toolboxManifest, "dist/frontend.js": "export default {}",
+	upload := apitest.ExtensionZip(t, map[string]string{
+		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",
 	})
-	return publishExtension(t, r, session, assets, "Quiet Toolbox", upload)
+	return apitest.PublishExtension(t, r, session, assets, "Quiet Toolbox", upload)
 }
 
 func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 
@@ -60,7 +60,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 
 func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
@@ -99,7 +99,7 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 
 func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := newExtensionRouter(t)
+	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
@@ -128,7 +128,7 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 
 func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := newExtensionRouter(t)
+	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
 

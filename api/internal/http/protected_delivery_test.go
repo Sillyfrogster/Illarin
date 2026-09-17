@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -18,27 +17,6 @@ const ordinaryPreset = `{
 		{"id":"public","name":"Public","role":"system","content":"Visible prompt.","enabled":true}
 	]
 }`
-
-func sealEveryFragment(t *testing.T, body apitest.SaveBlockBody, apps []string) apitest.SaveBlockBody {
-	t.Helper()
-	var list struct {
-		Groups    []json.RawMessage            `json:"groups"`
-		Fragments []map[string]json.RawMessage `json:"fragments"`
-	}
-	if err := json.Unmarshal(body.Elements[0].Content, &list); err != nil {
-		t.Fatalf("read the prompt list to seal: %v", err)
-	}
-	for index := range list.Fragments {
-		list.Fragments[index]["protected"] = json.RawMessage("true")
-	}
-	sealed, err := json.Marshal(list)
-	if err != nil {
-		t.Fatalf("write the sealed prompt list: %v", err)
-	}
-	body.Elements[0].Content = sealed
-	body.AllowedApps = &apps
-	return body
-}
 
 func settledDelivery(t *testing.T, pool *pgxpool.Pool, assetID string) (string, string) {
 	t.Helper()
@@ -68,7 +46,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 
 	page := apitest.FetchStartedAsset(t, router, session, assetID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
-	sealed := sealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
+	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
 	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
@@ -102,7 +80,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 
 	page := apitest.FetchStartedAsset(t, router, session, assetID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
-	sealed := sealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
+	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
 	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
@@ -158,7 +136,7 @@ func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
 	assetID := apitest.AssetIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(keyedSealedPreset)),
+		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(apitest.KeyedSealedPreset)),
 	)
 	reader := addVerifiedLinkingUser(t, router, pool, "reader@example.com", "reader.creator")
 	grant := apitest.LinkDeviceInstance(t, router, reader, "Lumiverse", "reader desk", []string{apitest.ReceiveScope})

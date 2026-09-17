@@ -2,13 +2,11 @@ package asset
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type revisionRow struct {
@@ -34,54 +32,6 @@ func insertRevision(ctx context.Context, tx pgx.Tx, id, assetID uuid.UUID, row r
 		return fmt.Errorf("insert revision: %w", err)
 	}
 	return nil
-}
-
-func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput, candidate *Candidate) (IngestOperation, error) {
-	var withheldAt pgtype.Timestamptz
-	err := s.pool.QueryRow(ctx, `
-		select withheld_at
-		  from assets
-		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return IngestOperation{}, ErrNotFound
-	}
-	if err != nil {
-		return IngestOperation{}, fmt.Errorf("check revision owner: %w", err)
-	}
-	if withheldAt.Valid {
-		return IngestOperation{}, ErrAssetFrozen
-	}
-
-	stored, err := s.store.Put(ctx, in.File)
-	if err != nil {
-		return IngestOperation{}, fmt.Errorf("store revision: %w", err)
-	}
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return IngestOperation{}, fmt.Errorf("begin revision acceptance: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	if err := s.ensureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
-		return IngestOperation{}, err
-	}
-	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
-		return IngestOperation{}, err
-	}
-	id := uuid.New()
-	_, err = tx.Exec(ctx, `
-		insert into ingest_operations
-			(id, owner_id, blob_id, filename, status, target_asset_id, candidate_version)
-		values ($1, $2, $3, $4, 'pending', $5, $6)
-	`, id, in.OwnerID, stored.ID, in.Filename, in.AssetID, candidate.Version)
-	if err != nil {
-		return IngestOperation{}, fmt.Errorf("record revision ingest: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return IngestOperation{}, fmt.Errorf("commit revision acceptance: %w", err)
-	}
-	return IngestOperation{ID: id, Status: IngestPending}, nil
 }
 
 func setCurrentRevision(ctx context.Context, tx pgx.Tx, assetID, revisionID uuid.UUID) error {
@@ -177,7 +127,7 @@ func clearSupersededCover(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) err
 	return nil
 }
 
-func avatarMedia(media []preparedMedia) *uuid.UUID {
+func avatarMedia(media []PreparedMedia) *uuid.UUID {
 	var alternate *uuid.UUID
 	for _, item := range media {
 		if item.Role == MediaAvatar {
@@ -190,4 +140,39 @@ func avatarMedia(media []preparedMedia) *uuid.UUID {
 		}
 	}
 	return alternate
+}
+
+// Revision is an uploaded original file and the pictures read out of it
+type Revision struct {
+	AssetID    uuid.UUID
+	Number     int
+	BlobID     uuid.UUID
+	MediaType  string
+	Format     string
+	Identifier string
+	Media      []PreparedMedia
+}
+
+// RecordRevision makes an uploaded file the work's current original and replaces the pictures read from the one before
+func RecordRevision(ctx context.Context, tx pgx.Tx, revision Revision) (uuid.UUID, error) {
+	revisionID := uuid.New()
+	if err := insertRevision(ctx, tx, revisionID, revision.AssetID, revisionRow{
+		Revision: revision.Number, BlobID: revision.BlobID, MediaType: revision.MediaType,
+		Format: revision.Format, Identifier: revision.Identifier,
+	}); err != nil {
+		return uuid.Nil, err
+	}
+	if err := supersedeExtractedMedia(ctx, tx, revision.AssetID); err != nil {
+		return uuid.Nil, err
+	}
+	if err := insertAssetMedia(ctx, tx, revision.AssetID, revision.Media); err != nil {
+		return uuid.Nil, err
+	}
+	if err := setCurrentRevision(ctx, tx, revision.AssetID, revisionID); err != nil {
+		return uuid.Nil, err
+	}
+	if coverID := avatarMedia(revision.Media); coverID != nil {
+		return revisionID, setCoverMedia(ctx, tx, revision.AssetID, coverID)
+	}
+	return revisionID, clearSupersededCover(ctx, tx, revision.AssetID)
 }

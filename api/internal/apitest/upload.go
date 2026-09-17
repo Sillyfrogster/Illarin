@@ -1,9 +1,11 @@
 package apitest
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -14,6 +16,8 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/upload"
+	"github.com/gin-gonic/gin"
 )
 
 func ExampleMetadata(name string) map[string]any {
@@ -83,7 +87,7 @@ func UploadAndFinish(
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202. body: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := assets.ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := Uploads(assets).ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 	finished := Send(t, r, Authorized(
@@ -190,4 +194,110 @@ func UploadedImageID(
 		t.Fatalf("decode the added picture: %v", err)
 	}
 	return picture.ID
+}
+
+// Uploads reads files in over the same database and store as assets
+func Uploads(assets *asset.Service) *upload.Service {
+	return upload.NewService(assets.Pool(), assets)
+}
+
+// RevisionRequest uploads file as a new version of the work
+func RevisionRequest(t *testing.T, assetID, filename string, file []byte) *http.Request {
+	t.Helper()
+	body := &bytes.Buffer{}
+	form := multipart.NewWriter(body)
+	WriteFilePartNamed(t, form, filename, file)
+	if err := form.Close(); err != nil {
+		t.Fatalf("close form: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions", body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	return req
+}
+
+// UploadExtension uploads an extension archive and leaves it a draft
+func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, file []byte) string {
+	t.Helper()
+	metadata := ExampleMetadata("Quiet Toolbox")
+	metadata["filename"] = "toolbox.zip"
+	metadata["_keepDraft"] = true
+	finished := UploadAndFinish(t, r, session, assets, metadata, file)
+	if !strings.Contains(finished.Body.String(), `"success"`) {
+		t.Fatalf("extension ingest did not succeed: %s", finished.Body.String())
+	}
+	return AssetIDFromIngest(t, finished)
+}
+
+// ExtensionZip packs files into a ZIP archive
+func ExtensionZip(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var file bytes.Buffer
+	archive := zip.NewWriter(&file)
+	for name, content := range files {
+		entry, err := archive.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
+		if err != nil {
+			t.Fatalf("create %q: %v", name, err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatalf("write %q: %v", name, err)
+		}
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatalf("close archive: %v", err)
+	}
+	return file.Bytes()
+}
+
+// PollIngestAsset reads a finished upload and fails the test unless it made a work
+func PollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location string) struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+} {
+	t.Helper()
+	rec := Send(t, r, Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("poll status = %d, want 200. body: %s", rec.Code, rec.Body.String())
+	}
+	var operation struct {
+		Status string `json:"status"`
+		Asset  *struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"asset"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &operation); err != nil {
+		t.Fatalf("decode operation: %v", err)
+	}
+	if operation.Status != "success" || operation.Asset == nil {
+		t.Fatalf("operation = %#v, want a successful asset", operation)
+	}
+	return *operation.Asset
+}
+
+// ToolboxManifest is the manifest of a small SillyTavern extension
+const ToolboxManifest = `{
+	"version": "1.0.0",
+	"name": "Quiet Toolbox",
+	"identifier": "quiet_toolbox",
+	"author": "A developer",
+	"github": "https://github.com/example/quiet_toolbox",
+	"homepage": "https://github.com/example/quiet_toolbox",
+	"description": "Small tools for a calmer chat.",
+	"permissions": ["ui_panels", "generation"],
+	"entry_frontend": "dist/frontend.js",
+	"minimum_lumiverse_version": "0.1.0"
+}`
+
+// PublishExtension gives an uploaded extension its catalog details and publishes it
+func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, name string, file []byte) string {
+	t.Helper()
+	assetID := UploadExtension(t, r, session, assets, file)
+	identity := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)
+	if saved := SaveIdentity(t, r, session, assetID, identity); saved.Code != http.StatusNoContent {
+		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
+	}
+	if published := PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
+		t.Fatalf("publish %s = %d: %s", name, published.Code, published.Body.String())
+	}
+	return assetID
 }

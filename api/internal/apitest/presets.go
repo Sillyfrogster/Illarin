@@ -1,9 +1,13 @@
 package apitest
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -114,3 +118,86 @@ func PublishTwoPromptPreset(
 	}
 	return started
 }
+
+// AcceptReplacementPreview accepts the staged replacement at location, removing whatever the file cannot hold
+func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string, exposeProtected ...bool) {
+	t.Helper()
+	preview := Send(t, r, Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
+	if preview.Code != http.StatusOK {
+		t.Fatalf("read replacement preview = %d: %s", preview.Code, preview.Body.String())
+	}
+	var operation struct {
+		Status  string `json:"status"`
+		Preview *struct {
+			Unrepresentable []string `json:"unrepresentable"`
+		} `json:"preview"`
+	}
+	if err := json.Unmarshal(preview.Body.Bytes(), &operation); err != nil {
+		t.Fatal(err)
+	}
+	if operation.Status != "preview" || operation.Preview == nil {
+		t.Fatalf("replacement preview = %+v", operation)
+	}
+	decisions := make(map[string]string, len(operation.Preview.Unrepresentable))
+	for _, role := range operation.Preview.Unrepresentable {
+		decisions[role] = "remove"
+	}
+	body, err := json.Marshal(map[string]any{
+		"unrepresentable": decisions,
+		"exposeProtected": len(exposeProtected) > 0 && exposeProtected[0],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID := strings.TrimPrefix(location, "/v1/ingests/")
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	accepted := Send(t, r, Authorized(request, session))
+	if accepted.Code != http.StatusOK {
+		t.Fatalf("accept replacement preview = %d: %s", accepted.Code, accepted.Body.String())
+	}
+}
+
+// SealEveryFragment marks every prompt in a prompt list private to the given apps
+func SealEveryFragment(t *testing.T, body SaveBlockBody, apps []string) SaveBlockBody {
+	t.Helper()
+	var list struct {
+		Groups    []json.RawMessage            `json:"groups"`
+		Fragments []map[string]json.RawMessage `json:"fragments"`
+	}
+	if err := json.Unmarshal(body.Elements[0].Content, &list); err != nil {
+		t.Fatalf("read the prompt list to seal: %v", err)
+	}
+	for index := range list.Fragments {
+		list.Fragments[index]["protected"] = json.RawMessage("true")
+	}
+	sealed, err := json.Marshal(list)
+	if err != nil {
+		t.Fatalf("write the sealed prompt list: %v", err)
+	}
+	body.Elements[0].Content = sealed
+	body.AllowedApps = &apps
+	return body
+}
+
+// NeverClaimsModule is a format that recognises no file
+type NeverClaimsModule struct{}
+
+func (NeverClaimsModule) ID() string { return "never" }
+func (NeverClaimsModule) Declaration() format.Declaration {
+	return ReaderDeclaration("never", "character")
+}
+func (NeverClaimsModule) Claim(format.Inspection) (format.Claim, bool) { return format.Claim{}, false }
+func (NeverClaimsModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+	return format.Parsed{}, errors.New("unreachable")
+}
+
+// KeyedSealedPreset is a Lumiverse preset whose one prompt is sealed by its key
+const KeyedSealedPreset = `{
+	"schemaVersion": 1,
+	"name": "Keyed sealed preset",
+	"blocks": [
+		{"id":"public","name":"Public","role":"system","content":"Visible prompt.","enabled":true},
+		{"id":"private","name":"Private","role":"system","content":"Exact private prompt.","enabled":true,"sealed":true,"sealedKey":"dialogue.frame"}
+	]
+}`

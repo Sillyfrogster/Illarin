@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Service) writeProjections(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+func (s *Service) WriteProjections(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
 	return missingAsset(summary.Write(ctx, tx, s.reg, assetID))
 }
 

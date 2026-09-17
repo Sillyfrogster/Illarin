@@ -1,9 +1,9 @@
 package asset
 
 import (
-	"io"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/google/uuid"
 )
 
@@ -43,70 +43,6 @@ type Asset struct {
 	CreatedAt         time.Time
 }
 
-type CreateInput struct {
-	OwnerID   uuid.UUID
-	Kind      string
-	Filename  string
-	File      io.Reader
-	Name      string
-	Blurb     string
-	Tags      []string
-	IsNSFW    bool
-	Discovery Discovery
-	CreatedAt *time.Time
-}
-
-type IngestInput struct {
-	OwnerID   uuid.UUID
-	Filename  string
-	File      io.Reader
-	Name      *string
-	Blurb     *string
-	Tags      *[]string
-	IsNSFW    *bool
-	Discovery Discovery
-}
-
-type RevisionInput struct {
-	OwnerID  uuid.UUID
-	AssetID  uuid.UUID
-	Filename string
-	File     io.Reader
-}
-
-type IngestStatus string
-
-const (
-	IngestPending    IngestStatus = "pending"
-	IngestProcessing IngestStatus = "processing"
-	IngestPreview    IngestStatus = "preview"
-	IngestCancelled  IngestStatus = "cancelled"
-	IngestFailed     IngestStatus = "failed"
-	IngestSuccess    IngestStatus = "success"
-)
-
-type IngestOperation struct {
-	ID      uuid.UUID
-	Status  IngestStatus
-	Failure *IngestFailure
-	Asset   *Asset
-	Preview *ReplacementPreview
-}
-
-type IngestFailure struct {
-	Reason  string
-	Message string
-}
-
-type ReplacementPreview struct {
-	Format          string
-	Groups          []ChangeGroup
-	Conflicts       []string
-	Unrepresentable []string
-	MissingWording  []string
-	Seals           int
-}
-
 type ContentVisibility string
 
 const (
@@ -124,4 +60,9 @@ type DetailImage struct {
 	Width     int
 	Height    int
 	Bytes     int64
+}
+
+type SavedBlocks struct {
+	Kind   string
+	Blocks []block.Block
 }

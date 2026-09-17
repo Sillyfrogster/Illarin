@@ -6,18 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type Asset struct {
-	Blurb     string         `json:"blurb"`
-	CreatedAt time.Time      `json:"createdAt"`
-	Discovery AssetDiscovery `json:"discovery"`
-	Format    string         `json:"format"`
-	Id        uuid.UUID      `json:"id"`
-	IsNsfw    *bool          `json:"isNsfw" tstype:"boolean | null,required"`
-	Kind      string         `json:"kind"`
-	Name      string         `json:"name"`
-	Tags      []string       `json:"tags"`
-}
-
 type Notification struct {
 	Asset       *NotificationAsset        `json:"asset,omitempty"`
 	CreatedAt   time.Time                 `json:"createdAt"`

@@ -31,6 +31,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
@@ -78,6 +79,7 @@ func run() error {
 	svc := asset.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
+	uploads := upload.NewService(pool, svc)
 	recomputed, err := summary.RecomputeStaleFormats(runtimeContext, pool, registry)
 	if err != nil {
 		return fmt.Errorf("export projections: %w", err)
@@ -96,7 +98,7 @@ func run() error {
 	background.Add(2)
 	go func() {
 		defer background.Done()
-		svc.RunIngestWorkers(runtimeContext, cfg.IngestWorkers, func(err error) {
+		uploads.RunIngestWorkers(runtimeContext, cfg.IngestWorkers, func(err error) {
 			log.Printf("ingest worker: %v", err)
 		})
 	}()
@@ -209,7 +211,7 @@ func run() error {
 	r := gin.New()
 	r.Use(apihttp.Recovery(log.Default()))
 	handlers := apihttp.NewHandlers(
-		svc, work.NewService(pool, svc), edit.NewService(pool, svc), version.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
+		svc, work.NewService(pool, svc), edit.NewService(pool, svc), version.NewService(pool, svc), uploads, accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
 	)
 	readiness := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
