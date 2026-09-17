@@ -1,4 +1,4 @@
-package linking
+package connect
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Service) Live(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
+func (s *Apps) Live(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
 	rows, err := db.New(s.pool).LiveLinkedInstances(ctx, uuidValue(userID))
 	if err != nil {
 		return nil, fmt.Errorf("list live instances: %w", err)
@@ -31,7 +31,7 @@ func (s *Service) Live(ctx context.Context, userID uuid.UUID) ([]Instance, error
 	return instances, nil
 }
 
-func (s *Service) LiveByID(
+func (s *Apps) LiveByID(
 	ctx context.Context,
 	userID uuid.UUID,
 	instanceID uuid.UUID,
@@ -56,7 +56,7 @@ func (s *Service) LiveByID(
 	}, nil
 }
 
-func (s *Service) Throttle(
+func (s *Apps) Throttle(
 	ctx context.Context,
 	action string,
 	source string,

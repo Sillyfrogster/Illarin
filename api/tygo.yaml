@@ -130,6 +130,16 @@ packages:
       work.RecordedVersion: "RecordedVersion"
     include_files:
       - "shapes.go"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/connect"
+    output_path: "../web/src/lib/api/shapes/connect.ts"
+    enum_style: "union"
+    preserve_comments: "none"
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
+    include_files:
+      - "link_shapes.go"
+      - "send_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
@@ -140,6 +150,7 @@ packages:
 
       export * from "./shapes/account";
       export * from "./shapes/block";
+      export * from "./shapes/connect";
       export * from "./shapes/download";
       export * from "./shapes/edit";
       export * from "./shapes/notify";
@@ -156,9 +167,7 @@ packages:
     include_files:
       - "asset_destination_shapes.go"
       - "asset_shapes.go"
-      - "delivery_shapes.go"
       - "destination_shapes.go"
-      - "linking_shapes.go"
       - "notification_shapes.go"
       - "post_deletion_shapes.go"
       - "post_history_shapes.go"

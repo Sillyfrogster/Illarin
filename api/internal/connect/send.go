@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	ErrInstanceNotFound  = errors.New("no live instance of yours has that id")
+	ErrNoInstanceOfYours = errors.New("no live instance of yours has that id")
 	ErrMissingScope      = errors.New("that instance was not granted the scope this needs")
 	ErrAssetNotFound     = errors.New("no such asset")
 	ErrAssetNotSendable  = errors.New("only a published asset can be sent to an instance")
@@ -35,7 +35,6 @@ var (
 	ErrCannotInstall     = errors.New("that instance does not install what this asset is")
 	ErrQueueFull         = errors.New("that instance already has as many waiting deliveries as it may hold")
 	ErrDeliveryNotFound  = errors.New("no waiting delivery of yours has that id")
-	ErrTooManyRequests   = errors.New("too many requests")
 	ErrTooManyCollectors = errors.New("too many instances are waiting for work at once")
 	ErrLibraryTooLarge   = errors.New("the library report is larger than one request may carry")
 	ErrLibraryReport     = errors.New("the library report is not valid")
@@ -103,14 +102,14 @@ type LibraryCounts struct {
 	UpdatesAvailable int
 }
 
-type LibraryReport struct {
+type ReportedLibrary struct {
 	Snapshot           bool
 	ApplicationVersion string
-	Entries            []LibraryEntry
+	Entries            []ReportedEntry
 	Removed            []uuid.UUID
 }
 
-type LibraryEntry struct {
+type ReportedEntry struct {
 	AssetID           uuid.UUID
 	ContentGeneration *int
 }
@@ -119,10 +118,10 @@ type LibraryResult struct {
 	Accepted int
 	Removed  int
 	Ignored  int
-	Withheld []WithheldNotice
+	Withheld []WithheldWork
 }
 
-type WithheldNotice struct {
+type WithheldWork struct {
 	AssetID    uuid.UUID
 	Name       string
 	WithheldAt time.Time
@@ -130,7 +129,7 @@ type WithheldNotice struct {
 
 type Collected struct {
 	Work     []Work
-	Withheld []WithheldNotice
+	Withheld []WithheldWork
 }
 
 func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal bool) (string, string, bool) {

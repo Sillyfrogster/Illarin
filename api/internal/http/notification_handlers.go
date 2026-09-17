@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -175,11 +175,11 @@ func (h *Handlers) sendTargetsFor(
 }
 
 // waitingToCollect says whether a delivery of the asset is already waiting for the instance.
-func waitingToCollect(state delivery.InstanceState) bool {
+func waitingToCollect(state connect.InstanceState) bool {
 	if state.Delivery == nil {
 		return false
 	}
-	return state.Delivery.State == delivery.StateQueued || state.Delivery.State == delivery.StateReleased
+	return state.Delivery.State == connect.StateQueued || state.Delivery.State == connect.StateReleased
 }
 
 // byInstanceName keeps the sends an entry offers in the order a reader would read them.

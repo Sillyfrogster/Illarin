@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -519,7 +519,7 @@ func sweepDeliveries(t *testing.T, pool *pgxpool.Pool) int64 {
 	t.Helper()
 	settings := apitest.DeliverySettings()
 	links := apitest.NewLinkingService(pool)
-	service := delivery.NewService(pool, nil, links, settings)
+	service := connect.NewSends(pool, nil, links, settings)
 	swept, err := service.Sweep(context.Background())
 	if err != nil {
 		t.Fatalf("sweep deliveries: %v", err)

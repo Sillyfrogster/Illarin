@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 var ErrArtifactNotFound = errors.New("no such delivery artifact")
 
-func (s *Service) Artifact(
+func (s *Sends) Artifact(
 	ctx context.Context,
 	deliveryID uuid.UUID,
 	expires string,

@@ -1,4 +1,4 @@
-package http
+package connect
 
 import (
 	"errors"
@@ -7,9 +7,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
-	"github.com/Sillyfrogster/Illarin/api/internal/download"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -18,7 +15,7 @@ const maxLibraryBodyBytes = 256 << 10
 
 func (h *Handlers) CollectDeliveries(c *gin.Context) {
 	noStoreLink(c)
-	instance, ok := h.instance(c, linking.ScopeReceiveAssets)
+	instance, ok := h.instance(c, ScopeAssetReceive)
 	if !ok {
 		return
 	}
@@ -26,7 +23,7 @@ func (h *Handlers) CollectDeliveries(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	collected, err := h.deliveries.Collect(
+	collected, err := h.sends.Collect(
 		c.Request.Context(), instance, uuidsFrom(request.Acknowledge),
 	)
 	if err != nil {
@@ -48,7 +45,7 @@ func (h *Handlers) CollectDeliveries(c *gin.Context) {
 
 func (h *Handlers) SyncLibrary(c *gin.Context) {
 	noStoreLink(c)
-	instance, ok := h.instance(c, linking.ScopeSyncLibrary)
+	instance, ok := h.instance(c, ScopeLibrarySync)
 	if !ok {
 		return
 	}
@@ -56,7 +53,7 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	if !api.ReadBoundedJSON(c, &request, maxLibraryBodyBytes, "The library report is too large.") {
 		return
 	}
-	result, err := h.deliveries.Sync(c.Request.Context(), instance, toLibraryReport(request))
+	result, err := h.sends.Sync(c.Request.Context(), instance, toLibraryReport(request))
 	if err != nil {
 		h.deliveryError(c, err)
 		return
@@ -77,7 +74,7 @@ func (h *Handlers) GetAssetInstances(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.deliveries.AssetInstances(c.Request.Context(), creator.ID, id)
+	found, err := h.sends.AssetInstances(c.Request.Context(), creator.ID, id)
 	if err != nil {
 		h.deliveryError(c, err)
 		return
@@ -101,14 +98,14 @@ func (h *Handlers) SendAssetToInstance(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.SignedIn(c, "sending an asset to an application")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
 	var request SendAssetRequest
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	queued, err := h.deliveries.Queue(
+	queued, err := h.sends.Queue(
 		c.Request.Context(), creator.ID, request.InstanceId, id,
 	)
 	if err != nil {
@@ -128,10 +125,10 @@ func (h *Handlers) DiscardDelivery(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.SignedIn(c, "managing deliveries")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	if err := h.deliveries.Discard(c.Request.Context(), creator.ID, id); err != nil {
+	if err := h.sends.Discard(c.Request.Context(), creator.ID, id); err != nil {
 		h.deliveryError(c, err)
 		return
 	}
@@ -152,55 +149,55 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
-	assetID, target, err := h.deliveries.Artifact(
+	assetID, target, err := h.sends.Artifact(
 		c.Request.Context(), id, params.Expires, params.Signature,
 	)
 	if err != nil {
 		h.deliveryArtifactError(c, err)
 		return
 	}
-	h.downloads.LinkedInstanceFile(c, assetID, target)
+	h.files.LinkedInstanceFile(c, assetID, target)
 }
 
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
-	if errors.Is(err, delivery.ErrArtifactNotFound) {
+	if errors.Is(err, ErrArtifactNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
-	download.Refuse(c, err)
+	api.Refuse(c, http.StatusInternalServerError, "could not read the file")
 }
 
 func (h *Handlers) deliveryError(c *gin.Context, err error) {
-	var limited *linking.RateLimitError
+	var limited *RateLimitError
 	switch {
 	case errors.As(err, &limited):
 		seconds := int((limited.After + time.Second - 1) / time.Second)
 		c.Header("Retry-After", strconv.Itoa(seconds))
 		api.Refuse(c, http.StatusTooManyRequests, "Too many requests. Try again later.")
-	case errors.Is(err, delivery.ErrTooManyCollectors):
+	case errors.Is(err, ErrTooManyCollectors):
 		c.Header("Retry-After", strconv.Itoa(collectorsBusySeconds))
 		api.Refuse(c, http.StatusServiceUnavailable, "Too many applications are waiting for work. Try again shortly.")
-	case errors.Is(err, delivery.ErrInstanceNotFound):
+	case errors.Is(err, ErrNoInstanceOfYours):
 		api.Refuse(c, http.StatusNotFound, "No live application of yours has that id.")
-	case errors.Is(err, delivery.ErrMissingScope):
+	case errors.Is(err, ErrMissingScope):
 		api.Refuse(c, http.StatusForbidden, "That application cannot receive assets.")
-	case errors.Is(err, delivery.ErrAssetNotFound), errors.Is(err, delivery.ErrAssetNotSendable):
+	case errors.Is(err, ErrAssetNotFound), errors.Is(err, ErrAssetNotSendable):
 		api.Refuse(c, http.StatusNotFound, "No asset that can be sent has that id.")
-	case errors.Is(err, delivery.ErrNoTarget):
+	case errors.Is(err, ErrNoTarget):
 		api.Refuse(c, http.StatusConflict, "That application accepts no format this asset can be written in.")
-	case errors.Is(err, delivery.ErrCannotInstall):
+	case errors.Is(err, ErrCannotInstall):
 		api.Refuse(c, http.StatusConflict, "That application does not install extensions from Illarin.")
-	case errors.Is(err, delivery.ErrQueueFull):
+	case errors.Is(err, ErrQueueFull):
 		api.Refuse(c, http.StatusConflict, "That application already has as many deliveries waiting as it may hold.")
-	case errors.Is(err, delivery.ErrDeliveryNotFound):
+	case errors.Is(err, ErrDeliveryNotFound):
 		api.Refuse(c, http.StatusNotFound, "No delivery of yours has that id.")
-	case errors.Is(err, delivery.ErrLibraryTooLarge):
+	case errors.Is(err, ErrLibraryTooLarge):
 		api.Refuse(c, http.StatusRequestEntityTooLarge, "Report fewer installed assets in one request.")
-	case errors.Is(err, delivery.ErrLibraryReport):
+	case errors.Is(err, ErrLibraryReport):
 		api.Refuse(c, http.StatusBadRequest, "That report is not valid.")
-	case errors.Is(err, delivery.ErrLibraryVersion):
+	case errors.Is(err, ErrLibraryVersion):
 		api.Refuse(c, http.StatusBadRequest, "The application version must be printable text of at most 64 characters.")
-	case errors.Is(err, delivery.ErrAcknowledgement):
+	case errors.Is(err, ErrAcknowledgement):
 		api.Refuse(c, http.StatusBadRequest, "Acknowledge at most 32 deliveries in one request.")
 	default:
 		api.Refuse(c, http.StatusInternalServerError, "Could not complete the request.")
@@ -209,10 +206,10 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 
 const collectorsBusySeconds = 30
 
-func toLibraryReport(request LibraryReport) delivery.LibraryReport {
-	entries := make([]delivery.LibraryEntry, 0, len(request.Entries))
+func toLibraryReport(request LibraryReport) ReportedLibrary {
+	entries := make([]ReportedEntry, 0, len(request.Entries))
 	for _, entry := range request.Entries {
-		entries = append(entries, delivery.LibraryEntry{
+		entries = append(entries, ReportedEntry{
 			AssetID: entry.AssetId, ContentGeneration: entry.ContentGeneration,
 		})
 	}
@@ -220,7 +217,7 @@ func toLibraryReport(request LibraryReport) delivery.LibraryReport {
 	if request.Removed != nil {
 		removed = uuidsFrom(*request.Removed)
 	}
-	report := delivery.LibraryReport{
+	report := ReportedLibrary{
 		Snapshot: request.Snapshot, Entries: entries, Removed: removed,
 	}
 	if request.ApplicationVersion != nil {
@@ -229,7 +226,7 @@ func toLibraryReport(request LibraryReport) delivery.LibraryReport {
 	return report
 }
 
-func toAPIDeliveryWork(released delivery.Work) DeliveryWork {
+func toAPIDeliveryWork(released Work) DeliveryWork {
 	artifacts := make([]DeliveryArtifact, 0, len(released.Artifacts))
 	for _, artifact := range released.Artifacts {
 		item := DeliveryArtifact{
@@ -251,7 +248,7 @@ func toAPIDeliveryWork(released delivery.Work) DeliveryWork {
 	}
 }
 
-func toAPIQueuedDelivery(queued delivery.Delivery) QueuedDelivery {
+func toAPIQueuedDelivery(queued Delivery) QueuedDelivery {
 	item := QueuedDelivery{
 		Id: queued.ID, InstanceId: queued.InstanceID,
 		AssetId: queued.AssetID, State: QueuedDeliveryState(queued.State),
@@ -265,7 +262,7 @@ func toAPIQueuedDelivery(queued delivery.Delivery) QueuedDelivery {
 	return item
 }
 
-func toAPIAssetInstance(state delivery.InstanceState) AssetInstance {
+func toAPIAssetInstance(state InstanceState) AssetInstance {
 	item := AssetInstance{
 		InstanceId: state.InstanceID, ApplicationName: state.ApplicationName,
 		InstanceName: state.InstanceName, LastSeenAt: state.LastSeenAt,
@@ -280,7 +277,7 @@ func toAPIAssetInstance(state delivery.InstanceState) AssetInstance {
 	return item
 }
 
-func toAPIWithheldNotices(notices []delivery.WithheldNotice) []WithheldNotice {
+func toAPIWithheldNotices(notices []WithheldWork) []WithheldNotice {
 	items := make([]WithheldNotice, 0, len(notices))
 	for _, notice := range notices {
 		items = append(items, WithheldNotice{

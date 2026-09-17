@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 const minimumGroupSize = 5
 
 // InstalledAppVersions lists the app versions an asset is installed on, counting only instances that declare one of the capabilities that install it.
-func (s *Service) InstalledAppVersions(ctx context.Context, assetID uuid.UUID, installCapabilities []string) ([]string, error) {
+func (s *Sends) InstalledAppVersions(ctx context.Context, assetID uuid.UUID, installCapabilities []string) ([]string, error) {
 	if len(installCapabilities) == 0 {
 		return []string{}, nil
 	}

@@ -1,4 +1,4 @@
-package http
+package connect
 
 import (
 	"errors"
@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +17,7 @@ func (h *Handlers) StartLinkRequest(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	started, err := h.links.Start(
+	started, err := h.apps.Start(
 		c.Request.Context(),
 		api.RequestSource(c),
 		startInput(
@@ -45,10 +43,10 @@ func (h *Handlers) StartLinkAuthorization(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	started, err := h.links.StartAuthorization(
+	started, err := h.apps.StartAuthorization(
 		c.Request.Context(),
 		api.RequestSource(c),
-		linking.AuthorizationInput{
+		AuthorizationInput{
 			StartInput: startInput(
 				request.ApplicationName, request.InstanceName, request.ApplicationVersion,
 				request.ProtocolVersion, request.Capabilities, request.AcceptedTargets,
@@ -74,7 +72,7 @@ func (h *Handlers) PollLinkRequest(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	grant, linked, err := h.links.Poll(
+	grant, linked, err := h.apps.Poll(
 		c.Request.Context(), api.RequestSource(c), request.DeviceCode,
 	)
 	if err != nil {
@@ -95,7 +93,7 @@ func (h *Handlers) GetLinkRequest(c *gin.Context) {
 	if !ok {
 		return
 	}
-	pending, err := h.links.Pending(c.Request.Context(), creator.ID, string(userCode))
+	pending, err := h.apps.Pending(c.Request.Context(), creator.ID, string(userCode))
 	if err != nil {
 		h.linkingError(c, err)
 		return
@@ -110,14 +108,14 @@ func (h *Handlers) ApproveLinkRequest(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.Verified(c, "approving a link")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
 	var decision DeviceLinkDecision
 	if !readLinkJSON(c, &decision) {
 		return
 	}
-	approved, err := h.links.Approve(
+	approved, err := h.apps.Approve(
 		c.Request.Context(), creator.ID, string(userCode), decision.ApprovalToken,
 	)
 	if err != nil {
@@ -134,14 +132,14 @@ func (h *Handlers) DenyLinkRequest(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.Verified(c, "denying a link")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
 	var decision DeviceLinkDecision
 	if !readLinkJSON(c, &decision) {
 		return
 	}
-	if err := h.links.Deny(
+	if err := h.apps.Deny(
 		c.Request.Context(), creator.ID, string(userCode), decision.ApprovalToken,
 	); err != nil {
 		h.linkingError(c, err)
@@ -157,7 +155,7 @@ func (h *Handlers) GetLinkAuthorization(c *gin.Context) {
 	if !ok {
 		return
 	}
-	pending, err := h.links.PendingAuthorization(
+	pending, err := h.apps.PendingAuthorization(
 		c.Request.Context(), creator.ID, string(requestCode),
 	)
 	if err != nil {
@@ -174,10 +172,10 @@ func (h *Handlers) ApproveLinkAuthorization(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.Verified(c, "approving a link")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	redirect, err := h.links.ApproveAuthorization(
+	redirect, err := h.apps.ApproveAuthorization(
 		c.Request.Context(), creator.ID, string(requestCode),
 	)
 	if err != nil {
@@ -194,10 +192,10 @@ func (h *Handlers) DenyLinkAuthorization(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.Verified(c, "denying a link")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	redirect, err := h.links.DenyAuthorization(
+	redirect, err := h.apps.DenyAuthorization(
 		c.Request.Context(), creator.ID, string(requestCode),
 	)
 	if err != nil {
@@ -213,7 +211,7 @@ func (h *Handlers) ExchangeLinkAuthorization(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	grant, err := h.links.Exchange(
+	grant, err := h.apps.Exchange(
 		c.Request.Context(), api.RequestSource(c), request.AuthorizationCode,
 		request.CodeVerifier, request.RedirectUri,
 	)
@@ -230,7 +228,7 @@ func (h *Handlers) RefreshInstanceToken(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	grant, err := h.links.Refresh(
+	grant, err := h.apps.Refresh(
 		c.Request.Context(), api.RequestSource(c), request.RefreshToken,
 	)
 	if err != nil {
@@ -246,12 +244,12 @@ func (h *Handlers) ListInstances(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.links.List(c.Request.Context(), creator.ID)
+	found, err := h.apps.List(c.Request.Context(), creator.ID)
 	if err != nil {
 		h.linkingError(c, err)
 		return
 	}
-	counts, err := h.deliveries.LibraryCountsByInstance(c.Request.Context(), creator.ID)
+	counts, err := h.sends.LibraryCountsByInstance(c.Request.Context(), creator.ID)
 	if err != nil {
 		h.linkingError(c, err)
 		return
@@ -273,10 +271,10 @@ func (h *Handlers) RevokeInstance(c *gin.Context) {
 	}
 	noStoreLink(c)
 	creator, ok := api.SignedIn(c, "managing linked instances")
-	if !ok || !api.RequireBrowser(c, h.links.BrowserOrigin()) {
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	if err := h.links.Revoke(c.Request.Context(), creator.ID, id); err != nil {
+	if err := h.apps.Revoke(c.Request.Context(), creator.ID, id); err != nil {
 		h.linkingError(c, err)
 		return
 	}
@@ -302,7 +300,7 @@ func (h *Handlers) UpdateInstance(c *gin.Context) {
 	if !readLinkJSON(c, &request) {
 		return
 	}
-	updated, err := h.links.UpdateDeclaration(c.Request.Context(), instance.ID, linking.Declaration{
+	updated, err := h.apps.UpdateDeclaration(c.Request.Context(), instance.ID, Declaration{
 		ApplicationName: instance.ApplicationName, InstanceName: instance.InstanceName,
 		ApplicationVersion: applicationVersion(request.ApplicationVersion),
 		ProtocolVersion:    int(request.ProtocolVersion),
@@ -317,18 +315,18 @@ func (h *Handlers) UpdateInstance(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIInstance(updated))
 }
 
-func (h *Handlers) instance(c *gin.Context, needs linking.Scope) (linking.Instance, bool) {
-	found, err := h.links.Authenticate(c.Request.Context(), bearerToken(c), needs)
+func (h *Handlers) instance(c *gin.Context, needs Scope) (Instance, bool) {
+	found, err := h.apps.Authenticate(c.Request.Context(), bearerToken(c), needs)
 	switch {
-	case errors.Is(err, linking.ErrInstanceCredential):
+	case errors.Is(err, ErrInstanceCredential):
 		api.Refuse(c, http.StatusUnauthorized, "This access token is not live.")
-		return linking.Instance{}, false
-	case errors.Is(err, linking.ErrInstanceMissingScope):
+		return Instance{}, false
+	case errors.Is(err, ErrInstanceMissingScope):
 		api.Refuse(c, http.StatusForbidden, "This instance was not granted that scope.")
-		return linking.Instance{}, false
+		return Instance{}, false
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the linked instance.")
-		return linking.Instance{}, false
+		return Instance{}, false
 	}
 	return found, true
 }
@@ -342,44 +340,55 @@ func bearerToken(c *gin.Context) string {
 }
 
 func (h *Handlers) linkingError(c *gin.Context, err error) {
-	var delay *linking.PollDelayError
-	var limited *linking.RateLimitError
+	var delay *PollDelayError
+	var limited *RateLimitError
 	switch {
 	case errors.As(err, &delay):
 		c.Header("Retry-After", strconv.Itoa(int(delay.After.Seconds())))
 		api.Refuse(c, http.StatusTooManyRequests, "slow_down")
-	case errors.Is(err, linking.ErrTooManyCodes):
+	case errors.Is(err, ErrTooManyCodes):
 		c.Header("Retry-After", strconv.Itoa(int(timeHourSeconds)))
 		api.Refuse(c, http.StatusTooManyRequests, "Too many codes were entered. Try again later.")
 	case errors.As(err, &limited):
 		seconds := int((limited.After + time.Second - 1) / time.Second)
 		c.Header("Retry-After", strconv.Itoa(seconds))
 		api.Refuse(c, http.StatusTooManyRequests, "Too many link requests. Try again later.")
-	case errors.Is(err, linking.ErrInvalidName):
+	case errors.Is(err, ErrInvalidName):
 		api.Refuse(c, http.StatusBadRequest, "Name the application and this installation in 64 characters or fewer.")
-	case errors.Is(err, linking.ErrInvalidDeclaration):
+	case errors.Is(err, ErrInvalidDeclaration):
 		api.Refuse(c, http.StatusBadRequest, "The instance declaration is not valid.")
-	case errors.Is(err, linking.ErrInvalidScopes):
+	case errors.Is(err, ErrInvalidScopes):
 		api.Refuse(c, http.StatusBadRequest, "Ask for asset:receive, library:sync, or both, once each.")
-	case errors.Is(err, linking.ErrInvalidRedirect):
+	case errors.Is(err, ErrInvalidRedirect):
 		api.Refuse(c, http.StatusBadRequest, "Use an exact 127.0.0.1 or [::1] callback with an explicit port.")
-	case errors.Is(err, linking.ErrInvalidPKCE):
+	case errors.Is(err, ErrInvalidPKCE):
 		api.Refuse(c, http.StatusBadRequest, "invalid_grant")
-	case errors.Is(err, linking.ErrAccessDenied):
+	case errors.Is(err, ErrAccessDenied):
 		api.Refuse(c, http.StatusBadRequest, "access_denied")
-	case errors.Is(err, linking.ErrLinkExpired):
+	case errors.Is(err, ErrLinkExpired):
 		api.Refuse(c, http.StatusBadRequest, "expired_token")
-	case errors.Is(err, linking.ErrLinkRequestNotFound):
+	case errors.Is(err, ErrLinkRequestNotFound):
 		api.Refuse(c, http.StatusNotFound, "No pending link request matches that code.")
-	case errors.Is(err, linking.ErrRefreshReuse):
+	case errors.Is(err, ErrRefreshReuse):
 		api.Refuse(c, http.StatusUnauthorized, "This instance was revoked because a replaced refresh token was reused.")
-	case errors.Is(err, linking.ErrInstanceCredential):
+	case errors.Is(err, ErrInstanceCredential):
 		api.Refuse(c, http.StatusUnauthorized, "This token is not live.")
-	case errors.Is(err, linking.ErrInstanceNotFound):
+	case errors.Is(err, ErrInstanceNotFound):
 		api.Refuse(c, http.StatusNotFound, "No live linked instance has that id.")
 	default:
 		api.Refuse(c, http.StatusInternalServerError, "Could not complete the link request.")
 	}
+}
+
+const maxLinkBodyBytes = 4 << 10
+
+func readLinkJSON(c *gin.Context, destination any) bool {
+	return api.ReadBoundedJSON(c, destination, maxLinkBodyBytes, "The link request is too large.")
+}
+
+func noStoreLink(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	c.Header("Pragma", "no-cache")
 }
 
 const timeHourSeconds = 60 * 60
@@ -392,15 +401,15 @@ func startInput(
 	capabilities InstanceCapabilities,
 	targets AcceptedTargets,
 	scopes Scopes,
-) linking.StartInput {
-	return linking.StartInput{
-		Declaration: linking.Declaration{
+) StartInput {
+	return StartInput{
+		Declaration: Declaration{
 			ApplicationName: string(applicationName), InstanceName: string(instanceName),
 			ApplicationVersion: applicationVersion(version), ProtocolVersion: int(protocol),
 			Capabilities:    stringsFromCapabilities(capabilities),
 			AcceptedTargets: stringsFromTargets(targets),
 		},
-		Scopes: toLinkingScopes(scopes),
+		Scopes: copyScopes(scopes),
 	}
 }
 
@@ -427,23 +436,11 @@ func stringsFromTargets(values AcceptedTargets) []string {
 	return result
 }
 
-func toLinkingScopes(requested []Scope) []linking.Scope {
-	scopes := make([]linking.Scope, len(requested))
-	for index, scope := range requested {
-		scopes[index] = linking.Scope(scope)
-	}
-	return scopes
+func copyScopes(scopes []Scope) []Scope {
+	return append(make([]Scope, 0, len(scopes)), scopes...)
 }
 
-func toAPIScopes(granted []linking.Scope) []Scope {
-	scopes := make([]Scope, len(granted))
-	for index, scope := range granted {
-		scopes[index] = Scope(scope)
-	}
-	return scopes
-}
-
-func toAPIPendingLink(pending linking.Pending) PendingLink {
+func toAPIPendingLink(pending Pending) PendingLink {
 	return PendingLink{
 		ApplicationName:    ApplicationName(pending.ApplicationName),
 		InstanceName:       InstanceName(pending.InstanceName),
@@ -451,11 +448,11 @@ func toAPIPendingLink(pending linking.Pending) PendingLink {
 		ProtocolVersion:    LinkProtocolVersion(pending.ProtocolVersion),
 		Capabilities:       apiCapabilities(pending.Capabilities),
 		AcceptedTargets:    apiTargets(pending.AcceptedTargets),
-		Scopes:             toAPIScopes(pending.Scopes), ExpiresAt: pending.ExpiresAt,
+		Scopes:             copyScopes(pending.Scopes), ExpiresAt: pending.ExpiresAt,
 	}
 }
 
-func toAPIPendingDeviceLink(pending linking.Pending) PendingDeviceLink {
+func toAPIPendingDeviceLink(pending Pending) PendingDeviceLink {
 	base := toAPIPendingLink(pending)
 	return PendingDeviceLink{
 		ApplicationName: base.ApplicationName, InstanceName: base.InstanceName,
@@ -466,7 +463,7 @@ func toAPIPendingDeviceLink(pending linking.Pending) PendingDeviceLink {
 	}
 }
 
-func toAPIPollGrant(grant linking.TokenGrant) LinkedLinkPollResult {
+func toAPIPollGrant(grant TokenGrant) LinkedLinkPollResult {
 	return LinkedLinkPollResult{
 		Status: LinkedLinkPollResultStatusLinked, AccessToken: AccessToken(grant.AccessToken),
 		AccessTokenExpiresAt: grant.AccessTokenExpiresAt,
@@ -475,7 +472,7 @@ func toAPIPollGrant(grant linking.TokenGrant) LinkedLinkPollResult {
 	}
 }
 
-func toAPITokenGrant(grant linking.TokenGrant) InstanceTokenGrant {
+func toAPITokenGrant(grant TokenGrant) InstanceTokenGrant {
 	return InstanceTokenGrant{
 		AccessToken:          grant.AccessToken,
 		AccessTokenExpiresAt: grant.AccessTokenExpiresAt,
@@ -484,7 +481,7 @@ func toAPITokenGrant(grant linking.TokenGrant) InstanceTokenGrant {
 	}
 }
 
-func toAPIInstance(instance linking.Instance) LinkedInstance {
+func toAPIInstance(instance Instance) LinkedInstance {
 	var version *int
 	if instance.ProtocolVersion > 0 {
 		protocol := instance.ProtocolVersion
@@ -498,15 +495,15 @@ func toAPIInstance(instance linking.Instance) LinkedInstance {
 		ProtocolVersion:    version,
 		Capabilities:       append([]string{}, instance.Capabilities...),
 		AcceptedTargets:    append([]string{}, instance.AcceptedTargets...),
-		Prefix:             instance.Prefix, Scopes: toAPIScopes(instance.Scopes),
+		Prefix:             instance.Prefix, Scopes: copyScopes(instance.Scopes),
 		LinkedAt: instance.LinkedAt, LastSeenAt: instance.LastSeenAt,
 		RevokedAt: instance.RevokedAt,
 	}
 }
 
 func toAPIManagedInstance(
-	instance linking.Instance,
-	counts delivery.LibraryCounts,
+	instance Instance,
+	counts LibraryCounts,
 ) ManagedInstance {
 	base := toAPIInstance(instance)
 	return ManagedInstance{

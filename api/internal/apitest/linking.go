@@ -14,6 +14,11 @@ const ReceiveScope = "asset:receive"
 
 const LibrarySyncScope = "library:sync"
 
+const (
+	LumiverseInstalls   = "chat.lumiverse:extension-install"
+	SillyTavernInstalls = "app.sillytavern:extension-install"
+)
+
 type StartedLink struct {
 	DeviceCode      string    `json:"deviceCode"`
 	UserCode        string    `json:"userCode"`

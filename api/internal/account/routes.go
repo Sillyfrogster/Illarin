@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/google/uuid"
 )
 
@@ -16,11 +16,11 @@ type Authority interface {
 
 type Handlers struct {
 	accounts     *Service
-	links        *linking.Service
+	links        *connect.Apps
 	publications Authority
 }
 
-func NewHandlers(accounts *Service, links *linking.Service, publications Authority) *Handlers {
+func NewHandlers(accounts *Service, links *connect.Apps, publications Authority) *Handlers {
 	return &Handlers{accounts: accounts, links: links, publications: publications}
 }
 

@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"context"
@@ -9,11 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
-)
-
-const (
-	lumiverseInstalls   = "chat.lumiverse:extension-install"
-	sillyTavernInstalls = "app.sillytavern:extension-install"
 )
 
 func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service) string {
@@ -32,7 +27,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 
 	for name, capabilities := range map[string][]string{
 		"no capability":         {},
-		"another app's":         {sillyTavernInstalls},
+		"another app's":         {apitest.SillyTavernInstalls},
 		"an unknown capability": {"lumiverse:extension-install", "chat.lumiverse:extension-installer"},
 	} {
 		apitest.Declare(t, r, grant.AccessToken, capabilities, []string{extension.SpindleID})
@@ -45,7 +40,7 @@ func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *tes
 		}
 	}
 
-	apitest.Declare(t, r, grant.AccessToken, []string{"chat.lumiverse:preset-install", lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.Declare(t, r, grant.AccessToken, []string{"chat.lumiverse:preset-install", apitest.LumiverseInstalls}, []string{extension.SpindleID})
 	if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; !state.CanReceive {
 		t.Fatal("the page does not offer the extension to an instance declaring the capability")
 	}
@@ -63,7 +58,7 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
 	apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID)
 
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
@@ -102,7 +97,7 @@ func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t 
 	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
 	if queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}

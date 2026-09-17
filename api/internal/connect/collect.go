@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -17,9 +16,9 @@ import (
 
 const holdMargin = 2 * time.Second
 
-func (s *Service) Collect(
+func (s *Sends) Collect(
 	ctx context.Context,
-	instance linking.Instance,
+	instance Instance,
 	acknowledged []uuid.UUID,
 ) (Collected, error) {
 	if len(acknowledged) > s.settings.MaxAcknowledged {
@@ -28,7 +27,7 @@ func (s *Service) Collect(
 	if err := s.instances.Throttle(
 		ctx, actionCollect, instance.ID.String(), collectLimit, time.Hour,
 	); err != nil {
-		return Collected{}, throttled(err)
+		return Collected{}, err
 	}
 	if len(acknowledged) > 0 {
 		if _, err := db.New(s.pool).AcknowledgeDeliveries(ctx, db.AcknowledgeDeliveriesParams{
@@ -69,7 +68,7 @@ func (s *Service) Collect(
 	}
 }
 
-func (s *Service) hold(ctx context.Context) time.Duration {
+func (s *Sends) hold(ctx context.Context) time.Duration {
 	spread := s.settings.HoldCeiling - s.settings.HoldFloor
 	wait := s.settings.HoldFloor
 	if spread > 0 {
@@ -89,7 +88,7 @@ func (s *Service) hold(ctx context.Context) time.Duration {
 	return wait
 }
 
-func (s *Service) claim(ctx context.Context, instance linking.Instance) (Collected, error) {
+func (s *Sends) claim(ctx context.Context, instance Instance) (Collected, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Collected{}, fmt.Errorf("begin a delivery claim: %w", err)
@@ -130,10 +129,10 @@ func (s *Service) claim(ctx context.Context, instance linking.Instance) (Collect
 	return Collected{Work: work, Withheld: withheld}, nil
 }
 
-func (s *Service) release(
+func (s *Sends) release(
 	ctx context.Context,
 	tx pgx.Tx,
-	instance linking.Instance,
+	instance Instance,
 	row db.ClaimDeliveriesRow,
 ) (*Work, error) {
 	queries := db.New(tx)
@@ -181,7 +180,7 @@ func stop(
 	return nil
 }
 
-func (s *Service) artifacts(deliveryID uuid.UUID, sendable asset.Deliverable) []Artifact {
+func (s *Sends) artifacts(deliveryID uuid.UUID, sendable asset.Deliverable) []Artifact {
 	artifacts := make([]Artifact, 0, len(sendable.Pictures)+1)
 	artifacts = append(artifacts, Artifact{
 		Kind: ArtifactExport,

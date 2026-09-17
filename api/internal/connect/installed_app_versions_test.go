@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func linkInstallations(t *testing.T, r *gin.Engine, session *http.Cookie, count 
 			t, r, session, "Lumiverse", fmt.Sprintf("desk %d", index+1),
 			[]string{apitest.ReceiveScope, apitest.LibrarySyncScope},
 		)
-		apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+		apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
 		grants = append(grants, grant)
 	}
 	return grants
@@ -28,7 +28,7 @@ func linkInstallations(t *testing.T, r *gin.Engine, session *http.Cookie, count 
 
 func installedAppVersions(t *testing.T, r http.Handler, assetID string) []string {
 	t.Helper()
-	return readExtensionPage(t, r, nil, assetID).InstalledAppVersions
+	return apitest.ReadExtensionPage(t, r, nil, assetID).InstalledAppVersions
 }
 
 func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *testing.T) {
@@ -66,7 +66,7 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 		t.Fatalf("revoke status = %d, want 204: %s", revoked.Code, revoked.Body.String())
 	}
 
-	if versions := readExtensionPage(t, r, session, assetID).InstalledAppVersions; len(versions) != 0 {
+	if versions := apitest.ReadExtensionPage(t, r, session, assetID).InstalledAppVersions; len(versions) != 0 {
 		t.Fatalf("installed app versions = %v after one of five installations was revoked, want none", versions)
 	}
 	if kept := rowCount(t, pool, `select count(*) from linked_instances
@@ -97,7 +97,7 @@ func TestAnAppVersionCountsOnlyFromInstallationsThatCanInstallTheExtensionsApp(t
 	r, session, assets, _ := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	for _, install := range linkInstallations(t, r, session, 5) {
-		apitest.Declare(t, r, install.AccessToken, []string{sillyTavernInstalls}, []string{extension.SillyTavernID})
+		apitest.Declare(t, r, install.AccessToken, []string{apitest.SillyTavernInstalls}, []string{extension.SillyTavernID})
 		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
 	}
 
@@ -111,7 +111,7 @@ func declareApplicationVersion(t *testing.T, r http.Handler, token, version stri
 	rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPut, "/v1/instances/me", token, map[string]any{
 		"applicationVersion": version,
 		"protocolVersion":    1,
-		"capabilities":       []string{lumiverseInstalls},
+		"capabilities":       []string{apitest.LumiverseInstalls},
 		"acceptedTargets":    []string{extension.SpindleID},
 	}))
 	if rec.Code != http.StatusOK {

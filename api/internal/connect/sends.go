@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,8 +22,8 @@ type Catalog interface {
 }
 
 type Instances interface {
-	Live(ctx context.Context, userID uuid.UUID) ([]linking.Instance, error)
-	LiveByID(ctx context.Context, userID, instanceID uuid.UUID) (linking.Instance, error)
+	Live(ctx context.Context, userID uuid.UUID) ([]Instance, error)
+	LiveByID(ctx context.Context, userID, instanceID uuid.UUID) (Instance, error)
 	Throttle(ctx context.Context, action, source string, limit int32, window time.Duration) error
 }
 
@@ -72,7 +71,7 @@ const (
 	deliveryPathStart = "/delivery/"
 )
 
-type Service struct {
+type Sends struct {
 	pool      *pgxpool.Pool
 	catalog   Catalog
 	instances Instances
@@ -81,19 +80,19 @@ type Service struct {
 	now       func() time.Time
 }
 
-func NewService(
+func NewSends(
 	pool *pgxpool.Pool,
 	catalog Catalog,
 	instances Instances,
 	settings Settings,
-) *Service {
-	return &Service{
+) *Sends {
+	return &Sends{
 		pool: pool, catalog: catalog, instances: instances, settings: settings,
 		waiting: newHub(settings.ConcurrentHolds), now: time.Now,
 	}
 }
 
-func (s *Service) Queue(
+func (s *Sends) Queue(
 	ctx context.Context,
 	userID uuid.UUID,
 	instanceID uuid.UUID,
@@ -102,16 +101,16 @@ func (s *Service) Queue(
 	if err := s.instances.Throttle(
 		ctx, actionQueue, userID.String(), queueLimit, time.Hour,
 	); err != nil {
-		return Delivery{}, throttled(err)
+		return Delivery{}, err
 	}
 	instance, err := s.instances.LiveByID(ctx, userID, instanceID)
-	if errors.Is(err, linking.ErrInstanceNotFound) {
-		return Delivery{}, ErrInstanceNotFound
+	if errors.Is(err, ErrInstanceNotFound) {
+		return Delivery{}, ErrNoInstanceOfYours
 	}
 	if err != nil {
 		return Delivery{}, err
 	}
-	if !instance.Grants(linking.ScopeReceiveAssets) {
+	if !instance.Grants(ScopeAssetReceive) {
 		return Delivery{}, ErrMissingScope
 	}
 	sendable, err := s.catalog.DeliverableAsset(ctx, s.pool, assetID)
@@ -156,7 +155,7 @@ func (s *Service) Queue(
 	), nil
 }
 
-func (s *Service) liveDelivery(
+func (s *Sends) liveDelivery(
 	ctx context.Context,
 	instanceID uuid.UUID,
 	assetID uuid.UUID,
@@ -176,7 +175,7 @@ func (s *Service) liveDelivery(
 	), nil
 }
 
-func (s *Service) Discard(ctx context.Context, userID, deliveryID uuid.UUID) error {
+func (s *Sends) Discard(ctx context.Context, userID, deliveryID uuid.UUID) error {
 	discarded, err := db.New(s.pool).DiscardDelivery(ctx, db.DiscardDeliveryParams{
 		DeliveryID: uuidValue(deliveryID), UserID: uuidValue(userID),
 	})
@@ -189,7 +188,7 @@ func (s *Service) Discard(ctx context.Context, userID, deliveryID uuid.UUID) err
 	return nil
 }
 
-func (s *Service) AssetInstances(
+func (s *Sends) AssetInstances(
 	ctx context.Context,
 	userID uuid.UUID,
 	assetID uuid.UUID,
@@ -225,9 +224,9 @@ func (s *Service) AssetInstances(
 			ApplicationName: row.ApplicationName,
 			InstanceName:    row.InstanceName,
 			LastSeenAt:      optionalTime(row.LastSeenAt),
-			CanReceive: holdsScope(row.Scopes, linking.ScopeReceiveAssets) &&
+			CanReceive: holdsScope(row.Scopes, ScopeAssetReceive) &&
 				installs(row.Capabilities, sendable) && canReceive,
-			ReportsLibrary: holdsScope(row.Scopes, linking.ScopeSyncLibrary),
+			ReportsLibrary: holdsScope(row.Scopes, ScopeLibrarySync),
 		}
 		if row.DeliveryID.Valid {
 			waiting := deliveryFrom(
@@ -248,7 +247,7 @@ func (s *Service) AssetInstances(
 }
 
 // UpdatableInstances names the account's instances that hold an older copy of an asset and can receive it.
-func (s *Service) UpdatableInstances(
+func (s *Sends) UpdatableInstances(
 	ctx context.Context,
 	userID uuid.UUID,
 	assetIDs []uuid.UUID,
@@ -276,7 +275,7 @@ func (s *Service) UpdatableInstances(
 }
 
 // assetsInstalledBehind keeps only the assets one of the account's instances holds an older copy of.
-func (s *Service) assetsInstalledBehind(
+func (s *Sends) assetsInstalledBehind(
 	ctx context.Context,
 	userID uuid.UUID,
 	assetIDs []uuid.UUID,
@@ -315,9 +314,9 @@ func (s *Service) assetsInstalledBehind(
 	return behind, nil
 }
 
-func holdsScope(scopes []string, wanted linking.Scope) bool {
+func holdsScope(scopes []string, wanted Scope) bool {
 	for _, scope := range scopes {
-		if linking.Scope(scope) == wanted {
+		if Scope(scope) == wanted {
 			return true
 		}
 	}
@@ -342,27 +341,4 @@ func deliveryFrom(
 		SettledAt: optionalTime(settledAt), ExpiresAt: expiresAt.Time,
 		UpdatesInstall: updatesInstall,
 	}
-}
-
-func throttled(err error) error {
-	if errors.Is(err, linking.ErrTooManyRequests) {
-		return fmt.Errorf("%w: %w", ErrTooManyRequests, err)
-	}
-	return err
-}
-
-func uuidValue(value uuid.UUID) pgtype.UUID {
-	return pgtype.UUID{Bytes: value, Valid: true}
-}
-
-func timestamptz(value time.Time) pgtype.Timestamptz {
-	return pgtype.Timestamptz{Time: value, Valid: true}
-}
-
-func optionalTime(value pgtype.Timestamptz) *time.Time {
-	if !value.Valid {
-		return nil
-	}
-	moment := value.Time
-	return &moment
 }

@@ -11,10 +11,9 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
@@ -101,20 +100,20 @@ func (ClosedSender) Post(
 	return outbound.Answer{}, errors.New("this test stack sends nowhere")
 }
 
-func NewLinkingService(pool *pgxpool.Pool) *linking.Service {
-	return linking.NewService(pool, "http://localhost:3000", []byte("01234567890123456789012345678901"))
+func NewLinkingService(pool *pgxpool.Pool) *connect.Apps {
+	return connect.NewApps(pool, "http://localhost:3000", []byte("01234567890123456789012345678901"))
 }
 
 func NewDeliveryService(
 	pool *pgxpool.Pool,
 	assets *asset.Service,
-	links *linking.Service,
-) *delivery.Service {
-	return delivery.NewService(pool, assets, links, DeliverySettings())
+	links *connect.Apps,
+) *connect.Sends {
+	return connect.NewSends(pool, assets, links, DeliverySettings())
 }
 
-func DeliverySettings() delivery.Settings {
-	settings := delivery.DefaultSettings()
+func DeliverySettings() connect.Settings {
+	settings := connect.DefaultSettings()
 	settings.HoldFloor = 50 * time.Millisecond
 	settings.HoldCeiling = 80 * time.Millisecond
 	settings.Recheck = 20 * time.Millisecond

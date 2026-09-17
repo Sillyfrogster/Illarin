@@ -11,11 +11,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -40,8 +39,8 @@ type Services struct {
 	Uploads            *upload.Service
 	Downloads          *download.Service
 	Accounts           *account.Service
-	Links              *linking.Service
-	Deliveries         *delivery.Service
+	Links              *connect.Apps
+	Deliveries         *connect.Sends
 	Publications       *publication.Service
 	UpdateDestinations *assetdestination.Service
 	Notifications      *notify.Service
@@ -127,7 +126,7 @@ func NewServicesWithDelivery(
 	pool *pgxpool.Pool,
 	maxUploadBytes int64,
 	sender account.EmailSender,
-	settings delivery.Settings,
+	settings connect.Settings,
 	to publication.Sender,
 ) Services {
 	t.Helper()
@@ -151,7 +150,7 @@ func NewServicesWithDelivery(
 		Downloads:          download.NewService(pool, assets),
 		Accounts:           accounts,
 		Links:              links,
-		Deliveries:         delivery.NewService(pool, assets, links, settings),
+		Deliveries:         connect.NewSends(pool, assets, links, settings),
 		Publications:       publication.NewService(pool, MediaLibrary(blob), Publishing(to)),
 		UpdateDestinations: updateDestinations,
 		Notifications:      NewNotifications(pool),

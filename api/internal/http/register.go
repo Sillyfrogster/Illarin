@@ -9,6 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
@@ -47,6 +48,7 @@ func Register(r *gin.Engine, h *Handlers, d api.Deadlines, readiness Readiness) 
 	upload.Register(routes, upload.NewHandlers(h.uploads, h.works, h.maxUploadBytes))
 	download.Register(routes, h.downloads)
 	private.Register(routes, private.NewHandlers(private.NewService(h.assets.Pool())))
+	connect.Register(routes, connect.NewHandlers(h.links, h.deliveries, h.downloads))
 	registerRoutes(routes, h)
 	return nil
 }

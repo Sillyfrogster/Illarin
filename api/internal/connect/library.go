@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -6,20 +6,19 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	"github.com/google/uuid"
 )
 
-func (s *Service) Sync(
+func (s *Sends) Sync(
 	ctx context.Context,
-	instance linking.Instance,
-	report LibraryReport,
+	instance Instance,
+	report ReportedLibrary,
 ) (LibraryResult, error) {
 	entries, removed, err := s.readReport(report)
 	if err != nil {
 		return LibraryResult{}, err
 	}
-	version, err := linking.ApplicationVersion(report.ApplicationVersion)
+	version, err := checkApplicationVersion(report.ApplicationVersion)
 	if err != nil {
 		return LibraryResult{}, ErrLibraryVersion
 	}
@@ -30,7 +29,7 @@ func (s *Service) Sync(
 	if err := s.instances.Throttle(
 		ctx, action, instance.ID.String(), limit, time.Hour,
 	); err != nil {
-		return LibraryResult{}, throttled(err)
+		return LibraryResult{}, err
 	}
 
 	assetIDs := make([]uuid.UUID, 0, len(entries))
@@ -88,7 +87,7 @@ func (s *Service) Sync(
 	}, nil
 }
 
-func (s *Service) readReport(report LibraryReport) ([]LibraryEntry, []uuid.UUID, error) {
+func (s *Sends) readReport(report ReportedLibrary) ([]ReportedEntry, []uuid.UUID, error) {
 	if len(report.Entries) > s.settings.MaxLibraryEntries ||
 		len(report.Removed) > s.settings.MaxLibraryEntries {
 		return nil, nil, ErrLibraryTooLarge
@@ -96,7 +95,7 @@ func (s *Service) readReport(report LibraryReport) ([]LibraryEntry, []uuid.UUID,
 	if report.Snapshot && len(report.Removed) > 0 {
 		return nil, nil, ErrLibraryReport
 	}
-	entries := make([]LibraryEntry, 0, len(report.Entries))
+	entries := make([]ReportedEntry, 0, len(report.Entries))
 	seen := make(map[uuid.UUID]struct{}, len(report.Entries))
 	for _, entry := range report.Entries {
 		if entry.ContentGeneration != nil && *entry.ContentGeneration < 1 {
@@ -118,7 +117,7 @@ func (s *Service) readReport(report LibraryReport) ([]LibraryEntry, []uuid.UUID,
 	return entries, removed, nil
 }
 
-func (s *Service) LibraryCountsByInstance(
+func (s *Sends) LibraryCountsByInstance(
 	ctx context.Context,
 	userID uuid.UUID,
 ) (map[uuid.UUID]LibraryCounts, error) {

@@ -1,4 +1,4 @@
-package linking
+package connect
 
 import (
 	"context"
@@ -15,24 +15,24 @@ import (
 
 func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
 	t.Parallel()
-	both, err := canonicalScopes([]Scope{ScopeSyncLibrary, ScopeReceiveAssets})
+	both, err := canonicalScopes([]Scope{ScopeLibrarySync, ScopeAssetReceive})
 	if err != nil {
 		t.Fatalf("both scopes: %v", err)
 	}
-	if len(both) != 2 || both[0] != ScopeReceiveAssets || both[1] != ScopeSyncLibrary {
+	if len(both) != 2 || both[0] != ScopeAssetReceive || both[1] != ScopeLibrarySync {
 		t.Errorf("canonical order = %v", both)
 	}
 
-	one, err := canonicalScopes([]Scope{ScopeSyncLibrary})
-	if err != nil || len(one) != 1 || one[0] != ScopeSyncLibrary {
+	one, err := canonicalScopes([]Scope{ScopeLibrarySync})
+	if err != nil || len(one) != 1 || one[0] != ScopeLibrarySync {
 		t.Errorf("one scope = %v, %v", one, err)
 	}
 
 	for _, requested := range [][]Scope{
 		{},
 		{"asset:write"},
-		{ScopeReceiveAssets, ScopeReceiveAssets},
-		{ScopeReceiveAssets, "asset:write"},
+		{ScopeAssetReceive, ScopeAssetReceive},
+		{ScopeAssetReceive, "asset:write"},
 	} {
 		if _, err := canonicalScopes(requested); !errors.Is(err, ErrInvalidScopes) {
 			t.Errorf("canonicalScopes(%v) error = %v, want a refusal", requested, err)
@@ -150,7 +150,7 @@ func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
 	base := AuthorizationInput{
 		StartInput: StartInput{
 			Declaration: testDeclaration(),
-			Scopes:      []Scope{ScopeReceiveAssets},
+			Scopes:      []Scope{ScopeAssetReceive},
 		},
 		RedirectURI:         "http://127.0.0.1:49152/link/callback",
 		State:               strings.Repeat("s", 43),
@@ -198,7 +198,7 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
-	service := NewService(
+	service := NewApps(
 		pool,
 		"http://localhost:3000",
 		[]byte("01234567890123456789012345678901"),
@@ -207,7 +207,7 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 
 	started, err := service.Start(ctx, "127.0.0.1", StartInput{
 		Declaration: testDeclaration(),
-		Scopes:      []Scope{ScopeReceiveAssets},
+		Scopes:      []Scope{ScopeAssetReceive},
 	})
 	if err != nil {
 		t.Fatalf("start: %v", err)
@@ -224,10 +224,10 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 		t.Fatalf("poll: %v, linked %v", err, linked)
 	}
 
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeReceiveAssets); err != nil {
+	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeAssetReceive); err != nil {
 		t.Errorf("granted scope refused: %v", err)
 	}
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeSyncLibrary); !errors.Is(
+	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeLibrarySync); !errors.Is(
 		err, ErrInstanceMissingScope,
 	) {
 		t.Errorf("ungranted scope error = %v, want a refusal", err)

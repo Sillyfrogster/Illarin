@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/gin-gonic/gin"
 )
 
@@ -275,7 +275,7 @@ func (h *Handlers) allowAccountAttempt(
 	if err == nil {
 		return true
 	}
-	var limited *linking.RateLimitError
+	var limited *connect.RateLimitError
 	if errors.As(err, &limited) {
 		seconds := int((limited.After + time.Second - 1) / time.Second)
 		c.Header("Retry-After", strconv.Itoa(seconds))

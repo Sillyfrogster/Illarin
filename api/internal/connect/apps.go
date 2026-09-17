@@ -1,4 +1,4 @@
-package linking
+package connect
 
 import (
 	"context"
@@ -46,28 +46,28 @@ type RateLimitError struct {
 func (e *RateLimitError) Error() string { return ErrTooManyRequests.Error() }
 func (e *RateLimitError) Unwrap() error { return ErrTooManyRequests }
 
-type Service struct {
+type Apps struct {
 	pool          *pgxpool.Pool
 	siteURL       string
 	browserOrigin string
 	hmacKey       []byte
 }
 
-func NewService(pool *pgxpool.Pool, siteURL string, hmacKey []byte) *Service {
+func NewApps(pool *pgxpool.Pool, siteURL string, hmacKey []byte) *Apps {
 	trimmed := strings.TrimRight(siteURL, "/")
 	origin := trimmed
 	if parsed, err := url.Parse(trimmed); err == nil && parsed.Scheme != "" && parsed.Host != "" {
 		origin = parsed.Scheme + "://" + parsed.Host
 	}
-	return &Service{
+	return &Apps{
 		pool: pool, siteURL: trimmed, browserOrigin: origin,
 		hmacKey: append([]byte(nil), hmacKey...),
 	}
 }
 
-func (s *Service) BrowserOrigin() string { return s.browserOrigin }
+func (s *Apps) BrowserOrigin() string { return s.browserOrigin }
 
-func (s *Service) Start(ctx context.Context, source string, input StartInput) (Request, error) {
+func (s *Apps) Start(ctx context.Context, source string, input StartInput) (Request, error) {
 	in, err := validateStart(input)
 	if err != nil {
 		return Request{}, err
@@ -119,7 +119,7 @@ func (s *Service) Start(ctx context.Context, source string, input StartInput) (R
 	return Request{}, errors.New("could not allocate a link code")
 }
 
-func (s *Service) StartAuthorization(
+func (s *Apps) StartAuthorization(
 	ctx context.Context,
 	source string,
 	input AuthorizationInput,
@@ -166,7 +166,7 @@ func (s *Service) StartAuthorization(
 	return Authorization{}, errors.New("could not allocate an authorization request")
 }
 
-func (s *Service) Pending(ctx context.Context, userID uuid.UUID, rawCode string) (Pending, error) {
+func (s *Apps) Pending(ctx context.Context, userID uuid.UUID, rawCode string) (Pending, error) {
 	if err := s.takeRate(ctx, "user-code", userID.String(), codeAttemptLimit, time.Hour); err != nil {
 		return Pending{}, ErrTooManyCodes
 	}
@@ -187,7 +187,7 @@ func (s *Service) Pending(ctx context.Context, userID uuid.UUID, rawCode string)
 	return pendingFromDeviceReview(row, s.deviceApprovalProof(userID, code)), nil
 }
 
-func (s *Service) Approve(
+func (s *Apps) Approve(
 	ctx context.Context,
 	userID uuid.UUID,
 	rawCode string,
@@ -211,7 +211,7 @@ func (s *Service) Approve(
 	return pendingFromDeviceApproval(row), nil
 }
 
-func (s *Service) Deny(
+func (s *Apps) Deny(
 	ctx context.Context,
 	userID uuid.UUID,
 	rawCode string,
@@ -235,7 +235,7 @@ func (s *Service) Deny(
 	return nil
 }
 
-func (s *Service) PendingAuthorization(
+func (s *Apps) PendingAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
@@ -262,7 +262,7 @@ func (s *Service) PendingAuthorization(
 	}, nil
 }
 
-func (s *Service) ApproveAuthorization(
+func (s *Apps) ApproveAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
@@ -292,7 +292,7 @@ func (s *Service) ApproveAuthorization(
 	return Redirect{URL: destination}, nil
 }
 
-func (s *Service) DenyAuthorization(
+func (s *Apps) DenyAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
@@ -317,7 +317,7 @@ func (s *Service) DenyAuthorization(
 	return Redirect{URL: destination}, nil
 }
 
-func (s *Service) Poll(
+func (s *Apps) Poll(
 	ctx context.Context,
 	source string,
 	deviceCode string,
@@ -394,7 +394,7 @@ func (s *Service) Poll(
 	return grant, true, nil
 }
 
-func (s *Service) Exchange(
+func (s *Apps) Exchange(
 	ctx context.Context,
 	source string,
 	authorizationCode string,
@@ -449,7 +449,7 @@ func (s *Service) Exchange(
 	return grant, nil
 }
 
-func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
+func (s *Apps) List(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
 	rows, err := db.New(s.pool).ListLinkedInstances(ctx, uuidValue(userID))
 	if err != nil {
 		return nil, fmt.Errorf("list linked instances: %w", err)
@@ -470,7 +470,7 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Instance, error
 	return instances, nil
 }
 
-func (s *Service) Revoke(ctx context.Context, userID, instanceID uuid.UUID) error {
+func (s *Apps) Revoke(ctx context.Context, userID, instanceID uuid.UUID) error {
 	revoked, err := db.New(s.pool).RevokeLinkedInstance(ctx, db.RevokeLinkedInstanceParams{
 		InstanceID: uuidValue(instanceID), UserID: uuidValue(userID),
 	})
@@ -483,7 +483,7 @@ func (s *Service) Revoke(ctx context.Context, userID, instanceID uuid.UUID) erro
 	return nil
 }
 
-func (s *Service) UpdateDeclaration(
+func (s *Apps) UpdateDeclaration(
 	ctx context.Context,
 	instanceID uuid.UUID,
 	declaration Declaration,
@@ -554,7 +554,7 @@ func declarationFrom(
 	}
 }
 
-func (s *Service) takeRate(
+func (s *Apps) takeRate(
 	ctx context.Context,
 	action string,
 	source string,
@@ -592,7 +592,7 @@ func deleteExpiredRates(ctx context.Context, queries *db.Queries) error {
 	return nil
 }
 
-func (s *Service) digest(purpose, value string) []byte {
+func (s *Apps) digest(purpose, value string) []byte {
 	mac := hmac.New(sha256.New, s.hmacKey)
 	mac.Write([]byte(purpose))
 	mac.Write([]byte{0})
@@ -600,12 +600,12 @@ func (s *Service) digest(purpose, value string) []byte {
 	return mac.Sum(nil)
 }
 
-func (s *Service) deviceApprovalProof(userID uuid.UUID, code string) string {
+func (s *Apps) deviceApprovalProof(userID uuid.UUID, code string) string {
 	digest := s.digest("device-approval", userID.String()+"\x00"+code)
 	return base64.RawURLEncoding.EncodeToString(digest)
 }
 
-func (s *Service) deviceApprovalProofHash(
+func (s *Apps) deviceApprovalProofHash(
 	userID uuid.UUID,
 	code string,
 	proof string,

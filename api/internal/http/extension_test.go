@@ -14,31 +14,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 )
 
-type extensionPage struct {
-	Kind                  string   `json:"kind"`
-	Name                  string   `json:"name"`
-	Identifier            *string  `json:"identifier"`
-	InstalledAppVersions  []string `json:"installedAppVersions"`
-	ExtensionDependencies []struct {
-		Name   string `json:"name"`
-		Assets []struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Creator string `json:"creator"`
-		} `json:"assets"`
-	} `json:"extensionDependencies"`
-	Blocks []struct {
-		ID         string `json:"id"`
-		Definition string `json:"definition"`
-		Elements   []struct {
-			Role    string          `json:"role"`
-			Pinned  bool            `json:"pinned"`
-			Locked  bool            `json:"locked"`
-			Content json.RawMessage `json:"content"`
-		} `json:"elements"`
-	} `json:"blocks"`
-}
-
 func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
 	r, session, assets, pool := harness.NewExtensionRouter(t)
@@ -47,7 +22,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	})
 	assetID := apitest.UploadExtension(t, r, session, assets, upload)
 
-	page := readExtensionPage(t, r, session, assetID)
+	page := apitest.ReadExtensionPage(t, r, session, assetID)
 	if page.Kind != "extension" || page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
 		t.Fatalf("page kind %q identifier %v, want an extension showing quiet_toolbox", page.Kind, page.Identifier)
 	}
@@ -90,7 +65,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
 	if queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send to the instance = %d: %s", queued.Code, queued.Body.String())
 	}
@@ -133,7 +108,7 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 	})
 	assetID := apitest.PublishExtension(t, r, session, assets, "Custom Sliders", upload)
 
-	page := readExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, assetID)
 	if page.Identifier == nil || *page.Identifier != "Extension-CustomSliders" {
 		t.Fatalf("identifier = %v, want the folder SillyTavern clones into", page.Identifier)
 	}
@@ -188,7 +163,7 @@ func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	})
 	assetID := apitest.PublishExtension(t, r, session, assets, "Quiet Toolbox", upload)
 
-	if page := readExtensionPage(t, r, nil, assetID); page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
+	if page := apitest.ReadExtensionPage(t, r, nil, assetID); page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
 		t.Fatalf("identifier = %v, want the manifest inside the folder read", page.Identifier)
 	}
 	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+extension.SpindleID, nil))
@@ -230,7 +205,7 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	if after := apitest.ContentGeneration(t, pool, assetID); after <= before {
 		t.Errorf("content generation stayed at %d after a new archive", after)
 	}
-	page := readExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, assetID)
 	contents := ""
 	for _, holder := range page.Blocks {
 		for _, element := range holder.Elements {
@@ -297,7 +272,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 // additionsOnPage reads the public page's locked list of what the extension adds, as group and name pairs.
 func additionsOnPage(t *testing.T, r http.Handler, assetID string) string {
 	t.Helper()
-	page := readExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, assetID)
 	for _, holder := range page.Blocks {
 		if holder.Definition != "extension_additions" {
 			continue
@@ -393,23 +368,6 @@ func TestAnExtensionCannotBeStartedWithoutAnArchive(t *testing.T) {
 	if response := apitest.Send(t, r, apitest.Authorized(request, session)); response.Code != http.StatusBadRequest {
 		t.Fatalf("start an extension from nothing = %d: %s", response.Code, response.Body.String())
 	}
-}
-
-func readExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, assetID string) extensionPage {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
-	if session != nil {
-		request = apitest.Authorized(request, session)
-	}
-	response := apitest.Send(t, r, request)
-	if response.Code != http.StatusOK {
-		t.Fatalf("read the extension = %d: %s", response.Code, response.Body.String())
-	}
-	var page extensionPage
-	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the extension: %v", err)
-	}
-	return page
 }
 
 func browsedIDs(t *testing.T, r http.Handler, path string) string {

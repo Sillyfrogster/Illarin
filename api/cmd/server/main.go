@@ -19,12 +19,11 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
@@ -156,8 +155,8 @@ func run() error {
 	publications := publication.NewService(pool, images, publishing)
 	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	svc.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
-	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
-	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
+	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
+	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
 	background.Add(8)
 	go func() {

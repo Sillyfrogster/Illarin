@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"context"
@@ -126,7 +126,7 @@ func TestWithholdingAnExtensionStopsItsQueuedDeliveriesAsWithdrawn(t *testing.T)
 	r, session, assets, pool := harness.NewExtensionRouter(t)
 	assetID := publishedSpindleExtension(t, r, session, assets)
 	install := linkInstallations(t, r, session, 1)[0]
-	apitest.Declare(t, r, install.AccessToken, []string{lumiverseInstalls}, []string{extension.SpindleID})
+	apitest.Declare(t, r, install.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
 	if queued := apitest.SendToInstance(t, r, session, assetID, install.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}

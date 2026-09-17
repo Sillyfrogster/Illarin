@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"context"

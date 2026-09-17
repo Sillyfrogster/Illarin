@@ -5,21 +5,21 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 )
 
 type Handlers struct {
 	works         *Service
 	accounts      *account.Service
-	deliveries    *delivery.Service
+	deliveries    *connect.Sends
 	notifications *notify.Service
 }
 
 func NewHandlers(
 	works *Service,
 	accounts *account.Service,
-	deliveries *delivery.Service,
+	deliveries *connect.Sends,
 	notifications *notify.Service,
 ) *Handlers {
 	return &Handlers{works: works, accounts: accounts, deliveries: deliveries, notifications: notifications}

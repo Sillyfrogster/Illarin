@@ -1,4 +1,4 @@
-package http
+package connect_test
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/gin-gonic/gin"
 )
 
@@ -419,7 +420,7 @@ func TestLinkSecretsAreHashedAndHumanCodesUseKeyedDigestsAtRest(t *testing.T) {
 func TestLinkBodiesStopAtFourKiBAndResponsesAreNotStored(t *testing.T) {
 	t.Parallel()
 	r, _, _ := harness.NewLinkingRouter(t)
-	body := `{"applicationName":"` + strings.Repeat("x", maxLinkBodyBytes) + `"}`
+	body := `{"applicationName":"` + strings.Repeat("x", connect.MaxLinkBodyBytes) + `"}`
 	rec := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/requests", body)
 	apitest.AssertNoStore(t, rec)
 	if rec.Code != http.StatusRequestEntityTooLarge {

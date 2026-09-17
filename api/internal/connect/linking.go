@@ -1,4 +1,4 @@
-package linking
+package connect
 
 import (
 	"crypto/rand"
@@ -19,14 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Scope string
-
-const (
-	ScopeReceiveAssets Scope = "asset:receive"
-	ScopeSyncLibrary   Scope = "library:sync"
-)
-
-var scopeOrder = []Scope{ScopeReceiveAssets, ScopeSyncLibrary}
+var scopeOrder = []Scope{ScopeAssetReceive, ScopeLibrarySync}
 
 var (
 	ErrInvalidName          = errors.New("application and instance names are required")
@@ -169,7 +162,7 @@ func validateDeclaration(in Declaration) (Declaration, error) {
 	if err != nil {
 		return Declaration{}, ErrInvalidName
 	}
-	version, err := ApplicationVersion(in.ApplicationVersion)
+	version, err := checkApplicationVersion(in.ApplicationVersion)
 	if err != nil {
 		return Declaration{}, ErrInvalidDeclaration
 	}
@@ -191,8 +184,8 @@ func validateDeclaration(in Declaration) (Declaration, error) {
 	}, nil
 }
 
-// ApplicationVersion trims a reported version, which may be empty, and refuses one that is not printable text of at most 64 characters.
-func ApplicationVersion(raw string) (string, error) {
+// checkApplicationVersion trims a reported version, which may be empty, and refuses one that is not printable text of at most 64 characters
+func checkApplicationVersion(raw string) (string, error) {
 	version := strings.TrimSpace(raw)
 	if version == "" {
 		return "", nil

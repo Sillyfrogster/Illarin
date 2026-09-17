@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -77,7 +77,7 @@ func (h Harness) NewLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgx
 
 func (h Harness) NewLinkingRouterWith(
 	t *testing.T,
-	settings delivery.Settings,
+	settings connect.Settings,
 ) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
 	pool := testdb.Connect(t)

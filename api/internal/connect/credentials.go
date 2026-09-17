@@ -1,4 +1,4 @@
-package linking
+package connect
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) Refresh(ctx context.Context, source, refreshToken string) (TokenGrant, error) {
+func (s *Apps) Refresh(ctx context.Context, source, refreshToken string) (TokenGrant, error) {
 	if err := s.takeRate(ctx, "refresh", source, 600, time.Hour); err != nil {
 		return TokenGrant{}, err
 	}
@@ -138,7 +138,7 @@ func rotateRefreshGrant(
 	}, nil
 }
 
-func (s *Service) Authenticate(ctx context.Context, token string, needs Scope) (Instance, error) {
+func (s *Apps) Authenticate(ctx context.Context, token string, needs Scope) (Instance, error) {
 	hash, ok := credentialHash(token, accessTokenKind)
 	if !ok {
 		return Instance{}, ErrInstanceCredential

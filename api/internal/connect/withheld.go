@@ -1,4 +1,4 @@
-package delivery
+package connect
 
 import (
 	"context"
@@ -10,16 +10,16 @@ import (
 )
 
 // takeWithheldNotices returns each withhold of an installed kind the instance has not been told about, and records that it now has.
-func takeWithheldNotices(ctx context.Context, queries *db.Queries, instanceID uuid.UUID) ([]WithheldNotice, error) {
+func takeWithheldNotices(ctx context.Context, queries *db.Queries, instanceID uuid.UUID) ([]WithheldWork, error) {
 	rows, err := queries.TakeWithheldNotices(ctx, db.TakeWithheldNoticesParams{
 		InstanceID: uuidValue(instanceID), Kinds: format.InstalledKinds(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("take withheld notices: %w", err)
 	}
-	notices := make([]WithheldNotice, 0, len(rows))
+	notices := make([]WithheldWork, 0, len(rows))
 	for _, row := range rows {
-		notices = append(notices, WithheldNotice{
+		notices = append(notices, WithheldWork{
 			AssetID: uuid.UUID(row.AssetID.Bytes), Name: row.Name, WithheldAt: row.WithheldAt.Time,
 		})
 	}
