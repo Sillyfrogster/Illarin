@@ -53,7 +53,7 @@ func (h *Handlers) AddAssetUpdateDestination(c *gin.Context) {
 		return
 	}
 	if request.Address == nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Enter the destination address.", "address")
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Enter the destination address.", "address")
 		return
 	}
 	added, err := h.updateDestinations.Add(c.Request.Context(), owner.ID, string(request.Kind), request.Name, *request.Address)
@@ -78,9 +78,9 @@ func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
 	case errors.Is(err, asset.ErrAssetFrozen):
 		c.JSON(http.StatusConflict, gin.H{"error": "This asset is frozen while it is withheld."})
 	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
 	case errors.As(err, &field):
-		refuseField(c, http.StatusBadRequest, CodeInvalid, field.Message, field.Field)
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, field.Message, field.Field)
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update your destination. Try again."})
 	}
@@ -209,7 +209,7 @@ func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
 		return
 	}
 	if request.DestinationIds == nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send destination IDs, or an empty list to disable default announcements.", "destinationIds")
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send destination IDs, or an empty list to disable default announcements.", "destinationIds")
 		return
 	}
 	if err := h.assets.SetUpdateDestinations(c.Request.Context(), owner.ID, id, readIDs(&request.DestinationIds)); err != nil {

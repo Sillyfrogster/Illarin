@@ -89,7 +89,7 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, asset.ErrPublishFloor):
-		notReady := NotReady
+		notReady := PublishRefusalCodeNotReady
 		c.JSON(http.StatusConflict, PublishRefusal{
 			Error:     "This draft is not ready to publish yet.",
 			Code:      &notReady,
@@ -97,7 +97,7 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 		})
 		return
 	case errors.Is(err, asset.ErrAlreadyPublished):
-		published := AlreadyPublished
+		published := PublishRefusalCodeAlreadyPublished
 		c.JSON(http.StatusConflict, PublishRefusal{
 			Error: "This asset is already published.", Code: &published,
 		})
@@ -176,25 +176,25 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, assetdestination.ErrUnlistedConsentRequired):
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.",
 			"announceUnlisted")
 	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Choose only your own verified, active destinations.", "destinationIds")
 	case errors.Is(err, asset.ErrSummaryRequired):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Say what changed in this update."})
 	case errors.Is(err, asset.ErrSummaryTooLong):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "The summary, notes or version label is too long."})
 	case errors.Is(err, asset.ErrPublishFloor):
-		notReady := NotReady
+		notReady := PublishRefusalCodeNotReady
 		c.JSON(http.StatusConflict, PublishRefusal{
 			Error:     "This asset is not ready to publish yet.",
 			Code:      &notReady,
 			Readiness: toAPIReadiness(items),
 		})
 	case errors.Is(err, asset.ErrNothingToPublish):
-		unchanged := NoChanges
+		unchanged := PublishRefusalCodeNoChanges
 		c.JSON(http.StatusConflict, PublishRefusal{
 			Error: "Nothing has changed since the last update.", Code: &unchanged,
 		})

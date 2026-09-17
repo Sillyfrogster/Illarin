@@ -1,86 +1,63 @@
-import { type Answer, ask } from "./request";
-import type { components } from "./schema";
+import { ask } from "./request";
 
-export type AssetUpdateDestination =
-  components["schemas"]["AssetUpdateDestination"];
-export type AssetUpdateDestinationChoice =
-  components["schemas"]["AssetUpdateDestinationChoice"];
-export type AssetUpdateAnnouncement =
-  components["schemas"]["AssetUpdateAnnouncement"];
-type AddedDestination = components["schemas"]["AddedAssetUpdateDestination"];
-type NewDestination = components["schemas"]["AddAssetUpdateDestinationRequest"];
-type DestinationChange =
-  components["schemas"]["UpdateAssetUpdateDestinationRequest"];
+import type {
+  AddAssetUpdateDestinationRequest,
+  AddedAssetUpdateDestination,
+  AssetUpdateAnnouncement,
+  AssetUpdateDestination,
+  AssetUpdateDestinationChoice,
+  UpdateAssetUpdateDestinationRequest,
+} from "./shapes";
+export type {
+  AssetUpdateAnnouncement,
+  AssetUpdateDestination,
+  AssetUpdateDestinationChoice,
+};
+
+type AddedDestination = AddedAssetUpdateDestination;
+type NewDestination = AddAssetUpdateDestinationRequest;
+type DestinationChange = UpdateAssetUpdateDestinationRequest;
 
 const base = "/account/update-destinations";
 
-async function request<T>(
-  path: string,
-  method: string,
-  body?: unknown,
-  signal?: AbortSignal,
-): Promise<Answer<T>> {
-  try {
-    return await ask<T>(
-      path,
-      {
-        method,
-        signal,
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-      },
-      (response) => response.json() as Promise<T>,
-    );
-  } catch {
-    return { error: "We could not read Illarin's response. Try again." };
-  }
-}
-
 export function readUpdateDestinations(signal?: AbortSignal) {
-  return request<{ destinations: AssetUpdateDestination[] }>(
-    base,
-    "GET",
-    undefined,
+  return ask<{ destinations: AssetUpdateDestination[] }>("GET", base, {
     signal,
-  );
+  });
 }
 
 export function addUpdateDestination(body: NewDestination) {
-  return request<AddedDestination>(base, "POST", body);
+  return ask<AddedDestination>("POST", base, { body });
 }
 
 export function changeUpdateDestination(id: string, body: DestinationChange) {
-  return request<AssetUpdateDestination>(`${base}/${id}`, "PATCH", body);
+  return ask<AssetUpdateDestination>("PATCH", `${base}/${id}`, { body });
 }
 
 export function verifyUpdateDestination(id: string) {
-  return request<AssetUpdateDestination>(`${base}/${id}/verification`, "POST");
+  return ask<AssetUpdateDestination>("POST", `${base}/${id}/verification`);
 }
 
 export function disableUpdateDestination(id: string) {
-  return request<AssetUpdateDestination>(
-    `${base}/${id}/verification`,
-    "DELETE",
-  );
+  return ask<AssetUpdateDestination>("DELETE", `${base}/${id}/verification`);
 }
 
 export function rotateUpdateDestinationSecret(id: string) {
-  return request<AddedDestination>(`${base}/${id}/secret`, "POST");
+  return ask<AddedDestination>("POST", `${base}/${id}/secret`);
 }
 
 export function removeUpdateDestination(id: string) {
-  return ask<null>(`${base}/${id}`, { method: "DELETE" }, async () => null);
+  return ask<void>("DELETE", `${base}/${id}`);
 }
 
 export function readAssetUpdateDestinationChoices(
   assetId: string,
   signal?: AbortSignal,
 ) {
-  return request<{ destinations: AssetUpdateDestinationChoice[] }>(
-    `/assets/${assetId}/update-destinations`,
+  return ask<{ destinations: AssetUpdateDestinationChoice[] }>(
     "GET",
-    undefined,
-    signal,
+    `/assets/${assetId}/update-destinations`,
+    { signal },
   );
 }
 
@@ -88,10 +65,9 @@ export function readAssetUpdateAnnouncements(
   assetId: string,
   signal?: AbortSignal,
 ) {
-  return request<{ announcements: AssetUpdateAnnouncement[] }>(
-    `/assets/${assetId}/announcements`,
+  return ask<{ announcements: AssetUpdateAnnouncement[] }>(
     "GET",
-    undefined,
-    signal,
+    `/assets/${assetId}/announcements`,
+    { signal },
   );
 }

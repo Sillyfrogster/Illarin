@@ -9,17 +9,17 @@ import (
 type ItemSize string
 
 const (
-	Large  ItemSize = "large"
-	Medium ItemSize = "medium"
-	Small  ItemSize = "small"
+	ItemSizeLarge  ItemSize = "large"
+	ItemSizeMedium ItemSize = "medium"
+	ItemSizeSmall  ItemSize = "small"
 )
 
 type SaveAssetBlockRequest struct {
-	AllowedApps     *[]SaveAssetBlockRequestAllowedApps `json:"allowedApps,omitempty"`
+	AllowedApps     *[]SaveAssetBlockRequestAllowedApps `json:"allowedApps,omitempty" tstype:"'lumiverse'[]"`
 	Elements        []SaveAssetElement                  `json:"elements"`
 	ExposeProtected *bool                               `json:"exposeProtected,omitempty"`
 	Layout          SaveAssetBlockRequestLayout         `json:"layout"`
-	Title           *string                             `json:"title"`
+	Title           *string                             `json:"title" tstype:"string | null,required"`
 	Width           SaveAssetBlockRequestWidth          `json:"width"`
 }
 
@@ -50,7 +50,7 @@ const (
 )
 
 type SaveAssetElement struct {
-	Content  json.RawMessage          `json:"content"`
+	Content  json.RawMessage          `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
 	Display  *SaveAssetElementDisplay `json:"display,omitempty"`
 	Id       uuid.UUID                `json:"id"`
 	ItemSize *ItemSize                `json:"itemSize,omitempty"`

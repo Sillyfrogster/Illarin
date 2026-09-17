@@ -9,13 +9,13 @@ type PublicationError struct {
 type PublicationErrorCode string
 
 const (
-	CodeAlreadyScheduled PublicationErrorCode = "already_scheduled"
-	CodeCategoryRefused  PublicationErrorCode = "category_refused"
-	CodeForbidden        PublicationErrorCode = "forbidden"
-	CodeInvalid          PublicationErrorCode = "invalid"
-	CodeNotFound         PublicationErrorCode = "not_found"
-	CodeScheduleRunning  PublicationErrorCode = "schedule_running"
-	CodeServerError      PublicationErrorCode = "server_error"
-	CodeStaleVersion     PublicationErrorCode = "stale_version"
-	CodeUnauthenticated  PublicationErrorCode = "unauthenticated"
+	PublicationErrorCodeAlreadyScheduled PublicationErrorCode = "already_scheduled"
+	PublicationErrorCodeCategoryRefused  PublicationErrorCode = "category_refused"
+	PublicationErrorCodeForbidden        PublicationErrorCode = "forbidden"
+	PublicationErrorCodeInvalid          PublicationErrorCode = "invalid"
+	PublicationErrorCodeNotFound         PublicationErrorCode = "not_found"
+	PublicationErrorCodeScheduleRunning  PublicationErrorCode = "schedule_running"
+	PublicationErrorCodeServerError      PublicationErrorCode = "server_error"
+	PublicationErrorCodeStaleVersion     PublicationErrorCode = "stale_version"
+	PublicationErrorCodeUnauthenticated  PublicationErrorCode = "unauthenticated"
 )

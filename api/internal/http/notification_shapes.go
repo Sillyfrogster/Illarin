@@ -12,7 +12,7 @@ type Asset struct {
 	Discovery AssetDiscovery `json:"discovery"`
 	Format    string         `json:"format"`
 	Id        uuid.UUID      `json:"id"`
-	IsNsfw    *bool          `json:"isNsfw"`
+	IsNsfw    *bool          `json:"isNsfw" tstype:"boolean | null,required"`
 	Kind      string         `json:"kind"`
 	Name      string         `json:"name"`
 	Tags      []string       `json:"tags"`
@@ -54,11 +54,11 @@ type NotificationSendTarget struct {
 type NotificationType string
 
 const (
-	AssetRestored     NotificationType = "asset_restored"
-	AssetUpdated      NotificationType = "asset_updated"
-	AssetWithheld     NotificationType = "asset_withheld"
-	ProfileRestored   NotificationType = "profile_restored"
-	ProfileRestricted NotificationType = "profile_restricted"
+	NotificationTypeAssetRestored     NotificationType = "asset_restored"
+	NotificationTypeAssetUpdated      NotificationType = "asset_updated"
+	NotificationTypeAssetWithheld     NotificationType = "asset_withheld"
+	NotificationTypeProfileRestored   NotificationType = "profile_restored"
+	NotificationTypeProfileRestricted NotificationType = "profile_restricted"
 )
 
 type NotificationUpdate struct {

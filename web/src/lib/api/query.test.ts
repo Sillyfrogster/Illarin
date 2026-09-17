@@ -6,7 +6,10 @@ const ID = "00000000-0000-4000-8000-000000000024";
 const originalFetch = globalThis.fetch;
 
 function useFetch(
-  fetchImplementation: (request: Request) => Promise<Response>,
+  fetchImplementation: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ) {
   Object.defineProperty(globalThis, "fetch", {
     configurable: true,
@@ -20,7 +23,7 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, "window");
 });
 
-describe("generated identity client", () => {
+describe("identity client", () => {
   for (const [action, blurb] of [
     ["add", "A new pitch."],
     ["edit", "A clearer pitch."],
@@ -29,8 +32,8 @@ describe("generated identity client", () => {
     test(`sends the blurb when a creator ${action}s it`, async () => {
       let sent: Request | undefined;
       useFetch(
-        mock(async (input: Request) => {
-          sent = input;
+        mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+          sent = new Request(input, init);
           return new Response(null, { status: 204 });
         }),
       );

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Said, TextInput } from "@/components/ui/field";
 import { Gate } from "@/components/ui/gate";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
-import { type Refusal, refusalMessage } from "@/lib/answer";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { readRefusal, refusalMessage } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -58,22 +58,23 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
     setSaid("");
 
     try {
-      const response = await browserFetch("/api/v1/account/password", {
-        body: JSON.stringify({
-          password: String(new FormData(form).get("password") ?? ""),
-        }),
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        method: "PUT",
-      });
-      const answer = (await response.json()) as SignedInAccount & Refusal;
-      if (!response.ok) {
+      const { data, error } = await api<SignedInAccount>(
+        "PUT",
+        "/v1/account/password",
+        {
+          body: { password: String(new FormData(form).get("password") ?? "") },
+        },
+      );
+      if (!data) {
         setSaid(
-          refusalMessage(answer, "The password could not be saved. Try again."),
+          refusalMessage(
+            readRefusal(error),
+            "The password could not be saved. Try again.",
+          ),
         );
         return;
       }
-      setAccount(answer);
+      setAccount(data);
       form.reset();
       setSaid(
         "Password saved. You can sign in with your verified email address.",
@@ -89,21 +90,20 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
     setDetachPending(true);
     setSaid("");
     try {
-      const response = await browserFetch("/api/v1/account/discord", {
-        credentials: "same-origin",
-        method: "DELETE",
-      });
-      const answer = (await response.json()) as SignedInAccount & Refusal;
-      if (!response.ok) {
+      const { data, error } = await api<SignedInAccount>(
+        "DELETE",
+        "/v1/account/discord",
+      );
+      if (!data) {
         setSaid(
           refusalMessage(
-            answer,
+            readRefusal(error),
             "Discord could not be disconnected. Try again.",
           ),
         );
         return;
       }
-      setAccount(answer);
+      setAccount(data);
       setSaid(
         "Discord disconnected. It can now be connected to another account.",
       );

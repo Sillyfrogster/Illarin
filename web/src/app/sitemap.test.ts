@@ -28,7 +28,7 @@ test("sitemap follows the whole browse listing", async () => {
     },
     {
       items: [asset(SECOND_ID, "Second garden")],
-      nextCursor: null,
+      nextCursor: undefined,
     },
   ];
 
@@ -58,7 +58,7 @@ test("sitemap asks for the listing a stranger sees, adult work included", async 
 
   await buildSitemap(async (params) => {
     requests.push(params);
-    return { items: [], nextCursor: null };
+    return { items: [], nextCursor: undefined };
   });
 
   expect(requests).toEqual([

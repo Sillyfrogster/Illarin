@@ -199,40 +199,40 @@ func (h *Handlers) publicationError(c *gin.Context, err error) {
 	var field publication.FieldError
 	switch {
 	case errors.As(err, &field):
-		refuseField(c, http.StatusBadRequest, categoryOr(err, CodeInvalid),
+		refuseField(c, http.StatusBadRequest, categoryOr(err, PublicationErrorCodeInvalid),
 			field.Message, field.Field)
 	case errors.Is(err, publication.ErrAccountNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such account.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such account.")
 	case errors.Is(err, publication.ErrAppNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such publication app.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such publication app.")
 	case errors.Is(err, publication.ErrCategoryNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such publication category.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such publication category.")
 	case errors.Is(err, publication.ErrGrantNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such approval.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such approval.")
 	case errors.Is(err, publication.ErrGrantRevoked):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That approval has been revoked.")
 	case errors.Is(err, publication.ErrAccountUnverified):
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That account has not verified its email yet.", "handle")
 	case errors.Is(err, publication.ErrAlreadyGranted):
-		refusePublication(c, http.StatusConflict, CodeInvalid,
+		refusePublication(c, http.StatusConflict, PublicationErrorCodeInvalid,
 			"That account already publishes for that app.")
 	case errors.Is(err, publication.ErrIncompleteOrder):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Name every one of them exactly once to set the order.")
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		refusePublication(c, http.StatusServiceUnavailable, CodeServerError,
+		refusePublication(c, http.StatusServiceUnavailable, PublicationErrorCodeServerError,
 			"Uploads are temporarily unavailable because storage is low.")
 	default:
-		refusePublication(c, http.StatusInternalServerError, CodeServerError,
+		refusePublication(c, http.StatusInternalServerError, PublicationErrorCodeServerError,
 			"Could not change the publication.")
 	}
 }
 
 func categoryOr(err error, otherwise PublicationErrorCode) PublicationErrorCode {
 	if errors.Is(err, publication.ErrCategoryRefused) {
-		return CodeCategoryRefused
+		return PublicationErrorCodeCategoryRefused
 	}
 	return otherwise
 }

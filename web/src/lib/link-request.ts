@@ -1,9 +1,10 @@
-import type { components } from "@/lib/api/schema";
+import type {
+  LinkRedirect,
+  PendingDeviceLink,
+  PendingLink,
+} from "@/lib/api/shapes";
 import { isStringArray } from "./answer";
-
-export type PendingLink = components["schemas"]["PendingLink"];
-export type PendingDeviceLink = components["schemas"]["PendingDeviceLink"];
-export type LinkRedirect = components["schemas"]["LinkRedirect"];
+export type { LinkRedirect, PendingDeviceLink, PendingLink };
 
 export function isPendingLink(value: unknown): value is PendingLink {
   if (typeof value !== "object" || value === null) return false;

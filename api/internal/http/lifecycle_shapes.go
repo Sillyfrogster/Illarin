@@ -8,7 +8,7 @@ import (
 
 type AssetIdentityRequest struct {
 	Blurb  string `json:"blurb"`
-	IsNsfw *bool  `json:"isNsfw"`
+	IsNsfw *bool  `json:"isNsfw" tstype:"boolean | null,required"`
 	Name   string `json:"name"`
 }
 
@@ -41,9 +41,9 @@ type PublishRefusal struct {
 type PublishRefusalCode string
 
 const (
-	AlreadyPublished PublishRefusalCode = "already_published"
-	NoChanges        PublishRefusalCode = "no_changes"
-	NotReady         PublishRefusalCode = "not_ready"
+	PublishRefusalCodeAlreadyPublished PublishRefusalCode = "already_published"
+	PublishRefusalCodeNoChanges        PublishRefusalCode = "no_changes"
+	PublishRefusalCodeNotReady         PublishRefusalCode = "not_ready"
 )
 
 type ReadinessItem struct {

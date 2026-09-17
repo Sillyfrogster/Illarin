@@ -41,9 +41,9 @@ type PostRevisionList struct {
 type PostRevisionReason string
 
 const (
-	Checkpoint  PostRevisionReason = "checkpoint"
-	Publication PostRevisionReason = "publication"
-	Schedule    PostRevisionReason = "schedule"
+	PostRevisionReasonCheckpoint  PostRevisionReason = "checkpoint"
+	PostRevisionReasonPublication PostRevisionReason = "publication"
+	PostRevisionReasonSchedule    PostRevisionReason = "schedule"
 )
 
 type PostVersionRequest struct {

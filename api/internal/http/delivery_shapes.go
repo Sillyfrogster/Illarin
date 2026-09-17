@@ -9,11 +9,11 @@ import (
 type AssetInstance struct {
 	ApplicationName     string          `json:"applicationName"`
 	CanReceive          bool            `json:"canReceive"`
-	Delivery            *QueuedDelivery `json:"delivery"`
-	InstalledGeneration *int            `json:"installedGeneration"`
+	Delivery            *QueuedDelivery `json:"delivery" tstype:"QueuedDelivery | null,required"`
+	InstalledGeneration *int            `json:"installedGeneration" tstype:"number | null,required"`
 	InstanceId          uuid.UUID       `json:"instanceId"`
 	InstanceName        string          `json:"instanceName"`
-	LastSeenAt          *time.Time      `json:"lastSeenAt"`
+	LastSeenAt          *time.Time      `json:"lastSeenAt" tstype:"string | null,required"`
 	ReportsLibrary      bool            `json:"reportsLibrary"`
 	UpdateAvailable     bool            `json:"updateAvailable"`
 }
@@ -38,8 +38,8 @@ type DeliveryArtifact struct {
 type DeliveryArtifactKind string
 
 const (
-	Export  DeliveryArtifactKind = "export"
-	Picture DeliveryArtifactKind = "picture"
+	DeliveryArtifactKindExport  DeliveryArtifactKind = "export"
+	DeliveryArtifactKindPicture DeliveryArtifactKind = "picture"
 )
 
 type DeliveryWork struct {
@@ -86,7 +86,7 @@ type QueuedDelivery struct {
 	InstanceId     uuid.UUID             `json:"instanceId"`
 	QueuedAt       time.Time             `json:"queuedAt"`
 	Reason         *QueuedDeliveryReason `json:"reason,omitempty"`
-	SettledAt      *time.Time            `json:"settledAt"`
+	SettledAt      *time.Time            `json:"settledAt" tstype:"string | null,required"`
 	State          QueuedDeliveryState   `json:"state"`
 	UpdatesInstall bool                  `json:"updatesInstall"`
 }

@@ -2,7 +2,7 @@
 
 import { Check, CircleAlert, SendHorizontal } from "lucide-react";
 import { useState } from "react";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { api } from "@/lib/api/client";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
 
@@ -98,14 +98,10 @@ async function queueDelivery(
   instanceId: string,
 ): Promise<boolean> {
   try {
-    const response = await browserFetch(
-      `/api/v1/assets/${encodeURIComponent(assetId)}/deliveries`,
-      {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instanceId }),
-      },
+    const { response } = await api<unknown>(
+      "POST",
+      `/v1/assets/${encodeURIComponent(assetId)}/deliveries`,
+      { body: { instanceId } },
     );
     return response.ok;
   } catch {

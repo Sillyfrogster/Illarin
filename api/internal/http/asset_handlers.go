@@ -380,7 +380,7 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 	if errors.As(err, &exposure) {
 		c.JSON(http.StatusConflict, SealedExposureRefusal{
 			Error:   "This replacement removes prompt protection. Confirm that text in this asset and its recorded versions may become public immediately.",
-			Code:    SealedExposure,
+			Code:    SealedExposureRefusalCodeSealedExposure,
 			Prompts: exposure.Prompts,
 		})
 		return

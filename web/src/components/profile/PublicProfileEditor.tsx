@@ -17,7 +17,8 @@ import {
   TextInput,
   Trouble,
 } from "@/components/ui/field";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { readRefusal } from "@/lib/answer";
+import { type ApiMethod, api } from "@/lib/api/client";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { BIOGRAPHY_LIMIT } from "@/lib/profile-draft";
@@ -34,8 +35,6 @@ type Draft = {
   displayName: string;
   links: ProfileLink[];
 };
-
-type Answer = Profile & { error?: string; field?: string };
 
 function draftOf(profile: Profile): Draft {
   return {
@@ -63,13 +62,12 @@ export function PublicProfileEditor() {
     if (!handle) return;
     let current = true;
     void (async () => {
-      const response = await fetch(`/api/v1/profiles/${handle}`, {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      if (!response.ok || !current) return;
-      const found = (await response.json()) as Profile;
-      if (!current) return;
+      const { data: found } = await api<Profile>(
+        "GET",
+        `/v1/profiles/${handle}`,
+        { cache: "no-store" },
+      );
+      if (!found || !current) return;
       setProfile(found);
       setDraft(draftOf(found));
     })();
@@ -163,24 +161,23 @@ export function PublicProfileEditor() {
     setSaving(true);
     forget();
     try {
-      const response = await browserFetch("/api/v1/account/profile", {
-        body: JSON.stringify(draft),
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        method: "PUT",
-      });
-      const answer = (await response.json()) as Answer;
-      if (!response.ok) {
-        const reason = answer.error ?? "The profile could not be saved.";
-        setFailedField(answer.field ?? "");
-        setFieldTrouble(answer.field ? reason : "");
+      const { data: saved, error } = await api<Profile>(
+        "PUT",
+        "/v1/account/profile",
+        { body: draft },
+      );
+      if (!saved) {
+        const refusal = readRefusal(error);
+        const reason = refusal.error ?? "The profile could not be saved.";
+        setFailedField(refusal.field ?? "");
+        setFieldTrouble(refusal.field ? reason : "");
         setTrouble(
-          answer.field ? "Check the marked field and save again." : reason,
+          refusal.field ? "Check the marked field and save again." : reason,
         );
         return;
       }
-      setProfile(answer);
-      setDraft(draftOf(answer));
+      setProfile(saved);
+      setDraft(draftOf(saved));
       setSaid("Your public profile is saved.");
     } catch {
       setTrouble(UNREACHABLE);
@@ -189,20 +186,24 @@ export function PublicProfileEditor() {
     }
   }
 
-  async function writePicture(request: RequestInit, done: string) {
+  async function writePicture(
+    method: ApiMethod,
+    body: FormData | undefined,
+    done: string,
+  ) {
     setPicturePending(true);
     forget();
     try {
-      const response = await browserFetch("/api/v1/account/profile/avatar", {
-        credentials: "same-origin",
-        ...request,
-      });
-      const answer = (await response.json()) as Answer;
-      if (!response.ok) {
-        setTrouble(answer.error ?? "That image could not be used.");
+      const { data: saved, error } = await api<Profile>(
+        method,
+        "/v1/account/profile/avatar",
+        { body },
+      );
+      if (!saved) {
+        setTrouble(readRefusal(error).error ?? "That image could not be used.");
         return;
       }
-      setProfile(answer);
+      setProfile(saved);
       setSaid(done);
     } catch {
       setTrouble(UNREACHABLE);
@@ -227,17 +228,15 @@ export function PublicProfileEditor() {
             onRemove={() => {
               setConfirmingRemoval(false);
               void writePicture(
-                { method: "DELETE" },
+                "DELETE",
+                undefined,
                 "Your picture is removed.",
               );
             }}
             onUpload={(file) => {
               const body = new FormData();
               body.append("file", file);
-              void writePicture(
-                { body, method: "PUT" },
-                "Your picture is updated.",
-              );
+              void writePicture("PUT", body, "Your picture is updated.");
             }}
             pending={picturePending}
             profile={profile}

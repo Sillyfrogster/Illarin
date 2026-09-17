@@ -1,6 +1,5 @@
-import type { components } from "@/lib/api/schema";
-
-export type Scope = components["schemas"]["Scope"];
+import type { Scope } from "@/lib/api/shapes";
+export type { Scope };
 
 export type ScopeCopy = {
   title: string;

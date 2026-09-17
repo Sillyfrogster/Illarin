@@ -1,7 +1,7 @@
 import { api } from "@/lib/api/client";
-import type { components } from "@/lib/api/schema";
 
-export type WithdrawnPost = components["schemas"]["WithdrawnPost"];
+import type { PublicPost, WithdrawnPost } from "@/lib/api/shapes";
+export type { WithdrawnPost };
 
 export const WITHDRAWAL_MESSAGE = "Illarin took this post out of public view.";
 
@@ -27,9 +27,10 @@ export function postAddressIn(pathname: string): string | null {
 export async function fetchWithdrawnPost(
   slug: string,
 ): Promise<WithdrawnPost | null> {
-  const answer = await api
-    .GET("/v1/posts/{slug}", { params: { path: { slug } } })
-    .catch(() => null);
+  const answer = await api<PublicPost>(
+    "GET",
+    `/v1/posts/${encodeURIComponent(slug)}`,
+  ).catch(() => null);
   if (!answer || answer.response.status !== 410) return null;
   const withdrawn = answer.error as WithdrawnPost | undefined;
   return withdrawn?.slug ? withdrawn : null;

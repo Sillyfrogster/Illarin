@@ -89,9 +89,9 @@ type VersionChange struct {
 type VersionChangeKind string
 
 const (
-	Addition VersionChangeKind = "addition"
-	Change   VersionChangeKind = "change"
-	Removal  VersionChangeKind = "removal"
+	VersionChangeKindAddition VersionChangeKind = "addition"
+	VersionChangeKindChange   VersionChangeKind = "change"
+	VersionChangeKindRemoval  VersionChangeKind = "removal"
 )
 
 type VersionComparison struct {

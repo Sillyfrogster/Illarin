@@ -122,9 +122,9 @@ type PostMedia struct {
 type PostMediaPurpose string
 
 const (
-	Document PostMediaPurpose = "document"
-	Header   PostMediaPurpose = "header"
-	Social   PostMediaPurpose = "social"
+	PostMediaPurposeDocument PostMediaPurpose = "document"
+	PostMediaPurposeHeader   PostMediaPurpose = "header"
+	PostMediaPurposeSocial   PostMediaPurpose = "social"
 )
 
 type PostRelease struct {

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Said, Trouble } from "@/components/ui/field";
-import { readJSON, refusalMessage } from "@/lib/answer";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { refusalMessage } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import {
   isInstanceList,
@@ -33,11 +33,12 @@ export function LinkedInstances() {
     setLoadTrouble("");
     setInstances(undefined);
     try {
-      const response = await fetch("/api/v1/instances", {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      const answer: unknown = await readJSON(response);
+      const { data, error, response } = await api<unknown>(
+        "GET",
+        "/v1/instances",
+        { cache: "no-store" },
+      );
+      const answer = response.ok ? data : error;
       if (!response.ok) {
         setLoadTrouble(
           refusalMessage(answer, "We could not read your linked instances."),
@@ -74,11 +75,11 @@ export function LinkedInstances() {
     setRevoking(instance.id);
     const named = `${instance.applicationName} — ${instance.instanceName}`;
     try {
-      const response = await browserFetch(`/api/v1/instances/${instance.id}`, {
-        credentials: "same-origin",
-        method: "DELETE",
-      });
-      const answer: unknown = await readJSON(response);
+      const { error, response } = await api<void>(
+        "DELETE",
+        `/v1/instances/${instance.id}`,
+      );
+      const answer = error;
       if (!response.ok) {
         setNotice({
           kind: "trouble",

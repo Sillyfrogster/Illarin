@@ -38,7 +38,7 @@ func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
 	var request ImportPostMarkdownRequest
 	mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send JSON with the application/json content type.")
 		return request, false
 	}
@@ -46,11 +46,11 @@ func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
 	if err := decodeOneJSON(body, &request); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			refuseField(c, http.StatusRequestEntityTooLarge, CodeInvalid,
+			refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,
 				"This import is too large.", "markdown")
 			return request, false
 		}
-		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send one valid JSON object.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send one valid JSON object.")
 		return request, false
 	}
 	return request, true
@@ -65,7 +65,7 @@ func (h *Handlers) importError(c *gin.Context, err error) {
 	lines := toAPINotes(refused.Notes)
 	c.AbortWithStatusJSON(http.StatusBadRequest, PostImportRefusal{
 		Error:    "This Markdown contains unsupported content. Review the reported lines.",
-		Code:     CodeInvalid,
+		Code:     PublicationErrorCodeInvalid,
 		Field:    pointer("markdown"),
 		Refusals: &lines,
 	})

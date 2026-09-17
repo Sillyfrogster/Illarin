@@ -13,8 +13,8 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
-import { readJSON, refusalMessage } from "@/lib/answer";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { refusalMessage } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
@@ -96,15 +96,14 @@ export function LinkApproval() {
 
     const isAuthorization = request.kind === "authorization";
     const endpoint = isAuthorization
-      ? `/api/v1/link/authorizations/${encodeURIComponent(request.requestCode)}`
-      : `/api/v1/link/requests/${encodeURIComponent(request.userCode)}`;
+      ? `/v1/link/authorizations/${encodeURIComponent(request.requestCode)}`
+      : `/v1/link/requests/${encodeURIComponent(request.userCode)}`;
 
     try {
-      const response = await fetch(endpoint, {
+      const { data, error, response } = await api<unknown>("GET", endpoint, {
         cache: "no-store",
-        credentials: "same-origin",
       });
-      const answer: unknown = await readJSON(response);
+      const answer = response.ok ? data : error;
       if (!response.ok) {
         setTrouble(
           refusalMessage(
@@ -559,22 +558,17 @@ async function decide(
   const isAuthorization = source.kind === "authorization";
   const action = decision === "approve" ? "approve" : "deny";
   const endpoint = isAuthorization
-    ? `/api/v1/link/authorizations/${encodeURIComponent(source.requestCode)}/${action}`
-    : `/api/v1/link/requests/${encodeURIComponent(source.userCode)}/${action}`;
-  const options: RequestInit = {
-    body: isAuthorization
-      ? undefined
-      : JSON.stringify({ approvalToken: source.approvalToken }),
-    credentials: "same-origin",
-    headers: isAuthorization
-      ? undefined
-      : { "Content-Type": "application/json" },
-    method: "POST",
-  };
+    ? `/v1/link/authorizations/${encodeURIComponent(source.requestCode)}/${action}`
+    : `/v1/link/requests/${encodeURIComponent(source.userCode)}/${action}`;
+  const body = isAuthorization
+    ? undefined
+    : { approvalToken: source.approvalToken };
 
   try {
-    const response = await browserFetch(endpoint, options);
-    const answer: unknown = await readJSON(response);
+    const { data, error, response } = await api<unknown>("POST", endpoint, {
+      body,
+    });
+    const answer = response.ok ? data : error;
     if (!response.ok) {
       setTrouble(
         refusalMessage(

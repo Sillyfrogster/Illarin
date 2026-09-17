@@ -19,7 +19,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context) {
 	}
 	var request WithdrawPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the withdrawal as JSON.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the withdrawal as JSON.")
 		return
 	}
 	explanation := ""
@@ -48,7 +48,7 @@ func (h *Handlers) RepublishPost(c *gin.Context) {
 	}
 	var request RepublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Choose a revision to republish.", "revisionId")
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose a revision to republish.", "revisionId")
 		return
 	}
 	back, err := h.publications.RepublishPost(

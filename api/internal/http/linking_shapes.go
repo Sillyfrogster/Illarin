@@ -75,11 +75,11 @@ type LinkedInstance struct {
 	Capabilities       []string   `json:"capabilities"`
 	Id                 uuid.UUID  `json:"id"`
 	InstanceName       string     `json:"instanceName"`
-	LastSeenAt         *time.Time `json:"lastSeenAt"`
+	LastSeenAt         *time.Time `json:"lastSeenAt" tstype:"string | null,required"`
 	LinkedAt           time.Time  `json:"linkedAt"`
 	Prefix             string     `json:"prefix"`
-	ProtocolVersion    *int       `json:"protocolVersion"`
-	RevokedAt          *time.Time `json:"revokedAt"`
+	ProtocolVersion    *int       `json:"protocolVersion" tstype:"number | null,required"`
+	RevokedAt          *time.Time `json:"revokedAt" tstype:"string | null,required"`
 	Scopes             []Scope    `json:"scopes"`
 }
 
@@ -92,13 +92,13 @@ type LinkedLinkPollResult struct {
 	AccessTokenExpiresAt time.Time                  `json:"accessTokenExpiresAt"`
 	Instance             LinkedInstance             `json:"instance"`
 	RefreshToken         RefreshToken               `json:"refreshToken"`
-	Status               LinkedLinkPollResultStatus `json:"status"`
+	Status               LinkedLinkPollResultStatus `json:"status" tstype:"'linked',required"`
 }
 
 type LinkedLinkPollResultStatus string
 
 const (
-	Linked LinkedLinkPollResultStatus = "linked"
+	LinkedLinkPollResultStatusLinked LinkedLinkPollResultStatus = "linked"
 )
 
 type ManagedInstance struct {
@@ -109,11 +109,11 @@ type ManagedInstance struct {
 	Id                 uuid.UUID  `json:"id"`
 	Installed          int        `json:"installed"`
 	InstanceName       string     `json:"instanceName"`
-	LastSeenAt         *time.Time `json:"lastSeenAt"`
+	LastSeenAt         *time.Time `json:"lastSeenAt" tstype:"string | null,required"`
 	LinkedAt           time.Time  `json:"linkedAt"`
 	Prefix             string     `json:"prefix"`
-	ProtocolVersion    *int       `json:"protocolVersion"`
-	RevokedAt          *time.Time `json:"revokedAt"`
+	ProtocolVersion    *int       `json:"protocolVersion" tstype:"number | null,required"`
+	RevokedAt          *time.Time `json:"revokedAt" tstype:"string | null,required"`
 	Scopes             []Scope    `json:"scopes"`
 	UpdatesAvailable   int        `json:"updatesAvailable"`
 }
@@ -126,7 +126,7 @@ type PendingDeviceLink struct {
 	Capabilities       InstanceCapabilities `json:"capabilities"`
 	ExpiresAt          time.Time            `json:"expiresAt"`
 	InstanceName       InstanceName         `json:"instanceName"`
-	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
+	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion" tstype:"1,required"`
 	Scopes             Scopes               `json:"scopes"`
 }
 
@@ -137,12 +137,12 @@ type PendingLink struct {
 	Capabilities       InstanceCapabilities `json:"capabilities"`
 	ExpiresAt          time.Time            `json:"expiresAt"`
 	InstanceName       InstanceName         `json:"instanceName"`
-	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
+	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion" tstype:"1,required"`
 	Scopes             Scopes               `json:"scopes"`
 }
 
 type PendingLinkPollResult struct {
-	Status PendingLinkPollResultStatus `json:"status"`
+	Status PendingLinkPollResultStatus `json:"status" tstype:"'pending',required"`
 }
 
 type PendingLinkPollResultStatus string
@@ -166,8 +166,8 @@ type RequestCode = string
 type Scope string
 
 const (
-	AssetReceive Scope = "asset:receive"
-	LibrarySync  Scope = "library:sync"
+	ScopeAssetReceive Scope = "asset:receive"
+	ScopeLibrarySync  Scope = "library:sync"
 )
 
 type Scopes = []Scope
@@ -178,9 +178,9 @@ type StartLinkAuthorization struct {
 	ApplicationVersion  *ApplicationVersion                       `json:"applicationVersion,omitempty"`
 	Capabilities        InstanceCapabilities                      `json:"capabilities"`
 	CodeChallenge       string                                    `json:"codeChallenge"`
-	CodeChallengeMethod StartLinkAuthorizationCodeChallengeMethod `json:"codeChallengeMethod"`
+	CodeChallengeMethod StartLinkAuthorizationCodeChallengeMethod `json:"codeChallengeMethod" tstype:"'S256',required"`
 	InstanceName        InstanceName                              `json:"instanceName"`
-	ProtocolVersion     LinkProtocolVersion                       `json:"protocolVersion"`
+	ProtocolVersion     LinkProtocolVersion                       `json:"protocolVersion" tstype:"1,required"`
 	RedirectUri         string                                    `json:"redirectUri"`
 	Scopes              Scopes                                    `json:"scopes"`
 	State               string                                    `json:"state"`
@@ -189,7 +189,7 @@ type StartLinkAuthorization struct {
 type StartLinkAuthorizationCodeChallengeMethod string
 
 const (
-	S256 StartLinkAuthorizationCodeChallengeMethod = "S256"
+	StartLinkAuthorizationCodeChallengeMethodS256 StartLinkAuthorizationCodeChallengeMethod = "S256"
 )
 
 type StartLinkRequest struct {
@@ -198,7 +198,7 @@ type StartLinkRequest struct {
 	ApplicationVersion *ApplicationVersion  `json:"applicationVersion,omitempty"`
 	Capabilities       InstanceCapabilities `json:"capabilities"`
 	InstanceName       InstanceName         `json:"instanceName"`
-	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
+	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion" tstype:"1,required"`
 	Scopes             Scopes               `json:"scopes"`
 }
 
@@ -206,7 +206,7 @@ type UpdateInstance struct {
 	AcceptedTargets    AcceptedTargets      `json:"acceptedTargets"`
 	ApplicationVersion *ApplicationVersion  `json:"applicationVersion,omitempty"`
 	Capabilities       InstanceCapabilities `json:"capabilities"`
-	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion"`
+	ProtocolVersion    LinkProtocolVersion  `json:"protocolVersion" tstype:"1,required"`
 }
 
 type UserCode = string

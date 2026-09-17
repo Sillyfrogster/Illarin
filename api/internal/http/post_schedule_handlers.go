@@ -19,7 +19,7 @@ func (h *Handlers) SchedulePost(c *gin.Context) {
 	}
 	var request SchedulePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the version and the time it goes live, with an explicit offset.", "at")
 		return
 	}
@@ -45,7 +45,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
 	}
 	var request ReplacePostScheduleRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Name the edition and the time it goes live, with an explicit offset.", "at")
 		return
 	}
@@ -80,12 +80,12 @@ func (h *Handlers) CancelPostSchedule(c *gin.Context) {
 func (h *Handlers) scheduleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, publication.ErrScheduleNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound,
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound,
 			"This post has nothing waiting to publish.")
 	case errors.Is(err, publication.ErrAlreadyScheduled):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This post already has a scheduled revision. Change that revision instead.",
-			Code:  CodeAlreadyScheduled,
+			Code:  PublicationErrorCodeAlreadyScheduled,
 		})
 	default:
 		h.postError(c, err)

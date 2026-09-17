@@ -467,7 +467,7 @@ func toAPIPendingDeviceLink(pending linking.Pending) PendingDeviceLink {
 
 func toAPIPollGrant(grant linking.TokenGrant) LinkedLinkPollResult {
 	return LinkedLinkPollResult{
-		Status: Linked, AccessToken: AccessToken(grant.AccessToken),
+		Status: LinkedLinkPollResultStatusLinked, AccessToken: AccessToken(grant.AccessToken),
 		AccessTokenExpiresAt: grant.AccessTokenExpiresAt,
 		RefreshToken:         RefreshToken(grant.RefreshToken),
 		Instance:             toAPIInstance(grant.Instance),

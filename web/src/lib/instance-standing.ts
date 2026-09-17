@@ -1,8 +1,7 @@
-import type { components } from "@/lib/api/schema";
+import type { ManagedInstance } from "@/lib/api/shapes";
 import { isStringArray } from "./answer";
 import { readableDate } from "./dates";
-
-export type ManagedInstance = components["schemas"]["ManagedInstance"];
+export type { ManagedInstance };
 
 export function revoked(
   instance: ManagedInstance,
@@ -11,7 +10,7 @@ export function revoked(
   return {
     ...instance,
     acceptedTargets: [],
-    applicationVersion: null,
+    applicationVersion: undefined,
     capabilities: [],
     protocolVersion: null,
     revokedAt: at,

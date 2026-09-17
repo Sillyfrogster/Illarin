@@ -51,7 +51,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 		c.JSON(http.StatusConflict, SealedExposureRefusal{
 			Error: "Saving this makes " + joinNames(exposure.Prompts) +
 				" readable by anyone, and puts ordinary downloads back on the asset.",
-			Code:    SealedExposure,
+			Code:    SealedExposureRefusalCodeSealedExposure,
 			Prompts: exposure.Prompts,
 		})
 		return

@@ -159,7 +159,7 @@ func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
 		t.Fatalf("a stale save answered %d: %s", stale.Code, stale.Body.String())
 	}
 	refused := refusalOf(t, stale)
-	if refused.Code != string(CodeStaleVersion) || refused.Version == nil {
+	if refused.Code != string(PublicationErrorCodeStaleVersion) || refused.Version == nil {
 		t.Fatalf("a stale save said %+v", refused)
 	}
 	if *refused.Version != stack.working(t, writer.session, draft.ID).Version {
@@ -270,15 +270,15 @@ func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
 			t.Errorf("%s %s answered %d: %s", call.method, call.path, response.Code, response.Body.String())
 			continue
 		}
-		if code := refusalOf(t, response).Code; code != string(CodeInvalid) {
-			t.Errorf("%s %s said %q, want %q", call.method, call.path, code, CodeInvalid)
+		if code := refusalOf(t, response).Code; code != string(PublicationErrorCodeInvalid) {
+			t.Errorf("%s %s said %q, want %q", call.method, call.path, code, PublicationErrorCodeInvalid)
 		}
 	}
 
 	picture := stack.sent(t, writer, httptest.NewRequest(
 		http.MethodPost, at+"/media", strings.NewReader("not a form"),
 	))
-	if picture.Code != http.StatusBadRequest || refusalOf(t, picture).Code != string(CodeInvalid) {
+	if picture.Code != http.StatusBadRequest || refusalOf(t, picture).Code != string(PublicationErrorCodeInvalid) {
 		t.Errorf("a formless upload answered %d: %s", picture.Code, picture.Body.String())
 	}
 }

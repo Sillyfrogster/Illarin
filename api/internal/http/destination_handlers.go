@@ -32,7 +32,7 @@ func (h *Handlers) AddPublicationDestination(c *gin.Context) {
 	}
 	var request AddPublicationDestinationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the destination's name and address.", "address")
 		return
 	}
@@ -95,7 +95,7 @@ func (h *Handlers) UpdatePublicationChannel(c *gin.Context) {
 func readChannel(c *gin.Context) (publication.ChannelEdit, bool) {
 	var request PublicationChannelRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the channel's name and address.", "address")
 		return publication.ChannelEdit{}, false
 	}
@@ -123,7 +123,7 @@ func (h *Handlers) UpdatePublicationDestination(c *gin.Context) {
 	}
 	var request UpdatePublicationDestinationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the change as JSON.", "address")
 		return
 	}
@@ -288,7 +288,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 	}
 	var body publication.DiscordRepair
 	if err := c.ShouldBindJSON(&body); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid, "Send the repair as JSON.", "repair")
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the repair as JSON.", "repair")
 		return
 	}
 	result, err := h.publications.RepairDiscord(c.Request.Context(), authority.ID, id, body)
@@ -395,7 +395,7 @@ func readEvents(named *[]PublicationEvent) *[]string {
 func readDestinationPolicy(c *gin.Context) (publication.DestinationPolicy, bool) {
 	var request DestinationPolicyRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Send the destinations as JSON.", "destinationIds")
 		return publication.DestinationPolicy{}, false
 	}
@@ -421,26 +421,26 @@ func readIDs(listed *[]uuid.UUID) []uuid.UUID {
 func (h *Handlers) destinationError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, publication.ErrDestinationNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such destination.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such destination.")
 	case errors.Is(err, publication.ErrDestinationRefused):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not send to that destination.")
 	case errors.Is(err, publication.ErrRoleRefused):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not mention that destination's role.")
 	case errors.Is(err, publication.ErrNotDiscord):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That destination is a generic webhook.")
 	case errors.Is(err, publication.ErrNotWebhook):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That destination is a Discord channel.")
 	case errors.Is(err, publication.ErrDeliveryNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such delivery.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such delivery.")
 	case errors.Is(err, publication.ErrDeliveryUnsettled):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This delivery is still trying on its own.")
 	case errors.Is(err, publication.ErrDeliveryUnsendable):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"There is nowhere left to send this delivery.")
 	default:
 		h.publicationError(c, err)

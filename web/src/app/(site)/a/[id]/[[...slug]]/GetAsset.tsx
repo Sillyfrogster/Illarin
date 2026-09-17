@@ -14,7 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { api } from "@/lib/api/client";
 import type { AssetInstance, AssetInstanceList } from "@/lib/api/query";
 import {
   formatChoices,
@@ -61,16 +61,16 @@ export function GetAsset({
   const installs = installsOnInstance(kind);
 
   const read = useCallback(async () => {
-    const response = await fetch(`/api/v1/assets/${assetId}/instances`, {
-      cache: "no-store",
-      credentials: "same-origin",
-    });
-    if (!response.ok) {
+    const { data } = await api<AssetInstanceList>(
+      "GET",
+      `/v1/assets/${assetId}/instances`,
+      { cache: "no-store" },
+    );
+    if (!data) {
       setInstances([]);
       return;
     }
-    const answer = (await response.json()) as AssetInstanceList;
-    setInstances(answer.items);
+    setInstances(data.items);
   }, [assetId]);
 
   useEffect(() => {
@@ -101,10 +101,7 @@ export function GetAsset({
   async function dismiss(deliveryId: string) {
     setBusy(true);
     try {
-      await browserFetch(`/api/v1/deliveries/${deliveryId}`, {
-        method: "DELETE",
-        credentials: "same-origin",
-      });
+      await api<void>("DELETE", `/v1/deliveries/${deliveryId}`);
       await read();
     } finally {
       setBusy(false);

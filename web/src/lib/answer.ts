@@ -1,12 +1,9 @@
 export type Refusal = { error?: string; field?: string };
 
-export async function readJSON(response: Response): Promise<unknown> {
-  if (response.status === 204) return null;
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
+/** Reads a refusal body, throwing when it was not JSON so the caller treats the API as unreachable. */
+export function readRefusal(error: unknown): Refusal {
+  if (typeof error === "object" && error !== null) return error as Refusal;
+  throw new Error("The refusal could not be read.");
 }
 
 export function refusalMessage(value: unknown, fallback: string) {

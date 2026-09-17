@@ -169,9 +169,9 @@ const (
 type PublicationEvent string
 
 const (
-	PublicationPostPublishedV1 PublicationEvent = "publication.post.published.v1"
-	PublicationPostUpdatedV1   PublicationEvent = "publication.post.updated.v1"
-	PublicationPostWithdrawnV1 PublicationEvent = "publication.post.withdrawn.v1"
+	PublicationEventPublicationPostPublishedV1 PublicationEvent = "publication.post.published.v1"
+	PublicationEventPublicationPostUpdatedV1   PublicationEvent = "publication.post.updated.v1"
+	PublicationEventPublicationPostWithdrawnV1 PublicationEvent = "publication.post.withdrawn.v1"
 )
 
 type PublicationEventApp struct {

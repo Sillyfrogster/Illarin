@@ -13,7 +13,7 @@ function Portrait({ profile }: { profile: Profile }) {
   return (
     <CreatorPortrait
       handle={profile.handle}
-      picture={profile.restricted ? null : profile.avatar}
+      picture={profile.restricted ? undefined : profile.avatar}
       priority
       size="lg"
     />

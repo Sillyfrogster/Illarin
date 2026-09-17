@@ -96,34 +96,26 @@ function contentOf(element: AssetElement) {
 }
 
 export function isEmptyContent(element: AssetElement): boolean {
-  const content = element.content as Record<string, unknown>;
+  const content = element.content;
   if ("text" in content) return String(content.text ?? "").trim() === "";
   if ("texts" in content) {
-    return (content.texts as { text: string }[]).every(
-      (item) => item.text.trim() === "",
-    );
+    return content.texts.every((item) => item.text.trim() === "");
   }
   if ("turns" in content) {
-    return (content.turns as { text: string }[]).every(
-      (turn) => turn.text.trim() === "",
-    );
+    return content.turns.every((turn) => turn.text.trim() === "");
   }
   if ("fields" in content) {
-    return (content.fields as { value: string }[]).every(
-      (field) => field.value.trim() === "",
-    );
+    return content.fields.every((field) => field.value.trim() === "");
   }
   if ("links" in content) {
-    return (content.links as { url: string }[]).every(
-      (link) => link.url.trim() === "",
-    );
+    return content.links.every((link) => link.url.trim() === "");
   }
   return element.isEmpty;
 }
 
 export function firstCursor(element: AssetElement): string | null {
   if (!writesInPlace(element)) return null;
-  const content = element.content as Record<string, unknown>;
+  const content = element.content;
   if ("text" in content) return `${element.id}:text`;
   if ("texts" in content) return `${element.id}:0:text`;
   if ("turns" in content) return `${element.id}:0:speaker`;

@@ -83,7 +83,7 @@ func (h *Handlers) BeginDiscord(c *gin.Context) {
 		return
 	}
 	intent := account.DiscordSignIn
-	if params.Intent != nil && *params.Intent == Attach {
+	if params.Intent != nil && *params.Intent == BeginDiscordParamsIntentAttach {
 		intent = account.DiscordAttach
 	}
 	token, _ := c.Cookie(sessionCookieName)

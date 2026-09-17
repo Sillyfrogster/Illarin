@@ -19,7 +19,7 @@ func (e NsfwVisibilityRequestVisibility) Valid() bool {
 
 type Account struct {
 	DiscordLinked bool        `json:"discordLinked"`
-	Email         *string     `json:"email"`
+	Email         *string     `json:"email" tstype:"string | null,required"`
 	EmailVerified bool        `json:"emailVerified"`
 	Handle        string      `json:"handle"`
 	HasPassword   bool        `json:"hasPassword"`
@@ -70,7 +70,7 @@ type RenameHandleRequest struct {
 
 type SessionState struct {
 	PublicationAuthority bool     `json:"publicationAuthority"`
-	User                 *Account `json:"user"`
+	User                 *Account `json:"user" tstype:"Account | null,required"`
 }
 
 type SignInRequest struct {
@@ -102,6 +102,6 @@ type CompleteDiscordParams struct {
 type BeginDiscordParamsIntent string
 
 const (
-	Attach BeginDiscordParamsIntent = "attach"
-	SignIn BeginDiscordParamsIntent = "sign-in"
+	BeginDiscordParamsIntentAttach BeginDiscordParamsIntent = "attach"
+	BeginDiscordParamsIntentSignIn BeginDiscordParamsIntent = "sign-in"
 )

@@ -10,7 +10,7 @@ import type {
   PublicationWorkspace,
   RotatedPublicationSecret,
 } from "@/lib/api/query";
-import { ask, json } from "./request";
+import { ask } from "./request";
 
 export type DiscordRepair = {
   requestId: string;
@@ -27,17 +27,17 @@ export type DiscordRepairResult = {
 };
 
 export function repairDiscordAnnouncement(id: string, repair: DiscordRepair) {
-  return json<DiscordRepairResult>(
-    `/publication/deliveries/${id}/repair`,
+  return ask<DiscordRepairResult>(
     "POST",
-    repair,
+    `/publication/deliveries/${id}/repair`,
+    { body: repair },
   );
 }
 
 export function readCategories() {
-  return json<{ categories: PublicationCategory[] }>(
-    "/publication/categories",
+  return ask<{ categories: PublicationCategory[] }>(
     "GET",
+    "/publication/categories",
   );
 }
 
@@ -45,23 +45,21 @@ export function updateCategory(
   id: string,
   change: { label?: string; retired?: boolean },
 ) {
-  return json<PublicationCategory>(
-    `/publication/categories/${id}`,
-    "PATCH",
-    change,
-  );
+  return ask<PublicationCategory>("PATCH", `/publication/categories/${id}`, {
+    body: change,
+  });
 }
 
 export function orderCategories(categoryIds: string[]) {
-  return json<{ categories: PublicationCategory[] }>(
-    "/publication/categories",
+  return ask<{ categories: PublicationCategory[] }>(
     "PUT",
-    { categoryIds },
+    "/publication/categories",
+    { body: { categoryIds } },
   );
 }
 
 export function readGrants() {
-  return json<{ grants: PublicationGrant[] }>("/publication/grants", "GET");
+  return ask<{ grants: PublicationGrant[] }>("GET", "/publication/grants");
 }
 
 export function approveContributor(approval: {
@@ -70,28 +68,28 @@ export function approveContributor(approval: {
   categoryIds: string[];
   defaultCategoryId: string;
 }) {
-  return json<PublicationGrant>("/publication/grants", "POST", approval);
+  return ask<PublicationGrant>("POST", "/publication/grants", {
+    body: approval,
+  });
 }
 
 export function updateGrant(
   id: string,
   change: { categoryIds?: string[]; defaultCategoryId?: string },
 ) {
-  return json<PublicationGrant>(`/publication/grants/${id}`, "PATCH", change);
+  return ask<PublicationGrant>("PATCH", `/publication/grants/${id}`, {
+    body: change,
+  });
 }
 
 export function revokeGrant(id: string) {
-  return ask<null>(
-    `/publication/grants/${id}`,
-    { method: "DELETE" },
-    async () => null,
-  );
+  return ask<void>("DELETE", `/publication/grants/${id}`);
 }
 
 export function readDestinations() {
-  return json<{ destinations: PublicationDestination[] }>(
-    "/publication/destinations",
+  return ask<{ destinations: PublicationDestination[] }>(
     "GET",
+    "/publication/destinations",
   );
 }
 
@@ -100,21 +98,19 @@ export function addDestination(endpoint: {
   address: string;
   events: PublicationEvent[];
 }) {
-  return json<AddedPublicationDestination>(
-    "/publication/destinations",
-    "POST",
-    endpoint,
-  );
+  return ask<AddedPublicationDestination>("POST", "/publication/destinations", {
+    body: endpoint,
+  });
 }
 
 export function updateDestination(
   id: string,
   change: { name?: string; address?: string; events?: PublicationEvent[] },
 ) {
-  return json<PublicationDestination>(
-    `/publication/destinations/${id}`,
+  return ask<PublicationDestination>(
     "PATCH",
-    change,
+    `/publication/destinations/${id}`,
+    { body: change },
   );
 }
 
@@ -124,66 +120,62 @@ export function addChannel(channel: {
   roleId: string;
   roleName: string;
 }) {
-  return json<PublicationDestination>("/publication/channels", "POST", channel);
+  return ask<PublicationDestination>("POST", "/publication/channels", {
+    body: channel,
+  });
 }
 
 export function updateChannel(
   id: string,
   change: { name: string; address?: string; roleId: string; roleName: string },
 ) {
-  return json<PublicationDestination>(
-    `/publication/channels/${id}`,
-    "PATCH",
-    change,
-  );
+  return ask<PublicationDestination>("PATCH", `/publication/channels/${id}`, {
+    body: change,
+  });
 }
 
 export function verifyDestination(id: string) {
-  return json<PublicationDestination>(
-    `/publication/destinations/${id}/verification`,
+  return ask<PublicationDestination>(
     "POST",
+    `/publication/destinations/${id}/verification`,
   );
 }
 
 export function disableDestination(id: string) {
-  return json<PublicationDestination>(
-    `/publication/destinations/${id}/verification`,
+  return ask<PublicationDestination>(
     "DELETE",
+    `/publication/destinations/${id}/verification`,
   );
 }
 
 export function rotateDestinationSecret(id: string) {
-  return json<RotatedPublicationSecret>(
-    `/publication/destinations/${id}/secret`,
+  return ask<RotatedPublicationSecret>(
     "POST",
+    `/publication/destinations/${id}/secret`,
   );
 }
 
 export function readDeliveries(state?: PostDeliveryState) {
   const narrowed = state ? `?state=${state}` : "";
-  return json<{ deliveries: PostDelivery[] }>(
-    `/publication/deliveries${narrowed}`,
+  return ask<{ deliveries: PostDelivery[] }>(
     "GET",
+    `/publication/deliveries${narrowed}`,
   );
 }
 
 export function readDeliveryAttempts(id: string) {
-  return json<{ attempts: PostDeliveryAttempt[] }>(
-    `/publication/deliveries/${id}/attempts`,
+  return ask<{ attempts: PostDeliveryAttempt[] }>(
     "GET",
+    `/publication/deliveries/${id}/attempts`,
   );
 }
 
 export function replayDelivery(id: string) {
-  return json<PostDelivery>(`/publication/deliveries/${id}/replay`, "POST");
+  return ask<PostDelivery>("POST", `/publication/deliveries/${id}/replay`);
 }
 
 export function removeDestination(id: string) {
-  return ask<null>(
-    `/publication/destinations/${id}`,
-    { method: "DELETE" },
-    async () => null,
-  );
+  return ask<void>("DELETE", `/publication/destinations/${id}`);
 }
 
 export function setGrantDestinations(
@@ -193,13 +185,13 @@ export function setGrantDestinations(
     defaultDestinationIds: string[];
   },
 ) {
-  return json<PublicationGrant>(
-    `/publication/grants/${grantId}/destinations`,
+  return ask<PublicationGrant>(
     "PUT",
-    policy,
+    `/publication/grants/${grantId}/destinations`,
+    { body: policy },
   );
 }
 
 export function readWorkspace() {
-  return json<PublicationWorkspace>("/publication/workspace", "GET");
+  return ask<PublicationWorkspace>("GET", "/publication/workspace");
 }

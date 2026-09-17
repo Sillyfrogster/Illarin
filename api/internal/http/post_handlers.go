@@ -50,7 +50,7 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 	}
 	var request CreatePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the post as JSON.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the post as JSON.")
 		return
 	}
 	started, err := h.publications.CreatePost(c.Request.Context(), editor, publication.PostEdit{
@@ -93,12 +93,12 @@ func (h *Handlers) SavePost(c *gin.Context) {
 	}
 	var request SavePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the working copy as JSON.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the working copy as JSON.")
 		return
 	}
 	document, err := json.Marshal(request.Document)
 	if err != nil {
-		refusePublication(c, http.StatusBadRequest, CodeInvalid, "Send the post body as JSON.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the post body as JSON.")
 		return
 	}
 	saved, err := h.publications.SavePost(c.Request.Context(), editor, id,
@@ -178,7 +178,7 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 	}
 	var request PublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Include the current working-copy version.", "version")
 		return
 	}
@@ -319,13 +319,13 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
 	case errors.As(err, &tooLarge):
-		refuseField(c, http.StatusRequestEntityTooLarge, CodeInvalid,
+		refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,
 			"That picture is larger than the upload limit.", filePart)
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		refusePublication(c, http.StatusServiceUnavailable, CodeServerError,
+		refusePublication(c, http.StatusServiceUnavailable, PublicationErrorCodeServerError,
 			"Uploads are temporarily unavailable because storage is low.")
 	default:
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"That picture could not be read. Use a PNG, JPEG, WebP or GIF.", filePart)
 	}
 }
@@ -345,61 +345,61 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	var stale publication.Stale
 	switch {
 	case errors.Is(err, publication.ErrPostNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound, "No such post.")
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such post.")
 	case errors.Is(err, publication.ErrRevisionNotFound):
-		refusePublication(c, http.StatusNotFound, CodeNotFound,
+		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound,
 			"This post has no such revision.")
 	case errors.Is(err, publication.ErrDestinationRefused):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not send to that destination.")
 	case errors.Is(err, publication.ErrRoleRefused):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"This post may not mention that destination's role.")
 	case errors.Is(err, publication.ErrNotPostEditor):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")
 	case errors.Is(err, publication.ErrSlugLocked):
-		refuseField(c, http.StatusForbidden, CodeForbidden,
+		refuseField(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"The address of a published post is fixed. An admin can correct it.", "slug")
 	case errors.Is(err, publication.ErrNotPostAdmin):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"Only an Illarin admin can correct a published post.")
 	case errors.Is(err, publication.ErrPostUnpublished):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"There is nothing to correct until the post is published.")
 	case errors.Is(err, publication.ErrPostNotPublic):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Only a published post can be withdrawn.")
 	case errors.Is(err, publication.ErrPostNotWithdrawn):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This post is not withdrawn.")
 	case errors.Is(err, publication.ErrPostWithdrawn):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This post is withdrawn. Republish it to make it public again.")
 	case errors.Is(err, publication.ErrPostDeleted):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This post is deleted. Restore it before editing.")
 	case errors.Is(err, publication.ErrPostNotDeleted):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"This post has not been deleted.")
 	case errors.Is(err, publication.ErrPostInPublicView):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Withdraw the post before deleting it.")
 	case errors.Is(err, publication.ErrRecoveryExpired):
-		refusePublication(c, http.StatusBadRequest, CodeInvalid,
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"The recovery deadline has passed. This post cannot be restored.")
 	case errors.Is(err, publication.ErrDeletePublished):
-		refusePublication(c, http.StatusForbidden, CodeForbidden,
+		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"Only an Illarin admin can delete or restore a previously published post.")
 	case errors.Is(err, publication.ErrSchedulePublishing):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This revision is being published and can no longer be changed.",
-			Code:  CodeScheduleRunning,
+			Code:  PublicationErrorCodeScheduleRunning,
 		})
 	case errors.As(err, &stale):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error:     "This post was saved in another session. Copy any unsaved text, then reload to edit the latest version.",
-			Code:      CodeStaleVersion,
+			Code:      PublicationErrorCodeStaleVersion,
 			Field:     pointer("version"),
 			Version:   &stale.Version,
 			UpdatedAt: &stale.UpdatedAt,

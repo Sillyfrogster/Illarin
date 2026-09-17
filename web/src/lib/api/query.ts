@@ -1,131 +1,201 @@
 import { QueryClient } from "@tanstack/react-query";
+import { readRefusal } from "@/lib/answer";
 import {
   acceptCandidateVersion,
   type Candidate,
   reportStaleWorkingCopy,
 } from "@/lib/working-copy";
-import { browserFetch } from "./browser-mutation";
 import { api } from "./client";
-import type { components, paths } from "./schema";
+import type {
+  AddableBlock,
+  AddedPublicationDestination,
+  AddMediaRequest,
+  AppTarget,
+  ArrangeAssetBlocksRequest,
+  AssetBlock,
+  AssetDetail,
+  AssetElement,
+  AssetIdentityRequest,
+  AssetImage,
+  AssetInstance,
+  AssetInstanceList,
+  AssetList,
+  AssetTag,
+  AssetUpdate,
+  AssetUpdateRequest,
+  AssetVersionNotesRequest,
+  BrowseAsset,
+  BrowseCursor,
+  ColorSetContent,
+  DeletedAsset,
+  DeletedAssetList,
+  DownloadTarget,
+  ElementType,
+  EntryTableContent,
+  ExtensionDependency,
+  IngestOperation,
+  ListAssetsParams,
+  NsfwVisibilityRequest,
+  OriginalUpload,
+  Post,
+  PostAction,
+  PostArchive,
+  PostByline,
+  PostDeletion,
+  PostDelivery,
+  PostDeliveryAttempt,
+  PostDeliveryState,
+  PostMedia,
+  PostMediaPurpose,
+  PostRelease,
+  PostRevision,
+  PostSchedule,
+  PostSummary,
+  PostWithdrawal,
+  PreservedNamespace,
+  Profile,
+  ProfileLink,
+  ProfileRestriction,
+  PromptCorrespondenceRequest,
+  PromptListContent,
+  ProtectionMismatch,
+  ProtectionMismatchList,
+  PublicationApp,
+  PublicationAppList,
+  PublicationCategory,
+  PublicationCategoryList,
+  PublicationChannel,
+  PublicationDestination,
+  PublicationDestinationChoice,
+  PublicationDestinationChoiceList,
+  PublicationDestinationKind,
+  PublicationEvent,
+  PublicationGrant,
+  PublicationWorkspace,
+  PublicPost,
+  QueuedDelivery,
+  ReadinessItem,
+  RecordedVersion,
+  RecordedVersionDownloads,
+  RecordedVersionList,
+  RecordListContent,
+  ReplacementAcceptance,
+  ReplacementPreview,
+  RotatedPublicationSecret,
+  SaveAssetBlockRequest,
+  ScriptListContent,
+  SettingGroupContent,
+  StartAssetRequest,
+  StylesheetSetContent,
+  TypedValue,
+  VariableSchemaContent,
+  VaultPicture,
+  VaultPictureList,
+  VersionChange,
+  VersionChangeGroup,
+  VersionComparison,
+} from "./shapes";
+export type {
+  AddableBlock,
+  AddedPublicationDestination,
+  AppTarget,
+  ArrangeAssetBlocksRequest,
+  AssetBlock,
+  AssetDetail,
+  AssetElement,
+  AssetIdentityRequest,
+  AssetImage,
+  AssetInstance,
+  AssetInstanceList,
+  AssetTag,
+  AssetUpdate,
+  AssetUpdateRequest,
+  AssetVersionNotesRequest,
+  BrowseAsset,
+  BrowseCursor,
+  ColorSetContent,
+  DeletedAsset,
+  DownloadTarget,
+  ElementType,
+  EntryTableContent,
+  ExtensionDependency,
+  IngestOperation,
+  OriginalUpload,
+  Post,
+  PostAction,
+  PostArchive,
+  PostByline,
+  PostDeletion,
+  PostDelivery,
+  PostDeliveryAttempt,
+  PostDeliveryState,
+  PostMedia,
+  PostMediaPurpose,
+  PostRelease,
+  PostRevision,
+  PostSchedule,
+  PostSummary,
+  PostWithdrawal,
+  PreservedNamespace,
+  Profile,
+  ProfileLink,
+  ProfileRestriction,
+  PromptCorrespondenceRequest,
+  PromptListContent,
+  ProtectionMismatch,
+  PublicPost,
+  PublicationApp,
+  PublicationCategory,
+  PublicationChannel,
+  PublicationDestination,
+  PublicationDestinationChoice,
+  PublicationDestinationChoiceList,
+  PublicationDestinationKind,
+  PublicationEvent,
+  PublicationGrant,
+  PublicationWorkspace,
+  QueuedDelivery,
+  ReadinessItem,
+  RecordListContent,
+  RecordedVersion,
+  RecordedVersionDownloads,
+  ReplacementPreview,
+  RotatedPublicationSecret,
+  SaveAssetBlockRequest,
+  ScriptListContent,
+  SettingGroupContent,
+  StylesheetSetContent,
+  TypedValue,
+  VariableSchemaContent,
+  VaultPicture,
+  VersionChange,
+  VersionChangeGroup,
+  VersionComparison,
+};
 
-export type AssetDetail = components["schemas"]["AssetDetail"];
-export type ExtensionDependency = components["schemas"]["ExtensionDependency"];
-export type AssetIdentityRequest =
-  components["schemas"]["AssetIdentityRequest"];
-export type AssetImage = components["schemas"]["AssetImage"];
-export type AssetBlock = components["schemas"]["AssetBlock"];
-export type AssetElement = components["schemas"]["AssetElement"];
-export type SaveAssetBlockRequest =
-  components["schemas"]["SaveAssetBlockRequest"];
-export type ArrangeAssetBlocksRequest =
-  components["schemas"]["ArrangeAssetBlocksRequest"];
-export type EntryTableContent = components["schemas"]["EntryTableContent"];
 export type LorebookEntry = EntryTableContent["entries"][number];
-export type RecordListContent = components["schemas"]["RecordListContent"];
 export type LumiaRecord = RecordListContent["records"][number];
-export type PromptListContent = components["schemas"]["PromptListContent"];
 export type PromptGroup = PromptListContent["groups"][number];
 export type PromptFragment = PromptListContent["fragments"][number];
-export type SettingGroupContent = components["schemas"]["SettingGroupContent"];
 export type PresetSetting = SettingGroupContent["settings"][number];
-export type ColorSetContent = components["schemas"]["ColorSetContent"];
 export type ThemeColorMode = ColorSetContent["modes"][number];
 export type ThemeColor = ThemeColorMode["colors"][number];
-export type StylesheetSetContent =
-  components["schemas"]["StylesheetSetContent"];
 export type ThemeStylesheet = StylesheetSetContent["stylesheets"][number];
 export type ThemeFile = StylesheetSetContent["assets"][number];
-export type VariableSchemaContent =
-  components["schemas"]["VariableSchemaContent"];
 export type PresetVariable = VariableSchemaContent["variables"][number];
-export type ScriptListContent = components["schemas"]["ScriptListContent"];
 export type RegexScript = ScriptListContent["scripts"][number];
-export type TypedValue = components["schemas"]["TypedValue"];
-export type AddableBlock = components["schemas"]["AddableBlock"];
-export type ElementType = components["schemas"]["ElementType"];
-export type AssetTag = components["schemas"]["AssetTag"];
-export type ReadinessItem = components["schemas"]["ReadinessItem"];
-export type PreservedNamespace = components["schemas"]["PreservedNamespace"];
-export type ProtectionMismatch = components["schemas"]["ProtectionMismatch"];
-export type RecordedVersion = components["schemas"]["RecordedVersion"];
-export type RecordedVersionDownloads =
-  components["schemas"]["RecordedVersionDownloads"];
-export type VersionComparison = components["schemas"]["VersionComparison"];
-export type VersionChangeGroup = components["schemas"]["VersionChangeGroup"];
-export type VersionChange = components["schemas"]["VersionChange"];
-export type IngestOperation = components["schemas"]["IngestOperation"];
-export type ReplacementPreview = components["schemas"]["ReplacementPreview"];
-export type ReplacementDecision =
-  components["schemas"]["ReplacementAcceptance"]["unrepresentable"];
-export type DownloadTarget = components["schemas"]["DownloadTarget"];
-export type AppTarget = components["schemas"]["AppTarget"];
-export type OriginalUpload = components["schemas"]["OriginalUpload"];
-export type AssetInstance = components["schemas"]["AssetInstance"];
-export type AssetInstanceList = components["schemas"]["AssetInstanceList"];
-export type QueuedDelivery = components["schemas"]["QueuedDelivery"];
-export type AssetUpdate = components["schemas"]["AssetUpdate"];
-export type AssetUpdateRequest = components["schemas"]["AssetUpdateRequest"];
-export type AssetVersionNotesRequest =
-  components["schemas"]["AssetVersionNotesRequest"];
-export type PromptCorrespondenceRequest =
-  components["schemas"]["PromptCorrespondenceRequest"];
-export type Profile = components["schemas"]["Profile"];
-export type ProfileLink = components["schemas"]["ProfileLink"];
-export type ProfileRestriction = components["schemas"]["ProfileRestriction"];
-export type PublicationApp = components["schemas"]["PublicationApp"];
-export type PublicationCategory = components["schemas"]["PublicationCategory"];
-export type PublicationGrant = components["schemas"]["PublicationGrant"];
-export type PublicationWorkspace =
-  components["schemas"]["PublicationWorkspace"];
-export type PublicationDestination =
-  components["schemas"]["PublicationDestination"];
-export type AddedPublicationDestination =
-  components["schemas"]["AddedPublicationDestination"];
-export type PublicationDestinationKind =
-  components["schemas"]["PublicationDestinationKind"];
-export type PublicationChannel = components["schemas"]["PublicationChannel"];
-export type PublicationDestinationChoice =
-  components["schemas"]["PublicationDestinationChoice"];
-export type PublicationDestinationChoiceList =
-  components["schemas"]["PublicationDestinationChoiceList"];
-export type PostDelivery = components["schemas"]["PostDelivery"];
-export type PostDeliveryAttempt = components["schemas"]["PostDeliveryAttempt"];
-export type PostDeliveryState = components["schemas"]["PostDeliveryState"];
-export type PublicationEvent = components["schemas"]["PublicationEvent"];
-export type RotatedPublicationSecret =
-  components["schemas"]["RotatedPublicationSecret"];
-export type Post = components["schemas"]["Post"];
-export type PublicPost = components["schemas"]["PublicPost"];
-export type PostMedia = components["schemas"]["PostMedia"];
-export type PostMediaPurpose = components["schemas"]["PostMediaPurpose"];
-export type PostByline = components["schemas"]["PostByline"];
-export type PostRelease = components["schemas"]["PostRelease"];
-export type PostSummary = components["schemas"]["PostSummary"];
-export type PostArchive = components["schemas"]["PostArchive"];
-export type PostRevision = components["schemas"]["PostRevision"];
-export type PostAction = components["schemas"]["PostAction"];
-export type PostSchedule = components["schemas"]["PostSchedule"];
-export type PostWithdrawal = components["schemas"]["PostWithdrawal"];
-export type PostDeletion = components["schemas"]["PostDeletion"];
-export type BrowseAsset = components["schemas"]["BrowseAsset"];
-export type BrowsePage = components["schemas"]["AssetList"];
-export type BrowseCursor = components["schemas"]["BrowseCursor"];
-export type DeletedAsset = components["schemas"]["DeletedAsset"];
+export type ReplacementDecision = ReplacementAcceptance["unrepresentable"];
+export type BrowsePage = AssetList;
 export type BrowseKind = BrowseAsset["kind"];
-export type NsfwVisibility =
-  components["schemas"]["NsfwVisibilityRequest"]["visibility"];
-
-type AssetQuery = NonNullable<
-  paths["/v1/assets"]["get"]["parameters"]["query"]
->;
+export type NsfwVisibility = NsfwVisibilityRequest["visibility"];
 
 export type BrowseFilters = Pick<
-  AssetQuery,
+  ListAssetsParams,
   "kind" | "platform" | "q" | "facet"
 >;
 
 export type AssetListParams = BrowseFilters &
-  Pick<AssetQuery, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
+  Pick<ListAssetsParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
 
 /** Creates an isolated cache for each server render. */
 export function makeQueryClient() {
@@ -177,9 +247,10 @@ function writeRefusal(error: unknown, fallback: string): Error {
 }
 
 export async function fetchProfile(handle: string): Promise<Profile | null> {
-  const { data, error } = await api.GET("/v1/profiles/{handle}", {
-    params: { path: { handle } },
-  });
+  const { data, error } = await api<Profile>(
+    "GET",
+    `/v1/profiles/${encodeURIComponent(handle)}`,
+  );
   if (error || !data) return null;
   return data;
 }
@@ -189,12 +260,12 @@ export async function fetchAssets(
   cookie?: string,
   signal?: AbortSignal,
 ): Promise<BrowsePage> {
-  const { data, error } = await api.GET("/v1/assets", {
-    signal,
-    params: { query: params },
+  const { data, error } = await api<AssetList>("GET", "/v1/assets", {
+    query: params,
     headers: cookie ? { cookie } : undefined,
+    signal,
   });
-  if (error) throw new Error("Could not load the catalog");
+  if (error || !data) throw new Error("Could not load the catalog");
   return data;
 }
 
@@ -202,10 +273,11 @@ export async function fetchDeletedAssets(
   handle: string,
   cookie: string,
 ): Promise<DeletedAsset[] | null> {
-  const { data, error } = await api.GET("/v1/profiles/{handle}/deleted", {
-    params: { path: { handle } },
-    headers: { cookie },
-  });
+  const { data, error } = await api<DeletedAssetList>(
+    "GET",
+    `/v1/profiles/${encodeURIComponent(handle)}/deleted`,
+    { headers: { cookie } },
+  );
   if (error || !data) return null;
   return data.items;
 }
@@ -215,23 +287,21 @@ export async function fetchAsset(
   cookie?: string,
   workingCopy = false,
 ): Promise<AssetDetail | null> {
-  const { data, error } = await api.GET("/v1/assets/{id}", {
-    params: { path: { id }, query: { workingCopy } },
+  const { data, error } = await api<AssetDetail>("GET", `/v1/assets/${id}`, {
+    query: { workingCopy },
     headers: cookie ? { cookie } : undefined,
   });
   if (error || !data) return null;
   return data;
 }
 
-export type StartAssetApp = NonNullable<
-  components["schemas"]["StartAssetRequest"]["app"]
->;
+export type StartAssetApp = NonNullable<StartAssetRequest["app"]>;
 
 export async function startAsset(
   kind: string,
   app?: StartAssetApp,
 ): Promise<AssetDetail> {
-  const { data, error } = await api.POST("/v1/assets", {
+  const { data, error } = await api<AssetDetail>("POST", "/v1/assets", {
     body: app ? { kind, app } : { kind },
   });
   if (error || !data || !("blocks" in data)) {
@@ -241,7 +311,7 @@ export async function startAsset(
 }
 
 export async function saveNsfwVisibility(visibility: NsfwVisibility) {
-  const { error } = await api.PUT("/v1/account/nsfw-visibility", {
+  const { error } = await api<void>("PUT", "/v1/account/nsfw-visibility", {
     body: { visibility },
   });
   if (error) throw new Error("Could not save the content preference");
@@ -251,8 +321,7 @@ export async function saveAssetDiscovery(
   id: string,
   discovery: AssetDetail["discovery"],
 ) {
-  const { error } = await api.PUT("/v1/assets/{id}/discovery", {
-    params: { path: { id } },
+  const { error } = await api<void>("PUT", `/v1/assets/${id}/discovery`, {
     body: { discovery },
   });
   if (error) throw new Error("Could not save the catalog listing");
@@ -264,13 +333,11 @@ export async function saveAssetBlock(
   blockId: string,
   block: SaveAssetBlockRequest,
 ): Promise<AssetBlock> {
-  const { data, error, response } = await api.PUT(
-    "/v1/assets/{id}/blocks/{blockId}",
+  const { data, error, response } = await api<AssetBlock>(
+    "PUT",
+    `/v1/assets/${assetId}/blocks/${blockId}`,
     {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id: assetId, blockId },
-      },
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: block,
     },
   );
@@ -287,13 +354,14 @@ export async function addAssetBlock(
   definition: string,
   elementType: ElementType,
 ): Promise<AssetBlock> {
-  const { data, error, response } = await api.POST("/v1/assets/{id}/blocks", {
-    params: {
-      header: { "X-Working-Copy-Version": candidate.version },
-      path: { id: assetId },
+  const { data, error, response } = await api<AssetBlock>(
+    "POST",
+    `/v1/assets/${assetId}/blocks`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body: { definition, elementType },
     },
-    body: { definition, elementType },
-  });
+  );
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The block could not be added. Try again.");
@@ -305,17 +373,19 @@ export async function addAssetImage(
   candidate: Candidate,
   assetId: string,
   file: File,
-  role: components["schemas"]["AddMediaRequest"]["role"],
+  role: AddMediaRequest["role"],
 ): Promise<string> {
   const body = new FormData();
   body.append("metadata", JSON.stringify({ role }));
   body.append("file", file, file.name);
-  const response = await browserFetch(`/api/v1/assets/${assetId}/media`, {
-    method: "POST",
-    headers: { "X-Working-Copy-Version": String(candidate.version) },
-    credentials: "same-origin",
-    body,
-  });
+  const { data: added, response } = await api<{ id?: unknown }>(
+    "POST",
+    `/v1/assets/${assetId}/media`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body,
+    },
+  );
   if (!response.ok) {
     throw new Error(
       response.status === 413
@@ -324,8 +394,7 @@ export async function addAssetImage(
     );
   }
   acceptCandidateVersion(candidate, response);
-  const added = (await response.json()) as { id?: unknown };
-  if (typeof added.id !== "string") {
+  if (typeof added?.id !== "string") {
     throw new Error("The image could not be added. Try again.");
   }
   return added.id;
@@ -336,13 +405,14 @@ export async function arrangeAssetBlocks(
   assetId: string,
   arrangement: ArrangeAssetBlocksRequest,
 ): Promise<AssetBlock[]> {
-  const { data, error, response } = await api.PUT("/v1/assets/{id}/blocks", {
-    params: {
-      header: { "X-Working-Copy-Version": candidate.version },
-      path: { id: assetId },
+  const { data, error, response } = await api<AssetBlock[]>(
+    "PUT",
+    `/v1/assets/${assetId}/blocks`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body: arrangement,
     },
-    body: arrangement,
-  });
+  );
   acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The block order could not be saved. Try again.");
@@ -350,13 +420,12 @@ export async function arrangeAssetBlocks(
   return data;
 }
 
-export type VaultPicture = components["schemas"]["VaultPicture"];
-
 /** The pictures a README showed, waiting for the creator to place or let go. */
 export async function fetchVault(assetId: string): Promise<VaultPicture[]> {
-  const { data, error } = await api.GET("/v1/assets/{id}/vault", {
-    params: { path: { id: assetId } },
-  });
+  const { data, error } = await api<VaultPictureList>(
+    "GET",
+    `/v1/assets/${assetId}/vault`,
+  );
   if (error || !data) {
     throw new Error("The waiting pictures could not be read. Try again.");
   }
@@ -369,13 +438,11 @@ export async function placeVaultPicture(
   pictureId: string,
   mediaId?: string,
 ): Promise<AssetBlock[]> {
-  const { data, error, response } = await api.POST(
-    "/v1/assets/{id}/vault/{pictureId}/place",
+  const { data, error, response } = await api<AssetBlock[]>(
+    "POST",
+    `/v1/assets/${assetId}/vault/${pictureId}/place`,
     {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id: assetId, pictureId },
-      },
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: mediaId ? { mediaId } : undefined,
     },
   );
@@ -391,14 +458,10 @@ export async function discardVaultPicture(
   assetId: string,
   pictureId: string,
 ) {
-  const { error, response } = await api.DELETE(
-    "/v1/assets/{id}/vault/{pictureId}",
-    {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id: assetId, pictureId },
-      },
-    },
+  const { error, response } = await api<void>(
+    "DELETE",
+    `/v1/assets/${assetId}/vault/${pictureId}`,
+    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
@@ -411,14 +474,10 @@ export async function removeAssetBlock(
   assetId: string,
   blockId: string,
 ) {
-  const { error, response } = await api.DELETE(
-    "/v1/assets/{id}/blocks/{blockId}",
-    {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id: assetId, blockId },
-      },
-    },
+  const { error, response } = await api<void>(
+    "DELETE",
+    `/v1/assets/${assetId}/blocks/${blockId}`,
+    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
@@ -432,13 +491,11 @@ export async function moveAssetBlockContent(
   blockId: string,
   destinationBlockId: string,
 ): Promise<AssetBlock[]> {
-  const { data, error, response } = await api.POST(
-    "/v1/assets/{id}/blocks/{blockId}/move-and-remove",
+  const { data, error, response } = await api<AssetBlock[]>(
+    "POST",
+    `/v1/assets/${assetId}/blocks/${blockId}/move-and-remove`,
     {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id: assetId, blockId },
-      },
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: { destinationBlockId },
     },
   );
@@ -454,13 +511,14 @@ export async function saveAssetIdentity(
   id: string,
   identity: AssetIdentityRequest,
 ) {
-  const { error, response } = await api.PUT("/v1/assets/{id}/identity", {
-    params: {
-      header: { "X-Working-Copy-Version": candidate.version },
-      path: { id },
+  const { error, response } = await api<void>(
+    "PUT",
+    `/v1/assets/${id}/identity`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body: identity,
     },
-    body: identity,
-  });
+  );
   acceptCandidateVersion(candidate, response);
   if (error) {
     throw writeRefusal(error, "The details could not be saved. Try again.");
@@ -474,12 +532,11 @@ export async function publishAsset(
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
 > {
-  const { data, error, response } = await api.POST("/v1/assets/{id}/publish", {
-    params: {
-      header: { "X-Working-Copy-Version": candidate.version },
-      path: { id },
-    },
-  });
+  const { data, error, response } = await api<AssetDetail>(
+    "POST",
+    `/v1/assets/${id}/publish`,
+    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+  );
   acceptCandidateVersion(candidate, response);
   if (data) return { published: true };
   const refusal = error as
@@ -498,9 +555,10 @@ export async function publishAsset(
 export async function fetchWaitingReplacement(
   id: string,
 ): Promise<IngestOperation | null> {
-  const { data, error } = await api.GET("/v1/assets/{id}/revisions", {
-    params: { path: { id } },
-  });
+  const { data, error } = await api<IngestOperation | null>(
+    "GET",
+    `/v1/assets/${id}/revisions`,
+  );
   if (error || !data) return null;
   return data;
 }
@@ -512,37 +570,34 @@ export async function uploadAssetReplacement(
 ): Promise<IngestOperation> {
   const body = new FormData();
   body.append("file", file, file.name);
-  const response = await browserFetch(`/api/v1/assets/${id}/revisions`, {
-    method: "POST",
-    headers: { "X-Working-Copy-Version": String(candidate.version) },
-    credentials: "same-origin",
-    body,
-  });
+  const { data, error, response } = await api<IngestOperation>(
+    "POST",
+    `/v1/assets/${id}/revisions`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body,
+    },
+  );
   acceptCandidateVersion(candidate, response);
-  const answer = (await response.json()) as IngestOperation & {
-    error?: unknown;
-    code?: unknown;
-  };
-  if (!response.ok) {
+  if (!data) {
     throw writeRefusal(
-      answer,
+      readRefusal(error),
       response.status === 413
         ? "That file is larger than Illarin accepts."
         : "That file could not be accepted. Try again.",
     );
   }
-  return answer;
+  return data;
 }
 
 export async function readIngestOperation(
   url: string,
 ): Promise<IngestOperation> {
-  const response = await fetch(`/api${url}`, {
-    credentials: "same-origin",
+  const { data } = await api<IngestOperation>("GET", url, {
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("Illarin could not read this upload yet.");
-  return (await response.json()) as IngestOperation;
+  if (!data) throw new Error("Illarin could not read this upload yet.");
+  return data;
 }
 
 export async function acceptAssetReplacement(
@@ -552,13 +607,11 @@ export async function acceptAssetReplacement(
   unrepresentable: ReplacementDecision,
   exposeProtected = false,
 ): Promise<IngestOperation> {
-  const { data, error, response } = await api.POST(
-    "/v1/assets/{id}/revisions/{operationId}/accept",
+  const { data, error, response } = await api<IngestOperation>(
+    "POST",
+    `/v1/assets/${id}/revisions/${operationId}/accept`,
     {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id, operationId },
-      },
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: { unrepresentable, exposeProtected },
     },
   );
@@ -570,9 +623,9 @@ export async function acceptAssetReplacement(
 }
 
 export async function cancelAssetReplacement(id: string, operationId: string) {
-  const { error } = await api.DELETE(
-    "/v1/assets/{id}/revisions/{operationId}",
-    { params: { path: { id, operationId } } },
+  const { error } = await api<void>(
+    "DELETE",
+    `/v1/assets/${id}/revisions/${operationId}`,
   );
   if (error) throw new Error("That file could not be discarded. Try again.");
 }
@@ -591,13 +644,14 @@ export async function publishAssetUpdate(
       readiness?: ReadinessItem[];
     }
 > {
-  const { data, error, response } = await api.POST("/v1/assets/{id}/updates", {
-    params: {
-      header: { "X-Working-Copy-Version": candidate.version },
-      path: { id },
+  const { data, error, response } = await api<AssetUpdate>(
+    "POST",
+    `/v1/assets/${id}/updates`,
+    {
+      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      body: update,
     },
-    body: update,
-  });
+  );
   acceptCandidateVersion(candidate, response);
   if (data) return { published: true, update: data };
   reportStaleWorkingCopy(error);
@@ -624,9 +678,10 @@ export async function publishAssetUpdate(
 export async function fetchPreservedNamespaces(
   id: string,
 ): Promise<PreservedNamespace[]> {
-  const { data } = await api.GET("/v1/assets/{id}/preserved", {
-    params: { path: { id } },
-  });
+  const { data } = await api<PreservedNamespace[]>(
+    "GET",
+    `/v1/assets/${id}/preserved`,
+  );
   return data ?? [];
 }
 
@@ -634,9 +689,10 @@ export async function fetchAssetUpdates(
   id: string,
 ): Promise<RecordedVersion[] | null> {
   try {
-    const { data } = await api.GET("/v1/assets/{id}/updates", {
-      params: { path: { id } },
-    });
+    const { data } = await api<RecordedVersionList>(
+      "GET",
+      `/v1/assets/${id}/updates`,
+    );
     return data?.items ?? null;
   } catch {
     return null;
@@ -648,14 +704,10 @@ export async function restoreAssetVersion(
   id: string,
   number: number,
 ) {
-  const { error, response } = await api.POST(
-    "/v1/assets/{id}/updates/{number}/restore",
-    {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id, number },
-      },
-    },
+  const { error, response } = await api<void>(
+    "POST",
+    `/v1/assets/${id}/updates/${number}/restore`,
+    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) throw writeRefusal(error, "That version could not be restored.");
@@ -666,10 +718,11 @@ export async function correctAssetVersionNotes(
   number: number,
   correction: AssetVersionNotesRequest,
 ) {
-  const { error } = await api.PATCH("/v1/assets/{id}/updates/{number}/notes", {
-    params: { path: { id, number } },
-    body: correction,
-  });
+  const { error } = await api<void>(
+    "PATCH",
+    `/v1/assets/${id}/updates/${number}/notes`,
+    { body: correction },
+  );
   if (error) throw writeRefusal(error, "Those notes could not be corrected.");
 }
 
@@ -678,9 +731,10 @@ export async function withdrawAssetVersion(
   number: number,
   explanation: string,
 ) {
-  const { error } = await api.POST(
-    "/v1/assets/{id}/updates/{number}/withdraw",
-    { params: { path: { id, number } }, body: { explanation } },
+  const { error } = await api<void>(
+    "POST",
+    `/v1/assets/${id}/updates/${number}/withdraw`,
+    { body: { explanation } },
   );
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
 }
@@ -701,9 +755,9 @@ export async function fetchRecordedVersionDownloads(
   let data: RecordedVersionDownloads | undefined;
   let response: Response;
   try {
-    ({ data, response } = await api.GET(
-      "/v1/assets/{id}/updates/{number}/downloads",
-      { params: { path: { id, number } } },
+    ({ data, response } = await api<RecordedVersionDownloads>(
+      "GET",
+      `/v1/assets/${id}/updates/${number}/downloads`,
     ));
   } catch {
     return unreadable;
@@ -734,10 +788,11 @@ export async function compareAssetVersions(
   let data: VersionComparison | undefined;
   let response: Response;
   try {
-    ({ data, response } = await api.GET("/v1/assets/{id}/updates/comparison", {
-      params: { path: { id }, query: { from, to } },
-      headers: cookie ? { cookie } : undefined,
-    }));
+    ({ data, response } = await api<VersionComparison>(
+      "GET",
+      `/v1/assets/${id}/updates/comparison`,
+      { query: { from, to }, headers: cookie ? { cookie } : undefined },
+    ));
   } catch {
     return unreadable;
   }
@@ -761,9 +816,10 @@ export async function compareAssetVersions(
 export async function fetchProtectionMismatches(
   id: string,
 ): Promise<ProtectionMismatch[]> {
-  const { data } = await api.GET("/v1/assets/{id}/updates/protection", {
-    params: { path: { id } },
-  });
+  const { data } = await api<ProtectionMismatchList>(
+    "GET",
+    `/v1/assets/${id}/updates/protection`,
+  );
   return data?.items ?? [];
 }
 
@@ -772,12 +828,10 @@ export async function resolvePromptCorrespondence(
   number: number,
   matches: PromptCorrespondenceRequest["matches"],
 ) {
-  const { error } = await api.PUT(
-    "/v1/assets/{id}/updates/{number}/protection",
-    {
-      params: { path: { id, number } },
-      body: { matches },
-    },
+  const { error } = await api<void>(
+    "PUT",
+    `/v1/assets/${id}/updates/${number}/protection`,
+    { body: { matches } },
   );
   if (error) {
     const refusal = error as { error?: unknown } | undefined;
@@ -794,14 +848,10 @@ export async function deletePreservedNamespace(
   id: string,
   namespace: string,
 ) {
-  const { error, response } = await api.DELETE(
-    "/v1/assets/{id}/preserved/{namespace}",
-    {
-      params: {
-        header: { "X-Working-Copy-Version": candidate.version },
-        path: { id, namespace },
-      },
-    },
+  const { error, response } = await api<void>(
+    "DELETE",
+    `/v1/assets/${id}/preserved/${encodeURIComponent(namespace)}`,
+    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
@@ -812,9 +862,10 @@ export async function deletePreservedNamespace(
 export async function fetchPublishedPost(
   slug: string,
 ): Promise<PublicPost | null> {
-  const { data, error } = await api.GET("/v1/posts/{slug}", {
-    params: { path: { slug } },
-  });
+  const { data, error } = await api<PublicPost>(
+    "GET",
+    `/v1/posts/${encodeURIComponent(slug)}`,
+  );
   if (error || !data) return null;
   return data;
 }
@@ -824,8 +875,8 @@ export async function fetchPostArchive(query: {
   category?: string;
   app?: string;
 }): Promise<PostArchive | null> {
-  const { data, error, response } = await api.GET("/v1/posts", {
-    params: { query },
+  const { data, error, response } = await api<PostArchive>("GET", "/v1/posts", {
+    query,
   });
   if (response.status === 404) return null;
   if (error || !data) throw new Error("Could not load blog posts.");
@@ -833,12 +884,15 @@ export async function fetchPostArchive(query: {
 }
 
 export async function fetchPostCategories(): Promise<PublicationCategory[]> {
-  const answer = await api.GET("/v1/post-categories", {}).catch(() => null);
+  const answer = await api<PublicationCategoryList>(
+    "GET",
+    "/v1/post-categories",
+  ).catch(() => null);
   return answer?.data?.categories ?? [];
 }
 
 export async function fetchPostApps(): Promise<PublicationApp[]> {
-  const { data, error } = await api.GET("/v1/post-apps", {});
+  const { data, error } = await api<PublicationAppList>("GET", "/v1/post-apps");
   if (error || !data) return [];
   return data.apps;
 }
@@ -846,47 +900,45 @@ export async function fetchPostApps(): Promise<PublicationApp[]> {
 export async function fetchProfileRestriction(
   handle: string,
 ): Promise<ProfileRestriction | null> {
-  const { data, error } = await api.GET("/v1/profiles/{handle}/restriction", {
-    params: { path: { handle } },
-  });
+  const { data, error } = await api<ProfileRestriction>(
+    "GET",
+    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+  );
   if (error || !data) return null;
   return data;
 }
 
 export async function restrictProfile(handle: string, reason: string) {
-  const { data, error } = await api.PUT("/v1/profiles/{handle}/restriction", {
-    params: { path: { handle } },
-    body: { reason },
-  });
+  const { data, error } = await api<ProfileRestriction>(
+    "PUT",
+    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+    { body: { reason } },
+  );
   if (error || !data) throw new Error("Could not restrict the profile");
   return data;
 }
 
 export async function restoreProfile(handle: string) {
-  const { error } = await api.DELETE("/v1/profiles/{handle}/restriction", {
-    params: { path: { handle } },
-  });
+  const { error } = await api<void>(
+    "DELETE",
+    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+  );
   if (error) throw new Error("Could not restore the profile");
 }
 
 export async function withholdAsset(id: string, reason: string) {
-  const { error } = await api.PUT("/v1/assets/{id}/withhold", {
-    params: { path: { id } },
+  const { error } = await api<void>("PUT", `/v1/assets/${id}/withhold`, {
     body: { reason },
   });
   if (error) throw new Error("Could not withhold the asset");
 }
 
 export async function deleteAsset(id: string) {
-  const { error } = await api.DELETE("/v1/assets/{id}", {
-    params: { path: { id } },
-  });
+  const { error } = await api<void>("DELETE", `/v1/assets/${id}`);
   if (error) throw new Error("Could not delete the asset");
 }
 
 export async function restoreAsset(id: string) {
-  const { error } = await api.POST("/v1/assets/{id}/restore", {
-    params: { path: { id } },
-  });
+  const { error } = await api<void>("POST", `/v1/assets/${id}/restore`);
   if (error) throw new Error("Could not restore the asset");
 }

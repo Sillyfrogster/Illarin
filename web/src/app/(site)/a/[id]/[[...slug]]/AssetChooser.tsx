@@ -13,7 +13,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { type ApiMethod, api } from "@/lib/api/client";
 import type {
   AppTarget,
   AssetBlock,
@@ -149,18 +149,14 @@ export function AssetChooser({
   });
   const oversized = bytes > MAX_DOWNLOAD_BYTES;
 
-  async function act(path: string, method: string, body?: unknown) {
+  async function act(path: string, method: ApiMethod, body?: unknown) {
     setBusy(true);
     setFailure("");
     try {
-      const response = await browserFetch(path, {
-        method,
-        credentials: "same-origin",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
+      const { error: answer, response } = await api<unknown>(method, path, {
+        body,
       });
       if (!response.ok) {
-        const answer: unknown = await response.json().catch(() => null);
         setFailure(
           typeof answer === "object" &&
             answer !== null &&
@@ -332,7 +328,7 @@ export function AssetChooser({
             loading={busy}
             onClick={async () => {
               const sent = await act(
-                `/api/v1/assets/${assetId}/deliveries`,
+                `/v1/assets/${assetId}/deliveries`,
                 "POST",
                 { instanceId: instance.instanceId },
               );
@@ -354,7 +350,7 @@ export function AssetChooser({
               disabled={busy}
               onClick={() =>
                 instance.delivery &&
-                act(`/api/v1/deliveries/${instance.delivery.id}`, "DELETE")
+                act(`/v1/deliveries/${instance.delivery.id}`, "DELETE")
               }
             >
               {pending ? "Cancel" : "Dismiss"}

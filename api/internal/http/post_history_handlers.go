@@ -92,7 +92,7 @@ func (h *Handlers) ReadPostHistory(c *gin.Context) {
 func (h *Handlers) workingVersion(c *gin.Context) (int, bool) {
 	var request PostVersionRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, CodeInvalid,
+		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
 			"Include the current working-copy version.", "version")
 		return 0, false
 	}

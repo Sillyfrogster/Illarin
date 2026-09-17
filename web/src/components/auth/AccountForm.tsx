@@ -11,8 +11,8 @@ import {
   TextInput,
   Trouble,
 } from "@/components/ui/field";
-import type { Refusal } from "@/lib/answer";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { type Refusal, readRefusal } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -50,21 +50,16 @@ export function AccountForm({
     if (signUp) body.handle = String(form.get("handle") ?? "");
 
     try {
-      const response = await browserFetch(
-        signUp ? "/api/v1/auth/sign-up" : "/api/v1/auth/sign-in",
-        {
-          body: JSON.stringify(body),
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        },
+      const { data, error } = await api<SignedInAccount>(
+        "POST",
+        signUp ? "/v1/auth/sign-up" : "/v1/auth/sign-in",
+        { body },
       );
-      const answer = (await response.json()) as SignedInAccount & Refusal;
-      if (!response.ok) {
-        setRefused(answer);
+      if (!data) {
+        setRefused(readRefusal(error));
         return;
       }
-      setAccount(answer);
+      setAccount(data);
       router.push(signUp ? `/verify-email${carry}` : (returnTo ?? "/browse"));
     } catch {
       setRefused({ error: UNREACHABLE });

@@ -146,7 +146,7 @@ func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
 	}
 	refused := decodeImportRefusal(t, response)
-	if refused.Code != string(CodeInvalid) || refused.Field != "markdown" {
+	if refused.Code != string(PublicationErrorCodeInvalid) || refused.Field != "markdown" {
 		t.Errorf("the refusal reads %+v", refused)
 	}
 	if len(refused.Refusals) != 3 {
@@ -180,7 +180,7 @@ func TestAnImportCannotPlaceAnotherPostsPicture(t *testing.T) {
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
 	}
-	if refusalOf(t, response).Code != string(CodeInvalid) {
+	if refusalOf(t, response).Code != string(PublicationErrorCodeInvalid) {
 		t.Errorf("the refusal reads %s", response.Body.String())
 	}
 }
@@ -223,7 +223,7 @@ func TestAnImportBegunFromAnOlderVersionIsRefused(t *testing.T) {
 	if response.Code != http.StatusConflict {
 		t.Fatalf("import status = %d: %s", response.Code, response.Body.String())
 	}
-	if refused := refusalOf(t, response); refused.Code != string(CodeStaleVersion) ||
+	if refused := refusalOf(t, response); refused.Code != string(PublicationErrorCodeStaleVersion) ||
 		refused.Version == nil {
 		t.Errorf("the refusal reads %+v", refused)
 	}

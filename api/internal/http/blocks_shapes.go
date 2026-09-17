@@ -54,7 +54,7 @@ const (
 )
 
 type AssetElement struct {
-	Content  json.RawMessage      `json:"content"`
+	Content  json.RawMessage      `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
 	Display  *AssetElementDisplay `json:"display,omitempty"`
 	Facts    []string             `json:"facts"`
 	Id       uuid.UUID            `json:"id"`
@@ -110,8 +110,8 @@ type EntryTableContent struct {
 type EntryTableContentEntriesPosition string
 
 const (
-	AfterCharacter  EntryTableContentEntriesPosition = "after_character"
-	BeforeCharacter EntryTableContentEntriesPosition = "before_character"
+	EntryTableContentEntriesPositionAfterCharacter  EntryTableContentEntriesPosition = "after_character"
+	EntryTableContentEntriesPositionBeforeCharacter EntryTableContentEntriesPosition = "before_character"
 )
 
 type PromptListContent struct {
@@ -136,9 +136,9 @@ type PromptListContent struct {
 type PromptListContentFragmentsPlacement string
 
 const (
-	InHistory   PromptListContentFragmentsPlacement = "in_history"
-	PostHistory PromptListContentFragmentsPlacement = "post_history"
-	PreHistory  PromptListContentFragmentsPlacement = "pre_history"
+	PromptListContentFragmentsPlacementInHistory   PromptListContentFragmentsPlacement = "in_history"
+	PromptListContentFragmentsPlacementPostHistory PromptListContentFragmentsPlacement = "post_history"
+	PromptListContentFragmentsPlacementPreHistory  PromptListContentFragmentsPlacement = "pre_history"
 )
 
 type PromptListContentFragmentsRole string
@@ -163,7 +163,7 @@ type RecordListContent struct {
 		LumiaPersonality string                                 `json:"lumiaPersonality"`
 		Version          int                                    `json:"version"`
 	} `json:"records"`
-	Schema RecordListContentSchema `json:"schema"`
+	Schema RecordListContentSchema `json:"schema" tstype:"'lumia',required"`
 }
 
 type RecordListContentRecordsGenderIdentity int
@@ -177,7 +177,7 @@ const (
 type RecordListContentSchema string
 
 const (
-	Lumia RecordListContentSchema = "lumia"
+	RecordListContentSchemaLumia RecordListContentSchema = "lumia"
 )
 
 type ScriptListContent struct {
@@ -201,8 +201,8 @@ type ScriptListContent struct {
 type ScriptListContentScriptsAffects string
 
 const (
-	Display ScriptListContentScriptsAffects = "display"
-	Prompt  ScriptListContentScriptsAffects = "prompt"
+	ScriptListContentScriptsAffectsDisplay ScriptListContentScriptsAffects = "display"
+	ScriptListContentScriptsAffectsPrompt  ScriptListContentScriptsAffects = "prompt"
 )
 
 type ScriptListContentScriptsTargets string
@@ -293,3 +293,49 @@ const (
 	VariableSchemaContentVariablesWidgetText        VariableSchemaContentVariablesWidget = "text"
 	VariableSchemaContentVariablesWidgetTextarea    VariableSchemaContentVariablesWidget = "textarea"
 )
+
+type ProseContent struct {
+	Text string `json:"text"`
+}
+
+type TextSetContent struct {
+	Texts []struct {
+		Id   *uuid.UUID `json:"id,omitempty"`
+		Name *string    `json:"name,omitempty"`
+		Text string     `json:"text"`
+	} `json:"texts"`
+}
+
+type DialogueSampleContent struct {
+	Turns []struct {
+		Id      *uuid.UUID `json:"id,omitempty"`
+		Speaker string     `json:"speaker"`
+		Text    string     `json:"text"`
+	} `json:"turns"`
+}
+
+type ImageSetContent struct {
+	Images []struct {
+		Id                *uuid.UUID `json:"id,omitempty"`
+		MediaId           uuid.UUID  `json:"mediaId"`
+		Name              *string    `json:"name,omitempty"`
+		OmitFromDownloads *bool      `json:"omitFromDownloads,omitempty"`
+	} `json:"images"`
+}
+
+type FieldListContent struct {
+	Fields []struct {
+		Id    *uuid.UUID `json:"id,omitempty"`
+		Name  *string    `json:"name,omitempty"`
+		Value string     `json:"value"`
+	} `json:"fields"`
+}
+
+type LinkListContent struct {
+	Links []struct {
+		Id    *uuid.UUID `json:"id,omitempty"`
+		Label *string    `json:"label,omitempty"`
+		Note  *string    `json:"note,omitempty"`
+		Url   string     `json:"url"`
+	} `json:"links"`
+}

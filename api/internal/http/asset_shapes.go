@@ -30,10 +30,10 @@ type AddableBlock struct {
 type AddableBlockGroup string
 
 const (
-	File   AddableBlockGroup = "file"
-	Other  AddableBlockGroup = "other"
-	Reader AddableBlockGroup = "reader"
-	Work   AddableBlockGroup = "work"
+	AddableBlockGroupFile   AddableBlockGroup = "file"
+	AddableBlockGroupOther  AddableBlockGroup = "other"
+	AddableBlockGroupReader AddableBlockGroup = "reader"
+	AddableBlockGroupWork   AddableBlockGroup = "work"
 )
 
 type AddableBlockChoice struct {
@@ -56,7 +56,7 @@ const (
 
 type AssetDetail struct {
 	AddableBlocks         *[]AddableBlock           `json:"addableBlocks,omitempty"`
-	AllowedApps           []AssetDetailAllowedApps  `json:"allowedApps"`
+	AllowedApps           []AssetDetailAllowedApps  `json:"allowedApps" tstype:"'lumiverse'[],required"`
 	AppTargets            []AppTarget               `json:"appTargets"`
 	Blocks                []AssetBlock              `json:"blocks"`
 	Blurb                 string                    `json:"blurb"`
@@ -64,12 +64,12 @@ type AssetDetail struct {
 	Creator               string                    `json:"creator"`
 	Discovery             AssetDetailDiscovery      `json:"discovery"`
 	Downloads             []DownloadTarget          `json:"downloads"`
-	EligibleApps          []AssetDetailEligibleApps `json:"eligibleApps"`
+	EligibleApps          []AssetDetailEligibleApps `json:"eligibleApps" tstype:"'lumiverse'[],required"`
 	ExtensionDependencies []ExtensionDependency     `json:"extensionDependencies"`
 	Id                    uuid.UUID                 `json:"id"`
 	Identifier            *string                   `json:"identifier,omitempty"`
 	InstalledAppVersions  []string                  `json:"installedAppVersions"`
-	IsNsfw                *bool                     `json:"isNsfw"`
+	IsNsfw                *bool                     `json:"isNsfw" tstype:"boolean | null,required"`
 	IsOwner               bool                      `json:"isOwner"`
 	Kind                  AssetDetailKind           `json:"kind"`
 	LatestUpdate          *RecordedVersion          `json:"latestUpdate,omitempty"`
@@ -77,8 +77,8 @@ type AssetDetail struct {
 	LinkedInstallOnly     bool                      `json:"linkedInstallOnly"`
 	Media                 []AssetImage              `json:"media"`
 	Name                  string                    `json:"name"`
-	Original              *OriginalUpload           `json:"original"`
-	Preview               *string                   `json:"preview"`
+	Original              *OriginalUpload           `json:"original" tstype:"OriginalUpload | null,required"`
+	Preview               *string                   `json:"preview" tstype:"string | null,required"`
 	Readiness             *[]ReadinessItem          `json:"readiness,omitempty"`
 	SealedBlocks          *int                      `json:"sealedBlocks,omitempty"`
 	Tags                  []AssetTag                `json:"tags"`
@@ -168,7 +168,7 @@ const (
 )
 
 type AssetList struct {
-	EmptyState *AssetListEmptyState `json:"emptyState"`
+	EmptyState *AssetListEmptyState `json:"emptyState" tstype:"AssetListEmptyState | null,required"`
 	Facets     []BrowseFacet        `json:"facets"`
 	Items      []BrowseAsset        `json:"items"`
 	NextCursor *BrowseCursor        `json:"nextCursor,omitempty"`
@@ -206,10 +206,10 @@ type AssetWithhold struct {
 }
 
 type BrowseAsset struct {
-	Cover      *BrowseCover           `json:"cover"`
+	Cover      *BrowseCover           `json:"cover" tstype:"BrowseCover | null,required"`
 	Creator    string                 `json:"creator"`
 	Id         uuid.UUID              `json:"id"`
-	IsNsfw     *bool                  `json:"isNsfw"`
+	IsNsfw     *bool                  `json:"isNsfw" tstype:"boolean | null,required"`
 	Kind       BrowseAssetKind        `json:"kind"`
 	Name       string                 `json:"name"`
 	OwnerState *BrowseAssetOwnerState `json:"ownerState,omitempty"`
@@ -301,9 +301,9 @@ type DownloadRoleVerdict struct {
 type DownloadRoleVerdictVerdict string
 
 const (
-	Carried DownloadRoleVerdictVerdict = "carried"
-	Dropped DownloadRoleVerdictVerdict = "dropped"
-	Reduced DownloadRoleVerdictVerdict = "reduced"
+	DownloadRoleVerdictVerdictCarried DownloadRoleVerdictVerdict = "carried"
+	DownloadRoleVerdictVerdictDropped DownloadRoleVerdictVerdict = "dropped"
+	DownloadRoleVerdictVerdictReduced DownloadRoleVerdictVerdict = "reduced"
 )
 
 type DownloadSample struct {
@@ -322,20 +322,20 @@ type DownloadTarget struct {
 type ElementType string
 
 const (
-	ColorSet       ElementType = "color_set"
-	DialogueSample ElementType = "dialogue_sample"
-	EntryTable     ElementType = "entry_table"
-	FieldList      ElementType = "field_list"
-	ImageSet       ElementType = "image_set"
-	LinkList       ElementType = "link_list"
-	PromptList     ElementType = "prompt_list"
-	Prose          ElementType = "prose"
-	RecordList     ElementType = "record_list"
-	ScriptList     ElementType = "script_list"
-	SettingGroup   ElementType = "setting_group"
-	StylesheetSet  ElementType = "stylesheet_set"
-	TextSet        ElementType = "text_set"
-	VariableSchema ElementType = "variable_schema"
+	ElementTypeColorSet       ElementType = "color_set"
+	ElementTypeDialogueSample ElementType = "dialogue_sample"
+	ElementTypeEntryTable     ElementType = "entry_table"
+	ElementTypeFieldList      ElementType = "field_list"
+	ElementTypeImageSet       ElementType = "image_set"
+	ElementTypeLinkList       ElementType = "link_list"
+	ElementTypePromptList     ElementType = "prompt_list"
+	ElementTypeProse          ElementType = "prose"
+	ElementTypeRecordList     ElementType = "record_list"
+	ElementTypeScriptList     ElementType = "script_list"
+	ElementTypeSettingGroup   ElementType = "setting_group"
+	ElementTypeStylesheetSet  ElementType = "stylesheet_set"
+	ElementTypeTextSet        ElementType = "text_set"
+	ElementTypeVariableSchema ElementType = "variable_schema"
 )
 
 type ExtensionDependency struct {
@@ -422,8 +422,8 @@ type ReplacementAcceptance struct {
 type ReplacementAcceptanceUnrepresentable string
 
 const (
-	Keep   ReplacementAcceptanceUnrepresentable = "keep"
-	Remove ReplacementAcceptanceUnrepresentable = "remove"
+	ReplacementAcceptanceUnrepresentableKeep   ReplacementAcceptanceUnrepresentable = "keep"
+	ReplacementAcceptanceUnrepresentableRemove ReplacementAcceptanceUnrepresentable = "remove"
 )
 
 type ReplacementPreview struct {
@@ -436,7 +436,7 @@ type ReplacementPreview struct {
 }
 
 type SealedExposureRefusal struct {
-	Code    SealedExposureRefusalCode `json:"code"`
+	Code    SealedExposureRefusalCode `json:"code" tstype:"'sealed_exposure',required"`
 	Error   string                    `json:"error"`
 	Prompts []string                  `json:"prompts"`
 }
@@ -444,7 +444,7 @@ type SealedExposureRefusal struct {
 type SealedExposureRefusalCode string
 
 const (
-	SealedExposure SealedExposureRefusalCode = "sealed_exposure"
+	SealedExposureRefusalCodeSealedExposure SealedExposureRefusalCode = "sealed_exposure"
 )
 
 type VersionChangeGroup struct {
