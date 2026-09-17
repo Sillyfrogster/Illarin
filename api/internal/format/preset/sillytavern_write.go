@@ -18,7 +18,7 @@ func (SillyTavernModule) Write(
 ) (format.Artifact, error) {
 	held := preservedBy(asset.Preserved)
 	named := slotsByApp[SillyTavern]
-	list := fragments(asset)
+	list := sillyTavernFragments(fragments(asset))
 	identifiers := sillyTavernIdentifiers(list, held)
 
 	body := map[string]json.RawMessage{
@@ -63,12 +63,32 @@ func (SillyTavernModule) Write(
 	}, nil
 }
 
+func sillyTavernFragments(list block.PromptList) block.PromptList {
+	read := list.Fragments
+	list.Fragments = make([]block.PromptFragment, 0, len(read))
+	markers := make(map[string]int)
+	for _, fragment := range read {
+		if fragment.Marker != "" && fragment.Marker != "nsfw" && fragment.Marker != "enhanceDefinitions" {
+			if at, duplicate := markers[fragment.Marker]; duplicate {
+				list.Fragments[at].Enabled = list.Fragments[at].Enabled || fragment.Enabled
+				continue
+			}
+			markers[fragment.Marker] = len(list.Fragments)
+		}
+		list.Fragments = append(list.Fragments, fragment)
+	}
+	return list
+}
+
 func sillyTavernIdentifiers(list block.PromptList, held kept) map[uuid.UUID]string {
 	identifiers := make(map[uuid.UUID]string, len(list.Fragments))
 	for _, fragment := range list.Fragments {
 		identifiers[fragment.ID] = itemName(
 			held, sillyTavernPromptNamespace, fragment.ID, stIdentifier,
 		)
+		if fragment.Marker != "" {
+			identifiers[fragment.ID] = fragment.Marker
+		}
 	}
 	return identifiers
 }
@@ -84,7 +104,8 @@ func writeSillyTavernPrompts(
 			stIdentifier: keys.Must(identifiers[fragment.ID]),
 			stName:       keys.Must(fragment.Name),
 		}
-		keys.WriteIfSet(fields, stMarker, fragment.Marker != "", true)
+		marker := fragment.Marker != "" && fragment.Marker != "nsfw" && fragment.Marker != "enhanceDefinitions"
+		fields[stMarker] = keys.Must(marker)
 		keys.WriteIfSet(fields, stRole, fragment.Role != "", fragment.Role)
 		keys.WriteIfSet(fields, stText,
 			fragment.Text != "" || fragment.Marker == "", fragment.Text)
@@ -93,6 +114,15 @@ func writeSillyTavernPrompts(
 			keys.WriteIfSet(fields, stDepth, fragment.Depth != nil, fragment.Depth)
 		}
 		keys.MergeAbsent(fields, held.item(sillyTavernPromptNamespace, fragment.ID))
+		switch identifiers[fragment.ID] {
+		case "main", "nsfw", "jailbreak", "enhanceDefinitions", "worldInfoBefore", "worldInfoAfter",
+			"charDescription", "charPersonality", "scenario", "personaDescription", "dialogueExamples", "chatHistory":
+			fields["system_prompt"] = keys.Must(true)
+		default:
+			if _, present := fields["system_prompt"]; !present {
+				fields["system_prompt"] = keys.Must(false)
+			}
+		}
 		written = append(written, fields)
 	}
 	return written
