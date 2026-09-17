@@ -40,7 +40,7 @@ fi
 
 echo "Pulling Illarin $ILLARIN_VERSION."
 compose pull api web
-compose up -d --wait --wait-timeout 180 db datadog
+compose up -d --wait --wait-timeout 180 db
 
 echo "Starting analytics."
 "$OPS_DIR/analytics.sh" prepare
@@ -65,11 +65,11 @@ rollback_after_failure() {
   echo "The new release failed its checks. Restoring application release $current." >&2
   ILLARIN_VERSION="$current"
   export ILLARIN_VERSION
-  compose up -d --wait --wait-timeout 180 api web gateway datadog
+  compose up -d --wait --wait-timeout 180 api web gateway
 }
 
 echo "Starting the new application containers."
-if ! compose up -d --wait --wait-timeout 180 --remove-orphans api web gateway datadog; then
+if ! compose up -d --wait --wait-timeout 180 --remove-orphans api web gateway; then
   rollback_after_failure || true
   exit 1
 fi

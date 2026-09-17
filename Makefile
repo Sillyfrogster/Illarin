@@ -44,10 +44,6 @@ setup: ## Get a fresh clone ready to run
 	$(MAKE) web-install
 	$(MAKE) migrate
 
-.PHONY: production-setup
-production-setup: ## Walk through the reference production integrations
-	@ENV_FILE="$(CURDIR)/ops/.env" ./ops/setup-production.sh
-
 .PHONY: web-install
 web-install: ## Install the site's locked dependencies
 	cd web && bun install --frozen-lockfile
@@ -211,11 +207,6 @@ image-web: ## Build the production Next image locally
 		-f web/Dockerfile -t illarin-web:local .
 
 images: image-api image-web ## Build both production application images
-
-.PHONY: production-stack-test
-production-stack-test: VERSION := $(shell git rev-parse HEAD)
-production-stack-test: images ## Run an isolated smoke test against the production Compose stack
-	@./ops/test-production-stack.sh
 
 # Database
 

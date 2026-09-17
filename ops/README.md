@@ -19,8 +19,9 @@ Internet -> DNS and TLS proxy -> Illarin gateway -> web and API -> PostgreSQL
 ```
 
 The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
-nginx gateway, Umami for page view counts, and a Datadog agent. Uploaded blobs remain on the host. nginx may
-serve a blob only after the API authorizes it with `X-Accel-Redirect`.
+nginx gateway, and Umami for page view counts. Uploaded blobs remain on the
+host. nginx may serve a blob only after the API authorizes it with
+`X-Accel-Redirect`.
 
 Illarin answers on two hostnames that both reach the same gateway: the site at
 `SITE_URL` and the blog at `BLOG_URL`. The gateway tells them apart by name. A
@@ -42,7 +43,6 @@ The included deployment has these current integration requirements:
 - a container registry that holds `illarin-api` and `illarin-web` images tagged
   with full Git commit SHAs;
 - an SMTP relay or Microsoft Graph application credentials for account email;
-- a Datadog API key for the monitoring service in `compose.prod.yaml`;
 - an off-host, restic-compatible repository for production backups.
 
 Discord sign-in is optional. NPMPlus is also optional: `compose.npmplus.yaml`
@@ -56,7 +56,7 @@ port instead.
 - three DNS names, the site's and its `blog.` and `analytics.` subdomains, and
   a TLS-terminating reverse proxy that forwards all three to the gateway;
 - a GitHub fork or another way to build and publish both application images;
-- SMTP or Microsoft 365 credentials, and a Datadog API key;
+- SMTP or Microsoft 365 credentials;
 - enough persistent storage for PostgreSQL, uploads, image replacement, and the
   configured free-space reserve.
 
@@ -80,7 +80,7 @@ fork owned by `example`, use `ghcr.io/example`; the workflows publish
 
 Set `SITE_URL` to the site's address and `BLOG_URL` to the blog's. The blog
 hostname must begin with `blog.`, because that prefix is how the gateway
-recognises it. The stack refuses to start without `BLOG_URL`.
+recognizes it. The stack refuses to start without `BLOG_URL`.
 
 Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
 encoded as unpadded base64url. They are separate keys and never share a value.
@@ -97,17 +97,6 @@ The API accepts one mail transport. For SMTP, set `SMTP_ADDR` and `SMTP_FROM`,
 and set `SMTP_USERNAME` and `SMTP_PASSWORD` when the relay needs a login. Leave
 the Microsoft 365 values empty. For Microsoft Graph, leave the SMTP values empty
 and install the Microsoft secret as shown above.
-
-The interactive helper covers the reference GitHub, Microsoft Graph, Datadog,
-SSH, and NPMPlus path:
-
-```bash
-make production-setup
-```
-
-It writes local setup material under `ops/`; those files are ignored by Git.
-The helper is optional. Operators may configure the same values and secrets with
-their own provisioning system.
 
 ## Publish and deploy
 
