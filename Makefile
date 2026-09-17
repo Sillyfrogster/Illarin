@@ -1,6 +1,6 @@
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
 SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
-OAPI  := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
+TYGO  := go run github.com/gzuidhof/tygo@v0.2.21
 ACTIONLINT := go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 GOTESTSUM := go run gotest.tools/gotestsum@v1.13.0
 SHADCN := bunx --bun shadcn@4.21.0
@@ -132,7 +132,7 @@ check: check-go check-web workflow-check ## Everything CI runs
 
 check-go: fmt-check vet test ## Check the Go code and run its tests
 
-check-web: test-web lint openapi-check ## Check the site and run its tests
+check-web: test-web lint ## Check the site and run its tests
 
 .PHONY: test test-postgres test-postgres-stop
 test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/http/...
@@ -170,7 +170,7 @@ vet: ## Report suspicious Go code
 	cd api && go vet ./...
 
 .PHONY: lint
-lint: ## Check the site with Biome and the TypeScript compiler
+lint: site-types ## Check the site with Biome and the TypeScript compiler
 	cd web && bun run lint
 	cd web && bunx next typegen
 	cd web && bunx tsc --noEmit
@@ -229,18 +229,12 @@ publication-authority: need-db ## Record which account holds publication authori
 
 # Generated code, never hand edited
 
-.PHONY: generate openapi-bundle
-generate: openapi-bundle ## Regenerate database code, server stubs, and the site's API types
+.PHONY: generate site-types
+generate: site-types ## Regenerate database code and the site's API types
 	cd api && $(SQLC) generate
-	cd api/openapi && $(OAPI) -config cfg-server.yaml openapi.gen.yaml
-	cd web && bun run gen:api
 
-openapi-bundle: ## Bundle the OpenAPI modules for publication and generation
-	cd web && bun run bundle:api
-
-.PHONY: openapi-check
-openapi-check: ## Check that the published OpenAPI bundle is current
-	cd web && bun run check:api
+site-types: ## Write the site's API types from the Go request and response structs
+	cd api && $(TYGO) generate --config tygo.yaml
 
 .PHONY: refractive-assets
 refractive-assets: ## Generate the deterministic refractive art assets

@@ -6,6 +6,7 @@
 !api/internal/**
 !api/migrations/**
 !api/protocol.go
+!api/tygo.yaml
 !api/protocol.md
 
 !web/package.json
