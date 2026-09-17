@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
 func TestCCv2UsesTheSpecRepresentationWithoutShadowFields(t *testing.T) {
@@ -56,10 +56,10 @@ func TestCCv2UsesLegacyShapeOnlyWithoutARecognizedSpec(t *testing.T) {
 	}
 }
 
-func document(root map[string]json.RawMessage) probe.Inspection {
-	return probe.Inspection{Payloads: []probe.Payload{{
+func document(root map[string]json.RawMessage) format.Inspection {
+	return format.Inspection{Payloads: []format.Payload{{
 		ID:      0,
-		Locator: probe.Locator{Container: probe.JSON},
+		Locator: format.Locator{Container: format.JSON},
 		Root:    root,
 	}}}
 }

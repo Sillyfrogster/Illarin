@@ -16,7 +16,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
@@ -126,13 +125,13 @@ func (*leasedModule) ID() string { return "leased" }
 func (*leasedModule) Declaration() format.Declaration {
 	return testReaderDeclaration("leased", "character")
 }
-func (*leasedModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (*leasedModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (m *leasedModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m *leasedModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	if m.calls.Add(1) == 1 {
 		close(m.started)
 		<-m.release

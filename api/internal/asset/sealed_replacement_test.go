@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 )
@@ -37,7 +36,7 @@ func (sealingModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (module sealingModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (module sealingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.parsed, nil
 }
 

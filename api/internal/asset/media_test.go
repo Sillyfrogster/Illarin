@@ -18,7 +18,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
@@ -49,7 +48,7 @@ func TestOnlySourceLocalImageReadErrorsDegrade(t *testing.T) {
 	if !localImageReadFailure(zip.ErrChecksum) {
 		t.Error("a corrupt optional ZIP image did not degrade locally")
 	}
-	if localImageReadFailure(fmt.Errorf("read store: %w", probe.ErrRangeRead)) {
+	if localImageReadFailure(fmt.Errorf("read store: %w", format.ErrRangeRead)) {
 		t.Error("an infrastructure range-read failure degraded as corrupt optional media")
 	}
 	if localImageReadFailure(context.Canceled) {

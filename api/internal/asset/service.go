@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/Sillyfrogster/Illarin/api/internal/signing"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -62,7 +61,7 @@ func (s *Service) BeginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
 }
 
 type IngestSettings struct {
-	ProbeLimits            probe.Limits
+	ProbeLimits            format.Limits
 	LeaseDuration          time.Duration
 	RetryBase              time.Duration
 	MaxAttempts            int
@@ -74,7 +73,7 @@ type MediaProcessor = mediaproc.Renderer
 
 func DefaultIngestSettings() IngestSettings {
 	return IngestSettings{
-		ProbeLimits:   probe.DefaultLimits(),
+		ProbeLimits:   format.DefaultLimits(),
 		LeaseDuration: 30 * time.Second,
 		RetryBase:     time.Second,
 		MaxAttempts:   3,
@@ -90,7 +89,7 @@ func NewServiceWithProbeLimits(
 	pool *pgxpool.Pool,
 	reg *format.Registry,
 	store storage.Store,
-	limits probe.Limits,
+	limits format.Limits,
 ) *Service {
 	settings := DefaultIngestSettings()
 	settings.ProbeLimits = limits
@@ -101,7 +100,7 @@ func NewServiceForSite(
 	pool *pgxpool.Pool,
 	reg *format.Registry,
 	store storage.Store,
-	limits probe.Limits,
+	limits format.Limits,
 	siteURL string,
 	accountStorageCapBytes int64,
 ) *Service {
@@ -362,7 +361,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Asset, error) {
 		return Asset{}, fmt.Errorf("store upload: %w", err)
 	}
 
-	inspected, err := probe.Inspect(ctx, s.store, stored.ID, stored.ByteSize, in.Filename)
+	inspected, err := format.Inspect(ctx, s.store, stored.ID, stored.ByteSize, in.Filename)
 	if err != nil {
 		return Asset{}, fmt.Errorf("probe upload: %w", err)
 	}
@@ -524,7 +523,7 @@ func (s *Service) DownloadSource(
 	revisionID := location.RevisionID
 	return SourceDownload{
 		InternalRedirect: redirect, MediaType: location.MediaType,
-		Inline: probe.IsInlineMediaType(location.MediaType),
+		Inline: format.IsInlineMediaType(location.MediaType),
 		Event: downloadEvent(
 			location.AssetID, &revisionID, RawDownloadTarget,
 			location.OwnerID, viewerID,

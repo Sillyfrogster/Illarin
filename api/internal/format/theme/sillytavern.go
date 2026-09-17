@@ -11,11 +11,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-func readSillyTavern(payload probe.Payload) (format.Parsed, error) {
+func readSillyTavern(payload format.Payload) (format.Parsed, error) {
 	source := maps.Clone(payload.Root)
 	header := format.Header{}
 	keys.Take(source, "name", &header.Name)

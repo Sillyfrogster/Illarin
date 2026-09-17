@@ -16,11 +16,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-func readLumiverse(ctx context.Context, file probe.Inspection, payload probe.Payload) (format.Parsed, error) {
+func readLumiverse(ctx context.Context, file format.Inspection, payload format.Payload) (format.Parsed, error) {
 	source := maps.Clone(payload.Root)
 	delete(source, "format")
 	header := format.Header{}
@@ -161,7 +160,7 @@ func readLumiverseControls(theme map[string]json.RawMessage) []block.Setting {
 
 func readLumiverseStyles(
 	ctx context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	source map[string]json.RawMessage,
 ) (block.StylesheetSet, []itemRemainder) {
 	styles := block.StylesheetSet{

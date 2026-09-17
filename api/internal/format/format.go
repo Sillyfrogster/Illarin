@@ -10,7 +10,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -158,7 +157,7 @@ const (
 
 type Recognition struct {
 	Kind         RecognitionKind
-	Containers   []probe.Container
+	Containers   []Container
 	Path         []string
 	Entry        string
 	Values       []string
@@ -167,7 +166,7 @@ type Recognition struct {
 	SupersededBy []string
 }
 
-func ClaimByDeclaration(file probe.Inspection, declaration Declaration) (Claim, bool) {
+func ClaimByDeclaration(file Inspection, declaration Declaration) (Claim, bool) {
 	for _, recognition := range declaration.Recognition {
 		if supersededInFile(file, recognition) {
 			continue
@@ -205,7 +204,7 @@ func ClaimByDeclaration(file probe.Inspection, declaration Declaration) (Claim, 
 	return Claim{}, false
 }
 
-func supersededInFile(file probe.Inspection, recognition Recognition) bool {
+func supersededInFile(file Inspection, recognition Recognition) bool {
 	if len(recognition.SupersededBy) == 0 {
 		return false
 	}
@@ -559,7 +558,7 @@ func validateRecognition(d Declaration) error {
 				}
 			}
 		case RecognitionEntry:
-			if recognition.Entry == "" || !slices.Equal(recognition.Containers, []probe.Container{probe.ZIP}) {
+			if recognition.Entry == "" || !slices.Equal(recognition.Containers, []Container{ZIP}) {
 				return errors.New("an entry recognition needs an archive and the entry it reads")
 			}
 		default:
@@ -609,7 +608,7 @@ func validateStorageContract(d Declaration) error {
 		return errors.New("payload, collection and item limits are required")
 	}
 	readsArchives := slices.ContainsFunc(d.Recognition, func(recognition Recognition) bool {
-		return slices.Contains(recognition.Containers, probe.ZIP)
+		return slices.Contains(recognition.Containers, ZIP)
 	})
 	if readsArchives && d.Limits.ArchiveFiles <= 0 {
 		return errors.New("a module that reads archives needs a limit on their files")

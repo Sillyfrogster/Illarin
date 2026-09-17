@@ -1,4 +1,4 @@
-package probe
+package format
 
 import (
 	"archive/zip"

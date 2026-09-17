@@ -1,4 +1,4 @@
-package probe
+package format
 
 import (
 	"archive/zip"
@@ -28,14 +28,14 @@ var (
 	ErrRangeRead       = errors.New("blob range read failed")
 )
 
-// SafetyViolation names the archive safety rule a file breaks.
-type SafetyViolation struct{ Rule string }
+// ArchiveViolation names the archive safety rule a file breaks.
+type ArchiveViolation struct{ Rule string }
 
-func (v SafetyViolation) Error() string        { return ErrSafetyViolation.Error() + ": " + v.Rule }
-func (v SafetyViolation) Is(target error) bool { return target == ErrSafetyViolation }
+func (v ArchiveViolation) Error() string        { return ErrSafetyViolation.Error() + ": " + v.Rule }
+func (v ArchiveViolation) Is(target error) bool { return target == ErrSafetyViolation }
 
 func violates(rule string, args ...any) error {
-	return SafetyViolation{Rule: fmt.Sprintf(rule, args...)}
+	return ArchiveViolation{Rule: fmt.Sprintf(rule, args...)}
 }
 
 // byteCount writes a byte count in the largest whole unit it fills.

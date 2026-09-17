@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -87,7 +86,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionSignature,
-			Containers: []probe.Container{probe.JSON},
+			Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				stPrompts: format.ValueArray, stOrder: format.ValueArray,
 			},
@@ -178,13 +177,13 @@ func hasHeadingOrHistoryPlacement(content block.Content) bool {
 	return false
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m SillyTavernModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
 func (m SillyTavernModule) Parse(
 	_ context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
 	payload, ok := claim.Payload(file)

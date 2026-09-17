@@ -10,7 +10,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -212,7 +211,7 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 
 func (s *Service) prepareExtractedMedia(
 	ctx context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	extracted []format.Media,
 ) ([]preparedMedia, error) {
 	prepared := make([]preparedMedia, 0, len(extracted))
@@ -223,7 +222,7 @@ func (s *Service) prepareExtractedMedia(
 		}
 		source, err := file.OpenImage(ctx, item.ImageID)
 		if err != nil {
-			if errors.Is(err, probe.ErrImageUnavailable) {
+			if errors.Is(err, format.ErrImageUnavailable) {
 				continue
 			}
 			return nil, fmt.Errorf("open extracted media: %w", err)
@@ -260,7 +259,7 @@ func (s *Service) prepareExtractedMedia(
 }
 
 func localImageReadFailure(err error) bool {
-	return err != nil && !errors.Is(err, probe.ErrRangeRead) && !errors.Is(err, context.Canceled)
+	return err != nil && !errors.Is(err, format.ErrRangeRead) && !errors.Is(err, context.Canceled)
 }
 
 func elementsForExtractedMedia(media []preparedMedia) []block.Element {

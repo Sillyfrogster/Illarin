@@ -24,7 +24,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -40,8 +39,8 @@ func (neverClaimsModule) ID() string { return "never" }
 func (neverClaimsModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("never", "character")
 }
-func (neverClaimsModule) Claim(probe.Inspection) (format.Claim, bool) { return format.Claim{}, false }
-func (neverClaimsModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (neverClaimsModule) Claim(format.Inspection) (format.Claim, bool) { return format.Claim{}, false }
+func (neverClaimsModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("unreachable")
 }
 
@@ -49,7 +48,7 @@ func (parseFailureModule) ID() string { return "claimed" }
 func (parseFailureModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("claimed", "character")
 }
-func (parseFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (parseFailureModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
@@ -64,16 +63,16 @@ func (typedParseFailureModule) ID() string { return "typed_failure" }
 func (typedParseFailureModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("typed_failure", "character")
 }
-func (typedParseFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (typedParseFailureModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (m typedParseFailureModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m typedParseFailureModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{}, m.err
 }
-func (parseFailureModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (parseFailureModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("the claimed payload is malformed")
 }
 
@@ -767,13 +766,13 @@ func (invalidFinalizationModule) ID() string { return "invalid_finalization" }
 func (invalidFinalizationModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("invalid_finalization", "not-a-kind")
 }
-func (invalidFinalizationModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (invalidFinalizationModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (invalidFinalizationModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (invalidFinalizationModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{Kind: "not-a-kind", Format: "invalid_finalization"}, nil
 }
 
@@ -781,13 +780,13 @@ func (catalogModule) ID() string { return "catalog" }
 func (catalogModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("catalog", "character")
 }
-func (catalogModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (catalogModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (catalogModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (catalogModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	nsfw := true
 	return format.Parsed{
 		Kind: "character", Format: "catalog",
@@ -806,13 +805,13 @@ func (*internalFailureModule) ID() string { return "internal_failure" }
 func (*internalFailureModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("internal_failure", "character")
 }
-func (*internalFailureModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (*internalFailureModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (m *internalFailureModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m *internalFailureModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	if m.failuresLeft > 0 {
 		m.failuresLeft--
 		return format.Parsed{}, format.InternalFailure(errors.New("temporary module failure"))
@@ -1011,13 +1010,13 @@ func (*blockingModule) ID() string { return "blocking" }
 func (*blockingModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("blocking", "character")
 }
-func (*blockingModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (*blockingModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (m *blockingModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m *blockingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	close(m.started)
 	<-m.release
 	return format.Parsed{Kind: "character", Format: "blocking"}, nil

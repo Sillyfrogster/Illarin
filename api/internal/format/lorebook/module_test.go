@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -409,10 +408,10 @@ func preservedPayload(
 	return payload
 }
 
-func document(t *testing.T, body string) probe.Inspection {
+func document(t *testing.T, body string) format.Inspection {
 	t.Helper()
 	data := []byte(body)
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), "book.json",
 	)
 	if err != nil {

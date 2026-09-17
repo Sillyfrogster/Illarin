@@ -18,7 +18,6 @@ import (
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/outbound"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -151,11 +150,11 @@ func (OpaqueModule) Write(_ context.Context, written format.ExportAsset) (format
 	}, nil
 }
 
-func (OpaqueModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (OpaqueModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.WholeFileCompatibilityClaim(file), true
 }
 
-func (OpaqueModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (OpaqueModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{
 		Kind: "character", Format: "test_opaque",
 		Elements: []block.Element{
@@ -169,7 +168,7 @@ func ReaderDeclaration(id, kind string) format.Declaration {
 	return format.Declaration{
 		ID: id, Kind: kind, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{

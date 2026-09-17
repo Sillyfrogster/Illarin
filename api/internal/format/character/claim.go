@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 const (
@@ -13,7 +12,7 @@ const (
 	CharX = "charx"
 )
 
-func Fields(file probe.Inspection, claim format.Claim) (map[string]json.RawMessage, bool) {
+func Fields(file format.Inspection, claim format.Claim) (map[string]json.RawMessage, bool) {
 	payload, ok := claim.Payload(file)
 	if !ok {
 		return nil, false

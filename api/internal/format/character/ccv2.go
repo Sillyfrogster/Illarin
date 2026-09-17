@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 type CCv2Module struct{}
@@ -13,13 +12,13 @@ func (CCv2Module) ID() string { return V2 }
 
 func (CCv2Module) Declaration() format.Declaration { return declaration(V2) }
 
-func (m CCv2Module) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m CCv2Module) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
 func (m CCv2Module) Parse(
 	_ context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
 	read, err := readCard(file, claim, 2, m.ID())

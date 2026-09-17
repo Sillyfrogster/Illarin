@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/book"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -53,7 +52,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
 			Kind:       format.RecognitionSignature,
-			Containers: []probe.Container{probe.JSON},
+			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueObject},
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -83,13 +82,13 @@ func (SillyTavernModule) Declaration() format.Declaration {
 	}
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m SillyTavernModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
 func (m SillyTavernModule) Parse(
 	_ context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
 	payload, ok := claim.Payload(file)

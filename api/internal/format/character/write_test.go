@@ -14,7 +14,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -365,7 +364,7 @@ func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],
 		"character_book":{"entries":[{"keys":["ledger"],"content":"A debt."}]}`
-	origins := map[string]probe.Inspection{
+	origins := map[string]format.Inspection{
 		V2:    jsonCard(t, `{"spec":"chara_card_v2","spec_version":"2.0","data":{`+body+`}}`),
 		V3:    jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`),
 		CharX: charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`, nil),

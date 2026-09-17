@@ -15,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -258,13 +257,13 @@ func (smallLimitModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (m smallLimitModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m smallLimitModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
 func (smallLimitModule) Parse(
 	context.Context,
-	probe.Inspection,
+	format.Inspection,
 	format.Claim,
 ) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("an over-limit file never reaches the reader")

@@ -15,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/jscode"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -62,7 +61,7 @@ var codeEndings = []string{".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts",
 
 // readAdditions reads what an extension's code adds to its app, from the files the app loads and the files they import.
 func readAdditions(
-	ctx context.Context, file probe.Inspection, entries []string, rules []rule, limit time.Duration,
+	ctx context.Context, file format.Inspection, entries []string, rules []rule, limit time.Duration,
 ) (*block.Element, error) {
 	reading, stop := context.WithTimeout(ctx, limit)
 	defer stop()
@@ -89,7 +88,7 @@ func readAdditions(
 		if reading.Err() != nil {
 			break
 		}
-		if errors.Is(err, probe.ErrRangeRead) {
+		if errors.Is(err, format.ErrRangeRead) {
 			return nil, format.InternalFailure(fmt.Errorf("read %s: %w", name, err))
 		}
 		if err != nil {
@@ -121,7 +120,7 @@ func applied(rules []rule, call jscode.Call) []addition {
 	return found
 }
 
-func readCode(archive probe.ZIPFiles, name string, budget int) ([]byte, error) {
+func readCode(archive format.ZIPFiles, name string, budget int) ([]byte, error) {
 	opened, err := archive.Open(name)
 	if err != nil {
 		return nil, err
@@ -131,7 +130,7 @@ func readCode(archive probe.ZIPFiles, name string, budget int) ([]byte, error) {
 }
 
 // codeFiles lists the JavaScript and TypeScript files in the archive, by their names inside its folder.
-func codeFiles(file probe.Inspection) map[string]bool {
+func codeFiles(file format.Inspection) map[string]bool {
 	code := make(map[string]bool)
 	for _, entry := range file.ZIPEntries {
 		name, inside := strings.CutPrefix(entry.Name, file.ArchiveBase)

@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 )
 
@@ -36,7 +36,7 @@ type Config struct {
 	AccountStorageCapBytes       int64
 	LinkingHMACKey               []byte
 	PublicationSecretKey         []byte
-	ProbeLimits                  probe.Limits
+	ProbeLimits                  format.Limits
 	IngestWorkers                int
 	Server                       apihttp.Timeouts
 	Deadlines                    api.Deadlines
@@ -137,7 +137,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
 	}
 	cfg.PublicationSecretKey = publicationKey
-	limits := probe.DefaultLimits()
+	limits := format.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {
 		return Config{}, err
@@ -154,7 +154,7 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	cfg.ProbeLimits = probe.Limits{
+	cfg.ProbeLimits = format.Limits{
 		MaxArchiveEntries:   entries,
 		MaxEntryBytes:       uint64(entryBytes),
 		MaxArchiveBytes:     uint64(archiveBytes),

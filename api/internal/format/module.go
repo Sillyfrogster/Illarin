@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 	"slices"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 type Module interface {
@@ -15,8 +13,8 @@ type Module interface {
 
 type Reader interface {
 	Module
-	Claim(probe.Inspection) (Claim, bool)
-	Parse(ctx context.Context, file probe.Inspection, claim Claim) (Parsed, error)
+	Claim(Inspection) (Claim, bool)
+	Parse(ctx context.Context, file Inspection, claim Claim) (Parsed, error)
 }
 
 type DatabaseReader interface {
@@ -52,13 +50,13 @@ type Claim struct {
 
 const wholeFilePayloadID = ^uint32(0)
 
-func WholeFileCompatibilityClaim(file probe.Inspection) Claim {
+func WholeFileCompatibilityClaim(file Inspection) Claim {
 	return Claim{
 		payloadID: wholeFilePayloadID, strength: compatibility, byteSize: file.ByteSize(),
 	}
 }
 
-func AuthoritativeClaim(payload probe.Payload, discriminator string) (Claim, bool) {
+func AuthoritativeClaim(payload Payload, discriminator string) (Claim, bool) {
 	formatID, ok := payload.String(discriminator)
 	if !ok || formatID == "" {
 		return Claim{}, false
@@ -66,20 +64,20 @@ func AuthoritativeClaim(payload probe.Payload, discriminator string) (Claim, boo
 	return Claim{payloadID: payload.ID, strength: authoritative, formatID: formatID}, true
 }
 
-func CompatibilityClaim(payload probe.Payload) Claim {
+func CompatibilityClaim(payload Payload) Claim {
 	return Claim{payloadID: payload.ID, strength: compatibility}
 }
 
-func (c Claim) Payload(file probe.Inspection) (probe.Payload, bool) {
+func (c Claim) Payload(file Inspection) (Payload, bool) {
 	if c.payloadID == wholeFilePayloadID {
-		return probe.Payload{ID: wholeFilePayloadID, ByteSize: c.byteSize}, true
+		return Payload{ID: wholeFilePayloadID, ByteSize: c.byteSize}, true
 	}
 	for _, payload := range file.Payloads {
 		if payload.ID == c.payloadID {
 			return payload, true
 		}
 	}
-	return probe.Payload{}, false
+	return Payload{}, false
 }
 
 type LabelledText struct {

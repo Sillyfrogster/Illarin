@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -33,14 +32,14 @@ var labels = map[string]string{
 func declaration(id string) format.Declaration {
 	recognition := []format.Recognition{{
 		Kind:       format.RecognitionDiscriminator,
-		Containers: []probe.Container{probe.JSON, probe.PNG, probe.JPEG, probe.WebP, probe.GIF},
+		Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 		Path:       []string{"spec"}, Values: []string{id},
 	}}
 	if id == V2 {
 		recognition[0].SupersededBy = []string{V3}
 		recognition = append(recognition, format.Recognition{
 			Kind: format.RecognitionSignature, LegacyOnly: true,
-			Containers: []probe.Container{probe.JSON, probe.PNG, probe.JPEG, probe.WebP, probe.GIF},
+			Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 			Required: map[string]format.ValueType{
 				"name": format.ValueString, "description": format.ValueString,
 				"personality": format.ValueString, "scenario": format.ValueString,
@@ -50,7 +49,7 @@ func declaration(id string) format.Declaration {
 	}
 	if id == CharX {
 		recognition = []format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []probe.Container{probe.ZIP},
+			Kind: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
 			Path: []string{"spec"}, Values: []string{V3},
 		}}
 	}
@@ -151,7 +150,7 @@ type card struct {
 	fields map[string]json.RawMessage
 }
 
-func readCard(file probe.Inspection, claim format.Claim, implemented int, moduleID string) (card, error) {
+func readCard(file format.Inspection, claim format.Claim, implemented int, moduleID string) (card, error) {
 	payload, ok := claim.Payload(file)
 	if !ok {
 		return card{}, fmt.Errorf("%s payload: the claimed payload is missing", moduleID)
@@ -166,7 +165,7 @@ func readCard(file probe.Inspection, claim format.Claim, implemented int, module
 	return card{fields: fields}, nil
 }
 
-func readableVersion(payload probe.Payload, implemented int) error {
+func readableVersion(payload format.Payload, implemented int) error {
 	declared, ok := payload.String("spec_version")
 	if !ok || declared == "" {
 		return nil
@@ -412,9 +411,9 @@ func (c card) extensions() map[string]json.RawMessage {
 	return extensions
 }
 
-func documentImage(file probe.Inspection) []format.Media {
+func documentImage(file format.Inspection) []format.Media {
 	for _, image := range file.Images {
-		if image.Locator.Container != probe.ZIP {
+		if image.Locator.Container != format.ZIP {
 			return []format.Media{{Role: media.Avatar, ImageID: image.ID}}
 		}
 	}

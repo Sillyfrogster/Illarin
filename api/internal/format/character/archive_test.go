@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
@@ -128,7 +127,7 @@ func archived(name, body string) format.Remainder {
 
 const plainCard = `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`
 
-func charxWithMembers(t *testing.T, body string, members map[string][]byte) probe.Inspection {
+func charxWithMembers(t *testing.T, body string, members map[string][]byte) format.Inspection {
 	t.Helper()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)

@@ -15,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -26,13 +25,13 @@ func (browseModule) ID() string { return "browse_card" }
 func (browseModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("browse_card", "character")
 }
-func (browseModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (browseModule) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
 	return format.CompatibilityClaim(file.Payloads[0]), true
 }
-func (browseModule) Parse(_ context.Context, file probe.Inspection, _ format.Claim) (format.Parsed, error) {
+func (browseModule) Parse(_ context.Context, file format.Inspection, _ format.Claim) (format.Parsed, error) {
 	elements := []block.Element{
 		{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
 		{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},

@@ -16,7 +16,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -153,7 +152,7 @@ func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
 		name   string
-		file   probe.Inspection
+		file   format.Inspection
 		format string
 	}{
 		{name: "CCv2 json", file: jsonCard(t, `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`), format: V2},
@@ -462,7 +461,7 @@ func TestAV3CardInAnArchiveIsCharXAndNotCCv3(t *testing.T) {
 	}
 }
 
-func resolveAndParse(t *testing.T, file probe.Inspection) format.Parsed {
+func resolveAndParse(t *testing.T, file format.Inspection) format.Parsed {
 	t.Helper()
 	registry := format.NewRegistry()
 	for _, module := range Modules() {
@@ -484,7 +483,7 @@ func resolveAndParse(t *testing.T, file probe.Inspection) format.Parsed {
 	return parsed
 }
 
-func claimFor(t *testing.T, module format.Reader, file probe.Inspection) format.Claim {
+func claimFor(t *testing.T, module format.Reader, file format.Inspection) format.Claim {
 	t.Helper()
 	claim, ok := module.Claim(file)
 	if !ok {
@@ -493,19 +492,19 @@ func claimFor(t *testing.T, module format.Reader, file probe.Inspection) format.
 	return claim
 }
 
-func jsonCard(t *testing.T, body string) probe.Inspection {
+func jsonCard(t *testing.T, body string) format.Inspection {
 	t.Helper()
 	return inspect(t, []byte(body), "card.json")
 }
 
-func pngCard(t *testing.T, chunk, body string) probe.Inspection {
+func pngCard(t *testing.T, chunk, body string) format.Inspection {
 	t.Helper()
 	return pngCardChunks(t, textChunk{name: chunk, body: body})
 }
 
 type textChunk struct{ name, body string }
 
-func pngCardChunks(t *testing.T, chunks ...textChunk) probe.Inspection {
+func pngCardChunks(t *testing.T, chunks ...textChunk) format.Inspection {
 	t.Helper()
 	file := testPNG(t)
 	end := len(file) - 12
@@ -517,7 +516,7 @@ func pngCardChunks(t *testing.T, chunks ...textChunk) probe.Inspection {
 	return inspect(t, append(withCards, file[end:]...), "card.png")
 }
 
-func charxCard(t *testing.T, body string, pictures []string) probe.Inspection {
+func charxCard(t *testing.T, body string, pictures []string) format.Inspection {
 	t.Helper()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)
@@ -549,9 +548,9 @@ func (s memoryStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
+func inspect(t *testing.T, data []byte, filename string) format.Inspection {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), filename,
 	)
 	if err != nil {

@@ -12,7 +12,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 const embeddedPrefix = "embeded://"
@@ -25,13 +24,13 @@ func (CharXModule) Declaration() format.Declaration { return declaration(CharX) 
 
 func (CharXModule) OwnedSpecs() []string { return []string{V3} }
 
-func (m CharXModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m CharXModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
 func (m CharXModule) Parse(
 	ctx context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
 	read, err := readCard(file, claim, 3, m.ID())
@@ -60,10 +59,10 @@ const (
 )
 
 // archivedMembers keeps the archived files Illarin reads nothing from.
-func archivedMembers(ctx context.Context, file probe.Inspection) ([]format.Remainder, error) {
+func archivedMembers(ctx context.Context, file format.Inspection) ([]format.Remainder, error) {
 	pictures := make(map[string]bool, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == probe.ZIP {
+		if image.Locator.Container == format.ZIP {
 			pictures[image.Locator.Name] = true
 		}
 	}
@@ -95,7 +94,7 @@ func archivedMembers(ctx context.Context, file probe.Inspection) ([]format.Remai
 
 func readArchivedMember(
 	ctx context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	name string,
 ) (json.RawMessage, error) {
 	opened, err := file.OpenZIPEntry(ctx, name)
@@ -156,7 +155,7 @@ type cardAsset struct {
 }
 
 // archivedImages routes every bundled image, naming the ones the card names.
-func archivedImages(read card, file probe.Inspection) []format.Media {
+func archivedImages(read card, file format.Inspection) []format.Media {
 	var assets []cardAsset
 	if raw, ok := read.fields["assets"]; ok {
 		_ = json.Unmarshal(raw, &assets)
@@ -186,7 +185,7 @@ func archivedImages(read card, file probe.Inspection) []format.Media {
 		})
 	}
 	for _, image := range file.Images {
-		if image.Locator.Container != probe.ZIP || named[image.ID] {
+		if image.Locator.Container != format.ZIP || named[image.ID] {
 			continue
 		}
 		role := archivedRole(image.Locator.Name, hasAvatar)
@@ -243,10 +242,10 @@ func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
 	}
 }
 
-func archivedImage(file probe.Inspection, path string) (uint32, bool) {
+func archivedImage(file format.Inspection, path string) (uint32, bool) {
 	wanted := strings.TrimPrefix(strings.ReplaceAll(path, "\\", "/"), "./")
 	for _, image := range file.Images {
-		if image.Locator.Container != probe.ZIP {
+		if image.Locator.Container != format.ZIP {
 			continue
 		}
 		if strings.TrimPrefix(image.Locator.Name, "./") == wanted {

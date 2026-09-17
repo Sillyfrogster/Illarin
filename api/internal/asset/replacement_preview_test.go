@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -401,7 +400,7 @@ func (m namedReplacementModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (m namedReplacementModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m namedReplacementModule) Claim(file format.Inspection) (format.Claim, bool) {
 	for _, payload := range file.Payloads {
 		if spec, _ := payload.String("spec"); spec == m.id {
 			return format.AuthoritativeClaim(payload, "spec")
@@ -410,7 +409,7 @@ func (m namedReplacementModule) Claim(file probe.Inspection) (format.Claim, bool
 	return format.Claim{}, false
 }
 
-func (m namedReplacementModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m namedReplacementModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return m.parsed, nil
 }
 

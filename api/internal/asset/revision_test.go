@@ -10,7 +10,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -344,7 +343,7 @@ func (m kindModule) Declaration() format.Declaration {
 	return testReaderDeclaration(m.id, m.kind)
 }
 
-func (m kindModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m kindModule) Claim(file format.Inspection) (format.Claim, bool) {
 	for _, payload := range file.Payloads {
 		if spec, _ := payload.String("spec"); spec == m.id {
 			return format.AuthoritativeClaim(payload, "spec")
@@ -353,6 +352,6 @@ func (m kindModule) Claim(file probe.Inspection) (format.Claim, bool) {
 	return format.Claim{}, false
 }
 
-func (m kindModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (m kindModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{Kind: m.kind, Format: m.id}, nil
 }

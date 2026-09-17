@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -32,7 +31,7 @@ func (Module) Declaration() format.Declaration {
 		ID: ID, Label: "Lumiverse pack", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"packName": format.ValueString, "lumiaItems": format.ValueArray,
 				"loomItems": format.ValueArray,
@@ -76,13 +75,13 @@ func (Module) Declaration() format.Declaration {
 	}
 }
 
-func (module Module) Claim(file probe.Inspection) (format.Claim, bool) {
+func (module Module) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, module.Declaration())
 }
 
 func (Module) Parse(
 	_ context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	claim format.Claim,
 ) (format.Parsed, error) {
 	payload, ok := claim.Payload(file)

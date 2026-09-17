@@ -14,7 +14,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -375,7 +374,7 @@ func elementFor(t *testing.T, elements []block.Element, role block.Role) block.C
 	return nil
 }
 
-func parse(t *testing.T, file probe.Inspection) format.Parsed {
+func parse(t *testing.T, file format.Inspection) format.Parsed {
 	t.Helper()
 	resolution, claimed, err := testRegistry(t).Resolve(file)
 	if err != nil {
@@ -423,9 +422,9 @@ func (s memoryStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
+func inspect(t *testing.T, data []byte, filename string) format.Inspection {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), filename,
 	)
 	if err != nil {

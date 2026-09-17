@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 type claimingModule struct {
@@ -20,14 +18,14 @@ func (m claimingModule) Declaration() Declaration {
 	declaration := testReaderDeclaration(m.id, "character")
 	declaration.Recognition = []Recognition{{
 		Kind: RecognitionDiscriminator, Path: []string{"spec"}, Values: []string{m.spec},
-		Containers: []probe.Container{probe.PNG},
+		Containers: []Container{PNG},
 	}}
 	return declaration
 }
-func (m claimingModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (m claimingModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
 	return Parsed{Format: m.id}, nil
 }
-func (m claimingModule) Claim(file probe.Inspection) (Claim, bool) {
+func (m claimingModule) Claim(file Inspection) (Claim, bool) {
 	for _, payload := range file.Payloads {
 		if spec, ok := payload.String("spec"); ok && spec == m.spec {
 			if m.authoritative {
@@ -43,7 +41,7 @@ func TestResolveReturnsNoModuleWhenNothingClaimsTheFile(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
 
-	_, ok, err := registry.Resolve(probe.Inspection{Container: probe.Unknown})
+	_, ok, err := registry.Resolve(Inspection{Container: Unknown})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -139,14 +137,14 @@ func (m forcedAuthoritativeModule) ID() string { return m.id }
 func (m forcedAuthoritativeModule) Declaration() Declaration {
 	return testReaderDeclaration(m.id, "character")
 }
-func (m forcedAuthoritativeModule) Claim(file probe.Inspection) (Claim, bool) {
+func (m forcedAuthoritativeModule) Claim(file Inspection) (Claim, bool) {
 	return Claim{
 		payloadID: file.Payloads[0].ID,
 		strength:  authoritative,
 		formatID:  m.id,
 	}, true
 }
-func (m forcedAuthoritativeModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (m forcedAuthoritativeModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
 	return Parsed{Format: m.id}, nil
 }
 
@@ -165,12 +163,12 @@ func TestResolveRejectsAuthorityForADifferentDiscriminator(t *testing.T) {
 	}
 }
 
-func probedPayload(spec, locator string) probe.Inspection {
-	return probe.Inspection{
-		Container: probe.PNG,
-		Payloads: []probe.Payload{{
+func probedPayload(spec, locator string) Inspection {
+	return Inspection{
+		Container: PNG,
+		Payloads: []Payload{{
 			ID:      0,
-			Locator: probe.Locator{Container: probe.PNG, Name: locator},
+			Locator: Locator{Container: PNG, Name: locator},
 			Root: map[string]json.RawMessage{
 				"spec": json.RawMessage(`"` + spec + `"`),
 			},

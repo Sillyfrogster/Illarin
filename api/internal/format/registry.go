@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 var (
@@ -111,7 +109,7 @@ func shadows(looser, stricter map[string]ValueType) bool {
 	return true
 }
 
-func incompatibleContainers(first, second []probe.Container) bool {
+func incompatibleContainers(first, second []Container) bool {
 	if len(first) == 0 || len(second) == 0 {
 		return false
 	}
@@ -152,7 +150,7 @@ func (r *Registry) ReadableLabels() []string {
 	return labels
 }
 
-func (r *Registry) Resolve(file probe.Inspection) (Resolution, bool, error) {
+func (r *Registry) Resolve(file Inspection) (Resolution, bool, error) {
 	var candidates []Resolution
 	for _, module := range r.modules {
 		declaration := module.Declaration()
@@ -212,7 +210,7 @@ func (r *Registry) Resolve(file probe.Inspection) (Resolution, bool, error) {
 	return winners[0], true, nil
 }
 
-func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
+func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 	type observation struct {
 		kind    string
 		path    string
@@ -279,7 +277,7 @@ func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
 	)
 }
 
-func validateClaim(file probe.Inspection, module Reader, claim Claim) error {
+func validateClaim(file Inspection, module Reader, claim Claim) error {
 	if claim.strength != compatibility && claim.strength != authoritative {
 		return fmt.Errorf("strength %d: %w", claim.strength, ErrInvalidClaim)
 	}

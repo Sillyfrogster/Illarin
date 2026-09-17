@@ -1,4 +1,4 @@
-package probe
+package format
 
 import (
 	"archive/zip"
@@ -282,7 +282,7 @@ func TestInspectEnforcesEveryArchiveResourceLimit(t *testing.T) {
 				context.Background(), &recordingStore{data: file}, uuid.New(),
 				int64(len(file)), "bundle.zip", test.limits(),
 			)
-			var violation SafetyViolation
+			var violation ArchiveViolation
 			if !errors.Is(err, ErrSafetyViolation) || !errors.As(err, &violation) || violation.Rule != test.rule {
 				t.Fatalf("InspectWithLimits error = %v, want the safety rule %q", err, test.rule)
 			}

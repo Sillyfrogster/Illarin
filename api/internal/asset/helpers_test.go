@@ -6,7 +6,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
@@ -41,7 +40,7 @@ func testReaderDeclaration(id, kind string) format.Declaration {
 	return format.Declaration{
 		ID: id, Kind: kind, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{
@@ -56,7 +55,7 @@ func testReaderDeclaration(id, kind string) format.Declaration {
 
 type claimsFirstPayload struct{}
 
-func (claimsFirstPayload) Claim(file probe.Inspection) (format.Claim, bool) {
+func (claimsFirstPayload) Claim(file format.Inspection) (format.Claim, bool) {
 	if len(file.Payloads) == 0 {
 		return format.Claim{}, false
 	}
@@ -90,10 +89,10 @@ func (opaqueTestModule) Write(_ context.Context, written format.ExportAsset) (fo
 		MediaType: "text/plain", Extension: ".txt",
 	}, nil
 }
-func (opaqueTestModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (opaqueTestModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.WholeFileCompatibilityClaim(file), true
 }
-func (opaqueTestModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (opaqueTestModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{
 		Kind: "character", Format: "test_opaque",
 		Elements: []block.Element{
@@ -112,7 +111,7 @@ func (recognizedModule) ID() string { return "recognized" }
 func (recognizedModule) Declaration() format.Declaration {
 	return testReaderDeclaration("recognized", "character")
 }
-func (module recognizedModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (module recognizedModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return module.parsed, nil
 }
 
@@ -136,7 +135,7 @@ func (replacingModule) Declaration() format.Declaration {
 	}
 	return declaration
 }
-func (module replacingModule) Parse(context.Context, probe.Inspection, format.Claim) (format.Parsed, error) {
+func (module replacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.parsed, nil
 }
 func (replacingModule) Write(context.Context, format.ExportAsset) (format.Artifact, error) {

@@ -12,7 +12,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -323,9 +322,9 @@ func tryParseSpindle(t *testing.T, data []byte) (format.Parsed, error) {
 	return Spindle{}.Parse(context.Background(), file, claim)
 }
 
-func inspectZip(t *testing.T, data []byte) probe.Inspection {
+func inspectZip(t *testing.T, data []byte) format.Inspection {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), "extension.zip",
 	)
 	if err != nil {

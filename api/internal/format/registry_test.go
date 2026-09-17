@@ -6,8 +6,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 type stubModule struct{ id string }
@@ -16,7 +14,7 @@ func testReaderDeclaration(id, kind string) Declaration {
 	return Declaration{
 		ID: id, Kind: kind, Direction: Direction{Read: true},
 		Recognition: []Recognition{{
-			Kind: RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Kind: RecognitionSignature, Containers: []Container{JSON},
 			Required: map[string]ValueType{"payload": ValueBoolean},
 		}},
 		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
@@ -28,7 +26,7 @@ func testReaderDeclaration(id, kind string) Declaration {
 
 func (s stubModule) ID() string               { return s.id }
 func (s stubModule) Declaration() Declaration { return testReaderDeclaration(s.id, "character") }
-func (stubModule) Claim(probe.Inspection) (Claim, bool) {
+func (stubModule) Claim(Inspection) (Claim, bool) {
 	return Claim{}, false
 }
 
@@ -38,15 +36,15 @@ func (declaredDiscriminatorModule) ID() string { return "theme_lumiverse" }
 func (declaredDiscriminatorModule) Declaration() Declaration {
 	declaration := testReaderDeclaration("theme_lumiverse", "theme")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionDiscriminator, Containers: []probe.Container{probe.JSON},
+		Kind: RecognitionDiscriminator, Containers: []Container{JSON},
 		Path: []string{"format"}, Values: []string{"3"},
 	}}
 	return declaration
 }
-func (m declaredDiscriminatorModule) Claim(file probe.Inspection) (Claim, bool) {
+func (m declaredDiscriminatorModule) Claim(file Inspection) (Claim, bool) {
 	return ClaimByDeclaration(file, m.Declaration())
 }
-func (declaredDiscriminatorModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (declaredDiscriminatorModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
 	return Parsed{}, nil
 }
 
@@ -56,8 +54,8 @@ func TestDiscriminatorOutsideTheAcceptedSetNamesTheFormatAndValue(t *testing.T) 
 	if err := registry.Register(declaredDiscriminatorModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	file := probe.Inspection{Payloads: []probe.Payload{{
-		ID: 0, Locator: probe.Locator{Container: probe.JSON},
+	file := Inspection{Payloads: []Payload{{
+		ID: 0, Locator: Locator{Container: JSON},
 		Root: map[string]json.RawMessage{"format": json.RawMessage(`4`)},
 	}}}
 	_, claimed, err := registry.Resolve(file)
@@ -66,7 +64,7 @@ func TestDiscriminatorOutsideTheAcceptedSetNamesTheFormatAndValue(t *testing.T) 
 		t.Fatalf("Resolve = claimed %v, error %v; want named unsupported discriminator", claimed, err)
 	}
 }
-func (s stubModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (s stubModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
 	return Parsed{Format: s.id}, nil
 }
 
@@ -140,7 +138,7 @@ func TestValidationRequiresAFileLimitOfAModuleThatReadsArchives(t *testing.T) {
 	t.Parallel()
 	declaration := testReaderDeclaration("archived", "character")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionEntry, Containers: []probe.Container{probe.ZIP}, Entry: "card.json",
+		Kind: RecognitionEntry, Containers: []Container{ZIP}, Entry: "card.json",
 	}}
 	registry := NewRegistry()
 	if err := registry.Register(declarationModule{stubModule: stubModule{id: "archived"}, declaration: declaration}); err != nil {

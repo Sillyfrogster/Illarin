@@ -14,7 +14,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/jscode"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -38,7 +37,7 @@ func (Spindle) Declaration() format.Declaration {
 		ID: SpindleID, Label: "Spindle extension", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []probe.Container{probe.ZIP},
+			Kind: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: spindleManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -62,7 +61,7 @@ func (Spindle) Declaration() format.Declaration {
 	}
 }
 
-func (module Spindle) Claim(file probe.Inspection) (format.Claim, bool) {
+func (module Spindle) Claim(file format.Inspection) (format.Claim, bool) {
 	return claimArchive(file, module.Declaration(), spindleManifest)
 }
 
@@ -72,7 +71,7 @@ type spindleManifestFields struct {
 	Permissions                                         []string
 }
 
-func (s Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (s Spindle) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
@@ -159,7 +158,7 @@ var spindleSides = []spindleSide{
 }
 
 // spindleCode names the file Lumiverse runs for each side the extension has, the built entry or the source it builds from.
-func spindleCode(file probe.Inspection, root map[string]json.RawMessage) ([]string, error) {
+func spindleCode(file format.Inspection, root map[string]json.RawMessage) ([]string, error) {
 	var code []string
 	for _, side := range spindleSides {
 		var declared string

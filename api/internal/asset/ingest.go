@@ -15,7 +15,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -115,7 +114,7 @@ type preparedImport struct {
 
 func (s *Service) readImport(
 	ctx context.Context,
-	inspected probe.Inspection,
+	inspected format.Inspection,
 	expectedKind string,
 ) (preparedImport, error) {
 	resolution, claimed, err := s.reg.Resolve(inspected)
@@ -198,7 +197,7 @@ func (s *Service) readImport(
 	}, nil
 }
 
-func heaviestNamespace(payload probe.Payload, declaration format.Declaration) string {
+func heaviestNamespace(payload format.Payload, declaration format.Declaration) string {
 	container := payload.Root
 	for _, part := range declaration.Preservation.Container {
 		raw, present := container[part]
@@ -243,18 +242,18 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		return ok, err
 	}
 
-	inspected, err := probe.InspectWithLimits(
+	inspected, err := format.InspectWithLimits(
 		ctx, s.store, job.BlobID, job.ByteSize, job.Filename, s.ingest.ProbeLimits,
 	)
 	if err != nil {
-		if violation := (probe.SafetyViolation{}); errors.As(err, &violation) {
+		if violation := (format.ArchiveViolation{}); errors.As(err, &violation) {
 			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation,
 				"The file breaks an archive safety rule: "+violation.Rule+".")
 		}
-		if errors.Is(err, probe.ErrSafetyViolation) {
+		if errors.Is(err, format.ErrSafetyViolation) {
 			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation)
 		}
-		if errors.Is(err, probe.ErrMalformedInput) {
+		if errors.Is(err, format.ErrMalformedInput) {
 			return true, s.finishIngestFailure(ctx, job, format.FailureMalformedInput)
 		}
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)

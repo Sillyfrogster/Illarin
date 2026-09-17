@@ -16,7 +16,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/pack"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -61,7 +60,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		file, err := probe.Inspect(
+		file, err := format.Inspect(
 			context.Background(), corpusStore{data: data}, uuid.New(), int64(len(data)), "fixture.bin",
 		)
 		if err != nil {
@@ -103,13 +102,13 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 }
 
 // unreadArchiveEntries names the archived files a card carries and Illarin reads nothing from.
-func unreadArchiveEntries(file probe.Inspection) []string {
-	if file.Container != probe.ZIP {
+func unreadArchiveEntries(file format.Inspection) []string {
+	if file.Container != format.ZIP {
 		return nil
 	}
 	pictures := make(map[string]bool, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == probe.ZIP {
+		if image.Locator.Container == format.ZIP {
 			pictures[image.Locator.Name] = true
 		}
 	}

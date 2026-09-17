@@ -9,7 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/readme"
 	"github.com/google/uuid"
 )
@@ -24,7 +23,7 @@ const (
 )
 
 // seedFromReadme adds the blocks a README seeds and puts its pictures in the vault, once, when its asset is made.
-func (s *Service) seedFromReadme(ctx context.Context, file probe.Inspection, read preparedImport) (preparedImport, error) {
+func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, read preparedImport) (preparedImport, error) {
 	source := read.Parsed.Readme
 	if source == nil {
 		return read, nil
@@ -49,10 +48,10 @@ func (s *Service) seedFromReadme(ctx context.Context, file probe.Inspection, rea
 	return read, nil
 }
 
-func archivedImages(file probe.Inspection) map[string]uint32 {
+func archivedImages(file format.Inspection) map[string]uint32 {
 	held := make(map[string]uint32, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == probe.ZIP {
+		if image.Locator.Container == format.ZIP {
 			held[image.Locator.Name] = image.ID
 		}
 	}
@@ -61,7 +60,7 @@ func archivedImages(file probe.Inspection) map[string]uint32 {
 
 // readmePictures stores the cover, and puts every other picture in the vault for the block its section became.
 func (s *Service) readmePictures(
-	ctx context.Context, file probe.Inspection, page readme.Page, held map[string]uint32, targets []*uuid.UUID,
+	ctx context.Context, file format.Inspection, page readme.Page, held map[string]uint32, targets []*uuid.UUID,
 ) ([]preparedMedia, []VaultPicture, error) {
 	var prepared []preparedMedia
 	var vault []VaultPicture
@@ -107,7 +106,7 @@ func (s *Service) readmePictures(
 
 // seededPicture prepares one README picture, leaving out one the media processor will not take.
 func (s *Service) seededPicture(
-	ctx context.Context, file probe.Inspection, image uint32, role MediaRole,
+	ctx context.Context, file format.Inspection, image uint32, role MediaRole,
 ) (preparedMedia, bool, error) {
 	prepared, err := s.prepareExtractedMedia(ctx, file, []format.Media{{Role: role, ImageID: image}})
 	if errors.Is(err, mediaproc.ErrImageTooLarge) {

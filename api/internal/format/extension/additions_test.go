@@ -13,7 +13,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -201,7 +200,7 @@ func TestReadingThatRunsOutOfTimeKeepsWhatItFound(t *testing.T) {
 		t.Fatalf("close archive: %v", err)
 	}
 	store := &stallingStore{data: file.Bytes()}
-	inspected, err := probe.Inspect(context.Background(), store, uuid.New(), int64(file.Len()), "extension.zip")
+	inspected, err := format.Inspect(context.Background(), store, uuid.New(), int64(file.Len()), "extension.zip")
 	if err != nil {
 		t.Fatalf("inspect: %v", err)
 	}

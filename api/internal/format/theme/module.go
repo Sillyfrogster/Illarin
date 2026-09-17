@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 const (
@@ -36,7 +35,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 		LumiverseID,
 		"Lumiverse theme bundle",
 		[]format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []probe.Container{probe.ZIP},
+			Kind: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
 			Path: []string{"format"}, Values: []string{"3"},
 		}},
 		lumiverseColors,
@@ -51,7 +50,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		SillyTavernID,
 		"SillyTavern theme",
 		[]format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"main_text_color": format.ValueString,
 				"blur_strength":   format.ValueNumber,
@@ -291,23 +290,23 @@ func hasEnabledStylesheet(styles block.StylesheetSet) bool {
 	})
 }
 
-func (m LumiverseModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m LumiverseModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
+func (m SillyTavernModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.ClaimByDeclaration(file, m.Declaration())
 }
 
-func payloadFor(file probe.Inspection, claim format.Claim, id string) (probe.Payload, error) {
+func payloadFor(file format.Inspection, claim format.Claim, id string) (format.Payload, error) {
 	payload, ok := claim.Payload(file)
 	if !ok {
-		return probe.Payload{}, fmt.Errorf("%s payload: the claimed payload is missing", id)
+		return format.Payload{}, fmt.Errorf("%s payload: the claimed payload is missing", id)
 	}
 	return payload, nil
 }
 
-func (m LumiverseModule) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (m LumiverseModule) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
 	payload, err := payloadFor(file, claim, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
@@ -315,7 +314,7 @@ func (m LumiverseModule) Parse(ctx context.Context, file probe.Inspection, claim
 	return readLumiverse(ctx, file, payload)
 }
 
-func (m SillyTavernModule) Parse(_ context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (m SillyTavernModule) Parse(_ context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
 	payload, err := payloadFor(file, claim, m.ID())
 	if err != nil {
 		return format.Parsed{}, err

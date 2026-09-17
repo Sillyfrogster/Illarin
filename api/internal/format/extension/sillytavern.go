@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/jscode"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -36,7 +35,7 @@ func (SillyTavern) Declaration() format.Declaration {
 		ID: SillyTavernID, Label: "SillyTavern extension", Kind: Kind,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []probe.Container{probe.ZIP},
+			Kind: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: sillyTavernManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -59,7 +58,7 @@ func (SillyTavern) Declaration() format.Declaration {
 	}
 }
 
-func (module SillyTavern) Claim(file probe.Inspection) (format.Claim, bool) {
+func (module SillyTavern) Claim(file format.Inspection) (format.Claim, bool) {
 	return claimArchive(file, module.Declaration(), sillyTavernManifest)
 }
 
@@ -69,7 +68,7 @@ type sillyTavernManifestFields struct {
 	Dependencies                               []string
 }
 
-func (SillyTavern) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (SillyTavern) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
