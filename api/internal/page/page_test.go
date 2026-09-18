@@ -47,7 +47,7 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 		t.Fatalf("work page details = %+v", page)
 	}
 	if page.Blurb != "She closes the book on a ribbon." {
-		t.Errorf("blurb = %q, want the catalog blurb", page.Blurb)
+		t.Errorf("blurb = %q, want the blurb from its details", page.Blurb)
 	}
 	if page.Creator != "verified.creator" {
 		t.Errorf("creator = %q, want the owner's handle", page.Creator)
