@@ -25,7 +25,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// services are the running parts the routes are served from
+// services holds the running parts the routes need
 type services struct {
 	Assets             *asset.Service
 	Works              *work.Service
