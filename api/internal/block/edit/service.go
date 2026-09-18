@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,10 +17,10 @@ import (
 type Service struct {
 	pool   *pgxpool.Pool
 	reg    *format.Registry
-	assets *asset.Service
+	assets *work.Service
 }
 
-func NewService(pool *pgxpool.Pool, assets *asset.Service) *Service {
+func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
 	return &Service{pool: pool, reg: assets.Registry(), assets: assets}
 }
 
@@ -44,7 +44,7 @@ func (s *Service) writeSummary(ctx context.Context, tx pgx.Tx, workID uuid.UUID)
 
 func missingWork(err error) error {
 	if errors.Is(err, summary.ErrNotFound) {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	return err
 }

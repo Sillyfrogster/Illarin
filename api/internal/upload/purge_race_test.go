@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +23,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	service := NewService(pool, asset.NewService(pool, registryWithModule(t, opaqueTestModule{}), store))
+	service := NewService(pool, work.NewService(pool, registryWithModule(t, opaqueTestModule{}), store))
 	ownerID := uuid.New()
 	actorID := uuid.New()
 	if _, err := pool.Exec(ctx, `
@@ -49,7 +49,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	copy(digest[:], digestBytes)
 	prepared := preparedIngest{
 		Kind: "character", Format: "unknown", Name: "Race", Tags: []string{},
-		Discovery: asset.DiscoveryListed, MediaType: "application/octet-stream",
+		Discovery: work.DiscoveryListed, MediaType: "application/octet-stream",
 	}
 	prepared.Blocks, err = block.Place(prepared.Kind, nil)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	}()
 	go func() {
 		<-start
-		purged <- service.assets.Purge(ctx, digest, "legal_order", actorID)
+		purged <- sweeper(service.assets).Purge(ctx, digest, "legal_order", actorID)
 	}()
 	close(start)
 	if err := <-purged; err != nil {
@@ -94,4 +94,9 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	if tombstones != 1 {
 		t.Fatalf("tombstones = %d, want 1", tombstones)
 	}
+}
+
+// sweeper cleans up blobs the way the server's background sweeper does
+func sweeper(works *work.Service) *storage.Sweeper {
+	return storage.NewSweeper(works.Pool(), works.Store())
 }

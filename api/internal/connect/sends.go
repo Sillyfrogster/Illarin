@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	"github.com/google/uuid"
@@ -16,7 +15,7 @@ import (
 )
 
 type Catalog interface {
-	DeliverableAsset(ctx context.Context, q db.DBTX, assetID uuid.UUID) (asset.Deliverable, error)
+	DeliverableAsset(ctx context.Context, q db.DBTX, assetID uuid.UUID) (Deliverable, error)
 	SignedURL(path string) string
 	ValidSignature(path, expires, signature string) bool
 }
@@ -114,7 +113,7 @@ func (s *Sends) Queue(
 		return Delivery{}, ErrMissingScope
 	}
 	sendable, err := s.catalog.DeliverableAsset(ctx, s.pool, assetID)
-	if errors.Is(err, asset.ErrNotDeliverable) {
+	if errors.Is(err, ErrNotDeliverable) {
 		return Delivery{}, ErrAssetNotSendable
 	}
 	if err != nil {
@@ -202,7 +201,7 @@ func (s *Sends) AssetInstances(
 		return AssetInstances{}, fmt.Errorf("read the asset to send: %w", err)
 	}
 	sendable, err := s.catalog.DeliverableAsset(ctx, s.pool, assetID)
-	if errors.Is(err, asset.ErrNotDeliverable) {
+	if errors.Is(err, ErrNotDeliverable) {
 		return AssetInstances{}, ErrAssetNotFound
 	}
 	if err != nil {

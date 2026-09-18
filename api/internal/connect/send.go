@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
@@ -132,8 +132,8 @@ type Collected struct {
 	Withheld []WithheldWork
 }
 
-func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal bool) (string, string, bool) {
-	byID := make(map[string]asset.DeliveryTarget, len(offered))
+func chooseTarget(accepted []string, offered []DeliveryTarget, hasOriginal bool) (string, string, bool) {
+	byID := make(map[string]DeliveryTarget, len(offered))
 	for _, target := range offered {
 		byID[target.Format] = target
 	}
@@ -141,12 +141,12 @@ func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal
 		if target, offers := byID[wanted]; offers {
 			return target.Format, target.Label, true
 		}
-		if wanted == asset.RawDownloadTarget && hasOriginal {
-			return asset.RawDownloadTarget, rawLabel, true
+		if wanted == format.RawTarget && hasOriginal {
+			return format.RawTarget, rawLabel, true
 		}
 	}
 	if hasOriginal {
-		return asset.RawDownloadTarget, rawLabel, true
+		return format.RawTarget, rawLabel, true
 	}
 	return "", "", false
 }
@@ -154,7 +154,7 @@ func chooseTarget(accepted []string, offered []asset.DeliveryTarget, hasOriginal
 const rawLabel = "The creator's own file"
 
 // installs says whether the instance declared one of the capabilities the asset needs, or the asset needs none.
-func installs(capabilities []string, sendable asset.Deliverable) bool {
+func installs(capabilities []string, sendable Deliverable) bool {
 	if len(sendable.InstallCapabilities) == 0 {
 		return true
 	}

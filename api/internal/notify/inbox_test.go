@@ -10,8 +10,8 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -355,7 +355,7 @@ const (
 
 type inboxStack struct {
 	router        *gin.Engine
-	assets        *asset.Service
+	assets        *work.Service
 	notifications *notify.Service
 	outbox        *apitest.VerificationOutbox
 	creator       *http.Cookie

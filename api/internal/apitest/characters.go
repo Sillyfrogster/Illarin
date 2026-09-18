@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -73,7 +73,7 @@ func PublishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetI
 	}
 }
 
-func (h Harness) NewCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *asset.Service) {
+func (h Harness) NewCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
 	router, session, assets, _ := h.NewCharacterIngestRouterWithPool(t)
 	return router, session, assets
@@ -81,7 +81,7 @@ func (h Harness) NewCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cook
 
 func (h Harness) NewCharacterIngestRouterWithPool(
 	t *testing.T,
-) (*gin.Engine, *http.Cookie, *asset.Service, *pgxpool.Pool) {
+) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
@@ -111,7 +111,7 @@ func UploadedCharacterID(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assets *asset.Service,
+	assets *work.Service,
 	card string,
 ) string {
 	t.Helper()

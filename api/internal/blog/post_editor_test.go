@@ -3,12 +3,13 @@ package blog_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )

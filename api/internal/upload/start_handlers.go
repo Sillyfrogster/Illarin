@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
@@ -35,12 +35,12 @@ func (h *Handlers) startAssetFromNothing(c *gin.Context, owner api.Account) {
 		return
 	}
 
-	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, asset.ContentShown)
+	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, work.ContentShown)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
 		return
 	}
-	page, err := work.ToPage(found, asset.ContentShown)
+	page, err := page.ToPage(found, work.ContentShown)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
 		return

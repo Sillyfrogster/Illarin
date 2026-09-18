@@ -18,10 +18,11 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/lorebook"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -164,7 +165,7 @@ func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	for range 2 {
-		if _, err := assets.Sweep(t.Context()); err != nil {
+		if _, err := sweeper(assets).Sweep(t.Context()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
@@ -352,7 +353,7 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, asset.DefaultIngestSettings())
+	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
 	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
@@ -423,7 +424,7 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(firstCover) + len(secondCover) + len(third) - 1)
 	r, session, _, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
 
@@ -480,7 +481,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("version 1 after recovery = %d, want it whole again", recovered.Code)
 	}
 
-	if err := assets.Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
+	if err := sweeper(assets).Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
 		t.Fatalf("purge the first cover: %v", err)
 	}
 	purged := downloadVersion(t, r, nil, started.ID, "charx", "?version=1")
@@ -500,7 +501,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("expire the recovery window: %v", err)
 	}
 	for range 2 {
-		if _, err := assets.Sweep(t.Context()); err != nil {
+		if _, err := sweeper(assets).Sweep(t.Context()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
@@ -653,4 +654,9 @@ func TestAVersionListsThePicturesItRecorded(t *testing.T) {
 	if picture.Code != http.StatusOK || picture.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("the recorded cover is not reachable: %d %s", picture.Code, picture.Body.String())
 	}
+}
+
+// sweeper cleans up blobs the way the server's background sweeper does
+func sweeper(works *work.Service) *storage.Sweeper {
+	return storage.NewSweeper(works.Pool(), works.Store())
 }

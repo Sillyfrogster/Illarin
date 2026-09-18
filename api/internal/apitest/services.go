@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
@@ -20,6 +19,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -106,7 +106,7 @@ func NewLinkingService(pool *pgxpool.Pool) *connect.Apps {
 
 func NewDeliveryService(
 	pool *pgxpool.Pool,
-	assets *asset.Service,
+	assets *work.Service,
 	links *connect.Apps,
 ) *connect.Sends {
 	return connect.NewSends(pool, assets, links, DeliverySettings())
@@ -128,6 +128,7 @@ func (OpaqueModule) Declaration() format.Declaration {
 	declaration := ReaderDeclaration("test_opaque", "character")
 	declaration.Label = "Test format"
 	declaration.Direction.Write = true
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderAssetVersion}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {

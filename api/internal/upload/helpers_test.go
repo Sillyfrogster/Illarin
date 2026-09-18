@@ -10,9 +10,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
@@ -32,7 +32,7 @@ func newTestServiceWithRegistry(t *testing.T, registry *format.Registry) (*Servi
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	return NewService(pool, asset.NewService(pool, registry, blob)), pool
+	return NewService(pool, work.NewService(pool, registry, blob)), pool
 }
 
 func registryWithModule(t *testing.T, module format.Module) *format.Registry {
@@ -150,9 +150,9 @@ func (replacingModule) Write(context.Context, format.ExportAsset) (format.Artifa
 	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
-func currentCandidate(t *testing.T, svc *Service, id uuid.UUID) *asset.Candidate {
+func currentCandidate(t *testing.T, svc *Service, id uuid.UUID) *work.Candidate {
 	t.Helper()
-	var candidate asset.Candidate
+	var candidate work.Candidate
 	if err := svc.pool.QueryRow(context.Background(), `select working_copy_version from assets where id = $1`, id).Scan(&candidate.Version); err != nil {
 		t.Fatal(err)
 	}
@@ -170,8 +170,8 @@ func blockFor(t *testing.T, blocks []block.Block, definition block.DefinitionID)
 	return block.Block{}
 }
 
-func works(s *Service) *work.Service {
-	return work.NewService(s.pool, s.assets)
+func works(s *Service) *page.Service {
+	return page.NewService(s.pool, s.assets)
 }
 
 func testPNG(t *testing.T, width, height int, fill color.Color) []byte {

@@ -31,7 +31,8 @@ Features, one per thing the product has:
 
 - `account` — sign-in, email, password, Discord, deletion, suspension.
 - `profile` — the profile, its avatar, banner and links.
-- `work` — details, visibility, following, deletion, browse, preserved data.
+- `page` — a work's page and its listings: details, visibility, following,
+  deletion, browse, preserved data.
 - `block` — the page's blocks and elements; `block/edit` saves changes to them.
 - `version` — versions, drafted changes, history, comparison.
 - `upload` — reading a file in, found images, replacement preview.
@@ -49,8 +50,8 @@ Features, one per thing the product has:
 Everything else is plumbing a feature reaches for:
 
 - `api` — what every feature needs from the request, as above.
-- `asset` — what has still to move out into `work`, `version`, `upload`,
-  `download` and `storage`.
+- `work` — the stored work itself: its row, revisions, snapshots, media,
+  preserved payloads, and the service every feature builds on.
 - `format` — one reader and writer per file format, plus recognition;
   `format/modules` holds the registry and the rest is one package per format.
 - `media` — reading an image in and rendering its sizes.

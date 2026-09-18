@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
 type postSchedule struct {
@@ -445,7 +447,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 	if held != 1 {
 		t.Fatalf("the scheduled edition refers to %d pictures, want 1", held)
 	}
-	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
+	if _, err := sweeper(stack.handlers.Assets).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	var blob *string
@@ -604,4 +606,9 @@ func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the scheduler kept running after its context was cancelled")
 	}
+}
+
+// sweeper cleans up blobs the way the server's background sweeper does
+func sweeper(works *work.Service) *storage.Sweeper {
+	return storage.NewSweeper(works.Pool(), works.Store())
 }

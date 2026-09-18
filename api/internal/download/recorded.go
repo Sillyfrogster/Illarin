@@ -8,10 +8,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -56,13 +56,13 @@ func (s *Service) OpenRecordedExport(
 
 // RecordedDownloads lists the formats and media available for a historical download.
 type RecordedDownloads struct {
-	Version           asset.Version
+	Version           work.Version
 	Kind              string
 	LinkedInstallOnly bool
 	Downloads         []format.Target
 	AppTargets        []format.AppTarget
 	Blocks            []block.Block
-	Media             []asset.DetailImage
+	Media             []work.DetailImage
 }
 
 // RecordedDownloads reads a historical version's download choices under current protection.
@@ -71,7 +71,7 @@ func (s *Service) RecordedDownloads(
 	assetID uuid.UUID,
 	viewerID *uuid.UUID,
 	number int,
-	visibility asset.ContentVisibility,
+	visibility work.ContentVisibility,
 ) (RecordedDownloads, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
@@ -103,14 +103,14 @@ func (s *Service) recordedPictures(
 	ctx context.Context,
 	tx pgx.Tx,
 	subject exportSubject,
-	visibility asset.ContentVisibility,
-) ([]asset.DetailImage, error) {
+	visibility work.ContentVisibility,
+) ([]work.DetailImage, error) {
 	var flagged *bool
 	if err := tx.QueryRow(ctx,
 		`select is_nsfw from public.assets where id = $1`, subject.assetID).Scan(&flagged); err != nil {
 		return nil, fmt.Errorf("read the asset to address its pictures: %w", err)
 	}
-	blurred := flagged != nil && *flagged && visibility != asset.ContentShown
+	blurred := flagged != nil && *flagged && visibility != work.ContentShown
 	rows, err := tx.Query(ctx, `
 		select media.id, media.role, media.width, media.height, blob.byte_size
 		  from public.asset_snapshot_media kept
@@ -133,9 +133,9 @@ func (s *Service) recordedPictures(
 		return nil, fmt.Errorf("list the pictures a version recorded: %w", err)
 	}
 	defer rows.Close()
-	pictures := make([]asset.DetailImage, 0)
+	pictures := make([]work.DetailImage, 0)
 	for rows.Next() {
-		var picture asset.DetailImage
+		var picture work.DetailImage
 		var width, height *int32
 		if err := rows.Scan(&picture.ID, &picture.Role, &width, &height, &picture.Bytes); err != nil {
 			return nil, fmt.Errorf("read a picture a version recorded: %w", err)
@@ -167,17 +167,17 @@ func (s *Service) recordedExportSubject(
 		   and (asset.withheld_at is null or asset.owner_id = $2)
 	`, assetID, viewerID).Scan(&ownerID, &subject.lifecycle)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return exportSubject{}, false, asset.ErrNotFound
+		return exportSubject{}, false, work.ErrNotFound
 	}
 	if err != nil {
 		return exportSubject{}, false, fmt.Errorf("read the asset to export: %w", err)
 	}
-	recorded, err := asset.ReadVersion(ctx, tx, assetID, number)
+	recorded, err := work.ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
 	if recorded.WithdrawnAt != nil && (viewerID == nil || ownerID == nil || *viewerID != *ownerID) {
-		return exportSubject{}, false, asset.ErrNotFound
+		return exportSubject{}, false, work.ErrNotFound
 	}
 	if err := private.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
@@ -209,7 +209,7 @@ func (s *Service) recordedExportSubject(
 	return subject, sealed, nil
 }
 
-func recordedRemainder(v asset.RecordedVersion) []format.Remainder {
+func recordedRemainder(v work.Snapshot) []format.Remainder {
 	preserved := make([]format.Remainder, 0, len(v.Preserved))
 	for _, row := range v.Preserved {
 		preserved = append(preserved, format.Remainder{

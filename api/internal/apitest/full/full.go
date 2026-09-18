@@ -15,12 +15,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/image"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,7 +47,7 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	account.Register(routes, account.NewHandlers(s.Accounts, s.Links, s.Publications))
 	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Deliveries))
-	work.Register(routes, work.NewHandlers(s.Works, s.Accounts, s.Deliveries, s.Notifications))
+	page.Register(routes, page.NewHandlers(s.Works, s.Accounts, s.Deliveries, s.Notifications))
 	edit.Register(routes, edit.NewHandlers(s.Blocks))
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
 	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Works, s.MaxUploadBytes))

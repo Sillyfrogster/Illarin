@@ -10,9 +10,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -56,7 +56,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create export store: %v", err)
 	}
-	linkedExport, err := download.NewService(pool, asset.NewService(pool, apitest.Registry(t), store)).OpenExportForLinkedInstance(
+	linkedExport, err := download.NewService(pool, work.NewService(pool, apitest.Registry(t), store)).OpenExportForLinkedInstance(
 		context.Background(), uuid.MustParse(started.ID), "preset_lumiverse",
 	)
 	if err != nil {

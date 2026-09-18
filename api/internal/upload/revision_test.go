@@ -7,10 +7,10 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
@@ -25,7 +25,7 @@ func revisionOwner(t *testing.T, svc *Service, handle string) uuid.UUID {
 	return ownerID
 }
 
-func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) asset.Asset {
+func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) work.Asset {
 	t.Helper()
 	operation, err := svc.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: filename, File: bytes.NewReader(file),
@@ -46,14 +46,14 @@ func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, f
 	return *operation.Asset
 }
 
-func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created asset.Asset) {
+func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work.Asset) {
 	t.Helper()
 	name := created.Name
 	if name == "" {
 		name = "Test asset"
 	}
 	nsfw := false
-	if err := works(svc).SetIdentity(context.Background(), work.Identity{
+	if err := works(svc).SetIdentity(context.Background(), page.Identity{
 		OwnerID: ownerID, AssetID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetIdentity imported asset: %v", err)
@@ -256,7 +256,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 		OwnerID: uuid.New(), AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
-	if !errors.Is(err, asset.ErrNotFound) {
+	if !errors.Is(err, work.ErrNotFound) {
 		t.Fatalf("stranger revision error = %v, want asset.ErrNotFound", err)
 	}
 
@@ -270,7 +270,7 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 		OwnerID: ownerID, AssetID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
-	if !errors.Is(err, asset.ErrAssetFrozen) {
+	if !errors.Is(err, work.ErrAssetFrozen) {
 		t.Fatalf("withheld revision error = %v, want asset.ErrAssetFrozen", err)
 	}
 }
@@ -279,14 +279,14 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Kind: "character", Format: "recognized",
-		Media: []format.Media{{Role: asset.MediaAvatar, ImageID: 0}},
+		Media: []format.Media{{Role: work.MediaAvatar, ImageID: 0}},
 	}})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "scoped.owner")
 	first := archiveWithImage(t, testPNG(t, 40, 20, color.White))
 	created := ingestOne(t, svc, ownerID, "card.charx", first)
-	added, err := svc.assets.AddMedia(context.Background(), asset.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: asset.MediaGallery,
+	added, err := svc.assets.AddMedia(context.Background(), work.AddMediaInput{
+		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.Gray{Y: 128})),
 	}, currentCandidate(t, svc, created.ID))
 	if err != nil {

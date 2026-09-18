@@ -1,30 +1,81 @@
 package work
 
 import (
+	"context"
 	"errors"
-	"net/http"
-	"strconv"
+	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
-func CandidateResult(c *gin.Context, candidate *asset.Candidate, err error) bool {
-	var conflict *asset.VersionConflict
-	switch {
-	case errors.As(err, &conflict):
-		c.JSON(http.StatusConflict, CandidateConflict{
-			Code: "working_copy_conflict", Error: conflict.Error(), CurrentVersion: &conflict.CurrentVersion,
-		})
-		return true
-	case errors.Is(err, asset.ErrVersionRequired):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the working-copy version you reviewed.", "code": "working_copy_version_required"})
-		return true
-	case errors.Is(err, asset.ErrAssetFrozen):
-		c.JSON(http.StatusConflict, CandidateConflict{Code: "asset_frozen", Error: "A withheld asset cannot be changed."})
-		return true
-	case err == nil && candidate.SavedVersion > 0:
-		c.Header("X-Working-Copy-Version", strconv.FormatInt(candidate.SavedVersion, 10))
+var ErrVersionRequired = errors.New("a reviewed working-copy version is required")
+
+type Candidate struct {
+	Version      int64
+	SavedVersion int64
+}
+
+type VersionConflict struct {
+	CurrentVersion int64
+}
+
+func (e *VersionConflict) Error() string {
+	return "This asset changed since you opened it. Keep your edits and reload the working copy to reconcile them."
+}
+
+func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) (string, error) {
+	kind, err := LockEditable(ctx, tx, ownerID, assetID)
+	if err != nil {
+		return "", err
 	}
-	return false
+	if c == nil || c.Version < 1 {
+		return "", ErrVersionRequired
+	}
+	var current int64
+	if err := tx.QueryRow(ctx, `select working_copy_version from assets where id = $1`, assetID).Scan(&current); err != nil {
+		return "", fmt.Errorf("read working-copy version: %w", err)
+	}
+	if c.Version != current {
+		return "", &VersionConflict{CurrentVersion: current}
+	}
+	return kind, nil
+}
+
+func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+	var version int64
+	if err := tx.QueryRow(ctx, `update assets set working_copy_version = working_copy_version + 1 where id = $1 returning working_copy_version`, assetID).Scan(&version); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	c.SavedVersion = version
+	return nil
+}
+
+func LockEditable(
+	ctx context.Context,
+	tx pgx.Tx,
+	ownerID uuid.UUID,
+	assetID uuid.UUID,
+) (string, error) {
+	var kind string
+	var withheld bool
+	err := tx.QueryRow(ctx, `
+		select kind, withheld_at is not null
+		  from assets
+		 where id = $1 and owner_id = $2 and deleted_at is null
+		 for update
+	`, assetID, ownerID).Scan(&kind, &withheld)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("read block owner: %w", err)
+	}
+	if withheld {
+		return "", ErrAssetFrozen
+	}
+	return kind, nil
 }

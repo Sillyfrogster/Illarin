@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -57,11 +57,11 @@ func archivedImages(file format.Inspection) map[string]uint32 {
 
 func (s *Service) readmePictures(
 	ctx context.Context, file format.Inspection, page readmePage, held map[string]uint32, targets []*uuid.UUID,
-) ([]asset.PreparedMedia, []WaitingPicture, error) {
-	var prepared []asset.PreparedMedia
+) ([]work.PreparedMedia, []WaitingPicture, error) {
+	var prepared []work.PreparedMedia
 	var vault []WaitingPicture
 	if page.Cover != nil {
-		cover, ok, err := s.seededPicture(ctx, file, held[page.Cover.Entry], asset.MediaAvatar)
+		cover, ok, err := s.seededPicture(ctx, file, held[page.Cover.Entry], work.MediaAvatar)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -75,7 +75,7 @@ func (s *Service) readmePictures(
 		for _, image := range section.Images {
 			id, done := stored[image.Entry]
 			if !done {
-				picture, ok, err := s.seededPicture(ctx, file, held[image.Entry], asset.MediaGallery)
+				picture, ok, err := s.seededPicture(ctx, file, held[image.Entry], work.MediaGallery)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -101,14 +101,14 @@ func (s *Service) readmePictures(
 }
 
 func (s *Service) seededPicture(
-	ctx context.Context, file format.Inspection, image uint32, role asset.MediaRole,
-) (asset.PreparedMedia, bool, error) {
+	ctx context.Context, file format.Inspection, image uint32, role work.MediaRole,
+) (work.PreparedMedia, bool, error) {
 	prepared, err := s.assets.PrepareExtractedMedia(ctx, file, []format.Media{{Role: role, ImageID: image}})
 	if errors.Is(err, mediaproc.ErrImageTooLarge) {
-		return asset.PreparedMedia{}, false, nil
+		return work.PreparedMedia{}, false, nil
 	}
 	if err != nil || len(prepared) == 0 {
-		return asset.PreparedMedia{}, false, err
+		return work.PreparedMedia{}, false, err
 	}
 	prepared[0].Seeded = true
 	return prepared[0], true, nil

@@ -319,7 +319,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if removed := stack.clearOut(t, gone.Deletion.Until.Add(-time.Minute)); removed != 0 {
 		t.Fatalf("the worker removed %d posts before the deadline", removed)
 	}
-	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
+	if _, err := sweeper(stack.handlers.Assets).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {
@@ -341,7 +341,7 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if response.Code != http.StatusNotFound {
 		t.Errorf("a removed post still reads as %d", response.Code)
 	}
-	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
+	if _, err := sweeper(stack.handlers.Assets).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if !markedBlob(t, stack, bytes) {
@@ -376,7 +376,7 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 	if stack.clearOut(t, gone.Deletion.Until) != 1 {
 		t.Fatal("the worker left the post behind")
 	}
-	if _, err := stack.handlers.Assets.Sweep(t.Context()); err != nil {
+	if _, err := sweeper(stack.handlers.Assets).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {

@@ -7,7 +7,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
@@ -48,7 +48,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := <-done; !errors.Is(err, asset.ErrAssetFrozen) {
+	if err := <-done; !errors.Is(err, work.ErrAssetFrozen) {
 		t.Fatalf("revoked acceptance = %v, want frozen", err)
 	}
 	if err := staff.NewService(pool).ClearWithhold(context.Background(), id); err != nil {
@@ -57,7 +57,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: owner, AssetID: id, Filename: "candidate.json", File: bytes.NewBufferString(`{"candidate":"private"}`),
 	}, candidate)
-	var conflict *asset.VersionConflict
+	var conflict *work.VersionConflict
 	if !errors.As(err, &conflict) {
 		t.Fatalf("acceptance after revocation cleared = %v, want stale", err)
 	}
@@ -84,7 +84,7 @@ func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	adult := false
-	if err := works(svc).SetIdentity(context.Background(), work.Identity{OwnerID: owner, AssetID: created.ID, Name: "Newer work", IsNSFW: &adult}, candidate); err != nil {
+	if err := works(svc).SetIdentity(context.Background(), page.Identity{OwnerID: owner, AssetID: created.ID, Name: "Newer work", IsNSFW: &adult}, candidate); err != nil {
 		t.Fatal(err)
 	}
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
@@ -97,7 +97,7 @@ func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 	if finished.Status != IngestFailed || finished.Failure == nil || finished.Failure.Reason != "working_copy_conflict" {
 		t.Fatalf("stale upload = %+v", finished)
 	}
-	page, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	page, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}

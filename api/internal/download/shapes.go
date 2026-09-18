@@ -2,7 +2,7 @@ package download
 
 import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
 type DownloadExportParams struct {
@@ -11,13 +11,13 @@ type DownloadExportParams struct {
 }
 
 type RecordedVersionDownloads struct {
-	AppTargets        []work.AppTarget             `json:"appTargets"`
+	AppTargets        []page.AppTarget             `json:"appTargets"`
 	Blocks            []block.AssetBlock           `json:"blocks"`
-	Downloads         []work.DownloadTarget        `json:"downloads"`
+	Downloads         []page.DownloadTarget        `json:"downloads"`
 	Kind              RecordedVersionDownloadsKind `json:"kind"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
-	Media             []work.AssetImage            `json:"media"`
-	Version           work.RecordedVersion         `json:"version"`
+	Media             []page.AssetImage            `json:"media"`
+	Version           page.RecordedVersion         `json:"version"`
 }
 
 type RecordedVersionDownloadsKind string

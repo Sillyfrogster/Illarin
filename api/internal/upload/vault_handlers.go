@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,7 +25,7 @@ func (h *Handlers) ListVaultPictures(c *gin.Context) {
 	}
 	pictures, err := h.uploads.ListVault(c.Request.Context(), owner.ID, id)
 	switch {
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the vault.")
@@ -66,16 +66,16 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 		media := uuid.UUID(*request.MediaId)
 		mediaID = &media
 	}
-	candidate := &asset.Candidate{Version: version}
+	candidate := &work.Candidate{Version: version}
 	saved, err := h.uploads.PlaceVaultPicture(
 		c.Request.Context(), owner.ID, id, pictureID, mediaID, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, asset.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
-	case errors.Is(err, ErrVaultPictureNeedsMedia), errors.Is(err, asset.ErrInvalidBlock), errors.Is(err, asset.ErrMediaNotFound):
+	case errors.Is(err, ErrVaultPictureNeedsMedia), errors.Is(err, work.ErrInvalidBlock), errors.Is(err, work.ErrMediaNotFound):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
@@ -106,13 +106,13 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: version}
+	candidate := &work.Candidate{Version: version}
 	err := h.uploads.DiscardVaultPicture(c.Request.Context(), owner.ID, id, pictureID, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, asset.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not discard the picture.")

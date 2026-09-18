@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
+	"unicode"
+
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
@@ -13,10 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"net/url"
-	"strings"
-	"time"
-	"unicode"
 )
 
 var (

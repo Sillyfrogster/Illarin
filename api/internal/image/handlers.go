@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
@@ -44,17 +44,17 @@ func (h *Handlers) AddMedia(c *gin.Context) {
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
-	candidate := &asset.Candidate{Version: version}
-	added, err := h.assets.AddMedia(c.Request.Context(), asset.AddMediaInput{
+	candidate := &work.Candidate{Version: version}
+	added, err := h.assets.AddMedia(c.Request.Context(), work.AddMediaInput{
 		OwnerID: owner.ID,
 		AssetID: id,
-		Role:    asset.MediaRole(metadata.Role),
+		Role:    work.MediaRole(metadata.Role),
 		File:    limitedFile,
 	}, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
-	if errors.Is(err, asset.ErrMediaNotFound) || errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, work.ErrMediaNotFound) || errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	}
@@ -75,7 +75,7 @@ func (h *Handlers) ListMedia(c *gin.Context) {
 		return
 	}
 	found, err := h.assets.ListMedia(c.Request.Context(), id, viewerID)
-	if errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	}

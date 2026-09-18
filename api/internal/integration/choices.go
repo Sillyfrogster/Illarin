@@ -3,7 +3,8 @@ package integration
 import (
 	"context"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +24,7 @@ func (s *Service) UpdateDestinations(ctx context.Context, ownerID, assetID uuid.
 		return nil, err
 	}
 	if !owned {
-		return nil, asset.ErrNotFound
+		return nil, work.ErrNotFound
 	}
 	rows, err := s.pool.Query(ctx, `
 		select destination.id, destination.name, destination.kind,
@@ -54,7 +55,7 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, assetID uu
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := asset.LockEditable(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := work.LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `
@@ -74,7 +75,7 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, assetID uu
 		return err
 	}
 	if count != len(ids) {
-		return asset.ErrUpdateDestinationIneligible
+		return version.ErrUpdateDestinationIneligible
 	}
 	if _, err := tx.Exec(ctx, `delete from asset_update_destination_defaults where asset_id = $1`, assetID); err != nil {
 		return err

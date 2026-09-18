@@ -13,10 +13,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -73,7 +74,7 @@ type ingestJob struct {
 	Blurb      *string
 	Tags       []string
 	IsNSFW     *bool
-	Discovery  asset.Discovery
+	Discovery  work.Discovery
 	ByteSize   int64
 	Attempts   int
 	Target     *revisionTarget
@@ -92,13 +93,13 @@ type preparedIngest struct {
 	Blurb         string
 	Tags          []string
 	IsNSFW        bool
-	Discovery     asset.Discovery
+	Discovery     work.Discovery
 	Blocks        []block.Block
 	SuppliedRoles []block.Role
 	Header        format.Header
 	Remainder     []format.Remainder
 	Protected     format.ProtectedImport
-	Media         []asset.PreparedMedia
+	Media         []work.PreparedMedia
 	Vault         []WaitingPicture
 	CreatedAt     *time.Time
 	MediaType     string
@@ -108,7 +109,7 @@ type preparedImport struct {
 	Parsed    format.Parsed
 	Blocks    []block.Block
 	Elements  []block.Element
-	Media     []asset.PreparedMedia
+	Media     []work.PreparedMedia
 	Vault     []WaitingPicture
 	MediaType string
 }
@@ -181,7 +182,7 @@ func (s *Service) readImport(
 	if err != nil {
 		return preparedImport{}, err
 	}
-	elements := append(slices.Clone(parsed.Elements), asset.ElementsForExtractedMedia(extracted)...)
+	elements := append(slices.Clone(parsed.Elements), work.ElementsForExtractedMedia(extracted)...)
 	if err := block.ValidateContentLimits(elements); err != nil {
 		return preparedImport{}, format.LimitExceeded(err)
 	}
@@ -268,7 +269,7 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if err == format.ErrUnsupportedFormat {
 			return true, s.finishIngestFailure(ctx, job, format.FailureUnsupportedFormat)
 		}
-		reason := asset.MediaIngestFailure(err)
+		reason := work.MediaIngestFailure(err)
 		if errors.Is(err, errWrongKind) {
 			reason = format.FailureWrongKind
 		}
@@ -306,14 +307,14 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if errors.Is(err, errIngestLeaseLost) {
 			return true, nil
 		}
-		var conflict *asset.VersionConflict
-		if errors.As(err, &conflict) || errors.Is(err, asset.ErrVersionRequired) {
+		var conflict *work.VersionConflict
+		if errors.As(err, &conflict) || errors.Is(err, work.ErrVersionRequired) {
 			return true, s.failIngest(ctx, job, "working_copy_conflict", "The working copy changed. Review it before accepting the upload again.")
 		}
-		if errors.Is(err, asset.ErrAssetFrozen) || errors.Is(err, asset.ErrNotFound) {
+		if errors.Is(err, work.ErrAssetFrozen) || errors.Is(err, work.ErrNotFound) {
 			return true, s.failIngest(ctx, job, "asset_unavailable", "This asset is no longer available for changes.")
 		}
-		if errors.Is(err, asset.ErrStorageCap) {
+		if errors.Is(err, work.ErrStorageCap) {
 			return true, s.finishIngestFailure(
 				ctx, job, format.FailureLimitExceeded,
 				"The imported file would take this account past its storage cap.",
@@ -504,7 +505,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 		return fmt.Errorf("begin ingest finalization: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := asset.LockBlobDigest(ctx, tx, job.BlobID); errors.Is(err, pgx.ErrNoRows) {
+	if err := storage.LockBlobDigest(ctx, tx, job.BlobID); errors.Is(err, pgx.ErrNoRows) {
 		return errIngestLeaseLost
 	} else if err != nil {
 		return fmt.Errorf("lock ingest digest: %w", err)
@@ -549,7 +550,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 		return errIngestLeaseLost
 	}
 	if job.Target != nil {
-		candidate := &asset.Candidate{Version: job.Target.Version}
+		candidate := &work.Candidate{Version: job.Target.Version}
 		if err := candidate.Commit(ctx, tx, job.Target.AssetID); err != nil {
 			return err
 		}
@@ -597,7 +598,7 @@ func (s *Service) writeIngestResultWithDecisions(
 ) (uuid.UUID, error) {
 	blocks := prepared.Blocks
 	if job.Target != nil {
-		candidate := &asset.Candidate{Version: job.Target.Version}
+		candidate := &work.Candidate{Version: job.Target.Version}
 		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
 			return uuid.Nil, err
 		}
@@ -633,16 +634,16 @@ func (s *Service) writeIngestResultWithDecisions(
 	}
 	assetID := uuid.New()
 	isNSFW := prepared.IsNSFW
-	a := asset.Asset{
+	a := work.Asset{
 		ID: assetID, Kind: prepared.Kind, Format: prepared.Format,
 		OriginFormat:   &prepared.Format,
 		AssetVersion:   prepared.Header.AssetVersion,
 		CreditedAuthor: prepared.Header.CreditedAuthor, Nickname: prepared.Header.Nickname,
 		Name: prepared.Name, Blurb: prepared.Blurb, Tags: prepared.Tags,
 		IsNSFW: &isNSFW, Discovery: prepared.Discovery,
-		Lifecycle: asset.LifecycleDraft,
+		Lifecycle: work.LifecycleDraft,
 	}
-	if _, err := asset.InsertAsset(ctx, tx, a, job.OwnerID, prepared.CreatedAt); err != nil {
+	if _, err := work.InsertAsset(ctx, tx, a, job.OwnerID, prepared.CreatedAt); err != nil {
 		return uuid.Nil, err
 	}
 	if err := block.Insert(ctx, tx, assetID, blocks); err != nil {
@@ -662,7 +663,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	if err := insertVaultPictures(ctx, tx, assetID, prepared.Vault); err != nil {
 		return uuid.Nil, err
 	}
-	return assetID, s.assets.WriteProjections(ctx, tx, assetID)
+	return assetID, s.writeSummary(ctx, tx, assetID)
 }
 
 func (s *Service) replaceContent(
@@ -710,7 +711,7 @@ func (s *Service) replaceContent(
 		prepared.Header.CreditedAuthor, prepared.Header.Nickname); err != nil {
 		return fmt.Errorf("move asset origin: %w", err)
 	}
-	if err := s.assets.WriteProjections(ctx, tx, job.Target.AssetID); err != nil {
+	if err := s.writeSummary(ctx, tx, job.Target.AssetID); err != nil {
 		return err
 	}
 	return nil
@@ -774,7 +775,7 @@ func writeRevision(
 	job ingestJob,
 	prepared preparedIngest,
 ) error {
-	_, err := asset.RecordRevision(ctx, tx, asset.Revision{
+	_, err := work.RecordRevision(ctx, tx, work.Revision{
 		AssetID: assetID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
 		Format: prepared.Format, Identifier: prepared.Header.Identifier, Media: prepared.Media,
 	})

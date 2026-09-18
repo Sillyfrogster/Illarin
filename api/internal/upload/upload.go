@@ -5,7 +5,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -25,7 +26,7 @@ type CreateInput struct {
 	Blurb     string
 	Tags      []string
 	IsNSFW    bool
-	Discovery asset.Discovery
+	Discovery work.Discovery
 	CreatedAt *time.Time
 }
 
@@ -37,7 +38,7 @@ type IngestInput struct {
 	Blurb     *string
 	Tags      *[]string
 	IsNSFW    *bool
-	Discovery asset.Discovery
+	Discovery work.Discovery
 }
 
 type RevisionInput struct {
@@ -62,7 +63,7 @@ type Operation struct {
 	ID      uuid.UUID
 	Status  Status
 	Failure *Failure
-	Asset   *asset.Asset
+	Asset   *work.Asset
 	Preview *Preview
 }
 
@@ -73,7 +74,7 @@ type Failure struct {
 
 type Preview struct {
 	Format          string
-	Groups          []asset.ChangeGroup
+	Groups          []version.ChangeGroup
 	Conflicts       []string
 	Unrepresentable []string
 	MissingWording  []string

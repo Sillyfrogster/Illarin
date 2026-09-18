@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )

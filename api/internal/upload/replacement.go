@@ -9,10 +9,12 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -31,10 +33,10 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 		return fmt.Errorf("begin replacement preview: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := asset.LockBlobDigest(ctx, tx, job.BlobID); err != nil {
+	if err := storage.LockBlobDigest(ctx, tx, job.BlobID); err != nil {
 		return err
 	}
-	if _, err := (&asset.Candidate{Version: job.Target.Version}).Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
+	if _, err := (&work.Candidate{Version: job.Target.Version}).Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
 		return err
 	}
 	preview, err := s.replacementPreview(ctx, tx, job.Target.AssetID, prepared)
@@ -83,7 +85,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err := private.RestorePromptFragments(ctx, tx, assetID, working); err != nil {
 		return Preview{}, err
 	}
-	public, err := asset.ReadPublishedBlocks(ctx, tx, assetID)
+	public, err := work.ReadPublishedBlocks(ctx, tx, assetID)
 	if err != nil {
 		return Preview{}, err
 	}
@@ -122,15 +124,15 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	if err != nil {
 		return Preview{}, err
 	}
-	groups := asset.CompareContentKeyed(working, arriving, names)
-	groups = asset.AddGroup(groups, asset.PresentationSubject, "Page",
-		asset.ComparePresentation(prepared.Kind, working, arriving))
-	groups = asset.AddGroup(groups, asset.PreservedSubject, "Preserved data",
-		asset.ComparePreserved(asVersionPreserved(currentRemainder), asVersionPreserved(prepared.Remainder)))
-	groups = asset.AddGroup(groups, asset.PicturesSubject, "Pictures",
+	groups := version.CompareContentKeyed(working, arriving, names)
+	groups = version.AddGroup(groups, version.PresentationSubject, "Page",
+		version.ComparePresentation(prepared.Kind, working, arriving))
+	groups = version.AddGroup(groups, version.PreservedSubject, "Preserved data",
+		version.ComparePreserved(asVersionPreserved(currentRemainder), asVersionPreserved(prepared.Remainder)))
+	groups = version.AddGroup(groups, version.PicturesSubject, "Pictures",
 		comparePictureSets(currentImages, incomingImages))
-	if err := s.assets.AddressPictures(ctx, tx, asset.ComparisonRequest{
-		AssetID: assetID, Visibility: asset.ContentShown,
+	if err := version.AddressPictures(ctx, tx, s.assets, version.ComparisonRequest{
+		AssetID: assetID, Visibility: work.ContentShown,
 	}, groups); err != nil {
 		return Preview{}, err
 	}
@@ -226,10 +228,10 @@ func fillSealedPrompts(blocks []block.Block, carried map[uuid.UUID]string, impor
 	}
 }
 
-func asVersionPreserved(records []format.Remainder) []asset.VersionPreserved {
-	held := make([]asset.VersionPreserved, len(records))
+func asVersionPreserved(records []format.Remainder) []work.VersionPreserved {
+	held := make([]work.VersionPreserved, len(records))
 	for index, record := range records {
-		held[index] = asset.VersionPreserved{
+		held[index] = work.VersionPreserved{
 			Owner: string(record.Owner), OwnerID: record.OwnerID,
 			Namespace: record.Namespace, Payload: string(record.Payload),
 		}
@@ -237,7 +239,7 @@ func asVersionPreserved(records []format.Remainder) []asset.VersionPreserved {
 	return held
 }
 
-func comparePictureSets(current, incoming []uuid.UUID) []asset.Change {
+func comparePictureSets(current, incoming []uuid.UUID) []version.Change {
 	held := make(map[uuid.UUID]bool, len(current))
 	for _, id := range current {
 		held[id] = true
@@ -246,15 +248,15 @@ func comparePictureSets(current, incoming []uuid.UUID) []asset.Change {
 	for _, id := range incoming {
 		arriving[id] = true
 	}
-	changes := make([]asset.Change, 0)
+	changes := make([]version.Change, 0)
 	for _, id := range incoming {
 		if !held[id] {
-			changes = append(changes, asset.Change{Kind: asset.ChangeAdded, Name: "Picture", AfterMedia: &id})
+			changes = append(changes, version.Change{Kind: version.ChangeAdded, Name: "Picture", AfterMedia: &id})
 		}
 	}
 	for _, id := range current {
 		if !arriving[id] {
-			changes = append(changes, asset.Change{Kind: asset.ChangeRemoved, Name: "Picture", BeforeMedia: &id})
+			changes = append(changes, version.Change{Kind: version.ChangeRemoved, Name: "Picture", BeforeMedia: &id})
 		}
 	}
 	return changes
@@ -292,10 +294,10 @@ func replacementConflicts(
 	}
 	if !reflect.DeepEqual(currentRemainder, incomingRemainder) &&
 		!reflect.DeepEqual(publicRemainder, currentRemainder) {
-		conflicts = append(conflicts, asset.PreservedSubject)
+		conflicts = append(conflicts, version.PreservedSubject)
 	}
 	if !sameImageSet(publicImages, currentImages) && !sameImageSet(currentImages, incomingImages) {
-		conflicts = append(conflicts, asset.PicturesSubject)
+		conflicts = append(conflicts, version.PicturesSubject)
 	}
 	slices.Sort(conflicts)
 	return conflicts
@@ -590,7 +592,7 @@ func readRemainder(ctx context.Context, tx pgx.Tx, table string, assetID uuid.UU
 	return current, nil
 }
 
-func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *asset.Candidate, decisions map[string]string, exposeProtected bool) (Operation, error) {
+func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *work.Candidate, decisions map[string]string, exposeProtected bool) (Operation, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Operation{}, err

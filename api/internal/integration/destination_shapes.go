@@ -1,8 +1,9 @@
 package integration
 
 import (
-	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"time"
+
+	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 
 	"github.com/google/uuid"
 )

@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	postbody "github.com/Sillyfrogster/Illarin/api/internal/blog/body"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"io"
-	"strings"
-	"time"
 )
 
 const ReleaseCategory = "release"

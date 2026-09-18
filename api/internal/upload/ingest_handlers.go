@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
@@ -101,18 +101,18 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 
-	candidate := &asset.Candidate{Version: version}
+	candidate := &work.Candidate{Version: version}
 	operation, err := h.uploads.AcceptRevision(c.Request.Context(), RevisionInput{
 		OwnerID:  owner.ID,
 		AssetID:  id,
 		Filename: file.FileName(),
 		File:     limitedFile,
 	}, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
 	case errors.Is(err, storage.ErrTombstoned):
@@ -175,9 +175,9 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 	for role, decision := range body.Unrepresentable {
 		decisions[role] = string(decision)
 	}
-	candidate := &asset.Candidate{Version: version}
+	candidate := &work.Candidate{Version: version}
 	operation, err := h.uploads.AcceptReplacement(c.Request.Context(), owner.ID, id, operationID, candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	var exposure private.ExposureRefusal
@@ -189,7 +189,7 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 		})
 		return
 	}
-	if errors.Is(err, ErrIngestNotFound) || errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, ErrIngestNotFound) || errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no reviewed replacement")
 		return
 	}
@@ -286,7 +286,7 @@ func nonNilStrings(values []string) []string {
 	return values
 }
 
-func ingestAsset(a *asset.Asset) *Asset {
+func ingestAsset(a *work.Asset) *Asset {
 	if a == nil {
 		return nil
 	}
@@ -294,7 +294,7 @@ func ingestAsset(a *asset.Asset) *Asset {
 	return &converted
 }
 
-func toAPI(a asset.Asset) Asset {
+func toAPI(a work.Asset) Asset {
 	return Asset{
 		Id: a.ID, Kind: a.Kind, Format: a.Format,
 		Name: a.Name, Blurb: a.Blurb, Tags: a.Tags, IsNsfw: a.IsNSFW,

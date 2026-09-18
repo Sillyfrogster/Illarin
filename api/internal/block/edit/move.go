@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -18,7 +18,7 @@ func (s *Service) MoveBlockContent(
 	workID uuid.UUID,
 	blockID uuid.UUID,
 	destinationID uuid.UUID,
-	candidate *asset.Candidate,
+	candidate *work.Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -69,7 +69,7 @@ func (s *Service) moveContent(
 		}
 	}
 	if source == nil || destination == nil || source.ID == destination.ID {
-		return nil, asset.ErrNotFound
+		return nil, work.ErrNotFound
 	}
 	if err := moveElements(kind, source, destination); err != nil {
 		return nil, err

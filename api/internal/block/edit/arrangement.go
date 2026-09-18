@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +23,7 @@ func (s *Service) AddBlock(
 	workID uuid.UUID,
 	definition block.DefinitionID,
 	elementType block.Type,
-	candidate *asset.Candidate,
+	candidate *work.Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -70,7 +70,7 @@ func (s *Service) ArrangeBlocks(
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 	arrangement []BlockArrangement,
-	candidate *asset.Candidate,
+	candidate *work.Candidate,
 ) (SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -147,7 +147,7 @@ func (s *Service) RemoveBlock(
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 	blockID uuid.UUID,
-	candidate *asset.Candidate,
+	candidate *work.Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -202,7 +202,7 @@ func withoutBlock(kind string, blocks []block.Block, blockID uuid.UUID) ([]block
 		}
 	}
 	if !found {
-		return nil, asset.ErrNotFound
+		return nil, work.ErrNotFound
 	}
 	if err := block.ValidateBuilderConstraints(kind, blocks, remaining); err != nil {
 		return nil, invalid(err)

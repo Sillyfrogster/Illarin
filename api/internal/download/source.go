@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -31,10 +31,10 @@ func (s *Service) Source(
 		return Source{}, err
 	}
 	defer tx.Rollback(ctx)
-	location, err := asset.CurrentRevisionLocation(ctx, tx, assetID, viewerID)
+	location, err := work.CurrentRevisionLocation(ctx, tx, assetID, viewerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Source{}, asset.ErrNotFound
+			return Source{}, work.ErrNotFound
 		}
 		return Source{}, fmt.Errorf("find current revision: %w", err)
 	}
@@ -61,7 +61,7 @@ func (s *Service) Source(
 		InternalRedirect: redirect, MediaType: location.MediaType,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Event: newEvent(
-			location.AssetID, &revisionID, asset.RawDownloadTarget,
+			location.AssetID, &revisionID, format.RawTarget,
 			location.OwnerID, viewerID,
 		),
 	}, nil

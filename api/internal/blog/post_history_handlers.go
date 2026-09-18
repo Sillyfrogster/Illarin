@@ -1,11 +1,12 @@
 package blog
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"net/http"
-	"time"
 )
 
 func (h *Handlers) ListPostRevisions(c *gin.Context) {

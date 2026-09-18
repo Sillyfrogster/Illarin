@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"time"
+
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
@@ -11,10 +16,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"time"
 )
 
 func (h *Handlers) ListPosts(c *gin.Context) {

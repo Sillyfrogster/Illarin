@@ -5,39 +5,39 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
-func (s *Service) Create(ctx context.Context, in CreateInput) (asset.Asset, error) {
+func (s *Service) Create(ctx context.Context, in CreateInput) (work.Asset, error) {
 	assetID := uuid.New()
 
 	stored, err := s.store.Put(ctx, in.File)
 	if err != nil {
-		return asset.Asset{}, fmt.Errorf("store upload: %w", err)
+		return work.Asset{}, fmt.Errorf("store upload: %w", err)
 	}
 
 	inspected, err := format.Inspect(ctx, s.store, stored.ID, stored.ByteSize, in.Filename)
 	if err != nil {
-		return asset.Asset{}, fmt.Errorf("probe upload: %w", err)
+		return work.Asset{}, fmt.Errorf("probe upload: %w", err)
 	}
 	read, err := s.readImport(ctx, inspected, "")
 	if err != nil {
-		return asset.Asset{}, fmt.Errorf("read upload: %w", err)
+		return work.Asset{}, fmt.Errorf("read upload: %w", err)
 	}
 	if read, err = s.seedFromReadme(ctx, inspected, read); err != nil {
-		return asset.Asset{}, fmt.Errorf("seed the page from the README: %w", err)
+		return work.Asset{}, fmt.Errorf("seed the page from the README: %w", err)
 	}
 	parsed := read.Parsed
 	kind := parsed.Kind
 	discovery := in.Discovery
 	if discovery == "" {
-		discovery = asset.DiscoveryListed
+		discovery = work.DiscoveryListed
 	}
 
-	a := asset.Asset{
+	a := work.Asset{
 		ID: assetID, Kind: kind, Format: parsed.Format, OriginFormat: &parsed.Format,
 		AssetVersion: parsed.Header.AssetVersion, CreditedAuthor: parsed.Header.CreditedAuthor,
 		Nickname:  parsed.Header.Nickname,
@@ -46,7 +46,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (asset.Asset, erro
 		Tags:      in.Tags,
 		IsNSFW:    &in.IsNSFW,
 		Discovery: discovery,
-		Lifecycle: asset.LifecyclePublished,
+		Lifecycle: work.LifecyclePublished,
 	}
 	if len(a.Tags) == 0 {
 		a.Tags = parsed.Tags
@@ -59,40 +59,40 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (asset.Asset, erro
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 	defer tx.Rollback(ctx)
 
-	made, err := asset.InsertAsset(ctx, tx, a, in.OwnerID, firstDate(in.CreatedAt, parsed.CreatedAt))
+	made, err := work.InsertAsset(ctx, tx, a, in.OwnerID, firstDate(in.CreatedAt, parsed.CreatedAt))
 	if err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 	a.CreatedAt = made
-	revisionID, err := asset.RecordRevision(ctx, tx, asset.Revision{
+	revisionID, err := work.RecordRevision(ctx, tx, work.Revision{
 		AssetID: a.ID, Number: 1, BlobID: stored.ID, MediaType: "application/octet-stream",
 		Format: a.Format, Media: extractedMedia,
 	})
 	if err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 	if err := insertVaultPictures(ctx, tx, a.ID, read.Vault); err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 	if err := replacePreservedData(ctx, tx, a.ID, parsed.Remainder); err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
-	if err := s.assets.WriteProjections(ctx, tx, a.ID); err != nil {
-		return asset.Asset{}, err
+	if err := s.writeSummary(ctx, tx, a.ID); err != nil {
+		return work.Asset{}, err
 	}
 	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, a.ID); err != nil {
-		return asset.Asset{}, fmt.Errorf("record initial publication: %w", err)
+		return work.Asset{}, fmt.Errorf("record initial publication: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return asset.Asset{}, err
+		return work.Asset{}, err
 	}
 
 	a.CurrentRevisionID = revisionID

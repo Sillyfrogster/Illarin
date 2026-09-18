@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput, candidate *asset.Candidate) (Operation, error) {
+func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput, candidate *work.Candidate) (Operation, error) {
 	var withheldAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
 		select withheld_at
@@ -19,13 +19,13 @@ func (s *Service) AcceptRevision(ctx context.Context, in RevisionInput, candidat
 		 where id = $1 and owner_id = $2 and deleted_at is null
 	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Operation{}, asset.ErrNotFound
+		return Operation{}, work.ErrNotFound
 	}
 	if err != nil {
 		return Operation{}, fmt.Errorf("check revision owner: %w", err)
 	}
 	if withheldAt.Valid {
-		return Operation{}, asset.ErrAssetFrozen
+		return Operation{}, work.ErrAssetFrozen
 	}
 
 	stored, err := s.store.Put(ctx, in.File)

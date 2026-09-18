@@ -19,11 +19,11 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,7 +110,7 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 	}
 
 	r, session, _, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), asset.DefaultIngestSettings(),
+		t, format.NewRegistry(), work.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStoreWithCapacity(pool, root, storage.Capacity{
 				FreeSpaceReserveBytes: available - headroom,
@@ -145,7 +145,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	root := t.TempDir()
 	var blobs storage.Store
 	r, firstSession, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), asset.DefaultIngestSettings(),
+		t, format.NewRegistry(), work.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
 			blobs, err = storage.NewStore(pool, root)
@@ -163,9 +163,9 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	}
 	created := apitest.PollIngestAsset(t, r, firstSession, seed.Header().Get("Location"))
 
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(shared) - 1)
-	limitedAssets := asset.NewServiceWithIngestSettings(
+	limitedAssets := work.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	outbox := &apitest.VerificationOutbox{}
@@ -445,7 +445,7 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 			"assets":[{"type":"emotion","uri":"embeded://assets/happy.png","name":"happy","ext":"png"}]}
 	}`)
 	file := zipCharacterCardWithFiles(t, card, map[string][]byte{"assets/happy.png": image})
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(file) + len(image) - 1)
 	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
 	metadata := apitest.ExampleMetadata("Ana")
@@ -809,7 +809,7 @@ func (m *internalFailureModule) Parse(context.Context, format.Inspection, format
 
 func TestOnlyInternalFailuresRetry(t *testing.T) {
 	t.Parallel()
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	module := &internalFailureModule{failuresLeft: 1}
@@ -859,7 +859,7 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 
 func TestExhaustedInternalFailureIsReported(t *testing.T) {
 	t.Parallel()
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	registry := format.NewRegistry()
@@ -895,7 +895,7 @@ func TestExhaustedInternalFailureIsReported(t *testing.T) {
 
 func TestAClaimedKindWithoutABlockCatalogIsRefused(t *testing.T) {
 	t.Parallel()
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	registry := format.NewRegistry()

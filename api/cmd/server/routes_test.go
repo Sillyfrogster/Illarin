@@ -7,14 +7,14 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest/full"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
 func TestTheTestRouterServesTheSameRoutesAsTheServer(t *testing.T) {
 	t.Parallel()
-	assets, links := &asset.Service{}, &connect.Apps{}
+	assets, links := &work.Service{}, &connect.Apps{}
 
 	served := routesOf(t, func(r *gin.Engine) error {
 		return registerRoutes(

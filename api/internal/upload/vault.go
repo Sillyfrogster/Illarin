@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -48,7 +48,7 @@ func (s *Service) ListVault(ctx context.Context, ownerID, assetID uuid.UUID) ([]
 		select id from assets where id = $1 and owner_id = $2 and deleted_at is null
 	`, assetID, ownerID).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, asset.ErrNotFound
+		return nil, work.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("find the asset: %w", err)
@@ -84,28 +84,28 @@ func (s *Service) ListVault(ctx context.Context, ownerID, assetID uuid.UUID) ([]
 
 // PlaceVaultPicture puts a waiting picture into the block its section became
 func (s *Service) PlaceVaultPicture(
-	ctx context.Context, ownerID, assetID, pictureID uuid.UUID, mediaID *uuid.UUID, candidate *asset.Candidate,
-) (asset.SavedBlocks, error) {
+	ctx context.Context, ownerID, assetID, pictureID uuid.UUID, mediaID *uuid.UUID, candidate *work.Candidate,
+) (work.SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return asset.SavedBlocks{}, err
+		return work.SavedBlocks{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
 	if err != nil {
-		return asset.SavedBlocks{}, err
+		return work.SavedBlocks{}, err
 	}
 	picture, err := lockVaultPicture(ctx, tx, assetID, pictureID)
 	if err != nil {
-		return asset.SavedBlocks{}, err
+		return work.SavedBlocks{}, err
 	}
 	if picture.MediaID == nil {
 		if mediaID == nil {
-			return asset.SavedBlocks{}, ErrVaultPictureNeedsMedia
+			return work.SavedBlocks{}, ErrVaultPictureNeedsMedia
 		}
 		if err := checkGalleryMedia(ctx, tx, assetID, *mediaID); err != nil {
-			return asset.SavedBlocks{}, err
+			return work.SavedBlocks{}, err
 		}
 		picture.MediaID = mediaID
 	}
@@ -115,12 +115,12 @@ func (s *Service) PlaceVaultPicture(
 		return err
 	}
 	if err := s.assets.ChangeContent(ctx, tx, assetID, place); err != nil {
-		return asset.SavedBlocks{}, err
+		return work.SavedBlocks{}, err
 	}
 	if err := candidate.Commit(ctx, tx, assetID); err != nil {
-		return asset.SavedBlocks{}, err
+		return work.SavedBlocks{}, err
 	}
-	return asset.SavedBlocks{Kind: kind, Blocks: after}, nil
+	return work.SavedBlocks{Kind: kind, Blocks: after}, nil
 }
 
 func (s *Service) placeInPage(
@@ -132,7 +132,7 @@ func (s *Service) placeInPage(
 	}
 	after, made, err := placePicture(page, picture)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", asset.ErrInvalidBlock, err)
+		return nil, fmt.Errorf("%w: %v", work.ErrInvalidBlock, err)
 	}
 	if made != nil {
 		if _, err := tx.Exec(ctx, `
@@ -143,7 +143,7 @@ func (s *Service) placeInPage(
 		}
 	}
 	if err := block.ValidateBuilderConstraints(kind, after, after); err != nil {
-		return nil, fmt.Errorf("%w: %v", asset.ErrInvalidBlock, err)
+		return nil, fmt.Errorf("%w: %v", work.ErrInvalidBlock, err)
 	}
 	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, assetID); err != nil {
 		return nil, fmt.Errorf("replace the blocks: %w", err)
@@ -154,7 +154,7 @@ func (s *Service) placeInPage(
 	if _, err := tx.Exec(ctx, `delete from asset_vault_pictures where id = $1`, picture.ID); err != nil {
 		return nil, fmt.Errorf("take the picture out of the vault: %w", err)
 	}
-	if err := s.assets.WriteProjections(ctx, tx, assetID); err != nil {
+	if err := s.writeSummary(ctx, tx, assetID); err != nil {
 		return nil, err
 	}
 	return after, nil
@@ -162,7 +162,7 @@ func (s *Service) placeInPage(
 
 // DiscardVaultPicture lets a waiting picture go along with the copy the archive gave it
 func (s *Service) DiscardVaultPicture(
-	ctx context.Context, ownerID, assetID, pictureID uuid.UUID, candidate *asset.Candidate,
+	ctx context.Context, ownerID, assetID, pictureID uuid.UUID, candidate *work.Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -220,7 +220,7 @@ func checkGalleryMedia(ctx context.Context, tx pgx.Tx, assetID, mediaID uuid.UUI
 		return fmt.Errorf("check the uploaded picture: %w", err)
 	}
 	if !found {
-		return asset.ErrMediaNotFound
+		return work.ErrMediaNotFound
 	}
 	return nil
 }

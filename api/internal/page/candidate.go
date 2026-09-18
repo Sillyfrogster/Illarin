@@ -1,0 +1,30 @@
+package page
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/gin-gonic/gin"
+)
+
+func CandidateResult(c *gin.Context, candidate *work.Candidate, err error) bool {
+	var conflict *work.VersionConflict
+	switch {
+	case errors.As(err, &conflict):
+		c.JSON(http.StatusConflict, CandidateConflict{
+			Code: "working_copy_conflict", Error: conflict.Error(), CurrentVersion: &conflict.CurrentVersion,
+		})
+		return true
+	case errors.Is(err, work.ErrVersionRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the working-copy version you reviewed.", "code": "working_copy_version_required"})
+		return true
+	case errors.Is(err, work.ErrAssetFrozen):
+		c.JSON(http.StatusConflict, CandidateConflict{Code: "asset_frozen", Error: "A withheld asset cannot be changed."})
+		return true
+	case err == nil && candidate.SavedVersion > 0:
+		c.Header("X-Working-Copy-Version", strconv.FormatInt(candidate.SavedVersion, 10))
+	}
+	return false
+}

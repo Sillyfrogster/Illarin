@@ -3,21 +3,17 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 const EventUpdatePublished = "asset.update.published.v1"
-
-var ErrUnlistedConsentRequired = errors.New(
-	"announcing an unlisted asset sends its direct link, which needs explicit consent",
-)
 
 type sent struct {
 	ID         uuid.UUID  `json:"id"`
@@ -55,8 +51,8 @@ type announced struct {
 func (s *Service) Announce(
 	ctx context.Context,
 	tx pgx.Tx,
-	published asset.Update,
-	choice asset.UpdateAnnouncement,
+	published version.Update,
+	choice version.UpdateAnnouncement,
 ) error {
 	var held announced
 	err := tx.QueryRow(ctx, `
@@ -65,7 +61,7 @@ func (s *Service) Announce(
 	if err != nil {
 		return fmt.Errorf("read the asset being announced: %w", err)
 	}
-	unlisted := held.discovery == string(asset.DiscoveryUnlisted)
+	unlisted := held.discovery == string(work.DiscoveryUnlisted)
 	picked, err := s.pick(ctx, tx, held.owner, published.AssetID, unlisted, choice)
 	if err != nil || len(picked) == 0 {
 		return err
@@ -121,7 +117,7 @@ func (s *Service) pick(
 	tx pgx.Tx,
 	owner, assetID uuid.UUID,
 	unlisted bool,
-	choice asset.UpdateAnnouncement,
+	choice version.UpdateAnnouncement,
 ) ([]picked, error) {
 	if choice.DestinationIDs == nil {
 		if unlisted {
@@ -138,7 +134,7 @@ func (s *Service) pick(
 	}
 	wanted := distinct(*choice.DestinationIDs)
 	if len(wanted) > 0 && unlisted && !choice.AnnounceUnlisted {
-		return nil, ErrUnlistedConsentRequired
+		return nil, version.ErrUnlistedConsentRequired
 	}
 	found, err := collectPicked(tx.Query(ctx, `
 		select id, name, kind from asset_update_destinations
@@ -150,7 +146,7 @@ func (s *Service) pick(
 		return nil, err
 	}
 	if len(found) != len(wanted) {
-		return nil, asset.ErrUpdateDestinationIneligible
+		return nil, version.ErrUpdateDestinationIneligible
 	}
 	if err := remember(ctx, tx, assetID, wanted); err != nil {
 		return nil, err

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -23,7 +23,7 @@ var (
 	ErrVersionAlreadyWithdrawn       = errors.New("the version is already withdrawn")
 )
 
-func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, candidate *asset.Candidate) error {
+func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, candidate *work.Candidate) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -33,12 +33,12 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID
 	if err != nil {
 		return err
 	}
-	recorded, err := asset.ReadVersion(ctx, tx, assetID, number)
+	recorded, err := work.ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return err
 	}
 	if recorded.Kind != kind {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	if err := private.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return err
@@ -102,7 +102,7 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := asset.LockEditable(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := work.LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
@@ -113,7 +113,7 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 		return fmt.Errorf("correct the update notes: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	return tx.Commit(ctx)
 }
@@ -131,7 +131,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := asset.LockEditable(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := work.LockEditable(ctx, tx, ownerID, assetID); err != nil {
 		return err
 	}
 	var current, chosen uuid.UUID
@@ -142,7 +142,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		 where asset.id = $1 and snapshot.number = $2 for update of asset, snapshot
 	`, assetID, number).Scan(&current, &chosen, &withdrawn)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("read the version to withdraw: %w", err)

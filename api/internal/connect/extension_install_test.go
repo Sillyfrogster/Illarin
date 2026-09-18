@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
-func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service) string {
+func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *work.Service) string {
 	t.Helper()
 	upload := apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",

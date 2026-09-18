@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/jackc/pgx/v5"
 )
 
 // TellWatchers records an update for the accounts watching the asset when it changed the file and was not published quietly.
-func TellWatchers(ctx context.Context, tx pgx.Tx, published asset.Update, choice asset.UpdateAnnouncement) error {
+func TellWatchers(ctx context.Context, tx pgx.Tx, published Update, choice UpdateAnnouncement) error {
 	if !published.ContentChanged || !choice.Notify {
 		return nil
 	}

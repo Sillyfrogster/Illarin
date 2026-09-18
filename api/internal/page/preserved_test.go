@@ -1,0 +1,341 @@
+package page_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/google/uuid"
+)
+
+func preservedNamespaces(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID string,
+) []struct {
+	Name  string `json:"name"`
+	Bytes int    `json:"bytes"`
+} {
+	t.Helper()
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/assets/"+assetID+"/preserved", nil,
+	), session))
+	if response.Code != http.StatusOK {
+		t.Fatalf("read preserved data: status = %d: %s", response.Code, response.Body.String())
+	}
+	var found []struct {
+		Name  string `json:"name"`
+		Bytes int    `json:"bytes"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &found); err != nil {
+		t.Fatalf("decode preserved namespaces: %v", err)
+	}
+	return found
+}
+
+func namespaceNames(rows []struct {
+	Name  string `json:"name"`
+	Bytes int    `json:"bytes"`
+}) []string {
+	names := make([]string, 0, len(rows))
+	for _, row := range rows {
+		names = append(names, row.Name)
+	}
+	return names
+}
+
+func TestThePanelNamesTheNamespacesAnAssetCarries(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
+
+	names := namespaceNames(preservedNamespaces(t, r, session, assetID))
+	for _, want := range []string{"card", "character_book", "chub", "tavern_helper"} {
+		if !contains(names, want) {
+			t.Errorf("the panel does not name %s: %v", want, names)
+		}
+	}
+	for _, hidden := range []string{"depth_prompt", "fav", "world", "talkativeness"} {
+		if contains(names, hidden) {
+			t.Errorf("the panel shows %s, which records nothing: %v", hidden, names)
+		}
+	}
+}
+
+func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
+
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
+		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
+	), session))
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("delete chub: status = %d: %s", response.Code, response.Body.String())
+	}
+
+	names := namespaceNames(preservedNamespaces(t, r, session, assetID))
+	if contains(names, "chub") {
+		t.Errorf("chub survived its deletion: %v", names)
+	}
+	if !contains(names, "tavern_helper") {
+		t.Errorf("deleting chub cost the namespace beside it: %v", names)
+	}
+
+	again := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
+		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil,
+	), session))
+	if again.Code != http.StatusNotFound {
+		t.Errorf("deleting chub twice = %d, want 404", again.Code)
+	}
+}
+
+func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
+
+	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/assets/"+assetID, nil,
+	), session))
+	body := page.Body.String()
+	for _, namespace := range []string{"chub", "tavern_helper", "ana/quiet", "uid"} {
+		if strings.Contains(body, namespace) {
+			t.Errorf("the page carries preserved data: %s is in it", namespace)
+		}
+	}
+
+	stranger := apitest.Send(t, r, httptest.NewRequest(
+		http.MethodGet, "/v1/assets/"+assetID+"/preserved", nil,
+	))
+	if stranger.Code != http.StatusUnauthorized {
+		t.Errorf("a signed-out reader asked what an asset preserves and got %d", stranger.Code)
+	}
+}
+
+func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
+	before := preservedNamespaces(t, r, session, assetID)
+
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
+	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
+	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
+	if saved.Code != http.StatusOK {
+		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
+	}
+
+	after := preservedNamespaces(t, r, session, assetID)
+	if len(before) != len(after) {
+		t.Fatalf("preserved namespaces = %v, were %v", after, before)
+	}
+	for index := range before {
+		if before[index] != after[index] {
+			t.Errorf("%s changed from %d bytes to %d",
+				before[index].Name, before[index].Bytes, after[index].Bytes)
+		}
+	}
+}
+
+func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
+
+	before := namespaceBytes(t, r, session, assetID, "character_book")
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	lorebook := apitest.BlockNamed(t, page.Blocks, "lorebook")
+	body := apitest.EditableBlock(lorebook)
+
+	var book struct {
+		Entries []json.RawMessage `json:"entries"`
+	}
+	if err := json.Unmarshal(body.Elements[0].Content, &book); err != nil {
+		t.Fatalf("read the imported book: %v", err)
+	}
+	if len(book.Entries) != 2 {
+		t.Fatalf("the book arrived with %d entries, want both", len(book.Entries))
+	}
+	kept, err := json.Marshal(map[string]any{"entries": book.Entries[1:]})
+	if err != nil {
+		t.Fatalf("write the shortened book: %v", err)
+	}
+	body.Elements[0].Content = kept
+	if saved := apitest.SaveBlock(t, r, session, assetID, lorebook.ID, body); saved.Code != http.StatusOK {
+		t.Fatalf("save the shortened book: status = %d: %s", saved.Code, saved.Body.String())
+	}
+
+	after := namespaceBytes(t, r, session, assetID, "character_book")
+	if after == 0 {
+		t.Fatal("deleting one entry took the whole book's preserved data")
+	}
+	if after >= before {
+		t.Errorf("the book preserves %d bytes and preserved %d before the deletion", after, before)
+	}
+}
+
+func namespaceBytes(
+	t *testing.T,
+	r http.Handler,
+	session *http.Cookie,
+	assetID, namespace string,
+) int {
+	t.Helper()
+	for _, row := range preservedNamespaces(t, r, session, assetID) {
+		if row.Name == namespace {
+			return row.Bytes
+		}
+	}
+	return 0
+}
+
+func contains(names []string, wanted string) bool {
+	for _, name := range names {
+		if name == wanted {
+			return true
+		}
+	}
+	return false
+}
+
+type smallLimitModule struct{}
+
+const smallPayloadLimit = 512
+
+func (smallLimitModule) ID() string { return "small_limit" }
+
+func (smallLimitModule) Declaration() format.Declaration {
+	declaration := apitest.ReaderDeclaration("small_limit", "character")
+	declaration.Limits.PayloadBytes = smallPayloadLimit
+	declaration.Preservation = format.PreservationDeclaration{
+		Body: "card", Container: []string{"extensions"},
+	}
+	return declaration
+}
+
+func (m smallLimitModule) Claim(file format.Inspection) (format.Claim, bool) {
+	return format.ClaimByDeclaration(file, m.Declaration())
+}
+
+func (smallLimitModule) Parse(
+	context.Context,
+	format.Inspection,
+	format.Claim,
+) (format.Parsed, error) {
+	return format.Parsed{}, errors.New("an over-limit file never reaches the reader")
+}
+
+func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
+	t.Parallel()
+	registry := format.NewRegistry()
+	if err := registry.Register(smallLimitModule{}); err != nil {
+		t.Fatalf("register the small-limit module: %v", err)
+	}
+	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Heavy")
+	metadata["filename"] = "heavy.json"
+	oversized, err := json.Marshal(map[string]any{
+		"payload": true,
+		"extensions": map[string]any{
+			"chub":              map[string]any{"full_path": "ana/quiet"},
+			"lumiverse_modules": strings.Repeat("x", smallPayloadLimit),
+		},
+	})
+	if err != nil {
+		t.Fatalf("write the oversized file: %v", err)
+	}
+
+	finished := apitest.UploadAndFinish(t, r, session, assets, metadata, oversized)
+	var operation struct {
+		Status  string `json:"status"`
+		Failure *struct {
+			Reason  string `json:"reason"`
+			Message string `json:"message"`
+		} `json:"failure"`
+	}
+	if err := json.Unmarshal(finished.Body.Bytes(), &operation); err != nil {
+		t.Fatalf("decode the refusal: %v", err)
+	}
+	if operation.Status != "failed" || operation.Failure == nil {
+		t.Fatalf("an oversized file finished as %q: %s", operation.Status, finished.Body.String())
+	}
+	if operation.Failure.Reason != "limit_exceeded" {
+		t.Errorf("refusal reason = %q, want limit_exceeded", operation.Failure.Reason)
+	}
+	if !strings.Contains(operation.Failure.Message, "lumiverse_modules") {
+		t.Errorf("refusal = %q, want it to name the namespace holding the weight",
+			operation.Failure.Message)
+	}
+	if !strings.Contains(operation.Failure.Message, strconv.Itoa(smallPayloadLimit)) {
+		t.Errorf("refusal = %q, want it to name the limit", operation.Failure.Message)
+	}
+
+	listed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/assets?mine=true", nil,
+	), session))
+	if strings.Contains(listed.Body.String(), "Heavy") {
+		t.Error("a refused file left an asset behind")
+	}
+}
+
+func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
+	t.Parallel()
+	r, session, assets := harness.NewCharacterIngestRouter(t)
+	metadata := apitest.ExampleMetadata("Ana")
+	metadata["filename"] = "ana.json"
+	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
+		t, r, session, assets, metadata, []byte(apitest.CardWithThirdPartyNamespaces),
+	))
+
+	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
+	core.Elements[0].Content = json.RawMessage(`{"text":"Keeps the archive, and the ledger."}`)
+	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
+	if saved.Code != http.StatusOK {
+		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
+	}
+
+	export, err := download.NewService(assets.Pool(), assets).OpenExport(
+		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
+	)
+	if err != nil {
+		t.Fatalf("export the card: %v", err)
+	}
+
+	exported := apitest.CardBodyOf(t, export.Body)
+	source := apitest.CardBodyOf(t, []byte(apitest.CardWithThirdPartyNamespaces))
+	for _, key := range []string{"tags"} {
+		if !bytes.Equal(apitest.CompactJSON(t, exported[key]), apitest.CompactJSON(t, source[key])) {
+			t.Errorf("%s came back as %s, want %s", key, exported[key], source[key])
+		}
+	}
+	for namespace, value := range apitest.NamespacesOf(t, source["extensions"]) {
+		got := apitest.NamespacesOf(t, exported["extensions"])[namespace]
+		if !bytes.Equal(apitest.CompactJSON(t, got), apitest.CompactJSON(t, value)) {
+			t.Errorf("%s came back as %s, want %s", namespace, got, value)
+		}
+	}
+	book := apitest.NamespacesOf(t, exported["character_book"])
+	if !bytes.Equal(apitest.CompactJSON(t, book["scan_depth"]), []byte("4")) {
+		t.Errorf("the book's own keys did not come back: %s", exported["character_book"])
+	}
+	var entries []map[string]json.RawMessage
+	if err := json.Unmarshal(book["entries"], &entries); err != nil {
+		t.Fatalf("read the written entries: %v", err)
+	}
+	if len(entries) == 0 || string(entries[0]["uid"]) == "" {
+		t.Errorf("an entry lost the identifier its format gave it: %+v", entries)
+	}
+}

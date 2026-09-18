@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,13 +72,13 @@ func (h *Handlers) AddAssetUpdateDestination(c *gin.Context) {
 func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
 	var field FieldError
 	switch {
-	case errors.Is(err, ErrNotFound), errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, ErrNotFound), errors.Is(err, work.ErrNotFound):
 		c.Status(http.StatusNotFound)
 	case errors.Is(err, ErrChanged):
 		api.Refuse(c, http.StatusConflict, "The destination changed. Check its configuration and try again.")
-	case errors.Is(err, asset.ErrAssetFrozen):
+	case errors.Is(err, work.ErrAssetFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
-	case errors.Is(err, asset.ErrUpdateDestinationIneligible):
+	case errors.Is(err, version.ErrUpdateDestinationIneligible):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
 	case errors.As(err, &field):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, field.Message, field.Field)

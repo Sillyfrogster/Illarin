@@ -2,8 +2,9 @@ package integration
 
 import (
 	"errors"
-	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"net/http"
+
+	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"

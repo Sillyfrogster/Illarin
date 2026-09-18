@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
 func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
@@ -64,7 +64,7 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			if responses[winner].Code != want || responses[loser].Code != http.StatusConflict {
 				t.Fatalf("concurrent results: %d %s; %d %s", responses[0].Code, responses[0].Body, responses[1].Code, responses[1].Body)
 			}
-			var conflict work.CandidateConflict
+			var conflict page.CandidateConflict
 			if err := json.Unmarshal(responses[loser].Body.Bytes(), &conflict); err != nil {
 				t.Fatal(err)
 			}

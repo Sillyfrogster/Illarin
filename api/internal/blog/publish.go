@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	postbody "github.com/Sillyfrogster/Illarin/api/internal/blog/body"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"strings"
-	"time"
 )
 
 const (

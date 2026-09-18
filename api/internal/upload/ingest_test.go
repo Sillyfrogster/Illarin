@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -46,7 +46,7 @@ func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	service := NewService(pool, asset.NewService(pool, registry, blobs))
+	service := NewService(pool, work.NewService(pool, registry, blobs))
 	payload, err := json.Marshal(map[string]any{
 		"spec": "chara_card_v3", "spec_version": "3.0",
 		"data": map[string]any{
@@ -92,7 +92,7 @@ func TestUnrecognisedImportFailsTerminallyAndReleasesItsBlobReference(t *testing
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	service := NewService(pool, asset.NewService(pool, format.NewRegistry(), blobs))
+	service := NewService(pool, work.NewService(pool, format.NewRegistry(), blobs))
 	operation, err := service.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: "mystery.bundle", File: bytes.NewReader([]byte("mystery")),
 	})
@@ -157,13 +157,13 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.LeaseDuration = time.Minute
-	service := NewService(pool, asset.NewServiceWithIngestSettings(pool, registry, blobs, settings))
+	service := NewService(pool, work.NewServiceWithIngestSettings(pool, registry, blobs, settings))
 	name := "Leased card"
 	_, err = service.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: "leased.json", File: bytes.NewReader([]byte(`{"value":true}`)),
-		Name: &name, Discovery: asset.DiscoveryListed,
+		Name: &name, Discovery: work.DiscoveryListed,
 	})
 	if err != nil {
 		t.Fatalf("accept ingest: %v", err)
@@ -243,7 +243,7 @@ func TestAThemeArchiveOverItsFileLimitIsRefusedByName(t *testing.T) {
 	if err := archive.Close(); err != nil {
 		t.Fatalf("close bundle: %v", err)
 	}
-	service := NewService(pool, asset.NewService(pool, registry, blobs))
+	service := NewService(pool, work.NewService(pool, registry, blobs))
 	operation, err := service.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: "crowded.lumitheme", File: bytes.NewReader(bundle.Bytes()),
 	})

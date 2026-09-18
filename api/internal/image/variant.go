@@ -7,9 +7,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -40,7 +40,7 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 		api.Refuse(c, http.StatusNotFound, "no such media variant")
 		return
 	}
-	download, err := h.assets.MediaVariant(c.Request.Context(), asset.MediaRequest{
+	download, err := h.assets.MediaVariant(c.Request.Context(), work.MediaRequest{
 		MediaID:   mediaID,
 		Variant:   variant,
 		Version:   uint32(derivativeVersion),
@@ -48,7 +48,7 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 		Expires:   valueOrEmpty(params.Expires),
 		Signature: valueOrEmpty(params.Signature),
 	})
-	if errors.Is(err, asset.ErrMediaNotFound) {
+	if errors.Is(err, work.ErrMediaNotFound) {
 		h.sharedImageVariant(c, mediaID, variant, uint32(derivativeVersion), params)
 		return
 	}
@@ -125,7 +125,7 @@ func valueOrEmpty(value *string) string {
 	return *value
 }
 
-func toAPIMedia(found asset.Media) Media {
+func toAPIMedia(found work.Media) Media {
 	return Media{
 		Id:                found.ID,
 		AssetId:           found.AssetID,

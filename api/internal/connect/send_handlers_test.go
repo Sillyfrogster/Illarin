@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -89,7 +89,7 @@ func TestSendingAnAssetReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
 
@@ -105,7 +105,7 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 		t.Fatalf("collect status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec).Deliveries[0]
-	if work.Format != asset.RawDownloadTarget {
+	if work.Format != format.RawTarget {
 		t.Fatalf("format = %q, want the creator's own file as raw", work.Format)
 	}
 	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)

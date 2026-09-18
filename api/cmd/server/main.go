@@ -16,7 +16,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
@@ -27,6 +26,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
@@ -76,7 +76,7 @@ func run() error {
 		return err
 	}
 
-	svc := asset.NewServiceForSite(
+	svc := work.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
 	uploads := upload.NewService(pool, svc)
@@ -104,7 +104,7 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		svc.RunSweeper(runtimeContext, func(err error) {
+		storage.NewSweeper(pool, blob).RunSweeper(runtimeContext, func(err error) {
 			log.Printf("blob sweeper: %v", err)
 		})
 	}()
@@ -154,7 +154,8 @@ func run() error {
 	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := blog.NewService(pool, images, publishing)
 	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
-	svc.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
+	versions := version.NewService(pool, svc)
+	versions.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
 	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
@@ -212,9 +213,9 @@ func run() error {
 	r.Use(api.Recovery(log.Default()))
 	running := services{
 		Assets:             svc,
-		Works:              work.NewService(pool, svc),
+		Works:              page.NewService(pool, svc),
 		Blocks:             edit.NewService(pool, svc),
-		Versions:           version.NewService(pool, svc),
+		Versions:           versions,
 		Uploads:            uploads,
 		Downloads:          download.NewService(pool, svc),
 		Accounts:           accounts,

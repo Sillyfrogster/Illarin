@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
@@ -41,10 +41,10 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	candidate := &asset.Candidate{Version: version}
+	candidate := &work.Candidate{Version: version}
 	saved, err := h.blocks.SaveBlock(
 		c.Request.Context(), owner.ID, id, blockID, update, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	var exposure private.ExposureRefusal
@@ -58,7 +58,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 		return
 	}
 	switch {
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such block.")
 	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())

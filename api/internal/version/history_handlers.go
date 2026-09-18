@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,7 +21,7 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 		return
 	}
 	history, err := h.versions.VersionHistory(c.Request.Context(), id, viewerID)
-	if errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
 	}
@@ -29,9 +29,9 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the update history.")
 		return
 	}
-	items := make([]work.RecordedVersion, 0, len(history))
+	items := make([]page.RecordedVersion, 0, len(history))
 	for _, recorded := range history {
-		items = append(items, work.ToRecordedVersion(recorded))
+		items = append(items, page.ToRecordedVersion(recorded))
 	}
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
@@ -53,18 +53,18 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	candidate := &asset.Candidate{Version: workingCopyVersion}
+	candidate := &work.Candidate{Version: workingCopyVersion}
 	err := h.versions.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, asset.ErrInvalidBlock):
+	case errors.Is(err, work.ErrInvalidBlock):
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "This version no longer forms a valid working copy.",
 			"code":  "invalid_recorded_version",
 		})
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not restore the version.")
@@ -98,9 +98,9 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Keep a summary for this update.")
 	case errors.Is(err, ErrSummaryTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The summary or notes are too long.")
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
-	case errors.Is(err, asset.ErrAssetFrozen):
+	case errors.Is(err, work.ErrAssetFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not correct the notes.")
@@ -137,9 +137,9 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
 		api.Refuse(c, http.StatusConflict, "Publish a replacement before withdrawing the current version.")
 	case errors.Is(err, ErrVersionAlreadyWithdrawn):
 		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
-	case errors.Is(err, asset.ErrAssetFrozen):
+	case errors.Is(err, work.ErrAssetFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not withdraw the version.")
@@ -165,7 +165,7 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	visibility, ok := work.ReaderVisibility(c, h.accounts, nil)
+	visibility, ok := page.ReaderVisibility(c, h.accounts, nil)
 	if !ok {
 		return
 	}
@@ -174,9 +174,9 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 		versionNumber(params.From), versionNumber(params.To), visibility,
 	)
 	switch {
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
-	case errors.Is(err, asset.ErrNoEarlierVersion):
+	case errors.Is(err, work.ErrNoEarlierVersion):
 		api.Refuse(c, http.StatusConflict, "Nothing was recorded before that version.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not compare the versions.")
@@ -195,7 +195,7 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 		return
 	}
 	mismatches, err := h.versions.ProtectionMismatches(c.Request.Context(), owner.ID, id)
-	if errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 		return
 	}
@@ -206,7 +206,7 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 	items := make([]ProtectionMismatch, 0, len(mismatches))
 	for _, mismatch := range mismatches {
 		items = append(items, ProtectionMismatch{
-			Version:   work.ToRecordedVersion(mismatch.Version),
+			Version:   page.ToRecordedVersion(mismatch.Version),
 			Unmatched: toAPINamedPrompts(mismatch.Unmatched),
 			Recorded:  toAPINamedPrompts(mismatch.Recorded),
 		})
@@ -246,7 +246,7 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 	switch {
 	case errors.Is(err, ErrUnknownPrompt):
 		api.Refuse(c, http.StatusBadRequest, "That prompt is not one of the choices.")
-	case errors.Is(err, asset.ErrNotFound):
+	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not settle the sealed prompts.")
@@ -270,9 +270,9 @@ func toAPINamedPrompts(prompts []Prompt) []NamedPrompt {
 	return out
 }
 
-func toAPIComparison(compared asset.Comparison) VersionComparison {
+func toAPIComparison(compared Comparison) VersionComparison {
 	served := VersionComparison{
-		From: work.ToRecordedVersion(compared.From), To: work.ToRecordedVersion(compared.To),
+		From: page.ToRecordedVersion(compared.From), To: page.ToRecordedVersion(compared.To),
 		Groups:          ToChangeGroups(compared.Groups),
 		PromptsWithheld: compared.PromptsWithheld,
 	}
@@ -283,7 +283,7 @@ func toAPIComparison(compared asset.Comparison) VersionComparison {
 	return served
 }
 
-func ToChangeGroups(groups []asset.ChangeGroup) []VersionChangeGroup {
+func ToChangeGroups(groups []ChangeGroup) []VersionChangeGroup {
 	served := make([]VersionChangeGroup, 0, len(groups))
 	for _, group := range groups {
 		changes := make([]VersionChange, 0, len(group.Changes))
@@ -297,7 +297,7 @@ func ToChangeGroups(groups []asset.ChangeGroup) []VersionChangeGroup {
 	return served
 }
 
-func toAPIChange(change asset.Change) VersionChange {
+func toAPIChange(change Change) VersionChange {
 	served := VersionChange{Kind: VersionChangeKind(change.Kind), Name: change.Name}
 	if change.Note != "" {
 		note := change.Note

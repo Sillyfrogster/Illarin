@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
 type Handlers struct {
 	uploads        *Service
-	works          *work.Service
+	works          *page.Service
 	maxUploadBytes int64
 }
 
-func NewHandlers(uploads *Service, works *work.Service, maxUploadBytes int64) *Handlers {
+func NewHandlers(uploads *Service, works *page.Service, maxUploadBytes int64) *Handlers {
 	return &Handlers{uploads: uploads, works: works, maxUploadBytes: maxUploadBytes}
 }
 

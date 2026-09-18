@@ -10,7 +10,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -118,7 +118,7 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 			t.Fatalf("delivery without a policy for %s: %v", target, err)
 		}
 	}
-	if _, err := assets.DeliverableAsset(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, asset.ErrNotDeliverable) {
+	if _, err := assets.DeliverableAsset(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, connect.ErrNotDeliverable) {
 		t.Fatalf("advertised delivery without a policy: %v", err)
 	}
 }

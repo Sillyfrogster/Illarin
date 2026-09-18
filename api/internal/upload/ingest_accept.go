@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -26,7 +26,7 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 	}
 	discovery := in.Discovery
 	if discovery == "" {
-		discovery = asset.DiscoveryListed
+		discovery = work.DiscoveryListed
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -84,7 +84,7 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 		operation.Preview = &staged.Preview
 	}
 	if assetID.Valid {
-		created, err := asset.AssetByID(ctx, s.pool, uuidFromPgtype(assetID))
+		created, err := work.AssetByID(ctx, s.pool, uuidFromPgtype(assetID))
 		if err != nil {
 			return Operation{}, err
 		}

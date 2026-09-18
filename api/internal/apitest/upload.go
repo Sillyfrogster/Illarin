@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -78,7 +78,7 @@ func UploadAndFinish(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assets *asset.Service,
+	assets *work.Service,
 	metadata map[string]any,
 	file []byte,
 ) *httptest.ResponseRecorder {
@@ -159,8 +159,8 @@ func UploadDiscoveryTestAsset(
 	t *testing.T,
 	router http.Handler,
 	session *http.Cookie,
-	assets *asset.Service,
-	discovery asset.Discovery,
+	assets *work.Service,
+	discovery work.Discovery,
 ) string {
 	t.Helper()
 	metadata := ExampleMetadata("A quiet draft")
@@ -197,7 +197,7 @@ func UploadedImageID(
 }
 
 // Uploads reads files in over the same database and store as assets
-func Uploads(assets *asset.Service) *upload.Service {
+func Uploads(assets *work.Service) *upload.Service {
 	return upload.NewService(assets.Pool(), assets)
 }
 
@@ -216,7 +216,7 @@ func RevisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 }
 
 // UploadExtension uploads an extension archive and leaves it a draft
-func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, file []byte) string {
+func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *work.Service, file []byte) string {
 	t.Helper()
 	metadata := ExampleMetadata("Quiet Toolbox")
 	metadata["filename"] = "toolbox.zip"
@@ -289,7 +289,7 @@ const ToolboxManifest = `{
 }`
 
 // PublishExtension gives an uploaded extension its catalog details and publishes it
-func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *asset.Service, name string, file []byte) string {
+func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *work.Service, name string, file []byte) string {
 	t.Helper()
 	assetID := UploadExtension(t, r, session, assets, file)
 	identity := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)

@@ -8,7 +8,6 @@ import (
 	protocol "github.com/Sillyfrogster/Illarin/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
@@ -16,6 +15,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/image"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/profile"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
@@ -27,8 +27,8 @@ import (
 
 // services holds the running parts the routes need
 type services struct {
-	Assets             *asset.Service
-	Works              *work.Service
+	Assets             *work.Service
+	Works              *page.Service
 	Blocks             *edit.Service
 	Versions           *version.Service
 	Uploads            *upload.Service
@@ -70,7 +70,7 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	account.Register(routes, account.NewHandlers(s.Accounts, s.Links, s.Publications))
 	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Deliveries))
-	work.Register(routes, work.NewHandlers(s.Works, s.Accounts, s.Deliveries, s.Notifications))
+	page.Register(routes, page.NewHandlers(s.Works, s.Accounts, s.Deliveries, s.Notifications))
 	edit.Register(routes, edit.NewHandlers(s.Blocks))
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
 	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Works, s.MaxUploadBytes))

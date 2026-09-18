@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -55,10 +55,10 @@ type exportSubject struct {
 	blocks     []block.Block
 	cover      *uuid.UUID
 	ownerID    *uuid.UUID
-	lifecycle  asset.Lifecycle
+	lifecycle  work.Lifecycle
 	revisionID *uuid.UUID
 	gallery    *GallerySelection
-	recorded   *asset.RecordedVersion
+	recorded   *work.Snapshot
 }
 
 func (s *Service) OpenExport(
@@ -121,7 +121,7 @@ func (subject exportSubject) export(
 		Body: written.Body, MediaType: written.MediaType, Target: target,
 		Filename: format.Filename(subject.name, subject.updateName(), label, written.Extension),
 	}
-	if subject.lifecycle == asset.LifecyclePublished {
+	if subject.lifecycle == work.LifecyclePublished {
 		event := newEvent(subject.assetID, subject.revisionID, target, subject.ownerID, viewerID)
 		export.Event = &event
 	}
@@ -322,7 +322,7 @@ func (s *Service) exportSubject(
 		&subject.header.Nickname, &ownerID, &revisionID, &cover,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return exportSubject{}, asset.ErrNotFound
+		return exportSubject{}, work.ErrNotFound
 	}
 	if err != nil {
 		return exportSubject{}, fmt.Errorf("read the asset to export: %w", err)
@@ -430,7 +430,7 @@ func (s *Service) exportImages(
 	}
 
 	images := make(map[uuid.UUID]format.ExportMedia, len(blobs))
-	private := subject.lifecycle == asset.LifecycleDraft
+	private := subject.lifecycle == work.LifecycleDraft
 	for mediaID, blobID := range blobs {
 		picture, err := s.readBlob(ctx, blobID)
 		if err != nil {

@@ -7,10 +7,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -104,7 +104,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}

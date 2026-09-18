@@ -7,7 +7,6 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -139,7 +138,7 @@ func (s *Sends) release(
 	deliveryID := uuid.UUID(row.ID.Bytes)
 	assetID := uuid.UUID(row.AssetID.Bytes)
 	sendable, err := s.catalog.DeliverableAsset(ctx, tx, assetID)
-	if errors.Is(err, asset.ErrNotDeliverable) || errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, ErrNotDeliverable) || errors.Is(err, pgx.ErrNoRows) {
 		return nil, stop(ctx, queries, row.ID, ReasonWithdrawn)
 	}
 	if err != nil {
@@ -180,7 +179,7 @@ func stop(
 	return nil
 }
 
-func (s *Sends) artifacts(deliveryID uuid.UUID, sendable asset.Deliverable) []Artifact {
+func (s *Sends) artifacts(deliveryID uuid.UUID, sendable Deliverable) []Artifact {
 	artifacts := make([]Artifact, 0, len(sendable.Pictures)+1)
 	artifacts = append(artifacts, Artifact{
 		Kind: ArtifactExport,

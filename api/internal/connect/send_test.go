@@ -3,14 +3,14 @@ package connect
 import (
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
-func offered(ids ...string) []asset.DeliveryTarget {
-	targets := make([]asset.DeliveryTarget, 0, len(ids))
+func offered(ids ...string) []DeliveryTarget {
+	targets := make([]DeliveryTarget, 0, len(ids))
 	for _, id := range ids {
-		targets = append(targets, asset.DeliveryTarget{Format: id, Label: id})
+		targets = append(targets, DeliveryTarget{Format: id, Label: id})
 	}
 	return targets
 }
@@ -41,7 +41,7 @@ func TestAnAssetWithAnUploadedFileFallsBackToRaw(t *testing.T) {
 	t.Parallel()
 	chosen, _, found := chooseTarget([]string{"card_v3"}, offered("card_v2"), true)
 
-	if !found || chosen != asset.RawDownloadTarget {
+	if !found || chosen != format.RawTarget {
 		t.Fatalf("chooseTarget = %q, %t, want raw", chosen, found)
 	}
 }
@@ -114,14 +114,14 @@ func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
 
 func TestAnAssetThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
 	t.Parallel()
-	if !installs(nil, asset.Deliverable{}) {
+	if !installs(nil, Deliverable{}) {
 		t.Fatal("an asset with no install capability was refused")
 	}
 }
 
 func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
 	t.Parallel()
-	sendable := asset.Deliverable{InstallCapabilities: []string{"chat.lumiverse:extension-install"}}
+	sendable := Deliverable{InstallCapabilities: []string{"chat.lumiverse:extension-install"}}
 
 	if installs([]string{"app.sillytavern:extension-install", "org.example:extension-install"}, sendable) {
 		t.Fatal("another app's capability, or an unknown one, let the extension through")

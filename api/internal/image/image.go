@@ -6,19 +6,19 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
 type Handlers struct {
-	assets         *asset.Service
+	assets         *work.Service
 	accounts       *account.Service
 	publications   *blog.Service
 	maxUploadBytes int64
 }
 
 func NewHandlers(
-	assets *asset.Service,
+	assets *work.Service,
 	accounts *account.Service,
 	publications *blog.Service,
 	maxUploadBytes int64,

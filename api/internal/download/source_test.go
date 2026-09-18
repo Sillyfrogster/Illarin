@@ -22,9 +22,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -91,7 +91,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
 
 	before := time.Now()
 	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
@@ -190,7 +190,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithStore(
 		t,
 		format.NewRegistry(),
-		asset.DefaultIngestSettings(),
+		work.DefaultIngestSettings(),
 		func(store storage.Store) storage.Store {
 			blocker = &blockingRedirectStore{
 				Store: store, reached: make(chan struct{}, 1), release: make(chan struct{}),
@@ -198,7 +198,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 			return blocker
 		},
 	)
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
 
 	response := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
@@ -235,7 +235,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	t.Parallel()
 	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
 
 	download := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/download/"+assetID+"/test_opaque", nil,
@@ -267,7 +267,7 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 	t.Parallel()
 	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/download/"+assetID+"/chara_card_v2", nil,
@@ -280,7 +280,7 @@ func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, ownerSession, assets, asset.DiscoveryListed)
+	assetID := apitest.UploadDiscoveryTestAsset(t, router, ownerSession, assets, work.DiscoveryListed)
 	readerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
 
 	requests := []*http.Request{
@@ -321,10 +321,10 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	unlistedID := apitest.UploadDiscoveryTestAsset(
-		t, router, ownerSession, assets, asset.DiscoveryUnlisted,
+		t, router, ownerSession, assets, work.DiscoveryUnlisted,
 	)
 	withheldID := apitest.UploadDiscoveryTestAsset(
-		t, router, ownerSession, assets, asset.DiscoveryListed,
+		t, router, ownerSession, assets, work.DiscoveryListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
 		update assets asset

@@ -71,7 +71,7 @@ packages:
     include_files:
       - "save_shapes.go"
       - "shapes.go"
-  - path: "github.com/Sillyfrogster/Illarin/api/internal/work"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/page"
     output_path: "../web/src/lib/api/shapes/work.ts"
     enum_style: "union"
     preserve_comments: "none"
@@ -96,7 +96,7 @@ packages:
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
-      work.RecordedVersion: "RecordedVersion"
+      page.RecordedVersion: "RecordedVersion"
     include_files:
       - "publish_shapes.go"
       - "shapes.go"
@@ -129,10 +129,10 @@ packages:
     type_mappings:
       uuid.UUID: "string"
       block.AssetBlock: "AssetBlock"
-      work.AppTarget: "AppTarget"
-      work.AssetImage: "AssetImage"
-      work.DownloadTarget: "DownloadTarget"
-      work.RecordedVersion: "RecordedVersion"
+      page.AppTarget: "AppTarget"
+      page.AssetImage: "AssetImage"
+      page.DownloadTarget: "DownloadTarget"
+      page.RecordedVersion: "RecordedVersion"
     include_files:
       - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/connect"

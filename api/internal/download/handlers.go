@@ -7,8 +7,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -107,7 +108,7 @@ func chosenGallery(images *string) (*GallerySelection, bool) {
 // Refuse answers a download that could not be made
 func Refuse(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, asset.ErrNotFound), errors.Is(err, ErrTargetNotOffered),
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrTargetNotOffered),
 		errors.Is(err, ErrLinkedInstallOnly):
 		api.Refuse(c, http.StatusNotFound, "no such download")
 	case errors.Is(err, ErrExportTooLarge):
@@ -182,12 +183,12 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		value := string(*params.Nsfw)
 		requested = &value
 	}
-	visibility, ok := work.ReaderVisibility(c, h.accounts, requested)
+	visibility, ok := page.ReaderVisibility(c, h.accounts, requested)
 	if !ok {
 		return
 	}
 	offered, err := h.downloads.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
-	if errors.Is(err, asset.ErrNotFound) {
+	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 		return
 	}
@@ -201,19 +202,19 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, RecordedVersionDownloads{
-		Version:           work.ToRecordedVersion(offered.Version),
+		Version:           page.ToRecordedVersion(offered.Version),
 		Kind:              RecordedVersionDownloadsKind(offered.Kind),
 		LinkedInstallOnly: offered.LinkedInstallOnly,
-		Downloads:         work.ToDownloads(offered.Downloads),
-		AppTargets:        work.ToAppTargets(offered.AppTargets),
+		Downloads:         page.ToDownloads(offered.Downloads),
+		AppTargets:        page.ToAppTargets(offered.AppTargets),
 		Blocks:            blocks,
-		Media:             work.ToImages(offered.Media),
+		Media:             page.ToImages(offered.Media),
 	})
 }
 
 // LinkedInstanceFile hands a connected app the file it was sent
 func (h *Handlers) LinkedInstanceFile(c *gin.Context, assetID uuid.UUID, target string) {
-	if target == asset.RawDownloadTarget {
+	if target == format.RawTarget {
 		download, err := h.downloads.SourceForLinkedInstance(c.Request.Context(), assetID)
 		if err != nil {
 			Refuse(c, err)

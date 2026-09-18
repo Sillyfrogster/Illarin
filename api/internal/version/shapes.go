@@ -1,7 +1,7 @@
 package version
 
 import (
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/google/uuid"
 )
 
@@ -29,7 +29,7 @@ type PromptCorrespondenceRequest struct {
 type ProtectionMismatch struct {
 	Recorded  []NamedPrompt        `json:"recorded"`
 	Unmatched []NamedPrompt        `json:"unmatched"`
-	Version   work.RecordedVersion `json:"version"`
+	Version   page.RecordedVersion `json:"version"`
 }
 
 type ProtectionMismatchList struct {
@@ -37,7 +37,7 @@ type ProtectionMismatchList struct {
 }
 
 type RecordedVersionList struct {
-	Items []work.RecordedVersion `json:"items"`
+	Items []page.RecordedVersion `json:"items"`
 }
 
 type VersionChange struct {
@@ -60,10 +60,10 @@ const (
 )
 
 type VersionComparison struct {
-	From            work.RecordedVersion `json:"from"`
+	From            page.RecordedVersion `json:"from"`
 	Groups          []VersionChangeGroup `json:"groups"`
 	PromptsWithheld bool                 `json:"promptsWithheld"`
-	To              work.RecordedVersion `json:"to"`
+	To              page.RecordedVersion `json:"to"`
 	Unavailable     *string              `json:"unavailable,omitempty"`
 }
 

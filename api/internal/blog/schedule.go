@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 	"time"
+
+	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

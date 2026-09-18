@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -22,7 +22,7 @@ type Prompt struct {
 }
 
 type Mismatch struct {
-	Version   asset.Version
+	Version   work.Version
 	Unmatched []Prompt
 	Recorded  []Prompt
 }
@@ -55,7 +55,7 @@ func (s *Service) ProtectionMismatches(
 	}
 	mismatches := make([]Mismatch, 0)
 	for _, number := range numbers {
-		version, err := asset.ReadVersion(ctx, tx, assetID, number)
+		version, err := work.ReadVersion(ctx, tx, assetID, number)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +106,7 @@ func (s *Service) ResolvePromptCorrespondence(
 	if err != nil {
 		return err
 	}
-	version, err := asset.ReadVersion(ctx, tx, assetID, number)
+	version, err := work.ReadVersion(ctx, tx, assetID, number)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func ownedAsset(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) erro
 		select true from assets where id = $1 and owner_id = $2 and deleted_at is null
 	`, assetID, ownerID).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("read the asset to settle: %w", err)

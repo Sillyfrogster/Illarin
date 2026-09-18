@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -59,7 +59,7 @@ func (s *Service) Record(ctx context.Context, event Event) error {
 		return fmt.Errorf("record download: %w", err)
 	}
 	if recorded.RowsAffected() != 1 {
-		return asset.ErrNotFound
+		return work.ErrNotFound
 	}
 	return nil
 }

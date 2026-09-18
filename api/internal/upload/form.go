@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -57,14 +57,14 @@ func ingestInput(
 		in.IsNSFW = metadata.IsNsfw
 	}
 	if metadata.Discovery != nil {
-		in.Discovery = asset.Discovery(*metadata.Discovery)
+		in.Discovery = work.Discovery(*metadata.Discovery)
 	}
 	return in
 }
 
 // RefuseFile answers a refused upload with the reason a person can act on
 func RefuseFile(c *gin.Context, err error, maxUploadBytes int64) {
-	if errors.Is(err, asset.ErrStorageCap) {
+	if errors.Is(err, work.ErrStorageCap) {
 		api.Refuse(c, http.StatusRequestEntityTooLarge, "Your account does not have enough storage left for this file.")
 		return
 	}

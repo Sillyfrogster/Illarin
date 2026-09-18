@@ -7,9 +7,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
@@ -50,7 +51,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	if preview.Status != IngestPreview || preview.Preview == nil {
 		t.Fatalf("preview = %+v", preview)
 	}
-	public, err := works(svc).Detail(context.Background(), created.ID, nil, asset.ContentShown)
+	public, err := works(svc).Detail(context.Background(), created.ID, nil, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	if accepted.Status != IngestSuccess {
 		t.Fatalf("accepted replacement = %+v", accepted)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,13 +94,13 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
 	}
 	adult := false
-	if err := works(svc).SetIdentity(context.Background(), work.Identity{
+	if err := works(svc).SetIdentity(context.Background(), page.Identity{
 		OwnerID: owner, AssetID: created.ID, Name: "Newer", IsNSFW: &adult,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatal(err)
 	}
 	_, err = svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, candidate, nil, false)
-	var conflict *asset.VersionConflict
+	var conflict *work.VersionConflict
 	if !errors.As(err, &conflict) {
 		t.Fatalf("stale acceptance = %v, want version conflict", err)
 	}
@@ -145,7 +146,7 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, currentCandidate(t, svc, created.ID), decisions, false); err != nil {
 		t.Fatal(err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +191,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	if err != nil || cancelled.Status != IngestCancelled {
 		t.Fatalf("cancelled operation = %+v, error = %v", cancelled, err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, asset.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +238,7 @@ func TestReplacementPreviewReportsAConflictingImageReplacement(t *testing.T) {
 	}
 	conflicts := replacementConflicts(nil, nil, nil, nil, nil, nil,
 		[]uuid.UUID{local}, []uuid.UUID{public}, []uuid.UUID{incoming})
-	if !slices.Contains(conflicts, asset.PicturesSubject) {
+	if !slices.Contains(conflicts, version.PicturesSubject) {
 		t.Fatalf("image conflict = %+v", conflicts)
 	}
 }
@@ -247,12 +248,12 @@ func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
 	current := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: uuid.New(), Namespace: "extension", Payload: []byte(`{"local":true}`)}}
 	public := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"published":true}`)}}
 	incoming := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"file":true}`)}}
-	changes := asset.ComparePreserved(asVersionPreserved(current), asVersionPreserved(incoming))
-	if len(changes) != 1 || changes[0].Kind != asset.ChangeEdited || changes[0].Name != "extension" {
+	changes := version.ComparePreserved(asVersionPreserved(current), asVersionPreserved(incoming))
+	if len(changes) != 1 || changes[0].Kind != version.ChangeEdited || changes[0].Name != "extension" {
 		t.Fatalf("opaque replacement = %+v", changes)
 	}
 	conflicts := replacementConflicts(nil, nil, nil, current, public, incoming, nil, nil, nil)
-	if !slices.Contains(conflicts, asset.PreservedSubject) {
+	if !slices.Contains(conflicts, version.PreservedSubject) {
 		t.Fatalf("opaque conflict = %+v", conflicts)
 	}
 }

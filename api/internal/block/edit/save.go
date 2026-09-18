@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/private"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -30,7 +30,7 @@ func (s *Service) SaveBlock(
 	workID uuid.UUID,
 	blockID uuid.UUID,
 	update BlockUpdate,
-	candidate *asset.Candidate,
+	candidate *work.Candidate,
 ) (SavedBlock, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *Service) writeBlock(
 	before := append([]block.Block(nil), blocks...)
 	index := slices.IndexFunc(blocks, func(holder block.Block) bool { return holder.ID == blockID })
 	if index < 0 {
-		return nil, 0, asset.ErrNotFound
+		return nil, 0, work.ErrNotFound
 	}
 	blocks[index].Title = update.Title
 	blocks[index].Layout = update.Layout
@@ -118,7 +118,7 @@ func (s *Service) writeBlock(
 		return nil, 0, fmt.Errorf("save block: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return nil, 0, asset.ErrNotFound
+		return nil, 0, work.ErrNotFound
 	}
 	if err := dropUnownedPreservedData(ctx, tx, workID, blocks); err != nil {
 		return nil, 0, err

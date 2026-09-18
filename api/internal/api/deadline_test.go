@@ -10,8 +10,8 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest/full"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,7 +50,7 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	t.Parallel()
 	err := full.Register(
 		gin.New(),
-		apitest.Services{Assets: &asset.Service{}, Links: &connect.Apps{}},
+		apitest.Services{Assets: &work.Service{}, Links: &connect.Apps{}},
 		api.Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
 	)
 

@@ -12,8 +12,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
 type PublicProfile struct {
@@ -74,11 +74,11 @@ type ProfileListingResponse struct {
 
 func CreateProfileAsset(
 	t *testing.T,
-	assets *asset.Service,
+	assets *work.Service,
 	ownerID uuid.UUID,
 	name string,
 	isNSFW bool,
-	discovery asset.Discovery,
+	discovery work.Discovery,
 ) uuid.UUID {
 	t.Helper()
 	created, err := Uploads(assets).Create(context.Background(), upload.CreateInput{

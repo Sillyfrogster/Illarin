@@ -11,7 +11,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,7 +33,7 @@ type restrictionStack struct {
 	pool      *pgxpool.Pool
 	outbox    *apitest.VerificationOutbox
 	authority *http.Cookie
-	assets    *asset.Service
+	assets    *work.Service
 	admin     *http.Cookie
 	owner     *http.Cookie
 	ownerID   uuid.UUID
@@ -150,7 +150,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
-	apitest.CreateProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed)
+	apitest.CreateProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, work.DiscoveryListed)
 
 	restricted := stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	if restricted.Code != http.StatusOK {
@@ -278,7 +278,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
 	published := apitest.CreateProfileAsset(
-		t, stack.assets, stack.ownerID, "Fen weather", false, asset.DiscoveryListed,
+		t, stack.assets, stack.ownerID, "Fen weather", false, work.DiscoveryListed,
 	)
 	before := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
@@ -314,7 +314,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	}
 	stack.expectAssetUntouched(t, published)
 	if apitest.CreateProfileAsset(
-		t, stack.assets, stack.ownerID, "Still working", false, asset.DiscoveryListed,
+		t, stack.assets, stack.ownerID, "Still working", false, work.DiscoveryListed,
 	) == uuid.Nil {
 		t.Fatal("a restricted owner could not publish")
 	}

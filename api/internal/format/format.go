@@ -656,3 +656,6 @@ func (t ValueType) known() bool {
 	return t == ValueString || t == ValueNumber || t == ValueBoolean ||
 		t == ValueObject || t == ValueArray
 }
+
+// RawTarget names the uploaded file itself as a download or send target
+const RawTarget = "raw"

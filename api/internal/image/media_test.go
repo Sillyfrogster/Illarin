@@ -11,9 +11,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -137,7 +137,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	t.Parallel()
 	root := t.TempDir()
 	r, session, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), asset.DefaultIngestSettings(),
+		t, format.NewRegistry(), work.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStore(pool, root)
 		},
@@ -195,8 +195,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	if err != nil {
 		t.Fatalf("open limited store: %v", err)
 	}
-	limitedAssets := asset.NewServiceWithIngestSettings(
-		pool, format.NewRegistry(), limited, asset.DefaultIngestSettings(),
+	limitedAssets := work.NewServiceWithIngestSettings(
+		pool, format.NewRegistry(), limited, work.DefaultIngestSettings(),
 	)
 	handlers := apitest.NewServicesOver(pool, limited, limitedAssets, &apitest.VerificationOutbox{}, nil)
 	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
@@ -218,7 +218,7 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	root := t.TempDir()
 	var blobs storage.Store
 	r, session, assets, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), asset.DefaultIngestSettings(),
+		t, format.NewRegistry(), work.DefaultIngestSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
 			blobs, err = storage.NewStore(pool, root)
@@ -232,9 +232,9 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	assetID := apitest.AssetIDFromIngest(t, created)
 	mediaBytes := apitest.PNG(t, 120, 60)
 
-	settings := asset.DefaultIngestSettings()
+	settings := work.DefaultIngestSettings()
 	settings.AccountStorageCapBytes = int64(len(source) + len(mediaBytes) - 1)
-	limitedAssets := asset.NewServiceWithIngestSettings(
+	limitedAssets := work.NewServiceWithIngestSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	handlers := apitest.NewServicesOver(pool, blobs, limitedAssets, &apitest.VerificationOutbox{}, nil)

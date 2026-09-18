@@ -1,10 +1,11 @@
 package blog
 
 import (
-	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/gin-gonic/gin"
 )
 
 func (h *Handlers) DeletePost(c *gin.Context) {

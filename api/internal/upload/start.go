@@ -3,10 +3,10 @@ package upload
 import (
 	"context"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
@@ -77,9 +77,9 @@ func (s *Service) StartFromNothing(
 		return uuid.Nil, ErrKindNotBuildable
 	}
 
-	a := asset.Asset{
+	a := work.Asset{
 		ID: uuid.New(), Kind: kind, Tags: []string{},
-		Discovery: asset.DiscoveryListed, Lifecycle: asset.LifecycleDraft,
+		Discovery: work.DiscoveryListed, Lifecycle: work.LifecycleDraft,
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -88,13 +88,13 @@ func (s *Service) StartFromNothing(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := asset.InsertAsset(ctx, tx, a, ownerID, nil); err != nil {
+	if _, err := work.InsertAsset(ctx, tx, a, ownerID, nil); err != nil {
 		return uuid.Nil, err
 	}
 	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {
 		return uuid.Nil, err
 	}
-	if err := s.assets.WriteProjections(ctx, tx, a.ID); err != nil {
+	if err := s.writeSummary(ctx, tx, a.ID); err != nil {
 		return uuid.Nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
