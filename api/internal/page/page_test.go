@@ -41,7 +41,7 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
+	page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID)
 
 	if page.ID != workID || page.Name != "The Quiet Archivist" || page.Type != "character" {
 		t.Fatalf("work page identity = %+v", page)
@@ -104,7 +104,7 @@ func TestWorkPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
+	page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID)
 	if len(page.Media) != 1 || page.Media[0].Role != "gallery" || page.Media[0].IsCover {
 		t.Fatalf("coverless gallery media = %+v", page.Media)
 	}
@@ -117,20 +117,21 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 	metadata["filename"] = "countless.lumitheme"
 	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	var body map[string]any
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode work page: %v", err)
 	}
 
 	wantKeys := map[string]bool{
-		"id": true, "kind": true, "name": true, "blurb": true, "tags": true,
-		"creator": true, "isNsfw": true, "discovery": true, "createdAt": true,
+		"id": true, "type": true, "name": true, "blurb": true, "tags": true,
+		"creator": true, "isNsfw": true, "visibility": true, "createdAt": true,
 		"lifecycle": true, "isOwner": true, "downloads": true, "original": true,
 		"appTargets": true,
-		"blocks":     true, "media": true, "preview": true, "visibility": true,
+		"blocks":     true, "media": true, "preview": true, "nsfwPreference": true,
 		"linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestUpdate": true, "extensionDependencies": true, "installedAppVersions": true,
+		"kind": true, "discovery": true,
 	}
 	for key := range body {
 		if !wantKeys[key] {
@@ -144,10 +145,10 @@ func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Kept Back")
 	metadata["filename"] = "kept-back.lumitheme"
-	metadata["discovery"] = "unlisted"
+	metadata["visibility"] = "unlisted"
 	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
-	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
+	page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID)
 
 	if page.Visibility != "unlisted" {
 		t.Fatalf("visibility = %q, want unlisted", page.Visibility)
@@ -185,7 +186,7 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	never := "22222222-2222-2222-2222-222222222222"
 	var bodies []string
 	for _, id := range []string{withhold, deleted, never} {
-		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil))
+		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+id, nil))
 		if response.Code != http.StatusNotFound {
 			t.Fatalf("GET /v1/works/%s status = %d, want 404: %s",
 				id, response.Code, response.Body.String())
@@ -217,7 +218,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	}
 
 	for _, preference := range []string{"blurred", "hidden"} {
-		page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID+"?nsfw="+preference)
+		page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID+"?nsfw="+preference)
 		if len(page.Media) != 1 {
 			t.Fatalf("%s media = %+v", preference, page.Media)
 		}
@@ -235,7 +236,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 		}
 	}
 
-	shown := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID+"?nsfw=shown")
+	shown := apitest.FetchWorkPage(t, r, "/v1/works/"+workID+"?nsfw=shown")
 	if !strings.HasSuffix(shown.Media[0].DetailURL, "/detail/2") {
 		t.Errorf("a shown reader got %q", shown.Media[0].DetailURL)
 	}

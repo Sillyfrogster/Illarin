@@ -45,7 +45,7 @@ type VersionChange struct {
 	AfterImage   *string           `json:"afterImage,omitempty"`
 	Before       *string           `json:"before,omitempty"`
 	BeforeImage  *string           `json:"beforeImage,omitempty"`
-	Type         VersionChangeType `json:"kind"`
+	Type         VersionChangeType `json:"type"`
 	Name         string            `json:"name"`
 	Note         *string           `json:"note,omitempty"`
 	PreviousName *string           `json:"previousName,omitempty"`

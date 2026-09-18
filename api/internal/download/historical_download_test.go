@@ -223,7 +223,7 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 	apitest.PublishCharacter(t, r, session, workID)
 	removed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+workID+"/preserved/chub", nil), session))
+		http.MethodDelete, "/v1/works/"+workID+"/preserved/chub", nil), session))
 	if removed.Code != http.StatusNoContent {
 		t.Fatalf("delete chub: %d %s", removed.Code, removed.Body.String())
 	}
@@ -463,7 +463,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
-	deleted := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	deleted := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete: %d %s", deleted.Code, deleted.Body.String())
 	}
@@ -472,7 +472,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 			t.Fatalf("a deleted work still wrote version 1: %d", got.Code)
 		}
 	}
-	restored := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session))
+	restored := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/restore", nil), session))
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore: %d %s", restored.Code, restored.Body.String())
 	}
@@ -492,7 +492,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatal("version 1 still carries the purged cover")
 	}
 
-	deleted = apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	deleted = apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete again: %d %s", deleted.Code, deleted.Body.String())
 	}
@@ -525,7 +525,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 
 type recordedDownloadsBody struct {
 	Version           apitest.RecordedVersionBody `json:"version"`
-	Type              string                      `json:"kind"`
+	Type              string                      `json:"type"`
 	LinkedInstallOnly bool                        `json:"linkedInstallOnly"`
 	Downloads         []apitest.DownloadTarget    `json:"downloads"`
 	AppTargets        []apitest.AppTarget         `json:"appTargets"`
@@ -547,7 +547,7 @@ func readVersionDownloads(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet,
-		"/v1/assets/"+workID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
+		"/v1/works/"+workID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -625,7 +625,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 	}
 
 	other := apitest.SignUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
-	withheld := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+	withheld := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
 	if withheld.Code != http.StatusNoContent {
 		t.Fatalf("delete: %d %s", withheld.Code, withheld.Body.String())
 	}

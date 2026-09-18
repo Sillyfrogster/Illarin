@@ -57,7 +57,7 @@ type WorkDetail struct {
 	Blurb                 string                   `json:"blurb"`
 	CreatedAt             time.Time                `json:"createdAt"`
 	Creator               string                   `json:"creator"`
-	Visibility            WorkDetailVisibility     `json:"discovery"`
+	Visibility            WorkDetailVisibility     `json:"visibility"`
 	Downloads             []DownloadTarget         `json:"downloads"`
 	EligibleApps          []WorkDetailEligibleApps `json:"eligibleApps" tstype:"'lumiverse'[],required"`
 	ExtensionDependencies []ExtensionDependency    `json:"extensionDependencies"`
@@ -66,7 +66,7 @@ type WorkDetail struct {
 	InstalledAppVersions  []string                 `json:"installedAppVersions"`
 	IsNsfw                *bool                    `json:"isNsfw" tstype:"boolean | null,required"`
 	IsOwner               bool                     `json:"isOwner"`
-	Type                  WorkDetailType           `json:"kind"`
+	Type                  WorkDetailType           `json:"type"`
 	LatestUpdate          *RecordedVersion         `json:"latestUpdate,omitempty"`
 	Lifecycle             WorkDetailLifecycle      `json:"lifecycle"`
 	LinkedInstallOnly     bool                     `json:"linkedInstallOnly"`
@@ -78,8 +78,8 @@ type WorkDetail struct {
 	SealedBlocks          *int                     `json:"sealedBlocks,omitempty"`
 	Tags                  []WorkTag                `json:"tags"`
 	UnpublishedChanges    *bool                    `json:"unpublishedChanges,omitempty"`
-	NSFWPreference        WorkDetailNSFWPreference `json:"visibility"`
-	Follow                *notify.WorkFollow       `json:"watch,omitempty"`
+	NSFWPreference        WorkDetailNSFWPreference `json:"nsfwPreference"`
+	Follow                *notify.WorkFollow       `json:"follow,omitempty"`
 	Withhold              *WorkWithhold            `json:"withhold,omitempty"`
 	WorkingCopyVersion    *int64                   `json:"workingCopyVersion,omitempty"`
 }
@@ -130,7 +130,7 @@ const (
 )
 
 type WorkVisibilityRequest struct {
-	Visibility WorkVisibilityRequestVisibility `json:"discovery"`
+	Visibility WorkVisibilityRequestVisibility `json:"visibility"`
 }
 
 type WorkVisibilityRequestVisibility string
@@ -170,7 +170,7 @@ type WorkList struct {
 	Platforms      []BrowseOption         `json:"platforms"`
 	Suppressed     int                    `json:"suppressed"`
 	Total          int                    `json:"total"`
-	NSFWPreference WorkListNSFWPreference `json:"visibility"`
+	NSFWPreference WorkListNSFWPreference `json:"nsfwPreference"`
 }
 
 type WorkListEmptyState string
@@ -205,7 +205,7 @@ type BrowseWork struct {
 	Creator    string                `json:"creator"`
 	Id         uuid.UUID             `json:"id"`
 	IsNsfw     *bool                 `json:"isNsfw" tstype:"boolean | null,required"`
-	Type       BrowseWorkType        `json:"kind"`
+	Type       BrowseWorkType        `json:"type"`
 	Name       string                `json:"name"`
 	OwnerState *BrowseWorkOwnerState `json:"ownerState,omitempty"`
 	Withhold   *WorkWithhold         `json:"withhold,omitempty"`
@@ -257,7 +257,7 @@ type BrowseOption struct {
 type DeletedWork struct {
 	DeletedAt        time.Time       `json:"deletedAt"`
 	Id               uuid.UUID       `json:"id"`
-	Type             DeletedWorkType `json:"kind"`
+	Type             DeletedWorkType `json:"type"`
 	Name             string          `json:"name"`
 	RecoverableUntil time.Time       `json:"recoverableUntil"`
 }
@@ -315,7 +315,7 @@ type DownloadTarget struct {
 }
 
 type ExtensionDependency struct {
-	Works []DependencyWork `json:"assets"`
+	Works []DependencyWork `json:"works"`
 	Name  string           `json:"name"`
 }
 
@@ -326,7 +326,7 @@ type OriginalUpload struct {
 }
 
 type ListWorksParams struct {
-	Type     *ListWorksParamsType `json:"kind,omitempty"`
+	Type     *ListWorksParamsType `json:"type,omitempty"`
 	Platform *string              `json:"platform,omitempty"`
 	Creator  *string              `json:"creator,omitempty"`
 	Q        *string              `json:"q,omitempty"`
@@ -406,7 +406,7 @@ type CandidateConflict struct {
 type CandidateConflictCode string
 
 const (
-	CandidateConflictCodeWorkFrozen          CandidateConflictCode = "asset_frozen"
+	CandidateConflictCodeWorkFrozen          CandidateConflictCode = "work_frozen"
 	CandidateConflictCodeWorkingCopyConflict CandidateConflictCode = "working_copy_conflict"
 )
 

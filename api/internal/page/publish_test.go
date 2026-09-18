@@ -76,7 +76,7 @@ func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
 		t.Errorf("a published work still carries a readiness list: %+v", page.Readiness)
 	}
 
-	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if stranger.Code != http.StatusOK {
 		t.Errorf("a reader got %d for a published work, want 200", stranger.Code)
 	}
@@ -163,7 +163,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 
 	other := apitest.SignUp(t, setup, "other@example.com", "other.creator")
 	stranger := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), other))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil), other))
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("another account read the draft: %d", stranger.Code)
 	}
@@ -187,7 +187,7 @@ func TestADraftHasNoDownloadNoDeliveryAndNoVisibilityToSet(t *testing.T) {
 	}
 
 	visibility := httptest.NewRequest(http.MethodPut,
-		"/v1/assets/"+started.ID+"/discovery", strings.NewReader(`{"discovery":"unlisted"}`))
+		"/v1/works/"+started.ID+"/visibility", strings.NewReader(`{"visibility":"unlisted"}`))
 	visibility.Header.Set("Content-Type", "application/json")
 	if got := apitest.Send(t, r, apitest.Authorized(visibility, session)); got.Code != http.StatusConflict {
 		t.Errorf("set visibility on a draft status = %d, want 409: %s", got.Code, got.Body.String())
@@ -207,7 +207,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 	}
 
 	strangerList := apitest.Send(t, r, httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/media", nil))
+		http.MethodGet, "/v1/works/"+started.ID+"/media", nil))
 	if strangerList.Code != http.StatusNotFound {
 		t.Errorf("a stranger listed a draft's images: %d", strangerList.Code)
 	}
@@ -257,7 +257,7 @@ func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	owner := readProfileListing(t, r, "/v1/assets?creator=verified.creator", session)
+	owner := readProfileListing(t, r, "/v1/works?creator=verified.creator", session)
 	if len(owner.Items) != 1 || owner.Items[0].OwnerState == nil ||
 		*owner.Items[0].OwnerState != "draft" {
 		t.Fatalf("owner listing = %+v, want the draft marked", owner.Items)
@@ -269,7 +269,7 @@ func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
 		t.Errorf("an unanswered draft reads as %v", *owner.Items[0].IsNsfw)
 	}
 
-	stranger := readProfileListing(t, r, "/v1/assets?creator=verified.creator", nil)
+	stranger := readProfileListing(t, r, "/v1/works?creator=verified.creator", nil)
 	if len(stranger.Items) != 0 {
 		t.Errorf("a stranger sees %+v on the profile", stranger.Items)
 	}
@@ -278,7 +278,7 @@ func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
-	after := readProfileListing(t, r, "/v1/assets?creator=verified.creator", session)
+	after := readProfileListing(t, r, "/v1/works?creator=verified.creator", session)
 	if len(after.Items) != 1 || after.Items[0].OwnerState != nil {
 		t.Errorf("published listing = %+v, want an unmarked card", after.Items)
 	}
@@ -290,7 +290,7 @@ func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
 	started := apitest.StartCharacter(t, r, session)
 
 	deleted := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete a draft status = %d, want 204: %s", deleted.Code, deleted.Body.String())
 	}
@@ -313,7 +313,7 @@ func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
 	}
 
 	restored := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session))
+		httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/restore", nil), session))
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore a draft status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
@@ -394,7 +394,7 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 		t.Fatalf("empty the greetings status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the page as a visitor status = %d, want 200", response.Code)
 	}

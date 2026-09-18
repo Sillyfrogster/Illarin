@@ -30,7 +30,7 @@ func FetchWork(
 	workID string,
 ) StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}
@@ -150,7 +150,7 @@ func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 		t.Fatal(err)
 	}
 	operationID := strings.TrimPrefix(location, "/v1/ingests/")
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	accepted := Send(t, r, Authorized(request, session))
 	if accepted.Code != http.StatusOK {

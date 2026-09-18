@@ -88,7 +88,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	stack.seal(t, "0.9.0", "jailbreak", "An older take.")
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
+		http.MethodGet, "/v1/works/"+stack.workID+"/sealed", nil,
 	), stack.session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("export sealed content: status = %d: %s", response.Code, response.Body.String())
@@ -103,7 +103,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	}
 
 	var exported struct {
-		WorkID string `json:"asset_id"`
+		WorkID string `json:"work_id"`
 		Blocks []struct {
 			Version string `json:"version"`
 			Key     string `json:"block_key"`
@@ -140,14 +140,14 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
 	signedOut := apitest.Send(t, stack.router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
+		http.MethodGet, "/v1/works/"+stack.workID+"/sealed", nil,
 	))
 	if signedOut.Code != http.StatusUnauthorized {
 		t.Errorf("a signed-out reader asked for sealed content and got %d", signedOut.Code)
 	}
 
 	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
+		http.MethodGet, "/v1/works/"+stack.workID+"/sealed", nil,
 	), stack.stranger))
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("another creator asked for sealed content and got %d, want 404", stranger.Code)
@@ -163,7 +163,7 @@ func TestAnWorkHoldingNothingSealedHasNoExport(t *testing.T) {
 	started := apitest.StartPreset(t, r, session, "sillytavern")
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/sealed", nil,
+		http.MethodGet, "/v1/works/"+started.ID+"/sealed", nil,
 	), session))
 	if response.Code != http.StatusNotFound {
 		t.Errorf("a work with nothing sealed exported %d, want 404", response.Code)
@@ -176,7 +176,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
 	owner := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.workID, nil,
+		http.MethodGet, "/v1/works/"+stack.workID, nil,
 	), stack.session))
 	var page struct {
 		SealedBlocks *int `json:"sealedBlocks"`
@@ -192,7 +192,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	}
 
 	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.workID, nil,
+		http.MethodGet, "/v1/works/"+stack.workID, nil,
 	), stack.stranger))
 	if strings.Contains(stranger.Body.String(), "sealedBlocks") {
 		t.Error("a stranger's page says the work is withholding something")

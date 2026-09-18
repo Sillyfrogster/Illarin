@@ -285,8 +285,8 @@ func TestARevokedInstanceLosesItsQueueAndMirrorAndAnotherKeepsBoth(t *testing.T)
 	workID := apitest.PublishedCharacter(t, router, session)
 	apitest.SendToInstance(t, router, session, workID, cut.Instance.ID)
 	apitest.SendToInstance(t, router, session, workID, kept.Instance.ID)
-	syncLibrary(t, router, cut.AccessToken, false, []map[string]any{{"assetId": workID}}, nil)
-	syncLibrary(t, router, kept.AccessToken, false, []map[string]any{{"assetId": workID}}, nil)
+	syncLibrary(t, router, cut.AccessToken, false, []map[string]any{{"workId": workID}}, nil)
+	syncLibrary(t, router, kept.AccessToken, false, []map[string]any{{"workId": workID}}, nil)
 
 	revoked := apitest.Send(t, router, apitest.BrowserRequest(
 		t, http.MethodDelete, "/v1/instances/"+cut.Instance.ID, nil, session))
@@ -346,7 +346,7 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 	workID := apitest.PublishedCharacter(t, router, session)
 
 	result := syncLibrary(t, router, grant.AccessToken, true,
-		[]map[string]any{{"assetId": workID}}, nil)
+		[]map[string]any{{"workId": workID}}, nil)
 	if result.Accepted != 1 {
 		t.Fatalf("library sync accepted %d, want 1", result.Accepted)
 	}
@@ -372,12 +372,12 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 	first := apitest.PublishedCharacter(t, router, session)
 	second := apitest.PublishedCharacter(t, router, session)
 	syncLibrary(t, router, grant.AccessToken, false, []map[string]any{
-		{"assetId": first, "contentGeneration": 1},
-		{"assetId": second, "contentGeneration": 1},
+		{"workId": first, "contentGeneration": 1},
+		{"workId": second, "contentGeneration": 1},
 	}, nil)
 
 	result := syncLibrary(t, router, grant.AccessToken, true, []map[string]any{
-		{"assetId": second, "contentGeneration": 1},
+		{"workId": second, "contentGeneration": 1},
 	}, nil)
 
 	if result.Accepted != 1 || result.Removed != 1 {
@@ -398,7 +398,7 @@ func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 	rec := apitest.Send(t, router, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken,
 		map[string]any{
 			"snapshot": true,
-			"entries":  []map[string]any{{"assetId": workID}},
+			"entries":  []map[string]any{{"workId": workID}},
 			"removed":  []string{workID},
 		}))
 
@@ -437,7 +437,7 @@ func TestAnWorkNobodyMaySendHasNoInstanceState(t *testing.T) {
 	draft := apitest.StartCharacter(t, router, session)
 
 	rec := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+draft.ID+"/instances", nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+draft.ID+"/instances", nil), session))
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("draft instance state status = %d, want 404: %s", rec.Code, rec.Body.String())
@@ -530,7 +530,7 @@ func sweepDeliveries(t *testing.T, pool *pgxpool.Pool) int64 {
 func changeTheWork(t *testing.T, r *gin.Engine, session *http.Cookie, workID string) {
 	t.Helper()
 	rec := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("read the work to change: %d %s", rec.Code, rec.Body.String())
 	}

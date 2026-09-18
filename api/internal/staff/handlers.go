@@ -22,8 +22,9 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/profiles/:handle/restriction", d.JSON, h.RestoreProfile)
 	routes.Handle(http.MethodGet, "/v1/profiles/:handle/restriction", d.JSON, h.GetProfileRestriction)
 	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restriction", d.JSON, h.RestrictProfile)
-	routes.Handle(http.MethodDelete, "/v1/assets/:id/withhold", d.JSON, h.ClearWorkWithhold)
-	routes.Handle(http.MethodPut, "/v1/assets/:id/withhold", d.JSON, h.WithholdWork)
+	routes.Handle(http.MethodDelete, "/v1/works/:id/withhold", d.JSON, h.ClearWorkWithhold)
+	routes.Handle(http.MethodPut, "/v1/works/:id/withhold", d.JSON, h.WithholdWork)
+	registerAliases(routes, h)
 }
 
 func (h *Handlers) GetProfileRestriction(c *gin.Context) {

@@ -149,7 +149,7 @@ func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing
 		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", install.AccessToken, map[string]any{
 			"snapshot":           false,
 			"applicationVersion": bad,
-			"entries":            []map[string]any{{"assetId": workID}},
+			"entries":            []map[string]any{{"workId": workID}},
 		}))
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("application version %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())

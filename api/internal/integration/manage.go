@@ -121,7 +121,7 @@ func (s *Service) RotateSecret(ctx context.Context, owner, id uuid.UUID) (Added,
 		return Added{}, err
 	}
 	if held.Type != Webhook {
-		return Added{}, FieldError{"kind", "Discord credentials are changed by replacing the webhook address."}
+		return Added{}, FieldError{"type", "Discord credentials are changed by replacing the webhook address."}
 	}
 	if held.PreviousSecretUntil != nil && time.Now().Before(*held.PreviousSecretUntil) {
 		return Added{}, FieldError{"secret", "Wait until the previous signing secret expires before rotating again."}

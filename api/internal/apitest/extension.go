@@ -8,7 +8,7 @@ import (
 )
 
 type ExtensionPage struct {
-	Type                  string   `json:"kind"`
+	Type                  string   `json:"type"`
 	Name                  string   `json:"name"`
 	Identifier            *string  `json:"identifier"`
 	InstalledAppVersions  []string `json:"installedAppVersions"`
@@ -34,7 +34,7 @@ type ExtensionPage struct {
 
 func ReadExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, workID string) ExtensionPage {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}

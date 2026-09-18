@@ -12,7 +12,7 @@ export function WatchOffer() {
   const [asked, setAsked] = useState(false);
   if (!watching) return null;
 
-  if (asked && watching.watch.state === "watching") {
+  if (asked && watching.watch.state === "following") {
     return (
       <output className="mt-4 flex items-start gap-2 text-meta text-mute">
         <BellRing

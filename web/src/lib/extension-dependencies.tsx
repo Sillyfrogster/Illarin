@@ -32,10 +32,10 @@ export function dependencyLinks(
   dependencies: ExtensionDependency[],
 ): ExtensionDependency[] {
   const matched = new Map(
-    dependencies.map((dependency) => [dependency.name, dependency.assets]),
+    dependencies.map((dependency) => [dependency.name, dependency.works]),
   );
   return texts.map(({ text }) => ({
     name: text,
-    assets: matched.get(text) ?? [],
+    works: matched.get(text) ?? [],
   }));
 }

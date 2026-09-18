@@ -95,10 +95,11 @@ export function CatalogSurface({
     () => pages?.flatMap((page) => page.items) ?? [],
     [pages],
   );
-  const visibility = visibilityOverride ?? overview?.visibility ?? "blurred";
+  const visibility =
+    visibilityOverride ?? overview?.nsfwPreference ?? "blurred";
   const narrowings = narrowingsInForce(filters, overview ?? null);
   const suppressionKey =
-    overview?.visibility === "hidden" && overview.suppressed > 0
+    overview?.nsfwPreference === "hidden" && overview.suppressed > 0
       ? `${JSON.stringify(filters)}:${overview.suppressed}`
       : undefined;
 
@@ -232,7 +233,7 @@ export function CatalogSurface({
           {...choices}
           clear={
             filtering
-              ? () => navigate({ kind: filters.kind, q: filters.q })
+              ? () => navigate({ type: filters.type, q: filters.q })
               : null
           }
           onOpenChange={setRefining}

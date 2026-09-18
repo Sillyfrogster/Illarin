@@ -260,7 +260,7 @@ func appTargetsFor(
 	t *testing.T, r http.Handler, session *http.Cookie, workID string,
 ) []apitest.AppTarget {
 	t.Helper()
-	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session)
+	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session)
 	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the work: status = %d: %s", response.Code, response.Body.String())

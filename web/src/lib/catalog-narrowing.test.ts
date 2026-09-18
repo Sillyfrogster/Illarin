@@ -26,7 +26,7 @@ describe("what the catalog is narrowed by", () => {
 
   test("names the kind and lifts it without keeping kind-scoped facets", () => {
     const [kind] = narrowingsInForce(
-      { kind: "lorebook", facet: ["tone=gentle"] },
+      { type: "lorebook", facet: ["tone=gentle"] },
       overview,
     );
 
@@ -70,7 +70,7 @@ describe("what the catalog is narrowed by", () => {
   test("gives every narrowing a key of its own when two read alike", () => {
     const all = narrowingsInForce(
       {
-        kind: "theme",
+        type: "theme",
         platform: "gentle",
         facet: ["tone=gentle"],
         q: "gentle",

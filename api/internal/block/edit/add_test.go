@@ -207,7 +207,7 @@ func TestOnlyTheOwnerIsOfferedBlocksToAdd(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 
 	if response.Code == http.StatusOK {
 		var page apitest.StartedWork

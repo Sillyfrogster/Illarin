@@ -28,7 +28,7 @@ func (s destinationStack) updateDestinationRequest(t *testing.T, session *http.C
 func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cookie, destinationType, address string) addedDestination {
 	t.Helper()
 	response := s.updateDestinationRequest(t, session, http.MethodPost, updateDestinationsPath,
-		fmt.Sprintf(`{"name":"Creator updates","kind":%q,"address":%q}`, destinationType, address))
+		fmt.Sprintf(`{"name":"Creator updates","type":%q,"address":%q}`, destinationType, address))
 	if response.Code != http.StatusCreated {
 		t.Fatalf("create update destination = %d, want 201: %s", response.Code, response.Body.String())
 	}
@@ -238,7 +238,7 @@ func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *t
 	webhook := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	foreign := stack.addUpdateDestination(t, stack.authority, "discord", discordCapability())
-	path := "/v1/assets/" + first.ID + "/update-destinations"
+	path := "/v1/works/" + first.ID + "/update-destinations"
 	for _, refusedID := range []string{webhook.Destination.ID, foreign.Destination.ID} {
 		got := stack.updateDestinationRequest(t, stack.editor, http.MethodPut, path, fmt.Sprintf(`{"destinationIds":[%q]}`, refusedID))
 		if got.Code != http.StatusBadRequest {
@@ -250,7 +250,7 @@ func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *t
 		t.Fatalf("save destination defaults = %d", chosen.Code)
 	}
 	for _, workID := range []string{first.ID, second.ID} {
-		got := stack.updateDestinationRequest(t, stack.editor, http.MethodGet, "/v1/assets/"+workID+"/update-destinations", "")
+		got := stack.updateDestinationRequest(t, stack.editor, http.MethodGet, "/v1/works/"+workID+"/update-destinations", "")
 		var choices destinationChoiceList
 		if got.Code != http.StatusOK || json.Unmarshal(got.Body.Bytes(), &choices) != nil {
 			t.Fatalf("read choices = %d", got.Code)
@@ -303,7 +303,7 @@ func TestWorkUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T) 
 		"https://127.0.0.1/update", "https://[::1]/update", "https://169.254.169.254/update",
 	} {
 		got := stack.updateDestinationRequest(t, stack.editor, http.MethodPost, updateDestinationsPath,
-			fmt.Sprintf(`{"kind":"webhook","name":"Unsafe receiver","address":%q}`, address))
+			fmt.Sprintf(`{"type":"webhook","name":"Unsafe receiver","address":%q}`, address))
 		if got.Code != http.StatusBadRequest {
 			t.Errorf("unsafe address was accepted: %d", got.Code)
 		}
@@ -320,7 +320,7 @@ func TestWorkUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T) 
 	}
 	for _, address := range []string{discordCapability() + "?thread_id=123", strings.Replace(discordCapability(), "discord.com", "example.com", 1)} {
 		got := stack.updateDestinationRequest(t, stack.editor, http.MethodPost, updateDestinationsPath,
-			fmt.Sprintf(`{"kind":"discord","name":"Invalid channel","address":%q}`, address))
+			fmt.Sprintf(`{"type":"discord","name":"Invalid channel","address":%q}`, address))
 		if got.Code != http.StatusBadRequest {
 			t.Error("an arbitrary Discord target was accepted")
 		}
@@ -433,7 +433,7 @@ func TestWorkUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T
 	started := apitest.StartCharacter(t, stack.router, stack.editor)
 	apitest.WriteCharacterFloor(t, stack.router, stack.editor, started)
 	made := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
-	path := "/v1/assets/" + started.ID + "/update-destinations"
+	path := "/v1/works/" + started.ID + "/update-destinations"
 	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut, path,
 		fmt.Sprintf(`{"destinationIds":[%q]}`, made.Destination.ID))
 	if chosen.Code != http.StatusNoContent {

@@ -22,7 +22,7 @@ import (
 
 type destination struct {
 	ID          string     `json:"id"`
-	Type        string     `json:"kind"`
+	Type        string     `json:"type"`
 	Name        string     `json:"name"`
 	Host        string     `json:"host"`
 	Address     string     `json:"address"`
@@ -55,7 +55,7 @@ type destinationList struct {
 type destinationChoice struct {
 	ID        string   `json:"id"`
 	Name      string   `json:"name"`
-	Type      string   `json:"kind"`
+	Type      string   `json:"type"`
 	State     string   `json:"state"`
 	Events    []string `json:"events"`
 	Role      string   `json:"role"`
@@ -85,7 +85,7 @@ type postDelivery struct {
 	PostTitle     string           `json:"postTitle"`
 	RevisionID    string           `json:"revisionId"`
 	Destination   string           `json:"destination"`
-	Type          string           `json:"kind"`
+	Type          string           `json:"type"`
 	MessageID     string           `json:"messageId"`
 	Removed       bool             `json:"removed"`
 	State         string           `json:"state"`

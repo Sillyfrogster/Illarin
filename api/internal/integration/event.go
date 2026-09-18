@@ -13,19 +13,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const EventUpdatePublished = "asset.update.published.v1"
+const EventUpdatePublished = "work.update.published.v1"
 
 type sent struct {
 	ID         uuid.UUID  `json:"id"`
 	Type       string     `json:"type"`
 	OccurredAt time.Time  `json:"occurredAt"`
-	Work       sentWork   `json:"asset"`
+	Work       sentWork   `json:"work"`
 	Update     sentUpdate `json:"update"`
 }
 
 type sentWork struct {
 	ID   uuid.UUID `json:"id"`
-	Type string    `json:"kind"`
+	Type string    `json:"type"`
 	Name string    `json:"name"`
 	URL  string    `json:"url"`
 }

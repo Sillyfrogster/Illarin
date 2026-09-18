@@ -10,11 +10,11 @@ import (
 type Work struct {
 	Blurb      string         `json:"blurb"`
 	CreatedAt  time.Time      `json:"createdAt"`
-	Visibility WorkVisibility `json:"discovery"`
+	Visibility WorkVisibility `json:"visibility"`
 	Format     string         `json:"format"`
 	Id         uuid.UUID      `json:"id"`
 	IsNsfw     *bool          `json:"isNsfw" tstype:"boolean | null,required"`
-	Type       string         `json:"kind"`
+	Type       string         `json:"type"`
 	Name       string         `json:"name"`
 	Tags       []string       `json:"tags"`
 }
@@ -34,7 +34,7 @@ type IngestFailure struct {
 type IngestFailureReason string
 
 const (
-	IngestFailureReasonWorkUnavailable     IngestFailureReason = "asset_unavailable"
+	IngestFailureReasonWorkUnavailable     IngestFailureReason = "work_unavailable"
 	IngestFailureReasonInternalFailure     IngestFailureReason = "internal_failure"
 	IngestFailureReasonLimitExceeded       IngestFailureReason = "limit_exceeded"
 	IngestFailureReasonMalformedInput      IngestFailureReason = "malformed_input"
@@ -42,11 +42,11 @@ const (
 	IngestFailureReasonUnsupportedFormat   IngestFailureReason = "unsupported_format"
 	IngestFailureReasonUnsupportedVersion  IngestFailureReason = "unsupported_version"
 	IngestFailureReasonWorkingCopyConflict IngestFailureReason = "working_copy_conflict"
-	IngestFailureReasonWrongType           IngestFailureReason = "wrong_kind"
+	IngestFailureReasonWrongType           IngestFailureReason = "wrong_type"
 )
 
 type IngestOperation struct {
-	Work    *Work                 `json:"asset,omitempty"`
+	Work    *Work                 `json:"work,omitempty"`
 	Failure *IngestFailure        `json:"failure,omitempty"`
 	Id      uuid.UUID             `json:"id"`
 	Preview *ReplacementPreview   `json:"preview,omitempty"`
@@ -89,7 +89,7 @@ type ReplacementPreview struct {
 type CreateWorkRequest struct {
 	Blurb      *string                      `json:"blurb,omitempty"`
 	Confirmed  bool                         `json:"confirmed"`
-	Visibility *CreateWorkRequestVisibility `json:"discovery,omitempty"`
+	Visibility *CreateWorkRequestVisibility `json:"visibility,omitempty"`
 	IsNsfw     *bool                        `json:"isNsfw,omitempty"`
 	Name       *string                      `json:"name,omitempty"`
 	Tags       *[]string                    `json:"tags,omitempty"`

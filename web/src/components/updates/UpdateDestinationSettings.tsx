@@ -228,7 +228,7 @@ function DestinationRow({
   open: boolean;
 }) {
   const state = STATES[one.state];
-  const Kind = one.kind === "discord" ? Hash : Webhook;
+  const Kind = one.type === "discord" ? Hash : Webhook;
 
   return (
     <li

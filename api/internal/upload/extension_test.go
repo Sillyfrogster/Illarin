@@ -79,10 +79,10 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	}
 	assertSameBytes(t, "delivery", fetched.Body.Bytes(), upload)
 
-	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); !strings.Contains(lumiverse, workID) {
+	if lumiverse := browsedIDs(t, r, "/v1/works?kind=extension&platform=lumiverse"); !strings.Contains(lumiverse, workID) {
 		t.Errorf("browsing Lumiverse extensions did not find the work: %s", lumiverse)
 	}
-	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); strings.Contains(tavern, workID) {
+	if tavern := browsedIDs(t, r, "/v1/works?kind=extension&platform=sillytavern"); strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions found a Spindle extension: %s", tavern)
 	}
 	if generation := apitest.ContentGeneration(t, pool, workID); generation != 1 {
@@ -145,10 +145,10 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 	}
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
-	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); !strings.Contains(tavern, workID) {
+	if tavern := browsedIDs(t, r, "/v1/works?kind=extension&platform=sillytavern"); !strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions did not find the work: %s", tavern)
 	}
-	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); strings.Contains(lumiverse, workID) {
+	if lumiverse := browsedIDs(t, r, "/v1/works?kind=extension&platform=lumiverse"); strings.Contains(lumiverse, workID) {
 		t.Errorf("browsing Lumiverse extensions found a SillyTavern extension: %s", lumiverse)
 	}
 }
@@ -363,7 +363,7 @@ func TestAnExtensionBuiltIntoManyFilesIsAccepted(t *testing.T) {
 func TestAnExtensionCannotBeStartedWithoutAnArchive(t *testing.T) {
 	t.Parallel()
 	r, session, _, _ := harness.NewExtensionRouter(t)
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(`{"kind":"extension"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works", strings.NewReader(`{"type":"extension"}`))
 	request.Header.Set("Content-Type", "application/json")
 	if response := apitest.Send(t, r, apitest.Authorized(request, session)); response.Code != http.StatusBadRequest {
 		t.Fatalf("start an extension from nothing = %d: %s", response.Code, response.Body.String())

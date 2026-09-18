@@ -66,17 +66,17 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
                             className={cn(
                               "h-full w-full object-contain",
                               asset.isNsfw &&
-                                page?.visibility !== "shown" &&
+                                page?.nsfwPreference !== "shown" &&
                                 "blur-xl",
                             )}
                           />
                         ) : (
                           <div className="flex h-full w-full flex-col justify-between p-4 sm:p-5">
                             <span className="font-ui text-meta text-mute">
-                              {KIND_LABELS[asset.kind]}
+                              {KIND_LABELS[asset.type]}
                             </span>
                             <span className="break-words font-display text-[clamp(1.4rem,2vw,2rem)] leading-tight text-ink">
-                              {KIND_LABELS[asset.kind]}
+                              {KIND_LABELS[asset.type]}
                               <span className="mt-4 block font-ui text-meta text-mute">
                                 No cover image
                               </span>
@@ -89,7 +89,7 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
                       </div>
                       <div className="pt-5">
                         <p className="font-ui text-meta text-accent">
-                          {KIND_LABELS[asset.kind]}
+                          {KIND_LABELS[asset.type]}
                         </p>
                         <h3 className="mt-2 break-words font-display text-[clamp(1.15rem,1.5vw,1.5rem)] leading-[1.2] font-medium tracking-tight group-hover:text-accent">
                           {asset.name || "Untitled"}
@@ -99,7 +99,7 @@ export function CatalogChapter({ page }: { page: BrowsePage | null }) {
                         </p>
                         {asset.isNsfw ? (
                           <p className="mt-1 text-meta text-mute">
-                            {page?.visibility === "shown"
+                            {page?.nsfwPreference === "shown"
                               ? "Adult"
                               : "Adult · blurred"}
                           </p>

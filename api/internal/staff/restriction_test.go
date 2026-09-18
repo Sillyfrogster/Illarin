@@ -169,7 +169,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	}
 
 	listing := apitest.Send(t, stack.router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets?creator="+ownerHandle, nil,
+		http.MethodGet, "/v1/works?creator="+ownerHandle, nil,
 	))
 	if listing.Code != http.StatusOK {
 		t.Fatalf("listing status = %d, want 200: %s", listing.Code, listing.Body.String())

@@ -312,7 +312,7 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 			return true, s.failIngest(ctx, job, "working_copy_conflict", "The working copy changed. Review it before accepting the upload again.")
 		}
 		if errors.Is(err, work.ErrWorkFrozen) || errors.Is(err, work.ErrNotFound) {
-			return true, s.failIngest(ctx, job, "asset_unavailable", "This asset is no longer available for changes.")
+			return true, s.failIngest(ctx, job, "work_unavailable", "This asset is no longer available for changes.")
 		}
 		if errors.Is(err, work.ErrStorageCap) {
 			return true, s.finishIngestFailure(

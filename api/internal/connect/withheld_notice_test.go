@@ -17,7 +17,7 @@ func withholdAsAdmin(t *testing.T, r http.Handler, pool *pgxpool.Pool, session *
 		`update users set role = 'admin' where username = $1`, handle); err != nil {
 		t.Fatalf("make %s an admin: %v", handle, err)
 	}
-	rec := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut, "/v1/assets/"+workID+"/withhold",
+	rec := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut, "/v1/works/"+workID+"/withhold",
 		`{"reason":"Report under review"}`, session))
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("withhold status = %d, want 204: %s", rec.Code, rec.Body.String())
@@ -27,7 +27,7 @@ func withholdAsAdmin(t *testing.T, r http.Handler, pool *pgxpool.Pool, session *
 func clearWithhold(t *testing.T, r http.Handler, session *http.Cookie, workID string) {
 	t.Helper()
 	rec := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID+"/withhold", nil), session))
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil), session))
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("clear withhold status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}

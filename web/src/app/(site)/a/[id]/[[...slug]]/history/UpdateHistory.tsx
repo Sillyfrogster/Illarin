@@ -138,7 +138,7 @@ export function UpdateHistory({
                 width={88}
               />
             ) : (
-              <DefaultCover compact kind={asset.kind} />
+              <DefaultCover compact kind={asset.type} />
             )}
           </span>
           <div className="min-w-0 flex-1">

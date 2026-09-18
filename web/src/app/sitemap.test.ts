@@ -10,7 +10,7 @@ function asset(id: string, name: string): BrowseWork {
     id,
     name,
     creator: "garden.keeper",
-    kind: "theme",
+    type: "theme",
     isNsfw: false,
     cover: null,
   };

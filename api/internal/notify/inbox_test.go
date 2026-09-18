@@ -41,7 +41,7 @@ func TestWithholdingAnWorkTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
 		t.Fatalf("inbox has %d entries, want 1: %s", len(page.Items), response.Body.String())
 	}
 	entry := page.Items[0]
-	if entry.Type != "asset_withheld" || entry.Work == nil || entry.Work.ID != workID ||
+	if entry.Type != "work_withheld" || entry.Work == nil || entry.Work.ID != workID ||
 		entry.Work.Name != "Moonlit Archive" || entry.Reason != "Copyright report under review" ||
 		entry.ReadAt != nil || entry.CreatedAt.IsZero() {
 		t.Fatalf("withheld entry = %+v", entry)
@@ -60,7 +60,7 @@ func TestRestoringAWithheldWorkTellsItsOwnerItIsBack(t *testing.T) {
 	s.fanOut(t, time.Now())
 
 	page := s.inbox(t, s.creator, "")
-	if len(page.Items) != 2 || page.Items[0].Type != "asset_restored" || page.Items[1].Type != "asset_withheld" {
+	if len(page.Items) != 2 || page.Items[0].Type != "work_restored" || page.Items[1].Type != "work_withheld" {
 		t.Fatalf("inbox = %+v, want the restore above the withhold", page.Items)
 	}
 	restored := page.Items[0]
@@ -131,8 +131,8 @@ func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
 
 	for _, path := range []string{
 		"/v1/notifications",
-		"/v1/assets/" + workID,
-		"/v1/assets?creator=" + apitest.CreatorHandle,
+		"/v1/works/" + workID,
+		"/v1/works?creator=" + apitest.CreatorHandle,
 		"/v1/profiles/" + apitest.CreatorHandle,
 		"/v1/auth/session",
 	} {
@@ -176,7 +176,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 		names = append(names, entry.Type+" "+entry.Work.Name)
 	}
 	want := []string{
-		"asset_withheld Sunlit Archive", "asset_restored Moonlit Archive", "asset_withheld Moonlit Archive",
+		"work_withheld Sunlit Archive", "work_restored Moonlit Archive", "work_withheld Moonlit Archive",
 	}
 	if strings.Join(names, ", ") != strings.Join(want, ", ") {
 		t.Fatalf("inbox reads %q, want %q", names, want)
@@ -211,8 +211,8 @@ func TestTheInboxPagesNewestFirstByCursor(t *testing.T) {
 			"&beforeId=" + page.NextCursor.BeforeID
 	}
 	want := []string{
-		"asset_withheld Report C", "asset_restored ", "asset_withheld Report B",
-		"asset_restored ", "asset_withheld Report A",
+		"work_withheld Report C", "work_restored ", "work_withheld Report B",
+		"work_restored ", "work_withheld Report A",
 	}
 	if strings.Join(read, "|") != strings.Join(want, "|") {
 		t.Fatalf("paged inbox = %q, want %q", read, want)
@@ -370,7 +370,7 @@ type inboxEntry struct {
 	Work      *struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
-	} `json:"asset"`
+	} `json:"work"`
 	Reason string `json:"reason"`
 	Update *struct {
 		Number       int    `json:"number"`
@@ -422,7 +422,7 @@ func (s inboxStack) withhold(t *testing.T, workID, reason string) {
 		t.Fatal(err)
 	}
 	response := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/assets/"+workID+"/withhold", string(body), s.staff,
+		t, http.MethodPut, "/v1/works/"+workID+"/withhold", string(body), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("withhold status = %d, want 204: %s", response.Code, response.Body.String())
@@ -432,7 +432,7 @@ func (s inboxStack) withhold(t *testing.T, workID, reason string) {
 func (s inboxStack) restore(t *testing.T, workID string) {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID+"/withhold", nil), s.staff,
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", response.Code, response.Body.String())

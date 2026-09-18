@@ -66,7 +66,7 @@ func formRequest(t *testing.T, write func(*multipart.Writer)) *http.Request {
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/v1/assets", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/works", body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	return req
 }
@@ -81,7 +81,7 @@ func TestFormDataThatCannotBeReadIsRefused(t *testing.T) {
 		{
 			name: "not form data at all",
 			request: func(t *testing.T) *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/v1/assets",
+				req := httptest.NewRequest(http.MethodPost, "/v1/works",
 					strings.NewReader("kind=character"))
 				req.Header.Set("Content-Type", "text/plain")
 				return req

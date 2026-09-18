@@ -163,8 +163,8 @@ func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
 	if operation.Status != IngestFailed {
 		t.Fatalf("revision status = %s, want failed", operation.Status)
 	}
-	if operation.Failure == nil || operation.Failure.Reason != "wrong_kind" {
-		t.Fatalf("revision failure = %+v, want wrong_kind", operation.Failure)
+	if operation.Failure == nil || operation.Failure.Reason != "wrong_type" {
+		t.Fatalf("revision failure = %+v, want wrong_type", operation.Failure)
 	}
 
 	var workType string

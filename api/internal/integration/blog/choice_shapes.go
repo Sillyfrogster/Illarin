@@ -6,7 +6,7 @@ type PublicationDestinationChoice struct {
 	ByDefault bool                        `json:"byDefault"`
 	Events    []PublicationEvent          `json:"events"`
 	Id        uuid.UUID                   `json:"id"`
-	Type      PublicationDestinationType  `json:"kind"`
+	Type      PublicationDestinationType  `json:"type"`
 	Name      string                      `json:"name"`
 	Role      string                      `json:"role"`
 	State     PublicationDestinationState `json:"state"`

@@ -25,7 +25,7 @@ func TestAFollowGoesWithItsAccountOrItsWork(t *testing.T) {
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into work_follows (account_id, work_id, state)
-		values ($1, $3, 'watching'), ($2, $3, 'watching'), ($2, $4, 'stopped')
+		values ($1, $3, 'following'), ($2, $3, 'following'), ($2, $4, 'stopped')
 	`, leaving, staying, kept, removed); err != nil {
 		t.Fatalf("insert follows: %v", err)
 	}

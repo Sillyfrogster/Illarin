@@ -65,7 +65,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	var created struct {
 		Work *struct {
 			ID string `json:"id"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -119,7 +119,7 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	if revisionID != currentRevisionID || target != "raw" ||
 		authorizationClass != "anonymous" || visibility != "listed" {
 		t.Fatalf(
-			"download event = revision %s, target %q, class %q, discovery %q",
+			"download event = revision %s, target %q, class %q, visibility %q",
 			revisionID, target, authorizationClass, visibility,
 		)
 	}
@@ -210,8 +210,8 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 		t.Fatal("download did not reach the handoff boundary")
 	}
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/assets/"+workID+"/discovery",
-		`{"discovery":"unlisted"}`, session,
+		t, http.MethodPut, "/v1/works/"+workID+"/visibility",
+		`{"visibility":"unlisted"}`, session,
 	))
 	if changed.Code != http.StatusNoContent {
 		t.Fatalf("change visibility status = %d, want 204", changed.Code)
@@ -364,7 +364,7 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
 		}
 		if visibility != want.visibility || authorization != want.authorization {
 			t.Fatalf(
-				"event for %s = discovery %q, class %q; want %q, %q",
+				"event for %s = visibility %q, class %q; want %q, %q",
 				want.workID, visibility, authorization, want.visibility, want.authorization,
 			)
 		}
@@ -467,7 +467,7 @@ func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 	var created struct {
 		Work *struct {
 			ID string `json:"id"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -505,7 +505,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 			var operation struct {
 				Work *struct {
 					ID string `json:"id"`
-				} `json:"asset"`
+				} `json:"work"`
 			}
 			if err := json.Unmarshal(created.Body.Bytes(), &operation); err != nil {
 				t.Fatalf("decode: %v", err)
@@ -553,7 +553,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets", body)
+	request := httptest.NewRequest(http.MethodPost, "/v1/works", body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
 	accepted := apitest.Send(t, r, apitest.Authorized(request, session))
 	if accepted.Code != http.StatusAccepted {
@@ -565,7 +565,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 
 	removedCompletion := apitest.Send(t, r, apitest.AuthorizedJSONRequest(
 		t, http.MethodPatch, accepted.Header().Get("Location"),
-		`{"kind":"theme","name":"Claimed image"}`, session,
+		`{"type":"theme","name":"Claimed image"}`, session,
 	))
 	if removedCompletion.Code != http.StatusNotFound {
 		t.Fatalf("removed completion route status = %d, want 404", removedCompletion.Code)

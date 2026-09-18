@@ -7,8 +7,8 @@ import { SITE_CARD, siteOpenGraph, siteTwitter } from "./site-metadata";
 
 export function assetMetadata(asset: WorkDetail): Metadata {
   const name = assetDisplayName(asset.name);
-  const title = `${name} · ${KIND_LABELS[asset.kind]}`;
-  const description = asset.blurb || `A ${asset.kind} by ${asset.creator}.`;
+  const title = `${name} · ${KIND_LABELS[asset.type]}`;
+  const description = asset.blurb || `A ${asset.type} by ${asset.creator}.`;
   const url = assetHref(asset.id, asset.name);
   const images = asset.preview
     ? [{ url: asset.preview, alt: name, width: 1200, height: 630 }]
@@ -18,7 +18,7 @@ export function assetMetadata(asset: WorkDetail): Metadata {
     title,
     description,
     alternates: { canonical: url },
-    robots: asset.discovery === "unlisted" ? { index: false } : undefined,
+    robots: asset.visibility === "unlisted" ? { index: false } : undefined,
     openGraph: {
       ...siteOpenGraph(),
       type: "article",

@@ -10,8 +10,10 @@ gin with a `Register` function, and gives each route a deadline as it does.
 
 Plumbing that every feature needs lives in `internal/api`: the session and the
 signed-in account, cookies, the check that a change came from the site, reading
-path and query values, the error body, route deadlines, the panic recovery and
-the no-store header on replies that carry credentials. A feature package
+path and query values, the error body, route deadlines, the panic recovery,
+the no-store header on replies that carry credentials, and the helpers that let
+a renamed field keep answering to its old name. Each feature keeps its old
+paths and field names in one `aliases.go`. A feature package
 imports `api`; `api` imports no feature.
 
 `cmd/server` builds the gin engine, puts the shared middleware on it and calls

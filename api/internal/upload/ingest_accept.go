@@ -107,7 +107,7 @@ func (s *Service) ingestFailureMessage(reason string) string {
 		return "The file breaks an archive safety rule."
 	case "limit_exceeded":
 		return "The file is over a content limit."
-	case "wrong_kind":
+	case "wrong_type":
 		return "This file is a different kind of thing than the asset it would update."
 	default:
 		return "Illarin could not finish this upload. Please try again."

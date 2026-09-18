@@ -79,7 +79,7 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	}
 
 	syncLibrary(t, r, grant.AccessToken, false, []map[string]any{
-		{"assetId": workID, "contentGeneration": 1},
+		{"workId": workID, "contentGeneration": 1},
 	}, nil)
 	reported := apitest.WorkInstances(t, r, session, workID).Items[0]
 	if reported.InstalledGeneration == nil || *reported.InstalledGeneration != 1 {
@@ -130,7 +130,7 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 	for _, bad := range []string{"javascript:alert(1)", "lumiverse://extensions/x", "/extensions/x", "http://localhost/" + strings.Repeat("a", 600)} {
 		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken, map[string]any{
 			"snapshot": false,
-			"entries":  []map[string]any{{"assetId": workID, "address": bad}},
+			"entries":  []map[string]any{{"workId": workID, "address": bad}},
 		}))
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("address %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())

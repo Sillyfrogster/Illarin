@@ -15,17 +15,17 @@ export function destinationStanding(one: WorkUpdateDestination): string {
     return "Switched off. Verify it again to announce here.";
   }
   if (one.state !== "active" || !one.verifiedAt) {
-    return one.kind === "discord"
+    return one.type === "discord"
       ? "Discord has not confirmed this channel yet."
       : "Your endpoint has to answer a signed challenge before Illarin sends to it.";
   }
-  if (one.kind === "discord") {
+  if (one.type === "discord") {
     return `Discord confirmed the channel on ${readableDate(one.verifiedAt)}.`;
   }
   return `Answered the challenge on ${readableDate(one.verifiedAt)}.`;
 }
 
 export function destinationWhere(one: WorkUpdateDestination): string {
-  if (one.kind === "discord") return "Discord channel";
+  if (one.type === "discord") return "Discord channel";
   return one.host;
 }

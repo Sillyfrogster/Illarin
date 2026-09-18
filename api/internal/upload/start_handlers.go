@@ -45,7 +45,7 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
 		return
 	}
-	c.Header("Location", "/v1/assets/"+id.String())
+	c.Header("Location", "/v1/works/"+id.String())
 	c.JSON(http.StatusCreated, page)
 }
 

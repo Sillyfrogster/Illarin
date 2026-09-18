@@ -16,7 +16,7 @@ import (
 func TestFollowersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 	installer := s.reader(t, "installer@example.com", "moon.installer")
 	s.install(t, installer, "Reading desk")
@@ -32,13 +32,13 @@ func TestFollowersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T)
 	for _, hearer := range []struct {
 		name    string
 		session *http.Cookie
-	}{{"watcher", follower}, {"installer", installer}} {
+	}{{"follower", follower}, {"installer", installer}} {
 		page := s.inbox(t, hearer.session, "")
 		if len(page.Items) != 1 {
 			t.Fatalf("the %s has %d entries, want 1: %+v", hearer.name, len(page.Items), page.Items)
 		}
 		entry := page.Items[0]
-		if entry.Type != "asset_updated" || entry.Work == nil || entry.Work.ID != s.workID ||
+		if entry.Type != "work_updated" || entry.Work == nil || entry.Work.ID != s.workID ||
 			entry.Work.Name != "Ilse of the west shelf" || entry.Update == nil ||
 			entry.Update.Number != 2 || entry.Update.VersionLabel != "v2" ||
 			entry.Update.Summary != "Rewrote her opening" || entry.ReadAt != nil || entry.Reason != "" {
@@ -51,7 +51,7 @@ func TestFollowersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T)
 	for _, silent := range []struct {
 		name    string
 		session *http.Cookie
-	}{{"owner", s.creator}, {"stopped watcher", stopped}, {"bystander", bystander}} {
+	}{{"owner", s.creator}, {"stopped follower", stopped}, {"bystander", bystander}} {
 		if page := s.inbox(t, silent.session, ""); len(page.Items) != 0 {
 			t.Errorf("the %s has %d entries, want none: %+v", silent.name, len(page.Items), page.Items)
 		}
@@ -61,26 +61,26 @@ func TestFollowersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T)
 func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 
 	s.describe(t, "A private save that nobody hears about.")
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("a private save reached the watcher: %+v", page.Items)
+		t.Fatalf("a private save reached the follower: %+v", page.Items)
 	}
 
 	s.publishUpdate(t, `{"summary":"Kept quiet","notify":false}`)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("a quiet update reached the watcher: %+v", page.Items)
+		t.Fatalf("a quiet update reached the follower: %+v", page.Items)
 	}
 
 	s.resizeMessages(t)
 	s.publishUpdate(t, `{"summary":"Tidied the page"}`)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("resizing a block reached the watcher: %+v", page.Items)
+		t.Fatalf("resizing a block reached the follower: %+v", page.Items)
 	}
 
 	s.describe(t, "A change everyone should hear about.")
@@ -89,7 +89,7 @@ func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 	page := s.inbox(t, follower, "")
 	if len(page.Items) != 1 || page.Items[0].Update == nil || page.Items[0].Update.Number != 4 ||
 		page.Items[0].Update.Summary != "No destinations, still told" {
-		t.Fatalf("an update with no destinations gave the watcher %+v, want update 4", page.Items)
+		t.Fatalf("an update with no destinations gave the follower %+v, want update 4", page.Items)
 	}
 }
 
@@ -97,12 +97,12 @@ func TestAnUnlistedWorkStillTellsItsFollowers(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
 	unlisted := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/assets/"+s.workID+"/discovery", `{"discovery":"unlisted"}`, s.creator,
+		t, http.MethodPut, "/v1/works/"+s.workID+"/visibility", `{"visibility":"unlisted"}`, s.creator,
 	))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist status = %d, want 204: %s", unlisted.Code, unlisted.Body.String())
 	}
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 
 	s.describe(t, "Unlisted, and still updated.")
@@ -110,16 +110,16 @@ func TestAnUnlistedWorkStillTellsItsFollowers(t *testing.T) {
 	s.fanOut(t, time.Now())
 
 	page := s.inbox(t, follower, "")
-	if len(page.Items) != 1 || page.Items[0].Type != "asset_updated" ||
+	if len(page.Items) != 1 || page.Items[0].Type != "work_updated" ||
 		page.Items[0].Update == nil || page.Items[0].Update.Summary != "Unlisted update" {
-		t.Fatalf("the watcher of an unlisted work has %+v, want one update entry", page.Items)
+		t.Fatalf("the follower of an unlisted work has %+v, want one update entry", page.Items)
 	}
 }
 
 func TestUpdatesFoldIntoOneUnreadEntryThatTheNextReadUnfolds(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 
 	for _, summary := range []string{"Rewrote her opening", "Softened her temper", "Added a greeting"} {
@@ -165,7 +165,7 @@ func TestAFoldedEntryMovesBackToTheTopOfTheInbox(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
 	other := s.with(apitest.PublishedCharacter(t, s.router, s.creator))
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 	other.follow(t, follower)
 
@@ -192,7 +192,7 @@ func TestAFoldedEntryMovesBackToTheTopOfTheInbox(t *testing.T) {
 func TestAFoldedEntrysNinetyDaysRunFromTheUpdateItLastAbsorbed(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 
 	s.describe(t, "The first change")
@@ -222,41 +222,41 @@ func TestAFoldedEntrysNinetyDaysRunFromTheUpdateItLastAbsorbed(t *testing.T) {
 func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
-	follower := s.reader(t, "watcher@example.com", "moon.watcher")
+	follower := s.reader(t, "follower@example.com", "moon.follower")
 	s.follow(t, follower)
 	s.describe(t, "A change everyone should hear about")
 	s.publishUpdate(t, `{"summary":"A change everyone should hear about"}`)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 {
-		t.Fatalf("the watcher has %d entries before the withhold, want one", len(page.Items))
+		t.Fatalf("the follower has %d entries before the withhold, want one", len(page.Items))
 	}
 
 	s.withhold(t, s.workID, "Copyright report under review")
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("a withheld work left %+v in the watcher's inbox", page.Items)
+		t.Fatalf("a withheld work left %+v in the follower's inbox", page.Items)
 	}
 	if got := s.unread(t, follower); got != 0 {
-		t.Fatalf("a withheld work counts %d unread for the watcher, want 0", got)
+		t.Fatalf("a withheld work counts %d unread for the follower, want 0", got)
 	}
 	owner := s.inbox(t, s.creator, "")
-	if len(owner.Items) != 1 || owner.Items[0].Type != "asset_withheld" {
+	if len(owner.Items) != 1 || owner.Items[0].Type != "work_withheld" {
 		t.Fatalf("the owner's inbox = %+v, want the withheld entry", owner.Items)
 	}
 
 	s.restore(t, s.workID)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 || s.unread(t, follower) != 1 {
-		t.Fatalf("restoring the work left the watcher %+v", page.Items)
+		t.Fatalf("restoring the work left the follower %+v", page.Items)
 	}
 
 	s.deleteWork(t)
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 || s.unread(t, follower) != 0 {
-		t.Fatalf("a deleted work left %+v in the watcher's inbox", page.Items)
+		t.Fatalf("a deleted work left %+v in the follower's inbox", page.Items)
 	}
 	s.restoreWork(t)
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 || s.unread(t, follower) != 1 {
-		t.Fatalf("recovering the work left the watcher %+v", page.Items)
+		t.Fatalf("recovering the work left the follower %+v", page.Items)
 	}
 }
 
@@ -329,7 +329,7 @@ func (s updateInboxStack) stopFollowing(t *testing.T, session *http.Cookie) {
 
 func (s updateInboxStack) setFollow(t *testing.T, session *http.Cookie, method string) {
 	t.Helper()
-	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/assets/"+s.workID+"/watch", nil), session))
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/works/"+s.workID+"/follow", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("%s follow status = %d, want 200: %s", method, response.Code, response.Body.String())
 	}
@@ -351,7 +351,7 @@ func (s updateInboxStack) with(workID string) updateInboxStack {
 func (s updateInboxStack) deleteWork(t *testing.T) {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.BrowserRequest(
-		t, http.MethodDelete, "/v1/assets/"+s.workID, nil, s.creator,
+		t, http.MethodDelete, "/v1/works/"+s.workID, nil, s.creator,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("delete status = %d, want 204: %s", response.Code, response.Body.String())
@@ -361,7 +361,7 @@ func (s updateInboxStack) deleteWork(t *testing.T) {
 func (s updateInboxStack) restoreWork(t *testing.T) {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.BrowserRequest(
-		t, http.MethodPost, "/v1/assets/"+s.workID+"/restore", nil, s.creator,
+		t, http.MethodPost, "/v1/works/"+s.workID+"/restore", nil, s.creator,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", response.Code, response.Body.String())

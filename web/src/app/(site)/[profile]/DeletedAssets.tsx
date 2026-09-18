@@ -88,9 +88,9 @@ export function DeletedAssets({
                   <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute">
                     <KindMark
                       className="size-3.5 text-accent"
-                      kind={item.kind}
+                      kind={item.type}
                     />
-                    {KIND_LABELS[item.kind]}
+                    {KIND_LABELS[item.type]}
                     <span aria-hidden="true">·</span>
                     <span suppressHydrationWarning>
                       {remainingDeletionWindow(item.recoverableUntil)}

@@ -126,7 +126,7 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 			union all
 			select account_id from (
 				select account_id from work_follows
-				 where work_id = $2 and state = 'watching'
+				 where work_id = $2 and state = 'following'
 				union
 				select instance.user_id
 				  from instance_library_entries entry
@@ -137,10 +137,10 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 				 where work_id = $2 and state = 'stopped'
 				except
 				select owner_id from works where id = $2
-			) watching
+			) following
 			 where $5::uuid is null
 		  ) hearer (account_id)
-		on conflict (account_id, work_id) where type = 'asset_updated' and read_at is null
+		on conflict (account_id, work_id) where type = 'work_updated' and read_at is null
 		do update set words = excluded.words,
 		              created_at = excluded.created_at,
 		              update_count = notifications.update_count + 1

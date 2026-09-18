@@ -186,12 +186,12 @@ export type PresetVariable = VariableSchemaContent["variables"][number];
 export type RegexScript = ScriptListContent["scripts"][number];
 export type ReplacementDecision = ReplacementAcceptance["unrepresentable"];
 export type BrowsePage = WorkList;
-export type BrowseKind = BrowseWork["kind"];
-export type NsfwVisibility = NsfwPreferenceRequest["visibility"];
+export type BrowseKind = BrowseWork["type"];
+export type NsfwVisibility = NsfwPreferenceRequest["preference"];
 
 export type BrowseFilters = Pick<
   ListWorksParams,
-  "kind" | "platform" | "q" | "facet"
+  "type" | "platform" | "q" | "facet"
 >;
 
 export type AssetListParams = BrowseFilters &
@@ -302,7 +302,7 @@ export async function startAsset(
   app?: StartAssetApp,
 ): Promise<WorkDetail> {
   const { data, error } = await api<WorkDetail>("POST", "/v1/assets", {
-    body: app ? { kind, app } : { kind },
+    body: app ? { type: kind, app } : { type: kind },
   });
   if (error || !data || !("blocks" in data)) {
     throw new Error("Could not start the asset");
@@ -312,17 +312,17 @@ export async function startAsset(
 
 export async function saveNsfwVisibility(visibility: NsfwVisibility) {
   const { error } = await api<void>("PUT", "/v1/account/nsfw-visibility", {
-    body: { visibility },
+    body: { preference: visibility },
   });
   if (error) throw new Error("Could not save the content preference");
 }
 
 export async function saveAssetDiscovery(
   id: string,
-  discovery: WorkDetail["discovery"],
+  discovery: WorkDetail["visibility"],
 ) {
   const { error } = await api<void>("PUT", `/v1/assets/${id}/discovery`, {
-    body: { discovery },
+    body: { visibility: discovery },
   });
   if (error) throw new Error("Could not save the catalog listing");
 }

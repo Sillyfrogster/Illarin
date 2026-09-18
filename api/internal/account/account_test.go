@@ -410,7 +410,7 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 	)
 	unverified := apitest.SignUp(t, r, "uploader@example.com", "new.uploader")
 
-	if browse := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets", nil)); browse.Code != http.StatusOK {
+	if browse := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works", nil)); browse.Code != http.StatusOK {
 		t.Errorf("unverified browse status = %d, want 200", browse.Code)
 	}
 	withoutSession := apitest.Send(t, r, apitest.UploadRequest(t, apitest.ExampleMetadata("Anonymous"), []byte("file")))
@@ -439,7 +439,7 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 	var work struct {
 		Work *struct {
 			ID string `json:"id"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(created.Body.Bytes(), &work); err != nil {
 		t.Fatalf("decode work: %v", err)

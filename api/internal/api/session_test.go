@@ -68,10 +68,10 @@ func TestARequestWithoutASessionCookieIsNeverLookedUp(t *testing.T) {
 	}
 
 	recorder := serveWithSession(t, lookup, false, func(c *gin.Context) {
-		SignedIn(c, "watching an asset")
+		SignedIn(c, "following a work")
 	})
 
-	if recorder.Code != http.StatusUnauthorized || refusal(t, recorder) != "Sign in before watching an asset." {
+	if recorder.Code != http.StatusUnauthorized || refusal(t, recorder) != "Sign in before following a work." {
 		t.Fatalf("signed out = %d %s, want 401 naming the action", recorder.Code, recorder.Body.String())
 	}
 }

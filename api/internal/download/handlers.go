@@ -26,9 +26,10 @@ func NewHandlers(downloads *Service, accounts *account.Service) *Handlers {
 
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodGet, "/v1/assets/:id/updates/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
+	routes.Handle(http.MethodGet, "/v1/works/:id/updates/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
 	routes.Handle(http.MethodGet, "/download/:id", d.Download, h.DownloadSource)
 	routes.Handle(http.MethodGet, "/download/:id/:target", d.Download, h.DownloadExport)
+	registerAliases(routes, h)
 }
 
 func (h *Handlers) DownloadSource(c *gin.Context) {

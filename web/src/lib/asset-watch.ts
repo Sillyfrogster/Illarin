@@ -17,7 +17,7 @@ export type WatchWords = {
 export function watchWords(watch: WorkFollow, kind: string): WatchWords {
   const installedOn = names.format(watch.installedOn);
   switch (watch.state) {
-    case "watching":
+    case "following":
       return {
         watching: true,
         name: "Watching",

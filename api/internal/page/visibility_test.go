@@ -26,7 +26,7 @@ func TestUploadAcceptsVisibilityAndDefaultsToListed(t *testing.T) {
 			router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 			workID := apitest.UploadVisibilityTestWork(t, router, session, works, test.visibility)
 
-			page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
+			page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID)
 			if page.Visibility != test.want {
 				t.Fatalf("visibility = %q, want %q", page.Visibility, test.want)
 			}
@@ -42,15 +42,15 @@ func TestCreatorChangesWorkVisibility(t *testing.T) {
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
-		"/v1/assets/"+workID+"/discovery",
-		`{"discovery":"unlisted"}`,
+		"/v1/works/"+workID+"/visibility",
+		`{"visibility":"unlisted"}`,
 		session,
 	))
 	if changed.Code != http.StatusNoContent {
 		t.Fatalf("change visibility status = %d, want 204: %s", changed.Code, changed.Body.String())
 	}
 
-	page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
+	page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID)
 	if page.Visibility != "unlisted" {
 		t.Fatalf("visibility = %q, want unlisted", page.Visibility)
 	}
@@ -63,7 +63,7 @@ func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 
 	changed := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodPut,
-		"/v1/assets/"+workID+"/discovery",
+		"/v1/works/"+workID+"/visibility",
 		nil,
 	))
 	if changed.Code != http.StatusUnauthorized {
@@ -92,8 +92,8 @@ func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
-		"/v1/assets/"+workID+"/discovery",
-		`{"discovery":"unlisted"}`,
+		"/v1/works/"+workID+"/visibility",
+		`{"visibility":"unlisted"}`,
 		session,
 	))
 	if changed.Code != http.StatusConflict {

@@ -12,8 +12,8 @@ import (
 
 func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"theme","app":"`+app+`"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"theme","app":"`+app+`"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {
@@ -31,8 +31,8 @@ func TestAThemeAsksWhichAppsNamesItUsesAndSeedsThoseNames(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"theme"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"theme"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest ||

@@ -8,7 +8,7 @@ import (
 
 type AddWorkUpdateDestinationRequest struct {
 	Address *string                   `json:"address,omitempty"`
-	Type    WorkUpdateDestinationType `json:"kind"`
+	Type    WorkUpdateDestinationType `json:"type"`
 	Name    string                    `json:"name"`
 }
 
@@ -23,7 +23,7 @@ type WorkUpdateAnnouncement struct {
 	DueAt         time.Time                            `json:"dueAt"`
 	EventId       uuid.UUID                            `json:"eventId"`
 	Id            uuid.UUID                            `json:"id"`
-	Type          WorkUpdateDestinationType            `json:"kind"`
+	Type          WorkUpdateDestinationType            `json:"type"`
 	Last          *WorkUpdateAnnouncementAttempt       `json:"last,omitempty"`
 	MessageId     string                               `json:"messageId"`
 	OccurredAt    time.Time                            `json:"occurredAt"`
@@ -98,7 +98,7 @@ type WorkUpdateDestination struct {
 	DisabledAt          *time.Time                 `json:"disabledAt,omitempty"`
 	Host                string                     `json:"host"`
 	Id                  uuid.UUID                  `json:"id"`
-	Type                WorkUpdateDestinationType  `json:"kind"`
+	Type                WorkUpdateDestinationType  `json:"type"`
 	Name                string                     `json:"name"`
 	PreviousSecretUntil *time.Time                 `json:"previousSecretUntil,omitempty"`
 	SecretSetAt         *time.Time                 `json:"secretSetAt,omitempty"`
@@ -117,7 +117,7 @@ const (
 type WorkUpdateDestinationChoice struct {
 	ByDefault bool                      `json:"byDefault"`
 	Id        uuid.UUID                 `json:"id"`
-	Type      WorkUpdateDestinationType `json:"kind"`
+	Type      WorkUpdateDestinationType `json:"type"`
 	Name      string                    `json:"name"`
 }
 

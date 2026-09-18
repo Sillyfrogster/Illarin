@@ -43,7 +43,8 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/deliveries/collect", d.Deliver, h.CollectDeliveries)
 	routes.Handle(http.MethodDelete, "/v1/deliveries/:id", d.JSON, h.DiscardDelivery)
 	routes.Handle(http.MethodPost, "/v1/library/sync", d.JSON, h.SyncLibrary)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/instances", d.JSON, h.GetWorkInstances)
-	routes.Handle(http.MethodPost, "/v1/assets/:id/deliveries", d.JSON, h.SendWorkToInstance)
+	routes.Handle(http.MethodGet, "/v1/works/:id/instances", d.JSON, h.GetWorkInstances)
+	routes.Handle(http.MethodPost, "/v1/works/:id/deliveries", d.JSON, h.SendWorkToInstance)
 	routes.Handle(http.MethodGet, "/delivery/:id/export", d.Download, h.DownloadDeliveryExport)
+	registerAliases(routes, h)
 }

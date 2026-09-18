@@ -38,7 +38,7 @@ import { WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
-  discovery: WorkDetail["discovery"];
+  discovery: WorkDetail["visibility"];
   hasOriginal: boolean;
   images: WorkImage[];
   kind: string;

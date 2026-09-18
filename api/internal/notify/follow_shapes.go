@@ -11,5 +11,5 @@ const (
 	WorkFollowStateInstalled WorkFollowState = "installed"
 	WorkFollowStateNone      WorkFollowState = "none"
 	WorkFollowStateStopped   WorkFollowState = "stopped"
-	WorkFollowStateFollowing WorkFollowState = "watching"
+	WorkFollowStateFollowing WorkFollowState = "following"
 )

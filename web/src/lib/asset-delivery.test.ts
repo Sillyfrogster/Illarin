@@ -172,7 +172,7 @@ test("the send action says what sending would do this time", () => {
         delivery: {
           id: "d",
           instanceId: "i1",
-          assetId: "a",
+          workId: "a",
           state: "queued",
           queuedAt: "",
           settledAt: null,
@@ -189,7 +189,7 @@ test("a delivered delivery no longer blocks sending, and an extension is install
     delivery: {
       id: "d",
       instanceId: "i1",
-      assetId: "a",
+      workId: "a",
       state: "delivered",
       queuedAt: "",
       settledAt: "2026-09-13T10:01:00Z",

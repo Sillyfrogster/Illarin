@@ -27,7 +27,7 @@ export function DependencyList({
           <p className="font-mono text-meta text-ink [overflow-wrap:anywhere]">
             {link.name}
           </p>
-          {link.assets.map((found) => (
+          {link.works.map((found) => (
             <p className={ITEM_META} key={found.id}>
               <Link
                 className="font-ui text-ui font-medium text-ink underline decoration-accent/55 underline-offset-[3px] [overflow-wrap:anywhere] hover:decoration-accent"

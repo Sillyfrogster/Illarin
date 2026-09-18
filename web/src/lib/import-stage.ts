@@ -1,6 +1,6 @@
 import type { IngestOperation } from "./api/query";
 
-export type ImportedAsset = NonNullable<IngestOperation["asset"]>;
+export type ImportedAsset = NonNullable<IngestOperation["work"]>;
 
 export type ImportStage =
   | { at: "choosing" }
@@ -25,8 +25,8 @@ export function importStage(
     };
   }
 
-  if (operation.status === "success" && operation.asset) {
-    return { asset: operation.asset, at: "arrived" };
+  if (operation.status === "success" && operation.work) {
+    return { asset: operation.work, at: "arrived" };
   }
 
   if (message) return { at: "lost", message };

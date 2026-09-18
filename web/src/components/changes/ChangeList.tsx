@@ -5,13 +5,13 @@ import type { VersionChange, VersionChangeGroup } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { wordDiff } from "@/lib/text-diff";
 
-const MARKS: Record<VersionChange["kind"], string> = {
+const MARKS: Record<VersionChange["type"], string> = {
   addition: "Added",
   removal: "Removed",
   change: "Changed",
 };
 
-const MARK_TONES: Record<VersionChange["kind"], string> = {
+const MARK_TONES: Record<VersionChange["type"], string> = {
   addition: "text-accent",
   removal: "text-stop",
   change: "text-mute",
@@ -58,10 +58,10 @@ function ChangeRow({
         <span
           className={cn(
             "w-[4.75rem] shrink-0 text-meta font-medium",
-            MARK_TONES[change.kind],
+            MARK_TONES[change.type],
           )}
         >
-          {MARKS[change.kind]}
+          {MARKS[change.type]}
         </span>
         <span className="min-w-0 text-ui text-ink">
           {change.name || subject}

@@ -23,7 +23,7 @@ type GetMediaVariantParams struct {
 }
 
 type Media struct {
-	WorkId            uuid.UUID `json:"assetId"`
+	WorkId            uuid.UUID `json:"workId"`
 	DerivativeVersion int       `json:"derivativeVersion"`
 	Height            int       `json:"height"`
 	Id                uuid.UUID `json:"id"`

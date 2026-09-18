@@ -33,7 +33,8 @@ func NewHandlers(
 
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodGet, "/v1/assets/:id/media", d.JSON, h.ListMedia)
-	routes.Handle(http.MethodPost, "/v1/assets/:id/media", d.Upload, h.AddMedia)
+	routes.Handle(http.MethodGet, "/v1/works/:id/media", d.JSON, h.ListMedia)
+	routes.Handle(http.MethodPost, "/v1/works/:id/media", d.Upload, h.AddMedia)
 	routes.Handle(http.MethodGet, "/media/:media_id/:variant/:derivative_version", d.Download, h.GetMediaVariant)
+	registerAliases(routes, h)
 }

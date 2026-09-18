@@ -11,8 +11,8 @@ export async function generateMetadata({
   searchParams,
 }: PageProps<"/browse">): Promise<Metadata> {
   const filters = readBrowseFilters(await searchParams);
-  const subject = filters.kind
-    ? `${KIND_LABELS[filters.kind].toLowerCase()}s`
+  const subject = filters.type
+    ? `${KIND_LABELS[filters.type].toLowerCase()}s`
     : "characters, lorebooks, presets, themes and packs";
 
   if (filters.q) {

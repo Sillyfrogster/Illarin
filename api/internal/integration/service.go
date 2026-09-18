@@ -86,7 +86,7 @@ func (s *Service) Add(ctx context.Context, owner uuid.UUID, destinationType, nam
 		return Added{}, FieldError{"name", "Name the destination in 1 to 48 characters."}
 	}
 	if destinationType != Webhook && destinationType != Discord {
-		return Added{}, FieldError{"kind", "Choose a webhook or Discord destination."}
+		return Added{}, FieldError{"type", "Choose a webhook or Discord destination."}
 	}
 	prepared, err := s.prepareAddress(ctx, destinationType, address)
 	if err != nil {

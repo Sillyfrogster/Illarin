@@ -42,7 +42,7 @@ func TestEditingAnElementMovesTheCounterAndRearrangingThePageDoesNot(t *testing.
 		t.Fatalf("content generation = %d, want %d after a reorder and a width change", got, edited)
 	}
 
-	request := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity",
+	request := httptest.NewRequest(http.MethodPut, "/v1/works/"+started.ID+"/details",
 		strings.NewReader(`{"name":"","blurb":"","isNsfw":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	if answered := apitest.Send(t, r, apitest.Authorized(request, session)); answered.Code != http.StatusNoContent {

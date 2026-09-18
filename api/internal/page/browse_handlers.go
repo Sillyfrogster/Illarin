@@ -13,8 +13,9 @@ import (
 
 func (h *Handlers) ListWorks(c *gin.Context) {
 	q := api.ReadQuery(c)
+	aliasBrowseQuery(q)
 	params := ListWorksParams{
-		Type:     api.QueryText[ListWorksParamsType](q, "kind"),
+		Type:     api.QueryText[ListWorksParamsType](q, "type"),
 		Platform: api.QueryText[string](q, "platform"),
 		Creator:  api.QueryText[string](q, "creator"),
 		Q:        api.QueryText[string](q, "q"),

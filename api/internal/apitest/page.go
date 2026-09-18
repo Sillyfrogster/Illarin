@@ -12,12 +12,12 @@ import (
 
 type WorkPageResponse struct {
 	ID         string `json:"id"`
-	Type       string `json:"kind"`
+	Type       string `json:"type"`
 	Name       string `json:"name"`
 	Blurb      string `json:"blurb"`
 	Creator    string `json:"creator"`
 	IsNSFW     bool   `json:"isNsfw"`
-	Visibility string `json:"discovery"`
+	Visibility string `json:"visibility"`
 	CreatedAt  string `json:"createdAt"`
 	Tags       []struct {
 		Label string `json:"label"`
@@ -33,7 +33,7 @@ type WorkPageResponse struct {
 		Height    int    `json:"height"`
 	} `json:"media"`
 	Preview        *string `json:"preview"`
-	NSFWPreference string  `json:"visibility"`
+	NSFWPreference string  `json:"nsfwPreference"`
 	Withhold       *struct {
 		Reason string    `json:"reason"`
 		At     time.Time `json:"at"`

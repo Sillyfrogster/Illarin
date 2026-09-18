@@ -98,7 +98,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	settings, wide := vault[0], vault[1]
 
 	placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+workID+"/vault/"+settings.ID+"/place", nil), session))
+		http.MethodPost, "/v1/works/"+workID+"/vault/"+settings.ID+"/place", nil), session))
 	if placed.Code != http.StatusOK {
 		t.Fatalf("place the settings picture = %d: %s", placed.Code, placed.Body.String())
 	}
@@ -112,7 +112,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}
 
 	refused := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+workID+"/vault/"+wide.ID+"/place", nil), session))
+		http.MethodPost, "/v1/works/"+workID+"/vault/"+wide.ID+"/place", nil), session))
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("place a remote picture without a copy = %d: %s", refused.Code, refused.Body.String())
 	}
@@ -126,7 +126,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if err := json.Unmarshal(uploaded.Body.Bytes(), &copyMedia); err != nil {
 		t.Fatalf("decode the copy: %v", err)
 	}
-	withCopy := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/vault/"+wide.ID+"/place",
+	withCopy := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/vault/"+wide.ID+"/place",
 		strings.NewReader(fmt.Sprintf(`{"mediaId":%q}`, copyMedia.ID)))
 	withCopy.Header.Set("Content-Type", "application/json")
 	if placed := apitest.Send(t, r, apitest.Authorized(withCopy, session)); placed.Code != http.StatusOK {
@@ -150,11 +150,11 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		t.Fatalf("vault = %+v, want two pictures with no block, since their section held nothing else", shots)
 	}
 	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+second+"/vault/"+shots[0].ID+"/place", nil), session)); placed.Code != http.StatusOK {
+		http.MethodPost, "/v1/works/"+second+"/vault/"+shots[0].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place a picture with no block = %d: %s", placed.Code, placed.Body.String())
 	}
 	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+second+"/vault/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
+		http.MethodPost, "/v1/works/"+second+"/vault/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the second picture = %d: %s", placed.Code, placed.Body.String())
 	}
 	shotsPage := readSeededPage(t, r, session, second+"?workingCopy=true")
@@ -171,7 +171,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}))
 	waiting := readVault(t, r, session, third)[0]
 	discarded := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+third+"/vault/"+waiting.ID, nil), session))
+		http.MethodDelete, "/v1/works/"+third+"/vault/"+waiting.ID, nil), session))
 	if discarded.Code != http.StatusNoContent {
 		t.Fatalf("discard = %d: %s", discarded.Code, discarded.Body.String())
 	}
@@ -198,7 +198,7 @@ type vaultPicture struct {
 
 func readVault(t *testing.T, r http.Handler, session *http.Cookie, workID string) []vaultPicture {
 	t.Helper()
-	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/vault", nil), session))
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/vault", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the vault = %d: %s", response.Code, response.Body.String())
 	}
@@ -265,7 +265,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 
 func readSeededPage(t *testing.T, r http.Handler, session *http.Cookie, address string) seededPage {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+address, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+address, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}

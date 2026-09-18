@@ -135,7 +135,7 @@ export function DeliveryRows({
             return (
               <Row
                 aside={
-                  canReplay(one) && one.kind !== "discord" ? (
+                  canReplay(one) && one.type !== "discord" ? (
                     <RowAction
                       busy={working === one.id}
                       onClick={() => void again(one)}
@@ -163,7 +163,7 @@ export function DeliveryRows({
                 standing={deliveryStanding(one)}
                 title={one.postTitle}
               >
-                {one.kind === "discord" && one.settledAt && !one.removed ? (
+                {one.type === "discord" && one.settledAt && !one.removed ? (
                   <DiscordRepairControls delivery={one} />
                 ) : null}
                 {one.attempts > 0 ? (

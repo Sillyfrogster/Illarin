@@ -29,7 +29,7 @@ type CollectDeliveries struct {
 
 type DeliveryArtifact struct {
 	IsCover *bool                `json:"isCover,omitempty"`
-	Type    DeliveryArtifactType `json:"kind"`
+	Type    DeliveryArtifactType `json:"type"`
 	MediaId *uuid.UUID           `json:"mediaId,omitempty"`
 	Role    *string              `json:"role,omitempty"`
 	Url     string               `json:"url"`
@@ -44,11 +44,11 @@ const (
 
 type DeliveryWork struct {
 	Artifacts         []DeliveryArtifact `json:"artifacts"`
-	WorkId            uuid.UUID          `json:"assetId"`
+	WorkId            uuid.UUID          `json:"workId"`
 	ContentGeneration int                `json:"contentGeneration"`
 	Format            string             `json:"format"`
 	Id                uuid.UUID          `json:"id"`
-	Type              string             `json:"kind"`
+	Type              string             `json:"type"`
 	Label             string             `json:"label"`
 	LeaseExpiresAt    time.Time          `json:"leaseExpiresAt"`
 	Name              string             `json:"name"`
@@ -61,7 +61,7 @@ type DeliveryWorkList struct {
 }
 
 type LibraryEntry struct {
-	WorkId            uuid.UUID `json:"assetId"`
+	WorkId            uuid.UUID `json:"workId"`
 	ContentGeneration *int      `json:"contentGeneration,omitempty"`
 }
 
@@ -80,7 +80,7 @@ type LibraryReportResult struct {
 }
 
 type QueuedDelivery struct {
-	WorkId         uuid.UUID             `json:"assetId"`
+	WorkId         uuid.UUID             `json:"workId"`
 	ExpiresAt      time.Time             `json:"expiresAt"`
 	Id             uuid.UUID             `json:"id"`
 	InstanceId     uuid.UUID             `json:"instanceId"`
@@ -114,7 +114,7 @@ type SendWorkRequest struct {
 }
 
 type WithheldNotice struct {
-	WorkId     uuid.UUID `json:"assetId"`
+	WorkId     uuid.UUID `json:"workId"`
 	Name       string    `json:"name"`
 	WithheldAt time.Time `json:"withheldAt"`
 }

@@ -34,7 +34,7 @@ func readUpdateHistory(
 	session *http.Cookie,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/updates", nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/updates", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -97,7 +97,7 @@ func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	unlisted := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-		"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, session))
+		"/v1/works/"+started.ID+"/visibility", `{"visibility":"unlisted"}`, session))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist status = %d, want 204: %s", unlisted.Code, unlisted.Body.String())
 	}
@@ -133,7 +133,7 @@ func readLatestUpdate(t *testing.T, r http.Handler, workID string) struct {
 	Summary string `json:"summary"`
 } {
 	t.Helper()
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the work page = %d: %s", response.Code, response.Body.String())
 	}

@@ -22,10 +22,10 @@ import (
 
 func ExampleMetadata(name string) map[string]any {
 	return map[string]any{
-		"filename":  name + ".bin",
-		"name":      name,
-		"confirmed": true,
-		"discovery": "listed",
+		"filename":   name + ".bin",
+		"name":       name,
+		"confirmed":  true,
+		"visibility": "listed",
 	}
 }
 
@@ -41,7 +41,7 @@ func UploadRequest(t *testing.T, metadata map[string]any, file []byte) *http.Req
 		t.Fatalf("close form: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/assets", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/works", body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	return req
 }
@@ -98,12 +98,12 @@ func UploadAndFinish(
 			Status string `json:"status"`
 			Work   *struct {
 				ID string `json:"id"`
-			} `json:"asset"`
+			} `json:"work"`
 		}
 		if json.Unmarshal(finished.Body.Bytes(), &operation) == nil &&
 			operation.Status == "success" && operation.Work != nil {
 			_ = Send(t, r, Authorized(httptest.NewRequest(
-				http.MethodPost, "/v1/assets/"+operation.Work.ID+"/publish", nil,
+				http.MethodPost, "/v1/works/"+operation.Work.ID+"/publish", nil,
 			), session))
 		}
 	}
@@ -134,7 +134,7 @@ func MediaUploadRequest(t *testing.T, workID, role string, file []byte) *http.Re
 	if err := form.Close(); err != nil {
 		t.Fatalf("close media form: %v", err)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/media", &body)
+	request := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/media", &body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
 	return request
 }
@@ -144,13 +144,13 @@ func WorkIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string 
 	var operation struct {
 		Work *struct {
 			ID string `json:"id"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode ingest response: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatal("ingest response has no asset")
+		t.Fatalf("ingest response has no work: %s", response.Body.String())
 	}
 	return operation.Work.ID
 }
@@ -166,9 +166,9 @@ func UploadVisibilityTestWork(
 	metadata := ExampleMetadata("A quiet draft")
 	metadata["filename"] = "quiet-draft.lumitheme"
 	if visibility == "" {
-		delete(metadata, "discovery")
+		delete(metadata, "visibility")
 	} else {
-		metadata["discovery"] = visibility
+		metadata["visibility"] = visibility
 	}
 	return WorkIDFromIngest(
 		t, UploadAndFinish(t, router, session, works, metadata, []byte("theme")),
@@ -210,7 +210,7 @@ func RevisionRequest(t *testing.T, workID, filename string, file []byte) *http.R
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/revisions", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/revisions", body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	return req
 }
@@ -263,7 +263,7 @@ func PollIngestWork(t *testing.T, r *gin.Engine, session *http.Cookie, location 
 		Work   *struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode operation: %v", err)

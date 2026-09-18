@@ -23,13 +23,13 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	}
 	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+created.ID+"/publish", nil), session))
+		http.MethodPost, "/v1/works/"+created.ID+"/publish", nil), session))
 	if published.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", published.Code, published.Body.String())
 	}
 
 	quiet := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
 	if quiet.Code != http.StatusOK || strings.TrimSpace(quiet.Body.String()) != "null" {
 		t.Fatalf("a work with no replacement = %d %s, want 200 null",
 			quiet.Code, quiet.Body.String())
@@ -45,7 +45,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	}
 
 	found := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
 	if found.Code != http.StatusOK {
 		t.Fatalf("read the waiting replacement = %d, want 200: %s", found.Code, found.Body.String())
 	}
@@ -68,12 +68,12 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	}
 
 	cancelled := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+created.ID+"/revisions/"+operation.ID, nil), session))
+		http.MethodDelete, "/v1/works/"+created.ID+"/revisions/"+operation.ID, nil), session))
 	if cancelled.Code != http.StatusNoContent {
 		t.Fatalf("cancel the replacement = %d, want 204: %s", cancelled.Code, cancelled.Body.String())
 	}
 	after := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
 	if strings.TrimSpace(after.Body.String()) != "null" {
 		t.Fatalf("a cancelled replacement still answers %s, want null", after.Body.String())
 	}

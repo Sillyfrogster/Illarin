@@ -137,7 +137,7 @@ export function UpdateAnnouncementChoice({
               <legend className="sr-only">Destinations for this update</legend>
               {offered.map((one) => {
                 const on = chosen.includes(one.id);
-                const Kind = one.kind === "discord" ? Hash : Webhook;
+                const Kind = one.type === "discord" ? Hash : Webhook;
                 return (
                   <label
                     className={cn(

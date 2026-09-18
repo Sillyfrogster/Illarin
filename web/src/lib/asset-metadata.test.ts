@@ -8,7 +8,7 @@ const ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
 function asset(over: Partial<WorkDetail> = {}): WorkDetail {
   return {
     id: ID,
-    kind: "character",
+    type: "character",
     name: "Christine Novak",
     blurb: "She closes the book on a ribbon.",
     tags: [],
@@ -16,7 +16,7 @@ function asset(over: Partial<WorkDetail> = {}): WorkDetail {
     extensionDependencies: [],
     installedAppVersions: [],
     isNsfw: false,
-    discovery: "listed",
+    visibility: "listed",
     lifecycle: "published",
     isOwner: false,
     linkedInstallOnly: false,
@@ -29,7 +29,7 @@ function asset(over: Partial<WorkDetail> = {}): WorkDetail {
     blocks: [],
     media: [],
     preview: "/media/aaaa/og/1",
-    visibility: "blurred",
+    nsfwPreference: "blurred",
     ...over,
   };
 }
@@ -82,7 +82,7 @@ test("stands in a description when the creator wrote no blurb", () => {
 });
 
 test("asks not to be indexed while unlisted, and still invites following", () => {
-  expect(assetMetadata(asset({ discovery: "unlisted" })).robots).toEqual({
+  expect(assetMetadata(asset({ visibility: "unlisted" })).robots).toEqual({
     index: false,
   });
   expect(assetMetadata(asset()).robots).toBeUndefined();
@@ -92,7 +92,7 @@ test("does not copy protected prompt text into page or social metadata", () => {
   const privateText = "metadata-disclosure-canary-1c7ed05b";
   const metadata = assetMetadata(
     asset({
-      kind: "preset",
+      type: "preset",
       linkedInstallOnly: true,
       allowedApps: ["lumiverse"],
       blocks: [

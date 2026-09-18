@@ -91,7 +91,7 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 	galleryID := insertEmptyGallery(t, pool, started.ID)
 
 	request := httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+started.ID+"/blocks/"+galleryID, nil,
+		http.MethodDelete, "/v1/works/"+started.ID+"/blocks/"+galleryID, nil,
 	)
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusNoContent {
@@ -104,7 +104,7 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 
 	core := apitest.BlockNamed(t, saved.Blocks, "character_core")
 	request = httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+started.ID+"/blocks/"+core.ID, nil,
+		http.MethodDelete, "/v1/works/"+started.ID+"/blocks/"+core.ID, nil,
 	)
 	response = apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "required") {
@@ -150,7 +150,7 @@ func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
 
 	request := httptest.NewRequest(
 		http.MethodPost,
-		"/v1/assets/"+started.ID+"/blocks/"+galleryID+"/move-and-remove",
+		"/v1/works/"+started.ID+"/blocks/"+galleryID+"/move-and-remove",
 		strings.NewReader(`{"destinationBlockId":"`+messagesBlock.ID+`"}`),
 	)
 	request.Header.Set("Content-Type", "application/json")

@@ -16,7 +16,7 @@ import (
 )
 
 type DeliveryArtifact struct {
-	Type    string  `json:"kind"`
+	Type    string  `json:"type"`
 	URL     string  `json:"url"`
 	MediaID *string `json:"mediaId"`
 	Role    *string `json:"role"`
@@ -25,9 +25,9 @@ type DeliveryArtifact struct {
 
 type DeliveryWork struct {
 	ID                string             `json:"id"`
-	WorkID            string             `json:"assetId"`
+	WorkID            string             `json:"workId"`
 	ContentGeneration int                `json:"contentGeneration"`
-	Type              string             `json:"kind"`
+	Type              string             `json:"type"`
 	Name              string             `json:"name"`
 	Format            string             `json:"format"`
 	Label             string             `json:"label"`
@@ -44,7 +44,7 @@ type DeliveryWorkList struct {
 type QueuedDelivery struct {
 	ID             string     `json:"id"`
 	InstanceID     string     `json:"instanceId"`
-	WorkID         string     `json:"assetId"`
+	WorkID         string     `json:"workId"`
 	State          string     `json:"state"`
 	Reason         *string    `json:"reason"`
 	QueuedAt       time.Time  `json:"queuedAt"`
@@ -144,7 +144,7 @@ func SendToInstance(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return Send(t, r, BrowserRequest(
-		t, http.MethodPost, "/v1/assets/"+workID+"/deliveries",
+		t, http.MethodPost, "/v1/works/"+workID+"/deliveries",
 		map[string]string{"instanceId": instanceID}, session,
 	))
 }
@@ -166,7 +166,7 @@ func WorkInstances(
 ) WorkInstanceList {
 	t.Helper()
 	rec := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/instances", nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/instances", nil), session))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("asset instances status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}

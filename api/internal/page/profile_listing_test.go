@@ -31,7 +31,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	apitest.CreateProfileWork(t, works, secondID, "Second garden", false, work.VisibilityListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets?creator=verified.creator", nil,
+		http.MethodGet, "/v1/works?creator=verified.creator", nil,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("profile listing status = %d, want 200: %s", response.Code, response.Body.String())
@@ -58,19 +58,19 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 	apitest.CreateProfileWork(t, works, creatorID, "Midnight garden", true, work.VisibilityListed)
 
 	shown := readProfileListing(
-		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
+		t, router, "/v1/works?creator=verified.creator&nsfw=shown", nil,
 	)
 	if !slices.Equal(names(shown), []string{"Midnight garden", "Open garden"}) {
 		t.Fatalf("shown reader preference returned %v, want both profile works", names(shown))
 	}
 	hidden := readProfileListing(
-		t, router, "/v1/assets?creator=verified.creator&nsfw=hidden", nil,
+		t, router, "/v1/works?creator=verified.creator&nsfw=hidden", nil,
 	)
 	if !slices.Equal(names(hidden), []string{"Open garden"}) || hidden.Suppressed != 1 {
 		t.Fatalf("hidden reader preference = %+v", hidden)
 	}
 	blurred := readProfileListing(
-		t, router, "/v1/assets?creator=verified.creator&nsfw=blurred", nil,
+		t, router, "/v1/works?creator=verified.creator&nsfw=blurred", nil,
 	)
 	if !slices.Equal(names(blurred), []string{"Midnight garden", "Open garden"}) {
 		t.Fatalf("blurred reader preference returned %v, want both profile works", names(blurred))
@@ -107,20 +107,20 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	}
 
 	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/account/nsfw-visibility", `{"visibility":"hidden"}`, session,
+		t, http.MethodPut, "/v1/account/nsfw-preference", `{"preference":"hidden"}`, session,
 	))
 	if saved.Code != http.StatusNoContent {
 		t.Fatalf("save hidden preference status = %d: %s", saved.Code, saved.Body.String())
 	}
 
 	stranger := readProfileListing(
-		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
+		t, router, "/v1/works?creator=verified.creator&nsfw=shown", nil,
 	)
 	if !slices.Equal(names(stranger), []string{"Adult garden", "Public garden"}) {
 		t.Fatalf("stranger profile returned %v, want only the listed works", names(stranger))
 	}
 
-	owner := readProfileListing(t, router, "/v1/assets?creator=verified.creator", session)
+	owner := readProfileListing(t, router, "/v1/works?creator=verified.creator", session)
 	if owner.Total != 4 || owner.Suppressed != 0 {
 		t.Fatalf("owner profile counts = total %d, suppressed %d; want 4, 0",
 			owner.Total, owner.Suppressed)
@@ -144,7 +144,7 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		t.Fatalf("soft-deleted work appeared in the active owner listing")
 	}
 
-	browse := readProfileListing(t, router, "/v1/assets", session)
+	browse := readProfileListing(t, router, "/v1/works", session)
 	if !slices.Equal(names(browse), []string{"Public garden"}) || browse.Suppressed != 1 {
 		t.Fatalf("ordinary browse changed for the owner: %+v", browse)
 	}

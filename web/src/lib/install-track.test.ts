@@ -21,7 +21,7 @@ function delivery(overrides: Partial<QueuedDelivery> = {}): QueuedDelivery {
   return {
     id: "d1",
     instanceId: "i1",
-    assetId: "a1",
+    workId: "a1",
     state: "queued",
     queuedAt: "2026-09-13T10:00:00Z",
     settledAt: null,

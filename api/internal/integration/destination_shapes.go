@@ -31,7 +31,7 @@ type PostDelivery struct {
 	EventId       uuid.UUID                  `json:"eventId"`
 	EventType     string                     `json:"eventType"`
 	Id            uuid.UUID                  `json:"id"`
-	Type          PostDeliveryType           `json:"kind"`
+	Type          PostDeliveryType           `json:"type"`
 	Last          *PostDeliveryAttempt       `json:"last,omitempty"`
 	MessageId     string                     `json:"messageId"`
 	OccurredAt    time.Time                  `json:"occurredAt"`
@@ -126,7 +126,7 @@ type PublicationDestination struct {
 	Events              []PublicationEvent          `json:"events"`
 	Host                string                      `json:"host"`
 	Id                  uuid.UUID                   `json:"id"`
-	Type                PublicationDestinationType  `json:"kind"`
+	Type                PublicationDestinationType  `json:"type"`
 	Name                string                      `json:"name"`
 	PreviousSecretUntil *time.Time                  `json:"previousSecretUntil,omitempty"`
 	SecretSetAt         time.Time                   `json:"secretSetAt"`

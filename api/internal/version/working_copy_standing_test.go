@@ -21,7 +21,7 @@ func readWorkingCopyStanding(
 ) workingCopyStanding {
 	t.Helper()
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID+"?workingCopy=true", nil), session))
+		http.MethodGet, "/v1/works/"+workID+"?workingCopy=true", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the working copy = %d: %s", response.Code, response.Body.String())
 	}

@@ -27,17 +27,17 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 	))
 
 	deleted := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID, nil), session,
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID, nil), session,
 	))
 	if deleted.Code != http.StatusNoContent {
 		t.Fatalf("delete status = %d, want 204: %s", deleted.Code, deleted.Body.String())
 	}
 
-	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	if page.Code != http.StatusNotFound {
 		t.Fatalf("deleted work page status = %d, want 404: %s", page.Code, page.Body.String())
 	}
-	browse := readProfileListing(t, router, "/v1/assets?creator=verified.creator", session)
+	browse := readProfileListing(t, router, "/v1/works?creator=verified.creator", session)
 	if len(browse.Items) != 0 {
 		t.Fatalf("active owner listing after delete = %+v, want empty", browse.Items)
 	}
@@ -52,7 +52,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 		Items []struct {
 			ID               string    `json:"id"`
 			Name             string    `json:"name"`
-			Type             string    `json:"kind"`
+			Type             string    `json:"type"`
 			DeletedAt        time.Time `json:"deletedAt"`
 			RecoverableUntil time.Time `json:"recoverableUntil"`
 		} `json:"items"`
@@ -69,12 +69,12 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 	}
 
 	restored := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/restore", nil), session,
+		httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/restore", nil), session,
 	))
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
-	if got := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID); got.ID != workID {
+	if got := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); got.ID != workID {
 		t.Fatalf("restored work id = %q, want %q", got.ID, workID)
 	}
 	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
@@ -102,7 +102,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	deleteWork := func() {
 		t.Helper()
 		response := apitest.Send(t, router, apitest.Authorized(
-			httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session,
+			httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session,
 		))
 		if response.Code != http.StatusNoContent {
 			t.Fatalf("delete status = %d, want 204: %s", response.Code, response.Body.String())
@@ -114,7 +114,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	}
 
 	restored := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session,
+		httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/restore", nil), session,
 	))
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", restored.Code, restored.Body.String())
@@ -192,7 +192,7 @@ func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
 		withFilename(apitest.ExampleMetadata("Private recovery"), "private-recovery"), []byte("source"),
 	))
 	response := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID, nil), session,
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID, nil), session,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("delete status = %d: %s", response.Code, response.Body.String())

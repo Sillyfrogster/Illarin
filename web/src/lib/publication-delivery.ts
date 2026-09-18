@@ -46,5 +46,5 @@ export function offeredFor(
   announced: boolean,
 ): boolean {
   if (!destination.events.includes(event)) return false;
-  return destination.kind !== "discord" || !announced;
+  return destination.type !== "discord" || !announced;
 }

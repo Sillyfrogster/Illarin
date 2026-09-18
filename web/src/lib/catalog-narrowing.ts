@@ -18,7 +18,7 @@ const KIND_PLURALS: Record<BrowseKind, string> = {
 
 function settled(filters: BrowseFilters): BrowseFilters {
   const settled: BrowseFilters = {};
-  if (filters.kind) settled.kind = filters.kind;
+  if (filters.type) settled.type = filters.type;
   if (filters.platform) settled.platform = filters.platform;
   if (filters.q) settled.q = filters.q;
   if (filters.facet?.length) settled.facet = filters.facet;
@@ -40,12 +40,12 @@ export function narrowingsInForce(
 ): Narrowing[] {
   const narrowings: Narrowing[] = [];
 
-  if (filters.kind) {
+  if (filters.type) {
     narrowings.push({
-      id: `kind:${filters.kind}`,
+      id: `kind:${filters.type}`,
       group: "Kind",
-      label: KIND_PLURALS[filters.kind],
-      without: settled({ ...filters, kind: undefined, facet: undefined }),
+      label: KIND_PLURALS[filters.type],
+      without: settled({ ...filters, type: undefined, facet: undefined }),
     });
   }
 

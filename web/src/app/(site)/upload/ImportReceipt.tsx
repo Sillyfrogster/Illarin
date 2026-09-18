@@ -25,8 +25,8 @@ export function ImportReceipt({
   onBeginAgain: () => void;
 }) {
   const [preserved, setPreserved] = useState<PreservedNamespace[] | null>(null);
-  const kind = asset.kind as BrowseKind;
-  const label = (KIND_LABELS[kind] ?? asset.kind).toLowerCase();
+  const kind = asset.type as BrowseKind;
+  const label = (KIND_LABELS[kind] ?? asset.type).toLowerCase();
 
   useEffect(() => {
     let active = true;

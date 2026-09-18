@@ -575,7 +575,7 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	for name, values := range map[string][3]string{
 		"blank target":          {" ", "anonymous", "listed"},
 		"unknown authorization": {"raw", "crawler", "listed"},
-		"unknown discovery":     {"raw", "anonymous", "private"},
+		"unknown visibility":    {"raw", "anonymous", "private"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, `

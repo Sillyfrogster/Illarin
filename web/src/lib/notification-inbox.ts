@@ -20,34 +20,34 @@ export type NotificationWords = {
 
 /** Says what an entry is about. A staff decision always reads as Illarin staff and never as the person who made it. */
 export function notificationWords(entry: Notification): NotificationWords {
-  const assetName = entry.asset?.name ?? "One of your assets";
-  const assetPage = entry.asset
-    ? assetHref(entry.asset.id, entry.asset.name)
+  const assetName = entry.work?.name ?? "One of your assets";
+  const assetPage = entry.work
+    ? assetHref(entry.work.id, entry.work.name)
     : null;
   switch (entry.type) {
-    case "asset_withheld":
+    case "work_withheld":
       return {
         lead: "Illarin staff withheld",
         subject: assetName,
         detail: entry.reason ?? "",
         href: assetPage,
       };
-    case "asset_restored":
+    case "work_restored":
       return {
         lead: "Illarin staff restored",
         subject: assetName,
         detail: "Readers can reach it again.",
         href: assetPage,
       };
-    case "asset_updated":
+    case "work_updated":
       return {
         lead: updateLead(entry),
         subject: assetName,
         detail: updateDetail(entry),
-        href: entry.asset
+        href: entry.work
           ? assetHistoryHref(
-              entry.asset.id,
-              entry.asset.name,
+              entry.work.id,
+              entry.work.name,
               entry.update?.number,
             )
           : null,

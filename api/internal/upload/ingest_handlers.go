@@ -259,7 +259,7 @@ func toAPIIngest(operation Operation) gin.H {
 		"id":     operation.ID,
 		"status": operation.Status,
 		"url":    "/v1/ingests/" + operation.ID.String(),
-		"asset":  ingestWork(operation.Work),
+		"work":   ingestWork(operation.Work),
 	}
 	if operation.Failure != nil {
 		response["failure"] = gin.H{
@@ -276,7 +276,7 @@ func toAPIIngest(operation Operation) gin.H {
 			"seals":           operation.Preview.Seals,
 		}
 	}
-	return response
+	return aliasIngestKeys(response)
 }
 
 func nonNilStrings(values []string) []string {

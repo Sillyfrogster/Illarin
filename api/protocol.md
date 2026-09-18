@@ -1,13 +1,21 @@
 # Illarin platform integration guide
 
 This guide is for developers adding Illarin support to an application or a new
-asset platform. If the API behaves differently from this guide, report the
+platform. If the API behaves differently from this guide, report the
 mismatch. All API paths below are relative to the exact Illarin base URL and include the
 public `/api` prefix.
 
 The current protocol links an application installation, rotates its credentials,
-records what it can accept, lets its owner send assets to it, mirrors what it has
+records what it can accept, lets its owner send works to it, mirrors what it has
 installed, and lets its owner revoke it.
+
+## Names that changed
+
+Illarin says work where it said asset, type where it said kind, and follow where
+it said watch. For now the old names still answer beside the new ones: every
+`/api/v1/assets` path still works at its `/api/v1/works` address, a send carries
+`assetId` and `kind` next to `workId` and `type`, and a library report may name
+a work by `assetId`. The date the old names stop answering will be given here.
 
 ## What one installation must keep
 
@@ -113,13 +121,13 @@ unknown server feature available, or cause Illarin to run application code.
 which Illarin exports your application can read. The `example_*` values in
 this guide are placeholders, not registered targets. Declare only IDs backed by
 readers your application actually ships. Illarin exposes the formats currently
-offered for an asset in that asset's `downloads[].format` values; there is no
+offered for a work in that work's `downloads[].format` values; there is no
 global target catalog in this protocol version. The list can grow, and an unknown
 ID grants nothing or selects no server-side writer.
 
 The only scopes are:
 
-- `asset:receive`: collect assets the owner sends to this installation.
+- `asset:receive`: collect works the owner sends to this installation.
 - `library:sync`: report this installation's local library state.
 
 Ask only for scopes the installation will use. A declaration update cannot add
@@ -340,7 +348,7 @@ Send the complete replacement, not a patch. Names and granted scopes cannot be
 changed here. If an upgrade changes either, keep the existing authorization or
 ask the owner to revoke and link again; never silently widen access.
 
-## Add support for a new platform or asset format
+## Add support for a new platform or format
 
 The linked-instance protocol has no platform switch statement. A platform may
 use its own application name, installation name, namespaced capabilities, and
@@ -357,13 +365,13 @@ There are two different extension jobs:
 An Illarin format-module contribution should:
 
 - Choose a stable lowercase module ID that can also be an export target.
-- Declare its kind, read/write directions, recognition rules, role support,
+- Declare its type, read/write directions, recognition rules, role support,
   content limits, preservation namespace, and tested source formats.
 - Implement the writer used for delivery and, when uploads use the format, a
   reader with fail-closed recognition.
 - Preserve unknown data under the module's namespace instead of silently
   deleting it.
-- Register through that kind's `Modules()` list; the server builds one registry
+- Register through that type's `Modules()` list; the server builds one registry
   from those lists.
 - Add declaration, recognition, round-trip, cross-origin, size-limit, and corpus
   tests. Do not derive fixtures from production data.
@@ -375,7 +383,7 @@ support without granting remote code or remote branding control.
 
 ## Collect deliveries
 
-An owner presses send on an asset page and Illarin queues the asset for one of
+An owner presses send on a work's page and Illarin queues the work for one of
 their installations. Illarin never calls out, so collection is a pull. It needs
 the `asset:receive` scope.
 
@@ -393,7 +401,7 @@ Send `"acknowledge": []` when there is nothing to confirm; the field is required
 
 This is a durable queue read, not authorization polling, and the two never share
 a request. Illarin checks the credential, the `asset:receive` scope and the
-asset's own visibility again at the moment work is released, so an asset
+work's own visibility again at the moment it is released, so a work
 withdrawn after it was queued never arrives.
 
 A `200` carries one entry per released delivery, and the
@@ -404,17 +412,17 @@ A `200` carries one entry per released delivery, and the
   "deliveries": [
     {
       "id": "…",
-      "assetId": "…",
+      "workId": "…",
       "contentGeneration": 4,
-      "kind": "character",
+      "type": "character",
       "name": "…",
       "format": "example_bundle_v2",
       "label": "Example bundle",
       "queuedAt": "2026-08-23T18:30:00Z",
       "leaseExpiresAt": "2026-08-23T18:45:00Z",
       "artifacts": [
-        {"kind": "export", "url": "https://…/delivery/…/export?expires=…&signature=…"},
-        {"kind": "picture", "url": "https://…/media/…", "mediaId": "…",
+        {"type": "export", "url": "https://…/delivery/…/export?expires=…&signature=…"},
+        {"type": "picture", "url": "https://…/media/…", "mediaId": "…",
          "role": "expression", "isCover": false}
       ]
     }
@@ -424,10 +432,10 @@ A `200` carries one entry per released delivery, and the
 ```
 
 `format` is the first target in your declared order that Illarin can write for
-that asset, or `raw` for the creator's own uploaded file when nothing else fits.
+that work, or `raw` for the creator's own uploaded file when nothing else fits.
 The addresses are short-lived and signed: fetch them with ordinary `GET`s, which
 makes a large file retryable rather than an all-or-nothing read. Every image the
-asset holds is listed, so a format that cannot carry one can still be installed
+work holds is listed, so a format that cannot carry one can still be installed
 with it; a format that embeds an image hands you those bytes twice.
 
 Rules for a conforming client:
@@ -440,11 +448,11 @@ Rules for a conforming client:
   answers `204`; two workers waiting for the same installation simply take turns.
 - After a failure, back off exponentially with jitter and honour `Retry-After`.
   `429` is a rate limit and `503` means Illarin is holding as many waits as it will.
-- Store `contentGeneration` against `assetId`. A larger one later means the file
+- Store `contentGeneration` against `workId`. A larger one later means the file
   changed.
 
 An acknowledged delivery stays on record as delivered for a week, so the owner
-sees on the asset page that it arrived.
+sees on the work's page that it arrived.
 
 ### Install extensions
 
@@ -453,7 +461,7 @@ of the app it is written for: `chat.lumiverse:extension-install` for a Spindle
 extension, `app.sillytavern:extension-install` for a SillyTavern one. Without it the
 page offers a download only, and a delivery queued before the capability was
 withdrawn stops as `unsupported`. The artifact is the developer's archive exactly
-as uploaded, with `kind` set to `extension`; accept the matching format id
+as uploaded, with `type` set to `extension`; accept the matching format id
 (`extension_spindle` or `extension_sillytavern`) so `format` names it rather
 than `raw`. The archive holds the manifest at its root or inside the one folder
 that wraps everything else, as a repository download does.
@@ -481,8 +489,8 @@ Content-Type: application/json
   "snapshot": false,
   "applicationVersion": "4.3.0",
   "entries": [
-    {"assetId": "…", "contentGeneration": 4},
-    {"assetId": "…", "contentGeneration": 1}
+    {"workId": "…", "contentGeneration": 4},
+    {"workId": "…", "contentGeneration": 1}
   ],
   "removed": ["…"]
 }
@@ -506,11 +514,11 @@ anything absent is removed, so a snapshot may not also carry `removed`. Leave it
 2000 removals per request, and at most 256 KiB of body.
 
 Leave `contentGeneration` out when an installation predates the counter. Illarin
-records the asset's current generation rather than calling the install out of
+records the work's current generation rather than calling the install out of
 date: an installation that cannot say which version it holds has not told us it
 is behind.
 
-Report immutable asset ids and never addresses, in both directions, so a creator
+Report immutable work ids and never addresses, in both directions, so a creator
 renaming something cannot break your state. Send incremental reports as things
 change and a full snapshot occasionally, so a missed update repairs itself.
 The response counts what was recorded:
@@ -519,7 +527,7 @@ The response counts what was recorded:
 {"accepted": 142, "removed": 3, "ignored": 1, "withheld": []}
 ```
 
-`ignored` counts entries naming an asset Illarin cannot offer, such as one that
+`ignored` counts entries naming a work Illarin cannot offer, such as one that
 has since been deleted.
 
 ### Withheld notices
@@ -530,7 +538,7 @@ first:
 
 ```json
 {"accepted": 0, "removed": 0, "ignored": 0,
- "withheld": [{"assetId": "…", "name": "Quiet Toolbox",
+ "withheld": [{"workId": "…", "name": "Quiet Toolbox",
                "withheldAt": "2026-09-14T06:00:00Z"}]}
 ```
 
@@ -541,7 +549,7 @@ only rides on a request the installation makes. A delivery of that extension
 still waiting to be collected stops as `withdrawn`.
 
 An extension withheld again after its withhold was cleared carries a new notice.
-Only an extension carries one, because every other kind is content an
+Only an extension carries one, because every other type is content an
 application reads rather than code it runs.
 
 ## Revocation and multiple instances
@@ -584,11 +592,11 @@ Before calling an integration complete, verify all of these:
   as ordinary retryable `GET`s, and deliveries are acknowledged only after they
   are durably installed.
 - Delivery ids are deduplicated, so the same delivery arriving twice installs once.
-- Library reports name immutable asset ids, stay inside every bound, carry the
+- Library reports name immutable work ids, stay inside every bound, carry the
   application's `applicationVersion`, and a snapshot carries no removals.
 - An installation that declares an `extension-install` capability passes every
   item of the [extension install checklist](#extension-install-checklist).
-- All tests use synthetic accounts, names, codes, and assets.
+- All tests use synthetic accounts, names, codes, and works.
 
 ### Extension install checklist
 
@@ -606,7 +614,7 @@ Installing:
 - The manifest is read from the top of the archive, or from inside the folder
   that holds every file.
 - The contents of the folder that holds the manifest are what gets installed.
-- Every extension installed from a delivery is recorded against its `assetId`.
+- Every extension installed from a delivery is recorded against its `workId`.
 - A first delivery installs disabled.
 - A first install asks the owner to approve every permission its manifest lists
   before it first runs.
@@ -615,7 +623,7 @@ Installing:
 - An update keeps the extension's stored data, whether the owner approves the
   added permissions or not.
 - A delivery that would replace an extension from another source, whether a
-  clone, a copy made by hand or a different Illarin asset, is refused and leaves
+  clone, a copy made by hand or a different Illarin work, is refused and leaves
   the installed extension untouched.
 - A refusal shows the owner both extensions and where each came from.
 - A delivery is acknowledged only once it is installed, and a refused delivery

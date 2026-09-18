@@ -42,7 +42,7 @@ func TestAListingPastItsDeadlineFailsRatherThanAnswers(t *testing.T) {
 func list(t *testing.T, r *gin.Engine) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/assets", nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/works", nil))
 	return rec
 }
 
@@ -84,7 +84,7 @@ func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
 	var created struct {
 		Work *struct {
 			ID string `json:"id"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode: %v", err)

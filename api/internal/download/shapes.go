@@ -14,7 +14,7 @@ type RecordedVersionDownloads struct {
 	AppTargets        []page.AppTarget             `json:"appTargets"`
 	Blocks            []block.WorkBlock            `json:"blocks"`
 	Downloads         []page.DownloadTarget        `json:"downloads"`
-	Type              RecordedVersionDownloadsType `json:"kind"`
+	Type              RecordedVersionDownloadsType `json:"type"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
 	Media             []page.WorkImage             `json:"media"`
 	Version           page.RecordedVersion         `json:"version"`

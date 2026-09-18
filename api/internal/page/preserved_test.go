@@ -28,7 +28,7 @@ func preservedNamespaces(
 } {
 	t.Helper()
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID+"/preserved", nil,
+		http.MethodGet, "/v1/works/"+workID+"/preserved", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read preserved data: status = %d: %s", response.Code, response.Body.String())
@@ -78,7 +78,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+workID+"/preserved/chub", nil,
+		http.MethodDelete, "/v1/works/"+workID+"/preserved/chub", nil,
 	), session))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("delete chub: status = %d: %s", response.Code, response.Body.String())
@@ -93,7 +93,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	}
 
 	again := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+workID+"/preserved/chub", nil,
+		http.MethodDelete, "/v1/works/"+workID+"/preserved/chub", nil,
 	), session))
 	if again.Code != http.StatusNotFound {
 		t.Errorf("deleting chub twice = %d, want 404", again.Code)
@@ -106,7 +106,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID, nil,
+		http.MethodGet, "/v1/works/"+workID, nil,
 	), session))
 	body := page.Body.String()
 	for _, namespace := range []string{"chub", "tavern_helper", "ana/quiet", "uid"} {
@@ -116,7 +116,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	}
 
 	stranger := apitest.Send(t, r, httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID+"/preserved", nil,
+		http.MethodGet, "/v1/works/"+workID+"/preserved", nil,
 	))
 	if stranger.Code != http.StatusUnauthorized {
 		t.Errorf("a signed-out reader asked what a work preserves and got %d", stranger.Code)
@@ -283,7 +283,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 	}
 
 	listed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets?mine=true", nil,
+		http.MethodGet, "/v1/works?mine=true", nil,
 	), session))
 	if strings.Contains(listed.Body.String(), "Heavy") {
 		t.Error("a refused file left a work behind")

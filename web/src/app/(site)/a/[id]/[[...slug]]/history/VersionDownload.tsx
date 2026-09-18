@@ -128,7 +128,7 @@ function VersionChoices({
       images={offered.media}
       instances={[]}
       isOwner={false}
-      kind={offered.kind}
+      kind={offered.type}
       kindLabel={kind}
       linkedInstallOnly={false}
       original={null}

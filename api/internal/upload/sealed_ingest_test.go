@@ -50,7 +50,7 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 		t.Fatalf("owner prompts = %+v", ownerPrompts)
 	}
 
-	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	if readerResponse.Code != http.StatusOK {
 		t.Fatalf("reader page = %d: %s", readerResponse.Code, readerResponse.Body.String())
 	}
@@ -144,7 +144,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 				t.Fatalf("process replacement: %t %v", processed, err)
 			}
 			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/ingests/")
-			path := "/v1/assets/" + workID + "/revisions/" + operationID + "/accept"
+			path := "/v1/works/" + workID + "/revisions/" + operationID + "/accept"
 			request := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
 			apitest.WithReviewedVersion(t, router, request)
 			refused := apitest.Send(t, router, request)
@@ -155,7 +155,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
 				t.Fatal("refused replacement changed the working copy or its protection")
 			}
-			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 			if reader.Code != http.StatusOK || strings.Contains(reader.Body.String(), "Exact private prompt.") {
 				t.Fatalf("reader after refusal: %d %s", reader.Code, reader.Body.String())
 			}
@@ -169,7 +169,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 				t.Fatal("confirmed replacement kept the old protection")
 			}
 			if sealedAfterPublication {
-				reader = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+				reader = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 				if !strings.Contains(reader.Body.String(), "Exact private prompt.") {
 					t.Fatal("confirmed removal did not restore access to previously public text")
 				}
@@ -236,7 +236,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 			), session))
 			var operation struct {
 				Status  string `json:"status"`
-				Work    any    `json:"asset"`
+				Work    any    `json:"work"`
 				Failure *struct {
 					Reason string `json:"reason"`
 				} `json:"failure"`
@@ -274,7 +274,7 @@ func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 	}`))
 	workID := apitest.WorkIDFromIngest(t, finished)
 
-	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
+	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	if readerResponse.Code != http.StatusOK {
 		t.Fatalf("reader page = %d: %s", readerResponse.Code, readerResponse.Body.String())
 	}

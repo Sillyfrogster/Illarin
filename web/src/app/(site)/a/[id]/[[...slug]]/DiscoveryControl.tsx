@@ -13,7 +13,7 @@ export function DiscoveryControl({
   frozen,
 }: {
   assetId: string;
-  initialDiscovery: WorkDetail["discovery"];
+  initialDiscovery: WorkDetail["visibility"];
   frozen: boolean;
 }) {
   const router = useRouter();

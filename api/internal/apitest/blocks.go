@@ -27,7 +27,7 @@ func AddBlock(
 		t.Fatalf("encode the block to add: %v", err)
 	}
 	request := httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+workID+"/blocks", strings.NewReader(string(body)),
+		http.MethodPost, "/v1/works/"+workID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
@@ -64,7 +64,7 @@ func ArrangeBlocks(
 		t.Fatalf("encode arrangement: %v", err)
 	}
 	request := httptest.NewRequest(
-		http.MethodPut, "/v1/assets/"+workID+"/blocks", strings.NewReader(string(body)),
+		http.MethodPut, "/v1/works/"+workID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
@@ -78,7 +78,7 @@ func FetchStartedWork(
 ) StartedWork {
 	t.Helper()
 	response := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"?workingCopy=true", nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"?workingCopy=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())

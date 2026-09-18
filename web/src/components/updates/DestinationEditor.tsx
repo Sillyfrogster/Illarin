@@ -41,8 +41,8 @@ export function DestinationEditor({
   onRemoved: (id: string) => void;
 }) {
   const [current, setCurrent] = useState(existing);
-  const [kind, setKind] = useState<WorkUpdateDestination["kind"]>(
-    existing?.kind ?? "discord",
+  const [kind, setKind] = useState<WorkUpdateDestination["type"]>(
+    existing?.type ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
@@ -80,7 +80,7 @@ export function DestinationEditor({
         })
       : await addUpdateDestination({
           name: name.trim(),
-          kind,
+          type: kind,
           address: address.trim(),
         });
     finish();
@@ -294,7 +294,7 @@ export function DestinationEditor({
                 Switch off
               </StepAction>
             ) : null}
-            {current.kind === "webhook" ? (
+            {current.type === "webhook" ? (
               <StepAction
                 busy={busy || destinationRotating(current)}
                 icon={KeyRound}
@@ -323,8 +323,8 @@ function KindChoice({
   kind,
   onChange,
 }: {
-  kind: WorkUpdateDestination["kind"];
-  onChange: (kind: WorkUpdateDestination["kind"]) => void;
+  kind: WorkUpdateDestination["type"];
+  onChange: (kind: WorkUpdateDestination["type"]) => void;
 }) {
   const [lit, setLit] = useState<string>(kind);
   return (

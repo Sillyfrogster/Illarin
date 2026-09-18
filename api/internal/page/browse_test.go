@@ -70,7 +70,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	}
 
 	response := apitest.Send(t, router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets?nsfw=blurred", nil,
+		http.MethodGet, "/v1/works?nsfw=blurred", nil,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("browse status = %d, want 200: %s", response.Code, response.Body.String())
@@ -89,8 +89,8 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 			body.Total, body.Suppressed, len(body.Items))
 	}
 	wantKeys := map[string]bool{
-		"id": true, "name": true, "creator": true, "kind": true,
-		"isNsfw": true, "cover": true,
+		"id": true, "name": true, "creator": true, "type": true,
+		"isNsfw": true, "cover": true, "kind": true,
 	}
 	for key := range body.Items[0] {
 		if !wantKeys[key] {
@@ -99,7 +99,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	}
 	if body.Items[0]["name"] != "Velvet Night" ||
 		body.Items[0]["creator"] != "verified.creator" ||
-		body.Items[0]["kind"] != "character" || body.Items[0]["isNsfw"] != true {
+		body.Items[0]["type"] != "character" || body.Items[0]["isNsfw"] != true {
 		t.Errorf("browse card = %#v", body.Items[0])
 	}
 	if cover, present := body.Items[0]["cover"]; !present || cover != nil {
@@ -155,7 +155,7 @@ func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.query, func(t *testing.T) {
 			response := apitest.Send(t, router, httptest.NewRequest(
-				http.MethodGet, "/v1/assets?q="+url.QueryEscape(tc.query), nil,
+				http.MethodGet, "/v1/works?q="+url.QueryEscape(tc.query), nil,
 			))
 			if response.Code != http.StatusOK {
 				t.Fatalf("browse status = %d, want 200: %s", response.Code, response.Body.String())
@@ -246,12 +246,12 @@ func TestFacetsAreTypeScopedAndFilterOnElementContent(t *testing.T) {
 	metadata["filename"] = "storm.json"
 	apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{"card":true}`))
 
-	mixed := readBrowse(t, router, "/v1/assets")
+	mixed := readBrowse(t, router, "/v1/works")
 	if len(mixed.Facets) != 0 {
 		t.Fatalf("the mixed catalog offered %+v, want no facets", mixed.Facets)
 	}
 
-	scoped := readBrowse(t, router, "/v1/assets?kind=character")
+	scoped := readBrowse(t, router, "/v1/works?kind=character")
 	keys := make([]string, 0, len(scoped.Facets))
 	for _, group := range scoped.Facets {
 		keys = append(keys, group.Key)
@@ -265,11 +265,11 @@ func TestFacetsAreTypeScopedAndFilterOnElementContent(t *testing.T) {
 		t.Errorf("lorebook counts = %+v, want one carrying and one not", lorebook.Options)
 	}
 
-	carried := readBrowse(t, router, "/v1/assets?kind=character&facet=lorebook%3Dtrue")
+	carried := readBrowse(t, router, "/v1/works?kind=character&facet=lorebook%3Dtrue")
 	if !slices.Equal(carried.Names, []string{"Aster"}) {
 		t.Fatalf("works with a lorebook = %v, want Aster", carried.Names)
 	}
-	none := readBrowse(t, router, "/v1/assets?kind=character&facet=lorebook%3Dfalse")
+	none := readBrowse(t, router, "/v1/works?kind=character&facet=lorebook%3Dfalse")
 	if !slices.Equal(none.Names, []string{"Storm"}) {
 		t.Fatalf("works with no lorebook = %v, want Storm", none.Names)
 	}
@@ -282,7 +282,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 	apitest.PublishCharacter(t, r, session, workID)
 
-	before := readBrowse(t, r, "/v1/assets?kind=character&facet=gallery%3Dtrue")
+	before := readBrowse(t, r, "/v1/works?kind=character&facet=gallery%3Dtrue")
 	if !slices.Equal(before.Names, []string{"Ana"}) {
 		t.Fatalf("a gallery answered %v, want Ana", before.Names)
 	}
@@ -315,7 +315,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	}
 	move := httptest.NewRequest(
 		http.MethodPost,
-		"/v1/assets/"+workID+"/blocks/"+gallery.ID+"/move-and-remove",
+		"/v1/works/"+workID+"/blocks/"+gallery.ID+"/move-and-remove",
 		strings.NewReader(`{"destinationBlockId":"`+messagesBlock.ID+`"}`),
 	)
 	move.Header.Set("Content-Type", "application/json")
@@ -323,7 +323,7 @@ func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 		t.Fatalf("move the gallery into Messages: %d %s", moved.Code, moved.Body.String())
 	}
 
-	after := readBrowse(t, r, "/v1/assets?kind=character&facet=gallery%3Dtrue")
+	after := readBrowse(t, r, "/v1/works?kind=character&facet=gallery%3Dtrue")
 	if !slices.Equal(after.Names, before.Names) {
 		t.Fatalf("arranging the page changed the filter result to %v, want %v", after.Names, before.Names)
 	}
@@ -348,7 +348,7 @@ func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 	}
 
 	for _, bucket := range []string{"1", "2-4", "5-up"} {
-		found := readBrowse(t, router, "/v1/assets?kind=character&facet=alternate_greetings%3D"+bucket)
+		found := readBrowse(t, router, "/v1/works?kind=character&facet=alternate_greetings%3D"+bucket)
 		if len(found.Names) != 0 {
 			t.Fatalf("a heading the creator invented answered bucket %q: %v", bucket, found.Names)
 		}
@@ -362,11 +362,11 @@ func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
 	apitest.AddedBlock(t, apitest.AddBlock(t, r, session, workID, "expressions", "image_set"))
 	apitest.PublishCharacter(t, r, session, workID)
 
-	carried := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
+	carried := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dtrue")
 	if len(carried.Names) != 0 {
 		t.Fatalf("an empty expression set answered as carried: %v", carried.Names)
 	}
-	none := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dfalse")
+	none := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dfalse")
 	if !slices.Equal(none.Names, []string{"Ana"}) {
 		t.Fatalf("an empty expression set answered %v, want the none bucket", none.Names)
 	}
@@ -388,7 +388,7 @@ func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T
 		"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Welcome back."}
 	}`))
 
-	all := readBrowse(t, router, "/v1/assets")
+	all := readBrowse(t, router, "/v1/works")
 	labels := make([]string, 0, len(all.Platforms))
 	for _, option := range all.Platforms {
 		labels = append(labels, option.Label)
@@ -402,11 +402,11 @@ func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T
 		}
 	}
 
-	named := readBrowse(t, router, "/v1/assets?platform=sillytavern")
+	named := readBrowse(t, router, "/v1/works?platform=sillytavern")
 	if !slices.Equal(named.Names, []string{"Ana"}) {
 		t.Fatalf("SillyTavern returned %v, want Ana", named.Names)
 	}
-	unknown := readBrowse(t, router, "/v1/assets?platform=notepad")
+	unknown := readBrowse(t, router, "/v1/works?platform=notepad")
 	if len(unknown.Names) != 0 {
 		t.Fatalf("an app Illarin does not name returned %v", unknown.Names)
 	}
@@ -430,7 +430,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	apitest.GiveExpressions(t, r, session, workID)
 	apitest.PublishCharacter(t, r, session, workID)
 
-	shown := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
+	shown := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dtrue")
 	if !slices.Equal(shown.Names, []string{"Ana"}) {
 		t.Fatalf("a shown expression set answered %v, want Ana", shown.Names)
 	}
@@ -460,11 +460,11 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 		t.Errorf("content generation = %d, want %d after a hide", after, generation)
 	}
 
-	carried := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dtrue")
+	carried := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dtrue")
 	if !slices.Equal(carried.Names, []string{"Ana"}) {
 		t.Fatalf("private arrangement changed the published facet: %v", carried.Names)
 	}
-	none := readBrowse(t, r, "/v1/assets?kind=character&facet=expressions%3Dfalse")
+	none := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dfalse")
 	if len(none.Names) != 0 {
 		t.Fatalf("a hidden expression set answered %v, want the none bucket", none.Names)
 	}
@@ -501,7 +501,7 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	}
 
 	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/account/nsfw-visibility", `{"visibility":"hidden"}`, session,
+		t, http.MethodPut, "/v1/account/nsfw-preference", `{"preference":"hidden"}`, session,
 	))
 	if saved.Code != http.StatusNoContent {
 		t.Fatalf("save visibility status = %d, want 204: %s", saved.Code, saved.Body.String())
@@ -515,7 +515,7 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 		} `json:"items"`
 		Total          int     `json:"total"`
 		Suppressed     int     `json:"suppressed"`
-		NSFWPreference string  `json:"visibility"`
+		NSFWPreference string  `json:"nsfwPreference"`
 		EmptyState     *string `json:"emptyState"`
 	}
 	read := func(request *http.Request) response {
@@ -532,13 +532,13 @@ func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	}
 
 	signedIn := read(apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets", nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/works", nil), session,
 	))
 	if signedIn.Total != 0 || signedIn.Suppressed != 1 || signedIn.NSFWPreference != "hidden" ||
 		signedIn.EmptyState == nil || *signedIn.EmptyState != "suppressed" {
 		t.Fatalf("signed-in browse = %#v, want the saved hidden preference", signedIn)
 	}
-	signedOut := read(httptest.NewRequest(http.MethodGet, "/v1/assets", nil))
+	signedOut := read(httptest.NewRequest(http.MethodGet, "/v1/works", nil))
 	if signedOut.Total != 1 || signedOut.NSFWPreference != "blurred" || len(signedOut.Items) != 1 ||
 		signedOut.Items[0].Cover == nil || !strings.Contains(signedOut.Items[0].Cover.URL, "/grid_blurred/") {
 		t.Fatalf("signed-out browse = %#v, want one blurred card", signedOut)

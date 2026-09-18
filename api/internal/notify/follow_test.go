@@ -20,10 +20,10 @@ func TestAReaderFollowesAnWorkAndStopsFollowingIt(t *testing.T) {
 		t.Fatalf("follow before following = %+v, want none", got)
 	}
 
-	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "watching" {
+	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "following" {
 		t.Fatalf("following answered %+v, want following", got)
 	}
-	if got := s.followState(t, s.reader); got == nil || got.State != "watching" {
+	if got := s.followState(t, s.reader); got == nil || got.State != "following" {
 		t.Fatalf("follow after following = %+v, want following", got)
 	}
 
@@ -34,7 +34,7 @@ func TestAReaderFollowesAnWorkAndStopsFollowingIt(t *testing.T) {
 		t.Fatalf("follow after stopping = %+v, want stopped", got)
 	}
 
-	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "watching" {
+	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "following" {
 		t.Fatalf("following again answered %+v, want following", got)
 	}
 }
@@ -49,7 +49,7 @@ func TestAnOwnerNeitherFollowesNorLearnsWhoFollowesTheirWork(t *testing.T) {
 			t.Errorf("%s a follow on your own work = %d, want 403: %s", method, got.Code, got.Body.String())
 		}
 	}
-	page := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+s.workID, nil), s.creator))
+	page := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+s.workID, nil), s.creator))
 	if page.Code != http.StatusOK {
 		t.Fatalf("owner's work page = %d, want 200: %s", page.Code, page.Body.String())
 	}
@@ -65,7 +65,7 @@ func TestASignedOutReaderHasNoFollow(t *testing.T) {
 		t.Fatalf("signed-out follow = %+v, want none returned", got)
 	}
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
-		response := apitest.Send(t, s.router, apitest.BrowserMutation(httptest.NewRequest(method, "/v1/assets/"+s.workID+"/watch", nil)))
+		response := apitest.Send(t, s.router, apitest.BrowserMutation(httptest.NewRequest(method, "/v1/works/"+s.workID+"/follow", nil)))
 		if response.Code != http.StatusUnauthorized {
 			t.Errorf("signed-out %s follow = %d, want 401", method, response.Code)
 		}
@@ -83,12 +83,12 @@ func TestADraftCannotBeFollowedButAnUnlistedWorkCan(t *testing.T) {
 	}
 
 	unlisted := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/assets/"+s.workID+"/discovery", `{"discovery":"unlisted"}`, s.creator,
+		t, http.MethodPut, "/v1/works/"+s.workID+"/visibility", `{"visibility":"unlisted"}`, s.creator,
 	))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist status = %d, want 204: %s", unlisted.Code, unlisted.Body.String())
 	}
-	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "watching" {
+	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "following" {
 		t.Fatalf("following an unlisted work answered %+v, want following", got)
 	}
 }
@@ -118,7 +118,7 @@ func TestAnInstallReportedByLibrarySyncCountsAsFollowingUntilTheReaderStops(t *t
 		t.Fatalf("follow after the next library sync = %+v, want it still stopped", got)
 	}
 
-	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "watching" {
+	if got := s.setFollow(t, s.reader, http.MethodPut); got.State != "following" {
 		t.Fatalf("following again answered %+v, want following", got)
 	}
 }
@@ -181,7 +181,7 @@ func newFollowStack(t *testing.T) followStack {
 
 func (s followStack) followState(t *testing.T, session *http.Cookie) *workFollow {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+s.workID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+s.workID, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -200,7 +200,7 @@ func (s followStack) followState(t *testing.T, session *http.Cookie) *workFollow
 
 func (s followStack) followAt(t *testing.T, session *http.Cookie, method, workID string) *httptest.ResponseRecorder {
 	t.Helper()
-	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/assets/"+workID+"/watch", nil), session))
+	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/works/"+workID+"/follow", nil), session))
 }
 
 func (s followStack) setFollow(t *testing.T, session *http.Cookie, method string) workFollow {

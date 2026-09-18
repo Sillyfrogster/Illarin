@@ -42,7 +42,7 @@ test("an asset the reader has not watched offers to watch it", () => {
 });
 
 test("a watched asset says the reader hears when it updates", () => {
-  expect(watchWords(watch({ state: "watching" }), "lorebook")).toEqual({
+  expect(watchWords(watch({ state: "following" }), "lorebook")).toEqual({
     watching: true,
     name: "Watching",
     detail: "You get a notification when this lorebook updates.",
@@ -99,7 +99,7 @@ test("a stopped watch says an install does not start it again", () => {
 test("the offer appears only to a reader who has not watched, stopped or said not now", () => {
   expect(offersWatch(watch(), false)).toBe(true);
   expect(offersWatch(watch(), true)).toBe(false);
-  expect(offersWatch(watch({ state: "watching" }), false)).toBe(false);
+  expect(offersWatch(watch({ state: "following" }), false)).toBe(false);
   expect(
     offersWatch(
       watch({ state: "installed", installedOn: ["Reading desk"] }),

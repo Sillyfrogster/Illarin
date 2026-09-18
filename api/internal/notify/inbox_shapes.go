@@ -7,7 +7,7 @@ import (
 )
 
 type Notification struct {
-	Work        *NotificationWork         `json:"asset,omitempty"`
+	Work        *NotificationWork         `json:"work,omitempty"`
 	CreatedAt   time.Time                 `json:"createdAt"`
 	Id          uuid.UUID                 `json:"id"`
 	ReadAt      *time.Time                `json:"readAt,omitempty"`
@@ -42,9 +42,9 @@ type NotificationSendTarget struct {
 type NotificationType string
 
 const (
-	NotificationTypeWorkRestored      NotificationType = "asset_restored"
-	NotificationTypeWorkUpdated       NotificationType = "asset_updated"
-	NotificationTypeWorkWithheld      NotificationType = "asset_withheld"
+	NotificationTypeWorkRestored      NotificationType = "work_restored"
+	NotificationTypeWorkUpdated       NotificationType = "work_updated"
+	NotificationTypeWorkWithheld      NotificationType = "work_withheld"
 	NotificationTypeProfileRestored   NotificationType = "profile_restored"
 	NotificationTypeProfileRestricted NotificationType = "profile_restricted"
 )

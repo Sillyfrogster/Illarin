@@ -32,8 +32,8 @@ type SealedContent struct {
 }
 
 type sealedExport struct {
-	WorkID   uuid.UUID         `json:"asset_id"`
-	WorkName string            `json:"asset_name"`
+	WorkID   uuid.UUID         `json:"work_id"`
+	WorkName string            `json:"work_name"`
 	Source   string            `json:"source"`
 	Blocks   []json.RawMessage `json:"blocks"`
 }

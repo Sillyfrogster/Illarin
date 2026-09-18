@@ -96,19 +96,19 @@ func TestADraftResolvesForItsOwnerAndReturnsTheUniform404ForEveryoneElse(t *test
 	started := apitest.StartCharacter(t, r, session)
 
 	owner := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil), session))
 	if owner.Code != http.StatusOK {
 		t.Fatalf("the owner got %d for their own draft", owner.Code)
 	}
 
-	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("a signed-out reader got %d for a draft, want 404", stranger.Code)
 	}
 
 	other := apitest.SignUp(t, setup, "other@example.com", "other.creator")
 	signedIn := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), other))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil), other))
 	if signedIn.Code != http.StatusNotFound {
 		t.Errorf("another account got %d for someone else's draft, want 404", signedIn.Code)
 	}
@@ -120,9 +120,9 @@ func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
 	started := apitest.StartCharacter(t, r, session)
 
 	for _, path := range []string{
-		"/v1/assets",
-		"/v1/assets?kind=character",
-		"/v1/assets?q=character",
+		"/v1/works",
+		"/v1/works?kind=character",
+		"/v1/works?q=character",
 	} {
 		listing := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, path, nil), session))
 		if listing.Code != http.StatusOK {
@@ -138,8 +138,8 @@ func TestATypeIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	for _, body := range []string{`{"kind":"nonsense"}`, `{"kind":""}`, `{}`} {
-		request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
+	for _, body := range []string{`{"type":"nonsense"}`, `{"type":""}`, `{}`} {
+		request := httptest.NewRequest(http.MethodPost, "/v1/works", strings.NewReader(body))
 		request.Header.Set("Content-Type", "application/json")
 		response := apitest.Send(t, r, apitest.Authorized(request, session))
 		if response.Code != http.StatusBadRequest {
@@ -152,8 +152,8 @@ func TestStartingAnWorkNeedsAVerifiedAccount(t *testing.T) {
 	t.Parallel()
 	r := harness.NewRouter(t)
 
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"character"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"character"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, request)
 

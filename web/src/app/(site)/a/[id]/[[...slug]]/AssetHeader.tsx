@@ -75,7 +75,7 @@ export function AssetHeader({
     holdsNothing,
     images: asset.media,
     isOwner: asset.isOwner,
-    kind: asset.kind,
+    kind: asset.type,
     kindLabel: kind.toLowerCase(),
     linkedInstallOnly: asset.linkedInstallOnly,
     original: asset.original,
@@ -86,7 +86,7 @@ export function AssetHeader({
   return (
     <AssetWatchProvider
       assetId={asset.id}
-      initial={asset.watch}
+      initial={asset.follow}
       kind={kind.toLowerCase()}
     >
       <div className={shellClassName}>
@@ -229,11 +229,11 @@ export function AssetHeader({
                 key={
                   asset.media.find((image) => image.isCover)?.id ?? "coverless"
                 }
-                kind={asset.kind}
+                kind={asset.type}
                 kindLabel={kind.toLowerCase()}
                 media={asset.media}
                 name={asset.name}
-                visibility={asset.visibility}
+                visibility={asset.nsfwPreference}
                 writing={asset.isOwner && writing}
               />
             </div>

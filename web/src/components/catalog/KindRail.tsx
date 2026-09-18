@@ -27,7 +27,7 @@ export function KindRail({
   filters: BrowseFilters;
   navigate: (next: BrowseFilters) => void;
 }) {
-  const chosen = filters.kind ?? "all";
+  const chosen = filters.type ?? "all";
   const [lit, setLit] = useState(chosen);
 
   return (
@@ -47,13 +47,13 @@ export function KindRail({
               )}
               data-cell={one.key}
               href={buildBrowseHref(
-                { ...filters, kind: one.kind, facet: undefined },
+                { ...filters, type: one.kind, facet: undefined },
                 basePath,
               )}
               key={one.key}
               onClick={(event) => {
                 event.preventDefault();
-                navigate({ ...filters, kind: one.kind, facet: undefined });
+                navigate({ ...filters, type: one.kind, facet: undefined });
               }}
             >
               {one.kind ? (

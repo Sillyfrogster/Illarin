@@ -40,7 +40,7 @@ type protectionMismatchBody struct {
 func compareVersions(t *testing.T, router *gin.Engine, workID, query string, session *http.Cookie) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet,
-		"/v1/assets/"+workID+"/updates/comparison"+query, nil)
+		"/v1/works/"+workID+"/updates/comparison"+query, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -69,7 +69,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
-	history := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil))
+	history := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"/updates", nil))
 	if history.Code != http.StatusOK {
 		t.Fatalf("read the history: %d %s", history.Code, history.Body.String())
 	}
@@ -122,7 +122,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 
 	other := apitest.SignUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
 	crossOwner := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/updates/protection", nil), other))
+		http.MethodGet, "/v1/works/"+started.ID+"/updates/protection", nil), other))
 	if crossOwner.Code != http.StatusNotFound {
 		t.Fatalf("another account read the sealed prompts: %d %s", crossOwner.Code, crossOwner.Body.String())
 	}
@@ -179,7 +179,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatalf("reimport the prompts under new ids: %d %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if page.Code != http.StatusOK {
 		t.Fatalf("public page: %d %s", page.Code, page.Body.String())
 	}
@@ -202,7 +202,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	}
 
 	mismatches := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/updates/protection", nil), session))
+		http.MethodGet, "/v1/works/"+started.ID+"/updates/protection", nil), session))
 	if mismatches.Code != http.StatusOK {
 		t.Fatalf("read the mismatches: %d %s", mismatches.Code, mismatches.Body.String())
 	}
@@ -230,7 +230,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatalf("settle version 2: %d %s", settled.Code, settled.Body.String())
 	}
 
-	page = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	page = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if !strings.Contains(page.Body.String(), houseRule) {
 		t.Fatal("the settled version still hid its ordinary prompt")
 	}
@@ -248,7 +248,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal the settled prompt: %d %s", got.Code, got.Body.String())
 	}
-	page = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	page = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if !strings.Contains(page.Body.String(), secret) {
 		t.Fatal("the settled version stayed sealed after the owner made its prompt public")
 	}
@@ -264,7 +264,7 @@ func resolveCorrespondence(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPut,
-		"/v1/assets/"+workID+"/updates/"+strconv.Itoa(number)+"/protection", strings.NewReader(body))
+		"/v1/works/"+workID+"/updates/"+strconv.Itoa(number)+"/protection", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return apitest.Send(t, router, apitest.Authorized(request, session))
 }
@@ -282,7 +282,7 @@ func TestMediaRecordedInAnOlderVersionStaysPublic(t *testing.T) {
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
-	recorded := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	recorded := apitest.FetchWorkPage(t, router, "/v1/works/"+started.ID).Media[0]
 	if got := apitest.Send(t, router, apitest.Authorized(
 		apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session,
 	)); got.Code != http.StatusCreated {
@@ -292,7 +292,7 @@ func TestMediaRecordedInAnOlderVersionStaysPublic(t *testing.T) {
 		`{"summary":"Replaced the cover"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
-	current := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	current := apitest.FetchWorkPage(t, router, "/v1/works/"+started.ID).Media[0]
 	if current.ID == recorded.ID {
 		t.Fatal("the update did not replace the cover")
 	}

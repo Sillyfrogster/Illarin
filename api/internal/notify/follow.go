@@ -14,7 +14,7 @@ type FollowState string
 
 const (
 	NotFollowing       FollowState = "none"
-	Following          FollowState = "watching"
+	Following          FollowState = "following"
 	FollowingInstalled FollowState = "installed"
 	StoppedFollowing   FollowState = "stopped"
 )

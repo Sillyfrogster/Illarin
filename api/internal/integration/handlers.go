@@ -20,9 +20,9 @@ func NewHandlers(publications *blog.Service, destinations *Service, access BlogA
 }
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodGet, "/v1/assets/:id/update-destinations", d.JSON, h.ListWorkUpdateDestinationChoices)
-	routes.Handle(http.MethodPut, "/v1/assets/:id/update-destinations", d.JSON, h.SetWorkUpdateDestinationDefaults)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/announcements", d.JSON, h.ListWorkUpdateAnnouncements)
+	routes.Handle(http.MethodGet, "/v1/works/:id/update-destinations", d.JSON, h.ListWorkUpdateDestinationChoices)
+	routes.Handle(http.MethodPut, "/v1/works/:id/update-destinations", d.JSON, h.SetWorkUpdateDestinationDefaults)
+	routes.Handle(http.MethodGet, "/v1/works/:id/announcements", d.JSON, h.ListWorkUpdateAnnouncements)
 	routes.Handle(http.MethodGet, "/v1/account/update-destinations", d.JSON, h.ListWorkUpdateDestinations)
 	routes.Handle(http.MethodPost, "/v1/account/update-destinations", d.Verify, h.AddWorkUpdateDestination)
 	routes.Handle(http.MethodDelete, "/v1/account/update-destinations/:id", d.JSON, h.RemoveWorkUpdateDestination)
@@ -47,4 +47,5 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/publication/grants/:id/destinations", d.JSON, h.SetPublicationGrantDestinations)
 	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/destinations", d.JSON, h.ListPostDestinations)
 	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/deliveries", d.JSON, h.ListPostDeliveries)
+	registerAliases(routes, h)
 }

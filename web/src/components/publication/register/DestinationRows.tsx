@@ -138,7 +138,7 @@ export function DestinationRows({
                 standing={destinationStanding(one)}
                 title={one.name}
                 trailing={
-                  one.kind === "discord" ? <Mark>Discord</Mark> : undefined
+                  one.type === "discord" ? <Mark>Discord</Mark> : undefined
                 }
               />
             );
@@ -165,7 +165,7 @@ export function DestinationStep({
   onSaved: (saved: PublicationDestination) => void;
 }) {
   const [kind, setKind] = useState<PublicationDestinationType>(
-    existing?.kind ?? "discord",
+    existing?.type ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");

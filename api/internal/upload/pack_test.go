@@ -14,8 +14,8 @@ import (
 
 func startPack(t *testing.T, r http.Handler, session *http.Cookie) apitest.StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"pack"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"pack"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {

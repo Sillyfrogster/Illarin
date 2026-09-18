@@ -20,7 +20,7 @@ type workAnnouncement struct {
 	UpdateID      string           `json:"updateId"`
 	UpdateNumber  int              `json:"updateNumber"`
 	Destination   string           `json:"destination"`
-	Type          string           `json:"kind"`
+	Type          string           `json:"type"`
 	Removed       bool             `json:"removed"`
 	State         string           `json:"state"`
 	SettledReason string           `json:"settledReason"`
@@ -43,10 +43,10 @@ type workUpdateEvent struct {
 	OccurredAt time.Time `json:"occurredAt"`
 	Work       struct {
 		ID   string `json:"id"`
-		Type string `json:"kind"`
+		Type string `json:"type"`
 		Name string `json:"name"`
 		URL  string `json:"url"`
-	} `json:"asset"`
+	} `json:"work"`
 	Update struct {
 		ID             string `json:"id"`
 		Number         int    `json:"number"`
@@ -102,7 +102,7 @@ func (s destinationStack) announced(t *testing.T, session *http.Cookie, workID, 
 func (s destinationStack) announcements(t *testing.T, session *http.Cookie, workID string) []workAnnouncement {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID+"/announcements", nil,
+		http.MethodGet, "/v1/works/"+workID+"/announcements", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read announcements = %d: %s", response.Code, response.Body.String())
@@ -168,7 +168,7 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 	if err := json.Unmarshal(arrivals[0].Body, &event); err != nil {
 		t.Fatalf("decode the event: %v", err)
 	}
-	if event.Type != "asset.update.published.v1" || event.Work.ID != started.ID ||
+	if event.Type != "work.update.published.v1" || event.Work.ID != started.ID ||
 		event.Work.Type != "character" || event.Work.Name != "Ilse of the west shelf" ||
 		event.Update.Number != 2 || event.Update.VersionLabel != "v2" ||
 		!event.Update.ContentChanged || event.OccurredAt.IsZero() ||
@@ -255,7 +255,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	started := apitest.StartCharacter(t, stack.router, stack.editor)
 	apitest.WriteCharacterFloor(t, stack.router, stack.editor, started)
 	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut,
-		"/v1/assets/"+started.ID+"/update-destinations",
+		"/v1/works/"+started.ID+"/update-destinations",
 		fmt.Sprintf(`{"destinationIds":[%q]}`, hook.Destination.ID))
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
@@ -265,7 +265,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	}
 	stack.describe(t, stack.editor, started, "A private save changes nothing public.")
 	correction := apitest.AuthorizedJSONRequest(t, http.MethodPatch,
-		"/v1/assets/"+started.ID+"/updates/1/notes",
+		"/v1/works/"+started.ID+"/updates/1/notes",
 		`{"summary":"Corrected summary","notes":"Corrected context."}`, stack.editor)
 	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
@@ -295,7 +295,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	}
 
 	correction = apitest.AuthorizedJSONRequest(t, http.MethodPatch,
-		"/v1/assets/"+started.ID+"/updates/2/notes",
+		"/v1/works/"+started.ID+"/updates/2/notes",
 		`{"summary":"Corrected again","notes":""}`, stack.editor)
 	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
@@ -316,7 +316,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing
 	stack.announced(t, stack.editor, started.ID,
 		fmt.Sprintf(`{"summary":"First change","destinationIds":[%q]}`, hook.Destination.ID))
 	choices := stack.updateDestinationRequest(t, stack.editor, http.MethodGet,
-		"/v1/assets/"+started.ID+"/update-destinations", "")
+		"/v1/works/"+started.ID+"/update-destinations", "")
 	var offered struct {
 		Destinations []destinationChoice `json:"destinations"`
 	}
@@ -334,7 +334,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing
 		t.Fatalf("an empty selection queued something: %+v", listed)
 	}
 	choices = stack.updateDestinationRequest(t, stack.editor, http.MethodGet,
-		"/v1/assets/"+started.ID+"/update-destinations", "")
+		"/v1/works/"+started.ID+"/update-destinations", "")
 	if err := json.Unmarshal(choices.Body.Bytes(), &offered); err != nil {
 		t.Fatal(err)
 	}
@@ -349,13 +349,13 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
 	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut,
-		"/v1/assets/"+started.ID+"/update-destinations",
+		"/v1/works/"+started.ID+"/update-destinations",
 		fmt.Sprintf(`{"destinationIds":[%q]}`, hook.Destination.ID))
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
 	unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-		"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, stack.editor))
+		"/v1/works/"+started.ID+"/visibility", `{"visibility":"unlisted"}`, stack.editor))
 	if unlisted.Code != http.StatusNoContent {
 		t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
 	}
@@ -373,7 +373,7 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 		t.Fatalf("selecting a destination for an unlisted work = %d: %s", refused.Code, refused.Body.String())
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
 	if strings.Contains(history.Body.String(), "Needs consent") {
 		t.Fatal("a refused announcement left the update published")
 	}
@@ -414,7 +414,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
 	if strings.Contains(history.Body.String(), `"number":2`) {
 		t.Fatal("a refused announcement left the update published")
 	}
@@ -471,7 +471,7 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
 	if !strings.Contains(history.Body.String(), "Retried") {
 		t.Error("delivery failure undid the publication")
 	}
@@ -486,21 +486,21 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 	}{
 		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			withheld := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-				"/v1/assets/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
+				"/v1/works/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
 			if withheld.Code != http.StatusNoContent {
 				t.Fatalf("withhold = %d: %s", withheld.Code, withheld.Body.String())
 			}
 		}},
 		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-				"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, stack.editor))
+				"/v1/works/"+started.ID+"/visibility", `{"visibility":"unlisted"}`, stack.editor))
 			if unlisted.Code != http.StatusNoContent {
 				t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
 			}
 		}},
 		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			deleted := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-				http.MethodDelete, "/v1/assets/"+started.ID, nil), stack.editor))
+				http.MethodDelete, "/v1/works/"+started.ID, nil), stack.editor))
 			if deleted.Code != http.StatusNoContent {
 				t.Fatalf("delete = %d: %s", deleted.Code, deleted.Body.String())
 			}
@@ -509,7 +509,7 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 			stack.describe(t, stack.editor, started, "A replacement so the old one can go.")
 			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","destinationIds":[]}`)
 			withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-				"/v1/assets/"+started.ID+"/updates/2/withdraw",
+				"/v1/works/"+started.ID+"/updates/2/withdraw",
 				`{"explanation":"This version gave incorrect guidance."}`, stack.editor)
 			if got := apitest.Send(t, stack.router, withdraw); got.Code != http.StatusNoContent {
 				t.Fatalf("withdraw = %d: %s", got.Code, got.Body.String())
@@ -599,7 +599,7 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 	stack.sendAnnouncementsAt(t, time.Now())
 
 	for _, session := range []*http.Cookie{stack.authority, nil} {
-		request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID+"/announcements", nil)
+		request := httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"/announcements", nil)
 		if session != nil {
 			request = apitest.Authorized(request, session)
 		}
@@ -609,7 +609,7 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 		}
 	}
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+started.ID+"/announcements", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/announcements", nil), stack.editor))
 	body := response.Body.String()
 	if strings.Contains(body, hook.Secret) || strings.Contains(body, stack.to.address()) {
 		t.Error("announcement status carries credentials or the endpoint address")

@@ -260,7 +260,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 	workID := apitest.WorkIDFromIngest(t, finished)
 
 	pageResponse := apitest.Send(t, r, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session,
 	))
 	if pageResponse.Code != http.StatusOK {
 		t.Fatalf("page status = %d, want 200: %s", pageResponse.Code, pageResponse.Body.String())
@@ -349,7 +349,7 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 			metadata["_keepDraft"] = true
 			workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, test.file))
 			response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-				http.MethodGet, "/v1/assets/"+workID, nil,
+				http.MethodGet, "/v1/works/"+workID, nil,
 			), session))
 			var page apitest.StartedWork
 			if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &page) != nil {
@@ -533,7 +533,7 @@ func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
 	))
 	var operation struct {
 		Status  string `json:"status"`
-		Work    any    `json:"asset"`
+		Work    any    `json:"work"`
 		Failure *struct {
 			Reason  string `json:"reason"`
 			Message string `json:"message"`
@@ -575,7 +575,7 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnWork(t *testing.T) {
 		Failure *struct {
 			Reason string `json:"reason"`
 		} `json:"failure"`
-		Work any `json:"asset"`
+		Work any `json:"work"`
 	}
 	if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode failed operation: %v", err)
@@ -587,7 +587,7 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnWork(t *testing.T) {
 	if operation.Work != nil {
 		t.Fatalf("failed ingest returned work %#v", operation.Work)
 	}
-	if listed := apitest.ListItems(t, r, "/v1/assets"); len(listed) != 0 {
+	if listed := apitest.ListItems(t, r, "/v1/works"); len(listed) != 0 {
 		t.Fatalf("browse found %d works after a failed parse, want none", len(listed))
 	}
 }
@@ -954,7 +954,7 @@ func TestDetailsSeedFromParseWithoutChangingTheFile(t *testing.T) {
 			Blurb  string   `json:"blurb"`
 			Tags   []string `json:"tags"`
 			IsNSFW bool     `json:"isNsfw"`
-		} `json:"asset"`
+		} `json:"work"`
 	}
 	if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode operation: %v", err)
@@ -970,7 +970,7 @@ func TestDetailsSeedFromParseWithoutChangingTheFile(t *testing.T) {
 		t.Fatalf("parse work id: %v", err)
 	}
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+operation.Work.ID+"/publish", nil,
+		http.MethodPost, "/v1/works/"+operation.Work.ID+"/publish", nil,
 	), session))
 	if published.Code != http.StatusOK {
 		t.Fatalf("publish imported work = %d: %s", published.Code, published.Body.String())
@@ -1101,7 +1101,7 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	}
 	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+created.ID+"/publish", nil,
+		http.MethodPost, "/v1/works/"+created.ID+"/publish", nil,
 	), session))
 	if published.Code != http.StatusOK {
 		t.Fatalf("publish initial import = %d: %s", published.Code, published.Body.String())

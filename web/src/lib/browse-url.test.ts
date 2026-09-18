@@ -5,7 +5,7 @@ describe("browse URL state", () => {
   test("round-trips the complete search expression through one q parameter", () => {
     const expression = '  moon tag:"original character" mood:gentle  ';
     const href = buildBrowseHref({
-      kind: "character",
+      type: "character",
       platform: "raw",
       q: expression,
       facet: ["tone=gentle"],
@@ -14,7 +14,7 @@ describe("browse URL state", () => {
 
     expect(url.searchParams.getAll("q")).toEqual([expression]);
     expect(readBrowseFilters(Object.fromEntries(url.searchParams))).toEqual({
-      kind: "character",
+      type: "character",
       platform: "raw",
       q: expression,
       facet: ["tone=gentle"],
@@ -23,12 +23,12 @@ describe("browse URL state", () => {
 
   test("keeps creator profile filters on the creator profile", () => {
     expect(
-      buildBrowseHref({ kind: "lorebook", q: "moonlit" }, "/@verified.creator"),
+      buildBrowseHref({ type: "lorebook", q: "moonlit" }, "/@verified.creator"),
     ).toBe("/@verified.creator?kind=lorebook&q=moonlit");
   });
 
   test("keeps Pack as a catalog kind", () => {
-    expect(readBrowseFilters({ kind: "pack" }).kind).toBe("pack");
-    expect(buildBrowseHref({ kind: "pack" })).toBe("/browse?kind=pack");
+    expect(readBrowseFilters({ kind: "pack" }).type).toBe("pack");
+    expect(buildBrowseHref({ type: "pack" })).toBe("/browse?kind=pack");
   });
 });

@@ -16,7 +16,7 @@ import (
 
 type StartedWork struct {
 	ID        string `json:"id"`
-	Type      string `json:"kind"`
+	Type      string `json:"type"`
 	Name      string `json:"name"`
 	Blurb     string `json:"blurb"`
 	Lifecycle string `json:"lifecycle"`
@@ -115,8 +115,8 @@ type OriginalUpload struct {
 
 func StartCharacter(t *testing.T, r http.Handler, session *http.Cookie) StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"character"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"character"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := Send(t, r, Authorized(request, session))
 	if response.Code != http.StatusCreated {
@@ -191,7 +191,7 @@ func SaveBlock(
 	}
 	request := httptest.NewRequest(
 		http.MethodPut,
-		"/v1/assets/"+workID+"/blocks/"+blockID,
+		"/v1/works/"+workID+"/blocks/"+blockID,
 		strings.NewReader(string(encoded)),
 	)
 	request.Header.Set("Content-Type", "application/json")
@@ -215,7 +215,7 @@ func SaveIdentity(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPut,
-		"/v1/assets/"+workID+"/identity", strings.NewReader(body))
+		"/v1/works/"+workID+"/details", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
@@ -248,7 +248,7 @@ func PublishWork(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/publish", nil), session))
+		httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/publish", nil), session))
 }
 
 func PublishedCharacter(t *testing.T, r *gin.Engine, session *http.Cookie) string {
@@ -264,15 +264,15 @@ func PublishedCharacter(t *testing.T, r *gin.Engine, session *http.Cookie) strin
 func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 	t.Helper()
 	parts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
-	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "assets" || req.Header.Get("X-Working-Copy-Version") != "" {
+	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "works" || req.Header.Get("X-Working-Copy-Version") != "" {
 		return
 	}
 	switch parts[3] {
-	case "identity", "blocks", "publish", "updates", "preserved", "media", "revisions", "vault":
+	case "details", "blocks", "publish", "updates", "preserved", "media", "revisions", "vault":
 	default:
 		return
 	}
-	read := httptest.NewRequest(http.MethodGet, "/v1/assets/"+parts[2]+"?workingCopy=true", nil)
+	read := httptest.NewRequest(http.MethodGet, "/v1/works/"+parts[2]+"?workingCopy=true", nil)
 	read.Header.Set("Cookie", req.Header.Get("Cookie"))
 	response := httptest.NewRecorder()
 	r.ServeHTTP(response, read)
@@ -307,8 +307,8 @@ func ContentGeneration(t *testing.T, pool *pgxpool.Pool, workID string) int {
 
 func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"preset","app":"`+app+`"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"preset","app":"`+app+`"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := Send(t, r, Authorized(request, session))
 	if response.Code != http.StatusCreated {
@@ -347,14 +347,14 @@ func PublishWorkUpdate(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost,
-		"/v1/assets/"+workID+"/updates", strings.NewReader(body))
+		"/v1/works/"+workID+"/updates", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
 
 func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, workID string) []DownloadTarget {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}

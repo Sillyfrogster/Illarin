@@ -13,16 +13,16 @@ import (
 type Type string
 
 const (
-	WorkWithheld      Type = "asset_withheld"
-	WorkRestored      Type = "asset_restored"
-	WorkUpdated       Type = "asset_updated"
+	WorkWithheld      Type = "work_withheld"
+	WorkRestored      Type = "work_restored"
+	WorkUpdated       Type = "work_updated"
 	ProfileRestricted Type = "profile_restricted"
 	ProfileRestored   Type = "profile_restored"
 )
 
 // Words is what a notification shows, kept as it read when the change happened.
 type Words struct {
-	WorkName     string `json:"assetName,omitempty"`
+	WorkName     string `json:"workName,omitempty"`
 	Reason       string `json:"reason,omitempty"`
 	UpdateNumber int    `json:"updateNumber,omitempty"`
 	VersionLabel string `json:"versionLabel,omitempty"`

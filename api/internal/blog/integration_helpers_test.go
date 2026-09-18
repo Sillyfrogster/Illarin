@@ -5,7 +5,7 @@ import "time"
 type destinationChoice struct {
 	ID        string   `json:"id"`
 	Name      string   `json:"name"`
-	Type      string   `json:"kind"`
+	Type      string   `json:"type"`
 	State     string   `json:"state"`
 	Events    []string `json:"events"`
 	Role      string   `json:"role"`

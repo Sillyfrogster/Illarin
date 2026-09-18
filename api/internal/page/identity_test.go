@@ -18,11 +18,11 @@ func startIdentityWork(
 	workType string,
 ) apitest.StartedWork {
 	t.Helper()
-	body := fmt.Sprintf(`{"kind":%q}`, workType)
+	body := fmt.Sprintf(`{"type":%q}`, workType)
 	if workType == "preset" || workType == "theme" {
-		body = fmt.Sprintf(`{"kind":%q,"app":"lumiverse"}`, workType)
+		body = fmt.Sprintf(`{"type":%q,"app":"lumiverse"}`, workType)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusCreated {

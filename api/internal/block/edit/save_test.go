@@ -37,7 +37,7 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -94,7 +94,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -124,7 +124,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		t.Fatalf("unsealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 
-	reader = apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader = apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader after unsealing status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -423,7 +423,7 @@ func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
 	}
 	request := httptest.NewRequest(
 		http.MethodPut,
-		"/v1/assets/"+started.ID+"/blocks/"+messagesBlock.ID,
+		"/v1/works/"+started.ID+"/blocks/"+messagesBlock.ID,
 		strings.NewReader(string(encoded)),
 	)
 	request.Header.Set("Content-Type", "application/json")

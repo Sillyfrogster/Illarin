@@ -17,13 +17,13 @@ func TestAnAccountsNotificationsGoWithIt(t *testing.T) {
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into notification_events (id, type, account_id, words)
-		values ($1, 'asset_restored', $2, '{"assetName":"Quiet Shelf"}')
+		values ($1, 'work_restored', $2, '{"workName":"Quiet Shelf"}')
 	`, uuid.New(), accountID); err != nil {
 		t.Fatalf("insert waiting event: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into notifications (id, account_id, type, words, created_at)
-		values ($1, $2, 'asset_restored', '{"assetName":"Quiet Shelf"}', $3)
+		values ($1, $2, 'work_restored', '{"workName":"Quiet Shelf"}', $3)
 	`, uuid.New(), accountID, time.Now()); err != nil {
 		t.Fatalf("insert entry: %v", err)
 	}

@@ -19,9 +19,9 @@ const NOW = new Date("2026-09-14T12:00:00Z");
 function entry(overrides: Partial<Notification> = {}): Notification {
   return {
     id: "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
-    type: "asset_withheld",
+    type: "work_withheld",
     createdAt: "2026-09-14T09:00:00Z",
-    asset: ASSET,
+    work: ASSET,
     reason: "Copyright report under review",
     ...overrides,
   };
@@ -42,7 +42,7 @@ test("a withheld asset says Illarin staff withheld it, gives the reason and open
 
 test("a restored asset says Illarin staff restored it and that readers can reach it again", () => {
   expect(
-    notificationWords(entry({ type: "asset_restored", reason: undefined })),
+    notificationWords(entry({ type: "work_restored", reason: undefined })),
   ).toEqual({
     lead: "Illarin staff restored",
     subject: "Moonlit Archive",
@@ -56,7 +56,7 @@ test("a restricted profile says Illarin staff restricted it, gives the reason an
     notificationWords(
       entry({
         type: "profile_restricted",
-        asset: undefined,
+        work: undefined,
         reason: "Impersonating another creator",
       }),
     ),
@@ -71,7 +71,7 @@ test("a restricted profile says Illarin staff restricted it, gives the reason an
 test("a restored profile says Illarin staff restored it and that it can be edited again", () => {
   expect(
     notificationWords(
-      entry({ type: "profile_restored", asset: undefined, reason: undefined }),
+      entry({ type: "profile_restored", work: undefined, reason: undefined }),
     ),
   ).toEqual({
     lead: "Illarin staff restored",
@@ -85,7 +85,7 @@ test("an updated asset names the update, its version and summary, and opens that
   expect(
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: {
           number: 3,
@@ -107,7 +107,7 @@ test("an update without a version label leaves the label out", () => {
   expect(
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: {
           number: 2,
@@ -122,7 +122,7 @@ test("an update without a version label leaves the label out", () => {
 test("a folded entry says how many updates arrived and still shows the latest", () => {
   const words = notificationWords(
     entry({
-      type: "asset_updated",
+      type: "work_updated",
       reason: undefined,
       update: {
         number: 7,
@@ -144,7 +144,7 @@ test("an entry holding two updates counts them and one holding a single update d
   const folded = (count: number) =>
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: { number: 4, count, summary: "Rewrote her opening" },
       }),
@@ -154,7 +154,7 @@ test("an entry holding two updates counts them and one holding a single update d
 });
 
 test("an entry that names no asset still reads plainly and has nowhere to send the reader", () => {
-  const words = notificationWords(entry({ asset: undefined }));
+  const words = notificationWords(entry({ work: undefined }));
   expect(words.subject).toBe("One of your assets");
   expect(words.href).toBeNull();
 });

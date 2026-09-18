@@ -112,7 +112,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
+	reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
 		t.Fatalf("reader page status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
@@ -134,14 +134,14 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 
 	strangerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
 	stranger := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil), strangerSession,
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil), strangerSession,
 	))
 	if stranger.Code != http.StatusOK || strings.Contains(stranger.Body.String(), privateText) {
 		t.Fatalf("signed-in reader response = %d %s", stranger.Code, stranger.Body.String())
 	}
 
 	search := apitest.Send(t, router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets?q="+privateText, nil,
+		http.MethodGet, "/v1/works?q="+privateText, nil,
 	))
 	if search.Code != http.StatusOK {
 		t.Fatalf("search status = %d, want 200: %s", search.Code, search.Body.String())

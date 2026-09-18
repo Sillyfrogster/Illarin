@@ -165,7 +165,7 @@ type LibraryResult struct {
 }
 
 type WithheldNotice struct {
-	WorkID     string    `json:"assetId"`
+	WorkID     string    `json:"workId"`
 	Name       string    `json:"name"`
 	WithheldAt time.Time `json:"withheldAt"`
 }
@@ -174,7 +174,7 @@ func ReportInstalled(t *testing.T, r http.Handler, token, applicationVersion str
 	t.Helper()
 	entries := make([]map[string]any, 0, len(workIDs))
 	for _, workID := range workIDs {
-		entries = append(entries, map[string]any{"assetId": workID})
+		entries = append(entries, map[string]any{"workId": workID})
 	}
 	body := map[string]any{"snapshot": false, "entries": entries}
 	if applicationVersion != "" {

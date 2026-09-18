@@ -14,8 +14,8 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	for _, body := range []string{`{"kind":"preset"}`, `{"kind":"preset","app":""}`} {
-		request := httptest.NewRequest(http.MethodPost, "/v1/assets", strings.NewReader(body))
+	for _, body := range []string{`{"type":"preset"}`, `{"type":"preset","app":""}`} {
+		request := httptest.NewRequest(http.MethodPost, "/v1/works", strings.NewReader(body))
 		request.Header.Set("Content-Type", "application/json")
 		response := apitest.Send(t, r, apitest.Authorized(request, session))
 		if response.Code != http.StatusBadRequest {
@@ -32,8 +32,8 @@ func TestATypeThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
-		strings.NewReader(`{"kind":"character","app":"sillytavern"}`))
+	request := httptest.NewRequest(http.MethodPost, "/v1/works",
+		strings.NewReader(`{"type":"character","app":"sillytavern"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest {
@@ -152,7 +152,7 @@ func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 
 func readWork(t *testing.T, r http.Handler, session *http.Cookie, id string) string {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+id, nil)
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the work: status = %d: %s", response.Code, response.Body.String())

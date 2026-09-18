@@ -30,13 +30,13 @@ describe("api", () => {
     const sent = answerWith(Response.json({ items: [] }));
 
     await api("GET", "/v1/assets", {
-      query: { facet: ["a", "b"], kind: undefined, limit: 24, q: "two words" },
+      query: { facet: ["a", "b"], type: undefined, limit: 24, q: "two words" },
     });
 
     const address = new URL(sent[0].url);
     expect(address.pathname).toBe("/v1/assets");
     expect(address.searchParams.getAll("facet")).toEqual(["a", "b"]);
-    expect(address.searchParams.has("kind")).toBe(false);
+    expect(address.searchParams.has("type")).toBe(false);
     expect(address.searchParams.get("limit")).toBe("24");
     expect(address.searchParams.get("q")).toBe("two words");
   });

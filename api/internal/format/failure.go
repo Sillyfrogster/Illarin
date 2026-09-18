@@ -12,7 +12,7 @@ const (
 	FailureUnsupportedFormat  FailureReason = "unsupported_format"
 	FailureUnsupportedVersion FailureReason = "unsupported_version"
 	FailureSafetyViolation    FailureReason = "safety_violation"
-	FailureWrongType          FailureReason = "wrong_kind"
+	FailureWrongType          FailureReason = "wrong_type"
 	FailureLimitExceeded      FailureReason = "limit_exceeded"
 	FailureInternal           FailureReason = "internal_failure"
 )

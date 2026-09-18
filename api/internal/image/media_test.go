@@ -34,7 +34,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	}
 	var media struct {
 		ID                string `json:"id"`
-		WorkID            string `json:"assetId"`
+		WorkID            string `json:"workId"`
 		Role              string `json:"role"`
 		Width             int    `json:"width"`
 		Height            int    `json:"height"`
@@ -61,7 +61,7 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	}
 
 	listed := apitest.Send(t, r, httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+workID+"/media", nil,
+		http.MethodGet, "/v1/works/"+workID+"/media", nil,
 	))
 	if listed.Code != http.StatusOK {
 		t.Fatalf("list media status = %d, want 200: %s", listed.Code, listed.Body.String())

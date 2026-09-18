@@ -20,7 +20,7 @@ func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	t.Parallel()
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	id := publishedCharacter(t, router, session)
-	before := apitest.FetchWorkPage(t, router, "/v1/assets/"+id)
+	before := apitest.FetchWorkPage(t, router, "/v1/works/"+id)
 	generation := apitest.ContentGeneration(t, pool, id)
 	if got := apitest.SaveIdentity(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private header: %d %s", got.Code, got.Body.String())
@@ -31,18 +31,18 @@ func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "character_core").ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save private block: %d %s", got.Code, got.Body.String())
 	}
-	public := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil))
+	public := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+id, nil))
 	if public.Code != http.StatusOK || strings.Contains(public.Body.String(), "Unpublished") {
 		t.Fatalf("public page leaked a private edit: %d", public.Code)
 	}
-	if got := apitest.FetchWorkPage(t, router, "/v1/assets/"+id); got.Name != before.Name || got.IsNSFW != before.IsNSFW {
+	if got := apitest.FetchWorkPage(t, router, "/v1/works/"+id); got.Name != before.Name || got.IsNSFW != before.IsNSFW {
 		t.Fatal("private header changed public metadata")
 	}
-	working := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+id+"?workingCopy=true", nil), session))
+	working := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?workingCopy=true", nil), session))
 	if working.Code != http.StatusOK || !strings.Contains(working.Body.String(), "Unpublished description") || !strings.Contains(working.Body.String(), "Unpublished name") {
 		t.Fatalf("owner working copy: %d %s", working.Code, working.Body.String())
 	}
-	anonymous := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+id+"?workingCopy=true", nil))
+	anonymous := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?workingCopy=true", nil))
 	if anonymous.Code != http.StatusNotFound {
 		t.Fatalf("anonymous working copy: %d", anonymous.Code)
 	}
@@ -62,15 +62,15 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d", got.Code)
 	}
-	before := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID)
+	before := apitest.FetchWorkPage(t, router, "/v1/works/"+started.ID)
 	if got := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session)); got.Code != http.StatusCreated {
 		t.Fatalf("upload private cover: %d", got.Code)
 	}
-	public := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID)
+	public := apitest.FetchWorkPage(t, router, "/v1/works/"+started.ID)
 	if len(public.Media) != 1 || public.Media[0].ID != before.Media[0].ID {
 		t.Fatal("private cover changed the public media")
 	}
-	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID+"?workingCopy=true", nil), session))
+	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"?workingCopy=true", nil), session))
 	var working apitest.WorkPageResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &working); err != nil || response.Code != http.StatusOK {
 		t.Fatalf("working copy: %d, %v", response.Code, err)

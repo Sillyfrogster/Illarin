@@ -44,7 +44,7 @@ export default async function AssetPage({
     : published;
   if (!asset) notFound();
 
-  const kind = KIND_LABELS[asset.kind];
+  const kind = KIND_LABELS[asset.type];
   const isDraft = asset.lifecycle === "draft";
   const sharedDate = new Date(asset.createdAt).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -84,7 +84,7 @@ export default async function AssetPage({
               <AssetBlocks
                 images={asset.media}
                 isOwner={asset.isOwner}
-                kind={asset.kind}
+                kind={asset.type}
                 shellClassName={shellClasses}
               />
             </article>
@@ -92,7 +92,7 @@ export default async function AssetPage({
         </ExtensionDependenciesProvider>
         <WorkspaceSurfaces
           creator={asset.creator}
-          discovery={asset.discovery}
+          discovery={asset.visibility}
           hasOriginal={Boolean(asset.original)}
           images={asset.media}
           kind={kind.toLowerCase()}

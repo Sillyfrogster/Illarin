@@ -16,7 +16,7 @@ func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartPreset(t, r, session, "lumiverse")
-	req := httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
+	req := httptest.NewRequest(http.MethodPut, "/v1/works/"+started.ID+"/details", strings.NewReader(`{"name":"Unreviewed edit","blurb":"","isNsfw":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = apitest.Authorized(req, session)
 	response := httptest.NewRecorder()
@@ -37,11 +37,11 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			r, session := harness.NewVerifiedRouter(t)
 			started := apitest.StartCharacter(t, r, session)
 			apitest.WriteCharacterFloor(t, r, session, started)
-			first := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"First editor","blurb":"First pitch","isNsfw":false}`)), session)
+			first := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/works/"+started.ID+"/details", strings.NewReader(`{"name":"First editor","blurb":"First pitch","isNsfw":false}`)), session)
 			apitest.WithReviewedVersion(t, r, first)
-			second := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/assets/"+started.ID+"/identity", strings.NewReader(`{"name":"Second editor","blurb":"Second pitch","isNsfw":false}`)), session)
+			second := apitest.Authorized(httptest.NewRequest(http.MethodPut, "/v1/works/"+started.ID+"/details", strings.NewReader(`{"name":"Second editor","blurb":"Second pitch","isNsfw":false}`)), session)
 			if publish {
-				second = apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/publish", nil), session)
+				second = apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/publish", nil), session)
 			}
 			second.Header.Set("X-Working-Copy-Version", first.Header.Get("X-Working-Copy-Version"))
 			responses := []*httptest.ResponseRecorder{httptest.NewRecorder(), httptest.NewRecorder()}

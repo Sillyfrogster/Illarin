@@ -18,7 +18,8 @@ func NewHandlers(sealed *Service) *Handlers {
 
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodGet, "/v1/assets/:id/sealed", d.JSON, h.ExportSealedContent)
+	routes.Handle(http.MethodGet, "/v1/works/:id/sealed", d.JSON, h.ExportSealedContent)
+	registerAliases(routes, h)
 }
 
 func (h *Handlers) ExportSealedContent(c *gin.Context) {

@@ -25,7 +25,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 		return apitest.AuthorizedJSONRequest(
 			t,
 			http.MethodPut,
-			"/v1/assets/"+workID+"/withhold",
+			"/v1/works/"+workID+"/withhold",
 			`{"reason":"Copyright report under review"}`,
 			session,
 		)
@@ -69,7 +69,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 		t.Fatalf("withhold = actor %s, reason %q, at %v", actor, reason, at)
 	}
 
-	clear := httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID+"/withhold", nil)
+	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil)
 	apitest.Authorized(clear, session)
 	cleared := apitest.Send(t, router, clear)
 	if cleared.Code != http.StatusNoContent {
@@ -104,7 +104,7 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 		t.Fatalf("withhold work: %v", err)
 	}
 
-	pageRequest, err := http.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
+	pageRequest, err := http.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
 	if err != nil {
 		t.Fatalf("make owner page request: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 	}
 
 	for _, path := range []string{
-		"/v1/assets/" + workID + "/media",
+		"/v1/works/" + workID + "/media",
 		works.SignedURL("/media/" + mediaID + "/grid/2"),
 	} {
 		request := httptest.NewRequest(http.MethodGet, path, nil)
@@ -171,9 +171,9 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	missingMediaID := "33333333-3333-4333-8333-333333333333"
 	for name, paths := range map[string][]string{
 		"asset page": {
-			"/v1/assets/" + withheldID,
-			"/v1/assets/" + deletedID,
-			"/v1/assets/" + missingWorkID,
+			"/v1/works/" + withheldID,
+			"/v1/works/" + deletedID,
+			"/v1/works/" + missingWorkID,
 		},
 		"download": {
 			"/download/" + withheldID,
@@ -181,9 +181,9 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 			"/download/" + missingWorkID,
 		},
 		"media list": {
-			"/v1/assets/" + withheldID + "/media",
-			"/v1/assets/" + deletedID + "/media",
-			"/v1/assets/" + missingWorkID + "/media",
+			"/v1/works/" + withheldID + "/media",
+			"/v1/works/" + deletedID + "/media",
+			"/v1/works/" + missingWorkID + "/media",
 		},
 		"media file": {
 			"/media/" + withheldMediaID + "/grid/2",
@@ -227,8 +227,8 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 
 	changes := []*http.Request{
 		apitest.AuthorizedJSONRequest(
-			t, http.MethodPut, "/v1/assets/"+workID+"/discovery",
-			`{"discovery":"unlisted"}`, session,
+			t, http.MethodPut, "/v1/works/"+workID+"/visibility",
+			`{"visibility":"unlisted"}`, session,
 		),
 		apitest.Authorized(apitest.MediaUploadRequest(
 			t, workID, "gallery", apitest.PNG(t, 2, 2),
@@ -242,7 +242,7 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 		}
 	}
 
-	clear := httptest.NewRequest(http.MethodDelete, "/v1/assets/"+workID+"/withhold", nil)
+	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil)
 	apitest.Authorized(clear, session)
 	response := apitest.Send(t, router, clear)
 	if response.Code != http.StatusForbidden {

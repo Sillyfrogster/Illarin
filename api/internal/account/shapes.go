@@ -45,7 +45,7 @@ type CompletePasswordResetRequest struct {
 }
 
 type NsfwPreferenceRequest struct {
-	Preference NsfwPreferenceRequestPreference `json:"visibility"`
+	Preference NsfwPreferenceRequestPreference `json:"preference"`
 }
 
 type NsfwPreferenceRequestPreference string

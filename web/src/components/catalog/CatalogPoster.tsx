@@ -90,7 +90,7 @@ export function CatalogPoster({
           <KindMark
             aria-hidden="true"
             className="size-6 text-accent"
-            kind={asset.kind}
+            kind={asset.type}
           />
           <p
             aria-hidden="true"
@@ -117,9 +117,9 @@ export function CatalogPoster({
         >
           <KindMark
             className="size-3.5 shrink-0 text-accent"
-            kind={asset.kind}
+            kind={asset.type}
           />
-          {KIND_LABELS[asset.kind]}
+          {KIND_LABELS[asset.type]}
           <span aria-hidden="true">·</span>
           <Link
             className="relative z-1 inline-flex min-h-11 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"

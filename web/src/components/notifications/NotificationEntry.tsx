@@ -19,9 +19,9 @@ const GIVEN_BACK_TONE = "bg-accent-wash text-accent";
 const NEWS_TONE = "bg-deep text-ink";
 
 const MARKS = {
-  asset_withheld: { icon: LockKeyhole, tone: TAKEN_TONE },
-  asset_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
-  asset_updated: { icon: Sparkles, tone: NEWS_TONE },
+  work_withheld: { icon: LockKeyhole, tone: TAKEN_TONE },
+  work_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
+  work_updated: { icon: Sparkles, tone: NEWS_TONE },
   profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
@@ -42,7 +42,7 @@ export function NotificationEntry({
   const unread = !entry.readAt;
   const mark = MARKS[entry.type];
   const Icon = mark.icon;
-  const asset = entry.asset;
+  const asset = entry.work;
   const sends = entry.sendTargets ?? [];
   const row = cn(
     "flex gap-3.5 pt-3 pr-11 pl-3 outline-offset-[-2px]",
