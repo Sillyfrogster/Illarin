@@ -132,7 +132,7 @@ func TestAFieldListAndALinkListCarryTheirOwnItems(t *testing.T) {
 		t.Errorf("a field list holding only a name reads as filled")
 	}
 
-	links := LinkList{Links: []LinkItem{{Label: "The lorebook", URL: "https://illarin.xyz/a/1"}}}
+	links := LinkList{Links: []LinkItem{{Label: "The lorebook", URL: "https://illarin.com/a/1"}}}
 	if links.Empty() {
 		t.Errorf("a link list holding a link reads as empty")
 	}
@@ -154,7 +154,7 @@ func TestALinkListRefusesAnAddressThatIsNotAWebLink(t *testing.T) {
 	}
 
 	content, err := DecodeContent(TypeLinkList, []byte(
-		`{"links":[{"label":"The lorebook","url":"https://illarin.xyz/a/1","note":"Read it first"}]}`,
+		`{"links":[{"label":"The lorebook","url":"https://illarin.com/a/1","note":"Read it first"}]}`,
 	))
 	if err != nil {
 		t.Fatalf("read a web link: %v", err)

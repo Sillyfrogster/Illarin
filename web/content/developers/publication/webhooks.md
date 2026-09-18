@@ -45,19 +45,19 @@ webhook-signature: v1,K2h0dGdqQm5hRWx2NkpFVDk3RExoWmZzVHNvVE5GbGhHSkhtVjBoUDNzOD
     "title": "Paper Lantern 4.2",
     "summary": "Scene exports, a faster library and thirty fixes.",
     "category": { "slug": "release", "label": "Release" },
-    "url": "https://blog.illarin.xyz/paper-lantern-4-2",
+    "url": "https://blog.illarin.com/paper-lantern-4-2",
     "publishedAt": "2026-09-14T10:30:00Z",
     "updatedAt": null,
     "release": {
-      "app": { "slug": "paper-lantern", "name": "Paper Lantern", "url": "https://blog.illarin.xyz/app/paper-lantern" },
+      "app": { "slug": "paper-lantern", "name": "Paper Lantern", "url": "https://blog.illarin.com/app/paper-lantern" },
       "version": "4.2.0",
       "url": "https://paperlantern.example/4.2"
     },
     "byline": {
       "handle": "paperlantern",
       "name": "Paper Lantern",
-      "url": "https://illarin.xyz/@paperlantern",
-      "app": { "slug": "paper-lantern", "name": "Paper Lantern", "url": "https://blog.illarin.xyz/app/paper-lantern" }
+      "url": "https://illarin.com/@paperlantern",
+      "app": { "slug": "paper-lantern", "name": "Paper Lantern", "url": "https://blog.illarin.com/app/paper-lantern" }
     }
   }
 }

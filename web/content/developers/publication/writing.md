@@ -118,7 +118,7 @@ Replaces the whole working copy and keeps the post private until you publish. Wh
 | `categoryId` | uuid | yes | A category from your approval. |
 | `title` | string | yes | 1–160 characters. |
 | `summary` | string | yes | 0–320 characters, plain text. Must be non-empty to publish. |
-| `slug` | string | yes | Address under `https://blog.illarin.xyz/`. `a-z`, `0-9`, single hyphens, max 80. Locked after first publication. |
+| `slug` | string | yes | Address under `https://blog.illarin.com/`. `a-z`, `0-9`, single hyphens, max 80. Locked after first publication. |
 | `document` | object | yes | A [post document](/developers/publication/document). May be empty until publish. |
 | `release` | object or null | no | Required when the category is `release`, refused otherwise. `{ "appId": uuid, "version": string, "address": string }`. `version` 1–40 characters. `address` optional, `https://`. |
 | `header` | object or null | no | `{ "mediaId": uuid, "alt": string, "caption": string }`. `mediaId` must be a picture with purpose `header`. |
@@ -190,7 +190,7 @@ Returns `201` with the `PostMedia`. Pictures are immutable. To replace one, uplo
 | 503 | `server_error` | Storage is full. Retry later. |
 
 ```bash
-curl https://illarin.xyz/api/v1/publication/posts/8c2f4a71-6e3d-4b95-a1d0-3f7e9c5b2a48/media \
+curl https://illarin.com/api/v1/publication/posts/8c2f4a71-6e3d-4b95-a1d0-3f7e9c5b2a48/media \
   -H 'Authorization: Bearer ip1.…' \
   -H 'Idempotency-Key: 7d2a9c4b-1e5f-4a8b-9c3d-6e0f1a2b3c4d' \
   -F 'metadata={"purpose":"document"};type=application/json' \
@@ -209,7 +209,7 @@ curl https://illarin.xyz/api/v1/publication/posts/8c2f4a71-6e3d-4b95-a1d0-3f7e9c
 }
 ```
 
-`url` and `thumbUrl` are relative to `https://illarin.xyz` and signed for 15 minutes. Read the post again for fresh ones. A document may only reference pictures uploaded to the same post.
+`url` and `thumbUrl` are relative to `https://illarin.com` and signed for 15 minutes. Read the post again for fresh ones. A document may only reference pictures uploaded to the same post.
 
 ## Checkpoint
 

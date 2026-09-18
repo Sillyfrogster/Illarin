@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -200,7 +201,7 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          Write to <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>.
+          Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
           Include the address of the work and what is wrong with it. For
           anything urgent — a credible threat, private information published
           about someone, or content covered by section 1 — say so in the subject

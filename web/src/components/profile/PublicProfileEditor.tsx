@@ -20,6 +20,7 @@ import {
 import { browserFetch } from "@/lib/api/browser-mutation";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { BIOGRAPHY_LIMIT } from "@/lib/profile-draft";
 import { ProfileLinks } from "./ProfileLinks";
 import { ProfilePicture } from "./ProfilePicture";
@@ -138,9 +139,9 @@ export function PublicProfileEditor() {
           Write to{" "}
           <a
             className="font-medium text-stop underline underline-offset-4"
-            href="mailto:team@illarin.xyz"
+            href={`mailto:${CONTACT_EMAIL}`}
           >
-            team@illarin.xyz
+            {CONTACT_EMAIL}
           </a>{" "}
           to request a review.
         </p>

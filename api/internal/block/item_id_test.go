@@ -16,7 +16,7 @@ func TestEveryItemInsideAnElementGetsAnIDWhenItIsSaved(t *testing.T) {
 		{TypeTextSet, `{"texts":[{"text":"Hello again."},{"text":"And again."}]}`},
 		{TypeDialogueSample, `{"turns":[{"speaker":"Mira","text":"Sit down."}]}`},
 		{TypeFieldList, `{"fields":[{"name":"Height","value":"Six feet"}]}`},
-		{TypeLinkList, `{"links":[{"label":"The book","url":"https://illarin.xyz/a/1"}]}`},
+		{TypeLinkList, `{"links":[{"label":"The book","url":"https://illarin.com/a/1"}]}`},
 		{TypeImageSet, `{"images":[{"mediaId":"` + uuid.New().String() + `"}]}`},
 		{TypeEntryTable, `{"entries":[{"keys":["ledger"],"enabled":true,"text":"A debt."}]}`},
 	}

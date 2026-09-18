@@ -55,6 +55,8 @@ through_gateway "$site_host" GET /stats/script.js 200 "" "website-id"
 through_gateway "$blog_host" GET /stats/script.js 200 "" "website-id"
 through_gateway "analytics.$site_host" GET /api/heartbeat 200
 through_gateway "$site_host" GET /blog 308 "$blog_root"
+through_gateway "illarin.xyz" GET /a/1 308 "https://illarin.com/a/1"
+through_gateway "blog.illarin.xyz" GET /a-post 308 "https://blog.illarin.com/a-post"
 through_gateway "$blog_host" GET / 200 "" "<link rel=\"canonical\" href=\"${BLOG_URL%/}"
 through_gateway "$blog_host" GET /feed.xml 200 "" "<rss"
 through_gateway "$blog_host" GET /api/v1/auth/session 404

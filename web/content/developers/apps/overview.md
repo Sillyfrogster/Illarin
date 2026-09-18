@@ -71,7 +71,7 @@ Extensions arrive through the ordinary delivery wait. An extension's delivery ha
       "artifacts": [
         {
           "kind": "export",
-          "url": "https://illarin.xyz/delivery/7d1e2f3a-4b5c-4d6e-8f7a-9b0c1d2e3f4a/export?expires=…&signature=…"
+          "url": "https://illarin.com/delivery/7d1e2f3a-4b5c-4d6e-8f7a-9b0c1d2e3f4a/export?expires=…&signature=…"
         }
       ]
     }

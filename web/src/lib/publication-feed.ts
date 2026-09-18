@@ -59,7 +59,7 @@ export function publicationJsonFeed(
   )}\n`;
 }
 
-const ILLARIN_NAMESPACE = "https://illarin.xyz/ns/publication";
+const ILLARIN_NAMESPACE = "https://illarin.com/ns/publication";
 
 function channelName(scope: FeedScope): string {
   return scope.archive === BLOG_HOME

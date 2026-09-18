@@ -486,7 +486,7 @@ func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
 
 	stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"release": map[string]any{
-			"appId": illarin.ID, "version": "2.0", "address": "https://illarin.xyz/releases/2-0",
+			"appId": illarin.ID, "version": "2.0", "address": "https://illarin.com/releases/2-0",
 		},
 	}))
 	stack.published(t, session, draft.ID)
@@ -512,7 +512,7 @@ func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
 	))
 	response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 		"release": map[string]any{
-			"appId": illarin.ID, "version": "2.1", "address": "http://illarin.xyz/releases",
+			"appId": illarin.ID, "version": "2.1", "address": "http://illarin.com/releases",
 		},
 	}))
 	if response.Code != http.StatusBadRequest {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -232,7 +233,7 @@ const CLAUSES: LegalClause[] = [
         <p>
           For anything else — a copy of your data, a correction you cannot make
           yourself, an objection, or withdrawing consent — write to{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>. If you are in
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. If you are in
           California you have further rights under the CCPA and CPRA. If you are
           in the EEA or UK you have further rights under the GDPR and UK GDPR,
           including the right to complain to your data protection authority.
@@ -247,8 +248,8 @@ const CLAUSES: LegalClause[] = [
         <p>
           Illarin is not for children under 13, and we do not knowingly collect
           anything from them. If you believe a child has given us personal data,
-          write to <a href="mailto:team@illarin.xyz">team@illarin.xyz</a> and we
-          will delete it.
+          write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and
+          we will delete it.
         </p>
       </>
     ),
@@ -280,7 +281,7 @@ const CLAUSES: LegalClause[] = [
         <p>
           None of that makes a system perfectly secure. Use a password you use
           nowhere else, keep your Discord account secure, and write to{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a> if you think
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> if you think
           someone has got into your account.
         </p>
       </>
@@ -304,7 +305,7 @@ const CLAUSES: LegalClause[] = [
       <>
         <p>
           Privacy questions and requests go to{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
       </>
     ),

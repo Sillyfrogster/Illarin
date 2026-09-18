@@ -469,7 +469,7 @@ func TestAPublicationTokenIsRefusedFromABrowser(t *testing.T) {
 	kit := stack.tooling(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
-	for _, origin := range []string{testBrowserOrigin, "https://blog.illarin.xyz"} {
+	for _, origin := range []string{testBrowserOrigin, "https://blog.illarin.com"} {
 		request := jsonRequest(t, http.MethodPost, "/v1/publication/posts", fmt.Sprintf(
 			`{"categoryId":%q,"title":"From a page"}`, announcement.ID,
 		))

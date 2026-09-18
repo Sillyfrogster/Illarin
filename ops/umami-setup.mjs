@@ -42,7 +42,15 @@ async function adminToken() {
 
 async function ensureWebsite(token) {
   const found = await call("GET", `/api/websites/${websiteId}`, token);
-  if (found.status === 200 && found.body) return;
+  if (found.status === 200 && found.body) {
+    if (found.body.domain === domain) return;
+    const moved = await call("POST", `/api/websites/${websiteId}`, token, { name: "Illarin", domain });
+    if (moved.status !== 200) {
+      throw new Error(`Umami did not move the website to ${domain}: ${moved.status}`);
+    }
+    console.log(`Moved the Umami website from ${found.body.domain} to ${domain}.`);
+    return;
+  }
   const created = await call("POST", "/api/websites", token, { id: websiteId, name: "Illarin", domain });
   if (created.status !== 200) {
     throw new Error(`Umami did not create the website: ${created.status}`);

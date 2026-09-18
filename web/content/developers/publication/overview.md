@@ -20,12 +20,12 @@ Send API requests to the main site. Published posts appear on the blog.
 
 | Purpose | Address |
 | --- | --- |
-| API base URL | `https://illarin.xyz/api/v1/publication` |
-| Editor and token management | `https://illarin.xyz/admin/blog` |
-| Published posts | `https://blog.illarin.xyz/{slug}` |
+| API base URL | `https://illarin.com/api/v1/publication` |
+| Editor and token management | `https://illarin.com/admin/blog` |
+| Published posts | `https://blog.illarin.com/{slug}` |
 | OpenAPI contract | [openapi.yaml](/openapi.yaml) |
 
-Examples show the full request path, starting with `/api/v1/publication`. Add `https://illarin.xyz` in front of it. For a self-hosted instance, use its main site address instead. The blog hostname does not accept API requests.
+Examples show the full request path, starting with `/api/v1/publication`. Add `https://illarin.com` in front of it. For a self-hosted instance, use its main site address instead. The blog hostname does not accept API requests.
 
 Send your token in the `Authorization` header on every request:
 
@@ -118,7 +118,7 @@ Idempotency-Key: 5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e
 }
 ```
 
-The response is `200 OK` with `status: "published"`. Readers can now open `https://blog.illarin.xyz/scene-exports-are-here`.
+The response is `200 OK` with `status: "published"`. Readers can now open `https://blog.illarin.com/scene-exports-are-here`.
 
 The empty `destinationIds` list publishes without sending an announcement. The post still appears on the blog and in feeds. To announce it, choose IDs from your approval or omit `destinationIds` to use its defaults. Announcements happen after publication; a failed announcement does not take the post offline.
 

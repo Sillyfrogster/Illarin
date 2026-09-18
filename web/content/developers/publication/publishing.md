@@ -41,7 +41,7 @@ Saves a revision of the working copy and makes that revision public immediately.
 
 Returns `200` with the `Post`. `status` is `published`, `publicRevisionId` is set, `byline` is snapshotted. On first publication `publishedAt` is set. On later publications `updatedPublicAt` is set and the slug stays unchanged.
 
-The post is live at `https://blog.illarin.xyz/{slug}` before the response returns. Announcements are sent afterwards.
+The post is live at `https://blog.illarin.com/{slug}` before the response returns. Announcements are sent afterwards.
 
 | Status | Code | When |
 | --- | --- | --- |
