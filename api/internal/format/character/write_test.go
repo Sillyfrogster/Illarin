@@ -99,7 +99,7 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 	}
 	body := writtenBody(t, embedded.Body, V3)
 	if !bytes.Contains(body["assets"], []byte(defaultFileURI)) {
-		t.Errorf("assets = %s, want the icon to point at the container", body["assets"])
+		t.Errorf("works = %s, want the icon to point at the container", body["assets"])
 	}
 
 	withoutCover := withCover
@@ -124,7 +124,7 @@ func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
 	}
 	body := writtenBody(t, written.Body, V3)
 	if !bytes.Contains(body["assets"], []byte("data:image/jpeg;base64,")) {
-		t.Errorf("assets = %s, want the cover inlined", body["assets"])
+		t.Errorf("works = %s, want the cover inlined", body["assets"])
 	}
 }
 
@@ -157,15 +157,15 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 	var records []cardFileRecord
 	body := writtenBody(t, files["card.json"], V3)
 	if err := json.Unmarshal(body["assets"], &records); err != nil {
-		t.Fatalf("read the written asset list: %v", err)
+		t.Fatalf("read the written work list: %v", err)
 	}
 	if len(records) != 3 {
-		t.Fatalf("asset records = %+v, want the cover, the expression and the gallery image", records)
+		t.Fatalf("work records = %+v, want the cover, the expression and the gallery image", records)
 	}
 	for _, record := range records {
 		entry, embedded := strings.CutPrefix(record.URI, embeddedPrefix)
 		if !embedded {
-			t.Fatalf("asset %q points at %q, want a file in the archive", record.Name, record.URI)
+			t.Fatalf("work %q points at %q, want a file in the archive", record.Name, record.URI)
 		}
 		if _, held := files[entry]; !held {
 			t.Errorf("the archive has no %q", entry)
@@ -556,7 +556,7 @@ func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
 		card := writtenCard(t, module, write(t, module, work))
 		var records []cardFileRecord
 		if err := json.Unmarshal(card["assets"], &records); err != nil {
-			t.Fatalf("read %s's asset list: %v", module.ID(), err)
+			t.Fatalf("read %s's work list: %v", module.ID(), err)
 		}
 		if len(records) != 1 || records[0].Name != "At the door" {
 			t.Fatalf("%s wrote %+v, want the one gallery image it was given",

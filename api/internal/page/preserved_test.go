@@ -119,7 +119,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 		http.MethodGet, "/v1/assets/"+workID+"/preserved", nil,
 	))
 	if stranger.Code != http.StatusUnauthorized {
-		t.Errorf("a signed-out reader asked what an asset preserves and got %d", stranger.Code)
+		t.Errorf("a signed-out reader asked what a work preserves and got %d", stranger.Code)
 	}
 }
 
@@ -286,7 +286,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 		http.MethodGet, "/v1/assets?mine=true", nil,
 	), session))
 	if strings.Contains(listed.Body.String(), "Heavy") {
-		t.Error("a refused file left an asset behind")
+		t.Error("a refused file left a work behind")
 	}
 }
 

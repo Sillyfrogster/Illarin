@@ -160,7 +160,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	built := apitest.StartCharacter(t, r, session)
 	fromNothing := apitest.FetchStartedWork(t, r, session, built.ID)
 	if fromNothing.Original != nil {
-		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
+		t.Fatalf("a work built from nothing carries %+v", fromNothing.Original)
 	}
 	if len(fromNothing.Downloads) != 3 {
 		t.Fatalf("menu = %+v, want all three character targets", fromNothing.Downloads)
@@ -176,12 +176,12 @@ func TestTheSummaryIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing
 	apitest.GiveExpressions(t, r, session, workID)
 	afterEdit := apitest.SummaryComputedAt(t, pool, workID)
 	if !afterEdit.After(before) {
-		t.Fatal("editing a block left the export projection where it was")
+		t.Fatal("editing a block left the export summary where it was")
 	}
 
 	apitest.PublishCharacter(t, r, session, workID)
 	if afterPublish := apitest.SummaryComputedAt(t, pool, workID); !afterPublish.Equal(afterEdit) {
-		t.Fatal("publishing recomputed the export projection")
+		t.Fatal("publishing recomputed the export summary")
 	}
 }
 
@@ -205,7 +205,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 		t.Fatalf("hide the expressions: %d %s", arranged.Code, arranged.Body.String())
 	}
 	if after := apitest.SummaryComputedAt(t, pool, workID); !after.Equal(before) {
-		t.Fatal("hiding a block moved the export half of the projection")
+		t.Fatal("hiding a block moved the export half of the summary")
 	}
 
 	export, err := download.NewService(works.Pool(), works).OpenExport(
@@ -263,11 +263,11 @@ func appTargetsFor(
 	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session)
 	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
-		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read the work: status = %d: %s", response.Code, response.Body.String())
 	}
 	var page apitest.StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the asset: %v", err)
+		t.Fatalf("decode the work: %v", err)
 	}
 	return page.AppTargets
 }

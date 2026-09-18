@@ -43,7 +43,7 @@ func TestSillyTavernReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T)
 	}))
 
 	if parsed.Type != Type || parsed.Format != SillyTavernID {
-		t.Fatalf("parsed kind and format = %q %q", parsed.Type, parsed.Format)
+		t.Fatalf("parsed type and format = %q %q", parsed.Type, parsed.Format)
 	}
 	want := format.Header{
 		Name: "Custom Sliders", WorkVersion: "1.0.0", CreditedAuthor: "A developer",

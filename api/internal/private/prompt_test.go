@@ -293,7 +293,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	apitest.AcceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
 	updated := apitest.PollIngestWork(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
-		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)
+		t.Fatalf("replacement work = %s, want %s", updated.ID, started.ID)
 	}
 	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after replacement: %d payloads and %d policy rows, want none", payloads, policies)

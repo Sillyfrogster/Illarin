@@ -76,7 +76,7 @@ func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
 	}
 	var works int
 	if err := pool.QueryRow(context.Background(), `select count(*) from works`).Scan(&works); err != nil || works != 0 {
-		t.Fatalf("assets = %d, %v; over-limit import must store none", works, err)
+		t.Fatalf("works = %d, %v; over-limit import must store none", works, err)
 	}
 }
 

@@ -17,10 +17,10 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 	started := apitest.StartCharacter(t, r, session)
 
 	if started.Type != "character" || started.Name != "" {
-		t.Fatalf("started asset = %+v, want an unnamed character", started)
+		t.Fatalf("started work = %+v, want an unnamed character", started)
 	}
 	if len(started.Blocks) != 2 {
-		t.Fatalf("blocks = %d, want the two the kind requires", len(started.Blocks))
+		t.Fatalf("blocks = %d, want the two the type requires", len(started.Blocks))
 	}
 	if started.Blocks[0].Definition != "character_core" || started.Blocks[0].Position != 0 {
 		t.Errorf("first block = %+v, want the character core", started.Blocks[0])
@@ -86,7 +86,7 @@ func TestAnWorkBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
 		t.Errorf("the adult content question was answered for the creator: %v", *started.IsNSFW)
 	}
 	if !started.IsOwner {
-		t.Errorf("the creator is not read as the owner of the asset they just made")
+		t.Errorf("the creator is not read as the owner of the work they just made")
 	}
 }
 

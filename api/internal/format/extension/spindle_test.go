@@ -48,7 +48,7 @@ func TestSpindleReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
 	}))
 
 	if parsed.Type != Type || parsed.Format != SpindleID {
-		t.Fatalf("parsed kind and format = %q %q", parsed.Type, parsed.Format)
+		t.Fatalf("parsed type and format = %q %q", parsed.Type, parsed.Format)
 	}
 	want := format.Header{
 		Name: "Quiet Toolbox", WorkVersion: "2.0.0", CreditedAuthor: "A developer",

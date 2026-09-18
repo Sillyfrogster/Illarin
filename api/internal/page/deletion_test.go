@@ -35,7 +35,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 
 	page := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	if page.Code != http.StatusNotFound {
-		t.Fatalf("deleted asset page status = %d, want 404: %s", page.Code, page.Body.String())
+		t.Fatalf("deleted work page status = %d, want 404: %s", page.Code, page.Body.String())
 	}
 	browse := readProfileListing(t, router, "/v1/assets?creator=verified.creator", session)
 	if len(browse.Items) != 0 {
@@ -62,7 +62,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 	}
 	if len(recovery.Items) != 1 || recovery.Items[0].ID != workID ||
 		recovery.Items[0].Name != "Recoverable garden" || recovery.Items[0].Type != "character" {
-		t.Fatalf("deleted listing = %+v, want the deleted asset", recovery.Items)
+		t.Fatalf("deleted listing = %+v, want the deleted work", recovery.Items)
 	}
 	if !recovery.Items[0].RecoverableUntil.After(recovery.Items[0].DeletedAt) {
 		t.Fatalf("recovery deadline = %v, deleted at %v", recovery.Items[0].RecoverableUntil, recovery.Items[0].DeletedAt)
@@ -75,7 +75,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 		t.Fatalf("restore status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
 	if got := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID); got.ID != workID {
-		t.Fatalf("restored asset id = %q, want %q", got.ID, workID)
+		t.Fatalf("restored work id = %q, want %q", got.ID, workID)
 	}
 	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
 	if download.Code != http.StatusOK || download.Header().Get("X-Accel-Redirect") == "" {
@@ -122,7 +122,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) ||
 		!owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
-		t.Fatalf("restored protected asset lost its prompt or policy: %+v", owner)
+		t.Fatalf("restored protected work lost its prompt or policy: %+v", owner)
 	}
 
 	deleteWork()
@@ -132,7 +132,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 		t.Fatalf("expire recovery window: %v", err)
 	}
 	if _, err := sweeper(works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep expired asset: %v", err)
+		t.Fatalf("sweep expired work: %v", err)
 	}
 	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after recovery expired: %d payloads and %d policy rows, want none", payloads, policies)
@@ -154,7 +154,7 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 		  join blobs blob on blob.id = revision.blob_id
 		 where revision.work_id = $1
 	`, workID).Scan(&digest); err != nil {
-		t.Fatalf("read asset digest: %v", err)
+		t.Fatalf("read work digest: %v", err)
 	}
 	var contentDigest [32]byte
 	copy(contentDigest[:], digest)

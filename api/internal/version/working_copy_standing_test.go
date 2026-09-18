@@ -41,7 +41,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
-		t.Error("a freshly published asset reads as having changes readers cannot see")
+		t.Error("a freshly published work reads as having changes readers cannot see")
 	}
 
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")

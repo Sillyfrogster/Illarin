@@ -47,7 +47,7 @@ func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 	}
 	waiting := apitest.DecodeResponse[apitest.QueuedDelivery](t, queued)
 	if waiting.State != "queued" || waiting.WorkID != workID {
-		t.Fatalf("queued delivery = %+v, want a queued delivery for the asset", waiting)
+		t.Fatalf("queued delivery = %+v, want a queued delivery for the work", waiting)
 	}
 
 	rec := apitest.Collect(t, router, grant.AccessToken, nil)
@@ -61,7 +61,7 @@ func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 	work := released.Deliveries[0]
 	if work.ID != waiting.ID || work.WorkID != workID || work.Format != "test_opaque" ||
 		work.Type != "character" || work.Name == "" || work.ContentGeneration < 1 {
-		t.Fatalf("released work = %+v, want the queued asset written as test_opaque", work)
+		t.Fatalf("released work = %+v, want the queued work written as test_opaque", work)
 	}
 	if len(work.Artifacts) == 0 || work.Artifacts[0].Type != "export" {
 		t.Fatalf("artifacts = %+v, want an export first", work.Artifacts)
@@ -82,7 +82,7 @@ func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 		t.Fatalf("read linked-instance download event: %v", err)
 	}
 	if !revisionMissing {
-		t.Fatal("asset made in Illarin recorded a source revision")
+		t.Fatal("work made in Illarin recorded a source revision")
 	}
 }
 
@@ -213,7 +213,7 @@ func TestAnWorkWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 		       withheld_reason = 'Copyright report under review'
 		 where work.id = $1
 	`, workID); err != nil {
-		t.Fatalf("withhold the asset: %v", err)
+		t.Fatalf("withhold the work: %v", err)
 	}
 
 	rec := apitest.Collect(t, router, grant.AccessToken, nil)
@@ -385,7 +385,7 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 	}
 	gone := apitest.WorkInstances(t, router, session, first)
 	if gone.Items[0].InstalledGeneration != nil {
-		t.Fatalf("the first asset is still installed after a snapshot without it")
+		t.Fatalf("the first work is still installed after a snapshot without it")
 	}
 }
 
@@ -532,18 +532,18 @@ func changeTheWork(t *testing.T, r *gin.Engine, session *http.Cookie, workID str
 	rec := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session))
 	if rec.Code != http.StatusOK {
-		t.Fatalf("read the asset to change: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("read the work to change: %d %s", rec.Code, rec.Body.String())
 	}
 	var page apitest.StartedWork
 	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the asset to change: %v", err)
+		t.Fatalf("decode the work to change: %v", err)
 	}
 	core := apitest.BlockNamed(t, page.Blocks, "character_core")
 	edited := apitest.EditableBlock(core)
 	edited.Elements[0].Content = json.RawMessage(
 		`{"text":"She keeps the books, and one of them keeps her."}`)
 	if saved := apitest.SaveBlock(t, r, session, workID, core.ID, edited); saved.Code != http.StatusOK {
-		t.Fatalf("change the asset: %d %s", saved.Code, saved.Body.String())
+		t.Fatalf("change the work: %d %s", saved.Code, saved.Body.String())
 	}
 }
 

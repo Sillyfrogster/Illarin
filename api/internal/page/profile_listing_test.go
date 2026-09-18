@@ -42,7 +42,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 		t.Fatalf("decode profile listing: %v", err)
 	}
 	if body.Total != 1 || len(body.Items) != 1 || body.Items[0].Name != "First garden" {
-		t.Fatalf("profile listing = %+v, want only the requested creator's asset", body)
+		t.Fatalf("profile listing = %+v, want only the requested creator's work", body)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
 	)
 	if !slices.Equal(names(shown), []string{"Midnight garden", "Open garden"}) {
-		t.Fatalf("shown reader preference returned %v, want both profile assets", names(shown))
+		t.Fatalf("shown reader preference returned %v, want both profile works", names(shown))
 	}
 	hidden := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=hidden", nil,
@@ -73,7 +73,7 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 		t, router, "/v1/assets?creator=verified.creator&nsfw=blurred", nil,
 	)
 	if !slices.Equal(names(blurred), []string{"Midnight garden", "Open garden"}) {
-		t.Fatalf("blurred reader preference returned %v, want both profile assets", names(blurred))
+		t.Fatalf("blurred reader preference returned %v, want both profile works", names(blurred))
 	}
 }
 
@@ -99,11 +99,11 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, withheldID, creatorID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID); err != nil {
-		t.Fatalf("soft-delete asset: %v", err)
+		t.Fatalf("soft-delete work: %v", err)
 	}
 
 	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
@@ -117,7 +117,7 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
 	)
 	if !slices.Equal(names(stranger), []string{"Adult garden", "Public garden"}) {
-		t.Fatalf("stranger profile returned %v, want only the listed assets", names(stranger))
+		t.Fatalf("stranger profile returned %v, want only the listed works", names(stranger))
 	}
 
 	owner := readProfileListing(t, router, "/v1/assets?creator=verified.creator", session)
@@ -141,7 +141,7 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 		}
 	}
 	if _, exists := states["Deleted garden"]; exists {
-		t.Fatalf("soft-deleted asset appeared in the active owner listing")
+		t.Fatalf("soft-deleted work appeared in the active owner listing")
 	}
 
 	browse := readProfileListing(t, router, "/v1/assets", session)

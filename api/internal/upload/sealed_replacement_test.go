@@ -113,7 +113,7 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 		t.Fatalf("fragment = %+v, want a sealed fragment", fragment)
 	}
 	if fragment.Text != "The wording only this asset holds" {
-		t.Fatalf("sealed wording = %q, want the wording the asset already held", fragment.Text)
+		t.Fatalf("sealed wording = %q, want the wording the work already held", fragment.Text)
 	}
 }
 

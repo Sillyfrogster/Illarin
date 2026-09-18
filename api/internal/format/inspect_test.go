@@ -205,15 +205,15 @@ func TestAThemeBundleExposesItsJSONAndReferencedFiles(t *testing.T) {
 	}
 	opened, err := inspected.OpenZIPEntry(context.Background(), "assets/host.woff2")
 	if err != nil {
-		t.Fatalf("open theme asset: %v", err)
+		t.Fatalf("open theme work: %v", err)
 	}
 	defer opened.Close()
 	font, err := io.ReadAll(opened)
 	if err != nil {
-		t.Fatalf("read theme asset: %v", err)
+		t.Fatalf("read theme work: %v", err)
 	}
 	if string(font) != "font fixture" {
-		t.Errorf("theme asset = %q, want the archived bytes", font)
+		t.Errorf("theme work = %q, want the archived bytes", font)
 	}
 }
 

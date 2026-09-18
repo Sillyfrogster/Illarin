@@ -48,7 +48,7 @@ func TestSnapshotMediaBelongsToItsWorkAndKeepsItsBytes(t *testing.T) {
 	}
 	if _, err := pool.Exec(ctx, `update works set published_snapshot_id =
 		(select published_snapshot_id from works where id = $1) where id = $2`, id, other); err == nil {
-		t.Fatal("another asset selected the snapshot")
+		t.Fatal("another work selected the snapshot")
 	}
 	if _, err := pool.Exec(ctx, `update work_snapshot_media set work_id = $2 where media_id = $1`, mediaID, other); err == nil {
 		t.Fatal("historical media reference changed ownership")
@@ -111,7 +111,7 @@ func TestSnapshotRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
 	snapshotExec(t, pool, `insert into work_media (id, work_id, role, width, height) values ($1, $2, 'avatar', 1, 1)`, media, other)
 	snapshotExec(t, pool, `update works set cover_media_id = $2 where id = $1`, draft, media)
 	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, draft, apitest.CurrentCandidate(t, svc, draft)); err == nil {
-		t.Fatal("publication accepted another asset's private media")
+		t.Fatal("publication accepted another work's private media")
 	}
 	var private bool
 	err := pool.QueryRow(context.Background(), `select lifecycle = 'draft' and published_snapshot_id is null

@@ -112,7 +112,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	}
 	guessedWork := compareVersions(t, router, uuid.NewString(), "", nil)
 	if guessedWork.Code != http.StatusNotFound {
-		t.Fatalf("guessed asset = %d, want 404", guessedWork.Code)
+		t.Fatalf("guessed work = %d, want 404", guessedWork.Code)
 	}
 
 	source := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+started.ID, nil))

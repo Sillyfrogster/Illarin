@@ -120,14 +120,14 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 		File: bytes.NewReader([]byte("expired but durable")), Name: "Expired",
 	})
 	if err != nil {
-		t.Fatalf("create asset: %v", err)
+		t.Fatalf("create work: %v", err)
 	}
 	if err := apitest.Pages(service).Delete(ctx, ownerID, created.ID); err != nil {
-		t.Fatalf("delete asset: %v", err)
+		t.Fatalf("delete work: %v", err)
 	}
 	now = now.Add(page.RecoveryWindow + time.Second)
 	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
-		t.Fatalf("mark expired asset: %v", err)
+		t.Fatalf("mark expired work: %v", err)
 	}
 
 	now = now.Add(storage.SweepDelay + time.Second)
@@ -167,10 +167,10 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 		File: bytes.NewReader([]byte("recoverable")), Name: "Recoverable",
 	})
 	if err != nil {
-		t.Fatalf("create recoverable asset: %v", err)
+		t.Fatalf("create recoverable work: %v", err)
 	}
 	if err := apitest.Pages(service).Delete(ctx, ownerID, recoverable.ID); err != nil {
-		t.Fatalf("delete recoverable asset: %v", err)
+		t.Fatalf("delete recoverable work: %v", err)
 	}
 	var recoverableBlob uuid.UUID
 	if err := pool.QueryRow(ctx,
@@ -338,10 +338,10 @@ func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 		File: bytes.NewReader([]byte("expired source")), Name: "Expired",
 	})
 	if err != nil {
-		t.Fatalf("create asset: %v", err)
+		t.Fatalf("create work: %v", err)
 	}
 	if err := apitest.Pages(service).Delete(ctx, ownerID, created.ID); err != nil {
-		t.Fatalf("delete asset: %v", err)
+		t.Fatalf("delete work: %v", err)
 	}
 	var blobID uuid.UUID
 	if err := pool.QueryRow(ctx,
@@ -353,15 +353,15 @@ func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 	now = now.Add(page.RecoveryWindow + time.Second)
 	marked, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
 	if err != nil || marked.Marked != 1 || marked.Deleted != 0 {
-		t.Fatalf("mark expired asset = %+v, %v; want one mark", marked, err)
+		t.Fatalf("mark expired work = %+v, %v; want one mark", marked, err)
 	}
 	now = now.Add(storage.SweepDelay + time.Second)
 	deleted, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
 	if err != nil || deleted.Deleted != 1 {
-		t.Fatalf("collect expired asset = %+v, %v; want one deletion", deleted, err)
+		t.Fatalf("collect expired work = %+v, %v; want one deletion", deleted, err)
 	}
 	if _, err := store.Open(ctx, blobID); !errors.Is(err, storage.ErrBlobNotFound) {
-		t.Fatalf("expired asset blob error = %v, want ErrBlobNotFound", err)
+		t.Fatalf("expired work blob error = %v, want ErrBlobNotFound", err)
 	}
 	if err := apitest.Pages(service).Restore(ctx, ownerID, created.ID); !errors.Is(err, work.ErrNotFound) {
 		t.Fatalf("restore after recovery error = %v, want ErrNotFound", err)

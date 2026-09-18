@@ -107,7 +107,7 @@ func TestEveryVocabularySetIsClosed(t *testing.T) {
 			`{"version":2,"content":[{"type":"callout","kind":%q,"content":[`+
 				`{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}]}`, calloutType)
 		if _, err := postbody.Read([]byte(body)); err != nil {
-			t.Errorf("callout kind %q is listed but refused: %v", calloutType, err)
+			t.Errorf("callout type %q is listed but refused: %v", calloutType, err)
 		}
 	}
 }

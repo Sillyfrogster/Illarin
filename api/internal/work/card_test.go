@@ -42,7 +42,7 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 	created := apitest.IngestOne(t, svc, ownerID, "ana.png", card)
 	apitest.PublishImported(t, svc, ownerID, created)
 	if created.Type != "character" || created.Format != character.V2 {
-		t.Fatalf("asset = kind %q format %q", created.Type, created.Format)
+		t.Fatalf("work = type %q format %q", created.Type, created.Format)
 	}
 	if created.Name != "Ana" || created.Blurb != "A quiet archivist." {
 		t.Fatalf("catalog seed = %q, %q", created.Name, created.Blurb)
@@ -73,7 +73,7 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 		t.Fatalf("read cover media: %v", err)
 	}
 	if coverRole != string(work.MediaAvatar) || coverWork != created.ID {
-		t.Fatalf("cover = %s on asset %s", coverRole, coverWork)
+		t.Fatalf("cover = %s on work %s", coverRole, coverWork)
 	}
 
 }

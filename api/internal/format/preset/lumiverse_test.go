@@ -74,7 +74,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	if parsed.Type != Type || parsed.Format != LumiverseID {
-		t.Fatalf("parsed kind %q format %q", parsed.Type, parsed.Format)
+		t.Fatalf("parsed type %q format %q", parsed.Type, parsed.Format)
 	}
 	if parsed.Header.Name != "Quiet Room" || parsed.Header.WorkVersion != "1.2" {
 		t.Errorf("header = %+v, want the preset's own name and version", parsed.Header)

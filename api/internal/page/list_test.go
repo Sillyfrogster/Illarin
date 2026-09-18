@@ -42,15 +42,15 @@ func TestCreateThenListRoundTrip(t *testing.T) {
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
-		t.Fatalf("decode created asset: %v", err)
+		t.Fatalf("decode created work: %v", err)
 	}
 	if created.Work == nil || created.Work.CreatedAt.IsZero() {
-		t.Error("created asset came back with no made date")
+		t.Error("created work came back with no made date")
 	}
 
 	items := apitest.ListItems(t, r, "/v1/assets")
 	if len(items) != 1 || items[0].Name != "Mystery" {
-		t.Fatalf("list returned %+v, want one asset named Mystery", items)
+		t.Fatalf("list returned %+v, want one work named Mystery", items)
 	}
 }
 

@@ -222,7 +222,7 @@ func TestTwoBlocksOnOneWorkCannotShareAPosition(t *testing.T) {
 	if _, err := pool.Exec(ctx,
 		`insert into works (id, type, name, lifecycle)
 		 values ($1, 'character', 'Ordered', 'draft')`, workID); err != nil {
-		t.Fatalf("insert asset: %v", err)
+		t.Fatalf("insert work: %v", err)
 	}
 
 	insert := func(definition string) error {
@@ -236,7 +236,7 @@ func TestTwoBlocksOnOneWorkCannotShareAPosition(t *testing.T) {
 		t.Fatalf("insert first block: %v", err)
 	}
 	if err := insert("messages"); err == nil {
-		t.Fatal("two blocks on one asset took the same position")
+		t.Fatal("two blocks on one work took the same position")
 	}
 }
 
@@ -251,7 +251,7 @@ func TestWorkTypeIsClosedToKnownValues(t *testing.T) {
 			 values (gen_random_uuid(), $1, $2, 'published')`,
 			workType, workType)
 		if err != nil {
-			t.Errorf("insert kind %q: %v", workType, err)
+			t.Errorf("insert type %q: %v", workType, err)
 		}
 	}
 
@@ -259,7 +259,7 @@ func TestWorkTypeIsClosedToKnownValues(t *testing.T) {
 		`insert into works (id, type, name, lifecycle)
 		 values (gen_random_uuid(), 'bundle', 'Bundle', 'published')`)
 	if err == nil {
-		t.Fatal("kind outside the catalog vocabulary was accepted")
+		t.Fatal("type outside the catalog vocabulary was accepted")
 	}
 }
 
@@ -274,24 +274,24 @@ func TestVisibilityDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
 		 values (gen_random_uuid(), 'character', 'Listed by default', 'published')
 		 returning visibility`).Scan(&visibility)
 	if err != nil {
-		t.Fatalf("insert asset: %v", err)
+		t.Fatalf("insert work: %v", err)
 	}
 	if visibility != "listed" {
-		t.Errorf("discovery = %q, want listed", visibility)
+		t.Errorf("visibility = %q, want listed", visibility)
 	}
 
 	_, err = pool.Exec(ctx,
 		`insert into works (id, type, name, visibility, lifecycle)
 		 values (gen_random_uuid(), 'theme', 'Quiet', 'unlisted', 'published')`)
 	if err != nil {
-		t.Errorf("insert unlisted asset: %v", err)
+		t.Errorf("insert unlisted work: %v", err)
 	}
 
 	_, err = pool.Exec(ctx,
 		`insert into works (id, type, name, visibility, lifecycle)
 		 values (gen_random_uuid(), 'theme', 'Unknown', 'private', 'published')`)
 	if err == nil {
-		t.Fatal("discovery outside listed and unlisted was accepted")
+		t.Fatal("visibility outside listed and unlisted was accepted")
 	}
 }
 
@@ -311,7 +311,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 		`insert into works (id, type, name, lifecycle)
 		 values ($1, 'character', 'Held', 'published')`, workID)
 	if err != nil {
-		t.Fatalf("insert asset: %v", err)
+		t.Fatalf("insert work: %v", err)
 	}
 
 	_, err = pool.Exec(ctx,
@@ -340,7 +340,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 				`insert into works (id, type, name, lifecycle)
 				 values ($1, 'character', 'Partial', 'published')`, id)
 			if err != nil {
-				t.Fatalf("insert asset: %v", err)
+				t.Fatalf("insert work: %v", err)
 			}
 			_, err = pool.Exec(ctx, `update works set `+test.set+` where id = $1`, id)
 			if err == nil {
@@ -356,18 +356,18 @@ func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
 
 	workColumns, err := tableColumns(pool, "works")
 	if err != nil {
-		t.Fatalf("read asset columns: %v", err)
+		t.Fatalf("read work columns: %v", err)
 	}
 	for _, column := range []string{"format", "format_version", "platform", "publication"} {
 		if slices.Contains(workColumns, column) {
-			t.Errorf("assets still has %s", column)
+			t.Errorf("works still has %s", column)
 		}
 	}
 	for _, column := range []string{
 		"type", "visibility", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "origin_format",
 	} {
 		if !slices.Contains(workColumns, column) {
-			t.Errorf("assets has no %s", column)
+			t.Errorf("works has no %s", column)
 		}
 	}
 
@@ -452,7 +452,7 @@ func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
 		insert into works (id, type, name, lifecycle)
 		values ($1, 'character', 'Made here', 'published')
 	`, workID); err != nil {
-		t.Fatalf("insert asset without a source revision: %v", err)
+		t.Fatalf("insert work without a source revision: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into download_events
@@ -523,7 +523,7 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	}
 
 	if _, err := pool.Exec(ctx, `delete from works where id = $1`, workID); err != nil {
-		t.Fatalf("delete the asset the record belongs to: %v", err)
+		t.Fatalf("delete the work the record belongs to: %v", err)
 	}
 	var left int
 	if err := pool.QueryRow(ctx, `
@@ -532,7 +532,7 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 		t.Fatalf("count what the deletion left: %v", err)
 	}
 	if left != 0 {
-		t.Errorf("the deleted asset left %d legacy records behind", left)
+		t.Errorf("the deleted work left %d legacy records behind", left)
 	}
 }
 
@@ -548,7 +548,7 @@ func TestDownloadEventRevisionMustBelongToItsWork(t *testing.T) {
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 	`, secondWorkID, firstRevisionID)
 	if err == nil {
-		t.Fatalf("revision %s from asset %s was recorded for asset %s",
+		t.Fatalf("revision %s from work %s was recorded for work %s",
 			firstRevisionID, firstWorkID, secondWorkID)
 	}
 }
@@ -597,7 +597,7 @@ func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 
 	columns, err := tableColumns(pool, "work_summaries")
 	if err != nil {
-		t.Fatalf("read projection columns: %v", err)
+		t.Fatalf("read summary columns: %v", err)
 	}
 	want := []string{
 		"work_id", "export", "export_stamp", "export_computed_at",
@@ -605,7 +605,7 @@ func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 	}
 	for _, column := range want {
 		if !slices.Contains(columns, column) {
-			t.Errorf("the projection has no %s column; it holds %v", column, columns)
+			t.Errorf("the summary has no %s column; it holds %v", column, columns)
 		}
 	}
 
@@ -617,7 +617,7 @@ func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 	if _, err := pool.Exec(context.Background(),
 		`insert into work_summaries (work_id, facets, facet_stamp) values ($1, $2, 'stamp')`,
 		uuid.New(), `{}`); err == nil {
-		t.Fatal("a projection without an asset was accepted")
+		t.Fatal("a summary without a work was accepted")
 	}
 	if _, err := pool.Exec(context.Background(), `
 		update work_summaries set facets = '[]'::jsonb where work_id = $1
@@ -660,13 +660,13 @@ func TestMediaBelongsToOneWork(t *testing.T) {
 		`insert into work_media (id, role, blob_id)
 		 values (gen_random_uuid(), 'gallery', $1)`, blobID)
 	if err == nil {
-		t.Error("media without an asset was accepted")
+		t.Error("media without a work was accepted")
 	}
 	_, err = pool.Exec(ctx,
 		`insert into work_media (id, work_id, role, blob_id)
 		 values (gen_random_uuid(), $1, 'gallery', $2)`, uuid.New(), blobID)
 	if err == nil {
-		t.Error("media for an unknown asset was accepted")
+		t.Error("media for an unknown work was accepted")
 	}
 	_, err = pool.Exec(ctx,
 		`insert into work_media (id, work_id, role, blob_id)
@@ -684,10 +684,10 @@ func TestCoverIsAnOptionalWorkReference(t *testing.T) {
 
 	workColumns, err := tableColumns(pool, "works")
 	if err != nil {
-		t.Fatalf("read asset columns: %v", err)
+		t.Fatalf("read work columns: %v", err)
 	}
 	if !slices.Contains(workColumns, "cover_media_id") || slices.Contains(workColumns, "preview_media_id") {
-		t.Fatalf("asset columns do not carry the cover directly: %v", workColumns)
+		t.Fatalf("work columns do not carry the cover directly: %v", workColumns)
 	}
 
 	var coverID *uuid.UUID
@@ -697,7 +697,7 @@ func TestCoverIsAnOptionalWorkReference(t *testing.T) {
 		t.Fatalf("read empty cover: %v", err)
 	}
 	if coverID != nil {
-		t.Fatalf("new asset has synthetic cover %s", *coverID)
+		t.Fatalf("new work has synthetic cover %s", *coverID)
 	}
 
 	mediaID := uuid.New()
@@ -784,7 +784,7 @@ func insertWorkRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID,
 			revisionID, workID, blobID)
 	}
 	if err != nil {
-		t.Fatalf("insert asset revision: %v", err)
+		t.Fatalf("insert work revision: %v", err)
 	}
 	return workID, revisionID, blobID
 }

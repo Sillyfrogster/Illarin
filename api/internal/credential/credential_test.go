@@ -12,7 +12,7 @@ func TestAFreshSecretReadsBackAsWhatWasStored(t *testing.T) {
 		t.Fatalf("mint: %v", err)
 	}
 	if !strings.HasPrefix(minted.Value, string(InstanceRefresh)+"."+minted.Prefix+".") {
-		t.Fatalf("secret %q does not carry its kind and prefix", minted.Value)
+		t.Fatalf("secret %q does not carry its type and prefix", minted.Value)
 	}
 	read, ok := Read(minted.Value, InstanceRefresh)
 	if !ok {

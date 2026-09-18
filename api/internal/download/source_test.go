@@ -71,7 +71,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 	if created.Work == nil {
-		t.Fatal("completed ingest has no asset")
+		t.Fatal("completed ingest has no work")
 	}
 
 	rec = httptest.NewRecorder()
@@ -214,7 +214,7 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 		`{"discovery":"unlisted"}`, session,
 	))
 	if changed.Code != http.StatusNoContent {
-		t.Fatalf("change discovery status = %d, want 204", changed.Code)
+		t.Fatalf("change visibility status = %d, want 204", changed.Code)
 	}
 	close(blocker.release)
 	if download := <-response; download.Code != http.StatusOK {
@@ -228,7 +228,7 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 		t.Fatalf("read download event: %v", err)
 	}
 	if visibility != "unlisted" {
-		t.Fatalf("discovery at handoff = %q, want unlisted", visibility)
+		t.Fatalf("visibility at handoff = %q, want unlisted", visibility)
 	}
 }
 
@@ -332,7 +332,7 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, withheldID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	unlisted := apitest.Send(t, router, httptest.NewRequest(
@@ -473,7 +473,7 @@ func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 	if created.Work == nil {
-		t.Fatal("completed ingest has no asset")
+		t.Fatal("completed ingest has no work")
 	}
 
 	rec = httptest.NewRecorder()
@@ -511,7 +511,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 				t.Fatalf("decode: %v", err)
 			}
 			if operation.Work == nil {
-				t.Fatal("completed ingest has no asset")
+				t.Fatal("completed ingest has no work")
 			}
 
 			download := apitest.Send(t, r, httptest.NewRequest(

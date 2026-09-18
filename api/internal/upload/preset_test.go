@@ -155,7 +155,7 @@ func readWork(t *testing.T, r http.Handler, session *http.Cookie, id string) str
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil)
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read the work: status = %d: %s", response.Code, response.Body.String())
 	}
 	return response.Body.String()
 }

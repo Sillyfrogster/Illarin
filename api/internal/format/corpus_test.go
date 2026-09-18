@@ -81,7 +81,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		}
 		declared := resolution.Module.Declaration()
 		if parsed.Type != declared.Type || parsed.Format != resolution.Module.ID() {
-			t.Errorf("%s parsed as kind %q format %q", entry.Name(), parsed.Type, parsed.Format)
+			t.Errorf("%s parsed as type %q format %q", entry.Name(), parsed.Type, parsed.Format)
 		}
 		for _, sidecar := range unreadArchiveEntries(file) {
 			if !slices.Contains(preservedNamespaces(parsed.Remainder), sidecar) {

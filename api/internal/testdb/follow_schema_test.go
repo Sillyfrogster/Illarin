@@ -21,30 +21,30 @@ func TestAFollowGoesWithItsAccountOrItsWork(t *testing.T) {
 		insert into works (id, type, name, lifecycle)
 		values ($1, 'character', 'Quiet Shelf', 'published'), ($2, 'character', 'Loud Shelf', 'published')
 	`, kept, removed); err != nil {
-		t.Fatalf("insert assets: %v", err)
+		t.Fatalf("insert works: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into work_follows (account_id, work_id, state)
 		values ($1, $3, 'watching'), ($2, $3, 'watching'), ($2, $4, 'stopped')
 	`, leaving, staying, kept, removed); err != nil {
-		t.Fatalf("insert watches: %v", err)
+		t.Fatalf("insert follows: %v", err)
 	}
 
 	if _, err := pool.Exec(ctx, `delete from users where id = $1`, leaving); err != nil {
 		t.Fatalf("delete account: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `delete from works where id = $1`, removed); err != nil {
-		t.Fatalf("delete asset: %v", err)
+		t.Fatalf("delete work: %v", err)
 	}
 
 	var left, stayed int
 	if err := pool.QueryRow(ctx, `
 		select count(*), count(*) filter (where account_id = $1 and work_id = $2) from work_follows
 	`, staying, kept).Scan(&left, &stayed); err != nil {
-		t.Fatalf("count watches: %v", err)
+		t.Fatalf("count follows: %v", err)
 	}
 	if left != 1 || stayed != 1 {
-		t.Fatalf("%d watches left, want only the staying reader's watch on the kept asset", left)
+		t.Fatalf("%d follows left, want only the staying reader's follow on the kept work", left)
 	}
 }
 
@@ -59,11 +59,11 @@ func TestAFollowIsEitherFollowingOrStopped(t *testing.T) {
 	if _, err := pool.Exec(ctx, `
 		insert into works (id, type, name, lifecycle) values ($1, 'character', 'Quiet Shelf', 'published')
 	`, work); err != nil {
-		t.Fatalf("insert asset: %v", err)
+		t.Fatalf("insert work: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into work_follows (account_id, work_id, state) values ($1, $2, 'muted')
 	`, account, work); err == nil {
-		t.Fatal("a watch outside watching and stopped was accepted")
+		t.Fatal("a follow outside following and stopped was accepted")
 	}
 }

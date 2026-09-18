@@ -442,10 +442,10 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(created.Body.Bytes(), &work); err != nil {
-		t.Fatalf("decode asset: %v", err)
+		t.Fatalf("decode work: %v", err)
 	}
 	if work.Work == nil {
-		t.Fatal("completed ingest has no asset")
+		t.Fatal("completed ingest has no work")
 	}
 
 	viewer := apitest.SignUp(t, r, "viewer@example.com", "plain.viewer")

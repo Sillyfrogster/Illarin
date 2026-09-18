@@ -116,7 +116,7 @@ func TestARequiredBlockAndAnUnofferedElementAreBothRefused(t *testing.T) {
 		t.Errorf("starting a gallery with prose: status = %d, want 400", response.Code)
 	}
 	if response := apitest.AddBlock(t, r, session, started.ID, "theme_core", "color_set"); response.Code != http.StatusBadRequest {
-		t.Errorf("adding a block the kind has not got: status = %d, want 400", response.Code)
+		t.Errorf("adding a block the type has not got: status = %d, want 400", response.Code)
 	}
 }
 

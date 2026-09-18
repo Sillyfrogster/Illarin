@@ -24,7 +24,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 
 	page := apitest.ReadExtensionPage(t, r, session, workID)
 	if page.Type != "extension" || page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
-		t.Fatalf("page kind %q identifier %v, want an extension showing quiet_toolbox", page.Type, page.Identifier)
+		t.Fatalf("page type %q identifier %v, want an extension showing quiet_toolbox", page.Type, page.Identifier)
 	}
 	if len(page.Blocks) != 2 {
 		t.Fatalf("page blocks = %+v, want permissions and source", page.Blocks)
@@ -80,7 +80,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	assertSameBytes(t, "delivery", fetched.Body.Bytes(), upload)
 
 	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); !strings.Contains(lumiverse, workID) {
-		t.Errorf("browsing Lumiverse extensions did not find the asset: %s", lumiverse)
+		t.Errorf("browsing Lumiverse extensions did not find the work: %s", lumiverse)
 	}
 	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions found a Spindle extension: %s", tavern)
@@ -129,7 +129,7 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 		t.Fatalf("dependencies = %+v, want both names in manifest order", dependencies)
 	}
 	if len(dependencies[0].Works) != 1 || dependencies[0].Works[0].ID != libraryID || dependencies[0].Works[0].Name != "LALib" {
-		t.Errorf("third-party/SillyTavern-LALib links to %+v, want the LALib asset", dependencies[0].Works)
+		t.Errorf("third-party/SillyTavern-LALib links to %+v, want the LALib work", dependencies[0].Works)
 	}
 	if len(dependencies[1].Works) != 0 {
 		t.Errorf("the built-in vectors links to %+v, want the bare name", dependencies[1].Works)
@@ -146,7 +146,7 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
 	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); !strings.Contains(tavern, workID) {
-		t.Errorf("browsing SillyTavern extensions did not find the asset: %s", tavern)
+		t.Errorf("browsing SillyTavern extensions did not find the work: %s", tavern)
 	}
 	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); strings.Contains(lumiverse, workID) {
 		t.Errorf("browsing Lumiverse extensions found a SillyTavern extension: %s", lumiverse)

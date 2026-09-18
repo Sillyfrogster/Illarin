@@ -73,12 +73,12 @@ func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
 		t.Errorf("blurb = %q, and no blurb was written", page.Blurb)
 	}
 	if len(page.Readiness) != 0 {
-		t.Errorf("a published asset still carries a readiness list: %+v", page.Readiness)
+		t.Errorf("a published work still carries a readiness list: %+v", page.Readiness)
 	}
 
 	stranger := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 	if stranger.Code != http.StatusOK {
-		t.Errorf("a reader got %d for a published asset, want 200", stranger.Code)
+		t.Errorf("a reader got %d for a published work, want 200", stranger.Code)
 	}
 
 	again := apitest.PublishWork(t, r, session, started.ID)
@@ -98,7 +98,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 
 	refused := apitest.PublishWork(t, r, session, started.ID)
 	if refused.Code != http.StatusConflict {
-		t.Fatalf("an asset with empty required blocks published: %d", refused.Code)
+		t.Fatalf("a work with empty required blocks published: %d", refused.Code)
 	}
 
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
@@ -181,7 +181,7 @@ func TestADraftHasNoDownloadNoDeliveryAndNoVisibilityToSet(t *testing.T) {
 		response := apitest.Send(t, r, apitest.Authorized(
 			httptest.NewRequest(http.MethodGet, path, nil), session))
 		if response.Code != http.StatusNotFound {
-			t.Errorf("GET %s status = %d, want 404 while the asset is a draft",
+			t.Errorf("GET %s status = %d, want 404 while the work is a draft",
 				path, response.Code)
 		}
 	}
@@ -190,7 +190,7 @@ func TestADraftHasNoDownloadNoDeliveryAndNoVisibilityToSet(t *testing.T) {
 		"/v1/assets/"+started.ID+"/discovery", strings.NewReader(`{"discovery":"unlisted"}`))
 	visibility.Header.Set("Content-Type", "application/json")
 	if got := apitest.Send(t, r, apitest.Authorized(visibility, session)); got.Code != http.StatusConflict {
-		t.Errorf("set discovery on a draft status = %d, want 409: %s", got.Code, got.Body.String())
+		t.Errorf("set visibility on a draft status = %d, want 409: %s", got.Code, got.Body.String())
 	}
 }
 
@@ -333,7 +333,7 @@ func TestAPublishedWorkKeepsItsAdultContentAnswer(t *testing.T) {
 
 	unanswered := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Ilse","blurb":"","isNsfw":null}`)
 	if unanswered.Code != http.StatusBadRequest {
-		t.Errorf("unanswering a published asset status = %d, want 400: %s",
+		t.Errorf("unanswering a published work status = %d, want 400: %s",
 			unanswered.Code, unanswered.Body.String())
 	}
 

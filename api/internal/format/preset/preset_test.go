@@ -177,7 +177,7 @@ func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
 					t.Errorf("description = %s, want the catalog blurb", body["description"])
 				}
 				if string(body["presetVersion"]) != `"1.2"` {
-					t.Errorf("version = %s, want the asset's own", body["presetVersion"])
+					t.Errorf("version = %s, want the work's own", body["presetVersion"])
 				}
 				var samplers map[string]json.RawMessage
 				if err := json.Unmarshal(body["samplerOverrides"], &samplers); err != nil {

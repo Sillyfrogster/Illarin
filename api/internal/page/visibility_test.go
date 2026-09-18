@@ -28,7 +28,7 @@ func TestUploadAcceptsVisibilityAndDefaultsToListed(t *testing.T) {
 
 			page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
 			if page.Visibility != test.want {
-				t.Fatalf("discovery = %q, want %q", page.Visibility, test.want)
+				t.Fatalf("visibility = %q, want %q", page.Visibility, test.want)
 			}
 		})
 	}
@@ -47,12 +47,12 @@ func TestCreatorChangesWorkVisibility(t *testing.T) {
 		session,
 	))
 	if changed.Code != http.StatusNoContent {
-		t.Fatalf("change discovery status = %d, want 204: %s", changed.Code, changed.Body.String())
+		t.Fatalf("change visibility status = %d, want 204: %s", changed.Code, changed.Body.String())
 	}
 
 	page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
 	if page.Visibility != "unlisted" {
-		t.Fatalf("discovery = %q, want unlisted", page.Visibility)
+		t.Fatalf("visibility = %q, want unlisted", page.Visibility)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 		nil,
 	))
 	if changed.Code != http.StatusUnauthorized {
-		t.Fatalf("change discovery status = %d, want 401: %s", changed.Code, changed.Body.String())
+		t.Fatalf("change visibility status = %d, want 401: %s", changed.Code, changed.Body.String())
 	}
 }
 
@@ -86,7 +86,7 @@ func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, workID, ownerID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
@@ -97,6 +97,6 @@ func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 		session,
 	))
 	if changed.Code != http.StatusConflict {
-		t.Fatalf("change discovery status = %d, want 409: %s", changed.Code, changed.Body.String())
+		t.Fatalf("change visibility status = %d, want 409: %s", changed.Code, changed.Body.String())
 	}
 }

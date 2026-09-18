@@ -24,7 +24,7 @@ func TestEveryModuleDeclaresTheCharacterType(t *testing.T) {
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		if declaration.Type != Type {
-			t.Errorf("module %q kind = %q, want %q", module.ID(), declaration.Type, Type)
+			t.Errorf("module %q type = %q, want %q", module.ID(), declaration.Type, Type)
 		}
 		if !declaration.Direction.Read || !declaration.Direction.Write {
 			t.Errorf("module %q direction = %+v, want read and write", module.ID(), declaration.Direction)
@@ -61,7 +61,7 @@ func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
 		t.Error("declared consumed keys do not match the versioned character readers")
 	}
 	if slices.Contains((CharXModule{}).Declaration().ConsumedKeys, "assets") {
-		t.Error("CharX declared the asset list consumed")
+		t.Error("CharX declared the work list consumed")
 	}
 }
 
@@ -167,7 +167,7 @@ func TestTypeComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 				t.Errorf("format = %q, want %q", parsed.Format, test.format)
 			}
 			if parsed.Type != Type {
-				t.Errorf("kind = %q, want %q", parsed.Type, Type)
+				t.Errorf("type = %q, want %q", parsed.Type, Type)
 			}
 			if parsed.Header.Name != "Ana" {
 				t.Errorf("name = %q, want Ana", parsed.Header.Name)
@@ -186,7 +186,7 @@ func TestAnEmbeddedLorebookStaysPartOfTheCard(t *testing.T) {
 	}`)
 	parsed := resolveAndParse(t, withBook)
 	if parsed.Type != Type {
-		t.Fatalf("kind = %q, want the one character asset", parsed.Type)
+		t.Fatalf("type = %q, want the one character work", parsed.Type)
 	}
 	entries := 0
 	for _, element := range parsed.Elements {
@@ -278,7 +278,7 @@ func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
 	if !bytes.Contains(cardRemainder, []byte(`"assets"`)) ||
 		!bytes.Contains(cardRemainder, []byte(`"user_icon"`)) ||
 		!bytes.Contains(cardRemainder, []byte(`"remote"`)) {
-		t.Fatalf("CharX asset remainder = %s, want the complete source structure", cardRemainder)
+		t.Fatalf("CharX work remainder = %s, want the complete source structure", cardRemainder)
 	}
 }
 
@@ -644,6 +644,6 @@ func TestACharXThatNamesNoWorksIsReadFromItsArchiveLayout(t *testing.T) {
 		}
 	}
 	if parsed.Media[2].ElementRole != block.RoleGallery {
-		t.Errorf("an image under assets/other went to %q", parsed.Media[2].ElementRole)
+		t.Errorf("an image under works/other went to %q", parsed.Media[2].ElementRole)
 	}
 }

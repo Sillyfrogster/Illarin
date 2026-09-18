@@ -120,7 +120,7 @@ func TestCredentialsHaveSeparateTypesAndRejectMalformedValues(t *testing.T) {
 			t.Fatalf("new %s credential: %v", secretType, err)
 		}
 		if !strings.HasPrefix(token, secretType+"."+prefix+".") {
-			t.Errorf("token %q does not carry kind and prefix", token)
+			t.Errorf("token %q does not carry type and prefix", token)
 		}
 		got, ok := credentialHash(token, secretType)
 		if !ok || string(got) != string(hash) {

@@ -123,7 +123,7 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 	parsed := parse(t, twoEntries)
 
 	if parsed.Type != Type || parsed.Format != ID {
-		t.Fatalf("parsed kind %q format %q, want %q and %q", parsed.Type, parsed.Format, Type, ID)
+		t.Fatalf("parsed type %q format %q, want %q and %q", parsed.Type, parsed.Format, Type, ID)
 	}
 	if parsed.Header.Name != "Zenless lore" {
 		t.Errorf("name = %q, want the book's own", parsed.Header.Name)
@@ -234,7 +234,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 		t.Fatalf("read the written book: %v", err)
 	}
 	if string(body["name"]) != `"Zenless lore"` {
-		t.Errorf("written name = %s, want the asset's own", body["name"])
+		t.Errorf("written name = %s, want the work's own", body["name"])
 	}
 	for _, key := range []string{"description", "scan_depth", "token_budget", "extensions"} {
 		if _, held := body[key]; !held {
@@ -306,7 +306,7 @@ func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 		Type: "character", Origin: ID,
 	})
 	if len(targets) != 0 {
-		t.Fatalf("offered %+v for a lorebook origin under the character kind, want none", targets)
+		t.Fatalf("offered %+v for a lorebook origin under the character type, want none", targets)
 	}
 }
 

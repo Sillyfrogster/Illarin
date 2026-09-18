@@ -69,7 +69,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 		t.Fatal("media id is empty")
 	}
 	if added.WorkID != created.ID {
-		t.Fatalf("media asset = %v, want %s", added.WorkID, created.ID)
+		t.Fatalf("media work = %v, want %s", added.WorkID, created.ID)
 	}
 	if added.Width != 1200 || added.Height != 600 {
 		t.Fatalf("dimensions = %dx%d, want native 1200x600", added.Width, added.Height)
@@ -91,7 +91,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 		t.Fatalf("read media row: %v", err)
 	}
 	if storedWork != created.ID {
-		t.Fatalf("stored media asset = %v, want %s", storedWork, created.ID)
+		t.Fatalf("stored media work = %v, want %s", storedWork, created.ID)
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
@@ -357,7 +357,7 @@ func TestIngestStoresExtractedMediaOnTheWork(t *testing.T) {
 		t.Fatalf("GetIngest: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatal("ingest did not create an asset")
+		t.Fatal("ingest did not create a work")
 	}
 
 	var workID uuid.UUID
@@ -372,7 +372,7 @@ func TestIngestStoresExtractedMediaOnTheWork(t *testing.T) {
 		t.Fatalf("read extracted media: %v", err)
 	}
 	if workID != operation.Work.ID {
-		t.Fatalf("extracted media asset = %v, want %v", workID, operation.Work.ID)
+		t.Fatalf("extracted media work = %v, want %v", workID, operation.Work.ID)
 	}
 	if role != "expression" || width != 90 || height != 45 {
 		t.Fatalf("extracted media = %s %dx%d", role, width, height)

@@ -418,7 +418,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 	if err := pool.QueryRow(context.Background(), `
 		select payload from work_preserved_data where work_id = $1 and namespace = 'card'
 	`, workID).Scan(&preserved); err != nil {
-		t.Fatalf("read preserved assets: %v", err)
+		t.Fatalf("read preserved works: %v", err)
 	}
 	var cardRemainder map[string]json.RawMessage
 	if err := json.Unmarshal(preserved, &cardRemainder); err != nil {
@@ -475,10 +475,10 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	}
 	var workCount int
 	if err := pool.QueryRow(context.Background(), `select count(*) from works`).Scan(&workCount); err != nil {
-		t.Fatalf("count assets: %v", err)
+		t.Fatalf("count works: %v", err)
 	}
 	if workCount != 0 {
-		t.Fatalf("over-cap ingest recorded %d assets", workCount)
+		t.Fatalf("over-cap ingest recorded %d works", workCount)
 	}
 }
 
@@ -543,7 +543,7 @@ func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
 		t.Fatalf("decode refused operation: %v", err)
 	}
 	if operation.Status != "failed" || operation.Work != nil || operation.Failure == nil {
-		t.Fatalf("operation = %#v, want a refusal with no asset", operation)
+		t.Fatalf("operation = %#v, want a refusal with no work", operation)
 	}
 	if operation.Failure.Reason != "unsupported_format" ||
 		!strings.Contains(operation.Failure.Message, "start from nothing") {
@@ -585,10 +585,10 @@ func TestClaimedFileThatFailsToParseIsRejectedWithoutAnWork(t *testing.T) {
 		t.Fatalf("operation = %#v, want malformed_input", operation)
 	}
 	if operation.Work != nil {
-		t.Fatalf("failed ingest returned asset %#v", operation.Work)
+		t.Fatalf("failed ingest returned work %#v", operation.Work)
 	}
 	if listed := apitest.ListItems(t, r, "/v1/assets"); len(listed) != 0 {
-		t.Fatalf("browse found %d assets after a failed parse, want none", len(listed))
+		t.Fatalf("browse found %d works after a failed parse, want none", len(listed))
 	}
 }
 
@@ -962,18 +962,18 @@ func TestDetailsSeedFromParseWithoutChangingTheFile(t *testing.T) {
 	if operation.Work == nil || operation.Work.Name != "Moonlit Visitor" ||
 		operation.Work.Blurb != "A quiet visitor from the edge of the wood." ||
 		!operation.Work.IsNSFW || strings.Join(operation.Work.Tags, ",") != "folklore,gentle" {
-		t.Fatalf("asset metadata = %#v, want the parsed catalog seed", operation.Work)
+		t.Fatalf("work metadata = %#v, want the parsed catalog seed", operation.Work)
 	}
 
 	workID, err := uuid.Parse(operation.Work.ID)
 	if err != nil {
-		t.Fatalf("parse asset id: %v", err)
+		t.Fatalf("parse work id: %v", err)
 	}
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+operation.Work.ID+"/publish", nil,
 	), session))
 	if published.Code != http.StatusOK {
-		t.Fatalf("publish imported asset = %d: %s", published.Code, published.Body.String())
+		t.Fatalf("publish imported work = %d: %s", published.Code, published.Body.String())
 	}
 	stored, err := works.OpenSource(context.Background(), workID)
 	if err != nil {
@@ -1120,7 +1120,7 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	apitest.AcceptReplacementPreview(t, r, session, created.ID, revision.Header().Get("Location"))
 	updated := apitest.PollIngestWork(t, r, session, revision.Header().Get("Location"))
 	if updated.ID != created.ID {
-		t.Fatalf("revision made asset %s, want %s", updated.ID, created.ID)
+		t.Fatalf("revision made work %s, want %s", updated.ID, created.ID)
 	}
 	if updated.Name != created.Name {
 		t.Fatalf("name = %q, want the creator's own %q", updated.Name, created.Name)

@@ -102,7 +102,7 @@ func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 		t.Fatalf("unlist status = %d, want 204: %s", unlisted.Code, unlisted.Body.String())
 	}
 	if open := readUpdateHistory(t, r, started.ID, nil); open.Code != http.StatusOK {
-		t.Fatalf("an unlisted asset's history status = %d, want 200: %s", open.Code, open.Body.String())
+		t.Fatalf("an unlisted work's history status = %d, want 200: %s", open.Code, open.Body.String())
 	}
 
 	staff := "11111111-1111-1111-1111-111111111111"
@@ -114,11 +114,11 @@ func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, started.ID, staff); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	if stranger := readUpdateHistory(t, r, started.ID, nil); stranger.Code != http.StatusNotFound {
-		t.Fatalf("a withheld asset's history status = %d, want 404: %s",
+		t.Fatalf("a withheld work's history status = %d, want 404: %s",
 			stranger.Code, stranger.Body.String())
 	}
 	if owner := readUpdateHistory(t, r, started.ID, session); owner.Code != http.StatusOK {
@@ -135,14 +135,14 @@ func readLatestUpdate(t *testing.T, r http.Handler, workID string) struct {
 	t.Helper()
 	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read the asset page = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read the work page = %d: %s", response.Code, response.Body.String())
 	}
 	var page latestUpdateBody
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
-		t.Fatalf("decode the asset page: %v", err)
+		t.Fatalf("decode the work page: %v", err)
 	}
 	if page.LatestUpdate == nil {
-		t.Fatal("a published asset's page carries no recorded version")
+		t.Fatal("a published work's page carries no recorded version")
 	}
 	return *page.LatestUpdate
 }

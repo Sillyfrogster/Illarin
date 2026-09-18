@@ -44,7 +44,7 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
 
 	if page.ID != workID || page.Name != "The Quiet Archivist" || page.Type != "character" {
-		t.Fatalf("asset page identity = %+v", page)
+		t.Fatalf("work page identity = %+v", page)
 	}
 	if page.Blurb != "She closes the book on a ribbon." {
 		t.Errorf("blurb = %q, want the catalog blurb", page.Blurb)
@@ -120,7 +120,7 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	var body map[string]any
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decode asset page: %v", err)
+		t.Fatalf("decode work page: %v", err)
 	}
 
 	wantKeys := map[string]bool{
@@ -134,7 +134,7 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 	}
 	for key := range body {
 		if !wantKeys[key] {
-			t.Errorf("asset page carries %q, which is not part of the page", key)
+			t.Errorf("work page carries %q, which is not part of the page", key)
 		}
 	}
 }
@@ -150,7 +150,7 @@ func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
 
 	if page.Visibility != "unlisted" {
-		t.Fatalf("discovery = %q, want unlisted", page.Visibility)
+		t.Fatalf("visibility = %q, want unlisted", page.Visibility)
 	}
 }
 
@@ -174,12 +174,12 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, withhold, staff); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deleted,
 	); err != nil {
-		t.Fatalf("delete asset: %v", err)
+		t.Fatalf("delete work: %v", err)
 	}
 
 	never := "22222222-2222-2222-2222-222222222222"
@@ -187,7 +187,7 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	for _, id := range []string{withhold, deleted, never} {
 		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil))
 		if response.Code != http.StatusNotFound {
-			t.Fatalf("GET /v1/assets/%s status = %d, want 404: %s",
+			t.Fatalf("GET /v1/works/%s status = %d, want 404: %s",
 				id, response.Code, response.Body.String())
 		}
 		bodies = append(bodies, response.Body.String())
@@ -223,7 +223,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 		}
 		encoded, err := json.Marshal(page)
 		if err != nil {
-			t.Fatalf("re-encode asset page: %v", err)
+			t.Fatalf("re-encode work page: %v", err)
 		}
 		for _, clear := range []string{"/detail/", "/thumb/", "/og/"} {
 			if strings.Contains(string(encoded), clear) {

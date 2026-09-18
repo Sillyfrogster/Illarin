@@ -267,11 +267,11 @@ func TestFacetsAreTypeScopedAndFilterOnElementContent(t *testing.T) {
 
 	carried := readBrowse(t, router, "/v1/assets?kind=character&facet=lorebook%3Dtrue")
 	if !slices.Equal(carried.Names, []string{"Aster"}) {
-		t.Fatalf("assets with a lorebook = %v, want Aster", carried.Names)
+		t.Fatalf("works with a lorebook = %v, want Aster", carried.Names)
 	}
 	none := readBrowse(t, router, "/v1/assets?kind=character&facet=lorebook%3Dfalse")
 	if !slices.Equal(none.Names, []string{"Storm"}) {
-		t.Fatalf("assets with no lorebook = %v, want Storm", none.Names)
+		t.Fatalf("works with no lorebook = %v, want Storm", none.Names)
 	}
 }
 
@@ -418,7 +418,7 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, workID string) time.Time 
 	if err := pool.QueryRow(context.Background(), `
 		select facet_computed_at from work_summaries where work_id = $1
 	`, workID).Scan(&computedAt); err != nil {
-		t.Fatalf("read the facet projection: %v", err)
+		t.Fatalf("read the facet summary: %v", err)
 	}
 	return computedAt
 }
@@ -451,10 +451,10 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	}
 
 	if after := apitest.SummaryComputedAt(t, pool, workID); !after.Equal(exportedAt) {
-		t.Error("hiding a block moved the export half of the projection")
+		t.Error("hiding a block moved the export half of the summary")
 	}
 	if after := facetComputedAt(t, pool, workID); !after.After(measuredAt) {
-		t.Error("hiding a block left the facet half of the projection alone")
+		t.Error("hiding a block left the facet half of the summary alone")
 	}
 	if after := apitest.ContentGeneration(t, pool, workID); after != generation {
 		t.Errorf("content generation = %d, want %d after a hide", after, generation)

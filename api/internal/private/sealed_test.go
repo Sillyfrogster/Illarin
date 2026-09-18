@@ -44,7 +44,7 @@ func ownerOfWork(t *testing.T, pool *pgxpool.Pool, workID string) uuid.UUID {
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(t.Context(),
 		`select owner_id from works where id = $1`, workID).Scan(&ownerID); err != nil {
-		t.Fatalf("read the asset owner: %v", err)
+		t.Fatalf("read the work owner: %v", err)
 	}
 	return ownerID
 }
@@ -114,7 +114,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 		t.Fatalf("decode the export: %v", err)
 	}
 	if exported.WorkID != stack.workID {
-		t.Errorf("the export names asset %s, want %s", exported.WorkID, stack.workID)
+		t.Errorf("the export names work %s, want %s", exported.WorkID, stack.workID)
 	}
 	if len(exported.Blocks) != 3 {
 		t.Fatalf("the export holds %d blocks, want all three", len(exported.Blocks))
@@ -166,7 +166,7 @@ func TestAnWorkHoldingNothingSealedHasNoExport(t *testing.T) {
 		http.MethodGet, "/v1/assets/"+started.ID+"/sealed", nil,
 	), session))
 	if response.Code != http.StatusNotFound {
-		t.Errorf("an asset with nothing sealed exported %d, want 404", response.Code)
+		t.Errorf("a work with nothing sealed exported %d, want 404", response.Code)
 	}
 }
 
@@ -195,6 +195,6 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 		http.MethodGet, "/v1/assets/"+stack.workID, nil,
 	), stack.stranger))
 	if strings.Contains(stranger.Body.String(), "sealedBlocks") {
-		t.Error("a stranger's page says the asset is withholding something")
+		t.Error("a stranger's page says the work is withholding something")
 	}
 }

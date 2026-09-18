@@ -41,7 +41,7 @@ func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, f
 		t.Fatalf("GetIngest: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatalf("ingest did not create an asset: %+v", operation)
+		t.Fatalf("ingest did not create a work: %+v", operation)
 	}
 	return *operation.Work
 }
@@ -56,10 +56,10 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work
 	if err := works(svc).SetIdentity(context.Background(), page.Identity{
 		OwnerID: ownerID, WorkID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
-		t.Fatalf("SetIdentity imported asset: %v", err)
+		t.Fatalf("SetIdentity imported work: %v", err)
 	}
 	if _, err := works(svc).Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID)); err != nil {
-		t.Fatalf("Publish imported asset: %v", err)
+		t.Fatalf("Publish imported work: %v", err)
 	}
 }
 
@@ -112,10 +112,10 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 		t.Fatalf("revision operation = %+v, want success", operation)
 	}
 	if operation.Work.ID != created.ID {
-		t.Fatalf("revision made asset %s, want %s", operation.Work.ID, created.ID)
+		t.Fatalf("revision made work %s, want %s", operation.Work.ID, created.ID)
 	}
 	if operation.Work.CurrentRevisionID == created.CurrentRevisionID {
-		t.Fatal("the asset still points at its first revision")
+		t.Fatal("the work still points at its first revision")
 	}
 	if operation.Work.Name != created.Name || operation.Work.Blurb != created.Blurb {
 		t.Fatalf("the details were re-seeded: %+v", operation.Work)
@@ -176,10 +176,10 @@ func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
 		  from works where id = $1
 	`, created.ID).Scan(&workType, &currentRevisionID, &revisions)
 	if err != nil {
-		t.Fatalf("read asset: %v", err)
+		t.Fatalf("read work: %v", err)
 	}
 	if workType != "character" || currentRevisionID != created.CurrentRevisionID || revisions != 1 {
-		t.Fatalf("asset changed: kind %s, current %s, revisions %d", workType, currentRevisionID, revisions)
+		t.Fatalf("work changed: type %s, current %s, revisions %d", workType, currentRevisionID, revisions)
 	}
 }
 
@@ -224,7 +224,7 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheWork(t *testing.T) {
 
 	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing claims this"))
 	if operation.Status != IngestFailed || operation.Work != nil {
-		t.Fatalf("revision operation = %+v, want failed without an asset", operation)
+		t.Fatalf("revision operation = %+v, want failed without a work", operation)
 	}
 	if operation.Failure == nil || operation.Failure.Reason != string(format.FailureUnsupportedFormat) {
 		t.Fatalf("revision failure = %+v, want unsupported_format", operation.Failure)
@@ -238,10 +238,10 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheWork(t *testing.T) {
 		  from works where id = $1
 	`, created.ID).Scan(&currentRevisionID, &revisions)
 	if err != nil {
-		t.Fatalf("read asset: %v", err)
+		t.Fatalf("read work: %v", err)
 	}
 	if currentRevisionID != created.CurrentRevisionID || revisions != 1 {
-		t.Fatalf("asset changed: current %s, revisions %d", currentRevisionID, revisions)
+		t.Fatalf("work changed: current %s, revisions %d", currentRevisionID, revisions)
 	}
 }
 
@@ -257,21 +257,21 @@ func TestOnlyTheOwnerOfALiveWorkCanAddARevision(t *testing.T) {
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, work.ErrNotFound) {
-		t.Fatalf("stranger revision error = %v, want asset.ErrNotFound", err)
+		t.Fatalf("stranger revision error = %v, want work.ErrNotFound", err)
 	}
 
 	if _, err := pool.Exec(context.Background(), `
 		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'held'
 		 where id = $1
 	`, created.ID, ownerID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
 		OwnerID: ownerID, WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, work.ErrWorkFrozen) {
-		t.Fatalf("withheld revision error = %v, want asset.ErrAssetFrozen", err)
+		t.Fatalf("withheld revision error = %v, want work.ErrAssetFrozen", err)
 	}
 }
 
@@ -328,7 +328,7 @@ func TestReimportedMediaFillsTheWork(t *testing.T) {
 		t.Fatalf("read cover media: %v", err)
 	}
 	if previewWork != created.ID {
-		t.Fatalf("cover belongs to asset %s, want %s", previewWork, created.ID)
+		t.Fatalf("cover belongs to work %s, want %s", previewWork, created.ID)
 	}
 	if width != 60 {
 		t.Fatalf("cover media is %d wide, want the reimported picture", width)

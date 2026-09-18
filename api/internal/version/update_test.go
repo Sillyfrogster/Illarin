@@ -125,7 +125,7 @@ func publishedWork(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle s
 		t.Fatalf("save the header: %v", err)
 	}
 	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, id, apitest.CurrentCandidate(t, svc, id)); err != nil {
-		t.Fatalf("publish the asset: %v", err)
+		t.Fatalf("publish the work: %v", err)
 	}
 	return owner, id
 }
@@ -183,7 +183,7 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 	err = pool.QueryRow(ctx, `select created_at = $2 and id = $3 and content_generation = $4
 		from works where id = $1`, id, madeAt, kept, recorded.ContentGeneration).Scan(&stable)
 	if err != nil || !stable {
-		t.Fatalf("asset identity and generation stable = %v, error = %v", stable, err)
+		t.Fatalf("work identity and generation stable = %v, error = %v", stable, err)
 	}
 }
 

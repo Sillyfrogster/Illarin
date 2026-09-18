@@ -109,7 +109,7 @@ func TestWorkUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T)
 		t.Fatal(err)
 	}
 	if event.Type != "asset.endpoint.verification.v1" {
-		t.Errorf("asset verification event = %q", event.Type)
+		t.Errorf("work verification event = %q", event.Type)
 	}
 	if !dispatch.Accepts(last.Headers.Get(dispatch.SignatureHeader), made.Secret,
 		last.Headers.Get(dispatch.IDHeader), event.SentAt, last.Body) {
@@ -256,7 +256,7 @@ func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *t
 			t.Fatalf("read choices = %d", got.Code)
 		}
 		if len(choices.Destinations) != 1 || choices.Destinations[0].ID != channel.Destination.ID || choices.Destinations[0].ByDefault != (workID == first.ID) {
-			t.Error("choices include an ineligible destination or defaults leaked between assets")
+			t.Error("choices include an ineligible destination or defaults leaked between works")
 		}
 		if strings.Contains(got.Body.String(), "address") || strings.Contains(got.Body.String(), "secret") {
 			t.Error("selection exposed configuration")
@@ -440,16 +440,16 @@ func TestWorkUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T
 		t.Fatal("could not save defaults before first publication")
 	}
 	if published := apitest.PublishWork(t, stack.router, stack.editor, started.ID); published.Code != http.StatusOK {
-		t.Fatal("could not publish the asset")
+		t.Fatal("could not publish the work")
 	}
 	if len(stack.discord.announcements()) != 0 || len(stack.to.arrivals()) != 0 {
-		t.Error("first asset publication sent an announcement")
+		t.Error("first work publication sent an announcement")
 	}
 	var deliveries int
 	if err := stack.pool.QueryRow(t.Context(), `select count(*) from publication_deliveries`).Scan(&deliveries); err != nil {
 		t.Fatal(err)
 	}
 	if deliveries != 0 {
-		t.Error("asset defaults queued a blog announcement")
+		t.Error("work defaults queued a blog announcement")
 	}
 }

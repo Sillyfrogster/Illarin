@@ -112,7 +112,7 @@ func TestAnUnlistedWorkStillTellsItsFollowers(t *testing.T) {
 	page := s.inbox(t, follower, "")
 	if len(page.Items) != 1 || page.Items[0].Type != "asset_updated" ||
 		page.Items[0].Update == nil || page.Items[0].Update.Summary != "Unlisted update" {
-		t.Fatalf("the watcher of an unlisted asset has %+v, want one update entry", page.Items)
+		t.Fatalf("the watcher of an unlisted work has %+v, want one update entry", page.Items)
 	}
 }
 
@@ -175,7 +175,7 @@ func TestAFoldedEntryMovesBackToTheTopOfTheInbox(t *testing.T) {
 	other.publishUpdate(t, `{"summary":"A change to the other asset"}`)
 	s.fanOut(t, time.Now())
 	if top := s.inbox(t, follower, "").Items[0]; top.Work.ID != other.workID {
-		t.Fatalf("the newer asset is not on top: %+v", top)
+		t.Fatalf("the newer work is not on top: %+v", top)
 	}
 
 	s.describe(t, "The second change")
@@ -234,10 +234,10 @@ func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testi
 	s.withhold(t, s.workID, "Copyright report under review")
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("a withheld asset left %+v in the watcher's inbox", page.Items)
+		t.Fatalf("a withheld work left %+v in the watcher's inbox", page.Items)
 	}
 	if got := s.unread(t, follower); got != 0 {
-		t.Fatalf("a withheld asset counts %d unread for the watcher, want 0", got)
+		t.Fatalf("a withheld work counts %d unread for the watcher, want 0", got)
 	}
 	owner := s.inbox(t, s.creator, "")
 	if len(owner.Items) != 1 || owner.Items[0].Type != "asset_withheld" {
@@ -247,16 +247,16 @@ func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testi
 	s.restore(t, s.workID)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 || s.unread(t, follower) != 1 {
-		t.Fatalf("restoring the asset left the watcher %+v", page.Items)
+		t.Fatalf("restoring the work left the watcher %+v", page.Items)
 	}
 
 	s.deleteWork(t)
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 || s.unread(t, follower) != 0 {
-		t.Fatalf("a deleted asset left %+v in the watcher's inbox", page.Items)
+		t.Fatalf("a deleted work left %+v in the watcher's inbox", page.Items)
 	}
 	s.restoreWork(t)
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 || s.unread(t, follower) != 1 {
-		t.Fatalf("recovering the asset left the watcher %+v", page.Items)
+		t.Fatalf("recovering the work left the watcher %+v", page.Items)
 	}
 }
 
@@ -331,7 +331,7 @@ func (s updateInboxStack) setFollow(t *testing.T, session *http.Cookie, method s
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(method, "/v1/assets/"+s.workID+"/watch", nil), session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("%s watch status = %d, want 200: %s", method, response.Code, response.Body.String())
+		t.Fatalf("%s follow status = %d, want 200: %s", method, response.Code, response.Body.String())
 	}
 }
 

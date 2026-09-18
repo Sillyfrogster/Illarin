@@ -237,7 +237,7 @@ func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T)
 	}
 	page := apitest.FetchStartedWork(t, r, session, workID)
 	if !apitest.ContainsBytes(mustJSON(t, page.Blocks), []byte(`"omitFromDownloads":true`)) {
-		t.Error("the creator's own choice is no longer on the asset")
+		t.Error("the creator's own choice is no longer on the work")
 	}
 }
 

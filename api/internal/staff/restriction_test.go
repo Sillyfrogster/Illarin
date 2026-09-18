@@ -182,7 +182,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 		t.Fatalf("listing = %+v, want the restricted creator's published work", listed)
 	}
 	if listed.Items[0].Withhold != nil {
-		t.Fatalf("restriction withheld an asset: %+v", listed.Items[0].Withhold)
+		t.Fatalf("restriction withheld a work: %+v", listed.Items[0].Withhold)
 	}
 }
 
@@ -361,10 +361,10 @@ func (s restrictionStack) expectWorkUntouched(t *testing.T, workID uuid.UUID) {
 		select owner_id, visibility, withheld_at is not null from works where id = $1
 	`, workID).Scan(&owner, &visibility, &withheld)
 	if err != nil {
-		t.Fatalf("read asset state: %v", err)
+		t.Fatalf("read work state: %v", err)
 	}
 	if owner != s.ownerID || visibility != "listed" || withheld {
-		t.Fatalf("restriction changed the asset: owner %s, discovery %q, withheld %v",
+		t.Fatalf("restriction changed the work: owner %s, visibility %q, withheld %v",
 			owner, visibility, withheld)
 	}
 }

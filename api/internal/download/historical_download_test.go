@@ -469,7 +469,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 	}
 	for _, reader := range []*http.Cookie{nil, session} {
 		if got := downloadVersion(t, r, reader, started.ID, "charx", "?version=1"); got.Code != http.StatusNotFound {
-			t.Fatalf("a deleted asset still wrote version 1: %d", got.Code)
+			t.Fatalf("a deleted work still wrote version 1: %d", got.Code)
 		}
 	}
 	restored := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/assets/"+started.ID+"/restore", nil), session))
@@ -510,7 +510,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 		}
 	}
 	if got := downloadVersion(t, r, session, started.ID, "charx", "?version=2"); got.Code != http.StatusNotFound {
-		t.Fatalf("a finally deleted asset still wrote version 2: %d", got.Code)
+		t.Fatalf("a finally deleted work still wrote version 2: %d", got.Code)
 	}
 	var kept int
 	if err := pool.QueryRow(t.Context(), `select count(*) from work_snapshots where work_id = $1`, started.ID).Scan(&kept); err != nil || kept != 0 {
@@ -630,7 +630,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 		t.Fatalf("delete: %d %s", withheld.Code, withheld.Body.String())
 	}
 	if got := readVersionDownloads(t, router, other, started.ID, 1); got.Code != http.StatusNotFound {
-		t.Fatalf("a deleted asset answered a stranger: %d", got.Code)
+		t.Fatalf("a deleted work answered a stranger: %d", got.Code)
 	}
 }
 

@@ -127,7 +127,7 @@ func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, w
 	t.Helper()
 	listed := s.announcements(t, session, workID)
 	if len(listed) != 1 {
-		t.Fatalf("the asset shows %d announcements, want 1: %+v", len(listed), listed)
+		t.Fatalf("the work shows %d announcements, want 1: %+v", len(listed), listed)
 	}
 	return listed[0]
 }
@@ -324,7 +324,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing
 		t.Fatal(err)
 	}
 	if len(offered.Destinations) != 1 || !offered.Destinations[0].ByDefault {
-		t.Fatalf("after an explicit selection the asset remembers %+v", offered.Destinations)
+		t.Fatalf("after an explicit selection the work remembers %+v", offered.Destinations)
 	}
 
 	stack.describe(t, stack.editor, started, "Second change.")
@@ -370,7 +370,7 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	refused := apitest.PublishWorkUpdate(t, stack.router, stack.editor, started.ID,
 		fmt.Sprintf(`{"summary":"Needs consent","destinationIds":[%q]}`, hook.Destination.ID))
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
-		t.Fatalf("selecting a destination for an unlisted asset = %d: %s", refused.Code, refused.Body.String())
+		t.Fatalf("selecting a destination for an unlisted work = %d: %s", refused.Code, refused.Body.String())
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+started.ID+"/updates", nil), stack.editor))

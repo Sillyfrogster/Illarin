@@ -31,7 +31,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	quiet := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/assets/"+created.ID+"/revisions", nil), session))
 	if quiet.Code != http.StatusOK || strings.TrimSpace(quiet.Body.String()) != "null" {
-		t.Fatalf("an asset with no replacement = %d %s, want 200 null",
+		t.Fatalf("a work with no replacement = %d %s, want 200 null",
 			quiet.Code, quiet.Body.String())
 	}
 

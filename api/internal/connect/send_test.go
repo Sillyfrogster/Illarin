@@ -115,7 +115,7 @@ func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
 func TestAnWorkThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
 	t.Parallel()
 	if !installs(nil, Deliverable{}) {
-		t.Fatal("an asset with no install capability was refused")
+		t.Fatal("a work with no install capability was refused")
 	}
 }
 

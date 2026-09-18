@@ -46,7 +46,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 		File: bytes.NewReader([]byte("durably purged bytes")), Name: "Durable purge",
 	})
 	if err != nil {
-		t.Fatalf("create asset: %v", err)
+		t.Fatalf("create work: %v", err)
 	}
 	var digestBytes []byte
 	if err := pool.QueryRow(ctx, `

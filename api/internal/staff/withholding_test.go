@@ -101,7 +101,7 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, workID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	pageRequest, err := http.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
@@ -159,12 +159,12 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, withheldID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID,
 	); err != nil {
-		t.Fatalf("delete asset: %v", err)
+		t.Fatalf("delete work: %v", err)
 	}
 
 	missingWorkID := "22222222-2222-4222-8222-222222222222"
@@ -222,7 +222,7 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, workID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	changes := []*http.Request{
@@ -274,7 +274,7 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, started.ID); err != nil {
-		t.Fatalf("withhold asset: %v", err)
+		t.Fatalf("withhold work: %v", err)
 	}
 
 	textChange := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))

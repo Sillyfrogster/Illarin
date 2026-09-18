@@ -111,7 +111,7 @@ func TestDeviceLinkingRequiresManualReviewAndReturnsATokenPair(t *testing.T) {
 		t.Fatalf("poll after approval = %+v, want a token pair", grant)
 	}
 	if !strings.HasPrefix(*grant.AccessToken, "ia1.") || !strings.HasPrefix(*grant.RefreshToken, "ir1.") {
-		t.Errorf("unexpected token kinds: access %q refresh %q", *grant.AccessToken, *grant.RefreshToken)
+		t.Errorf("unexpected token types: access %q refresh %q", *grant.AccessToken, *grant.RefreshToken)
 	}
 	if grant.Instance.ApplicationName != "Example client" || grant.Instance.InstanceName != "studio workstation" {
 		t.Errorf("linked instance = %+v", grant.Instance)
