@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { fetchAssets, fetchDeletedAssets, fetchProfile } from "@/lib/api/query";
+import { fetchDeletedWorks, fetchProfile, fetchWorks } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
 import { readProfileAddress } from "@/lib/profile-address";
 import { pageMetadata, readableForMetadata } from "@/lib/site-metadata";
@@ -54,12 +54,12 @@ export default async function CreatorProfileListing({
     redirect(buildBrowseHref(filters, `/${canonical}`));
   }
 
-  const [initialPage, deletedAssets] = await Promise.all([
-    fetchAssets(
+  const [initialPage, deletedWorks] = await Promise.all([
+    fetchWorks(
       { ...filters, creator: profile.handle, limit: 24 },
       cookie,
     ).catch(() => null),
-    fetchDeletedAssets(profile.handle, cookie),
+    fetchDeletedWorks(profile.handle, cookie),
   ]);
 
   return (
@@ -67,7 +67,7 @@ export default async function CreatorProfileListing({
       profile={profile}
       filters={filters}
       initialPage={initialPage}
-      deletedAssets={deletedAssets}
+      deletedWorks={deletedWorks}
     />
   );
 }

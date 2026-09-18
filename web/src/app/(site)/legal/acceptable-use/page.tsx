@@ -70,8 +70,8 @@ const CLAUSES: LegalClause[] = [
             choose to see it, and confirm they are 18 or older.
           </li>
           <li>
-            Every asset has to answer the adult content question before it can
-            be published, and answering it wrongly is a violation on its own. If
+            Every work has to answer the adult content question before it can be
+            published, and answering it wrongly is a violation on its own. If
             you are unsure, mark it as adult.
           </li>
           <li>
@@ -185,12 +185,12 @@ const CLAUSES: LegalClause[] = [
           automated classifiers, and nothing you upload is scored by a machine.
         </p>
         <p>
-          We may withhold an asset, which takes it out of the catalog and makes
-          it answer as missing to everyone but its creator, who can still read
-          it, download it, and see why. We may also remove work outright,
-          suspend an account, or close one. What happens depends on how serious
-          it is and what came before. Anything in section 1 usually means
-          immediate removal and can mean an immediate permanent ban.
+          We may withhold a work, which takes it out of Browse and makes it
+          answer as missing to everyone but its creator, who can still read it,
+          download it, and see why. We may also remove work outright, suspend an
+          account, or close one. What happens depends on how serious it is and
+          what came before. Anything in section 1 usually means immediate
+          removal and can mean an immediate permanent ban.
         </p>
       </>
     ),

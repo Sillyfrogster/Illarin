@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { Run, RunItem } from "@/components/ui/run";
-import { assetHref } from "@/lib/asset-url";
 import {
   dependencyLinks,
   useExtensionDependencies,
 } from "@/lib/extension-dependencies";
+import { workHref } from "@/lib/work-url";
 import { ITEM_META } from "./element-runs";
 
 export function DependencyList({
@@ -31,7 +31,7 @@ export function DependencyList({
             <p className={ITEM_META} key={found.id}>
               <Link
                 className="font-ui text-ui font-medium text-ink underline decoration-accent/55 underline-offset-[3px] [overflow-wrap:anywhere] hover:decoration-accent"
-                href={assetHref(found.id, found.name)}
+                href={workHref(found.id, found.name)}
               >
                 {found.name}
               </Link>{" "}

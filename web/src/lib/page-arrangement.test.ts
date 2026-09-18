@@ -343,7 +343,7 @@ describe("remove confirmation counts", () => {
     );
   });
 
-  test("counts every catalog element through its named collection", () => {
+  test("counts every element type through its named collection", () => {
     const examples = [
       ["field_list", { fields: [{}, {}] }, 2],
       ["entry_table", { entries: [{}, {}, {}] }, 3],

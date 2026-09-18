@@ -71,7 +71,7 @@ describe("restricted markdown", () => {
     expect(rich.formattingRemoved).toBe(false);
   });
 
-  test("reads headings, both kinds of list, and a block quote", () => {
+  test("reads headings, both sorts of list, and a block quote", () => {
     const rich = readRichText(
       "## Her days\n\n- tea\n- toast\n\n3. third\n4. fourth\n\n> she said so",
     );

@@ -8,7 +8,7 @@ export type ScopeCopy = {
 
 const SCOPES: Record<Scope, ScopeCopy> = {
   "asset:receive": {
-    title: "Receive assets you send it",
+    title: "Receive works you send it",
     detail:
       "You choose what goes across. It cannot browse or take anything on its own.",
   },

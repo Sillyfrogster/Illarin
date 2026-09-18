@@ -206,7 +206,7 @@ type ReadinessItem struct {
 	BlockID *string `json:"blockId"`
 }
 
-func SaveIdentity(
+func SaveDetails(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
@@ -222,9 +222,9 @@ func SaveIdentity(
 
 func WriteCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started StartedWork) {
 	t.Helper()
-	if got := SaveIdentity(t, r, session, started.ID,
+	if got := SaveDetails(t, r, session, started.ID,
 		`{"name":"Ilse of the west shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	coreBlock := BlockNamed(t, started.Blocks, "character_core")
 	core := EditableBlock(coreBlock)

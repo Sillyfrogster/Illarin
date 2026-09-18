@@ -77,7 +77,7 @@ func TestFirstPublicationRecordsTheDraftInTheSameTransaction(t *testing.T) {
 	apitest.SaveDescription(t, svc, owner, draft, "Original description")
 	apitest.SaveGreeting(t, svc, owner, draft, "Original greeting")
 	nsfw := false
-	if err := apitest.Pages(svc).SetIdentity(context.Background(), page.Identity{
+	if err := apitest.Pages(svc).SetDetails(context.Background(), page.Details{
 		OwnerID: owner, WorkID: draft, Name: "First publication", IsNSFW: &nsfw,
 	}, apitest.CurrentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestSnapshotRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
 	apitest.SaveDescription(t, svc, owner, draft, "Description")
 	apitest.SaveGreeting(t, svc, owner, draft, "Greeting")
 	nsfw := false
-	if err := apitest.Pages(svc).SetIdentity(context.Background(), page.Identity{OwnerID: owner, WorkID: draft, Name: "Candidate", IsNSFW: &nsfw}, apitest.CurrentCandidate(t, svc, draft)); err != nil {
+	if err := apitest.Pages(svc).SetDetails(context.Background(), page.Details{OwnerID: owner, WorkID: draft, Name: "Candidate", IsNSFW: &nsfw}, apitest.CurrentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
 	}
 	other, media := uuid.New(), uuid.New()

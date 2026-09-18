@@ -29,12 +29,12 @@ describe("api", () => {
   test("repeats list values in the query and leaves out missing ones", async () => {
     const sent = answerWith(Response.json({ items: [] }));
 
-    await api("GET", "/v1/assets", {
+    await api("GET", "/v1/works", {
       query: { facet: ["a", "b"], type: undefined, limit: 24, q: "two words" },
     });
 
     const address = new URL(sent[0].url);
-    expect(address.pathname).toBe("/v1/assets");
+    expect(address.pathname).toBe("/v1/works");
     expect(address.searchParams.getAll("facet")).toEqual(["a", "b"]);
     expect(address.searchParams.has("type")).toBe(false);
     expect(address.searchParams.get("limit")).toBe("24");

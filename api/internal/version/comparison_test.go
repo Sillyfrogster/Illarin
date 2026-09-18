@@ -56,7 +56,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 	publishUpdate(t, svc, owner, id, "Rewrote the description")
 	apitest.SaveDescription(t, svc, owner, id, "Third description")
 	nsfw := false
-	if err := apitest.Pages(svc).SetIdentity(ctx, page.Identity{
+	if err := apitest.Pages(svc).SetDetails(ctx, page.Details{
 		OwnerID: owner, WorkID: id, Name: "Renamed", Blurb: "A changed pitch", IsNSFW: &nsfw,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)

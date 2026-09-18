@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { type RefObject, useCallback, useState } from "react";
 import {
-  addAssetBlock,
-  arrangeAssetBlocks,
+  addWorkBlock,
+  arrangeWorkBlocks,
   type ElementType,
-  moveAssetBlockContent,
-  removeAssetBlock,
+  moveWorkBlockContent,
+  removeWorkBlock,
   type WorkBlock,
 } from "@/lib/api/query";
 import type { Candidate } from "@/lib/working-copy";
@@ -23,7 +23,7 @@ export type Arrangement = {
 };
 
 type Page = {
-  assetId: string;
+  workId: string;
   candidate: Candidate;
   applyServerBlocks: (blocks: WorkBlock[]) => void;
   blocks: RefObject<WorkBlock[]>;
@@ -73,9 +73,9 @@ export function useArrangement(page: Page): Arrangement {
     (order: WorkBlock[], refusal: string, done?: () => void) =>
       run(
         async () => {
-          const saved = await arrangeAssetBlocks(
+          const saved = await arrangeWorkBlocks(
             page.candidate,
-            page.assetId,
+            page.workId,
             arrangementRequest(order, page.savedBlocks.current),
           );
           page.applyServerBlocks(saved);
@@ -89,9 +89,9 @@ export function useArrangement(page: Page): Arrangement {
   return {
     add: (definition, elementType) =>
       run(async () => {
-        const added = await addAssetBlock(
+        const added = await addWorkBlock(
           page.candidate,
-          page.assetId,
+          page.workId,
           definition,
           elementType,
         );
@@ -110,9 +110,9 @@ export function useArrangement(page: Page): Arrangement {
     },
     moveContent: (blockId, destinationBlockId) =>
       run(async () => {
-        const saved = await moveAssetBlockContent(
+        const saved = await moveWorkBlockContent(
           page.candidate,
-          page.assetId,
+          page.workId,
           blockId,
           destinationBlockId,
         );
@@ -120,7 +120,7 @@ export function useArrangement(page: Page): Arrangement {
       }, "The content could not be moved. Try again."),
     remove: (blockId) =>
       run(async () => {
-        await removeAssetBlock(page.candidate, page.assetId, blockId);
+        await removeWorkBlock(page.candidate, page.workId, blockId);
         page.editBlockList((list) =>
           list
             .filter((block) => block.id !== blockId)

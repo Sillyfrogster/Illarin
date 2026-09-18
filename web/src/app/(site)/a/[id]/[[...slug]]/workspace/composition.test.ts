@@ -226,7 +226,7 @@ describe("offerGroups", () => {
     },
   ] as AddableBlock[];
 
-  test("groups the catalog by where its content ends up", () => {
+  test("groups the blocks on offer by where their content ends up", () => {
     expect(offerGroups(addable, [], "").map((group) => group.title)).toEqual([
       "Things a reader sees",
       "Anything else",

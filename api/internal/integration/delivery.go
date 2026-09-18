@@ -21,10 +21,10 @@ const (
 )
 
 var whyCancelled = map[string]string{
-	SettledWithheld:  "The asset is withheld.",
+	SettledWithheld:  "The work is withheld.",
 	SettledWithdrawn: "The update was withdrawn.",
-	SettledUnlisted:  "The asset is unlisted and this update was not cleared to send its link.",
-	SettledDeleted:   "The asset is no longer published.",
+	SettledUnlisted:  "The work is unlisted and this update was not cleared to send its link.",
+	SettledDeleted:   "The work is no longer published.",
 }
 
 // RunAnnouncements sends due announcements until the context ends.

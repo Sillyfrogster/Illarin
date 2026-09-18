@@ -60,7 +60,7 @@ export function BlogFooter() {
             className="flex min-h-11 items-center text-ui text-ink hover:text-accent"
             href={siteAddress("/browse")}
           >
-            Browse the catalog
+            Browse
           </a>
           <div className="mt-4">
             <AppearanceMenu labelled />

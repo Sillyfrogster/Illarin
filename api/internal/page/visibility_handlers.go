@@ -28,13 +28,13 @@ func (h *Handlers) SetWorkVisibility(c *gin.Context) {
 	)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be changed.")
+		api.Refuse(c, http.StatusConflict, "A withheld work cannot be changed.")
 	case errors.Is(err, work.ErrWorkIsDraft):
-		api.Refuse(c, http.StatusConflict, "Discovery applies once the asset is published.")
+		api.Refuse(c, http.StatusConflict, "Visibility applies once the work is published.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not save the catalog listing. Try again.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the visibility. Try again.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -49,7 +49,7 @@ func (h *Handlers) PublishWork(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "publishing an asset")
+	owner, ok := api.Verified(c, "publishing a work")
 	if !ok {
 		return
 	}
@@ -70,14 +70,14 @@ func (h *Handlers) PublishWork(c *gin.Context) {
 	case errors.Is(err, ErrAlreadyPublished):
 		published := PublishRefusalCodeAlreadyPublished
 		c.JSON(http.StatusConflict, PublishRefusal{
-			Error: "This asset is already published.", Code: &published,
+			Error: "This work is already published.", Code: &published,
 		})
 		return
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such draft.")
 		return
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not publish the asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not publish the work.")
 		return
 	}
 
@@ -87,12 +87,12 @@ func (h *Handlers) PublishWork(c *gin.Context) {
 	}
 	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, preference)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the published work.")
 		return
 	}
 	page, err := ToPage(found, preference)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the published work.")
 		return
 	}
 	c.JSON(http.StatusOK, page)

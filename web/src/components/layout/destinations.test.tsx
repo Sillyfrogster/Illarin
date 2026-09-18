@@ -17,7 +17,7 @@ const account: SignedInAccount = {
 test("account navigation names each task and keeps icons when labels change", () => {
   const destinations = accountDestinations(account, true);
   expect(destinations.map(({ label, href }) => [label, href])).toEqual([
-    ["View profile", "/@copy_fixture"],
+    ["Your work", "/@copy_fixture"],
     ["Account settings", "/settings"],
     ["Blog administration", "/publication"],
   ]);
@@ -49,7 +49,7 @@ test("sign-in and verification destinations keep their labels and icons", () => 
     false,
   );
   expect(destinations.map(({ label }) => label)).toEqual([
-    "View profile",
+    "Your work",
     "Account settings",
     "Verify email",
   ]);

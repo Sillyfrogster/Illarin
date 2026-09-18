@@ -4,9 +4,9 @@ import { Hash, Webhook } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  readAssetUpdateDestinationChoices,
+  readWorkUpdateDestinationChoices,
   type WorkUpdateDestinationChoice,
-} from "@/lib/api/asset-destinations";
+} from "@/lib/api/work-destinations";
 import { cn } from "@/lib/cn";
 
 export type AnnouncementChoice = {
@@ -27,14 +27,14 @@ function isQuiet(choice: AnnouncementChoice): boolean {
 }
 
 export function UpdateAnnouncementChoice({
-  assetId,
+  workId,
   choice,
   disabled,
   needsConsent,
   onChange,
   unlisted,
 }: {
-  assetId: string;
+  workId: string;
   choice: AnnouncementChoice;
   disabled: boolean;
   needsConsent: boolean;
@@ -59,7 +59,7 @@ export function UpdateAnnouncementChoice({
   const load = useCallback(
     async (signal?: AbortSignal) => {
       setError("");
-      const answer = await readAssetUpdateDestinationChoices(assetId, signal);
+      const answer = await readWorkUpdateDestinationChoices(workId, signal);
       if (signal?.aborted) return;
       if (!answer.value) {
         setError(answer.error || "Could not read your destinations.");
@@ -72,7 +72,7 @@ export function UpdateAnnouncementChoice({
         notify: true,
       });
     },
-    [assetId, defaults],
+    [workId, defaults],
   );
 
   useEffect(() => {
@@ -104,10 +104,10 @@ export function UpdateAnnouncementChoice({
         <Switch
           checked={choice.notify}
           disabled={disabled}
-          hint="Anyone watching it, or with it installed on a linked instance, gets a notification when the file changed."
+          hint="Anyone following it, or with it installed on a linked instance, gets a notification when the file changed."
           onChange={(on) => onChange({ ...choice, notify: on })}
         >
-          Tell people watching this asset
+          Tell people following this work
         </Switch>
       </section>
 
@@ -116,8 +116,8 @@ export function UpdateAnnouncementChoice({
 
         {error ? (
           <Line>
-            {error} A listed asset will use its saved announcement destinations.
-            An unlisted asset will publish without an announcement.
+            {error} A listed work will use its saved announcement destinations.
+            An unlisted work will publish without an announcement.
           </Line>
         ) : offered === null ? (
           <output className="text-meta text-mute">
@@ -137,7 +137,7 @@ export function UpdateAnnouncementChoice({
               <legend className="sr-only">Destinations for this update</legend>
               {offered.map((one) => {
                 const on = chosen.includes(one.id);
-                const Kind = one.type === "discord" ? Hash : Webhook;
+                const Icon = one.type === "discord" ? Hash : Webhook;
                 return (
                   <label
                     className={cn(
@@ -159,7 +159,7 @@ export function UpdateAnnouncementChoice({
                       }
                       type="checkbox"
                     />
-                    <Kind
+                    <Icon
                       aria-hidden="true"
                       className={cn(
                         "size-4 shrink-0",
@@ -188,7 +188,7 @@ export function UpdateAnnouncementChoice({
             <Line>
               {chosen.length === 0
                 ? "No announcement will be sent. The update still appears on the page and in its history."
-                : "Selected destinations receive the asset name, update number, summary and history link. They do not receive the full notes or content changes."}
+                : "Selected destinations receive the name, update number, summary and history link. They do not receive the full notes or content changes."}
             </Line>
           </>
         )}

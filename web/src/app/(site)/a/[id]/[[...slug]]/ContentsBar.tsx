@@ -114,9 +114,9 @@ export function ContentsBar({
 
         {writing && workspace.addableBlocks.length > 0 ? (
           <button
-            aria-expanded={workspace.pane?.kind === "catalog"}
+            aria-expanded={workspace.pane?.kind === "add-block"}
             className={cn(TOOL, "shrink-0")}
-            onClick={() => workspace.openPane({ kind: "catalog" })}
+            onClick={() => workspace.openPane({ kind: "add-block" })}
             type="button"
           >
             <Plus aria-hidden="true" size={17} />

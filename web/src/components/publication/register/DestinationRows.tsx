@@ -164,7 +164,7 @@ export function DestinationStep({
   onRotate: () => void;
   onSaved: (saved: PublicationDestination) => void;
 }) {
-  const [kind, setKind] = useState<PublicationDestinationType>(
+  const [kind, setType] = useState<PublicationDestinationType>(
     existing?.type ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
@@ -322,7 +322,7 @@ export function DestinationStep({
         </div>
       ) : null}
 
-      {existing ? null : <DestinationKind chosen={kind} onChosen={setKind} />}
+      {existing ? null : <DestinationKind chosen={kind} onChosen={setType} />}
 
       {existing?.channel ? (
         <div className="rounded-plate bg-deep p-4">

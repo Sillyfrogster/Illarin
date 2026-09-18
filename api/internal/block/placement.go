@@ -10,7 +10,7 @@ import (
 func Place(workType string, tagged []Element) ([]Block, error) {
 	definitions, ok := Definitions(workType)
 	if !ok {
-		return nil, fmt.Errorf("no block catalog for type %q", workType)
+		return nil, fmt.Errorf("no block definitions for type %q", workType)
 	}
 
 	placed := make([]bool, len(tagged))
@@ -46,7 +46,7 @@ func Place(workType string, tagged []Element) ([]Block, error) {
 	for i, element := range tagged {
 		if !placed[i] {
 			return nil, fmt.Errorf(
-				"kind %q has nowhere to put a %s element", workType, element.Role,
+				"type %q has nowhere to put a %s element", workType, element.Role,
 			)
 		}
 	}

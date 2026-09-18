@@ -1,6 +1,6 @@
 import type { ReplacementPreview } from "@/lib/api/query";
-import { previewConflicts } from "@/lib/asset-publication";
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
+import { previewConflicts } from "@/lib/work-publication";
 
 export function ReplacementWarnings({
   preview,
@@ -15,7 +15,7 @@ export function ReplacementWarnings({
         <p className="rounded-control bg-accent-wash p-3 text-meta text-ink">
           This file seals {preview.seals} prompt
           {preview.seals === 1 ? "" : "s"}. Applying it means readers can only
-          install this asset through a linked app.
+          install it through a linked app.
         </p>
       ) : null}
       {missingWording.length > 0 ? (

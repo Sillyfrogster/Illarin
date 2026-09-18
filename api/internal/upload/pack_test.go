@@ -69,7 +69,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 	if saved := apitest.SaveBlock(t, r, session, started.ID, core.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save a Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	if saved := apitest.SaveIdentity(t, r, session, started.ID,
+	if saved := apitest.SaveDetails(t, r, session, started.ID,
 		`{"name":"Archive companions","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save Pack identity = %d, want 204: %s", saved.Code, saved.Body.String())
 	}

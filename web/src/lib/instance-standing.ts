@@ -19,11 +19,11 @@ export function revoked(
 
 export function installedHere(instance: ManagedInstance): string | null {
   if (!instance.scopes.includes("library:sync")) return null;
-  if (instance.installed === 0) return "No installed assets reported";
+  if (instance.installed === 0) return "No installed works reported";
   const held =
     instance.installed === 1
-      ? "1 asset installed"
-      : `${instance.installed} assets installed`;
+      ? "1 work installed"
+      : `${instance.installed} works installed`;
   return instance.updatesAvailable > 0
     ? `${held} · ${instance.updatesAvailable} with a newer version here`
     : `${held} · all up to date`;

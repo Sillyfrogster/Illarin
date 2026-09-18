@@ -14,7 +14,7 @@ import (
 func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 	var request StartWorkRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Send the kind to build as JSON.")
+		api.Refuse(c, http.StatusBadRequest, "Send the type to build as JSON.")
 		return
 	}
 	app := ""
@@ -23,7 +23,7 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 	}
 	id, err := h.uploads.StartFromNothing(c.Request.Context(), owner.ID, request.Type, app)
 	if errors.Is(err, ErrTypeNotBuildable) {
-		api.Refuse(c, http.StatusBadRequest, "Illarin cannot build that kind yet. Choose another.")
+		api.Refuse(c, http.StatusBadRequest, "Illarin cannot build that type yet. Choose another.")
 		return
 	}
 	if errors.Is(err, ErrAppNotAnswered) {
@@ -31,18 +31,18 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 		return
 	}
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not start the asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not start the work.")
 		return
 	}
 
 	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, work.NSFWShown)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the new work.")
 		return
 	}
 	page, err := page.ToPage(found, work.NSFWShown)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the new asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the new work.")
 		return
 	}
 	c.Header("Location", "/v1/works/"+id.String())
@@ -52,7 +52,7 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 func appAnswerRefusal(workType string) string {
 	apps := Apps(workType)
 	if len(apps) == 0 {
-		return "Nothing about this kind depends on an app, so do not send one."
+		return "Nothing about this type depends on an app, so do not send one."
 	}
 	return "Say which app this is for: " + strings.Join(apps, " or ") + "."
 }

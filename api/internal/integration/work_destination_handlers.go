@@ -77,7 +77,7 @@ func (h *Handlers) workDestinationError(c *gin.Context, err error) {
 	case errors.Is(err, ErrChanged):
 		api.Refuse(c, http.StatusConflict, "The destination changed. Check its configuration and try again.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
 	case errors.Is(err, version.ErrUpdateDestinationIneligible):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
 	case errors.As(err, &field):
@@ -180,7 +180,7 @@ func (h *Handlers) ListWorkUpdateDestinationChoices(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.SignedIn(c, "reading an asset's update destinations")
+	owner, ok := api.SignedIn(c, "reading a work's update destinations")
 	if !ok {
 		return
 	}
@@ -201,7 +201,7 @@ func (h *Handlers) SetWorkUpdateDestinationDefaults(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "choosing an asset's update destinations")
+	owner, ok := api.Verified(c, "choosing a work's update destinations")
 	if !ok {
 		return
 	}
@@ -238,7 +238,7 @@ func (h *Handlers) ListWorkUpdateAnnouncements(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.SignedIn(c, "reading what an asset announced")
+	owner, ok := api.SignedIn(c, "reading what a work announced")
 	if !ok {
 		return
 	}

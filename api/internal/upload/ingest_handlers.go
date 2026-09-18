@@ -31,7 +31,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 	parts, err := c.Request.MultipartReader()
 	if err != nil {
 		RefuseFile(c, api.FormRefusal{
-			Reason: "send the asset as form data, with a metadata part and a file part",
+			Reason: "send the work as form data, with a metadata part and a file part",
 			Cause:  err,
 		}, h.maxUploadBytes)
 		return
@@ -48,7 +48,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 		return
 	}
 	if !metadata.Confirmed {
-		RefuseFile(c, api.FormRefusal{Reason: "confirm the catalog details before uploading"}, h.maxUploadBytes)
+		RefuseFile(c, api.FormRefusal{Reason: "confirm the details before uploading"}, h.maxUploadBytes)
 		return
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
@@ -113,7 +113,7 @@ func (h *Handlers) AddWorkRevision(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 		return
 	case errors.Is(err, storage.ErrTombstoned):
 		api.Refuse(c, http.StatusUnprocessableEntity, "This file cannot be accepted.")
@@ -183,7 +183,7 @@ func (h *Handlers) AcceptWorkRevision(c *gin.Context) {
 	var exposure private.ExposureRefusal
 	if errors.As(err, &exposure) {
 		c.JSON(http.StatusConflict, edit.SealedExposureRefusal{
-			Error:   "This replacement removes prompt protection. Confirm that text in this asset and its recorded versions may become public immediately.",
+			Error:   "This replacement removes prompt protection. Confirm that text in this work and its recorded versions may become public immediately.",
 			Code:    edit.SealedExposureRefusalCodeSealedExposure,
 			Prompts: exposure.Prompts,
 		})

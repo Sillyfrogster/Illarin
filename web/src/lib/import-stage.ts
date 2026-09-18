@@ -1,13 +1,13 @@
 import type { IngestOperation } from "./api/query";
 
-export type ImportedAsset = NonNullable<IngestOperation["work"]>;
+export type ImportedWork = NonNullable<IngestOperation["work"]>;
 
 export type ImportStage =
   | { at: "choosing" }
   | { at: "reading"; heading: string }
   | { at: "lost"; message: string }
   | { at: "refused"; message: string }
-  | { at: "arrived"; asset: ImportedAsset };
+  | { at: "arrived"; work: ImportedWork };
 
 const STILL_READING = "Reading your file";
 
@@ -26,7 +26,7 @@ export function importStage(
   }
 
   if (operation.status === "success" && operation.work) {
-    return { asset: operation.work, at: "arrived" };
+    return { work: operation.work, at: "arrived" };
   }
 
   if (message) return { at: "lost", message };

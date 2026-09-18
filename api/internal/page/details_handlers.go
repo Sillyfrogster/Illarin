@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type workIdentityInput struct {
+type workDetailsInput struct {
 	Name   string  `json:"name"`
 	Blurb  *string `json:"blurb"`
 	IsNsfw *bool   `json:"isNsfw"`
 }
 
-func (h *Handlers) SetWorkIdentity(c *gin.Context) {
+func (h *Handlers) SetWorkDetails(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -24,11 +24,11 @@ func (h *Handlers) SetWorkIdentity(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "saving an asset")
+	owner, ok := api.Verified(c, "saving a work")
 	if !ok {
 		return
 	}
-	var request workIdentityInput
+	var request workDetailsInput
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send a name, a blurb, and an adult content answer of true, false or null.")
 		return
@@ -38,7 +38,7 @@ func (h *Handlers) SetWorkIdentity(c *gin.Context) {
 		return
 	}
 	candidate := &work.Candidate{Version: version}
-	err := h.works.SetIdentity(c.Request.Context(), Identity{
+	err := h.works.SetDetails(c.Request.Context(), Details{
 		OwnerID: owner.ID, WorkID: id,
 		Name: request.Name, Blurb: *request.Blurb, IsNSFW: request.IsNsfw,
 	}, candidate)
@@ -47,13 +47,13 @@ func (h *Handlers) SetWorkIdentity(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case errors.Is(err, ErrNameTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The name is too long.")
 	case errors.Is(err, ErrBlurbTooLong):
 		api.RefuseField(c, http.StatusBadRequest, "blurb", "The blurb must be 400 characters or fewer.")
 	case errors.Is(err, ErrRatingUnanswerable):
-		api.Refuse(c, http.StatusBadRequest, "A published asset needs an adult content answer.")
+		api.Refuse(c, http.StatusBadRequest, "A published work needs an adult content answer.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the details.")
 	default:

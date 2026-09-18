@@ -13,9 +13,9 @@ import {
   type RecordedVersion,
   type RecordedVersionDownloads,
 } from "@/lib/api/query";
-import { assetHoldsNothing } from "@/lib/asset-page-content";
-import { versionTitle } from "@/lib/asset-updates";
-import { AssetChooser } from "../AssetChooser";
+import { workHoldsNothing } from "@/lib/work-page-content";
+import { versionTitle } from "@/lib/work-updates";
+import { WorkChooser } from "../WorkChooser";
 
 type Reading =
   | { state: "unread" }
@@ -27,19 +27,19 @@ async function noRefresh(): Promise<void> {}
 
 /** Loads a historical version's download choices when the chooser opens. */
 export function VersionDownload({
-  assetId,
-  kind,
+  workId,
+  typeName,
   version,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
+  typeName: string;
   version: RecordedVersion;
 }) {
   const [reading, setReading] = useState<Reading>({ state: "unread" });
 
   async function read() {
     setReading({ state: "reading" });
-    const answer = await fetchRecordedVersionDownloads(assetId, version.number);
+    const answer = await fetchRecordedVersionDownloads(workId, version.number);
     setReading(
       answer.offered
         ? { state: "read", offered: answer.offered }
@@ -64,8 +64,8 @@ export function VersionDownload({
         aria-label={`Download ${versionTitle(version).toLowerCase()}`}
       >
         <VersionChoices
-          assetId={assetId}
-          kind={kind}
+          workId={workId}
+          typeName={typeName}
           onRetry={read}
           reading={reading}
           version={version}
@@ -76,14 +76,14 @@ export function VersionDownload({
 }
 
 function VersionChoices({
-  assetId,
-  kind,
+  workId,
+  typeName,
   version,
   reading,
   onRetry,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
+  typeName: string;
   version: RecordedVersion;
   reading: Reading;
   onRetry: () => void;
@@ -119,17 +119,17 @@ function VersionChoices({
     );
   }
   return (
-    <AssetChooser
+    <WorkChooser
       appTargets={offered.appTargets}
-      assetId={assetId}
+      workId={workId}
       blocks={offered.blocks}
       downloads={offered.downloads}
-      holdsNothing={assetHoldsNothing(offered.blocks)}
+      holdsNothing={workHoldsNothing(offered.blocks)}
       images={offered.media}
       instances={[]}
       isOwner={false}
-      kind={offered.type}
-      kindLabel={kind}
+      type={offered.type}
+      typeLabel={typeName}
       linkedInstallOnly={false}
       original={null}
       refresh={noRefresh}

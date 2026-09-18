@@ -104,7 +104,7 @@ export function EncounterHero() {
                 className="rounded-full px-6"
               >
                 <Link href="/browse">
-                  Browse the catalog <ArrowUpRight aria-hidden="true" />
+                  Browse <ArrowUpRight aria-hidden="true" />
                 </Link>
               </Button>
               <Button

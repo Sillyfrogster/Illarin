@@ -94,7 +94,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
 	}
 	nsfw := false
-	if err := works(svc).SetIdentity(context.Background(), page.Identity{
+	if err := works(svc).SetDetails(context.Background(), page.Details{
 		OwnerID: owner, WorkID: created.ID, Name: "Newer", IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatal(err)

@@ -85,7 +85,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	}
 	found, err := h.works.Browse(c.Request.Context(), f, preference)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "could not list assets")
+		api.Refuse(c, http.StatusInternalServerError, "could not list works")
 		return
 	}
 

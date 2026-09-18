@@ -64,9 +64,9 @@ func GivePictures(
 
 func PublishCharacter(t *testing.T, r http.Handler, session *http.Cookie, workID string) {
 	t.Helper()
-	if got := SaveIdentity(t, r, session, workID,
+	if got := SaveDetails(t, r, session, workID,
 		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
+		t.Fatalf("save details: %d %s", got.Code, got.Body.String())
 	}
 	if got := PublishWork(t, r, session, workID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())

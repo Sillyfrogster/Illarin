@@ -67,24 +67,24 @@ export async function clearNotifications(): Promise<void> {
   if (answer.error) throw new Error(answer.error);
 }
 
-export function watchAsset(assetId: string): Promise<WorkFollow> {
-  return changeWatch(assetId, "PUT");
+export function followWork(workId: string): Promise<WorkFollow> {
+  return changeFollow(workId, "PUT");
 }
 
-export function stopWatchingAsset(assetId: string): Promise<WorkFollow> {
-  return changeWatch(assetId, "DELETE");
+export function stopFollowingWork(workId: string): Promise<WorkFollow> {
+  return changeFollow(workId, "DELETE");
 }
 
-async function changeWatch(
-  assetId: string,
+async function changeFollow(
+  workId: string,
   method: "PUT" | "DELETE",
 ): Promise<WorkFollow> {
   const answer = await ask<WorkFollow>(
     method,
-    `/assets/${encodeURIComponent(assetId)}/watch`,
+    `/works/${encodeURIComponent(workId)}/follow`,
   );
   if (answer.value) return answer.value;
-  throw new Error(answer.error ?? "Your watch could not be changed.");
+  throw new Error(answer.error ?? "Following could not be changed.");
 }
 
 export async function markAllNotificationsRead(): Promise<void> {

@@ -1,11 +1,11 @@
 export function emptyPageInvitation({
   coreBlocks,
   canAdd,
-  kindLabel,
+  typeLabel,
 }: {
   coreBlocks: readonly string[];
   canAdd: boolean;
-  kindLabel: string;
+  typeLabel: string;
 }): string {
   const named = namedInSentence(coreBlocks);
 
@@ -17,8 +17,8 @@ export function emptyPageInvitation({
   }
 
   return canAdd
-    ? `Choose Add block to add content to this ${kindLabel}.`
-    : `No editable blocks are available for this ${kindLabel}.`;
+    ? `Choose Add block to add content to this ${typeLabel}.`
+    : `No editable blocks are available for this ${typeLabel}.`;
 }
 
 function namedInSentence(titles: readonly string[]): string {

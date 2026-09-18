@@ -7,8 +7,8 @@ import { type IngestOperation, readIngestOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { importStage } from "@/lib/import-stage";
 import { ImportFile } from "./ImportFile";
+import { ImportFollow, ImportRefusal } from "./ImportProgress";
 import { ImportReceipt } from "./ImportReceipt";
-import { ImportRefusal, ImportWatch } from "./ImportWatch";
 import { StartFromNothing } from "./StartFromNothing";
 
 const POLL_MS = 600;
@@ -23,10 +23,10 @@ export function UploadFlow() {
   const [message, setMessage] = useState("");
 
   const stage = importStage(operation, message);
-  const watching = stage.at === "reading";
+  const following = stage.at === "reading";
 
   useEffect(() => {
-    if (!operation || !watching) return;
+    if (!operation || !following) return;
     const current = operation;
     let active = true;
     async function poll() {
@@ -48,7 +48,7 @@ export function UploadFlow() {
     return () => {
       active = false;
     };
-  }, [operation, watching]);
+  }, [operation, following]);
 
   useEffect(() => {
     if (stage.at === "refused" || stage.at === "arrived")
@@ -105,7 +105,7 @@ export function UploadFlow() {
   if (stage.at === "arrived") {
     return (
       <ImportReceipt
-        asset={stage.asset}
+        work={stage.work}
         headingRef={heading}
         onBeginAgain={beginAgain}
       />
@@ -114,7 +114,7 @@ export function UploadFlow() {
 
   if (stage.at === "reading" || stage.at === "lost") {
     return (
-      <ImportWatch
+      <ImportFollow
         onCheckAgain={() => {
           setMessage("");
           setOperation((current) => (current ? { ...current } : current));

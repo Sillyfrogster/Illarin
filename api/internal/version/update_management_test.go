@@ -103,7 +103,7 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 	if err := json.Unmarshal(second.Body.Bytes(), &secondImage); err != nil {
 		t.Fatal(err)
 	}
-	if got := apitest.SaveIdentity(t, r, session, started.ID,
+	if got := apitest.SaveDetails(t, r, session, started.ID,
 		`{"name":"Ilse of the west shelf","blurb":"Now with another picture.","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save second version details = %d: %s", got.Code, got.Body.String())
 	}

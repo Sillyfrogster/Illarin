@@ -43,7 +43,7 @@ export function accountDestinations(
     ];
 
   return [
-    { id: "profile", label: "View profile", href: `/@${account.handle}` },
+    { id: "profile", label: "Your work", href: `/@${account.handle}` },
     { id: "settings", label: "Account settings", href: "/settings" },
     ...(publicationAuthority
       ? [

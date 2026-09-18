@@ -62,27 +62,27 @@ func (h *Handlers) GetWork(c *gin.Context) {
 	}
 	found, err := read(c.Request.Context(), id, viewerID, preference)
 	if errors.Is(err, work.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 		return
 	}
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
+		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
 	}
 	page, err := ToPage(found, preference)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
+		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
 	}
 	page.InstalledAppVersions, err = h.deliveries.InstalledAppVersions(c.Request.Context(), found.ID, found.InstallCapabilities)
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
+		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
 	}
 	if viewerID != nil && !found.IsOwner && found.Lifecycle != work.LifecycleDraft {
 		follow, err := h.notifications.FollowOf(c.Request.Context(), *viewerID, found.ID)
 		if err != nil {
-			api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
+			api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 			return
 		}
 		shown := notify.ToAPIFollow(follow)

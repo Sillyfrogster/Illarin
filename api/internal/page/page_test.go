@@ -44,7 +44,7 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID)
 
 	if page.ID != workID || page.Name != "The Quiet Archivist" || page.Type != "character" {
-		t.Fatalf("work page identity = %+v", page)
+		t.Fatalf("work page details = %+v", page)
 	}
 	if page.Blurb != "She closes the book on a ribbon." {
 		t.Errorf("blurb = %q, want the catalog blurb", page.Blurb)

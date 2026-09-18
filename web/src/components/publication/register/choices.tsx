@@ -291,7 +291,7 @@ export function EventChoice({
   );
 }
 
-const KINDS: {
+const TYPES: {
   icon: typeof Hash;
   kind: PublicationDestinationType;
   what: string;
@@ -321,7 +321,7 @@ export function DestinationKind({
   return (
     <Choice legend="Destination type">
       <div className="flex flex-col gap-2">
-        {KINDS.map((one) => (
+        {TYPES.map((one) => (
           <label
             className={cn(
               "flex cursor-pointer flex-col gap-2 rounded-plate p-4 outline-offset-3 transition-colors duration-200 motion-reduce:transition-none",

@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkBlock } from "@/lib/api/query";
-import { blockAudience } from "@/lib/asset-page-content";
+import { blockAudience } from "@/lib/work-page-content";
 import { useWorkspace } from "./state";
 
 const NOTE = "-mt-1 mb-5 font-ui text-label text-mute";

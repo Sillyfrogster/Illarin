@@ -125,7 +125,7 @@ test("a stopped delivery shows its reason instead of progress", () => {
         }),
       }),
     )?.stopped,
-  ).toBe("This asset was withdrawn before it could be collected.");
+  ).toBe("This work was withdrawn before it could be collected.");
 });
 
 test("an install the library reports without a delivery on record is a standing line, not a track", () => {

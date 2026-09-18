@@ -4,18 +4,18 @@ import { LockKeyhole, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { deleteAsset } from "@/lib/api/query";
+import { deleteWork } from "@/lib/api/query";
 
 export function DeleteControl({
-  assetId,
+  workId,
   creator,
-  kind,
+  typeName,
   isDraft,
   frozen,
 }: {
-  assetId: string;
+  workId: string;
   creator: string;
-  kind: string;
+  typeName: string;
   isDraft: boolean;
   frozen: boolean;
 }) {
@@ -23,18 +23,18 @@ export function DeleteControl({
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-  const noun = isDraft ? "draft" : "asset";
+  const noun = isDraft ? "draft" : typeName;
 
   async function remove() {
     if (pending || frozen) return;
     setPending(true);
     setMessage("");
     try {
-      await deleteAsset(assetId);
+      await deleteWork(workId);
       router.replace(`/@${creator}#deleted`);
       router.refresh();
     } catch {
-      setMessage("The asset could not be deleted. Try again.");
+      setMessage(`The ${noun} could not be deleted. Try again.`);
       setPending(false);
     }
   }
@@ -51,15 +51,15 @@ export function DeleteControl({
           </h3>
           <p className="mt-1 text-meta text-mute">
             {frozen
-              ? "A withheld asset cannot be deleted."
+              ? `A withheld ${typeName} cannot be deleted.`
               : isDraft
                 ? "Every block and image goes with it. You can restore it from your profile for 30 days."
                 : "Its page and downloads stop now. You can restore it from your profile for 30 days."}
           </p>
           {isDraft && !frozen ? (
             <p className="mt-1 text-meta text-mute">
-              A {kind} stays a {kind}. If you picked the wrong kind, delete this
-              draft and start the one you meant.
+              A {typeName} stays a {typeName}. If you picked the wrong type,
+              delete this draft and start the one you meant.
             </p>
           ) : null}
         </div>
@@ -73,7 +73,7 @@ export function DeleteControl({
             <p className="text-ui text-ink">Move this {noun} to Deleted?</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button loading={pending} onClick={remove} variant="stop">
-                Delete asset
+                Delete {noun}
               </Button>
               <Button
                 disabled={pending}
@@ -90,7 +90,7 @@ export function DeleteControl({
             disabled={frozen}
             onClick={() => setConfirming(true)}
           >
-            {frozen ? "Deletion locked" : "Delete asset"}
+            {frozen ? "Deletion locked" : `Delete ${noun}`}
           </Button>
         )}
       </div>

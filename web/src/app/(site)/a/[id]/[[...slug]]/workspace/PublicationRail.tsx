@@ -7,15 +7,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
-  fetchAsset,
   fetchWaitingReplacement,
+  fetchWork,
   type IngestOperation,
-  publishAsset,
+  publishWork,
   type ReadinessItem,
   type VersionChangeGroup,
 } from "@/lib/api/query";
-import { reviewBlockedReason, updateStanding } from "@/lib/asset-publication";
 import type { PageTarget, ReadinessTarget } from "@/lib/readiness";
+import { reviewBlockedReason, updateStanding } from "@/lib/work-publication";
 import { useWorkingCopy, WORKING_COPY_SAVED } from "@/lib/working-copy";
 import { Note } from "./fields";
 import { ReadinessList } from "./ReadinessList";
@@ -26,13 +26,13 @@ import { useWorkspace } from "./state";
 type Step = "home" | "replace" | "review" | "confirm";
 
 export function PublicationRail({
-  kind,
+  typeName,
   onGo,
   readiness,
   unlisted,
   unpublishedChanges,
 }: {
-  kind: string;
+  typeName: string;
   onGo: (target: PageTarget) => void;
   readiness: ReadinessItem[] | undefined;
   unlisted: boolean;
@@ -48,9 +48,9 @@ export function PublicationRail({
   useEffect(() => setChanged(unpublishedChanges), [unpublishedChanges]);
 
   const readStanding = useCallback(async () => {
-    const page = await fetchAsset(workspace.assetId, undefined, true);
+    const page = await fetchWork(workspace.workId, undefined, true);
     if (page) setChanged(Boolean(page.unpublishedChanges));
-  }, [workspace.assetId]);
+  }, [workspace.workId]);
 
   useEffect(() => {
     const saved = () => void readStanding();
@@ -61,13 +61,13 @@ export function PublicationRail({
   useEffect(() => {
     if (workspace.isDraft) return;
     let reading = true;
-    void fetchWaitingReplacement(workspace.assetId).then((found) => {
+    void fetchWaitingReplacement(workspace.workId).then((found) => {
       if (reading) setWaiting(found);
     });
     return () => {
       reading = false;
     };
-  }, [workspace.assetId, workspace.isDraft]);
+  }, [workspace.workId, workspace.isDraft]);
 
   function settled() {
     setWaiting(null);
@@ -88,7 +88,7 @@ export function PublicationRail({
     return (
       <DraftPublication
         confirming={step === "confirm"}
-        kind={kind}
+        typeName={typeName}
         onConfirm={() => setStep("confirm")}
         onGo={goTo}
         onLeaveConfirm={() => setStep("home")}
@@ -116,7 +116,7 @@ export function PublicationRail({
     return (
       <ReviewStep
         applied={applied}
-        kind={kind}
+        typeName={typeName}
         onBack={() => setStep("home")}
         onGo={goTo}
         onPublished={() => {
@@ -163,7 +163,7 @@ export function PublicationRail({
             Missing recommended content
           </h3>
           <Note>
-            These fields are required when publishing a new {kind}. Your
+            These fields are required when publishing a new {typeName}. Your
             existing page stays public.
           </Note>
           <ReadinessList items={shortfall} onGo={goTo} />
@@ -175,14 +175,14 @@ export function PublicationRail({
 
 function DraftPublication({
   confirming,
-  kind,
+  typeName,
   onConfirm,
   onGo,
   onLeaveConfirm,
   readiness,
 }: {
   confirming: boolean;
-  kind: string;
+  typeName: string;
   onConfirm: () => void;
   onGo: (target: ReadinessTarget) => void;
   onLeaveConfirm: () => void;
@@ -203,7 +203,7 @@ function DraftPublication({
     if (busy) return;
     setBusy(true);
     setMessage("");
-    const answer = await publishAsset(candidate, workspace.assetId);
+    const answer = await publishWork(candidate, workspace.workId);
     setBusy(false);
     if (answer.published) {
       workspace.closePane();
@@ -223,11 +223,11 @@ function DraftPublication({
       <div className="flex flex-col gap-5">
         <RailBack onClick={onLeaveConfirm}>Publication</RailBack>
         <h3 className="font-display text-section font-medium text-ink">
-          Publish this {kind}?
+          Publish this {typeName}?
         </h3>
         <p className="text-ui text-ink">
           This becomes a public page anyone can open. It is one-way, and a
-          published {kind} never returns to a draft.
+          published {typeName} never returns to a draft.
         </p>
         {message ? (
           <p
@@ -274,7 +274,7 @@ function DraftPublication({
         </Button>
         <Note>
           {missing.length === 0
-            ? "Published assets cannot return to draft. A blurb is optional."
+            ? `A published ${typeName} cannot return to draft. A blurb is optional.`
             : missing.length === 1
               ? "One thing above is still missing."
               : `${missing.length} things above are still missing.`}

@@ -4,7 +4,7 @@ import { ImagePlus, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import {
-  addAssetImage,
+  addWorkImage,
   type LumiaRecord,
   type RecordListContent,
   type WorkImage,
@@ -35,7 +35,7 @@ function recordName(record: LumiaRecord, position: number): string {
 }
 
 export function PackEditor({
-  assetId,
+  workId,
   chosen,
   content,
   images,
@@ -44,7 +44,7 @@ export function PackEditor({
   onImageAdded,
   pending,
 }: {
-  assetId: string;
+  workId: string;
   chosen: string | null;
   content: RecordListContent;
   images: WorkImage[];
@@ -97,7 +97,7 @@ export function PackEditor({
     >
       {(index) => (
         <LumiaFields
-          assetId={assetId}
+          workId={workId}
           images={images}
           onChange={(changes) =>
             onChange({
@@ -115,14 +115,14 @@ export function PackEditor({
 }
 
 function LumiaFields({
-  assetId,
+  workId,
   images,
   onChange,
   onImageAdded,
   pending,
   record,
 }: {
-  assetId: string;
+  workId: string;
   images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
@@ -132,7 +132,7 @@ function LumiaFields({
   return (
     <div className="flex flex-col gap-6">
       <AvatarField
-        assetId={assetId}
+        workId={workId}
         images={images}
         onChange={onChange}
         onImageAdded={onImageAdded}
@@ -224,14 +224,14 @@ function LumiaFields({
 }
 
 function AvatarField({
-  assetId,
+  workId,
   images,
   onChange,
   onImageAdded,
   pending,
   record,
 }: {
-  assetId: string;
+  workId: string;
   images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
@@ -258,9 +258,9 @@ function AvatarField({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(
+      const mediaId = await addWorkImage(
         candidate,
-        assetId,
+        workId,
         chosen,
         "pack_item",
       );

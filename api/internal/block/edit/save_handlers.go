@@ -27,7 +27,7 @@ func (h *Handlers) SaveWorkBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "saving an asset")
+	owner, ok := api.Verified(c, "saving a work")
 	if !ok {
 		return
 	}
@@ -51,7 +51,7 @@ func (h *Handlers) SaveWorkBlock(c *gin.Context) {
 	if errors.As(err, &exposure) {
 		c.JSON(http.StatusConflict, SealedExposureRefusal{
 			Error: "Saving this makes " + joinNames(exposure.Prompts) +
-				" readable by anyone, and puts ordinary downloads back on the asset.",
+				" readable by anyone, and puts ordinary downloads back on the work.",
 			Code:    SealedExposureRefusalCodeSealedExposure,
 			Prompts: exposure.Prompts,
 		})

@@ -176,10 +176,10 @@ type WorkList struct {
 type WorkListEmptyState string
 
 const (
-	WorkListEmptyStateCatalog     WorkListEmptyState = "catalog"
-	WorkListEmptyStateLessThannil WorkListEmptyState = "<nil>"
-	WorkListEmptyStateNoMatches   WorkListEmptyState = "no_matches"
-	WorkListEmptyStateSuppressed  WorkListEmptyState = "suppressed"
+	WorkListEmptyStateNothingPublished WorkListEmptyState = "nothing_published"
+	WorkListEmptyStateLessThannil      WorkListEmptyState = "<nil>"
+	WorkListEmptyStateNoMatches        WorkListEmptyState = "no_matches"
+	WorkListEmptyStateSuppressed       WorkListEmptyState = "suppressed"
 )
 
 type WorkListNSFWPreference string
@@ -369,7 +369,7 @@ const (
 	GetWorkParamsNsfwShown   GetWorkParamsNsfw = "shown"
 )
 
-type WorkIdentityRequest struct {
+type WorkDetailsRequest struct {
 	Blurb  string `json:"blurb"`
 	IsNsfw *bool  `json:"isNsfw" tstype:"boolean | null,required"`
 	Name   string `json:"name"`

@@ -4,10 +4,10 @@ import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function SealedPanel({
-  assetId,
+  workId,
   count,
 }: {
-  assetId: string;
+  workId: string;
   count: number;
 }) {
   return (
@@ -26,7 +26,7 @@ export function SealedPanel({
         them back into a download, so take a copy and keep it.
       </p>
       <Button asChild className="mt-3 w-full">
-        <a href={`/api/v1/assets/${assetId}/sealed`}>
+        <a href={`/api/v1/works/${workId}/sealed`}>
           <Lock aria-hidden="true" />
           Download the sealed blocks
         </a>

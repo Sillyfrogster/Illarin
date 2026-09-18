@@ -173,7 +173,7 @@ func PublishedWork(t *testing.T, works *work.Service, handle string) (uuid.UUID,
 	SaveGreeting(t, works, owner, id, "Published greeting")
 	nsfw := false
 	pages := Pages(works)
-	if err := pages.SetIdentity(context.Background(), page.Identity{
+	if err := pages.SetDetails(context.Background(), page.Details{
 		OwnerID: owner, WorkID: id, Name: "Published name", IsNSFW: &nsfw,
 	}, CurrentCandidate(t, works, id)); err != nil {
 		t.Fatalf("save the header: %v", err)
@@ -216,10 +216,10 @@ func PublishImported(t *testing.T, svc *work.Service, ownerID uuid.UUID, created
 	}
 	nsfw := false
 	pages := Pages(svc)
-	if err := pages.SetIdentity(context.Background(), page.Identity{
+	if err := pages.SetDetails(context.Background(), page.Details{
 		OwnerID: ownerID, WorkID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, CurrentCandidate(t, svc, created.ID)); err != nil {
-		t.Fatalf("SetIdentity imported asset: %v", err)
+		t.Fatalf("SetDetails imported asset: %v", err)
 	}
 	if _, err := pages.Publish(
 		context.Background(), ownerID, created.ID, CurrentCandidate(t, svc, created.ID),

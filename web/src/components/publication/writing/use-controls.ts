@@ -52,11 +52,11 @@ export type Controls = {
 const NEW_TABLE = { rows: 3, cols: 3, withHeaderRow: true };
 
 export function useControls(editor: Editor | null): Controls | null {
-  const watched = useEditorState({
+  const followed = useEditorState({
     editor,
     selector: ({ editor: live }) => (live ? read(live) : null),
   });
-  if (watched) return watched;
+  if (followed) return followed;
   return editor ? read(editor) : null;
 }
 

@@ -20,7 +20,7 @@ import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   readUpdateDestinations,
   type WorkUpdateDestination,
-} from "@/lib/api/asset-destinations";
+} from "@/lib/api/work-destinations";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
@@ -54,7 +54,7 @@ export function UpdateDestinationSettings() {
         className="mt-10"
         heading="Your destinations"
         href="/sign-in?returnTo=%2Fsettings%2Fupdate-destinations"
-        line="Sign in to manage where your asset updates are announced."
+        line="Sign in to manage where updates to your work are announced."
       />
     );
   if (!account.emailVerified)
@@ -228,7 +228,7 @@ function DestinationRow({
   open: boolean;
 }) {
   const state = STATES[one.state];
-  const Kind = one.type === "discord" ? Hash : Webhook;
+  const Icon = one.type === "discord" ? Hash : Webhook;
 
   return (
     <li
@@ -246,7 +246,7 @@ function DestinationRow({
               : "bg-plane text-mute",
           )}
         >
-          <Kind aria-hidden="true" className="size-5" strokeWidth={1.6} />
+          <Icon aria-hidden="true" className="size-5" strokeWidth={1.6} />
         </span>
 
         <div className="min-w-0 flex-1 basis-64">
@@ -287,11 +287,11 @@ function DestinationRow({
 
 const NOTES: { said: string; title: string }[] = [
   {
-    said: "The asset name, the update number or your version label, your one-line summary and a link to the history. Never the changes themselves, your notes or prompt text.",
+    said: "The name, the update number or your version label, your one-line summary and a link to the history. Never the changes themselves, your notes or prompt text.",
     title: "What an announcement carries",
   },
   {
-    said: "Only a published update. A first publication, a private save and a correction to published notes send nothing, and an unlisted asset stays quiet unless you say its link may travel.",
+    said: "Only a published update. A first publication, a private save and a correction to published notes send nothing, and an unlisted work stays quiet unless you say its link may travel.",
     title: "When one is sent",
   },
   {

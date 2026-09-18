@@ -21,7 +21,7 @@ func CandidateResult(c *gin.Context, candidate *work.Candidate, err error) bool 
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the working-copy version you reviewed.", "code": "working_copy_version_required"})
 		return true
 	case errors.Is(err, work.ErrWorkFrozen):
-		c.JSON(http.StatusConflict, CandidateConflict{Code: "asset_frozen", Error: "A withheld asset cannot be changed."})
+		c.JSON(http.StatusConflict, CandidateConflict{Code: CandidateConflictCodeWorkFrozen, Error: "A withheld work cannot be changed."})
 		return true
 	case err == nil && candidate.SavedVersion > 0:
 		c.Header("X-Working-Copy-Version", strconv.FormatInt(candidate.SavedVersion, 10))

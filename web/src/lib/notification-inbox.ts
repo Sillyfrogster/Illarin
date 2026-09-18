@@ -1,5 +1,5 @@
 import type { Notification, NotificationList } from "@/lib/api/notifications";
-import { assetHistoryHref, assetHref } from "@/lib/asset-url";
+import { workHistoryHref, workHref } from "@/lib/work-url";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -20,32 +20,30 @@ export type NotificationWords = {
 
 /** Says what an entry is about. A staff decision always reads as Illarin staff and never as the person who made it. */
 export function notificationWords(entry: Notification): NotificationWords {
-  const assetName = entry.work?.name ?? "One of your assets";
-  const assetPage = entry.work
-    ? assetHref(entry.work.id, entry.work.name)
-    : null;
+  const workName = entry.work?.name ?? "One of your works";
+  const workPage = entry.work ? workHref(entry.work.id, entry.work.name) : null;
   switch (entry.type) {
     case "work_withheld":
       return {
         lead: "Illarin staff withheld",
-        subject: assetName,
+        subject: workName,
         detail: entry.reason ?? "",
-        href: assetPage,
+        href: workPage,
       };
     case "work_restored":
       return {
         lead: "Illarin staff restored",
-        subject: assetName,
+        subject: workName,
         detail: "Readers can reach it again.",
-        href: assetPage,
+        href: workPage,
       };
     case "work_updated":
       return {
         lead: updateLead(entry),
-        subject: assetName,
+        subject: workName,
         detail: updateDetail(entry),
         href: entry.work
-          ? assetHistoryHref(
+          ? workHistoryHref(
               entry.work.id,
               entry.work.name,
               entry.update?.number,

@@ -1,5 +1,5 @@
 import type { QueuedDelivery, WorkInstance } from "@/lib/api/query";
-import { deliveryFailureLine } from "@/lib/asset-delivery";
+import { deliveryFailureLine } from "@/lib/work-delivery";
 
 export type InstallStep = {
   id: "queued" | "collected" | "installed";

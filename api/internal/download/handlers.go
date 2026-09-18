@@ -124,7 +124,7 @@ func Refuse(c *gin.Context, err error) {
 const (
 	oversizedDownload = "Those images make a file larger than Illarin will produce. " +
 		"Leave some of them out and try again."
-	unreadableDownloadImage = "One of this asset's images could not be read, " +
+	unreadableDownloadImage = "One of this work's images could not be read, " +
 		"so Illarin made no file rather than one missing a picture. Try again in a moment."
 )
 

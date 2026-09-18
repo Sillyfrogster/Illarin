@@ -73,7 +73,7 @@ func RefuseFile(c *gin.Context, err error, maxUploadBytes int64) {
 		return
 	}
 	if errors.Is(err, format.ErrInvariant) {
-		api.Refuse(c, http.StatusInternalServerError, "could not create the asset")
+		api.Refuse(c, http.StatusInternalServerError, "could not create the work")
 		return
 	}
 
@@ -90,7 +90,7 @@ func RefuseFile(c *gin.Context, err error, maxUploadBytes int64) {
 		api.Refuse(c, http.StatusBadRequest, refused.Error())
 		return
 	}
-	api.Refuse(c, http.StatusBadRequest, "could not create the asset")
+	api.Refuse(c, http.StatusBadRequest, "could not create the work")
 }
 
 func readableSize(bytes int64) string {

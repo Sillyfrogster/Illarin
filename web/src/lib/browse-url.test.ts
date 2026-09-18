@@ -24,11 +24,15 @@ describe("browse URL state", () => {
   test("keeps creator profile filters on the creator profile", () => {
     expect(
       buildBrowseHref({ type: "lorebook", q: "moonlit" }, "/@verified.creator"),
-    ).toBe("/@verified.creator?kind=lorebook&q=moonlit");
+    ).toBe("/@verified.creator?type=lorebook&q=moonlit");
   });
 
-  test("keeps Pack as a catalog kind", () => {
-    expect(readBrowseFilters({ kind: "pack" }).type).toBe("pack");
-    expect(buildBrowseHref({ type: "pack" })).toBe("/browse?kind=pack");
+  test("keeps Pack as a type", () => {
+    expect(readBrowseFilters({ type: "pack" }).type).toBe("pack");
+    expect(buildBrowseHref({ type: "pack" })).toBe("/browse?type=pack");
+  });
+
+  test("still reads the type from links that say kind", () => {
+    expect(readBrowseFilters({ kind: "lorebook" }).type).toBe("lorebook");
   });
 });

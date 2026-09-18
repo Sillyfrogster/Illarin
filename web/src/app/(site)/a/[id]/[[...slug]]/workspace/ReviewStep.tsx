@@ -10,7 +10,7 @@ import {
 } from "@/components/updates/UpdateAnnouncementChoice";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
-  publishAssetUpdate,
+  publishWorkUpdate,
   type ReadinessItem,
   type VersionChangeGroup,
 } from "@/lib/api/query";
@@ -22,14 +22,14 @@ import { useWorkspace } from "./state";
 
 export function ReviewStep({
   applied,
-  kind,
+  typeName,
   onBack,
   onGo,
   onPublished,
   unlisted,
 }: {
   applied: VersionChangeGroup[] | null;
-  kind: string;
+  typeName: string;
   onBack: () => void;
   onGo: (target: ReadinessTarget) => void;
   onPublished: () => void;
@@ -57,7 +57,7 @@ export function ReviewStep({
     setMessage("");
     setStale(false);
     setMissing([]);
-    const answer = await publishAssetUpdate(candidate, workspace.assetId, {
+    const answer = await publishWorkUpdate(candidate, workspace.workId, {
       announceUnlisted: announcement.announceUnlisted,
       destinationIds: announcement.destinationIds ?? undefined,
       notify: announcement.notify,
@@ -127,7 +127,7 @@ export function ReviewStep({
       </Field>
 
       <UpdateAnnouncementChoice
-        assetId={workspace.assetId}
+        workId={workspace.workId}
         choice={announcement}
         disabled={busy}
         needsConsent={needsConsent}
@@ -168,7 +168,7 @@ export function ReviewStep({
         onClick={publish}
         variant="primary"
       >
-        {busy ? "Publishing…" : `Publish this ${kind} update`}
+        {busy ? "Publishing…" : `Publish this ${typeName} update`}
       </Button>
     </div>
   );

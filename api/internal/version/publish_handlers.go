@@ -20,7 +20,7 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "publishing an asset update")
+	owner, ok := api.Verified(c, "publishing an update")
 	if !ok {
 		return
 	}
@@ -41,7 +41,7 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	switch {
 	case errors.Is(err, ErrUnlistedConsentRequired):
 		refuseInvalid(c, "announceUnlisted",
-			"This asset is unlisted. Confirm that its direct link may be sent, or publish quietly.")
+			"This work is unlisted. Confirm that its direct link may be sent, or publish quietly.")
 	case errors.Is(err, ErrUpdateDestinationIneligible):
 		refuseInvalid(c, "destinationIds", "Choose only your own verified, active destinations.")
 	case errors.Is(err, ErrSummaryRequired):
@@ -51,7 +51,7 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	case errors.Is(err, work.ErrPublishFloor):
 		notReady := page.PublishRefusalCodeNotReady
 		c.JSON(http.StatusConflict, page.PublishRefusal{
-			Error:     "This asset is not ready to publish yet.",
+			Error:     "This work is not ready to publish yet.",
 			Code:      &notReady,
 			Readiness: page.ToReadiness(items),
 		})
@@ -63,7 +63,7 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	case errors.Is(err, work.ErrWorkIsDraft):
 		c.JSON(http.StatusConflict, page.PublishRefusal{Error: "Publish this draft before updating it."})
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not publish the update.")
 	default:

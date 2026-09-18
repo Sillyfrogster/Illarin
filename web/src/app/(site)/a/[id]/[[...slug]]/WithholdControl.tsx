@@ -4,15 +4,17 @@ import { Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { withholdAsset } from "@/lib/api/query";
+import { withholdWork } from "@/lib/api/query";
 import { Field, TextAreaField } from "./workspace/fields";
 
 export function WithholdControl({
-  assetId,
+  workId,
   creator,
+  typeName,
 }: {
-  assetId: string;
+  workId: string;
   creator: string;
+  typeName: string;
 }) {
   const router = useRouter();
   const [reason, setReason] = useState("");
@@ -31,10 +33,12 @@ export function WithholdControl({
     setPending(true);
     setMessage("");
     try {
-      await withholdAsset(assetId, reason.trim());
+      await withholdWork(workId, reason.trim());
       router.replace("/browse");
     } catch {
-      setMessage("The asset could not be withheld. Your reason is still here.");
+      setMessage(
+        `The ${typeName} could not be withheld. Your reason is still here.`,
+      );
       setConfirming(false);
       setPending(false);
     }
@@ -48,12 +52,12 @@ export function WithholdControl({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div>
           <h3 className="text-ui font-medium text-ink" id="withhold-heading">
-            Withhold this asset
+            Withhold this {typeName}
           </h3>
           <p className="mt-1 text-meta text-mute">
-            It leaves the catalog and answers as missing to everyone but @
-            {creator}, who keeps reading and downloading their own file but
-            cannot edit it, relist it or delete it.
+            It leaves Browse and answers as missing to everyone but @{creator},
+            who keeps reading and downloading their own file but cannot edit it,
+            relist it or delete it.
           </p>
         </div>
         <form className="flex flex-col gap-3" onSubmit={ask}>
@@ -74,12 +78,12 @@ export function WithholdControl({
           {confirming ? (
             <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
               <p className="text-ui text-ink">
-                Withhold this asset? Only its creator will be able to open its
-                page.
+                Withhold this {typeName}? Only its creator will be able to open
+                its page.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button loading={pending} onClick={withhold} variant="stop">
-                  Withhold asset
+                  Withhold {typeName}
                 </Button>
                 <Button
                   disabled={pending}
@@ -96,7 +100,7 @@ export function WithholdControl({
               disabled={!reason.trim()}
               type="submit"
             >
-              Withhold asset
+              Withhold {typeName}
             </Button>
           )}
         </form>

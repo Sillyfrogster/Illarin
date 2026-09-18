@@ -20,7 +20,7 @@ import {
   rotateUpdateDestinationSecret,
   verifyUpdateDestination,
   type WorkUpdateDestination,
-} from "@/lib/api/asset-destinations";
+} from "@/lib/api/work-destinations";
 import { cn } from "@/lib/cn";
 import {
   destinationRotating,
@@ -41,9 +41,9 @@ export function DestinationEditor({
   onRemoved: (id: string) => void;
 }) {
   const [current, setCurrent] = useState(existing);
-  const [kind, setKind] = useState<WorkUpdateDestination["type"]>(
-    existing?.type ?? "discord",
-  );
+  const [destinationType, setDestinationType] = useState<
+    WorkUpdateDestination["type"]
+  >(existing?.type ?? "discord");
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
   const [secret, setSecret] = useState("");
@@ -80,7 +80,7 @@ export function DestinationEditor({
         })
       : await addUpdateDestination({
           name: name.trim(),
-          type: kind,
+          type: destinationType,
           address: address.trim(),
         });
     finish();
@@ -95,7 +95,9 @@ export function DestinationEditor({
       setCopied(false);
     } else receive(answer.value);
     setNotice(
-      kind === "discord" ? "Discord channel saved." : "Destination saved.",
+      destinationType === "discord"
+        ? "Discord channel saved."
+        : "Destination saved.",
     );
   }
 
@@ -112,7 +114,7 @@ export function DestinationEditor({
       return;
     }
     receive(answer.value);
-    setNotice("Verified. This destination is ready to select for your assets.");
+    setNotice("Verified. This destination is ready to select for your work.");
   }
 
   async function disable() {
@@ -182,7 +184,12 @@ export function DestinationEditor({
       ) : null}
       <form className="grid gap-5" onSubmit={save}>
         <fieldset className="grid min-w-0 gap-5" disabled={busy}>
-          {!current ? <KindChoice kind={kind} onChange={setKind} /> : null}
+          {!current ? (
+            <TypeChoice
+              destinationType={destinationType}
+              onChange={setDestinationType}
+            />
+          ) : null}
           <Field
             htmlFor="update-destination-name"
             label="Destination name"
@@ -199,7 +206,8 @@ export function DestinationEditor({
           {current ? (
             <div className="grid gap-1 rounded-control bg-deep px-3.5 py-3 text-meta text-mute">
               <span>
-                Saved {kind === "discord" ? "channel" : "endpoint"}, masked
+                Saved {destinationType === "discord" ? "channel" : "endpoint"},
+                masked
               </span>
               <code className="break-all text-ink">{current.address}</code>
             </div>
@@ -209,14 +217,14 @@ export function DestinationEditor({
             label={
               current
                 ? "Replacement address"
-                : kind === "discord"
+                : destinationType === "discord"
                   ? "Discord webhook address"
                   : "Endpoint address"
             }
             hint={
               current
                 ? "Leave blank to keep the saved address. Replacing a generic endpoint requires verification again."
-                : kind === "discord"
+                : destinationType === "discord"
                   ? "Copy the webhook URL from your Discord channel's Integrations settings."
                   : "A public HTTPS endpoint on port 443."
             }
@@ -228,11 +236,11 @@ export function DestinationEditor({
               onChange={(event) => setAddress(event.target.value)}
               required={!current}
               spellCheck={false}
-              type={kind === "discord" ? "password" : "url"}
+              type={destinationType === "discord" ? "password" : "url"}
               value={address}
             />
           </Field>
-          {kind === "discord" ? (
+          {destinationType === "discord" ? (
             <StepNote>
               User, role and everyone mentions are disabled. Setup checks the
               channel without posting a message.
@@ -265,7 +273,7 @@ export function DestinationEditor({
             ? "Saving…"
             : current
               ? "Save changes"
-              : kind === "discord"
+              : destinationType === "discord"
                 ? "Connect this channel"
                 : "Create the endpoint"}
         </button>
@@ -310,8 +318,8 @@ export function DestinationEditor({
             confirm="Remove permanently"
             onConfirm={() => void remove()}
           >
-            This removes the connection and every asset selection that names it.
-            Connecting it again needs the address again.
+            This removes the connection and every selection on your work that
+            names it. Connecting it again needs the address again.
           </Consequence>
         </div>
       ) : null}
@@ -319,25 +327,25 @@ export function DestinationEditor({
   );
 }
 
-function KindChoice({
-  kind,
+function TypeChoice({
+  destinationType,
   onChange,
 }: {
-  kind: WorkUpdateDestination["type"];
-  onChange: (kind: WorkUpdateDestination["type"]) => void;
+  destinationType: WorkUpdateDestination["type"];
+  onChange: (destinationType: WorkUpdateDestination["type"]) => void;
 }) {
-  const [lit, setLit] = useState<string>(kind);
+  const [lit, setLit] = useState<string>(destinationType);
   return (
     <fieldset>
       <legend className="mb-3 text-ui text-ink">Destination type</legend>
       <TravellingHighlight
-        chosen={kind}
+        chosen={destinationType}
         className="inline-flex rounded-control bg-deep p-1"
         onLit={setLit}
       >
         {(["discord", "webhook"] as const).map((value) => (
           <button
-            aria-pressed={kind === value}
+            aria-pressed={destinationType === value}
             className={cn(
               "min-h-11 rounded-control px-4 text-ui font-medium outline-offset-3",
               lit === value ? "text-on-accent" : "text-mute",

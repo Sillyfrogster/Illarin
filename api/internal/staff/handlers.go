@@ -83,17 +83,17 @@ func (h *Handlers) WithholdWork(c *gin.Context) {
 	}
 	var request WithholdWorkRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the work.")
 		return
 	}
 	err := h.staff.Withhold(c.Request.Context(), id, admin.ID, request.Reason)
 	switch {
 	case errors.Is(err, ErrInvalidWithholdReason):
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the work.")
 	case errors.Is(err, ErrWorkNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the work.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -110,7 +110,7 @@ func (h *Handlers) ClearWorkWithhold(c *gin.Context) {
 	err := h.staff.ClearWithhold(c.Request.Context(), id)
 	switch {
 	case errors.Is(err, ErrWorkNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not clear the withhold.")
 	default:

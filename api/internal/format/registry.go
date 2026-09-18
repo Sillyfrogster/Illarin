@@ -272,7 +272,7 @@ func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 		)
 	}
 	return fmt.Errorf(
-		"formats for kind %q recognise discriminator %q but cannot read value %q: %w",
+		"formats for type %q recognise discriminator %q but cannot read value %q: %w",
 		found.workType, found.path, found.value, ErrUnsupportedFormat,
 	)
 }

@@ -19,8 +19,8 @@ export function SiteFooter() {
           <div className="min-w-0">
             <BrandLogo className="w-40" tone="accent" />
             <p className="mt-3 max-w-[34ch] font-prose text-meta leading-6 text-mute">
-              A cross-application catalog for AI roleplay assets. Every
-              creator&rsquo;s source file stays intact.
+              A hub for AI roleplay work, across apps. Every creator&rsquo;s
+              source file stays intact.
             </p>
             <a
               className="mt-3 flex min-h-11 w-fit items-center text-meta text-ink hover:text-accent"

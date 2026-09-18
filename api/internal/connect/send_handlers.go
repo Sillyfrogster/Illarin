@@ -70,7 +70,7 @@ func (h *Handlers) GetWorkInstances(c *gin.Context) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := api.SignedIn(c, "sending an asset to an application")
+	creator, ok := api.SignedIn(c, "sending a work to an application")
 	if !ok {
 		return
 	}
@@ -97,7 +97,7 @@ func (h *Handlers) SendWorkToInstance(c *gin.Context) {
 		return
 	}
 	noStoreLink(c)
-	creator, ok := api.SignedIn(c, "sending an asset to an application")
+	creator, ok := api.SignedIn(c, "sending a work to an application")
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
@@ -180,11 +180,11 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 	case errors.Is(err, ErrNoInstanceOfYours):
 		api.Refuse(c, http.StatusNotFound, "No live application of yours has that id.")
 	case errors.Is(err, ErrMissingScope):
-		api.Refuse(c, http.StatusForbidden, "That application cannot receive assets.")
+		api.Refuse(c, http.StatusForbidden, "That application cannot receive works.")
 	case errors.Is(err, ErrWorkNotFound), errors.Is(err, ErrWorkNotSendable):
-		api.Refuse(c, http.StatusNotFound, "No asset that can be sent has that id.")
+		api.Refuse(c, http.StatusNotFound, "No work that can be sent has that id.")
 	case errors.Is(err, ErrNoTarget):
-		api.Refuse(c, http.StatusConflict, "That application accepts no format this asset can be written in.")
+		api.Refuse(c, http.StatusConflict, "That application accepts no format this work can be written in.")
 	case errors.Is(err, ErrCannotInstall):
 		api.Refuse(c, http.StatusConflict, "That application does not install extensions from Illarin.")
 	case errors.Is(err, ErrQueueFull):
@@ -192,7 +192,7 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 	case errors.Is(err, ErrDeliveryNotFound):
 		api.Refuse(c, http.StatusNotFound, "No delivery of yours has that id.")
 	case errors.Is(err, ErrLibraryTooLarge):
-		api.Refuse(c, http.StatusRequestEntityTooLarge, "Report fewer installed assets in one request.")
+		api.Refuse(c, http.StatusRequestEntityTooLarge, "Report fewer installed works in one request.")
 	case errors.Is(err, ErrLibraryReport):
 		api.Refuse(c, http.StatusBadRequest, "That report is not valid.")
 	case errors.Is(err, ErrLibraryVersion):

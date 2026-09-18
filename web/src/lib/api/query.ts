@@ -84,8 +84,8 @@ import type {
   VersionComparison,
   WorkBlock,
   WorkDetail,
+  WorkDetailsRequest,
   WorkElement,
-  WorkIdentityRequest,
   WorkImage,
   WorkInstance,
   WorkInstanceList,
@@ -103,7 +103,7 @@ export type {
   WorkBlock,
   WorkDetail,
   WorkElement,
-  WorkIdentityRequest,
+  WorkDetailsRequest,
   WorkImage,
   WorkInstance,
   WorkInstanceList,
@@ -186,15 +186,15 @@ export type PresetVariable = VariableSchemaContent["variables"][number];
 export type RegexScript = ScriptListContent["scripts"][number];
 export type ReplacementDecision = ReplacementAcceptance["unrepresentable"];
 export type BrowsePage = WorkList;
-export type BrowseKind = BrowseWork["type"];
-export type NsfwVisibility = NsfwPreferenceRequest["preference"];
+export type BrowseType = BrowseWork["type"];
+export type NsfwPreference = NsfwPreferenceRequest["preference"];
 
 export type BrowseFilters = Pick<
   ListWorksParams,
   "type" | "platform" | "q" | "facet"
 >;
 
-export type AssetListParams = BrowseFilters &
+export type WorkListParams = BrowseFilters &
   Pick<ListWorksParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
 
 /** Creates an isolated cache for each server render. */
@@ -206,13 +206,13 @@ export function makeQueryClient() {
   });
 }
 
-export const assetKeys = {
-  all: ["assets"] as const,
+export const workKeys = {
+  all: ["works"] as const,
   list: (
     filters: BrowseFilters,
-    visibility?: NsfwVisibility,
+    preference?: NsfwPreference,
     creator?: string,
-  ) => ["assets", "list", creator, filters, visibility] as const,
+  ) => ["works", "list", creator, filters, preference] as const,
 };
 
 export class SealedExposureError extends Error {
@@ -255,21 +255,21 @@ export async function fetchProfile(handle: string): Promise<Profile | null> {
   return data;
 }
 
-export async function fetchAssets(
-  params: AssetListParams,
+export async function fetchWorks(
+  params: WorkListParams,
   cookie?: string,
   signal?: AbortSignal,
 ): Promise<BrowsePage> {
-  const { data, error } = await api<WorkList>("GET", "/v1/assets", {
+  const { data, error } = await api<WorkList>("GET", "/v1/works", {
     query: params,
     headers: cookie ? { cookie } : undefined,
     signal,
   });
-  if (error || !data) throw new Error("Could not load the catalog");
+  if (error || !data) throw new Error("Could not load works");
   return data;
 }
 
-export async function fetchDeletedAssets(
+export async function fetchDeletedWorks(
   handle: string,
   cookie: string,
 ): Promise<DeletedWork[] | null> {
@@ -282,12 +282,12 @@ export async function fetchDeletedAssets(
   return data.items;
 }
 
-export async function fetchAsset(
+export async function fetchWork(
   id: string,
   cookie?: string,
   workingCopy = false,
 ): Promise<WorkDetail | null> {
-  const { data, error } = await api<WorkDetail>("GET", `/v1/assets/${id}`, {
+  const { data, error } = await api<WorkDetail>("GET", `/v1/works/${id}`, {
     query: { workingCopy },
     headers: cookie ? { cookie } : undefined,
   });
@@ -295,47 +295,47 @@ export async function fetchAsset(
   return data;
 }
 
-export type StartAssetApp = NonNullable<StartWorkRequest["app"]>;
+export type StartWorkApp = NonNullable<StartWorkRequest["app"]>;
 
-export async function startAsset(
-  kind: string,
-  app?: StartAssetApp,
+export async function startWork(
+  type: string,
+  app?: StartWorkApp,
 ): Promise<WorkDetail> {
-  const { data, error } = await api<WorkDetail>("POST", "/v1/assets", {
-    body: app ? { type: kind, app } : { type: kind },
+  const { data, error } = await api<WorkDetail>("POST", "/v1/works", {
+    body: app ? { type, app } : { type },
   });
   if (error || !data || !("blocks" in data)) {
-    throw new Error("Could not start the asset");
+    throw new Error("Could not start the work");
   }
   return data;
 }
 
-export async function saveNsfwVisibility(visibility: NsfwVisibility) {
-  const { error } = await api<void>("PUT", "/v1/account/nsfw-visibility", {
-    body: { preference: visibility },
+export async function saveNsfwPreference(preference: NsfwPreference) {
+  const { error } = await api<void>("PUT", "/v1/account/nsfw-preference", {
+    body: { preference },
   });
   if (error) throw new Error("Could not save the content preference");
 }
 
-export async function saveAssetDiscovery(
+export async function saveWorkVisibility(
   id: string,
-  discovery: WorkDetail["visibility"],
+  visibility: WorkDetail["visibility"],
 ) {
-  const { error } = await api<void>("PUT", `/v1/assets/${id}/discovery`, {
-    body: { visibility: discovery },
+  const { error } = await api<void>("PUT", `/v1/works/${id}/visibility`, {
+    body: { visibility },
   });
-  if (error) throw new Error("Could not save the catalog listing");
+  if (error) throw new Error("Could not save the visibility");
 }
 
-export async function saveAssetBlock(
+export async function saveWorkBlock(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   blockId: string,
   block: SaveWorkBlockRequest,
 ): Promise<WorkBlock> {
   const { data, error, response } = await api<WorkBlock>(
     "PUT",
-    `/v1/assets/${assetId}/blocks/${blockId}`,
+    `/v1/works/${workId}/blocks/${blockId}`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: block,
@@ -348,15 +348,15 @@ export async function saveAssetBlock(
   return data;
 }
 
-export async function addAssetBlock(
+export async function addWorkBlock(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   definition: string,
   elementType: ElementType,
 ): Promise<WorkBlock> {
   const { data, error, response } = await api<WorkBlock>(
     "POST",
-    `/v1/assets/${assetId}/blocks`,
+    `/v1/works/${workId}/blocks`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: { definition, elementType },
@@ -369,9 +369,9 @@ export async function addAssetBlock(
   return data;
 }
 
-export async function addAssetImage(
+export async function addWorkImage(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   file: File,
   role: AddMediaRequest["role"],
 ): Promise<string> {
@@ -380,7 +380,7 @@ export async function addAssetImage(
   body.append("file", file, file.name);
   const { data: added, response } = await api<{ id?: unknown }>(
     "POST",
-    `/v1/assets/${assetId}/media`,
+    `/v1/works/${workId}/media`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body,
@@ -400,14 +400,14 @@ export async function addAssetImage(
   return added.id;
 }
 
-export async function arrangeAssetBlocks(
+export async function arrangeWorkBlocks(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   arrangement: ArrangeWorkBlocksRequest,
 ): Promise<WorkBlock[]> {
   const { data, error, response } = await api<WorkBlock[]>(
     "PUT",
-    `/v1/assets/${assetId}/blocks`,
+    `/v1/works/${workId}/blocks`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: arrangement,
@@ -421,10 +421,10 @@ export async function arrangeAssetBlocks(
 }
 
 /** The pictures a README showed, waiting for the creator to place or let go. */
-export async function fetchVault(assetId: string): Promise<VaultPicture[]> {
+export async function fetchVault(workId: string): Promise<VaultPicture[]> {
   const { data, error } = await api<VaultPictureList>(
     "GET",
-    `/v1/assets/${assetId}/vault`,
+    `/v1/works/${workId}/vault`,
   );
   if (error || !data) {
     throw new Error("The waiting pictures could not be read. Try again.");
@@ -434,13 +434,13 @@ export async function fetchVault(assetId: string): Promise<VaultPicture[]> {
 
 export async function placeVaultPicture(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   pictureId: string,
   mediaId?: string,
 ): Promise<WorkBlock[]> {
   const { data, error, response } = await api<WorkBlock[]>(
     "POST",
-    `/v1/assets/${assetId}/vault/${pictureId}/place`,
+    `/v1/works/${workId}/vault/${pictureId}/place`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: mediaId ? { mediaId } : undefined,
@@ -455,12 +455,12 @@ export async function placeVaultPicture(
 
 export async function discardVaultPicture(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   pictureId: string,
 ) {
   const { error, response } = await api<void>(
     "DELETE",
-    `/v1/assets/${assetId}/vault/${pictureId}`,
+    `/v1/works/${workId}/vault/${pictureId}`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
@@ -469,14 +469,14 @@ export async function discardVaultPicture(
   }
 }
 
-export async function removeAssetBlock(
+export async function removeWorkBlock(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   blockId: string,
 ) {
   const { error, response } = await api<void>(
     "DELETE",
-    `/v1/assets/${assetId}/blocks/${blockId}`,
+    `/v1/works/${workId}/blocks/${blockId}`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
@@ -485,15 +485,15 @@ export async function removeAssetBlock(
   }
 }
 
-export async function moveAssetBlockContent(
+export async function moveWorkBlockContent(
   candidate: Candidate,
-  assetId: string,
+  workId: string,
   blockId: string,
   destinationBlockId: string,
 ): Promise<WorkBlock[]> {
   const { data, error, response } = await api<WorkBlock[]>(
     "POST",
-    `/v1/assets/${assetId}/blocks/${blockId}/move-and-remove`,
+    `/v1/works/${workId}/blocks/${blockId}/move-and-remove`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: { destinationBlockId },
@@ -506,17 +506,17 @@ export async function moveAssetBlockContent(
   return data;
 }
 
-export async function saveAssetIdentity(
+export async function saveWorkDetails(
   candidate: Candidate,
   id: string,
-  identity: WorkIdentityRequest,
+  details: WorkDetailsRequest,
 ) {
   const { error, response } = await api<void>(
     "PUT",
-    `/v1/assets/${id}/identity`,
+    `/v1/works/${id}/details`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
-      body: identity,
+      body: details,
     },
   );
   acceptCandidateVersion(candidate, response);
@@ -525,7 +525,7 @@ export async function saveAssetIdentity(
   }
 }
 
-export async function publishAsset(
+export async function publishWork(
   candidate: Candidate,
   id: string,
 ): Promise<
@@ -534,7 +534,7 @@ export async function publishAsset(
 > {
   const { data, error, response } = await api<WorkDetail>(
     "POST",
-    `/v1/assets/${id}/publish`,
+    `/v1/works/${id}/publish`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
@@ -547,7 +547,7 @@ export async function publishAsset(
     error:
       typeof refusal?.error === "string"
         ? refusal.error
-        : "The asset could not be published. Try again.",
+        : "The work could not be published. Try again.",
     readiness: refusal?.readiness,
   };
 }
@@ -557,13 +557,13 @@ export async function fetchWaitingReplacement(
 ): Promise<IngestOperation | null> {
   const { data, error } = await api<IngestOperation | null>(
     "GET",
-    `/v1/assets/${id}/revisions`,
+    `/v1/works/${id}/revisions`,
   );
   if (error || !data) return null;
   return data;
 }
 
-export async function uploadAssetReplacement(
+export async function uploadWorkReplacement(
   candidate: Candidate,
   id: string,
   file: File,
@@ -572,7 +572,7 @@ export async function uploadAssetReplacement(
   body.append("file", file, file.name);
   const { data, error, response } = await api<IngestOperation>(
     "POST",
-    `/v1/assets/${id}/revisions`,
+    `/v1/works/${id}/revisions`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body,
@@ -600,7 +600,7 @@ export async function readIngestOperation(
   return data;
 }
 
-export async function acceptAssetReplacement(
+export async function acceptWorkReplacement(
   candidate: Candidate,
   id: string,
   operationId: string,
@@ -609,7 +609,7 @@ export async function acceptAssetReplacement(
 ): Promise<IngestOperation> {
   const { data, error, response } = await api<IngestOperation>(
     "POST",
-    `/v1/assets/${id}/revisions/${operationId}/accept`,
+    `/v1/works/${id}/revisions/${operationId}/accept`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: { unrepresentable, exposeProtected },
@@ -622,15 +622,15 @@ export async function acceptAssetReplacement(
   return data;
 }
 
-export async function cancelAssetReplacement(id: string, operationId: string) {
+export async function cancelWorkReplacement(id: string, operationId: string) {
   const { error } = await api<void>(
     "DELETE",
-    `/v1/assets/${id}/revisions/${operationId}`,
+    `/v1/works/${id}/revisions/${operationId}`,
   );
   if (error) throw new Error("That file could not be discarded. Try again.");
 }
 
-export async function publishAssetUpdate(
+export async function publishWorkUpdate(
   candidate: Candidate,
   id: string,
   update: WorkUpdateRequest,
@@ -646,7 +646,7 @@ export async function publishAssetUpdate(
 > {
   const { data, error, response } = await api<WorkUpdate>(
     "POST",
-    `/v1/assets/${id}/updates`,
+    `/v1/works/${id}/updates`,
     {
       headers: { "X-Working-Copy-Version": String(candidate.version) },
       body: update,
@@ -680,18 +680,18 @@ export async function fetchPreservedNamespaces(
 ): Promise<PreservedNamespace[]> {
   const { data } = await api<PreservedNamespace[]>(
     "GET",
-    `/v1/assets/${id}/preserved`,
+    `/v1/works/${id}/preserved`,
   );
   return data ?? [];
 }
 
-export async function fetchAssetUpdates(
+export async function fetchWorkUpdates(
   id: string,
 ): Promise<RecordedVersion[] | null> {
   try {
     const { data } = await api<RecordedVersionList>(
       "GET",
-      `/v1/assets/${id}/updates`,
+      `/v1/works/${id}/updates`,
     );
     return data?.items ?? null;
   } catch {
@@ -699,41 +699,41 @@ export async function fetchAssetUpdates(
   }
 }
 
-export async function restoreAssetVersion(
+export async function restoreWorkVersion(
   candidate: Candidate,
   id: string,
   number: number,
 ) {
   const { error, response } = await api<void>(
     "POST",
-    `/v1/assets/${id}/updates/${number}/restore`,
+    `/v1/works/${id}/updates/${number}/restore`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) throw writeRefusal(error, "That version could not be restored.");
 }
 
-export async function correctAssetVersionNotes(
+export async function correctWorkVersionNotes(
   id: string,
   number: number,
   correction: WorkVersionNotesRequest,
 ) {
   const { error } = await api<void>(
     "PATCH",
-    `/v1/assets/${id}/updates/${number}/notes`,
+    `/v1/works/${id}/updates/${number}/notes`,
     { body: correction },
   );
   if (error) throw writeRefusal(error, "Those notes could not be corrected.");
 }
 
-export async function withdrawAssetVersion(
+export async function withdrawWorkVersion(
   id: string,
   number: number,
   explanation: string,
 ) {
   const { error } = await api<void>(
     "POST",
-    `/v1/assets/${id}/updates/${number}/withdraw`,
+    `/v1/works/${id}/updates/${number}/withdraw`,
     { body: { explanation } },
   );
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
@@ -757,7 +757,7 @@ export async function fetchRecordedVersionDownloads(
   try {
     ({ data, response } = await api<RecordedVersionDownloads>(
       "GET",
-      `/v1/assets/${id}/updates/${number}/downloads`,
+      `/v1/works/${id}/updates/${number}/downloads`,
     ));
   } catch {
     return unreadable;
@@ -773,7 +773,7 @@ export async function fetchRecordedVersionDownloads(
   return unreadable;
 }
 
-export async function compareAssetVersions(
+export async function compareWorkVersions(
   id: string,
   from: number,
   to: number,
@@ -790,7 +790,7 @@ export async function compareAssetVersions(
   try {
     ({ data, response } = await api<VersionComparison>(
       "GET",
-      `/v1/assets/${id}/updates/comparison`,
+      `/v1/works/${id}/updates/comparison`,
       { query: { from, to }, headers: cookie ? { cookie } : undefined },
     ));
   } catch {
@@ -818,7 +818,7 @@ export async function fetchProtectionMismatches(
 ): Promise<ProtectionMismatch[]> {
   const { data } = await api<ProtectionMismatchList>(
     "GET",
-    `/v1/assets/${id}/updates/protection`,
+    `/v1/works/${id}/updates/protection`,
   );
   return data?.items ?? [];
 }
@@ -830,7 +830,7 @@ export async function resolvePromptCorrespondence(
 ) {
   const { error } = await api<void>(
     "PUT",
-    `/v1/assets/${id}/updates/${number}/protection`,
+    `/v1/works/${id}/updates/${number}/protection`,
     { body: { matches } },
   );
   if (error) {
@@ -850,7 +850,7 @@ export async function deletePreservedNamespace(
 ) {
   const { error, response } = await api<void>(
     "DELETE",
-    `/v1/assets/${id}/preserved/${encodeURIComponent(namespace)}`,
+    `/v1/works/${id}/preserved/${encodeURIComponent(namespace)}`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
@@ -926,19 +926,19 @@ export async function restoreProfile(handle: string) {
   if (error) throw new Error("Could not restore the profile");
 }
 
-export async function withholdAsset(id: string, reason: string) {
-  const { error } = await api<void>("PUT", `/v1/assets/${id}/withhold`, {
+export async function withholdWork(id: string, reason: string) {
+  const { error } = await api<void>("PUT", `/v1/works/${id}/withhold`, {
     body: { reason },
   });
-  if (error) throw new Error("Could not withhold the asset");
+  if (error) throw new Error("Could not withhold the work");
 }
 
-export async function deleteAsset(id: string) {
-  const { error } = await api<void>("DELETE", `/v1/assets/${id}`);
-  if (error) throw new Error("Could not delete the asset");
+export async function deleteWork(id: string) {
+  const { error } = await api<void>("DELETE", `/v1/works/${id}`);
+  if (error) throw new Error("Could not delete the work");
 }
 
-export async function restoreAsset(id: string) {
-  const { error } = await api<void>("POST", `/v1/assets/${id}/restore`);
-  if (error) throw new Error("Could not restore the asset");
+export async function restoreWork(id: string) {
+  const { error } = await api<void>("POST", `/v1/works/${id}/restore`);
+  if (error) throw new Error("Could not restore the work");
 }

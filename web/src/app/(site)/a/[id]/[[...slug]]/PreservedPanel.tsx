@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { describePreservedNamespace } from "@/lib/preserved";
 import { useWorkingCopy } from "@/lib/working-copy";
 
-export function PreservedPanel({ assetId }: { assetId: string }) {
+export function PreservedPanel({ workId }: { workId: string }) {
   const candidate = useWorkingCopy();
   const [open, setOpen] = useState(false);
   const [namespaces, setNamespaces] = useState<PreservedNamespace[] | null>(
@@ -25,7 +25,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
     setOpen(true);
     if (namespaces !== null) return;
     setMessage("");
-    const found = await fetchPreservedNamespaces(assetId);
+    const found = await fetchPreservedNamespaces(workId);
     setNamespaces(found);
   }
 
@@ -34,7 +34,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
     setPending(true);
     setMessage("");
     try {
-      await deletePreservedNamespace(candidate, assetId, namespace);
+      await deletePreservedNamespace(candidate, workId, namespace);
       setNamespaces(
         (current) =>
           current?.filter((held) => held.name !== namespace) ?? current,

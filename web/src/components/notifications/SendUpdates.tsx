@@ -21,10 +21,10 @@ const LOOK: Record<Progress, string> = {
 
 /** The sends an update entry offers, one for each of the reader's instances that holds an older copy. */
 export function SendUpdates({
-  assetId,
+  workId,
   targets,
 }: {
-  assetId: string;
+  workId: string;
   targets: SendTarget[];
 }) {
   const [progress, setProgress] = useState<Record<string, Progress>>({});
@@ -34,7 +34,7 @@ export function SendUpdates({
 
   async function send(target: SendTarget) {
     setProgress((current) => ({ ...current, [target.instanceId]: "sending" }));
-    const landed = await queueDelivery(assetId, target.instanceId);
+    const landed = await queueDelivery(workId, target.instanceId);
     setProgress((current) => ({
       ...current,
       [target.instanceId]: landed ? "waiting" : "failed",
@@ -94,13 +94,13 @@ function sendLabel(target: SendTarget, state: Progress): string {
 }
 
 async function queueDelivery(
-  assetId: string,
+  workId: string,
   instanceId: string,
 ): Promise<boolean> {
   try {
     const { response } = await api<unknown>(
       "POST",
-      `/v1/assets/${encodeURIComponent(assetId)}/deliveries`,
+      `/v1/works/${encodeURIComponent(workId)}/deliveries`,
       { body: { instanceId } },
     );
     return response.ok;

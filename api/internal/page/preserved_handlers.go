@@ -21,7 +21,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 	found, err := h.works.PreservedNamespaces(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not load extra file data. Try again.")
 	default:
@@ -57,7 +57,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "This asset preserves no such data.")
+		api.Refuse(c, http.StatusNotFound, "This work preserves no such data.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not delete the preserved data.")
 	default:

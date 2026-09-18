@@ -241,7 +241,7 @@ refractive-assets: ## Generate the deterministic refractive art assets
 	cd web && bun scripts/generate-refractive-assets.mjs
 
 .PHONY: quiet-page-art
-quiet-page-art: ## Generate the empty and barren page artwork, one piece per kind
+quiet-page-art: ## Generate the empty and barren page artwork, one piece per type
 	cd web && bun scripts/generate-quiet-page-art.mjs
 
 .PHONY: archive-cutouts

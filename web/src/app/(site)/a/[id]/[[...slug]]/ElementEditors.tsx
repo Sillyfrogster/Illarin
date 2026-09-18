@@ -9,7 +9,7 @@ import {
   SortableItemHandle,
 } from "@/components/ui/sortable";
 import {
-  addAssetImage,
+  addWorkImage,
   type WorkElement,
   type WorkImage,
 } from "@/lib/api/query";
@@ -33,7 +33,7 @@ type ImageItem = {
 };
 
 export function ElementFields({
-  assetId,
+  workId,
   chosen,
   element,
   images,
@@ -42,7 +42,7 @@ export function ElementFields({
   onImageAdded,
   pending,
 }: {
-  assetId: string;
+  workId: string;
   chosen: string | null;
   element: WorkElement;
   images: WorkImage[];
@@ -54,7 +54,7 @@ export function ElementFields({
   if (element.type === "image_set" && "images" in element.content) {
     return (
       <ImageEditor
-        assetId={assetId}
+        workId={workId}
         images={images}
         isGallery={element.role === "gallery"}
         items={element.content.images}
@@ -97,7 +97,7 @@ export function ElementFields({
   ) {
     return (
       <PackEditor
-        assetId={assetId}
+        workId={workId}
         chosen={chosen}
         content={element.content}
         images={images}
@@ -228,7 +228,7 @@ export function ElementFields({
 }
 
 function ImageEditor({
-  assetId,
+  workId,
   images,
   isGallery,
   items,
@@ -237,7 +237,7 @@ function ImageEditor({
   onChange,
   pending,
 }: {
-  assetId: string;
+  workId: string;
   images: WorkImage[];
   isGallery: boolean;
   items: ImageItem[];
@@ -261,12 +261,7 @@ function ImageEditor({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(
-        candidate,
-        assetId,
-        chosen,
-        mediaRole,
-      );
+      const mediaId = await addWorkImage(candidate, workId, chosen, mediaRole);
       setPreviews((current) => ({
         ...current,
         [mediaId]: URL.createObjectURL(chosen),

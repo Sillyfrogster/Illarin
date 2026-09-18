@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
-import { compareAssetVersions, type VersionComparison } from "@/lib/api/query";
+import { compareWorkVersions, type VersionComparison } from "@/lib/api/query";
 
 export function VersionChanges({
-  assetId,
-  kind,
+  workId,
+  typeName,
   from,
   to,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
+  typeName: string;
   from: number;
   to: number;
 }) {
@@ -22,7 +22,7 @@ export function VersionChanges({
   useEffect(() => {
     let current = true;
     setReading(true);
-    void compareAssetVersions(assetId, from, to).then((answer) => {
+    void compareWorkVersions(workId, from, to).then((answer) => {
       if (!current) return;
       setCompared(answer.compared);
       setRefusal(answer.compared ? "" : answer.refusal);
@@ -31,7 +31,7 @@ export function VersionChanges({
     return () => {
       current = false;
     };
-  }, [assetId, from, to]);
+  }, [workId, from, to]);
 
   if (reading) return <ComparisonSkeleton />;
   if (!compared) return <Refusal>{refusal}</Refusal>;
@@ -41,8 +41,8 @@ export function VersionChanges({
     <div className="mt-4 max-w-[70ch]">
       {compared.promptsWithheld ? (
         <p className="mb-4 max-w-[60ch] text-meta text-mute">
-          This {kind} has sealed prompts for linked applications. Their wording
-          is not shown here.
+          This {typeName} has sealed prompts for linked applications. Their
+          wording is not shown here.
         </p>
       ) : null}
 

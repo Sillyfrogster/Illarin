@@ -119,7 +119,7 @@ func publishedWork(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle s
 	apitest.SaveDescription(t, svc, owner, id, "Published description")
 	apitest.SaveGreeting(t, svc, owner, id, "Published greeting")
 	nsfw := false
-	if err := apitest.Pages(svc).SetIdentity(context.Background(), page.Identity{
+	if err := apitest.Pages(svc).SetDetails(context.Background(), page.Details{
 		OwnerID: owner, WorkID: id, Name: "Published name", IsNSFW: &nsfw,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("save the header: %v", err)

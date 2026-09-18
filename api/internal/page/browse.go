@@ -210,7 +210,7 @@ func (s *Service) Browse(
 			page.EmptyState = "suppressed"
 		} else if f.Type == "" && search.Text == "" && search.Author == "" &&
 			len(search.Tags) == 0 && f.Platform == nil && len(chosen) == 0 {
-			page.EmptyState = "catalog"
+			page.EmptyState = "nothing_published"
 		} else {
 			page.EmptyState = "no_matches"
 		}

@@ -13,11 +13,11 @@ import {
 } from "react";
 import {
   type AddableBlock,
-  saveAssetBlock,
-  saveAssetIdentity,
+  saveWorkBlock,
+  saveWorkDetails,
   type WorkBlock,
+  type WorkDetailsRequest,
   type WorkElement,
-  type WorkIdentityRequest,
 } from "@/lib/api/query";
 import { useWorkingCopy, WORKING_COPY_STALE } from "@/lib/working-copy";
 import {
@@ -28,7 +28,7 @@ import {
 import { unsealedPrompts } from "../UnsealConfirmation";
 import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
-import { identityHasChanged } from "./identity";
+import { detailsHasChanged } from "./details";
 import {
   blockSaveRequest,
   changedBlockIds,
@@ -36,7 +36,7 @@ import {
   replaceElement,
 } from "./save";
 
-export type Identity = WorkIdentityRequest;
+export type Details = WorkDetailsRequest;
 
 export type SaveState =
   | "saving"
@@ -50,14 +50,14 @@ export type Pane =
   | { kind: "vault" }
   | { kind: "publication" }
   | { kind: "conflict" }
-  | { kind: "catalog" }
+  | { kind: "add-block" }
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
 type Unsealing = { prompts: string[]; keepsASeal: boolean };
 
 type Workspace = {
-  assetId: string;
+  workId: string;
   isOwner: boolean;
   isDraft: boolean;
   editing: boolean;
@@ -65,7 +65,7 @@ type Workspace = {
   blocks: WorkBlock[];
   addableBlocks: AddableBlock[];
   arrangement: Arrangement;
-  identity: Identity;
+  details: Details;
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
   cursor: string | null;
@@ -85,7 +85,7 @@ type Workspace = {
   applyServerBlocks: (blocks: WorkBlock[]) => void;
   editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
   writeElement: (blockId: string, element: WorkElement) => void;
-  writeIdentity: (identity: Identity) => void;
+  writeDetails: (details: Details) => void;
   setAllowedApps: (apps: AllowedApp[]) => void;
   openPane: (pane: Pane) => void;
   closePane: () => void;
@@ -103,24 +103,24 @@ export function useWorkspace() {
   return workspace;
 }
 
-export function AssetWorkspace({
+export function WorkspaceProvider({
   addableBlocks,
-  assetId,
+  workId,
   isOwner,
   isDraft,
   blocks,
-  identity,
+  details,
   allowedApps,
   eligibleApps,
   unpublishedChanges,
   children,
 }: {
   addableBlocks: AddableBlock[];
-  assetId: string;
+  workId: string;
   isOwner: boolean;
   isDraft: boolean;
   blocks: WorkBlock[];
-  identity: Identity;
+  details: Details;
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
   unpublishedChanges: boolean;
@@ -132,8 +132,8 @@ export function AssetWorkspace({
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);
-  const [draftIdentity, setDraftIdentity] = useState(identity);
-  const [savedIdentity, setSavedIdentity] = useState(identity);
+  const [draftDetails, setDraftDetails] = useState(details);
+  const [savedDetails, setSavedDetails] = useState(details);
   const [apps, setApps] = useState<AllowedApp[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
   const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
@@ -166,8 +166,8 @@ export function AssetWorkspace({
   }, [message]);
 
   const changed = useMemo(() => changedBlockIds(draft, saved), [draft, saved]);
-  const hasIdentityChanges = identityHasChanged(draftIdentity, savedIdentity);
-  const dirty = changed.length > 0 || hasIdentityChanges;
+  const hasDetailsChanges = detailsHasChanged(draftDetails, savedDetails);
+  const dirty = changed.length > 0 || hasDetailsChanges;
 
   const saveState: SaveState = busy
     ? "saving"
@@ -235,9 +235,9 @@ export function AssetWorkspace({
           for (const id of pending) {
             const block = written.find((item) => item.id === id);
             if (!block) continue;
-            const result = await saveAssetBlock(
+            const result = await saveWorkBlock(
               candidate,
-              assetId,
+              workId,
               block.id,
               blockSaveRequest(block, {
                 exposeProtected: expose || exposeConfirmed.current || undefined,
@@ -250,9 +250,9 @@ export function AssetWorkspace({
             );
             written = replaceBlock(written, result);
           }
-          if (hasIdentityChanges) {
-            await saveAssetIdentity(candidate, assetId, draftIdentity);
-            setSavedIdentity(draftIdentity);
+          if (hasDetailsChanges) {
+            await saveWorkDetails(candidate, workId, draftDetails);
+            setSavedDetails(draftDetails);
           }
           exposeConfirmed.current = false;
           setDraft(written);
@@ -278,13 +278,13 @@ export function AssetWorkspace({
     [
       allowedApps.length,
       apps,
-      assetId,
+      workId,
       busy,
       candidate,
       dirty,
       draft,
-      draftIdentity,
-      hasIdentityChanges,
+      draftDetails,
+      hasDetailsChanges,
       isDraft,
       openSealedElement,
       router,
@@ -310,14 +310,14 @@ export function AssetWorkspace({
   }, [applyServerBlocks, blocks]);
 
   useEffect(() => {
-    const incomingIdentity = {
-      blurb: identity.blurb,
-      isNsfw: identity.isNsfw,
-      name: identity.name,
+    const incomingDetails = {
+      blurb: details.blurb,
+      isNsfw: details.isNsfw,
+      name: details.name,
     };
-    setDraftIdentity(incomingIdentity);
-    setSavedIdentity(incomingIdentity);
-  }, [identity.blurb, identity.isNsfw, identity.name]);
+    setDraftDetails(incomingDetails);
+    setSavedDetails(incomingDetails);
+  }, [details.blurb, details.isNsfw, details.name]);
 
   const editBlockList = useCallback(
     (change: (blocks: WorkBlock[]) => WorkBlock[]) => {
@@ -334,7 +334,7 @@ export function AssetWorkspace({
 
   const arrangement = useArrangement({
     applyServerBlocks,
-    assetId,
+    workId,
     blocks: draftBlocks,
     candidate,
     editBlockList,
@@ -376,13 +376,13 @@ export function AssetWorkspace({
   const value: Workspace = {
     addableBlocks,
     arrangement,
-    assetId,
+    workId,
     isOwner,
     isDraft,
     editing,
     sweep,
     blocks: draft,
-    identity: draftIdentity,
+    details: draftDetails,
     allowedApps: apps,
     eligibleApps,
     cursor,
@@ -421,7 +421,7 @@ export function AssetWorkspace({
           block.id === blockId ? replaceElement(block, element) : block,
         ),
       ),
-    writeIdentity: setDraftIdentity,
+    writeDetails: setDraftDetails,
     setAllowedApps: setApps,
     openPane: (next) => {
       setPane(next);

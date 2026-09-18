@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 
 const ABSENT = "absent";
 
-export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
+export function RecordedPromptsPanel({ workId }: { workId: string }) {
   const [open, setOpen] = useState(false);
   const [versions, setVersions] = useState<ProtectionMismatch[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -22,7 +22,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
     setOpen(true);
     if (versions !== null) return;
     setMessage("");
-    setVersions(await fetchProtectionMismatches(assetId));
+    setVersions(await fetchProtectionMismatches(workId));
   }
 
   async function settle(version: ProtectionMismatch) {
@@ -31,7 +31,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
     setMessage("");
     try {
       await resolvePromptCorrespondence(
-        assetId,
+        workId,
         version.version.number,
         version.unmatched.map((prompt) => ({
           current: prompt.id,

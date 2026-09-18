@@ -53,10 +53,10 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work
 		name = "Test asset"
 	}
 	nsfw := false
-	if err := works(svc).SetIdentity(context.Background(), page.Identity{
+	if err := works(svc).SetDetails(context.Background(), page.Details{
 		OwnerID: ownerID, WorkID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
-		t.Fatalf("SetIdentity imported work: %v", err)
+		t.Fatalf("SetDetails imported work: %v", err)
 	}
 	if _, err := works(svc).Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("Publish imported work: %v", err)

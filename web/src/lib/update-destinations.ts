@@ -1,4 +1,4 @@
-import type { WorkUpdateDestination } from "@/lib/api/asset-destinations";
+import type { WorkUpdateDestination } from "@/lib/api/work-destinations";
 import { readableDate } from "@/lib/dates";
 
 export function destinationRotating(one: WorkUpdateDestination): boolean {

@@ -6,21 +6,21 @@ import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
-  acceptAssetReplacement,
-  cancelAssetReplacement,
+  acceptWorkReplacement,
+  cancelWorkReplacement,
   type IngestOperation,
   type ReplacementDecision,
   readIngestOperation,
   SealedExposureError,
-  uploadAssetReplacement,
+  uploadWorkReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
+import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import {
   replacementAction,
   replacementReady,
   unsettledReplacement,
-} from "@/lib/asset-publication";
-import { replacementSubjectLabel } from "@/lib/replacement-subject";
+} from "@/lib/work-publication";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { UnsealConfirmation } from "../UnsealConfirmation";
 import { Note } from "./fields";
@@ -63,20 +63,20 @@ export function ReplacementStep({
   useEffect(() => {
     if (!operation || !reading) return;
     const current = operation;
-    let watching = true;
+    let polling = true;
     async function poll() {
-      while (watching) {
+      while (polling) {
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-        if (!watching) return;
+        if (!polling) return;
         try {
           const next = await readIngestOperation(current.url);
-          if (!watching) return;
+          if (!polling) return;
           setOperation(next);
           onWaiting(unsettledReplacement(next));
           if (next.status !== "pending" && next.status !== "processing") return;
         } catch {
           setMessage(
-            "Import status is unavailable. Reopen this panel to check again. Your published asset has not changed.",
+            "Import status is unavailable. Reopen this panel to check again. Your published work has not changed.",
           );
           return;
         }
@@ -84,7 +84,7 @@ export function ReplacementStep({
     }
     void poll();
     return () => {
-      watching = false;
+      polling = false;
     };
   }, [operation, reading, onWaiting]);
 
@@ -132,9 +132,9 @@ export function ReplacementStep({
     if (staged) {
       const groups = staged.preview.groups;
       void run(async () => {
-        await acceptAssetReplacement(
+        await acceptWorkReplacement(
           candidate,
-          workspace.assetId,
+          workspace.workId,
           staged.id,
           decisions,
           exposeProtected,
@@ -147,7 +147,7 @@ export function ReplacementStep({
     if (!file) return;
     void run(async () => {
       setOperation(
-        await uploadAssetReplacement(candidate, workspace.assetId, file),
+        await uploadWorkReplacement(candidate, workspace.workId, file),
       );
     });
   }
@@ -262,7 +262,7 @@ export function ReplacementStep({
             <span className="text-meta text-mute">
               {file
                 ? "Choose a different file"
-                : "It must be the same kind of asset as this one"}
+                : "It must be the same type as this one"}
             </span>
           </label>
         </div>
@@ -291,7 +291,7 @@ export function ReplacementStep({
             disabled={busy}
             onClick={() =>
               void run(async () => {
-                await cancelAssetReplacement(workspace.assetId, staged.id);
+                await cancelWorkReplacement(workspace.workId, staged.id);
                 onDiscarded();
               })
             }

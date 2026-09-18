@@ -7,7 +7,7 @@ export type DeliveryState =
   | "gaveUp"
   | "stopped";
 
-/** Sending is the same for a blog post and an asset update, so both read alike. */
+/** Sending is the same for a blog post and a work update, so both read alike. */
 export type Sending = {
   state: string;
   attempts: number;
@@ -41,11 +41,11 @@ const STOPPED_WORDS: Record<string, string> = {
   removed: "The destination was removed.",
   disabled: "The destination was switched off.",
   moved: "The destination moved to another address.",
-  withheld: "Cancelled: this asset is withheld.",
+  withheld: "Cancelled: this work is withheld.",
   withdrawn: "Cancelled: this update was withdrawn.",
   unlisted:
-    "Cancelled: this asset is unlisted and sharing its link was not approved.",
-  deleted: "Cancelled: this asset is no longer published.",
+    "Cancelled: this work is unlisted and sharing its link was not approved.",
+  deleted: "Cancelled: this work is no longer published.",
 };
 
 export function deliveryStanding(one: Sending, now = new Date()): string {

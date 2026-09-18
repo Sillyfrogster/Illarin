@@ -55,7 +55,7 @@ func (h *Handlers) AddMedia(c *gin.Context) {
 		return
 	}
 	if errors.Is(err, work.ErrMediaNotFound) || errors.Is(err, work.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 		return
 	}
 	if err != nil {
@@ -76,7 +76,7 @@ func (h *Handlers) ListMedia(c *gin.Context) {
 	}
 	found, err := h.works.ListMedia(c.Request.Context(), id, viewerID)
 	if errors.Is(err, work.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 		return
 	}
 	if err != nil {

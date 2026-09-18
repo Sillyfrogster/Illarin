@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from "react";
 import {
-  readAssetUpdateAnnouncements,
+  readWorkUpdateAnnouncements,
   type WorkUpdateAnnouncement,
-} from "@/lib/api/asset-destinations";
+} from "@/lib/api/work-destinations";
 import { cn } from "@/lib/cn";
 import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 
-export function AnnouncementStatus({ assetId }: { assetId: string }) {
+export function AnnouncementStatus({ workId }: { workId: string }) {
   const [sent, setSent] = useState<WorkUpdateAnnouncement[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    void readAssetUpdateAnnouncements(assetId, controller.signal).then(
+    void readWorkUpdateAnnouncements(workId, controller.signal).then(
       (answer) => {
         if (answer.value) setSent(answer.value.announcements);
       },
     );
     return () => controller.abort();
-  }, [assetId]);
+  }, [workId]);
 
   if (sent.length === 0) return null;
 

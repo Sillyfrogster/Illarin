@@ -73,10 +73,10 @@ func PublishSealedPreset(
 	if got := SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := SaveIdentity(
+	if got := SaveDetails(
 		t, router, session, started.ID, `{"name":"`+name+`","blurb":"","isNsfw":false}`,
 	); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
@@ -109,9 +109,9 @@ func PublishTwoPromptPreset(
 	if got := SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the sealed prompts: %d %s", got.Code, got.Body.String())
 	}
-	if got := SaveIdentity(t, router, session, started.ID,
+	if got := SaveDetails(t, router, session, started.ID,
 		`{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save the identity: %d %s", got.Code, got.Body.String())
+		t.Fatalf("save the details: %d %s", got.Code, got.Body.String())
 	}
 	if got := PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish the preset: %d %s", got.Code, got.Body.String())

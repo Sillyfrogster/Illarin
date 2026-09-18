@@ -18,7 +18,7 @@ const UNREACHABLE =
   "Illarin could not be reached. Check your connection and try again.";
 
 const UNCONFIRMED =
-  "Confirm how to import the catalog details below, then upload the file.";
+  "Confirm how to import the details below, then upload the file.";
 
 export function ImportFile({
   onAccepted,
@@ -65,7 +65,7 @@ export function ImportFile({
     setPending(true);
     setMessage("");
     try {
-      const { data, error } = await api<IngestOperation>("POST", "/v1/assets", {
+      const { data, error } = await api<IngestOperation>("POST", "/v1/works", {
         body,
       });
       if (!data) {
@@ -158,8 +158,8 @@ export function ImportFile({
               type="checkbox"
             />
             <span className="min-w-0">
-              Use the catalog details Illarin finds in this file. I can change
-              them afterwards.
+              Use the details Illarin finds in this file. I can change them
+              afterwards.
             </span>
           </label>
 

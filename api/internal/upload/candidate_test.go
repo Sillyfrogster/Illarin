@@ -84,7 +84,7 @@ func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	nsfw := false
-	if err := works(svc).SetIdentity(context.Background(), page.Identity{OwnerID: owner, WorkID: created.ID, Name: "Newer work", IsNSFW: &nsfw}, candidate); err != nil {
+	if err := works(svc).SetDetails(context.Background(), page.Details{OwnerID: owner, WorkID: created.ID, Name: "Newer work", IsNSFW: &nsfw}, candidate); err != nil {
 		t.Fatal(err)
 	}
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {

@@ -34,7 +34,7 @@ func (h *Handlers) ExportSealedContent(c *gin.Context) {
 	sealed, err := h.sealed.OpenSealedContent(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "This asset holds no sealed content.")
+		api.Refuse(c, http.StatusNotFound, "This work holds no sealed content.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the sealed content.")
 	default:

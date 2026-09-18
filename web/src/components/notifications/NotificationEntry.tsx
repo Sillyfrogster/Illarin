@@ -42,7 +42,7 @@ export function NotificationEntry({
   const unread = !entry.readAt;
   const mark = MARKS[entry.type];
   const Icon = mark.icon;
-  const asset = entry.work;
+  const work = entry.work;
   const sends = entry.sendTargets ?? [];
   const row = cn(
     "flex gap-3.5 pt-3 pr-11 pl-3 outline-offset-[-2px]",
@@ -109,8 +109,8 @@ export function NotificationEntry({
       ) : (
         <div className={row}>{body}</div>
       )}
-      {asset && sends.length > 0 ? (
-        <SendUpdates assetId={asset.id} targets={sends} />
+      {work && sends.length > 0 ? (
+        <SendUpdates workId={work.id} targets={sends} />
       ) : null}
       <button
         type="button"

@@ -14,7 +14,6 @@ import type {
 import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
 import { DeleteControl } from "../DeleteControl";
-import { DiscoveryControl } from "../DiscoveryControl";
 import { ElementFields, elementHint } from "../ElementEditors";
 import { PreservedPanel } from "../PreservedPanel";
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
@@ -25,8 +24,9 @@ import {
   SealedPolicy,
 } from "../SealedPolicy";
 import { UnsealConfirmation } from "../UnsealConfirmation";
+import { VisibilityControl } from "../VisibilityControl";
 import { WithholdControl } from "../WithholdControl";
-import { BlockCatalog } from "./BlockCatalog";
+import { AddBlock } from "./AddBlock";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
 import { PublicationRail } from "./PublicationRail";
 import { RemoveBlock } from "./RemoveBlock";
@@ -38,10 +38,10 @@ import { WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
-  discovery: WorkDetail["visibility"];
+  visibility: WorkDetail["visibility"];
   hasOriginal: boolean;
   images: WorkImage[];
-  kind: string;
+  typeName: string;
   readiness?: ReadinessItem[];
   sealedBlocks?: number;
   sealsPrompts: boolean;
@@ -54,7 +54,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const { account } = useAuth();
   const reduced = useReducedMotion();
   const [jumping, setJumping] = useState(false);
-  const vault = useVault(workspace.assetId, workspace.isOwner);
+  const vault = useVault(workspace.workId, workspace.isOwner);
   const canWithhold = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.withheld,
   );
@@ -106,7 +106,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
     }
     document
       .getElementById(
-        target.where === "name" ? "asset-name" : "adult-content-answer",
+        target.where === "name" ? "work-name" : "adult-content-answer",
       )
       ?.scrollIntoView({ block: "center" });
     if (target.where === "name") workspace.setCursor("identity:name");
@@ -159,7 +159,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           >
             <div className="flex flex-col gap-5">
               <p className="text-ui text-mute">
-                This asset was saved in another session. Copy any unsaved text,
+                This page was saved in another session. Copy any unsaved text,
                 then reload to edit the latest version.
               </p>
               <button
@@ -203,7 +203,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                 />
               ) : null}
               <Fields
-                assetId={workspace.assetId}
+                workId={workspace.workId}
                 blockId={edited.id}
                 element={element}
                 images={props.images}
@@ -212,14 +212,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "catalog" ? (
+        {pane?.kind === "add-block" ? (
           <WorkspaceRail
             description="Blocks are grouped by where their content ends up. Nothing here is a decision you have to make now."
-            key="catalog"
+            key="add-block"
             onClose={workspace.closePane}
             title="Add a block"
           >
-            <BlockCatalog />
+            <AddBlock />
           </WorkspaceRail>
         ) : null}
 
@@ -258,14 +258,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             title="Publication"
           >
             <PublicationRail
-              kind={props.kind}
+              typeName={props.typeName}
               onGo={goToPage}
               readiness={props.readiness}
-              unlisted={props.discovery === "unlisted"}
+              unlisted={props.visibility === "unlisted"}
               unpublishedChanges={props.unpublishedChanges}
             />
             {workspace.isOwner && !workspace.isDraft ? (
-              <AnnouncementStatus assetId={workspace.assetId} />
+              <AnnouncementStatus workId={workspace.workId} />
             ) : null}
           </WorkspaceRail>
         ) : null}
@@ -279,37 +279,39 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           >
             <div className="flex flex-col gap-7">
               {workspace.isOwner && !workspace.isDraft ? (
-                <DiscoveryControl
-                  assetId={workspace.assetId}
+                <VisibilityControl
+                  workId={workspace.workId}
                   frozen={props.withheld}
-                  initialDiscovery={props.discovery}
+                  initialVisibility={props.visibility}
+                  typeName={props.typeName}
                 />
               ) : null}
               {workspace.isOwner && props.hasOriginal ? (
-                <PreservedPanel assetId={workspace.assetId} />
+                <PreservedPanel workId={workspace.workId} />
               ) : null}
               {workspace.isOwner && !workspace.isDraft && props.sealsPrompts ? (
-                <RecordedPromptsPanel assetId={workspace.assetId} />
+                <RecordedPromptsPanel workId={workspace.workId} />
               ) : null}
               {workspace.isOwner && props.sealedBlocks ? (
                 <SealedPanel
-                  assetId={workspace.assetId}
+                  workId={workspace.workId}
                   count={props.sealedBlocks}
                 />
               ) : null}
               {workspace.isOwner ? (
                 <DeleteControl
-                  assetId={workspace.assetId}
+                  workId={workspace.workId}
                   creator={props.creator}
                   frozen={props.withheld}
                   isDraft={workspace.isDraft}
-                  kind={props.kind}
+                  typeName={props.typeName}
                 />
               ) : null}
               {canWithhold ? (
                 <WithholdControl
-                  assetId={workspace.assetId}
+                  workId={workspace.workId}
                   creator={props.creator}
+                  typeName={props.typeName}
                 />
               ) : null}
             </div>
@@ -354,12 +356,12 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 }
 
 function Fields({
-  assetId,
+  workId,
   blockId,
   element,
   images,
 }: {
-  assetId: string;
+  workId: string;
   blockId: string;
   element: WorkElement;
   images: WorkImage[];
@@ -367,7 +369,7 @@ function Fields({
   const workspace = useWorkspace();
   return (
     <ElementFields
-      assetId={assetId}
+      workId={workId}
       chosen={workspace.chosenItems[element.id] ?? null}
       element={element}
       images={images}

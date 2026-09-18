@@ -22,7 +22,7 @@ func (h *Handlers) ListWorkUpdates(c *gin.Context) {
 	}
 	history, err := h.versions.VersionHistory(c.Request.Context(), id, viewerID)
 	if errors.Is(err, work.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 		return
 	}
 	if err != nil {
@@ -49,7 +49,7 @@ func (h *Handlers) RestoreWorkVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "restoring an asset version")
+	owner, ok := api.Verified(c, "restoring a version")
 	if !ok {
 		return
 	}
@@ -82,7 +82,7 @@ func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "correcting asset update notes")
+	owner, ok := api.Verified(c, "correcting update notes")
 	if !ok {
 		return
 	}
@@ -101,7 +101,7 @@ func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not correct the notes.")
 	default:
@@ -118,7 +118,7 @@ func (h *Handlers) WithdrawWorkVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "withdrawing an asset version")
+	owner, ok := api.Verified(c, "withdrawing a version")
 	if !ok {
 		return
 	}
@@ -138,7 +138,7 @@ func (h *Handlers) WithdrawWorkVersion(c *gin.Context) {
 	case errors.Is(err, ErrVersionAlreadyWithdrawn):
 		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
@@ -190,13 +190,13 @@ func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.SignedIn(c, "reading an asset's sealed prompts")
+	owner, ok := api.SignedIn(c, "reading a work's sealed prompts")
 	if !ok {
 		return
 	}
 	mismatches, err := h.versions.ProtectionMismatches(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, work.ErrNotFound) {
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 		return
 	}
 	if err != nil {
@@ -223,7 +223,7 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "settling an asset's sealed prompts")
+	owner, ok := api.Verified(c, "settling a work's sealed prompts")
 	if !ok {
 		return
 	}

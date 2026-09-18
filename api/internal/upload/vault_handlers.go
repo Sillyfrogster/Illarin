@@ -26,7 +26,7 @@ func (h *Handlers) ListVaultPictures(c *gin.Context) {
 	pictures, err := h.uploads.ListVault(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the vault.")
 	default:

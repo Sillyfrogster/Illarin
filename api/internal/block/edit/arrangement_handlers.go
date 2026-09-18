@@ -38,7 +38,7 @@ func (h *Handlers) AddWorkBlock(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
@@ -62,7 +62,7 @@ func (h *Handlers) ArrangeWorkBlocks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "arranging an asset")
+	owner, ok := api.Verified(c, "arranging a work")
 	if !ok {
 		return
 	}
@@ -84,7 +84,7 @@ func (h *Handlers) ArrangeWorkBlocks(c *gin.Context) {
 	}
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such asset.")
+		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case errors.Is(err, block.ErrInvalid):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:

@@ -248,7 +248,7 @@ func ValidateBuilderConstraints(workType string, before []Block, after []Block) 
 	for _, holder := range after {
 		definition, ok := holder.Definition.Definition(workType)
 		if !ok {
-			return fmt.Errorf("%s is not part of the %s catalog", holder.Definition, workType)
+			return fmt.Errorf("%s is not a block a %s can hold", holder.Definition, workType)
 		}
 		if _, repeated := seen[holder.Definition]; repeated && !definition.Repeatable {
 			return fmt.Errorf(

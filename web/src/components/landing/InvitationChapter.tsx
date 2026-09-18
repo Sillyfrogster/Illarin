@@ -51,7 +51,7 @@ export function InvitationChapter() {
               className="rounded-full px-6"
             >
               <Link href="/upload">
-                Create an asset <ArrowUpRight aria-hidden="true" />
+                Share your work <ArrowUpRight aria-hidden="true" />
               </Link>
             </Button>
             <Button
@@ -60,7 +60,7 @@ export function InvitationChapter() {
               size="large"
               className="rounded-full text-[#ffffff] hover:bg-[#ffffff]/10 hover:text-[#ffffff]"
             >
-              <Link href="/browse">Browse the catalog</Link>
+              <Link href="/browse">Browse</Link>
             </Button>
           </div>
           <p className="mt-10 max-w-[390px] text-meta leading-relaxed text-[#ffffff]/75">

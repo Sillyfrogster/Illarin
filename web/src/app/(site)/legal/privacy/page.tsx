@@ -76,7 +76,7 @@ const CLAUSES: LegalClause[] = [
         <ul>
           <li>
             <strong>We do not record who downloads what.</strong> Illarin counts
-            downloads for a creator&rsquo;s benefit. The record holds the asset,
+            downloads for a creator&rsquo;s benefit. The record holds the work,
             the format, the time, and whether the download came from a signed-in
             reader, the creator, a linked application, or nobody signed in at
             all. It holds no account, no IP address, and nothing else that could
@@ -84,8 +84,8 @@ const CLAUSES: LegalClause[] = [
           </li>
           <li>
             <strong>There is no advertising on the site</strong>, no advertising
-            or cross-site tracking cookies, and no third-party script watching
-            you read.
+            or cross-site tracking cookies, and no third-party script tracking
+            what you read.
           </li>
           <li>
             <strong>
@@ -226,7 +226,7 @@ const CLAUSES: LegalClause[] = [
         <p>
           You can see and change most of your data in your account settings,
           including your email address, your password, your handle, your linked
-          applications, and your content preferences. Deleting an asset or your
+          applications, and your content preferences. Deleting a work or your
           account is a normal control, not a request you have to file.
         </p>
         <p>

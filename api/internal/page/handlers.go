@@ -31,7 +31,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/works/:id", d.JSON, h.DeleteWork)
 	routes.Handle(http.MethodGet, "/v1/works/:id", d.JSON, h.GetWork)
 	routes.Handle(http.MethodPost, "/v1/works/:id/restore", d.JSON, h.RestoreWork)
-	routes.Handle(http.MethodPut, "/v1/works/:id/details", d.JSON, h.SetWorkIdentity)
+	routes.Handle(http.MethodPut, "/v1/works/:id/details", d.JSON, h.SetWorkDetails)
 	routes.Handle(http.MethodPost, "/v1/works/:id/publish", d.JSON, h.PublishWork)
 	routes.Handle(http.MethodPut, "/v1/works/:id/visibility", d.JSON, h.SetWorkVisibility)
 	routes.Handle(http.MethodGet, "/v1/profiles/:handle/deleted", d.JSON, h.ListDeletedWorks)

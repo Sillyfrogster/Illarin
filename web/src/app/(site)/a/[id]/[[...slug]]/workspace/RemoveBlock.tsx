@@ -58,7 +58,7 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
                 </li>
               ))}
             </ul>
-            <Note>Removing this block deletes its content from the asset.</Note>
+            <Note>Removing this block deletes its content from this page.</Note>
           </>
         ) : (
           <Note>This block is empty, so nothing is lost.</Note>

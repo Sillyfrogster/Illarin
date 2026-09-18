@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { CatalogSurface } from "@/components/catalog/CatalogSurface";
-import { fetchAssets } from "@/lib/api/query";
+import { BrowseSurface } from "@/components/browse/BrowseSurface";
+import { fetchWorks } from "@/lib/api/query";
 import { readBrowseFilters } from "@/lib/browse-url";
-import { KIND_LABELS } from "@/lib/kinds";
 import { pageMetadata } from "@/lib/site-metadata";
+import { TYPE_LABELS } from "@/lib/work-types";
 import { BrowseThreshold } from "./BrowseThreshold";
 
 export async function generateMetadata({
@@ -12,7 +12,7 @@ export async function generateMetadata({
 }: PageProps<"/browse">): Promise<Metadata> {
   const filters = readBrowseFilters(await searchParams);
   const subject = filters.type
-    ? `${KIND_LABELS[filters.type].toLowerCase()}s`
+    ? `${TYPE_LABELS[filters.type].toLowerCase()}s`
     : "characters, lorebooks, presets, themes and packs";
 
   if (filters.q) {
@@ -29,17 +29,16 @@ export default async function BrowsePage({
 }: PageProps<"/browse">) {
   const filters = readBrowseFilters(await searchParams);
   const cookie = (await cookies()).toString();
-  const initialPage = await fetchAssets(
-    { ...filters, limit: 24 },
-    cookie,
-  ).catch(() => null);
+  const initialPage = await fetchWorks({ ...filters, limit: 24 }, cookie).catch(
+    () => null,
+  );
 
   return (
     <>
       <BrowseThreshold filters={filters} />
-      <CatalogSurface
+      <BrowseSurface
         filters={filters}
-        heading="The catalog"
+        heading="Works"
         initialPage={initialPage}
       />
     </>

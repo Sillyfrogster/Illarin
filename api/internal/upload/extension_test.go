@@ -46,9 +46,9 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 		t.Fatalf("edit a locked element = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
 	}
 
-	if saved := apitest.SaveIdentity(t, r, session, workID,
+	if saved := apitest.SaveDetails(t, r, session, workID,
 		`{"name":"A Renamed Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
-		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
+		t.Fatalf("save details = %d: %s", saved.Code, saved.Body.String())
 	}
 	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish the extension = %d: %s", published.Code, published.Body.String())
@@ -178,9 +178,9 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	r, session, works, pool := harness.NewExtensionRouter(t)
 	first := apitest.ExtensionZip(t, map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one"})
 	workID := apitest.UploadExtension(t, r, session, works, first)
-	if saved := apitest.SaveIdentity(t, r, session, workID,
+	if saved := apitest.SaveDetails(t, r, session, workID,
 		`{"name":"Quiet Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
-		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
+		t.Fatalf("save details = %d: %s", saved.Code, saved.Body.String())
 	}
 	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
@@ -237,9 +237,9 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "archive") {
 		t.Fatalf("edit what it adds = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
 	}
-	if saved := apitest.SaveIdentity(t, r, session, workID,
+	if saved := apitest.SaveDetails(t, r, session, workID,
 		`{"name":"Quiet Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
-		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
+		t.Fatalf("save details = %d: %s", saved.Code, saved.Body.String())
 	}
 	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())

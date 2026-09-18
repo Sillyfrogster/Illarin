@@ -11,7 +11,7 @@ import (
 
 // ErrUnlistedConsentRequired says the creator has not agreed to send an unlisted work's direct link
 var ErrUnlistedConsentRequired = errors.New(
-	"announcing an unlisted asset sends its direct link, which needs explicit consent",
+	"announcing an unlisted work sends its direct link, which needs explicit consent",
 )
 
 var ErrUpdateDestinationIneligible = errors.New("choose only your own verified, active update destinations")

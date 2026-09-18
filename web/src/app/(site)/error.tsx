@@ -21,7 +21,7 @@ export default function SiteError({
         Try again
       </Button>
       <Button asChild variant="ghost">
-        <Link href="/browse">Browse the catalog</Link>
+        <Link href="/browse">Browse</Link>
       </Button>
     </DeadEnd>
   );

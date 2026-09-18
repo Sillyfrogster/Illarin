@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import type { AssetListParams, BrowsePage, BrowseWork } from "@/lib/api/query";
+import type { BrowsePage, BrowseWork, WorkListParams } from "@/lib/api/query";
 import { buildSitemap } from "./sitemap";
 
 const FIRST_ID = "11111111-1111-4111-8111-111111111111";
 const SECOND_ID = "22222222-2222-4222-8222-222222222222";
 
-function asset(id: string, name: string): BrowseWork {
+function work(id: string, name: string): BrowseWork {
   return {
     id,
     name,
@@ -17,17 +17,17 @@ function asset(id: string, name: string): BrowseWork {
 }
 
 test("sitemap follows the whole browse listing", async () => {
-  const requests: AssetListParams[] = [];
+  const requests: WorkListParams[] = [];
   const pages: Array<Pick<BrowsePage, "items" | "nextCursor">> = [
     {
-      items: [asset(FIRST_ID, "First garden")],
+      items: [work(FIRST_ID, "First garden")],
       nextCursor: {
         before: "2026-08-13T12:00:00Z",
         beforeId: FIRST_ID,
       },
     },
     {
-      items: [asset(SECOND_ID, "Second garden")],
+      items: [work(SECOND_ID, "Second garden")],
       nextCursor: undefined,
     },
   ];
@@ -54,7 +54,7 @@ test("sitemap follows the whole browse listing", async () => {
 });
 
 test("sitemap asks for the listing a stranger sees, adult work included", async () => {
-  const requests: AssetListParams[] = [];
+  const requests: WorkListParams[] = [];
 
   await buildSitemap(async (params) => {
     requests.push(params);

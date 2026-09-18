@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { WORKING_COPY_STALE } from "@/lib/working-copy";
-import { saveAssetIdentity } from "./query";
+import { saveWorkDetails } from "./query";
 
 const ID = "00000000-0000-4000-8000-000000000024";
 const originalFetch = globalThis.fetch;
@@ -23,7 +23,7 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, "window");
 });
 
-describe("identity client", () => {
+describe("details client", () => {
   for (const [action, blurb] of [
     ["add", "A new pitch."],
     ["edit", "A clearer pitch."],
@@ -38,17 +38,17 @@ describe("identity client", () => {
         }),
       );
 
-      await saveAssetIdentity({ version: 7 }, ID, {
+      await saveWorkDetails({ version: 7 }, ID, {
         blurb,
         isNsfw: false,
-        name: "Fixture asset",
+        name: "Fixture work",
       });
 
       expect(sent).toBeDefined();
       expect(await sent?.clone().json()).toEqual({
         blurb,
         isNsfw: false,
-        name: "Fixture asset",
+        name: "Fixture work",
       });
       expect(sent?.headers.get("X-Working-Copy-Version")).toBe("7");
     });
@@ -77,17 +77,17 @@ describe("identity client", () => {
         ),
       ),
     );
-    const identity = {
+    const details = {
       blurb: "Keep this unsaved pitch.",
       isNsfw: false,
-      name: "Fixture asset",
+      name: "Fixture work",
     };
 
-    await expect(
-      saveAssetIdentity({ version: 7 }, ID, identity),
-    ).rejects.toThrow("This working copy changed after you opened it.");
+    await expect(saveWorkDetails({ version: 7 }, ID, details)).rejects.toThrow(
+      "This working copy changed after you opened it.",
+    );
 
     expect(events).toEqual([WORKING_COPY_STALE]);
-    expect(identity.blurb).toBe("Keep this unsaved pitch.");
+    expect(details.blurb).toBe("Keep this unsaved pitch.");
   });
 });

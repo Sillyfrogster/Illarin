@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
-  addAssetImage,
+  addWorkImage,
   discardVaultPicture,
   placeVaultPicture,
   type VaultPicture,
@@ -57,16 +57,16 @@ export function VaultPanel({
     run(picture.id, async () => {
       let mediaId: string | undefined;
       if (file) {
-        mediaId = await addAssetImage(
+        mediaId = await addWorkImage(
           candidate,
-          workspace.assetId,
+          workspace.workId,
           file,
           "gallery",
         );
       }
       const saved = await placeVaultPicture(
         candidate,
-        workspace.assetId,
+        workspace.workId,
         picture.id,
         mediaId,
       );
@@ -79,7 +79,7 @@ export function VaultPanel({
 
   function discard(picture: VaultPicture) {
     run(picture.id, () =>
-      discardVaultPicture(candidate, workspace.assetId, picture.id),
+      discardVaultPicture(candidate, workspace.workId, picture.id),
     );
   }
 

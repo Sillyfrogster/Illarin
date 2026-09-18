@@ -6,7 +6,7 @@ const robots = buildRobots("https://illarin.xyz");
 const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
 const disallowed = [rules.disallow ?? []].flat();
 
-test("points crawlers at the catalog sitemap", () => {
+test("points crawlers at the sitemap", () => {
   expect(robots.sitemap).toBe("https://illarin.xyz/sitemap.xml");
 });
 
@@ -36,7 +36,7 @@ test("keeps crawlers off the pages that need an account or carry a token", () =>
   }
 });
 
-test("leaves asset pages crawlable, because an unlisted one answers with noindex", () => {
+test("leaves work pages crawlable, because an unlisted one answers with noindex", () => {
   expect(rules.allow).toBe("/");
   for (const path of disallowed) {
     expect("/a/".startsWith(path)).toBe(false);

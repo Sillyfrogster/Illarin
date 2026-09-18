@@ -5,11 +5,12 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import {
-  correctAssetVersionNotes,
+  correctWorkVersionNotes,
   type RecordedVersion,
-  restoreAssetVersion,
-  withdrawAssetVersion,
+  restoreWorkVersion,
+  withdrawWorkVersion,
 } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import {
   earlierVersions,
   isLongNote,
@@ -17,14 +18,13 @@ import {
   versionDate,
   versionSummary,
   versionTitle,
-} from "@/lib/asset-updates";
-import { assetHref } from "@/lib/asset-url";
-import { cn } from "@/lib/cn";
+} from "@/lib/work-updates";
+import { workHref } from "@/lib/work-url";
 import type { Candidate } from "@/lib/working-copy";
 import { VersionChanges } from "./VersionChanges";
 
 export type HistoryOwner = {
-  assetName: string;
+  workName: string;
   canManage: boolean;
   isOwner: boolean;
   workingCopyVersion: number;
@@ -32,8 +32,8 @@ export type HistoryOwner = {
 
 /** Shows a version's notes, changes, downloads and owner controls. */
 export function VersionDetail({
-  assetId,
-  kind,
+  workId,
+  typeName,
   version,
   versions,
   current,
@@ -41,8 +41,8 @@ export function VersionDetail({
   onChanged,
   owner,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
+  typeName: string;
   version: RecordedVersion;
   versions: RecordedVersion[];
   current: boolean;
@@ -98,7 +98,7 @@ export function VersionDetail({
       ) : (
         <>
           <p className="mt-6 max-w-[60ch] font-prose text-lede text-ink">
-            {versionSummary(version, kind)}
+            {versionSummary(version, typeName)}
           </p>
           {version.notes ? <Note notes={version.notes} /> : null}
 
@@ -124,9 +124,9 @@ export function VersionDetail({
             </div>
             {against ? (
               <VersionChanges
-                assetId={assetId}
+                workId={workId}
                 from={baseline}
-                kind={kind}
+                typeName={typeName}
                 to={version.number}
               />
             ) : (
@@ -141,7 +141,7 @@ export function VersionDetail({
 
       {owner.canManage ? (
         <VersionManagement
-          assetId={assetId}
+          workId={workId}
           current={current}
           onChanged={onChanged}
           owner={owner}
@@ -153,13 +153,13 @@ export function VersionDetail({
 }
 
 function VersionManagement({
-  assetId,
+  workId,
   current,
   onChanged,
   owner,
   version,
 }: {
-  assetId: string;
+  workId: string;
   current: boolean;
   onChanged: () => void;
   owner: HistoryOwner;
@@ -248,13 +248,12 @@ function VersionManagement({
             onConfirm={() =>
               runMutation(
                 () =>
-                  restoreAssetVersion(
+                  restoreWorkVersion(
                     { version: owner.workingCopyVersion } satisfies Candidate,
-                    assetId,
+                    workId,
                     version.number,
                   ),
-                () =>
-                  window.location.assign(assetHref(assetId, owner.assetName)),
+                () => window.location.assign(workHref(workId, owner.workName)),
               )
             }
           />
@@ -288,7 +287,7 @@ function VersionManagement({
             onConfirm={() =>
               runMutation(
                 () =>
-                  correctAssetVersionNotes(assetId, version.number, {
+                  correctWorkVersionNotes(workId, version.number, {
                     summary,
                     notes,
                   }),
@@ -323,8 +322,7 @@ function VersionManagement({
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
-                () =>
-                  withdrawAssetVersion(assetId, version.number, explanation),
+                () => withdrawWorkVersion(workId, version.number, explanation),
                 () => {
                   setMode("");
                   onChanged();

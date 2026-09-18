@@ -20,7 +20,7 @@ export function BackToIllarin() {
         className="absolute inset-0 bg-gradient-to-r from-deep via-deep/85 to-transparent"
       />
       <span className="relative flex items-center gap-4 pl-6 font-display text-section font-medium text-ink sm:pl-10">
-        Browse the catalog
+        Browse
         <ArrowRight
           aria-hidden="true"
           className="size-5 transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none"

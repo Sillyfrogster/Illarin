@@ -22,11 +22,11 @@ func (h *Handlers) DeleteWork(c *gin.Context) {
 	err := h.works.Delete(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be deleted.")
+		api.Refuse(c, http.StatusConflict, "A withheld work cannot be deleted.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not delete the asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not delete the work.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -44,9 +44,9 @@ func (h *Handlers) RestoreWork(c *gin.Context) {
 	err := h.works.Restore(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
-		api.Refuse(c, http.StatusNotFound, "no such recoverable asset")
+		api.Refuse(c, http.StatusNotFound, "no such recoverable work")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not restore the asset.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not restore the work.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
@@ -64,7 +64,7 @@ func (h *Handlers) ListDeletedWorks(c *gin.Context) {
 	}
 	found, err := h.works.Deleted(c.Request.Context(), owner.ID, strings.ToLower(handle))
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not list deleted assets.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not list deleted works.")
 		return
 	}
 	c.JSON(http.StatusOK, DeletedWorkList{Items: found})

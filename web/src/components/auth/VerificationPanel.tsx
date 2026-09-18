@@ -123,7 +123,7 @@ export function VerificationPanel() {
           Your address is verified
         </h2>
         <p className="mt-3 font-prose text-prose text-mute">
-          You can now publish assets and link applications.
+          You can now publish your work and link applications.
         </p>
         <div className="mt-7">
           <Button asChild size="large" variant="primary">

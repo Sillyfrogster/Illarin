@@ -1,47 +1,47 @@
-import { CatalogSurface } from "@/components/catalog/CatalogSurface";
+import { BrowseSurface } from "@/components/browse/BrowseSurface";
 import type {
   BrowseFilters,
   BrowsePage,
   DeletedWork,
   Profile,
 } from "@/lib/api/query";
-import { DeletedAssets } from "./DeletedAssets";
+import { DeletedWorks } from "./DeletedWorks";
 import { ProfileBanner } from "./ProfileBanner";
 
 export function ProfileListing({
-  deletedAssets,
+  deletedWorks,
   filters,
   initialPage,
   profile,
 }: {
-  deletedAssets: DeletedWork[] | null;
+  deletedWorks: DeletedWork[] | null;
   filters: BrowseFilters;
   initialPage: BrowsePage | null;
   profile: Profile;
 }) {
-  const isOwner = deletedAssets !== null;
+  const isOwner = deletedWorks !== null;
   const name = profile.displayName || `@${profile.handle}`;
 
   return (
     <>
       <ProfileBanner
-        deletedCount={deletedAssets?.length ?? null}
+        deletedCount={deletedWorks?.length ?? null}
         isOwner={isOwner}
         profile={profile}
       />
-      <CatalogSurface
+      <BrowseSurface
         basePath={`/@${profile.handle}`}
         creator={profile.handle}
         filters={filters}
-        heading={isOwner ? "Your creations" : `Published by ${name}`}
+        heading={isOwner ? "Your work" : `Published by ${name}`}
         initialPage={initialPage}
         search={{
           label: `Search @${profile.handle}'s creations`,
-          placeholder: "Search their creations",
+          placeholder: "Search their work",
         }}
       />
-      {deletedAssets !== null ? (
-        <DeletedAssets initialItems={deletedAssets} />
+      {deletedWorks !== null ? (
+        <DeletedWorks initialItems={deletedWorks} />
       ) : null}
     </>
   );

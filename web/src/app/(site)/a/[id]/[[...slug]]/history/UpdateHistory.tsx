@@ -14,14 +14,14 @@ import {
   ExpandingPanelTrigger,
 } from "@/components/ui/expanding-panel";
 import {
-  fetchAssetUpdates,
+  fetchWorkUpdates,
   type RecordedVersion,
   type WorkDetail,
 } from "@/lib/api/query";
-import { versionDate, versionSummary, versionTitle } from "@/lib/asset-updates";
-import { assetHref } from "@/lib/asset-url";
 import { protectedAppLabel } from "@/lib/protected-apps";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
+import { versionDate, versionSummary, versionTitle } from "@/lib/work-updates";
+import { workHref } from "@/lib/work-url";
 import { type HistoryOwner, VersionDetail } from "./VersionDetail";
 import { VersionDownload } from "./VersionDownload";
 import { VersionList } from "./VersionList";
@@ -41,30 +41,30 @@ function versionInAddress(): number | null {
 
 /** Opens the latest update into the full version history. */
 export function UpdateHistory({
-  asset,
+  work,
   download,
-  kind,
-  kindLabel,
+  typeName,
+  typeLabel,
 }: {
-  asset: WorkDetail;
+  work: WorkDetail;
   download: ReactNode;
-  kind: string;
-  kindLabel: string;
+  typeName: string;
+  typeLabel: string;
 }) {
   const router = useRouter();
   const phone = useMediaQuery(PHONE_WIDTH);
-  const latest = asset.latestUpdate;
+  const latest = work.latestUpdate;
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
   const [versions, setVersions] = useState<Versions>({ state: "unread" });
 
   const read = useCallback(async () => {
     setVersions({ state: "reading" });
-    const items = await fetchAssetUpdates(asset.id);
+    const items = await fetchWorkUpdates(work.id);
     setVersions(
       items ? { state: "read", versions: items } : { state: "refused" },
     );
-  }, [asset.id]);
+  }, [work.id]);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has(HISTORY_QUERY)) return;
@@ -81,7 +81,7 @@ export function UpdateHistory({
     if (next) return;
     setChosen(null);
     if (new URLSearchParams(window.location.search).has(HISTORY_QUERY)) {
-      router.replace(assetHref(asset.id, asset.name), { scroll: false });
+      router.replace(workHref(work.id, work.name), { scroll: false });
     }
   }
 
@@ -93,12 +93,12 @@ export function UpdateHistory({
       ? listed[0]
       : listed.find((v) => v.number === chosen);
   const owner: HistoryOwner = {
-    assetName: asset.name,
-    canManage: Boolean(asset.isOwner && !asset.withhold),
-    isOwner: asset.isOwner,
-    workingCopyVersion: asset.workingCopyVersion ?? 0,
+    workName: work.name,
+    canManage: Boolean(work.isOwner && !work.withhold),
+    isOwner: work.isOwner,
+    workingCopyVersion: work.workingCopyVersion ?? 0,
   };
-  const published = asset.lifecycle !== "draft";
+  const published = work.lifecycle !== "draft";
 
   return (
     <ExpandingPanel onOpenChange={change} open={open}>
@@ -115,7 +115,7 @@ export function UpdateHistory({
               ) : null}
             </span>
             <span className="line-clamp-2 font-ui text-meta text-mute">
-              {versionSummary(latest, kind)}
+              {versionSummary(latest, typeName)}
             </span>
           </span>
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-plane text-accent transition-colors duration-200 group-hover:bg-action group-hover:text-on-accent motion-reduce:transition-none">
@@ -128,17 +128,17 @@ export function UpdateHistory({
       <ExpandingPanelContent>
         <header className="flex items-center gap-4 border-b border-rule px-4 py-3 sm:px-6">
           <span className="relative size-11 shrink-0 overflow-hidden rounded-control bg-deep">
-            {asset.media.find((image) => image.isCover) ? (
+            {work.media.find((image) => image.isCover) ? (
               <Image
                 alt=""
                 className="size-full object-cover"
                 height={88}
-                src={asset.media.find((image) => image.isCover)?.thumbUrl ?? ""}
+                src={work.media.find((image) => image.isCover)?.thumbUrl ?? ""}
                 unoptimized
                 width={88}
               />
             ) : (
-              <DefaultCover compact kind={asset.type} />
+              <DefaultCover compact type={work.type} />
             )}
           </span>
           <div className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ export function UpdateHistory({
               Update history
             </ExpandingPanelTitle>
             <p className="truncate font-ui text-meta text-mute">
-              {asset.name} · {kindLabel} by {asset.creator}
+              {work.name} · {typeLabel} by {work.creator}
             </p>
           </div>
           <ExpandingPanelClose label="Close the update history" />
@@ -161,7 +161,11 @@ export function UpdateHistory({
                 : "min-h-0 overflow-y-auto border-rule bg-inset px-3 py-5 sm:px-4 md:border-r"
             }
           >
-            <HistoryVersions kind={kind} onRetry={read} versions={versions}>
+            <HistoryVersions
+              typeName={typeName}
+              onRetry={read}
+              versions={versions}
+            >
               <VersionList
                 chosen={shown?.number ?? null}
                 onChoose={setChosen}
@@ -189,34 +193,34 @@ export function UpdateHistory({
             ) : null}
             {shown ? (
               <VersionDetail
-                assetId={asset.id}
+                workId={work.id}
                 current={shown.number === listed[0]?.number}
                 download={
                   shown.number === listed[0]?.number ? (
                     published ? (
                       download
                     ) : null
-                  ) : published && !asset.linkedInstallOnly ? (
+                  ) : published && !work.linkedInstallOnly ? (
                     <VersionDownload
-                      assetId={asset.id}
-                      kind={kind}
+                      workId={work.id}
+                      typeName={typeName}
                       version={shown}
                     />
                   ) : null
                 }
                 key={shown.number}
-                kind={kind}
+                typeName={typeName}
                 onChanged={() => void read()}
                 owner={owner}
                 version={shown}
                 versions={listed}
               />
             ) : null}
-            {shown && asset.linkedInstallOnly && published ? (
+            {shown && work.linkedInstallOnly && published ? (
               <p className="mt-4 max-w-[60ch] font-ui text-meta text-mute">
-                This {kind} can only be installed through a linked app. File
+                This {typeName} can only be installed through a linked app. File
                 downloads are unavailable for all versions. Allowed apps:{" "}
-                {asset.allowedApps.map(protectedAppLabel).join(", ")}.
+                {work.allowedApps.map(protectedAppLabel).join(", ")}.
               </p>
             ) : null}
           </section>
@@ -228,12 +232,12 @@ export function UpdateHistory({
 
 function HistoryVersions({
   children,
-  kind,
+  typeName,
   onRetry,
   versions,
 }: {
   children: ReactNode;
-  kind: string;
+  typeName: string;
   onRetry: () => void;
   versions: Versions;
 }) {
@@ -242,7 +246,7 @@ function HistoryVersions({
     return (
       <div className="grid justify-items-start gap-3 px-3 py-2">
         <p className="font-ui text-meta text-mute" role="alert">
-          Illarin could not read the versions of this {kind}.
+          Illarin could not read the versions of this {typeName}.
         </p>
         <Button onClick={onRetry} size="compact">
           Try again

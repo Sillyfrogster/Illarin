@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/site-metadata";
 import { UploadFlow } from "./UploadFlow";
 
 export const metadata = pageMetadata(
-  "Publish an asset",
+  "Upload",
   "Import a file you already have, or start a new character, lorebook, preset, theme or pack.",
 );
 
@@ -15,7 +15,7 @@ export default function UploadPage() {
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-16">
         <div className="min-w-0">
           <h1 className="font-display text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-medium tracking-[-0.035em] text-ink text-balance">
-            Create an asset
+            Share your work
           </h1>
           <p className="mt-3 max-w-[48ch] text-ui text-mute">
             Import a file you already have, or start a new draft in the editor.
@@ -47,7 +47,7 @@ export default function UploadPage() {
                   <strong className="block font-medium text-ink">
                     Start a draft
                   </strong>
-                  Bring a file or choose an asset kind.
+                  Bring a file or choose a type.
                 </p>
               </li>
               <li className="flex items-start gap-3">

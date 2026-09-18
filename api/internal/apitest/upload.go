@@ -292,9 +292,9 @@ const ToolboxManifest = `{
 func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, works *work.Service, name string, file []byte) string {
 	t.Helper()
 	workID := UploadExtension(t, r, session, works, file)
-	identity := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)
-	if saved := SaveIdentity(t, r, session, workID, identity); saved.Code != http.StatusNoContent {
-		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
+	details := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)
+	if saved := SaveDetails(t, r, session, workID, details); saved.Code != http.StatusNoContent {
+		t.Fatalf("save details = %d: %s", saved.Code, saved.Body.String())
 	}
 	if published := PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish %s = %d: %s", name, published.Code, published.Body.String())

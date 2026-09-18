@@ -13,7 +13,7 @@ func (h *Handlers) FollowWork(c *gin.Context) {
 	if !ok {
 		return
 	}
-	current, ok := api.SignedIn(c, "watching an asset")
+	current, ok := api.SignedIn(c, "following a work")
 	if !ok {
 		return
 	}
@@ -26,7 +26,7 @@ func (h *Handlers) StopFollowingWork(c *gin.Context) {
 	if !ok {
 		return
 	}
-	current, ok := api.SignedIn(c, "watching an asset")
+	current, ok := api.SignedIn(c, "following a work")
 	if !ok {
 		return
 	}
@@ -37,11 +37,11 @@ func (h *Handlers) StopFollowingWork(c *gin.Context) {
 func answerFollow(c *gin.Context, follow Follow, err error) {
 	switch {
 	case errors.Is(err, ErrNothingToFollow):
-		api.Refuse(c, http.StatusNotFound, "no such asset")
+		api.Refuse(c, http.StatusNotFound, "no such work")
 	case errors.Is(err, ErrOwnWork):
-		api.Refuse(c, http.StatusForbidden, "You cannot watch your own asset.")
+		api.Refuse(c, http.StatusForbidden, "You cannot follow your own work.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not change your watch on this asset. Try again.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not change whether you follow this work. Try again.")
 	default:
 		c.JSON(http.StatusOK, ToAPIFollow(follow))
 	}

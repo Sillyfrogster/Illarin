@@ -108,7 +108,7 @@ func (s *Service) ingestFailureMessage(reason string) string {
 	case "limit_exceeded":
 		return "The file is over a content limit."
 	case "wrong_type":
-		return "This file is a different kind of thing than the asset it would update."
+		return "This file is a different type from the work it would update."
 	default:
 		return "Illarin could not finish this upload. Please try again."
 	}

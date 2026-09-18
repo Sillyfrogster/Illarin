@@ -159,7 +159,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 	workID := s.upload(t, "Moonlit Archive")
 	s.withhold(t, workID, "Copyright report under review")
 	s.restore(t, workID)
-	if got := apitest.SaveIdentity(t, s.router, s.creator, workID,
+	if got := apitest.SaveDetails(t, s.router, s.creator, workID,
 		`{"name":"Sunlit Archive","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("rename status = %d, want 204: %s", got.Code, got.Body.String())
 	}

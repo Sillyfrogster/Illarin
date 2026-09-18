@@ -91,9 +91,9 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
-	if got := apitest.SaveIdentity(t, r, session, started.ID,
+	if got := apitest.SaveDetails(t, r, session, started.ID,
 		`{"name":"Ilse","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d: %s", got.Code, got.Body.String())
+		t.Fatalf("save details status = %d: %s", got.Code, got.Body.String())
 	}
 
 	refused := apitest.PublishWork(t, r, session, started.ID)
@@ -146,7 +146,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 	if len(started.Readiness) != 4 {
 		t.Fatalf("readiness on a new draft = %+v, want four items", started.Readiness)
 	}
-	if got := apitest.SaveIdentity(t, r, session, started.ID,
+	if got := apitest.SaveDetails(t, r, session, started.ID,
 		`{"name":"Ilse","blurb":"","isNsfw":null}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save a name with no answer status = %d: %s", got.Code, got.Body.String())
 	}
@@ -331,13 +331,13 @@ func TestAPublishedWorkKeepsItsAdultContentAnswer(t *testing.T) {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
-	unanswered := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Ilse","blurb":"","isNsfw":null}`)
+	unanswered := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Ilse","blurb":"","isNsfw":null}`)
 	if unanswered.Code != http.StatusBadRequest {
 		t.Errorf("unanswering a published work status = %d, want 400: %s",
 			unanswered.Code, unanswered.Body.String())
 	}
 
-	long := apitest.SaveIdentity(t, r, session, started.ID,
+	long := apitest.SaveDetails(t, r, session, started.ID,
 		`{"name":"`+strings.Repeat("a", 201)+`","blurb":"","isNsfw":false}`)
 	if long.Code != http.StatusBadRequest {
 		t.Errorf("an overlong name status = %d, want 400: %s", long.Code, long.Body.String())

@@ -102,7 +102,7 @@ export default async function SettingsPage({
             </h2>
             <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
               Connect a Discord channel or webhook, then choose defaults for
-              each asset.
+              each work.
             </p>
             <Button asChild className="mt-5" variant="secondary">
               <Link href="/settings/update-destinations">

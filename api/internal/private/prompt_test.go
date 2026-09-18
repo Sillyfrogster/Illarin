@@ -31,8 +31,8 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
@@ -105,8 +105,8 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
@@ -175,8 +175,8 @@ func TestProtectedWorksRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *test
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
-		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
+	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())

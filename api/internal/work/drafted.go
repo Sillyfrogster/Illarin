@@ -79,7 +79,7 @@ func digestDetails(ctx context.Context, tx pgx.Tx, workID uuid.UUID, into hash.H
 		  from works where id = $1
 	`, workID).Scan(&name, &blurb, &tags, &isNSFW, &cover)
 	if err != nil {
-		return fmt.Errorf("read the catalog fields to compare: %w", err)
+		return fmt.Errorf("read the details to compare: %w", err)
 	}
 	nsfw := "unanswered"
 	if isNSFW != nil {

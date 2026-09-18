@@ -21,7 +21,7 @@ type VersionConflict struct {
 }
 
 func (e *VersionConflict) Error() string {
-	return "This asset changed since you opened it. Keep your edits and reload the working copy to reconcile them."
+	return "This work changed since you opened it. Keep your edits and reload the working copy to reconcile them."
 }
 
 func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UUID) (string, error) {

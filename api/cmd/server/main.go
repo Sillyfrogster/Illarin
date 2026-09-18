@@ -85,14 +85,14 @@ func run() error {
 		return fmt.Errorf("export summaries: %w", err)
 	}
 	if recomputed > 0 {
-		log.Printf("recomputed the export projection for %d assets", recomputed)
+		log.Printf("recomputed the export summary for %d works", recomputed)
 	}
 	remeasured, err := summary.RecomputeStaleFilters(runtimeContext, pool, registry)
 	if err != nil {
 		return fmt.Errorf("facet summaries: %w", err)
 	}
 	if remeasured > 0 {
-		log.Printf("recomputed the facet projection for %d assets", remeasured)
+		log.Printf("recomputed the facet summary for %d works", remeasured)
 	}
 	var background sync.WaitGroup
 	background.Add(2)
@@ -175,13 +175,13 @@ func run() error {
 	go func() {
 		defer background.Done()
 		updateDestinations.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("asset update destination sweeper: %v", err)
+			log.Printf("update destination sweeper: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
 		updateDestinations.RunAnnouncements(runtimeContext, func(err error) {
-			log.Printf("asset update announcement: %v", err)
+			log.Printf("update announcement: %v", err)
 		})
 	}()
 	go func() {

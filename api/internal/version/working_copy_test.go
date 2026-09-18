@@ -22,7 +22,7 @@ func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	id := publishedCharacter(t, router, session)
 	before := apitest.FetchWorkPage(t, router, "/v1/works/"+id)
 	generation := apitest.ContentGeneration(t, pool, id)
-	if got := apitest.SaveIdentity(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveDetails(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private header: %d %s", got.Code, got.Body.String())
 	}
 	owner := apitest.FetchStartedWork(t, router, session, id)

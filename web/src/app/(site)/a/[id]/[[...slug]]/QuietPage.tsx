@@ -1,10 +1,10 @@
-import type { BrowseKind } from "@/lib/api/query";
+import type { BrowseType } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { emptyPageInvitation } from "@/lib/empty-page-invitation";
-import { KIND_LABELS } from "@/lib/kinds";
+import { TYPE_LABELS } from "@/lib/work-types";
 
-export function EmptyPage({ kind }: { kind: BrowseKind }) {
-  const label = KIND_LABELS[kind].toLowerCase();
+export function EmptyPage({ type }: { type: BrowseType }) {
+  const label = TYPE_LABELS[type].toLowerCase();
 
   return (
     <QuietComposition heading="No public content">
@@ -15,11 +15,11 @@ export function EmptyPage({ kind }: { kind: BrowseKind }) {
 }
 
 export function EmptyPageInvitation({
-  kind,
+  type,
   coreBlocks,
   canAdd,
 }: {
-  kind: BrowseKind;
+  type: BrowseType;
   coreBlocks: readonly string[];
   canAdd: boolean;
 }) {
@@ -28,7 +28,7 @@ export function EmptyPageInvitation({
       {emptyPageInvitation({
         canAdd,
         coreBlocks,
-        kindLabel: KIND_LABELS[kind].toLowerCase(),
+        typeLabel: TYPE_LABELS[type].toLowerCase(),
       })}
     </QuietComposition>
   );

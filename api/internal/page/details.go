@@ -20,7 +20,7 @@ var (
 	ErrRatingUnanswerable = errors.New("a published work needs an adult content answer")
 )
 
-type Identity struct {
+type Details struct {
 	OwnerID uuid.UUID
 	WorkID  uuid.UUID
 	Name    string
@@ -28,7 +28,7 @@ type Identity struct {
 	IsNSFW  *bool
 }
 
-func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *work.Candidate) error {
+func (s *Service) SetDetails(ctx context.Context, in Details, candidate *work.Candidate) error {
 	name := strings.TrimSpace(in.Name)
 	if utf8.RuneCountInString(name) > MaxNameRunes {
 		return fmt.Errorf("%w: %d characters is past %d", ErrNameTooLong,

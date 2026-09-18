@@ -1,6 +1,6 @@
-import type { BrowseFilters, BrowseKind } from "./api/query";
+import type { BrowseFilters, BrowseType } from "./api/query";
 
-const KINDS = new Set<BrowseKind>([
+const TYPES = new Set<BrowseType>([
   "character",
   "lorebook",
   "preset",
@@ -16,9 +16,9 @@ function first(value: string | string[] | undefined) {
 export function readBrowseFilters(
   values: Record<string, string | string[] | undefined>,
 ): BrowseFilters {
-  const requestedKind = first(values.kind);
-  const kind = KINDS.has(requestedKind as BrowseKind)
-    ? (requestedKind as BrowseKind)
+  const requestedType = first(values.type) ?? first(values.kind);
+  const type = TYPES.has(requestedType as BrowseType)
+    ? (requestedType as BrowseType)
     : undefined;
   const q = first(values.q) || undefined;
   const platform = first(values.platform)?.trim() || undefined;
@@ -28,12 +28,12 @@ export function readBrowseFilters(
       ? [values.facet]
       : undefined;
 
-  return { type: kind, q, platform, facet: facets };
+  return { type, q, platform, facet: facets };
 }
 
 export function buildBrowseHref(filters: BrowseFilters, basePath = "/browse") {
   const params = new URLSearchParams();
-  if (filters.type) params.set("kind", filters.type);
+  if (filters.type) params.set("type", filters.type);
   if (filters.platform) params.set("platform", filters.platform);
   if (filters.q) params.set("q", filters.q);
   for (const facet of filters.facet ?? []) params.append("facet", facet);

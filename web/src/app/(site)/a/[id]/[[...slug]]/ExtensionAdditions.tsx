@@ -3,7 +3,7 @@ import { Run, RunHeading, RunItem } from "@/components/ui/run";
 import { groupAdditions } from "@/lib/extension-additions";
 import { ITEM_META, ITEM_NAME } from "./element-runs";
 
-/** ExtensionAdditions lists what an extension's code registers with its app, under each kind of thing it adds. */
+/** ExtensionAdditions lists what an extension's code registers with its app, under each sort of thing it adds. */
 export function ExtensionAdditions({
   fields,
   itemLimit,

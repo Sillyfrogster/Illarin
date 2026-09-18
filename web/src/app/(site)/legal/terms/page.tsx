@@ -110,14 +110,14 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          A published asset is either listed or unlisted. Listed work appears in
-          the catalog, in search, and in the sitemap. Unlisted work does not,
-          but anyone holding the address can still open it, download it, and see
-          its images.
+          A published work is either listed or unlisted. Listed work appears in
+          Browse, in search, and in the sitemap. Unlisted work does not, but
+          anyone holding the address can still open it, download it, and see its
+          images.
         </p>
         <p>
           <strong>Unlisted means harder to find, not private.</strong> It is a
-          way of keeping something out of the catalog, and it is not a security
+          way of keeping something out of Browse, and it is not a security
           boundary. Do not use it to protect anything that would harm you if a
           stranger read it.
         </p>
@@ -139,12 +139,12 @@ const CLAUSES: LegalClause[] = [
           scored by a machine learning model.
         </p>
         <p>
-          We may withhold an asset, which takes it out of the catalog and makes
-          it answer as missing to everyone except you. While an asset is
-          withheld you can still read and download it, and you can see the
-          reason it was withheld, but you cannot edit or delete it. We may also
-          remove work outright and close accounts. We try to be fair, and we do
-          not promise a formal appeal for every decision.
+          We may withhold a work, which takes it out of Browse and makes it
+          answer as missing to everyone except you. While a work is withheld you
+          can still read and download it, and you can see the reason it was
+          withheld, but you cannot edit or delete it. We may also remove work
+          outright and close accounts. We try to be fair, and we do not promise
+          a formal appeal for every decision.
         </p>
       </>
     ),
@@ -154,10 +154,10 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          Deleting an asset hides it immediately and starts a 30 day recovery
+          Deleting a work hides it immediately and starts a 30 day recovery
           window during which you can restore it. After that window it is
           destroyed for good, and the file behind it is destroyed with it unless
-          another asset shares the same bytes.
+          another work shares the same bytes.
         </p>
         <p>
           You can close your account at any time. Your handle is retired rather

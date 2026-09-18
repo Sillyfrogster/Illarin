@@ -10,7 +10,7 @@ import {
   unreadLabel,
 } from "./notification-inbox";
 
-const ASSET = {
+const WORK = {
   id: "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a",
   name: "Moonlit Archive",
 };
@@ -21,7 +21,7 @@ function entry(overrides: Partial<Notification> = {}): Notification {
     id: "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
     type: "work_withheld",
     createdAt: "2026-09-14T09:00:00Z",
-    work: ASSET,
+    work: WORK,
     reason: "Copyright report under review",
     ...overrides,
   };
@@ -31,7 +31,7 @@ function before(milliseconds: number): string {
   return new Date(NOW.getTime() - milliseconds).toISOString();
 }
 
-test("a withheld asset says Illarin staff withheld it, gives the reason and opens the asset", () => {
+test("a withheld work says Illarin staff withheld it, gives the reason and opens the work", () => {
   expect(notificationWords(entry())).toEqual({
     lead: "Illarin staff withheld",
     subject: "Moonlit Archive",
@@ -40,7 +40,7 @@ test("a withheld asset says Illarin staff withheld it, gives the reason and open
   });
 });
 
-test("a restored asset says Illarin staff restored it and that readers can reach it again", () => {
+test("a restored work says Illarin staff restored it and that readers can reach it again", () => {
   expect(
     notificationWords(entry({ type: "work_restored", reason: undefined })),
   ).toEqual({
@@ -81,7 +81,7 @@ test("a restored profile says Illarin staff restored it and that it can be edite
   });
 });
 
-test("an updated asset names the update, its version and summary, and opens that update in the history", () => {
+test("an updated work names the update, its version and summary, and opens that update in the history", () => {
   expect(
     notificationWords(
       entry({
@@ -153,9 +153,9 @@ test("an entry holding two updates counts them and one holding a single update d
   expect(folded(2)).toBe("2 new updates to");
 });
 
-test("an entry that names no asset still reads plainly and has nowhere to send the reader", () => {
+test("an entry that names no work still reads plainly and has nowhere to send the reader", () => {
   const words = notificationWords(entry({ work: undefined }));
-  expect(words.subject).toBe("One of your assets");
+  expect(words.subject).toBe("One of your works");
   expect(words.href).toBeNull();
 });
 
@@ -213,7 +213,7 @@ test("marking read keeps the time an entry was first opened", () => {
 });
 
 test("marking everything read stamps each unread entry and keeps the cursor", () => {
-  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: ASSET.id };
+  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: WORK.id };
   const page: NotificationList = {
     items: [entry(), entry({ id: "x", readAt: "2026-09-13T08:00:00Z" })],
     nextCursor: cursor,
@@ -231,7 +231,7 @@ test("marking everything read stamps each unread entry and keeps the cursor", ()
 test("removing an entry takes only that entry out of the page and keeps the cursor", () => {
   const gone = entry();
   const kept = entry({ id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d" });
-  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: ASSET.id };
+  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: WORK.id };
   const page: NotificationList = { items: [gone, kept], nextCursor: cursor };
 
   expect(removed(page, gone.id)).toEqual({ items: [kept], nextCursor: cursor });
