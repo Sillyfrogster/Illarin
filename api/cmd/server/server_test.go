@@ -1,4 +1,4 @@
-package http
+package main
 
 import (
 	"fmt"
@@ -10,16 +10,17 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/config"
 )
 
-func serve(t *testing.T, handler http.Handler, timeouts Timeouts) string {
+func serve(t *testing.T, handler http.Handler, timeouts config.ServerTimeouts) string {
 	t.Helper()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	server := NewServer(listener.Addr().String(), handler, timeouts)
+	server := newServer(listener.Addr().String(), handler, timeouts)
 	go func() { _ = server.Serve(listener) }()
 	t.Cleanup(func() { _ = server.Close() })
 
@@ -28,7 +29,7 @@ func serve(t *testing.T, handler http.Handler, timeouts Timeouts) string {
 
 func TestAConnectionThatNeverFinishesItsHeadersIsCutOff(t *testing.T) {
 	t.Parallel()
-	base := serve(t, http.NotFoundHandler(), Timeouts{
+	base := serve(t, http.NotFoundHandler(), config.ServerTimeouts{
 		ReadHeader: 200 * time.Millisecond,
 		Idle:       time.Minute,
 	})
@@ -60,7 +61,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		Deliver:  30 * time.Second,
 		Verify:   30 * time.Second,
 	})
-	base := serve(t, r, Timeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})
+	base := serve(t, r, config.ServerTimeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})
 
 	built := apitest.UploadRequest(t, apitest.ExampleMetadata("Trickle"), []byte("bytes that take their time"))
 	form, err := io.ReadAll(built.Body)

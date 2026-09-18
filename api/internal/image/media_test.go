@@ -1,4 +1,4 @@
-package http
+package image_test
 
 import (
 	"context"

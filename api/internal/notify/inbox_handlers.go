@@ -1,4 +1,4 @@
-package http
+package notify
 
 import (
 	"errors"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
-	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -31,16 +30,16 @@ func (h *Handlers) ListNotifications(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send before and beforeId together, or neither.")
 		return
 	}
-	limit := notify.DefaultPageSize
+	limit := DefaultPageSize
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	var after *notify.Cursor
+	var after *Cursor
 	if params.Before != nil {
-		after = &notify.Cursor{Before: *params.Before, BeforeID: uuid.UUID(*params.BeforeId)}
+		after = &Cursor{Before: *params.Before, BeforeID: uuid.UUID(*params.BeforeId)}
 	}
 	page, err := h.notifications.Inbox(c.Request.Context(), current.ID, after, limit)
-	if errors.Is(err, notify.ErrPageSize) {
+	if errors.Is(err, ErrPageSize) {
 		api.Refuse(c, http.StatusBadRequest, "Ask for between 1 and 50 notifications.")
 		return
 	}
@@ -144,12 +143,12 @@ func (h *Handlers) ClearNotifications(c *gin.Context) {
 func (h *Handlers) sendTargetsFor(
 	c *gin.Context,
 	account uuid.UUID,
-	entries []notify.Entry,
+	entries []Entry,
 ) (map[uuid.UUID][]NotificationSendTarget, error) {
 	updated := make([]uuid.UUID, 0, len(entries))
 	seen := make(map[uuid.UUID]bool, len(entries))
 	for _, entry := range entries {
-		if entry.Type != notify.AssetUpdated || entry.Asset == nil || seen[*entry.Asset] {
+		if entry.Type != AssetUpdated || entry.Asset == nil || seen[*entry.Asset] {
 			continue
 		}
 		seen[*entry.Asset] = true
@@ -191,7 +190,7 @@ func byInstanceName(first, second NotificationSendTarget) int {
 }
 
 func toAPINotification(
-	entry notify.Entry,
+	entry Entry,
 	sends map[uuid.UUID][]NotificationSendTarget,
 ) Notification {
 	shown := Notification{
@@ -204,7 +203,7 @@ func toAPINotification(
 		reason := entry.Words.Reason
 		shown.Reason = &reason
 	}
-	if entry.Type == notify.AssetUpdated {
+	if entry.Type == AssetUpdated {
 		shown.Update = &NotificationUpdate{
 			Number: entry.Words.UpdateNumber, Summary: entry.Words.Summary, Count: entry.Count,
 		}

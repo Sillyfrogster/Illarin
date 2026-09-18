@@ -1,4 +1,4 @@
-package http
+package image
 
 import "github.com/google/uuid"
 
@@ -16,8 +16,6 @@ const (
 type MediaList struct {
 	Items []Media `json:"items"`
 }
-
-type WorkingCopyVersion = int64
 
 type GetMediaVariantParams struct {
 	Expires   *string `json:"expires,omitempty"`

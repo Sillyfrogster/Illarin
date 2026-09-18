@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
@@ -23,7 +24,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
 	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
-	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
@@ -209,11 +209,23 @@ func run() error {
 	}()
 
 	r := gin.New()
-	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(
-		svc, work.NewService(pool, svc), edit.NewService(pool, svc), version.NewService(pool, svc), uploads, download.NewService(pool, svc), accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
-	)
-	readiness := func(ctx context.Context) error {
+	r.Use(api.Recovery(log.Default()))
+	running := services{
+		Assets:             svc,
+		Works:              work.NewService(pool, svc),
+		Blocks:             edit.NewService(pool, svc),
+		Versions:           version.NewService(pool, svc),
+		Uploads:            uploads,
+		Downloads:          download.NewService(pool, svc),
+		Accounts:           accounts,
+		Links:              links,
+		Deliveries:         deliveries,
+		Publications:       publications,
+		UpdateDestinations: updateDestinations,
+		Notifications:      notifications,
+		MaxUploadBytes:     cfg.MaxUploadBytes,
+	}
+	ready := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err
 		}
@@ -228,11 +240,11 @@ func run() error {
 		}
 		return nil
 	}
-	if err := apihttp.Register(r, handlers, cfg.Deadlines, readiness); err != nil {
+	if err := registerRoutes(r, running, cfg.Deadlines, ready); err != nil {
 		return fmt.Errorf("routes: %w", err)
 	}
 
-	server := apihttp.NewServer(":"+cfg.Port, r, cfg.Server)
+	server := newServer(":"+cfg.Port, r, cfg.Server)
 	log.Printf("listening on %s", server.Addr)
 	serverError := make(chan error, 1)
 	go func() { serverError <- server.ListenAndServe() }()

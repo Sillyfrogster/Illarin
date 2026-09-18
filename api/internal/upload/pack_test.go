@@ -1,4 +1,4 @@
-package http
+package upload_test
 
 import (
 	"encoding/json"

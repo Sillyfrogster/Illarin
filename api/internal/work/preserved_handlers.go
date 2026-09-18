@@ -1,4 +1,4 @@
-package http
+package work
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +18,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.assets.PreservedNamespaces(c.Request.Context(), owner.ID, id)
+	found, err := h.works.PreservedNamespaces(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, asset.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
@@ -51,9 +50,9 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 	candidate := &asset.Candidate{Version: version}
-	err := h.assets.DeletePreservedNamespace(
+	err := h.works.DeletePreservedNamespace(
 		c.Request.Context(), owner.ID, id, namespace, candidate)
-	if work.CandidateResult(c, candidate, err) {
+	if CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {

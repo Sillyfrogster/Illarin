@@ -422,3 +422,8 @@ type RecordedVersion struct {
 	WithdrawalExplanation *string    `json:"withdrawalExplanation,omitempty"`
 	WithdrawnAt           *time.Time `json:"withdrawnAt,omitempty"`
 }
+
+type PreservedNamespace struct {
+	Bytes int    `json:"bytes"`
+	Name  string `json:"name"`
+}

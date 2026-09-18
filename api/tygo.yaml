@@ -1,7 +1,8 @@
 # tygo reads the request and response structs in the files listed below and
 # writes them as TypeScript to web/src/lib/api/shapes.ts and one file per
 # feature package under web/src/lib/api/shapes/, all of which git ignores.
-# shapes.ts re-exports the feature files, so the site imports from one place.
+# shapes.ts re-exports the feature files, so the site imports from one place;
+# the image package writes it, so its own shapes sit there rather than beside it.
 # Run it from the api directory with make site-types.
 packages:
   - path: "github.com/Sillyfrogster/Illarin/api/internal/account"
@@ -24,7 +25,11 @@ packages:
     output_path: "../web/src/lib/api/shapes/notify.ts"
     enum_style: "union"
     preserve_comments: "none"
+    type_mappings:
+      time.Time: "string"
+      uuid.UUID: "string"
     include_files:
+      - "inbox_shapes.go"
       - "watch_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/block"
     output_path: "../web/src/lib/api/shapes/block.ts"
@@ -202,13 +207,11 @@ packages:
       time.Time: "string"
     include_files:
       - "shapes.go"
-  - path: "github.com/Sillyfrogster/Illarin/api/internal/http"
+  - path: "github.com/Sillyfrogster/Illarin/api/internal/image"
     output_path: "../web/src/lib/api/shapes.ts"
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
-      import type { AssetWatch } from "./shapes/notify";
-
       export * from "./shapes/account";
       export * from "./shapes/block";
       export * from "./shapes/blog";
@@ -223,12 +226,7 @@ packages:
       export * from "./shapes/version";
       export * from "./shapes/work";
     type_mappings:
-      time.Time: "string"
       uuid.UUID: "string"
-      json.RawMessage: "unknown"
-      notify.AssetWatch: "AssetWatch"
     include_files:
-      - "asset_shapes.go"
-      - "notification_shapes.go"
-      - "preserved_shapes.go"
-      - "upload_helpers_shapes.go"
+      - "form.go"
+      - "shapes.go"

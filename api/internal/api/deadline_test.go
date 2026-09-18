@@ -1,7 +1,6 @@
-package http
+package api_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +9,9 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest/full"
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,11 +48,10 @@ func list(t *testing.T, r *gin.Engine) *httptest.ResponseRecorder {
 
 func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	t.Parallel()
-	err := Register(
+	err := full.Register(
 		gin.New(),
-		NewHandlers(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, 1<<20),
+		apitest.Services{Assets: &asset.Service{}, Links: &connect.Apps{}},
 		api.Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
-		func(context.Context) error { return nil },
 	)
 
 	if err == nil {

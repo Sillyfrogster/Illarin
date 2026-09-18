@@ -1,4 +1,4 @@
-package http
+package api_test
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package http
+package work_test
 
 import (
 	"bytes"

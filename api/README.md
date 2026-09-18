@@ -10,12 +10,60 @@ gin with a `Register` function, and gives each route a deadline as it does.
 
 Plumbing that every feature needs lives in `internal/api`: the session and the
 signed-in account, cookies, the check that a change came from the site, reading
-path and query values, the error body, and route deadlines. A feature package
+path and query values, the error body, route deadlines, the panic recovery and
+the no-store header on replies that carry credentials. A feature package
 imports `api`; `api` imports no feature.
+
+`cmd/server` builds the gin engine, puts the shared middleware on it and calls
+each feature's `Register`. Nothing else wires the routes together.
 
 When a package grows past about fifteen files, split it by feature into smaller
 packages. Never split it by layer, so there is no `handlers` or `models`
 package.
 
 Tests that send real requests import `internal/apitest` for the shared helpers,
-and `internal/apitest/full` for a router that serves every route.
+and `internal/apitest/full` for a router that serves every route. A test in
+`cmd/server` fails if that router and the server stop serving the same routes.
+
+## The packages
+
+Features, one per thing the product has:
+
+- `account` — sign-in, email, password, Discord, deletion, suspension.
+- `profile` — the profile, its avatar, banner and links.
+- `work` — details, visibility, following, deletion, browse, preserved data.
+- `block` — the page's blocks and elements; `block/edit` saves changes to them.
+- `version` — versions, drafted changes, history, comparison.
+- `upload` — reading a file in, found images, replacement preview.
+- `download` — formats, the main file, download records, format comparison.
+- `image` — the pictures a work, a profile or a post owns.
+- `private` — private prompts.
+- `connect` — connected apps: linking, permissions, sending, the app's library.
+- `integration` — outgoing announcements: `integration/blog` picks the
+  destinations, `integration/discord` and `integration/dispatch` send them.
+- `notify` — the inbox and what a person follows.
+- `blog` — posts, versions, schedule, writers, categories, feeds, link cards,
+  import; `blog/body` is the post body format.
+- `staff` — reports, takedowns, restrictions, cases, strikes, appeals.
+
+Everything else is plumbing a feature reaches for:
+
+- `api` — what every feature needs from the request, as above.
+- `asset` — what has still to move out into `work`, `version`, `upload`,
+  `download` and `storage`.
+- `format` — one reader and writer per file format, plus recognition;
+  `format/modules` holds the registry and the rest is one package per format.
+- `media` — reading an image in and rendering its sizes.
+- `storage` — blobs, the image cache, cleanup, purge.
+- `summary` — the projections browse and the download page read.
+- `credential` — hashing and checking a secret.
+- `secrets` — the sealing key.
+- `jscode` — the check that an extension's JavaScript is safe to list.
+- `discord` — the Discord sign-in client.
+- `db` — sqlc output.
+- `postgres` — the connection pool.
+- `config` — what the server reads from the environment.
+- `apitest`, `apitest/full`, `testdb` — test helpers, as above.
+
+`cmd/` holds three programs: `server` serves the API, `backup` writes and
+restores a dump, and `publication-authority` records which account may publish.

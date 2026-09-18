@@ -35,4 +35,6 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/assets/:id/publish", d.JSON, h.PublishAsset)
 	routes.Handle(http.MethodPut, "/v1/assets/:id/discovery", d.JSON, h.SetAssetDiscovery)
 	routes.Handle(http.MethodGet, "/v1/profiles/:handle/deleted", d.JSON, h.ListDeletedAssets)
+	routes.Handle(http.MethodGet, "/v1/assets/:id/preserved", d.JSON, h.ListPreservedNamespaces)
+	routes.Handle(http.MethodDelete, "/v1/assets/:id/preserved/:namespace", d.JSON, h.DeletePreservedNamespace)
 }

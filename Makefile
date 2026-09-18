@@ -135,7 +135,7 @@ check-go: fmt-check vet test ## Check the Go code and run its tests
 check-web: test-web lint ## Check the site and run its tests
 
 .PHONY: test test-postgres test-postgres-stop
-test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/http/...
+test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/work/...
 	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
 		$(if $(TEST_JSON),--jsonfile "$(TEST_JSON)") -- -short -timeout $(TEST_TIMEOUT) $(TEST)
 

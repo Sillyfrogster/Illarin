@@ -1,13 +1,14 @@
-// Package full registers every route the server has, for tests outside the package that holds them
-package full
+package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	protocol "github.com/Sillyfrogster/Illarin/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
-	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/asset"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
 	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
@@ -24,22 +25,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Harness builds test routers that serve every route
-var Harness = apitest.Harness{Register: Register}
+// services are the running parts the routes are served from
+type services struct {
+	Assets             *asset.Service
+	Works              *work.Service
+	Blocks             *edit.Service
+	Versions           *version.Service
+	Uploads            *upload.Service
+	Downloads          *download.Service
+	Accounts           *account.Service
+	Links              *connect.Apps
+	Deliveries         *connect.Sends
+	Publications       *blog.Service
+	UpdateDestinations *integration.Service
+	Notifications      *notify.Service
+	MaxUploadBytes     int64
+}
 
-func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
+// readiness answers whether the server can take traffic
+type readiness func(context.Context) error
+
+// registerRoutes puts the shared middleware on the engine and lets each feature register its own routes
+func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness) error {
+	if ready == nil {
+		return fmt.Errorf("readiness check is required")
+	}
 	if err := d.Check(); err != nil {
 		return err
 	}
+
 	routes := api.NewRoutes(r.Group(
 		"",
 		api.NoStoreCredentialResponses(),
 		api.GuardBrowserMutations(s.Links.BrowserOrigin()),
 		api.Sessions(s.Accounts.Current),
 	), d)
-	routes.Handle(http.MethodGet, "/healthz", d.JSON, ok)
-	routes.Handle(http.MethodGet, "/readyz", d.JSON, ok)
-	routes.Handle(http.MethodGet, "/protocol", d.JSON, protocolDocument)
+	routes.Handle(http.MethodGet, "/healthz", d.JSON, alive)
+	routes.Handle(http.MethodGet, "/readyz", d.JSON, readyOrNot(ready))
+	routes.Handle(http.MethodGet, "/protocol", d.JSON, document("text/plain; charset=utf-8", protocol.Protocol))
 
 	downloads := download.NewHandlers(s.Downloads, s.Accounts)
 	posts := blog.NewHandlers(s.Publications, s.Accounts, s.MaxUploadBytes)
@@ -62,11 +85,23 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	return nil
 }
 
-func ok(c *gin.Context) {
+func alive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-func protocolDocument(c *gin.Context) {
-	c.Header("X-Content-Type-Options", "nosniff")
-	c.Data(http.StatusOK, "text/plain; charset=utf-8", protocol.Protocol)
+func readyOrNot(check readiness) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := check(c.Request.Context()); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	}
+}
+
+func document(mediaType string, body []byte) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Data(http.StatusOK, mediaType, body)
+	}
 }

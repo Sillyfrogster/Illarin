@@ -8,10 +8,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 )
@@ -38,8 +38,20 @@ type Config struct {
 	PublicationSecretKey         []byte
 	ProbeLimits                  format.Limits
 	IngestWorkers                int
-	Server                       apihttp.Timeouts
+	Server                       ServerTimeouts
 	Deadlines                    api.Deadlines
+}
+
+type ServerTimeouts struct {
+	ReadHeader time.Duration
+	Idle       time.Duration
+}
+
+func defaultServerTimeouts() ServerTimeouts {
+	return ServerTimeouts{
+		ReadHeader: 10 * time.Second,
+		Idle:       2 * time.Minute,
+	}
 }
 
 type SMTPSettings struct {
@@ -69,7 +81,7 @@ func Load() (Config, error) {
 		BlogURL:    get("BLOG_URL", ""),
 		Database:   postgres.DefaultSettings(databaseURL),
 		UploadsDir: get("UPLOADS_DIR", ""),
-		Server:     apihttp.DefaultTimeouts(),
+		Server:     defaultServerTimeouts(),
 		Deadlines:  api.DefaultDeadlines(),
 		SMTP: SMTPSettings{
 			Address:  get("SMTP_ADDR", ""),

@@ -1,4 +1,4 @@
-package http
+package api
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func noStoreCredentialResponses() gin.HandlerFunc {
+func NoStoreCredentialResponses() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.FullPath()
 		if strings.HasPrefix(path, "/v1/link/") ||
